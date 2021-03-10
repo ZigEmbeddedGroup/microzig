@@ -24,6 +24,7 @@ If you've never done any embedded development before, it's a good point to start
   - [ESP2866/ESP32](#)
   - [NRF52](#)
   - [Raspberry PI](#)
+  - [Raspberry PI Pico](#)
 - [What device to chose?](#)
 - [Introduction to HAL9001](#)
 
@@ -32,8 +33,8 @@ If you've never done any embedded development before, it's a good point to start
 The latest articles on embedded programming with Zig:
 
 - [2021-03-15 zCOM, a network stack for embedded devices](#)
+- [2021-03-12 Make your own keyboard with zig (and replace qmk)](#)
 - [2021-03-10 `async`/`await` on embedded platforms](#)
-- [2021-XX-YY Dummy Article](#)
 - [2021-XX-YY Dummy Article](#)
 - [2021-XX-YY Dummy Article](#)
 - [2021-XX-YY Dummy Article](#)
@@ -72,22 +73,6 @@ This group uses the already existing community infrastructures that exist for Zi
 - [Martin "SpexGuy" Wickham](https://github.com/SpexGuy)
 
 ---
-
-
-## Planned Documents/Articles
-
-- Getting started with embedded (not specific to a platform)  
-  Contains info about basic digital electronics, what MMIO is and how it works, what are the differences to "normal" programs how is the startup pocess, ...
-- Getting started with
-  - Arduino/AVR
-  - LPC1768
-  - STM32
-  - MSP430
-  - ESP2866/ESP32
-  - NRF52
-  - Raspberry PI
-- Using `async` code on embedded.
-- Make your own keyboard with zig (and replace qmk)
 
 ## Required Stuff
 
