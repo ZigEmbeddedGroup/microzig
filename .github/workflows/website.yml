@@ -1,0 +1,30 @@
+name: Render Website
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+
+      - name: Render website
+        run: |
+          zig build gen
+
+      - name: Deploy with SCP
+        uses: noobly314/deploy-with-scp@v1
+        with:
+          src: render/
+          dest: zeg/
+          username: generic-ci
+          server-ip: random-projects.net
+          ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #

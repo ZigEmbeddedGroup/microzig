@@ -1,0 +1,3 @@
+[submodule "deps/koino"]
+	path = deps/koino
+	url = https://github.com/kivikakk/koino
