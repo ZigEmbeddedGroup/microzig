@@ -23,7 +23,7 @@ jobs:
       - name: Deploy with SCP
         uses: noobly314/deploy-with-scp@v1
         with:
-          src: render/
+          src: render/*
           dest: zeg/
           username: generic-ci
           server-ip: random-projects.net
