@@ -68,6 +68,7 @@ pub fn main() anyerror!void {
                         \\    max-width: 40em;
                         \\    margin-left: auto;
                         \\    margin-right: auto;
+                        \\    font-family: sans;
                         \\  }
                         \\  h1 {
                         \\    text-align: center;

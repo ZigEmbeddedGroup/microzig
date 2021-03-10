@@ -2,14 +2,6 @@
 
 This group was formed to document and improve the embedded programming experience with the [Zig programming language](https://ziglang.org).
 
-Right now, this group has the following members:
-
-- [Felix "xq" Queißner](https://github.com/masterQ32/)
-- [Matthew "mattnite" Knight](https://github.com/mattnite/)
-- [Vesim](https://github.com/vesim987/)
-- [Timon "FireFox317" Kruiper](https://github.com/FireFox317)
-- [Martin "SpexGuy" Wickham](https://github.com/SpexGuy)
-
 ## Goals
 
 - Provide documents on how to get started with embedded programming (for absolute newbies)
@@ -18,11 +10,69 @@ Right now, this group has the following members:
 - Create a common interface/HAL over several architectures
 - Create a <i>performant</i> common set of drivers for external platforms
 
+## Introduction to embedded programming
+
+If you've never done any embedded development before, it's a good point to start with one of our tutorials:
+
+- [Embedded Basics](articles/01-embedded-basics.htm)
+- [Embedded Programming for Beginners](#)
+- Getting started with...
+  - [Arduino/AVR](#)
+  - [LPC1768](#)
+  - [STM32](#)
+  - [MSP430](#)
+  - [ESP2866/ESP32](#)
+  - [NRF52](#)
+  - [Raspberry PI](#)
+- [What device to chose?](#)
+- [Introduction to HAL9001](#)
+
+## Latest Articles
+
+The latest articles on embedded programming with Zig:
+
+- [2021-03-15 zCOM, a network stack for embedded devices](#)
+- [2021-03-10 `async`/`await` on embedded platforms](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+- [2021-XX-YY Dummy Article](#)
+
+[See all articles...](#)
+
+## Code
+
+Here are some highlighted projects the ZEG provides:
+
+- [HAL9001 - One HAL to rule them all](#)
+- [STM32 Binding](#)
+- [AVR Binding](#)
+- [LPC1768 Binding](#)
+- [ESP32 Binding](#)
+- [zCOM Network Driver](#)
+- [TinySSL](#)
+
+[See all repositories...](#)
+
 ## Community
 
 This group uses the already existing community infrastructures that exist for Zig:
 
 - [Zig Programming Language - Discord Server](https://discord.gg/TyzJXjser6)
+
+## Members
+
+- [Felix "xq" Queißner](https://github.com/MasterQ32/)
+- [Matthew "mattnite" Knight](https://github.com/mattnite/)
+- [Vesim](https://github.com/vesim987/)
+- [Timon "FireFox317" Kruiper](https://github.com/FireFox317)
+- [Martin "SpexGuy" Wickham](https://github.com/SpexGuy)
+
+---
+
 
 ## Planned Documents/Articles
 
