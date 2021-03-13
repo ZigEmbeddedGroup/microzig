@@ -32,17 +32,9 @@ If you've never done any embedded development before, it's a good point to start
 
 The latest articles on embedded programming with Zig:
 
-- [2021-03-15 zCOM, a network stack for embedded devices](#)
-- [2021-03-12 Make your own keyboard with zig (and replace qmk)](#)
-- [2021-03-10 `async`/`await` on embedded platforms](#)
-- [2021-XX-YY Dummy Article](#)
-- [2021-XX-YY Dummy Article](#)
-- [2021-XX-YY Dummy Article](#)
-- [2021-XX-YY Dummy Article](#)
-- [2021-XX-YY Dummy Article](#)
-- [2021-XX-YY Dummy Article](#)
+<!-- ARTICLES -->
 
-[See all articles...](#)
+[See all articles...](articles.htm)
 
 ## Code
 
@@ -56,7 +48,7 @@ Here are some highlighted projects the ZEG provides:
 - [zCOM Network Driver](#)
 - [TinySSL](#)
 
-[See all repositories...](#)
+[See all repositories...](https://github.com/ZigEmbeddedGroup/)
 
 ## Community
 
@@ -71,9 +63,3 @@ This group uses the already existing community infrastructures that exist for Zi
 - [Vesim](https://github.com/vesim987/)
 - [Timon "FireFox317" Kruiper](https://github.com/FireFox317)
 - [Martin "SpexGuy" Wickham](https://github.com/SpexGuy)
-
----
-
-## Required Stuff
-
-- Fanart by the guy from ziglings
