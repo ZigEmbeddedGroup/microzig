@@ -36,6 +36,7 @@ pub fn main() anyerror!void {
         .allocator = allocator,
         .arena = std.heap.ArenaAllocator.init(allocator),
         .articles = std.ArrayList(Article).init(allocator),
+        .tutorials = std.ArrayList(Tutorial).init(allocator),
     };
     defer website.deinit();
 
@@ -43,6 +44,35 @@ pub fn main() anyerror!void {
     {
         var root_dir = try std.fs.cwd().openDir("website", .{});
         defer root_dir.close();
+
+        // Tutorials are maintained manually right now
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/01-embedded-basics.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/02-embedded-programming.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/03-lpc1768.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/03-nrf52.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/03-avr.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/03-pi-pico.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/03-stm32.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/04-chose-device.md",
+        });
+        try website.addTutorial(Tutorial{
+            .src_file = "website/tutorials/05-hal.md",
+        });
 
         // gather articles
         {
@@ -92,7 +122,12 @@ pub fn main() anyerror!void {
         var art_dir = try root_dir.makeOpenPath("articles", .{});
         defer art_dir.close();
 
+        var tut_dir = try root_dir.makeOpenPath("tutorials", .{});
+        defer tut_dir.close();
+
         try website.renderArticles(art_dir);
+
+        try website.renderTutorials(tut_dir);
     }
 }
 
@@ -143,7 +178,12 @@ const Date = struct {
 const Article = struct {
     date: Date,
     src_file: []const u8,
-    title: []const u8,
+    title: []const u8 = "<undetermined>",
+};
+
+const Tutorial = struct {
+    src_file: []const u8,
+    title: []const u8 = "<undetermined>",
 };
 
 const Website = struct {
@@ -153,8 +193,10 @@ const Website = struct {
     allocator: *std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
     articles: std.ArrayList(Article),
+    tutorials: std.ArrayList(Tutorial),
 
     fn deinit(self: *Self) void {
+        self.tutorials.deinit();
         self.articles.deinit();
         self.arena.deinit();
         self.* = undefined;
@@ -169,41 +211,63 @@ const Website = struct {
         });
     }
 
+    fn addTutorial(self: *Self, tutorial: Tutorial) !void {
+        self.is_prepared = false;
+        try self.tutorials.append(Tutorial{
+            .src_file = try self.arena.allocator.dupe(u8, tutorial.src_file),
+            .title = try self.arena.allocator.dupe(u8, tutorial.title),
+        });
+    }
+
+    fn findTitle(self: *Self, file: []const u8) !?[]const u8 {
+        var doc = blk: {
+            var p = try koino.parser.Parser.init(self.allocator, markdown_options);
+            defer p.deinit();
+
+            const markdown = try std.fs.cwd().readFileAlloc(self.allocator, file, 10_000_000);
+            defer self.allocator.free(markdown);
+
+            try p.feed(markdown);
+
+            break :blk try p.finish();
+        };
+        defer doc.deinit();
+
+        std.debug.assert(doc.data.value == .Document);
+
+        var iter = doc.first_child;
+        var heading_or_null: ?*koino.nodes.AstNode = while (iter) |item| : (iter = item.next) {
+            if (item.data.value == .Heading) {
+                if (item.data.value.Heading.level == 1) {
+                    break item;
+                }
+            }
+        } else null;
+
+        if (heading_or_null) |heading| {
+            const string = try koino.html.print(&self.arena.allocator, markdown_options, heading);
+
+            std.debug.assert(std.mem.startsWith(u8, string, "<h1>"));
+            std.debug.assert(std.mem.endsWith(u8, string, "</h1>\n"));
+
+            return string[4 .. string.len - 6];
+        } else {
+            return null;
+        }
+    }
+
     fn prepareRendering(self: *Self) !void {
         std.sort.sort(Article, self.articles.items, self.*, sortArticlesDesc);
 
         for (self.articles.items) |*article| {
-            var doc = blk: {
-                var p = try koino.parser.Parser.init(self.allocator, markdown_options);
-                defer p.deinit();
+            if (try self.findTitle(article.src_file)) |title| {
+                article.title = title;
+            }
+        }
 
-                const markdown = try std.fs.cwd().readFileAlloc(self.allocator, article.src_file, 10_000_000);
-                defer self.allocator.free(markdown);
-
-                try p.feed(markdown);
-
-                break :blk try p.finish();
-            };
-            defer doc.deinit();
-
-            std.debug.assert(doc.data.value == .Document);
-
-            var iter = doc.first_child;
-            var heading_or_null: ?*koino.nodes.AstNode = while (iter) |item| : (iter = item.next) {
-                if (item.data.value == .Heading) {
-                    if (item.data.value.Heading.level == 1) {
-                        break item;
-                    }
-                }
-            } else null;
-
-            if (heading_or_null) |heading| {
-                const string = try koino.html.print(&self.arena.allocator, markdown_options, heading);
-
-                std.debug.assert(std.mem.startsWith(u8, string, "<h1>"));
-                std.debug.assert(std.mem.endsWith(u8, string, "</h1>\n"));
-
-                article.title = string[4 .. string.len - 6];
+        for (self.tutorials.items) |*tutorial| {
+            if (try self.findTitle(tutorial.src_file)) |title| {
+                tutorial.title = title;
             }
         }
 
@@ -266,6 +330,17 @@ const Website = struct {
                 art.src_file,
                 dst_dir,
                 try self.changeExtension(std.fs.path.basename(art.src_file), ".htm"),
+            );
+        }
+    }
+
+    fn renderTutorials(self: *Self, dst_dir: std.fs.Dir) !void {
+        std.debug.assert(self.is_prepared);
+        for (self.tutorials.items) |tut| {
+            try self.renderMarkdownFile(
+                tut.src_file,
+                dst_dir,
+                try self.changeExtension(std.fs.path.basename(tut.src_file), ".htm"),
             );
         }
     }

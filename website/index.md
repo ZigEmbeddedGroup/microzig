@@ -14,19 +14,19 @@ This group was formed to document and improve the embedded programming experienc
 
 If you've never done any embedded development before, it's a good point to start with one of our tutorials:
 
-- [Embedded Basics](articles/01-embedded-basics.htm)
-- [Embedded Programming for Beginners](#)
+- [Embedded Basics](tutorials/01-embedded-basics.htm)
+- [Embedded Programming for Beginners](tutorials/02-embedded-programming.htm)
 - Getting started with...
-  - [Arduino/AVR](#)
-  - [LPC1768](#)
-  - [STM32](#)
-  - [MSP430](#)
-  - [ESP2866/ESP32](#)
-  - [NRF52](#)
-  - [Raspberry PI](#)
-  - [Raspberry PI Pico](#)
-- [What device to chose?](#)
-- [Introduction to HAL9001](#)
+  - [Arduino/AVR](tutorials/03-avr.htm)
+  - [LPC1768](tutorials/03-lpc1768.htm)
+  - [NRF52](tutorials/03-nrf52.htm)
+  - [Raspberry PI Pico](tutorials/03-pi-pico.htm)
+  - [STM32](tutorials/03-stm32.htm)
+  - [MSP430](#) (*missing*)
+  - [ESP2866/ESP32](#) (*missing*)
+  - [Raspberry PI](#) (*missing*)
+- [What device to chose?](tutorials/04-chose-device.htm)
+- [Introduction to HAL 9001](tutorials/05-hal.htm)
 
 ## Latest Articles
 
