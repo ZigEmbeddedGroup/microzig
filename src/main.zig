@@ -37,6 +37,7 @@ pub fn main() anyerror!void {
         .arena = std.heap.ArenaAllocator.init(allocator),
         .articles = std.ArrayList(Article).init(allocator),
         .tutorials = std.ArrayList(Tutorial).init(allocator),
+        .images = std.ArrayList([]const u8).init(allocator),
     };
     defer website.deinit();
 
@@ -73,6 +74,29 @@ pub fn main() anyerror!void {
         try website.addTutorial(Tutorial{
             .src_file = "website/tutorials/05-hal.md",
         });
+
+        // img articles
+        {
+            var dir = try root_dir.openDir("img", .{ .iterate = true });
+            defer dir.close();
+
+            var iter = dir.iterate();
+
+            while (try iter.next()) |entry| {
+                if (entry.kind != .File) {
+                    std.log.err("Illegal folder in directory website/img: {s}", .{entry.name});
+                    continue;
+                }
+
+                const path = try std.fs.path.join(&website.arena.allocator, &[_][]const u8{
+                    "website",
+                    "img",
+                    entry.name,
+                });
+
+                try website.addImage(path);
+            }
+        }
 
         // gather articles
         {
@@ -125,9 +149,16 @@ pub fn main() anyerror!void {
         var tut_dir = try root_dir.makeOpenPath("tutorials", .{});
         defer tut_dir.close();
 
+        var img_dir = try root_dir.makeOpenPath("img", .{});
+        defer img_dir.close();
+
         try website.renderArticles(art_dir);
 
         try website.renderTutorials(tut_dir);
+
+        try website.renderAtomFeed(root_dir, "feed.atom");
+
+        try website.renderImages(img_dir);
     }
 }
 
@@ -194,10 +225,12 @@ const Website = struct {
     arena: std.heap.ArenaAllocator,
     articles: std.ArrayList(Article),
     tutorials: std.ArrayList(Tutorial),
+    images: std.ArrayList([]const u8),
 
     fn deinit(self: *Self) void {
         self.tutorials.deinit();
         self.articles.deinit();
+        self.images.deinit();
         self.arena.deinit();
         self.* = undefined;
     }
@@ -217,6 +250,11 @@ const Website = struct {
             .src_file = try self.arena.allocator.dupe(u8, tutorial.src_file),
             .title = try self.arena.allocator.dupe(u8, tutorial.title),
         });
+    }
+
+    fn addImage(self: *Self, path: []const u8) !void {
+        self.is_prepared = false;
+        try self.images.append(try self.arena.allocator.dupe(u8, path));
     }
 
     fn findTitle(self: *Self, file: []const u8) !?[]const u8 {
@@ -466,5 +504,75 @@ const Website = struct {
             \\</html>
             \\
         );
+    }
+
+    fn renderAtomFeed(self: *Self, dir: std.fs.Dir, file_name: []const u8) !void {
+        var feed_file = try dir.createFile(file_name, .{});
+        defer feed_file.close();
+
+        var feed_writer = feed_file.writer();
+
+        try feed_writer.writeAll(
+            \\<?xml version="1.0" encoding="utf-8"?>
+            \\<feed xmlns="http://www.w3.org/2005/Atom">
+            \\  <author>
+            \\    <name>Zig Embedded Group</name>
+            \\  </author>
+            \\  <title>Zig Embedded Group</title>
+            \\  <id>https://zeg.random-projects.net/</id>
+            \\
+        );
+
+        var last_update = Date{ .year = 0, .month = 0, .day = 0 };
+        var article_count: usize = 0;
+        for (self.articles.items) |article| {
+            if (last_update.lessThan(article.date)) {
+                last_update = article.date;
+                article_count = 0;
+            } else {
+                article_count += 1;
+            }
+        }
+
+        try feed_writer.print("  <updated>{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:00:00Z</updated>\n", .{
+            last_update.year,
+            last_update.month,
+            last_update.day,
+            article_count, // this is fake, but is just here for creating a incremental version for multiple articles a day
+        });
+
+        for (self.articles.items) |article| {
+            const uri_name = try self.urlEscape(removeExtension(article.src_file));
+            try feed_writer.print(
+                \\  <entry>
+                \\    <title>{s}</title>
+                \\    <link href="https://zeg.random-projects.net/articles/{s}.htm" />
+                \\    <id>zeg.random-projects.net/articles/{s}.htm</id>
+                \\    <updated>{d:0>4}-{d:0>2}-{d:0>2}T00:00:00Z</updated>
+                \\  </entry>
+                \\
+            , .{
+                article.title,
+                uri_name,
+                uri_name,
+                article.date.year,
+                article.date.month,
+                article.date.day,
+            });
+        }
+
+        try feed_writer.writeAll("</feed>");
+    }
+
+    fn renderImages(self: Self, target_dir: std.fs.Dir) !void {
+        for (self.images.items) |img| {
+            try std.fs.Dir.copyFile(
+                std.fs.cwd(),
+                img,
+                target_dir,
+                std.fs.path.basename(img),
+                .{},
+            );
+        }
     }
 };
