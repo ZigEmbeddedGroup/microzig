@@ -1,8 +1,8 @@
-# Zig Embedded Group
+# ![](img/pager.svg) Zig Embedded Group ![](img/battery.svg)
 
 This group was formed to document and improve the embedded programming experience with the [Zig programming language](https://ziglang.org).
 
-## 🏁 Goals
+## ![](img/goals.svg) Goals
 
 - Provide documents on how to get started with embedded programming (for absolute newbies)
 - Provide example snippets for certain architectures (LPC, STM32, AVR, ...)
@@ -10,7 +10,7 @@ This group was formed to document and improve the embedded programming experienc
 - Create a common interface/HAL over several architectures
 - Create a <i>performant</i> common set of drivers for external platforms
 
-## 🧑‍🏫 Introduction to embedded programming
+## ![](img/teacher.svg) Introduction to embedded programming
 
 If you've never done any embedded development before, it's a good point to start with one of our tutorials:
 
@@ -28,17 +28,17 @@ If you've never done any embedded development before, it's a good point to start
 - [What device to chose?](tutorials/04-chose-device.htm)
 - [Introduction to HAL 9001](tutorials/05-hal.htm)
 
-## 📚 Latest Articles
+## ![](img/articles.svg) Latest Articles
 
 The latest articles on embedded programming with Zig:
 
 <!-- ARTICLES -->
 
-[↗️ See all articles...](articles.htm)
+[![](img/read-more.svg) See all articles...](articles.htm)
 
 [![Atom Feed](img/atom.svg) Subscribe the Atom feed](feed.atom)
 
-## 💻 Code
+## ![](img/code.svg) Code
 
 Here are some highlighted projects the ZEG provides:
 
@@ -50,15 +50,15 @@ Here are some highlighted projects the ZEG provides:
 - [zCOM Network Driver](#)
 - [TinySSL](#)
 
-[↗️ See all repositories...](https://github.com/ZigEmbeddedGroup/)
+[![](img/read-more.svg) See all repositories...](https://github.com/ZigEmbeddedGroup/)
 
-## 💬 Community
+## ![](img/community.svg) Community
 
 This group uses the already existing community infrastructures that exist for Zig:
 
 - [Zig Programming Language - Discord Server](https://discord.gg/TyzJXjser6)
 
-## 👥 Members
+## ![](img/members.svg) Members
 
 - [Felix "xq" Queißner](https://github.com/MasterQ32/)
 - [Matthew "mattnite" Knight](https://github.com/mattnite/)

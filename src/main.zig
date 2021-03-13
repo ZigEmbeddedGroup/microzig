@@ -491,6 +491,11 @@ const Website = struct {
             \\  h1 {
             \\    text-align: center;
             \\  }
+            \\  h1 img, h2 img, h3 img, h3 img, h4 img, h5 img, h6 img, a img {
+            \\    width: 1em;
+            \\    height: 1em;
+            \\    vertical-align: middle;
+            \\  }
             \\</style>
             \\</head>
             \\<body>
