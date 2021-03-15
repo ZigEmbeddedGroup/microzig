@@ -9,12 +9,12 @@ const markdown_options = koino.Options{
     },
     .render = .{
         .header_anchors = true,
+        .anchor_icon = "§ ",
     },
 };
 
 /// verifies and parses a file name in the format
 /// "YYYY-MM-DD - " [.*] ".md"
-/// 
 fn isValidArticleFileName(path: []const u8) ?Date {
     if (path.len < 16)
         return null;
@@ -596,6 +596,19 @@ const Website = struct {
             \\    padding-left: 0.5em;
             \\    margin-left: 0.5em;
             \\ }
+            \\
+            // Make links in headings invisible
+            \\  h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+            \\    text-decoration: none;
+            \\    font-weight: lighter;
+            \\    color: unset;
+            \\    opacity: 50%;
+            \\    visibility: hidden;
+            \\    margin-left: -1em;
+            \\  }
+            \\  h1:hover a, h2:hover a, h3:hover a, h4:hover a, h5:hover a, h6:hover a {
+            \\    visibility: visible;
+            \\  }
             \\</style>
             \\</head>
             \\<body>
