@@ -1,6 +1,12 @@
 # Embedded Basics
 
-In this tutorial, you'll learn the absolute basics of the embedded world:
+In this tutorial, you'll learn the absolute basics of the embedded world. If
+you have already experience with embedded systems and/or electronics, this
+chapter probably doesn't provide anything new to you.
+
+## Prerequisites
+
+None! This is your entry point into the embedded world!
 
 ## Contents
 
@@ -31,6 +37,7 @@ Some examples of Embedded systems:
 - cars
 - industrial control systems
 - mars rovers
+- digital thermometer
 
 ### Real time
 
