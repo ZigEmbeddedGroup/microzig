@@ -7,6 +7,9 @@ const markdown_options = koino.Options{
         .autolink = true,
         .strikethrough = true,
     },
+    .render = .{
+        .header_anchors = true,
+    },
 };
 
 /// verifies and parses a file name in the format
@@ -482,20 +485,46 @@ const Website = struct {
             \\  <meta name="viewport" content="width=device-width, initial-scale=1">
             \\  <title>ZEG</title>
             \\<style>
+            //  Limit the text width of the body to roughly 40 characters
             \\  body {
             \\    max-width: 40em;
             \\    margin-left: auto;
             \\    margin-right: auto;
             \\    font-family: sans;
             \\  }
+            \\
+            // Align top-level headings
             \\  h1 {
             \\    text-align: center;
             \\  }
+            \\
+            // Make images in headings and links exactly 1 character high.
             \\  h1 img, h2 img, h3 img, h3 img, h4 img, h5 img, h6 img, a img {
             \\    width: 1em;
             \\    height: 1em;
             \\    vertical-align: middle;
             \\  }
+            \\
+            // center images in a paragraph and display them as a block
+            \\  p > img {
+            \\    display: block;
+            \\    max-width: 100%;
+            \\    margin-left: auto;
+            \\    margin-right: auto;
+            \\  }
+            \\ 
+            // Make nice top-level codeblocks
+            \\  body > pre {
+            \\    background-color: #EEE;
+            \\    padding: 0.5em;
+            \\  }
+            \\
+            // Make nice top-level blockquotes
+            \\  body > blockquote {
+            \\    border-left: 3pt solid cornflowerblue;
+            \\    padding-left: 0.5em;
+            \\    margin-left: 0.5em;
+            \\ }
             \\</style>
             \\</head>
             \\<body>
