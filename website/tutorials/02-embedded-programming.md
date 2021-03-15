@@ -4,6 +4,8 @@ In this tutorial, you'll learn the ways of the embedded programmer and how to ma
 
 ## Prerequisites
 
+<!-- FOO -->
+
 - [Embedded Basics](01-embedded-basics.htm)
 
 ## Contents
@@ -48,7 +50,7 @@ So to get an embedded program up and running, we first need to check out the *me
 
 ![Memory Map of LPC1768](../img/memory-map.png)
 
-Here you can see that the memory contains continuous flash memory (*On-chip non-volatile memory*), two sections of SRAM (*On-chip SRAM*), some *Boot ROM*, and peripherials. 
+Here you can see that the memory contains continuous flash memory (*On-chip [non-volatile memory](https://en.wikipedia.org/wiki/Non-volatile_memory)*), two sections of SRAM (*On-chip [SRAM](https://en.wikipedia.org/wiki/Static_random-access_memory)*), some *Boot ROM*, and peripherials. 
 
 This memory map tells us how to design the [linker script](https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html#SEC6) and how to lay out our sections (`.text`, `.data`, …). As sections are quite complex topic for themselves, they [will be explained later](#text-data-and-other-curious-sections). For now, we only need to know that `.text` is all of our code (this is where our functions live), `.rodata` is pre-initialized immutable data, `.data` is the pre-initialized mutable data and `.bss` is zero-initialized mutable data.
 

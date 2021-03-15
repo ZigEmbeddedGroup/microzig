@@ -165,24 +165,6 @@ pub fn main() anyerror!void {
     }
 }
 
-fn markdownToHtmlInternal(resultAllocator: *std.mem.Allocator, internalAllocator: *std.mem.Allocator, options: koino.Options, markdown: []const u8) ![]u8 {
-    var p = try koino.parser.Parser.init(internalAllocator, options);
-    try p.feed(markdown);
-
-    var doc = try p.finish();
-    p.deinit();
-
-    defer doc.deinit();
-
-    return try koino.html.print(resultAllocator, p.options, doc);
-}
-
-pub fn markdownToHtml(allocator: *std.mem.Allocator, options: koino.Options, markdown: []const u8) ![]u8 {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-    return markdownToHtmlInternal(allocator, &arena.allocator, options, markdown);
-}
-
 const Date = struct {
     const Self = @This();
 
@@ -286,7 +268,12 @@ const Website = struct {
         } else null;
 
         if (heading_or_null) |heading| {
-            const string = try koino.html.print(&self.arena.allocator, markdown_options, heading);
+            var list = std.ArrayList(u8).init(&self.arena.allocator);
+            defer list.deinit();
+
+            try koino.html.print(list.writer(), &self.arena.allocator, markdown_options, heading);
+
+            const string = list.toOwnedSlice();
 
             std.debug.assert(std.mem.startsWith(u8, string, "<h1>"));
             std.debug.assert(std.mem.endsWith(u8, string, "</h1>\n"));
@@ -441,7 +428,7 @@ const Website = struct {
     }
 
     /// Render a given markdown file into `dst_path`.
-    fn renderMarkdownFile(self: Self, src_path: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
+    fn renderMarkdownFile(self: *Self, src_path: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
         std.debug.assert(self.is_prepared);
 
         var markdown_input = try std.fs.cwd().readFileAlloc(self.allocator, src_path, 10_000_000);
@@ -451,13 +438,25 @@ const Website = struct {
     }
 
     /// Render the given markdown source into `dst_path`.
-    fn renderMarkdown(self: Self, source: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
+    fn renderMarkdown(self: *Self, source: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
         std.debug.assert(self.is_prepared);
 
-        var rendered_markdown = try markdownToHtml(self.allocator, markdown_options, source);
-        defer self.allocator.free(rendered_markdown);
+        var p = try koino.parser.Parser.init(&self.arena.allocator, markdown_options);
+        try p.feed(source);
 
-        try self.renderHtml(rendered_markdown, dst_dir, dst_path);
+        var doc = try p.finish();
+        p.deinit();
+
+        defer doc.deinit();
+
+        var output_file = try dst_dir.createFile(dst_path, .{});
+        defer output_file.close();
+
+        var writer = output_file.writer();
+
+        try self.renderHeader(writer);
+        try koino.html.print(writer, &self.arena.allocator, p.options, doc);
+        try self.renderFooter(writer);
     }
 
     /// Render the markdown body into `dst_path`.
@@ -608,5 +607,14 @@ const Website = struct {
                 .{},
             );
         }
+    }
+
+    fn renderArticle(self: *Website, article: Article, dst_dir: std.fs.Dir, dst_name: []const u8) !void {
+        var formatter = HtmlFormatter.init(allocator, options);
+        defer formatter.deinit();
+
+        try formatter.format(root, false);
+
+        return formatter.buffer.toOwnedSlice();
     }
 };
