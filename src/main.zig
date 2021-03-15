@@ -603,12 +603,12 @@ const Website = struct {
             \\    text-decoration: none;
             \\    font-weight: lighter;
             \\    color: unset;
-            \\    opacity: 50%;
-            \\    visibility: hidden;
-            \\    margin-left: -1em;
+            \\    opacity: 10%;
+            \\    margin-left: -1.5em;
+            \\    padding-left: 0.5em;
             \\  }
             \\  h1:hover a, h2:hover a, h3:hover a, h4:hover a, h5:hover a, h6:hover a {
-            \\    visibility: visible;
+            \\    opacity: 50%;
             \\  }
             \\</style>
             \\</head>
