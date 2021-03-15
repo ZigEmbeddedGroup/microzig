@@ -4,20 +4,11 @@ In this tutorial, you'll learn the ways of the embedded programmer and how to ma
 
 ## Prerequisites
 
-<!-- FOO -->
-
 - [Embedded Basics](01-embedded-basics.htm)
 
 ## Contents
 
-- Differences to desktop programming
-- Inventory of an embedded programmer
-- The startup procedure
-- Interacting with peripherials
-- Interrupts and how to get them
-- `.text`, `.data` and other curious sections
-- Binary formats you might use
-- Deploying your application
+<!-- TOC -->
 
 ## Differences to desktop programming
 

@@ -142,7 +142,7 @@ pub fn main() anyerror!void {
         var root_dir = try std.fs.cwd().makeOpenPath("render", .{});
         defer root_dir.close();
 
-        try website.renderIndexFile("website/index.md", root_dir, "index.htm");
+        try website.renderMarkdownFile("website/index.md", root_dir, "index.htm");
 
         try website.renderArticleIndex(root_dir, "articles.htm");
 
@@ -271,7 +271,10 @@ const Website = struct {
             var list = std.ArrayList(u8).init(&self.arena.allocator);
             defer list.deinit();
 
-            try koino.html.print(list.writer(), &self.arena.allocator, markdown_options, heading);
+            var options = markdown_options;
+            options.render.header_anchors = false;
+
+            try koino.html.print(list.writer(), &self.arena.allocator, options, heading);
 
             const string = list.toOwnedSlice();
 
@@ -373,58 +376,15 @@ const Website = struct {
         }
     }
 
-    /// Renders the root file and replaces `<!-- ARTICLES -->` with the first 10 articles,
-    /// in descending order
-    fn renderIndexFile(self: *Self, src_path: []const u8, dst_dir: std.fs.Dir, file_name: []const u8) !void {
-        std.debug.assert(self.is_prepared);
-
-        var src_code = try std.fs.cwd().readFileAlloc(self.allocator, src_path, 10_000_000);
-        defer self.allocator.free(src_code);
-
-        var array_buffer = std.ArrayList(u8).init(self.allocator);
-        defer array_buffer.deinit();
-
-        const offset = std.mem.indexOf(u8, src_code, "<!-- ARTICLES -->") orelse return error.MissingArticlesMarker;
-
-        var writer = array_buffer.writer();
-
-        try writer.writeAll(src_code[0..offset]);
-
-        for (self.articles.items[0..std.math.min(self.articles.items.len, 10)]) |art| {
-            try writer.print("- [{} - {s}](articles/{s}.htm)\n", .{
-                art.date,
-                art.title,
-                try self.urlEscape(removeExtension(std.fs.path.basename(art.src_file))),
-            });
-        }
-
-        try writer.writeAll(src_code[offset + 17 ..]);
-
-        try self.renderMarkdown(array_buffer.items, dst_dir, file_name);
-    }
-
-    /// Renders the root file and replaces `<!-- ARTICLES -->` with the first 10 articles,
-    /// in descending order
+    /// Renders a list of all possible articles
     fn renderArticleIndex(self: *Self, dst_dir: std.fs.Dir, file_name: []const u8) !void {
         std.debug.assert(self.is_prepared);
 
-        var array_buffer = std.ArrayList(u8).init(self.allocator);
-        defer array_buffer.deinit();
-
-        var writer = array_buffer.writer();
-
-        try writer.writeAll("# Articles\n");
-        try writer.writeAll("\n");
-
-        for (self.articles.items[0..std.math.min(self.articles.items.len, 10)]) |art| {
-            try writer.print("- [{} - {s}](articles/{s}.htm)\n", .{
-                art.date,
-                art.title,
-                try self.urlEscape(removeExtension(std.fs.path.basename(art.src_file))),
-            });
-        }
-
-        try self.renderMarkdown(array_buffer.items, dst_dir, file_name);
+        try self.renderMarkdown(
+            \\# Articles
+            \\
+            \\<!-- ARTICLES -->
+        , dst_dir, file_name);
     }
 
     /// Render a given markdown file into `dst_path`.
@@ -438,16 +398,22 @@ const Website = struct {
     }
 
     /// Render the given markdown source into `dst_path`.
+    /// supported features here are:
+    /// - `<!-- TOC -->` (renders a table of contents with all items that come *after* said TOC
+    /// - `<!-- ARTICLES10 -->` Renders the 10 latest articles
+    /// - `<!-- ARTICLES -->` Renders all articles
     fn renderMarkdown(self: *Self, source: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
         std.debug.assert(self.is_prepared);
 
-        var p = try koino.parser.Parser.init(&self.arena.allocator, markdown_options);
-        try p.feed(source);
-
-        var doc = try p.finish();
-        p.deinit();
-
+        var doc: *koino.nodes.AstNode = blk: {
+            var p = try koino.parser.Parser.init(&self.arena.allocator, markdown_options);
+            try p.feed(source);
+            defer p.deinit();
+            break :blk try p.finish();
+        };
         defer doc.deinit();
+
+        std.debug.assert(doc.data.value == .Document);
 
         var output_file = try dst_dir.createFile(dst_path, .{});
         defer output_file.close();
@@ -455,7 +421,113 @@ const Website = struct {
         var writer = output_file.writer();
 
         try self.renderHeader(writer);
-        try koino.html.print(writer, &self.arena.allocator, p.options, doc);
+        {
+            var iter = doc.first_child;
+            while (iter) |item| : (iter = item.next) {
+                if (item.data.value == .HtmlBlock) {
+                    const raw_string = item.data.value.HtmlBlock.literal.items;
+
+                    const string = std.mem.trim(u8, raw_string, " \t\r\n");
+
+                    if (std.mem.eql(u8, string, "<!-- TOC -->")) {
+                        var min_heading_level: ?u8 = null;
+                        var current_heading_level: u8 = undefined;
+
+                        var heading_options = markdown_options;
+                        heading_options.render.header_anchors = false;
+
+                        try writer.writeAll("<ul>");
+
+                        var it = item.next;
+                        while (it) |child| : (it = child.next) {
+                            if (child.data.value == .Heading) {
+                                var heading = child.data.value.Heading;
+
+                                if (min_heading_level == null) {
+                                    min_heading_level = heading.level;
+                                    current_heading_level = heading.level;
+                                }
+
+                                if (heading.level < min_heading_level.?)
+                                    continue;
+
+                                while (current_heading_level > heading.level) {
+                                    try writer.writeAll("</ul>");
+                                    current_heading_level -= 1;
+                                }
+                                while (current_heading_level < heading.level) {
+                                    try writer.writeAll("<ul>");
+                                    current_heading_level += 1;
+                                }
+
+                                try writer.writeAll("<li>");
+
+                                {
+                                    var i = child.first_child;
+                                    while (i) |c| : (i = c.next) {
+                                        try koino.html.print(
+                                            writer,
+                                            &self.arena.allocator,
+                                            heading_options,
+                                            c,
+                                        );
+                                    }
+                                }
+
+                                while (current_heading_level > heading.level) {
+                                    try writer.writeAll("</ul>");
+                                    current_heading_level -= 1;
+                                }
+
+                                try writer.writeAll("</li>");
+                            }
+                        }
+
+                        if (min_heading_level) |mhl| {
+                            while (current_heading_level > mhl) {
+                                try writer.writeAll("</ul>");
+                                current_heading_level -= 1;
+                            }
+                        }
+
+                        try writer.writeAll("</ul>");
+                    } else if (std.mem.eql(u8, string, "<!-- ARTICLES -->")) {
+                        for (self.articles.items[0..std.math.min(self.articles.items.len, 10)]) |art| {
+                            try writer.print(
+                                \\<li><a href="articles/{s}.htm">{} - {s}</a></li>
+                                \\
+                            , .{
+                                try self.urlEscape(removeExtension(std.fs.path.basename(art.src_file))),
+                                art.date,
+                                art.title,
+                            });
+                        }
+                    } else if (std.mem.eql(u8, string, "<!-- ARTICLES -->")) {
+                        try writer.writeAll("<ul>\n");
+                        for (self.articles.items[0..std.math.min(self.articles.items.len, 10)]) |art| {
+                            try writer.print(
+                                \\<li><a href="articles/{s}.htm">{} - {s}</a></li>
+                                \\
+                            , .{
+                                try self.urlEscape(removeExtension(std.fs.path.basename(art.src_file))),
+                                art.date,
+                                art.title,
+                            });
+                        }
+                        try writer.writeAll("</ul>\n");
+                    } else {
+                        std.log.err("Unhandled HTML inline: {s}", .{string});
+                    }
+                } else {
+                    try koino.html.print(
+                        writer,
+                        &self.arena.allocator,
+                        markdown_options,
+                        item,
+                    );
+                }
+            }
+        }
         try self.renderFooter(writer);
     }
 
