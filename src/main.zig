@@ -422,6 +422,9 @@ const Website = struct {
 
         try self.renderHeader(writer);
         {
+            var renderer = koino.html.makeHtmlFormatter(writer, &self.arena.allocator, markdown_options);
+            defer renderer.deinit();
+
             var iter = doc.first_child;
             while (iter) |item| : (iter = item.next) {
                 if (item.data.value == .HtmlBlock) {
@@ -460,7 +463,9 @@ const Website = struct {
                                     current_heading_level += 1;
                                 }
 
-                                try writer.writeAll("<li>");
+                                try writer.writeAll("<li><a href=\"#");
+                                try writer.writeAll(try renderer.getNodeAnchor(child));
+                                try writer.writeAll("\">");
 
                                 {
                                     var i = child.first_child;
@@ -473,6 +478,7 @@ const Website = struct {
                                         );
                                     }
                                 }
+                                try writer.writeAll("</a>");
 
                                 while (current_heading_level > heading.level) {
                                     try writer.writeAll("</ul>");
@@ -519,12 +525,7 @@ const Website = struct {
                         std.log.err("Unhandled HTML inline: {s}", .{string});
                     }
                 } else {
-                    try koino.html.print(
-                        writer,
-                        &self.arena.allocator,
-                        markdown_options,
-                        item,
-                    );
+                    try renderer.format(item, false);
                 }
             }
         }
