@@ -20,13 +20,13 @@ pub fn isEnabled(comptime interrupt: anytype) bool {
 /// *Set Enable Interrupt*, will enable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub fn sei() void {
-    @panic("not implemented yet!");
+    micro.chip.cpu.sei();
 }
 
 /// *Clear Enable Interrupt*, will disable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub fn cli() void {
-    @panic("not implemented yet!");
+    micro.chip.cpu.cli();
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.

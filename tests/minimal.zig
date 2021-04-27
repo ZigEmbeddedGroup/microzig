@@ -4,5 +4,5 @@ const micro = @import("microzig");
 pub const panic = micro.panic;
 
 pub fn main() void {
-    return;
+    // This function will contain the application logic.
 }
