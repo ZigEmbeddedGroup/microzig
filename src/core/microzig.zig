@@ -1,6 +1,11 @@
 const std = @import("std");
 const root = @import("root");
 
+/// Contains build-time generated configuration options for microzig.
+/// Contains a CPU target description, chip, board and cpu information
+/// and so on.
+pub const config = @import("microzig-config");
+
 /// Provides access to the low level features of the current microchip.
 pub const chip = @import("chip");
 
@@ -9,6 +14,12 @@ pub const cpu = chip.cpu;
 
 /// Module that helps with interrupt handling.
 pub const interrupts = @import("interrupts.zig");
+
+const gpio = @import("gpio.zig");
+pub const Gpio = gpio.Gpio;
+
+const pin = @import("pin.zig");
+pub const Pin = pin.Pin;
 
 /// The microzig panic handler. Will disable interrupts and loop endlessly.
 /// Export this symbol from your main file to enable microzig:

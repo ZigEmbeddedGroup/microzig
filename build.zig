@@ -17,17 +17,25 @@ pub fn build(b: *std.build.Builder) void {
         BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = pkgs.chips.lpc1768 } },
     };
 
-    inline for (all_backings) |cfg| {
-        const exe = addEmbeddedExecutable(
-            b,
-            "test-minimal-" ++ cfg.name,
-            "tests/minimal.zig",
-            cfg.backing,
-        );
-        exe.setBuildMode(mode);
-        exe.install();
+    const Test = struct { name: []const u8, source: []const u8 };
+    const all_tests = [_]Test{
+        Test{ .name = "minimal", .source = "tests/minimal.zig" },
+        Test{ .name = "blinky", .source = "tests/blinky.zig" },
+    };
 
-        test_step.dependOn(&exe.step);
+    inline for (all_backings) |cfg| {
+        inline for (all_tests) |tst| {
+            const exe = addEmbeddedExecutable(
+                b,
+                "test-" ++ tst.name ++ "-" ++ cfg.name,
+                tst.source,
+                cfg.backing,
+            );
+            exe.setBuildMode(mode);
+            exe.install();
+
+            test_step.dependOn(&exe.step);
+        }
     }
 }
 
@@ -38,6 +46,8 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         .chip => |c| c,
         .board => |b| b.chip,
     };
+
+    const has_board = (backing == .board);
 
     const chip_package = Pkg{
         .name = "chip",
@@ -81,6 +91,58 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         break :blk builder.dupe(filename);
     };
 
+    const config_file_name = blk: {
+        const hash = hash_blk: {
+            var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
+
+            hasher.update(chip.name);
+            hasher.update(chip.path);
+            hasher.update(chip.cpu.name);
+            hasher.update(chip.cpu.path);
+
+            if (backing == .board) {
+                hasher.update(backing.board.name);
+                hasher.update(backing.board.path);
+            }
+
+            var mac: [16]u8 = undefined;
+            hasher.final(&mac);
+            break :hash_blk mac;
+        };
+
+        const file_prefix = "zig-cache/microzig/config-";
+        const file_suffix = ".zig";
+
+        var ld_file_name: [file_prefix.len + 2 * hash.len + file_suffix.len]u8 = undefined;
+        const filename = std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
+            file_prefix,
+            std.fmt.fmtSliceHexLower(&hash),
+            file_suffix,
+        }) catch unreachable;
+
+        break :blk builder.dupe(filename);
+    };
+
+    {
+        var config_file = std.fs.cwd().createFile(config_file_name, .{}) catch unreachable;
+        defer config_file.close();
+
+        var writer = config_file.writer();
+
+        writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
+        if (has_board) {
+            writer.print("pub const board_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
+        }
+
+        writer.print("pub const chip_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
+        writer.print("pub const cpu_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
+    }
+
+    const config_pkg = Pkg{
+        .name = "microzig-config",
+        .path = config_file_name,
+    };
+
     const linkerscript_gen = builder.addExecutable("linkerscript-gen", "src/tools/linkerscript-gen.zig");
     linkerscript_gen.addPackage(chip_package);
     linkerscript_gen.addPackage(Pkg{
@@ -113,24 +175,18 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
 
     switch (backing) {
         .chip => {
-            exe.addBuildOption(bool, "microzig_has_board", false);
-            exe.addBuildOption([]const u8, "microzig_chip_name", chip.name);
-            exe.addBuildOption([]const u8, "microzig_cpu_name", chip.cpu.name);
             exe.addPackage(Pkg{
                 .name = "microzig",
                 .path = "src/core/microzig.zig",
-                .dependencies = &[_]Pkg{chip_package},
+                .dependencies = &[_]Pkg{ config_pkg, chip_package },
             });
         },
         .board => |board| {
-            exe.addBuildOption(bool, "microzig_has_board", true);
-            exe.addBuildOption([]const u8, "microzig_board_name", board.name);
-            exe.addBuildOption([]const u8, "microzig_chip_name", chip.name);
-            exe.addBuildOption([]const u8, "microzig_cpu_name", chip.cpu.name);
             exe.addPackage(Pkg{
                 .name = "microzig",
                 .path = "src/core/microzig.zig",
                 .dependencies = &[_]Pkg{
+                    config_pkg,
                     chip_package,
                     Pkg{
                         .name = "board",
