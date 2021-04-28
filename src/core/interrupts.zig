@@ -4,17 +4,17 @@ const micro = @import("microzig.zig");
 /// Unmasks the given interrupt and enables its execution.
 /// Note that interrupts must be globally enabled with `sei()` as well.
 pub fn enable(comptime interrupt: anytype) void {
-    @panic("not implemented yet!");
+    @compileError("not implemented yet!");
 }
 
 /// Masks the given interrupt and disables its execution.
 pub fn disable(comptime interrupt: anytype) void {
-    @panic("not implemented yet!");
+    @compileError("not implemented yet!");
 }
 
 /// Returns true when the given interrupt is unmasked.
 pub fn isEnabled(comptime interrupt: anytype) bool {
-    @panic("not implemented yet!");
+    @compileError("not implemented yet!");
 }
 
 /// *Set Enable Interrupt*, will enable IRQs globally, but keep the masking done via
@@ -31,7 +31,7 @@ pub fn cli() void {
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
 pub fn areGloballyEnabled() bool {
-    @panic("not implemented yet!");
+    @compileError("not implemented yet!");
 }
 
 /// Enters a critical section and disables interrupts globally.

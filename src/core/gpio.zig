@@ -83,12 +83,30 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
         }
 
         // bi-di:
-        fn setDirection(dir: Direction, output_state: State) void {}
-        fn getDirection() Direction {}
+        fn setDirection(dir: Direction, output_state: State) void {
+            switch (dir) {
+                .output => {
+                    chip.gpio.setOutput(pin.source_pin);
+                    write(output_state);
+                },
+                .input => chip.gpio.setInput(pin.source_pin),
+            }
+        }
+        fn getDirection() Direction {
+            if (chip.gpio.isOutput(pin.source_pin)) {
+                return .output;
+            } else {
+                return .input;
+            }
+        }
 
         // open drain
-        fn setDrive(drive: Drive) void {}
-        fn getDrive() Drive {}
+        fn setDrive(drive: Drive) void {
+            @compileError("open drain not implemented yet!");
+        }
+        fn getDrive() Drive {
+            @compileError("open drain not implemented yet!");
+        }
     };
     // return only a subset of Generic for the requested pin.
     switch (mode) {

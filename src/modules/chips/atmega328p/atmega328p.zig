@@ -33,6 +33,13 @@ pub const gpio = struct {
         return @intToPtr(*volatile u8, 0x01);
     }
 
+    pub fn setOutput(comptime pin: type) void {
+        dirReg(pin).* |= (1 << pin.pin);
+    }
+    pub fn setInput(comptime pin: type) void {
+        dirReg(pin).* &= ~(@as(u8, 1) << pin.pin);
+    }
+
     pub fn read(comptime pin: type) u1 {
         return if ((pinReg(pin).* & (1 << pin.pin)) != 0)
             @as(u1, 1)

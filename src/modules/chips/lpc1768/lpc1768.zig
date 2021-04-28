@@ -26,6 +26,13 @@ pub fn parsePin(comptime spec: []const u8) type {
 }
 
 pub const gpio = struct {
+    pub fn setOutput(comptime pin: type) void {
+        pin.gpio_register.dir |= pin.gpio_mask;
+    }
+    pub fn setInput(comptime pin: type) void {
+        pin.gpio_register.dir &= ~pin.gpio_mask;
+    }
+
     pub fn read(comptime pin: type) u1 {
         return if ((pin.gpio_register.pin & pin.gpio_mask) != 0)
             @as(u1, 1)
