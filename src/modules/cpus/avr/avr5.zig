@@ -1,11 +1,27 @@
 const std = @import("std");
 
-pub fn sei() void {
+pub fn sei() callconv(.Inline) void {
     asm volatile ("sei");
 }
 
-pub fn cli() void {
+pub fn cli() callconv(.Inline) void {
     asm volatile ("cli");
+}
+
+pub fn sbi(comptime reg: u5, comptime bit: u3) callconv(.Inline) void {
+    asm volatile ("sbi %[reg], %[bit]"
+        :
+        : [reg] "I" (reg),
+          [bit] "I" (bit)
+    );
+}
+
+pub fn cbi(comptime reg: u5, comptime bit: u3) callconv(.Inline) void {
+    asm volatile ("cbi %[reg], %[bit]"
+        :
+        : [reg] "I" (reg),
+          [bit] "I" (bit)
+    );
 }
 
 pub const startup_logic = struct {

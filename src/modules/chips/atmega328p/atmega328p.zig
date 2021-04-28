@@ -42,18 +42,11 @@ pub const gpio = struct {
     }
 
     pub fn setOutput(comptime pin: type) void {
-        asm volatile ("sbi %[port], %[pin]"
-            :
-            : [port] "I" (regs(pin).dir_addr),
-              [pin] "I" (pin.pin)
-        );
+        cpu.sbi(regs(pin).dir_addr, pin.pin);
     }
+
     pub fn setInput(comptime pin: type) void {
-        asm volatile ("cbi %[port], %[pin]"
-            :
-            : [port] "I" (regs(pin).dir_addr),
-              [pin] "I" (pin.pin)
-        );
+        cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
     pub fn read(comptime pin: type) u1 {
@@ -65,25 +58,13 @@ pub const gpio = struct {
 
     pub fn write(comptime pin: type, state: u1) void {
         if (state == 1) {
-            asm volatile ("sbi %[port], %[pin]"
-                :
-                : [port] "I" (regs(pin).port_addr),
-                  [pin] "I" (pin.pin)
-            );
+            cpu.sbi(regs(pin).port_addr, pin.pin);
         } else {
-            asm volatile ("cbi %[port], %[pin]"
-                :
-                : [port] "I" (regs(pin).port_addr),
-                  [pin] "I" (pin.pin)
-            );
+            cpu.cbi(regs(pin).port_addr, pin.pin);
         }
     }
 
     pub fn toggle(comptime pin: type) void {
-        asm volatile ("sbi %[port], %[pin]"
-            :
-            : [port] "I" (regs(pin).pin_addr),
-              [pin] "I" (pin.pin)
-        );
+        cpu.sbi(regs(pin).pin_addr, pin.pin);
     }
 };
