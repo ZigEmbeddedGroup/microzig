@@ -30,8 +30,10 @@ pub fn main() void {
 }
 
 fn busyloop() void {
+    const limit = 100_000;
+
     var i: u24 = 0;
-    while (i < 100_000) : (i += 1) {
+    while (i < limit) : (i += 1) {
         @import("std").mem.doNotOptimizeAway(i);
     }
 }
