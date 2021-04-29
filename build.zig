@@ -23,6 +23,8 @@ pub fn build(b: *std.build.Builder) void {
         Test{ .name = "blinky", .source = "tests/blinky.zig" },
     };
 
+    const filter = b.option(std.Target.Cpu.Arch, "filter-target", "Filters for a certain cpu target");
+
     inline for (all_backings) |cfg| {
         inline for (all_tests) |tst| {
             const exe = addEmbeddedExecutable(
@@ -31,10 +33,13 @@ pub fn build(b: *std.build.Builder) void {
                 tst.source,
                 cfg.backing,
             );
-            exe.setBuildMode(mode);
-            exe.install();
 
-            test_step.dependOn(&exe.step);
+            if (filter == null or exe.target.cpu_arch.? == filter.?) {
+                exe.setBuildMode(mode);
+                exe.install();
+
+                test_step.dependOn(&exe.step);
+            }
         }
     }
 }
@@ -53,9 +58,11 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         .name = "chip",
         .path = chip.path,
         .dependencies = &[_]Pkg{
+            pkgs.mmio,
             Pkg{
                 .name = "cpu",
                 .path = chip.cpu.path,
+                .dependencies = &[_]Pkg{pkgs.mmio},
             },
             Pkg{
                 .name = "microzig-linker",
@@ -191,7 +198,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
                     Pkg{
                         .name = "board",
                         .path = board.path,
-                        .dependencies = &[_]Pkg{chip_package},
+                        .dependencies = &[_]Pkg{ chip_package, pkgs.mmio },
                     },
                 },
             });
@@ -225,6 +232,11 @@ pub const Backing = union(enum) {
 };
 
 const pkgs = struct {
+    const mmio = std.build.Pkg{
+        .name = "microzig-mmio",
+        .path = "src/core/mmio.zig",
+    };
+
     const cpus = struct {
         const avr5 = Cpu{
             .name = "AVR5",
