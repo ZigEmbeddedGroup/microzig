@@ -1,3 +1,4 @@
+
 const std = @import("std");
 
 pub fn mmio(addr: usize, comptime size: u8, comptime PackedT: type) *volatile MMIO(size, PackedT) {

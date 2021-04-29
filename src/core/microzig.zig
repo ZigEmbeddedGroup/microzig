@@ -15,11 +15,17 @@ pub const cpu = chip.cpu;
 /// Module that helps with interrupt handling.
 pub const interrupts = @import("interrupts.zig");
 
+/// Module that provides clock related functions
+pub const clock = @import("clock.zig");
+
 const gpio = @import("gpio.zig");
 pub const Gpio = gpio.Gpio;
 
 const pin = @import("pin.zig");
 pub const Pin = pin.Pin;
+
+const uart = @import("uart.zig");
+pub const Uart = uart.Uart;
 
 /// The microzig panic handler. Will disable interrupts and loop endlessly.
 /// Export this symbol from your main file to enable microzig:
@@ -72,7 +78,7 @@ export fn microzig_main() noreturn {
             // - Compute maximum size on the type of "err"
             // - Do not emit error names when std.builtin.strip is set.
             var msg: [64]u8 = undefined;
-            @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@tagName(err)}) catch @panic("main() returned error."));
+            @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@errorName(err)}) catch @panic("main() returned error."));
         };
     } else {
         main();

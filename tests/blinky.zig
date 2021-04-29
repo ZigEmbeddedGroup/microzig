@@ -6,13 +6,13 @@ pub const panic = micro.panic;
 // Configures the led_pin to a hardware pin
 const led_pin = switch (@import("builtin").cpu.arch) {
     .avr => if (micro.config.has_board)
-        micro.Pin("D13")
+        micro.Pin("D13") // Use D13 from Arduino Nano
     else
-        micro.Pin("PB5"),
+        micro.Pin("PB5"), // Use PB5 on raw ATmega328p
     .arm => if (micro.config.has_board)
-        micro.Pin("LED-1")
+        micro.Pin("LED-1") // Use LED-1 from mbed LPC1768
     else
-        micro.Pin("P1.18"),
+        micro.Pin("P1.18"), // Use P1.18 on raw LPC1768
     else => @compileError("Unsupported platform!"),
 };
 

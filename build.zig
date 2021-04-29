@@ -21,6 +21,7 @@ pub fn build(b: *std.build.Builder) void {
     const all_tests = [_]Test{
         Test{ .name = "minimal", .source = "tests/minimal.zig" },
         Test{ .name = "blinky", .source = "tests/blinky.zig" },
+        Test{ .name = "uart-sync", .source = "tests/uart-sync.zig" },
     };
 
     const filter = b.option(std.Target.Cpu.Arch, "filter-target", "Filters for a certain cpu target");
