@@ -22,7 +22,7 @@ class MMIOFileGenerator:
     def __init__(self, f):
         self.f = f
 
-    def generate_padding(self, count, name="padding", offset=0):
+    def generate_padding(self, count, name, offset):
         while count > 0:
             self.write_line(f"{name}{offset + count}: u1 = 0,")
             count = count - 1
@@ -55,12 +55,12 @@ class MMIOFileGenerator:
         for field in sorted(register.fields, key=lambda f: f.bit_offset):
             if last_offset != field.bit_offset:
                 self.generate_padding(field.bit_offset - last_offset, "reserved", reserved_index)
-                reserved_index = reserved_index + 1
+                reserved_index = reserved_index + field.bit_width
 
             last_offset = self.generate_register_field(field)
 
         if register.size is not None:
-            self.generate_padding(register.size - last_offset)
+            self.generate_padding(register.size - last_offset, "padding", 0)
 
         self.write_line("});")
 

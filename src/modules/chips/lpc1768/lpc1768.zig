@@ -1,4 +1,5 @@
 const std = @import("std");
+const micro = @import("microzig");
 const micro_linker = @import("microzig-linker");
 
 pub const cpu = @import("cpu");
@@ -61,3 +62,91 @@ pub const gpio = struct {
         }
     }
 };
+
+pub fn Uart(comptime index: usize) type {
+    return struct {
+        const UARTn = switch (index) {
+            0 => registers.UART0,
+            1 => registers.UART1,
+            2 => registers.UART2,
+            3 => registers.UART3,
+            else => @compileError("LPC1768 has 4 UARTs available."),
+        };
+        const Self = @This();
+
+        pub fn init(config: micro.uart.Config) !Self {
+            switch (index) {
+                0 => {
+                    registers.SYSCON.PCONP.modify(.{ .PCUART0 = true });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = 0 });
+                },
+                1 => {
+                    registers.SYSCON.PCONP.modify(.{ .PCUART1 = true });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = 0 });
+                },
+                2 => {
+                    registers.SYSCON.PCONP.modify(.{ .PCUART2 = true });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = 0 });
+                },
+                3 => {
+                    registers.SYSCON.PCONP.modify(.{ .PCUART3 = true });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = 0 });
+                },
+                else => unreachable,
+            }
+
+            UARTn.LCR.write(.{
+                // 8N1
+                .WLS = switch (config.data_bits) {
+                    .@"5" => 0b00,
+                    .@"6" => 0b01,
+                    .@"7" => 0b10,
+                    .@"8" => 0b11,
+                    .@"9" => return error.UnsupportedWordSize,
+                },
+                .SBS = switch (config.stop_bits) {
+                    .one => false,
+                    .two => true,
+                },
+                .PE = (config.parity != .none),
+                .PS = switch (config.parity) {
+                    .none, .odd => @as(u2, 0b00),
+                    .even => 0b01,
+                    .mark => 0b10,
+                    .space => 0b11,
+                },
+                .BC = false,
+                .DLAB = true,
+            });
+            UARTn.FCR.modify(.{ .FIFOEN = false });
+
+            const pclk = micro.clock.get() / 4;
+            const divider = (pclk / (16 * config.baud_rate));
+
+            const regval = std.math.cast(u16, divider) catch return error.UnsupportedBaudRate;
+
+            UARTn.DLL.write(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
+            UARTn.DLM.write(.{ .DLMSB = @truncate(u8, regval >> 0x08) });
+
+            UARTn.LCR.modify(.{ .DLAB = false });
+
+            return Self{};
+        }
+
+        pub fn canWrite(self: Self) bool {
+            return UARTn.LSR.read().THRE;
+        }
+        pub fn tx(self: Self, ch: u8) void {
+            while (!self.canWrite()) {} // Wait for Previous transmission
+            UARTn.THR.raw = ch; // Load the data to be transmitted
+        }
+
+        pub fn canRead(self: Self) bool {
+            return UARTn.LSR.read().RDR;
+        }
+        pub fn rx(self: Self) u8 {
+            while (!self.canRead()) {} // Wait till the data is received
+            return UARTn.RBR.read().RBR; // Read received data
+        }
+    };
+}

@@ -9,6 +9,9 @@ pub const config = @import("microzig-config");
 /// Provides access to the low level features of the current microchip.
 pub const chip = @import("chip");
 
+/// Provides access to board features or is `void` when no board is present.
+pub const board = if (config.has_board) @import("board") else void;
+
 /// Provides access to the low level features of the CPU.
 pub const cpu = chip.cpu;
 
@@ -18,13 +21,13 @@ pub const interrupts = @import("interrupts.zig");
 /// Module that provides clock related functions
 pub const clock = @import("clock.zig");
 
-const gpio = @import("gpio.zig");
+pub const gpio = @import("gpio.zig");
 pub const Gpio = gpio.Gpio;
 
-const pin = @import("pin.zig");
+pub const pin = @import("pin.zig");
 pub const Pin = pin.Pin;
 
-const uart = @import("uart.zig");
+pub const uart = @import("uart.zig");
 pub const Uart = uart.Uart;
 
 /// The microzig panic handler. Will disable interrupts and loop endlessly.

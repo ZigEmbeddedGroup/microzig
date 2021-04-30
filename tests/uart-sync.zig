@@ -10,7 +10,7 @@ const uart_rxd_pin = micro.Pin("P0.16");
 pub const cpu_frequency: u32 = 10_000_000; // 10 MHz
 
 pub fn main() !void {
-    var debug_port = micro.Uart(0).init(.{
+    var debug_port = try micro.Uart(0).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
         .parity = .none, // { none, even, odd, mark, space }

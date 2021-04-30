@@ -2618,12 +2618,12 @@ pub const RTC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         MINUTES: u6, // bit offset: 8 desc: Minutes value in the range of 0 to 59
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
         HOURS: u5, // bit offset: 16 desc: Hours value in the range of 0 to 23
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         DOW: u3, // bit offset: 24 desc: Day of week value in the range of 0 to 6
         padding5: u1 = 0,
         padding4: u1 = 0,
@@ -2638,10 +2638,10 @@ pub const RTC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         MONTH: u4, // bit offset: 8 desc: Month value in the range of 1 to 12.
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         YEAR: u12, // bit offset: 16 desc: Year value in the range of 0 to 4095.
         padding4: u1 = 0,
         padding3: u1 = 0,
@@ -3699,22 +3699,22 @@ pub const PINCONNECT = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         P1_4: u2, // bit offset: 8 desc: Pin function select P1.4.
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
-        P1_8: u2, // bit offset: 16 desc: Pin function select P1.8.
-        P1_9: u2, // bit offset: 18 desc: Pin function select P1.9.
-        P1_10: u2, // bit offset: 20 desc: Pin function select P1.10.
-        P1_14: u2, // bit offset: 22 desc: Pin function select P1.14.
         reserved8: u1 = 0,
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
         reserved4: u1 = 0,
         reserved3: u1 = 0,
+        P1_8: u2, // bit offset: 16 desc: Pin function select P1.8.
+        P1_9: u2, // bit offset: 18 desc: Pin function select P1.9.
+        P1_10: u2, // bit offset: 20 desc: Pin function select P1.10.
+        P1_14: u2, // bit offset: 22 desc: Pin function select P1.14.
+        reserved10: u1 = 0,
+        reserved9: u1 = 0,
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
+        reserved5: u1 = 0,
         P1_15: u2, // bit offset: 30 desc: Pin function select P1.15.
     });
     // byte offset: 12 Pin function select register 3.
@@ -3913,21 +3913,21 @@ pub const PINCONNECT = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         P1_04MODE: u2, // bit offset: 8 desc: Port 1 pin 4 control.
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
-        P1_08MODE: u2, // bit offset: 16 desc: Port 1 pin 8 control.
-        P1_09MODE: u2, // bit offset: 18 desc: Port 1 pin 9 control.
-        P1_10MODE: u2, // bit offset: 20 desc: Port 1 pin 10 control.
         reserved8: u1 = 0,
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
         reserved4: u1 = 0,
         reserved3: u1 = 0,
+        P1_08MODE: u2, // bit offset: 16 desc: Port 1 pin 8 control.
+        P1_09MODE: u2, // bit offset: 18 desc: Port 1 pin 9 control.
+        P1_10MODE: u2, // bit offset: 20 desc: Port 1 pin 10 control.
+        reserved10: u1 = 0,
+        reserved9: u1 = 0,
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
+        reserved5: u1 = 0,
         P1_14MODE: u2, // bit offset: 28 desc: Port 1 pin 14 control.
         P1_15MODE: u2, // bit offset: 30 desc: Port 1 pin 15 control.
     });
@@ -4596,18 +4596,18 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin selected by the SEL field, as it falls within the range of VREFP to VSS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
+        reserved15: u1 = 0,
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
         CHN: u3, // bit offset: 24 desc: These bits contain the channel from which the RESULT bits were converted (e.g. 000 identifies channel 0, 001 channel 1...).
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits. This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read and when the ADCR is written. If the ADCR is written while a conversion is still in progress, this bit is set and a new conversion is started.
     });
@@ -4653,20 +4653,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4677,20 +4677,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4701,20 +4701,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4725,20 +4725,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4749,20 +4749,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4773,20 +4773,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4797,20 +4797,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -4821,20 +4821,20 @@ pub const ADC = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RESULT: u12, // bit offset: 4 desc: When DONE is 1, this field contains a binary fraction representing the voltage on the AD0[n] pin, as it falls within the range of VREFP to V SS. Zero in the field indicates that the voltage on the input pin was less than, equal to, or close to that on VSS, while 0xFFF indicates that the voltage on the input was close to, equal to, or greater than that on VREFP.
+        reserved26: u1 = 0,
+        reserved25: u1 = 0,
+        reserved24: u1 = 0,
+        reserved23: u1 = 0,
+        reserved22: u1 = 0,
+        reserved21: u1 = 0,
+        reserved20: u1 = 0,
+        reserved19: u1 = 0,
+        reserved18: u1 = 0,
+        reserved17: u1 = 0,
+        reserved16: u1 = 0,
         reserved15: u1 = 0,
         reserved14: u1 = 0,
         reserved13: u1 = 0,
-        reserved12: u1 = 0,
-        reserved11: u1 = 0,
-        reserved10: u1 = 0,
-        reserved9: u1 = 0,
-        reserved8: u1 = 0,
-        reserved7: u1 = 0,
-        reserved6: u1 = 0,
-        reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         OVERRUN: bool, // bit offset: 30 desc: This bit is 1 in burst mode if the results of one or more conversions was (were) lost and overwritten before the conversion that produced the result in the RESULT bits.This bit is cleared by reading this register.
         DONE: bool, // bit offset: 31 desc: This bit is set to 1 when an A/D conversion completes. It is cleared when this register is read.
     });
@@ -7581,6 +7581,9 @@ pub const CAN1 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: The field contains the Data Length Code (DLC) field of the current received message. When RTR = 0, this is related to the number of data bytes available in the CANRDA and CANRDB registers as follows: 0000-0111 = 0 to 7 bytes1000-1111 = 8 bytes With RTR = 1, this value indicates the number of data bytes requested to be sent back, with the same encoding.
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -7588,9 +7591,6 @@ pub const CAN1 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This bit contains the Remote Transmission Request bit of the current received message. 0 indicates a Data Frame, in which (if DLC is non-zero) data can be read from the CANRDA and possibly the CANRDB registers. 1 indicates a Remote frame, in which case the DLC value identifies the number of data bytes requested to be sent using the same Identifier.
         FF: bool, // bit offset: 31 desc: A 0 in this bit indicates that the current received message included an 11-bit Identifier, while a 1 indicates a 29-bit Identifier. This affects the contents of the CANid register described below.
     });
@@ -7645,6 +7645,9 @@ pub const CAN1 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -7652,9 +7655,6 @@ pub const CAN1 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -7688,6 +7688,9 @@ pub const CAN1 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -7695,9 +7698,6 @@ pub const CAN1 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -7731,6 +7731,9 @@ pub const CAN1 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -7738,9 +7741,6 @@ pub const CAN1 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8007,6 +8007,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: The field contains the Data Length Code (DLC) field of the current received message. When RTR = 0, this is related to the number of data bytes available in the CANRDA and CANRDB registers as follows: 0000-0111 = 0 to 7 bytes1000-1111 = 8 bytes With RTR = 1, this value indicates the number of data bytes requested to be sent back, with the same encoding.
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8014,9 +8017,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This bit contains the Remote Transmission Request bit of the current received message. 0 indicates a Data Frame, in which (if DLC is non-zero) data can be read from the CANRDA and possibly the CANRDB registers. 1 indicates a Remote frame, in which case the DLC value identifies the number of data bytes requested to be sent using the same Identifier.
         FF: bool, // bit offset: 31 desc: A 0 in this bit indicates that the current received message included an 11-bit Identifier, while a 1 indicates a 29-bit Identifier. This affects the contents of the CANid register described below.
     });
@@ -8071,6 +8071,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8078,9 +8081,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8096,6 +8096,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8103,9 +8106,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8157,6 +8157,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8164,9 +8167,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8182,6 +8182,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8189,9 +8192,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8243,6 +8243,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8250,9 +8253,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -8268,6 +8268,9 @@ pub const CAN2 = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         DLC: u4, // bit offset: 16 desc: Data Length Code. This value is sent in the DLC field of the next transmit message. In addition, if RTR = 0, this value controls the number of Data bytes sent in the next transmit message, from the CANxTDA and CANxTDB registers: 0000-0111 = 0-7 bytes 1xxx = 8 bytes
+        reserved14: u1 = 0,
+        reserved13: u1 = 0,
+        reserved12: u1 = 0,
         reserved11: u1 = 0,
         reserved10: u1 = 0,
         reserved9: u1 = 0,
@@ -8275,9 +8278,6 @@ pub const CAN2 = extern struct {
         reserved7: u1 = 0,
         reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         RTR: bool, // bit offset: 30 desc: This value is sent in the RTR bit of the next transmit message. If this bit is 0, the number of data bytes called out by the DLC field are sent from the CANxTDA and CANxTDB registers. If this bit is 1, a Remote Frame is sent, containing a request for that number of bytes.
         FF: bool, // bit offset: 31 desc: If this bit is 0, the next transmit message will be sent with an 11-bit Identifier (standard frame format), while if it's 1, the message will be sent with a 29-bit Identifier (extended frame format).
     });
@@ -11001,10 +11001,10 @@ pub const I2S = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RX_LEVEL: u4, // bit offset: 8 desc: Reflects the current level of the Receive FIFO.
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         TX_LEVEL: u4, // bit offset: 16 desc: Reflects the current level of the Transmit FIFO.
         padding12: u1 = 0,
         padding11: u1 = 0,
@@ -11030,10 +11030,10 @@ pub const I2S = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RX_DEPTH_DMA1: u4, // bit offset: 8 desc: Set the FIFO level that triggers a receive DMA request on DMA1.
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         TX_DEPTH_DMA1: u4, // bit offset: 16 desc: Set the FIFO level that triggers a transmit DMA request on DMA1.
         padding12: u1 = 0,
         padding11: u1 = 0,
@@ -11059,10 +11059,10 @@ pub const I2S = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RX_DEPTH_DMA2: u4, // bit offset: 8 desc: Set the FIFO level that triggers a receive DMA request on DMA2.
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         TX_DEPTH_DMA2: u4, // bit offset: 16 desc: Set the FIFO level that triggers a transmit DMA request on DMA2.
         padding12: u1 = 0,
         padding11: u1 = 0,
@@ -11088,10 +11088,10 @@ pub const I2S = extern struct {
         reserved2: u1 = 0,
         reserved1: u1 = 0,
         RX_DEPTH_IRQ: u4, // bit offset: 8 desc: Set the FIFO level on which to create an irq request.
+        reserved8: u1 = 0,
+        reserved7: u1 = 0,
+        reserved6: u1 = 0,
         reserved5: u1 = 0,
-        reserved4: u1 = 0,
-        reserved3: u1 = 0,
-        reserved2: u1 = 0,
         TX_DEPTH_IRQ: u4, // bit offset: 16 desc: Set the FIFO level on which to create an irq request.
         padding12: u1 = 0,
         padding11: u1 = 0,
@@ -13017,8 +13017,8 @@ pub const SYSCON = extern struct {
         PCLK_PWM1: u2, // bit offset: 12 desc: Peripheral clock selection for PWM1.
         PCLK_I2C0: u2, // bit offset: 14 desc: Peripheral clock selection for I2C0.
         PCLK_SPI: u2, // bit offset: 16 desc: Peripheral clock selection for SPI.
+        reserved4: u1 = 0,
         reserved3: u1 = 0,
-        reserved2: u1 = 0,
         PCLK_SSP1: u2, // bit offset: 20 desc: Peripheral clock selection for SSP1.
         PCLK_DAC: u2, // bit offset: 22 desc: Peripheral clock selection for DAC.
         PCLK_ADC: u2, // bit offset: 24 desc: Peripheral clock selection for ADC.
@@ -13041,8 +13041,8 @@ pub const SYSCON = extern struct {
         PCLK_UART3: u2, // bit offset: 18 desc: Peripheral clock selection for UART3.
         PCLK_I2C2: u2, // bit offset: 20 desc: Peripheral clock selection for I2C2.
         PCLK_I2S: u2, // bit offset: 22 desc: Peripheral clock selection for I2S.
+        reserved4: u1 = 0,
         reserved3: u1 = 0,
-        reserved2: u1 = 0,
         PCLK_RIT: u2, // bit offset: 26 desc: Peripheral clock selection for Repetitive Interrupt Timer.
         PCLK_SYSCON: u2, // bit offset: 28 desc: Peripheral clock selection for the System Control block.
         PCLK_MC: u2, // bit offset: 30 desc: Peripheral clock selection for the Motor Control PWM.

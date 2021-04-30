@@ -48,6 +48,11 @@ pub fn build(b: *std.build.Builder) void {
 fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: []const u8, backing: Backing) *std.build.LibExeObjStep {
     const Pkg = std.build.Pkg;
 
+    const microzig_base = Pkg{
+        .name = "microzig",
+        .path = "src/core/microzig.zig",
+    };
+
     const chip = switch (backing) {
         .chip => |c| c,
         .board => |b| b.chip,
@@ -59,11 +64,12 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         .name = "chip",
         .path = chip.path,
         .dependencies = &[_]Pkg{
+            microzig_base,
             pkgs.mmio,
             Pkg{
                 .name = "cpu",
                 .path = chip.cpu.path,
-                .dependencies = &[_]Pkg{pkgs.mmio},
+                .dependencies = &[_]Pkg{ microzig_base, pkgs.mmio },
             },
             Pkg{
                 .name = "microzig-linker",
@@ -184,22 +190,22 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     switch (backing) {
         .chip => {
             exe.addPackage(Pkg{
-                .name = "microzig",
-                .path = "src/core/microzig.zig",
+                .name = microzig_base.name,
+                .path = microzig_base.path,
                 .dependencies = &[_]Pkg{ config_pkg, chip_package },
             });
         },
         .board => |board| {
             exe.addPackage(Pkg{
-                .name = "microzig",
-                .path = "src/core/microzig.zig",
+                .name = microzig_base.name,
+                .path = microzig_base.path,
                 .dependencies = &[_]Pkg{
                     config_pkg,
                     chip_package,
                     Pkg{
                         .name = "board",
                         .path = board.path,
-                        .dependencies = &[_]Pkg{ chip_package, pkgs.mmio },
+                        .dependencies = &[_]Pkg{ microzig_base, chip_package, pkgs.mmio },
                     },
                 },
             });

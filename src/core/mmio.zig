@@ -1,4 +1,3 @@
-
 const std = @import("std");
 
 pub fn mmio(addr: usize, comptime size: u8, comptime PackedT: type) *volatile MMIO(size, PackedT) {
@@ -32,20 +31,20 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
             addr.* = @bitCast(IntT, val);
         }
 
-        pub fn set(addr: *volatile Self, fields: anytype) void {
-            var val = read();
+        pub fn modify(addr: *volatile Self, fields: anytype) void {
+            var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
-            write(val);
+            write(addr, val);
         }
 
         pub fn toggle(addr: *volatile Self, fields: anytype) void {
-            var val = read();
+            var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, @tagName(field.default_value.?)) = !@field(val, @tagName(field.default_value.?));
             }
-            write(val);
+            write(addr, val);
         }
     };
 }
