@@ -57,12 +57,12 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
         }
 
         fn read() State {
-            return @intToEnum(State, chip.gpio.read(pin.source_pin));
+            return chip.gpio.read(pin.source_pin);
         }
 
         // outputs:
         fn write(state: State) void {
-            chip.gpio.write(pin.source_pin, @enumToInt(state));
+            chip.gpio.write(pin.source_pin, state);
         }
 
         fn setToHigh() void {

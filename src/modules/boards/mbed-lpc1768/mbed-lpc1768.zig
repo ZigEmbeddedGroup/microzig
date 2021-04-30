@@ -1,4 +1,35 @@
 pub const chip = @import("chip");
+pub const micro = @import("microzig");
+
+pub fn debugWrite(string: []const u8) void {
+    const clk_pin = micro.Pin("DIP5");
+    const dat_pin = micro.Pin("DIP6");
+
+    const clk = micro.Gpio(clk_pin, .{ .mode = .output, .initial_state = .low });
+    const dat = micro.Gpio(dat_pin, .{ .mode = .output, .initial_state = .low });
+
+    clk.init();
+    dat.init();
+
+    micro.debug.busySleep(1_000);
+
+    for (string) |c| {
+        comptime var i: usize = 128;
+        inline while (i > 0) : (i = i >> 1) {
+            if ((c & i) != 0) {
+                dat.write(.high);
+            } else {
+                dat.write(.low);
+            }
+            clk.write(.high);
+            micro.debug.busySleep(1_000);
+            clk.write(.low);
+            micro.debug.busySleep(1_000);
+        }
+    }
+    dat.write(.low);
+    clk.write(.low);
+}
 
 pub const pin_map = .{
     // Onboard-LEDs

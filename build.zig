@@ -185,7 +185,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
 
-    exe.bundle_compiler_rt = false;
+    // exe.bundle_compiler_rt = false;
 
     switch (backing) {
         .chip => {

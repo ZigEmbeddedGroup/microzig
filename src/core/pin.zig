@@ -28,7 +28,7 @@ pub fn Pin(comptime spec: []const u8) type {
         pub const source_pin = pin;
 
         pub fn route(target: pin.Targets) void {
-            unreachable;
+            chip.routePin(source_pin, target);
         }
     };
 }
