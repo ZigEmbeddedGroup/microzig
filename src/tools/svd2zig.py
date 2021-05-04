@@ -27,14 +27,32 @@ class MMIOFileGenerator:
             self.write_line(f"{name}{offset + count}: u1 = 0,")
             count = count - 1
 
+    def generate_enumerated_field(self, field):
+        '''
+        returns something like:
+            name: enum(u<size>){ // bit offset: 0 desc: foo description
+              name = value, // desc: ...
+              name = value, // desc:
+              _, // non_exhustive
+            },
+
+        '''
+        field.description = cleanup_description(field.description)
+        self.write_line(f"{field.name}:enum(u{field.bit_width}){{// bit offset: {field.bit_offset} desc: {field.description}")
+        for e in field.enumerated_values:
+            e.description = cleanup_description(e.description)
+            self.write_line(f"@\"{e.name}\" = {e.value}, // desc: {e.description}")
+        self.write_line("_, // non-exhaustive")
+        self.write_line("},")
+        return field.bit_offset + field.bit_width
+
     def generate_register_field(self, field):
         '''
         returns something like:
             name: u<size>, // bit offset: 0 desc: foo description
         '''
         field.description = cleanup_description(field.description)
-        field_type = f"u{field.bit_width}" if field.bit_width != 1 else 'bool'
-        self.write_line(f"{field.name}:{field_type},// bit offset: {field.bit_offset} desc: {field.description}")
+        self.write_line(f"{field.name}:u{field.bit_width},// bit offset: {field.bit_offset} desc: {field.description}")
         return field.bit_offset + field.bit_width
 
     def generate_register_declaration(self, register):
@@ -56,15 +74,22 @@ class MMIOFileGenerator:
             if last_offset != field.bit_offset:
                 self.generate_padding(field.bit_offset - last_offset, "reserved", reserved_index)
                 reserved_index = reserved_index + field.bit_width
+            if field.is_enumerated_type:
+                last_offset = self.generate_enumerated_field(field)
+            else:
+                last_offset = self.generate_register_field(field)
 
-            last_offset = self.generate_register_field(field)
+        if size is not None:
+            if len(register.fields) == 0:
+                self.write_line(f"raw: u{size}, // placeholder field")
+            else:
+                self.generate_padding(size - last_offset, "padding", 0)
 
-        if register.size is not None:
-            self.generate_padding(register.size - last_offset, "padding", 0)
 
         self.write_line("});")
 
     def generate_peripherial_declaration(self, peripherial):
+        # TODO: write peripherial description
         self.write_line(f"pub const {peripherial.name} = extern struct {{")
         self.write_line(f"pub const Address: u32 = 0x{peripherial.base_address:08x};")
 
