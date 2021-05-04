@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import sys
-import io
 import subprocess
 import re
 
 from cmsis_svd.parser import SVDParser
+
 
 def cleanup_description(description):
     if description is None:
@@ -12,11 +12,13 @@ def cleanup_description(description):
 
     return ' '.join(description.replace('\n', ' ').split())
 
-# register names in from Nordic SVDs are using foo[n] for couple of registers
-# and also for somereaons there are %s in the reigster names
-name_regex = re.compile(r"\[([^\]]+)]")
+
+# register names in some SVDs are using foo[n] for registers names
+# and also for some reaons there are string formatters like %s in the reigster names
+NAME_REGEX = re.compile(r"\[([^\]]+)]")
 def cleanup_name(name):
-    return name_regex.sub(r"_\1", name).replace("%", "_")
+    return NAME_REGEX.sub(r"_\1", name).replace("%", "_")
+
 
 class MMIOFileGenerator:
     def __init__(self, f):
@@ -33,16 +35,27 @@ class MMIOFileGenerator:
             name: enum(u<size>){ // bit offset: 0 desc: foo description
               name = value, // desc: ...
               name = value, // desc:
-              _, // non_exhustive
+              _, // non-exhustive
             },
 
         '''
         field.description = cleanup_description(field.description)
         self.write_line(f"{field.name}:enum(u{field.bit_width}){{// bit offset: {field.bit_offset} desc: {field.description}")
+
+        total_fields_with_values = 0
         for e in field.enumerated_values:
             e.description = cleanup_description(e.description)
-            self.write_line(f"@\"{e.name}\" = {e.value}, // desc: {e.description}")
-        self.write_line("_, // non-exhaustive")
+            if e.value is None:
+                # reserved fields doesn't have a value so we have to comment them out
+                self.write_line(f"// @\"{e.name}\", // desc: {e.description}")
+            else:
+                total_fields_with_values = total_fields_with_values + 1
+                self.write_line(f"@\"{e.name}\" = {e.value}, // desc: {e.description}")
+
+        # if the fields doesn't use all possible values make the enum non-exhaustive
+        if total_fields_with_values < 2**field.bit_width:
+            self.write_line("_, // non-exhaustive")
+
         self.write_line("},")
         return field.bit_offset + field.bit_width
 
@@ -109,7 +122,6 @@ class MMIOFileGenerator:
 
     def write_line(self, line):
         self.f.write(line + "\n")
-
 
 
 def main():
