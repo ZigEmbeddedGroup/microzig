@@ -45,7 +45,7 @@ class MMIOFileGenerator:
         total_fields_with_values = 0
         for e in field.enumerated_values:
             e.description = cleanup_description(e.description)
-            if e.value is None:
+            if e.value is None or e.name == "RESERVED":
                 # reserved fields doesn't have a value so we have to comment them out
                 self.write_line(f"// @\"{e.name}\", // desc: {e.description}")
             else:
@@ -84,9 +84,16 @@ class MMIOFileGenerator:
         last_offset = 0
         reserved_index = 0
         for field in sorted(register.fields, key=lambda f: f.bit_offset):
+            # workaround for NXP SVD which has overleaping reserved fields
+            if field.name == "RESERVED":
+                self.write_line(f"// RESERVED: u{field.bit_width}, // bit offset: {field.bit_offset} desc: {field.description}")
+                continue
+
             if last_offset != field.bit_offset:
-                self.generate_padding(field.bit_offset - last_offset, "reserved", reserved_index)
-                reserved_index = reserved_index + field.bit_width
+                reserved_size = field.bit_offset - last_offset
+                self.generate_padding(reserved_size, "reserved", reserved_index)
+                reserved_index = reserved_index + reserved_size
+
             if field.is_enumerated_type:
                 last_offset = self.generate_enumerated_field(field)
             else:
@@ -97,7 +104,6 @@ class MMIOFileGenerator:
                 self.write_line(f"raw: u{size}, // placeholder field")
             else:
                 self.generate_padding(size - last_offset, "padding", 0)
-
 
         self.write_line("});")
 

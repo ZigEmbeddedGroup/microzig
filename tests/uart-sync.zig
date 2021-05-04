@@ -28,7 +28,7 @@ const PLL = struct {
 
     fn overclock_flash(timing: u5) void {
         micro.chip.registers.SYSCON.FLASHCFG.write(.{
-            .FLASHTIM = @intCast(u4, timing - 1),
+            .FLASHTIM = @intToEnum(@TypeOf(micro.chip.registers.SYSCON.FLASHCFG.read().FLASHTIM), @intCast(u4, timing - 1)),
         });
     }
     fn feed_pll() callconv(.Inline) void {
@@ -39,12 +39,12 @@ const PLL = struct {
     fn overclock_pll(divider: u8) void {
         // PLL einrichten für RC
         micro.chip.registers.SYSCON.PLL0CON.write(.{
-            .PLLE0 = false,
-            .PLLC0 = false,
+            .PLLE0 = 0,
+            .PLLC0 = 0,
         });
         feed_pll();
 
-        micro.chip.registers.SYSCON.CLKSRCSEL.write(.{ .CLKSRC = 0 }); // RC-Oszillator als Quelle
+        micro.chip.registers.SYSCON.CLKSRCSEL.write(.{ .CLKSRC = .SELECTS_THE_INTERNAL }); // RC-Oszillator als Quelle
         micro.chip.registers.SYSCON.PLL0CFG.write(.{
             // SysClk = (4MHz / 2) * (2 * 75) = 300 MHz
             .MSEL0 = 74,
@@ -55,7 +55,7 @@ const PLL = struct {
 
         feed_pll();
 
-        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLE0 = true }); // PLL einschalten
+        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLE0 = 1 }); // PLL einschalten
         feed_pll();
 
         var i: usize = 0;
@@ -63,7 +63,7 @@ const PLL = struct {
             micro.cpu.nop();
         }
 
-        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLC0 = true });
+        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLC0 = 1 });
         feed_pll();
     }
 };
@@ -95,8 +95,8 @@ pub fn main() !void {
     var debug_port = micro.Uart(1).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
-        .parity = .none, // { none, even, odd, mark, space }
-        .data_bits = .@"8", // 5, 6, 7, 8, or 9 data bits
+        .parity = null,
+        .data_bits = .eight,
     }) catch |err| {
         led1.write(if (err == error.UnsupportedBaudRate) micro.gpio.State.low else .high);
         led2.write(if (err == error.UnsupportedParity) micro.gpio.State.low else .high);

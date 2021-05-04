@@ -55,7 +55,7 @@ pub fn parsePin(comptime spec: []const u8) type {
 
 pub fn routePin(comptime pin: type, function: PinTarget) void {
     var val = pin.regs.pinsel_reg.read();
-    @field(val, pin.regs.pinsel_field) = @enumToInt(function);
+    @field(val, pin.regs.pinsel_field) = @intToEnum(@TypeOf(@field(val, pin.regs.pinsel_field)), @enumToInt(function));
     pin.regs.pinsel_reg.write(val);
 }
 
@@ -83,6 +83,30 @@ pub const gpio = struct {
     }
 };
 
+pub const uart = struct {
+    const RegisterDataBitsEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .WLS).field_type;
+    pub const DataBits = enum(u2) {
+        five = @enumToInt(RegisterDataBitsEnum.@"5_BIT_CHARACTER_LENG"),
+        six = @enumToInt(RegisterDataBitsEnum.@"6_BIT_CHARACTER_LENG"),
+        seven = @enumToInt(RegisterDataBitsEnum.@"7_BIT_CHARACTER_LENG"),
+        eight = @enumToInt(RegisterDataBitsEnum.@"8_BIT_CHARACTER_LENG"),
+    };
+
+    const RegisterStopBitEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .SBS).field_type;
+    pub const StopBits = enum(u1) {
+        one = @enumToInt(RegisterStopBitEnum.@"1_STOP_BIT_"),
+        two = @enumToInt(RegisterStopBitEnum.@"2_STOP_BITS_1_5_IF_"),
+    };
+
+    const RegisterParityEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .PS).field_type;
+    pub const Parity = enum(u2) {
+        odd = @enumToInt(RegisterParityEnum.@"ODD_PARITY_NUMBER_O"),
+        even = @enumToInt(RegisterParityEnum.@"EVEN_PARITY_NUMBER_"),
+        mark = @enumToInt(RegisterParityEnum.@"FORCED_1_STICK_PARIT"),
+        space = @enumToInt(RegisterParityEnum.@"FORCED_0_STICK_PARIT"),
+    };
+};
+
 pub fn Uart(comptime index: usize) type {
     return struct {
         const UARTn = switch (index) {
@@ -98,20 +122,20 @@ pub fn Uart(comptime index: usize) type {
             micro.debug.write("0");
             switch (index) {
                 0 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART0 = true });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = 0 });
+                    registers.SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = .CCLK_DIV_4 });
                 },
                 1 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART1 = true });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = 0 });
+                    registers.SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = .CCLK_DIV_4 });
                 },
                 2 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART2 = true });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = 0 });
+                    registers.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = .CCLK_DIV_4 });
                 },
                 3 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART3 = true });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = 0 });
+                    registers.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
+                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = .CCLK_DIV_4 });
                 },
                 else => unreachable,
             }
@@ -119,29 +143,17 @@ pub fn Uart(comptime index: usize) type {
 
             UARTn.LCR.write(.{
                 // 8N1
-                .WLS = switch (config.data_bits) {
-                    .@"5" => 0b00,
-                    .@"6" => 0b01,
-                    .@"7" => 0b10,
-                    .@"8" => 0b11,
-                    .@"9" => return error.UnsupportedWordSize,
-                },
-                .SBS = switch (config.stop_bits) {
-                    .one => false,
-                    .two => true,
-                },
-                .PE = (config.parity != .none),
-                .PS = switch (config.parity) {
-                    .none, .odd => @as(u2, 0b00),
-                    .even => 0b01,
-                    .mark => 0b10,
-                    .space => 0b11,
-                },
-                .BC = false,
-                .DLAB = true,
+                .WLS = @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .WLS).field_type, @enumToInt(config.data_bits)),
+                .SBS = @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .SBS).field_type, @enumToInt(config.stop_bits)),
+                .PE = if (config.parity) |_| .ENABLE_PARITY_GENERA else .DISABLE_PARITY_GENER,
+                .PS = if (config.parity) |p| @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .PS).field_type, @enumToInt(p)) else .ODD_PARITY_NUMBER_O,
+                .BC = .DISABLE_BREAK_TRANSM,
+                .DLAB = .ENABLE_ACCESS_TO_DIV,
             });
             micro.debug.write("2");
-            UARTn.FCR.modify(.{ .FIFOEN = false });
+
+            // TODO: UARTN_FIFOS_ARE_DISA is not available in all uarts
+            //UARTn.FCR.modify(.{ .FIFOEN = .UARTN_FIFOS_ARE_DISA });
 
             micro.debug.writer().print("clock: {} baud: {} ", .{
                 micro.clock.get(),
@@ -156,13 +168,16 @@ pub fn Uart(comptime index: usize) type {
             UARTn.DLL.write(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
             UARTn.DLM.write(.{ .DLMSB = @truncate(u8, regval >> 0x08) });
 
-            UARTn.LCR.modify(.{ .DLAB = false });
+            UARTn.LCR.modify(.{ .DLAB = .DISABLE_ACCESS_TO_DI });
 
             return Self{};
         }
 
         pub fn canWrite(self: Self) bool {
-            return UARTn.LSR.read().THRE;
+            return switch (UARTn.LSR.read().THRE) {
+                .VALID => true,
+                .THR_IS_EMPTY_ => false,
+            };
         }
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
@@ -170,7 +185,10 @@ pub fn Uart(comptime index: usize) type {
         }
 
         pub fn canRead(self: Self) bool {
-            return UARTn.LSR.read().RDR;
+            return switch (UARTn.LSR.read().RDR) {
+                .EMPTY => false,
+                .NOTEMPTY => true,
+            };
         }
         pub fn rx(self: Self) u8 {
             while (!self.canRead()) {} // Wait till the data is received

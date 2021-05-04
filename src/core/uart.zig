@@ -56,27 +56,15 @@ pub fn Uart(comptime index: usize) type {
 pub const Config = struct {
     baud_rate: u32,
     stop_bits: StopBits = .one,
-    parity: Parity = .none,
-    data_bits: DataBits = .@"8",
+    parity: ?Parity = null,
+    data_bits: DataBits = .eight,
 };
 
-pub const DataBits = enum {
-    @"5",
-    @"6",
-    @"7",
-    @"8",
-    @"9",
-};
+// TODO: comptime verify that the enums are valid
+pub const DataBits = chip.uart.DataBits;
+pub const StopBits = chip.uart.StopBits;
+pub const Parity = chip.uart.Parity;
 
-pub const StopBits = enum { one, two };
-
-pub const Parity = enum {
-    none,
-    even,
-    odd,
-    mark,
-    space,
-};
 pub const InitError = error{
     UnsupportedWordSize,
     UnsupportedParity,

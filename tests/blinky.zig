@@ -4,16 +4,16 @@ const micro = @import("microzig");
 pub const panic = micro.panic;
 
 // Configures the led_pin to a hardware pin
-const led_pin = switch (@import("builtin").cpu.arch) {
-    .avr => if (micro.config.has_board)
-        micro.Pin("D13") // Use D13 from Arduino Nano
-    else
-        micro.Pin("PB5"), // Use PB5 on raw ATmega328p
-    .arm => if (micro.config.has_board)
-        micro.Pin("LED-1") // Use LED-1 from mbed LPC1768
-    else
-        micro.Pin("P1.18"), // Use P1.18 on raw LPC1768
-    else => @compileError("Unsupported platform!"),
+const led_pin = if (micro.config.has_board)
+    switch (micro.config.board_name) {
+        .@"Arduino Nano" => micro.Pin("D13"),
+        .@"mbed LPC1768" => micro.Pin("LED-1"),
+        else => @compileError("unknown board"),
+    }
+else switch (micro.config.chip_name) {
+    .@"ATmega328p" => micro.Pin("PB5"),
+    .@"NXP LPC1768" => micro.Pin("P1.18"),
+    else => @compileError("unknown chip"),
 };
 
 pub fn main() void {
