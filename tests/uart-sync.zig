@@ -31,7 +31,7 @@ const PLL = struct {
             .FLASHTIM = @intToEnum(@TypeOf(micro.chip.registers.SYSCON.FLASHCFG.read().FLASHTIM), @intCast(u4, timing - 1)),
         });
     }
-    fn feed_pll() callconv(.Inline) void {
+    inline fn feed_pll() void {
         micro.chip.registers.SYSCON.PLL0FEED.write(.{ .PLL0FEED = 0xAA });
         micro.chip.registers.SYSCON.PLL0FEED.write(.{ .PLL0FEED = 0x55 });
     }
@@ -109,6 +109,7 @@ pub fn main() !void {
 
     var out = debug_port.writer();
     var in = debug_port.reader();
+    _ = in;
 
     try out.writeAll("Please enter a sentence:\r\n");
 

@@ -12,16 +12,16 @@ pub fn build(b: *std.build.Builder) !void {
     const BuildConfig = struct { name: []const u8, backing: Backing };
     const all_backings = [_]BuildConfig{
         //BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = pkgs.boards.arduino_nano } },
-        //BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = pkgs.boards.mbed_lpc1768 } },
+        BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = pkgs.boards.mbed_lpc1768 } },
         //BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = pkgs.chips.atmega328p } },
         //BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = pkgs.chips.lpc1768 } },
     };
 
     const Test = struct { name: []const u8, source: []const u8 };
     const all_tests = [_]Test{
-        //Test{ .name = "minimal", .source = "tests/minimal.zig" },
-        //Test{ .name = "blinky", .source = "tests/blinky.zig" },
-        //Test{ .name = "uart-sync", .source = "tests/uart-sync.zig" },
+        Test{ .name = "minimal", .source = "tests/minimal.zig" },
+        Test{ .name = "blinky", .source = "tests/blinky.zig" },
+        Test{ .name = "uart-sync", .source = "tests/uart-sync.zig" },
     };
 
     const filter = b.option(std.Target.Cpu.Arch, "filter-target", "Filters for a certain cpu target");
@@ -187,7 +187,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
 
-    //exe.bundle_compiler_rt = false;
+    exe.bundle_compiler_rt = false;
 
     switch (backing) {
         .chip => {
@@ -266,7 +266,7 @@ const pkgs = struct {
                 .cpu_arch = .arm,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
                 .os_tag = .freestanding,
-                .abi = .eabi,
+                .abi = .none,
             },
         };
     };
