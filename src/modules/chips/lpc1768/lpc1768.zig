@@ -174,6 +174,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         pub fn canWrite(self: Self) bool {
+            _ = self;
             return switch (UARTn.LSR.read().THRE) {
                 .VALID => true,
                 .THR_IS_EMPTY_ => false,
@@ -185,6 +186,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         pub fn canRead(self: Self) bool {
+            _ = self;
             return switch (UARTn.LSR.read().RDR) {
                 .EMPTY => false,
                 .NOTEMPTY => true,

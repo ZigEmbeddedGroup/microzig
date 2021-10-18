@@ -102,6 +102,7 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
 
         // open drain
         fn setDrive(drive: Drive) void {
+            _ = drive;
             @compileError("open drain not implemented yet!");
         }
         fn getDrive() Drive {

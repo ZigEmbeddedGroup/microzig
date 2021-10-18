@@ -1,0 +1,28 @@
+name: Build
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: "0 7 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+        fetch-depth: 0
+  
+    # only using master until 0.9.0 is released
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v1.3.0
+      with:
+        version: master
+
+    - name: Build tests
+      run: zig build -Drelease-small
