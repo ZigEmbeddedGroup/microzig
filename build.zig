@@ -4,17 +4,17 @@
 
 const std = @import("std");
 
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const test_step = b.step("test", "Builds and runs the library test suite");
 
     const BuildConfig = struct { name: []const u8, backing: Backing };
     const all_backings = [_]BuildConfig{
-        BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = pkgs.boards.arduino_nano } },
+        //BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = pkgs.boards.arduino_nano } },
         BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = pkgs.boards.mbed_lpc1768 } },
-        BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = pkgs.chips.atmega328p } },
-        BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = pkgs.chips.lpc1768 } },
+        //BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = pkgs.chips.atmega328p } },
+        //BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = pkgs.chips.lpc1768 } },
     };
 
     const Test = struct { name: []const u8, source: []const u8 };
@@ -28,7 +28,7 @@ pub fn build(b: *std.build.Builder) void {
 
     inline for (all_backings) |cfg| {
         inline for (all_tests) |tst| {
-            const exe = addEmbeddedExecutable(
+            const exe = try addEmbeddedExecutable(
                 b,
                 "test-" ++ tst.name ++ "-" ++ cfg.name,
                 tst.source,
@@ -45,12 +45,12 @@ pub fn build(b: *std.build.Builder) void {
     }
 }
 
-fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: []const u8, backing: Backing) *std.build.LibExeObjStep {
+fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: []const u8, backing: Backing) !*std.build.LibExeObjStep {
     const Pkg = std.build.Pkg;
 
     const microzig_base = Pkg{
         .name = "microzig",
-        .path = "src/core/microzig.zig",
+        .path = .{ .path = "src/core/microzig.zig" },
     };
 
     const chip = switch (backing) {
@@ -62,18 +62,18 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
 
     const chip_package = Pkg{
         .name = "chip",
-        .path = chip.path,
+        .path = .{ .path = chip.path },
         .dependencies = &[_]Pkg{
             microzig_base,
             pkgs.mmio,
             Pkg{
                 .name = "cpu",
-                .path = chip.cpu.path,
+                .path = .{ .path = chip.cpu.path },
                 .dependencies = &[_]Pkg{ microzig_base, pkgs.mmio },
             },
             Pkg{
                 .name = "microzig-linker",
-                .path = "src/modules/linker/linker.zig",
+                .path = .{ .path = "src/modules/linker/linker.zig" },
             },
         },
     };
@@ -96,11 +96,11 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         const file_suffix = ".ld";
 
         var ld_file_name: [file_prefix.len + 2 * hash.len + file_suffix.len]u8 = undefined;
-        const filename = std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
+        const filename = try std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
             file_prefix,
             std.fmt.fmtSliceHexLower(&hash),
             file_suffix,
-        }) catch unreachable;
+        });
 
         break :blk builder.dupe(filename);
     };
@@ -128,44 +128,46 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         const file_suffix = ".zig";
 
         var ld_file_name: [file_prefix.len + 2 * hash.len + file_suffix.len]u8 = undefined;
-        const filename = std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
+        const filename = try std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
             file_prefix,
             std.fmt.fmtSliceHexLower(&hash),
             file_suffix,
-        }) catch unreachable;
+        });
 
         break :blk builder.dupe(filename);
     };
 
     {
-        var config_file = std.fs.cwd().createFile(config_file_name, .{}) catch unreachable;
+        std.fs.cwd().makeDir(std.fs.path.dirname(config_file_name).?) catch {};
+        var config_file = try std.fs.cwd().createFile(config_file_name, .{});
         defer config_file.close();
 
         var writer = config_file.writer();
+        try writer.print("pub const has_board = {};\n", .{has_board});
+        if (has_board)
+            try writer.print("pub const board_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)});
 
-        writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
-        if (has_board) {
-            writer.print("pub const board_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
-        }
-
-        writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
-        writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
+        try writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)});
+        try writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)});
     }
 
     const config_pkg = Pkg{
         .name = "microzig-config",
-        .path = config_file_name,
+        .path = .{ .path = config_file_name },
     };
+
+    const build_options = builder.addOptions();
+    build_options.addOption([]const u8, "microzig_chip_name", chip.name);
+    build_options.addOption([]const u8, "microzig_cpu_name", chip.cpu.name);
+    build_options.addOption([]const u8, "microzig_target_triple", try chip.cpu.target.zigTriple(builder.allocator));
 
     const linkerscript_gen = builder.addExecutable("linkerscript-gen", "src/tools/linkerscript-gen.zig");
     linkerscript_gen.addPackage(chip_package);
     linkerscript_gen.addPackage(Pkg{
         .name = "microzig-linker",
-        .path = "src/modules/linker/linker.zig",
+        .path = .{ .path = "src/modules/linker/linker.zig" },
     });
-    linkerscript_gen.addBuildOption([]const u8, "microzig_chip_name", chip.name);
-    linkerscript_gen.addBuildOption([]const u8, "microzig_cpu_name", chip.cpu.name);
-    linkerscript_gen.addBuildOption([]const u8, "microzig_target_triple", chip.cpu.target.zigTriple(builder.allocator) catch unreachable);
+    linkerscript_gen.addOptions("build_options", build_options);
 
     const linkerscript_invocation = linkerscript_gen.run();
     linkerscript_invocation.addArg(linker_script_name);
@@ -177,7 +179,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     exe.single_threaded = true;
     exe.setTarget(chip.cpu.target);
 
-    exe.setLinkerScriptPath(linker_script_name);
+    exe.setLinkerScriptPath(.{ .path = linker_script_name });
     exe.step.dependOn(&linkerscript_invocation.step);
 
     // TODO:
@@ -185,7 +187,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
 
-    // exe.bundle_compiler_rt = false;
+    exe.bundle_compiler_rt = false;
 
     switch (backing) {
         .chip => {
@@ -204,7 +206,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
                     chip_package,
                     Pkg{
                         .name = "board",
-                        .path = board.path,
+                        .path = .{ .path = board.path },
                         .dependencies = &[_]Pkg{ microzig_base, chip_package, pkgs.mmio },
                     },
                 },
@@ -241,7 +243,7 @@ pub const Backing = union(enum) {
 const pkgs = struct {
     const mmio = std.build.Pkg{
         .name = "microzig-mmio",
-        .path = "src/core/mmio.zig",
+        .path = .{ .path = "src/core/mmio.zig" },
     };
 
     const cpus = struct {
@@ -264,7 +266,7 @@ const pkgs = struct {
                 .cpu_arch = .arm,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
                 .os_tag = .freestanding,
-                .abi = .eabi,
+                .abi = .none,
             },
         };
     };

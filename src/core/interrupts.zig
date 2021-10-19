@@ -4,16 +4,19 @@ const micro = @import("microzig.zig");
 /// Unmasks the given interrupt and enables its execution.
 /// Note that interrupts must be globally enabled with `sei()` as well.
 pub fn enable(comptime interrupt: anytype) void {
+    _ = interrupt;
     @compileError("not implemented yet!");
 }
 
 /// Masks the given interrupt and disables its execution.
 pub fn disable(comptime interrupt: anytype) void {
+    _ = interrupt;
     @compileError("not implemented yet!");
 }
 
 /// Returns true when the given interrupt is unmasked.
 pub fn isEnabled(comptime interrupt: anytype) bool {
+    _ = interrupt;
     @compileError("not implemented yet!");
 }
 

@@ -19,6 +19,7 @@ pub fn busySleep(comptime limit: comptime_int) void {
 
 const DebugErr = error{};
 fn writerWrite(ctx: void, string: []const u8) DebugErr!usize {
+    _ = ctx;
     write(string);
     return string.len;
 }
@@ -26,10 +27,9 @@ fn writerWrite(ctx: void, string: []const u8) DebugErr!usize {
 const DebugWriter = std.io.Writer(void, DebugErr, writerWrite);
 
 pub fn write(string: []const u8) void {
-    if (!micro.config.has_board)
+    if (!micro.config.has_board and !@hasDecl(micro.board, "debugWrite"))
         return;
-    if (!@hasDecl(micro.board, "debugWrite"))
-        return;
+
     micro.board.debugWrite(string);
 }
 
