@@ -27,10 +27,10 @@ fn writerWrite(ctx: void, string: []const u8) DebugErr!usize {
 const DebugWriter = std.io.Writer(void, DebugErr, writerWrite);
 
 pub fn write(string: []const u8) void {
-    if (!micro.config.has_board and !@hasDecl(micro.board, "debugWrite"))
-        return;
+    //if (!micro.config.has_board and !@hasDecl(micro.board, "debugWrite"))
+    //    return;
 
-    micro.board.debugWrite(string);
+    micro.chip.debugWrite(string);
 }
 
 pub fn writer() DebugWriter {
