@@ -13,8 +13,8 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
 
     const IntT = std.meta.Int(.unsigned, size);
 
-    if (@sizeOf(PackedT) != (size / 8))
-        @compileError("IntT and PackedT must have the same size!");
+    //if (@sizeOf(PackedT) != (size / 8))
+    //    @compileError("IntT and PackedT must have the same size!");
 
     return extern struct {
         const Self = @This();

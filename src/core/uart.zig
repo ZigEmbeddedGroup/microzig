@@ -11,7 +11,7 @@ pub fn Uart(comptime index: usize) type {
 
         /// Initializes the UART with the given config and returns a handle to the uart.
         pub fn init(config: Config) InitError!Self {
-            micro.clock.ensure();
+            //micro.clock.ensure();
             return Self{
                 .internal = try SystemUart.init(config),
             };

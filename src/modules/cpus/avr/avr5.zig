@@ -1,26 +1,26 @@
 const std = @import("std");
 
-pub fn sei() callconv(.Inline) void {
+pub inline fn sei() void {
     asm volatile ("sei");
 }
 
-pub fn cli() callconv(.Inline) void {
+pub inline fn cli() void {
     asm volatile ("cli");
 }
 
-pub fn sbi(comptime reg: u5, comptime bit: u3) callconv(.Inline) void {
+pub inline fn sbi(comptime reg: u5, comptime bit: u3) void {
     asm volatile ("sbi %[reg], %[bit]"
         :
         : [reg] "I" (reg),
-          [bit] "I" (bit)
+          [bit] "I" (bit),
     );
 }
 
-pub fn cbi(comptime reg: u5, comptime bit: u3) callconv(.Inline) void {
+pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
     asm volatile ("cbi %[reg], %[bit]"
         :
         : [reg] "I" (reg),
-          [bit] "I" (bit)
+          [bit] "I" (bit),
     );
 }
 

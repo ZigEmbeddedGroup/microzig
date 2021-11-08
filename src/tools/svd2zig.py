@@ -25,9 +25,8 @@ class MMIOFileGenerator:
         self.f = f
 
     def generate_padding(self, count, name, offset):
-        while count > 0:
-            self.write_line(f"{name}{offset + count}: u1 = 0,")
-            count = count - 1
+        for x in range(offset, offset+count):
+            self.write_line(f"{name}{x}: u1 = 0,")
 
     def generate_enumerated_field(self, field):
         '''
@@ -47,7 +46,7 @@ class MMIOFileGenerator:
             e.description = cleanup_description(e.description)
             if e.value is None or e.name == "RESERVED":
                 # reserved fields doesn't have a value so we have to comment them out
-                self.write_line(f"// @\"{e.name}\", // desc: {e.description}")
+                self.write_line(f"// .@\"{e.name}\", // desc: {e.description}")
             else:
                 total_fields_with_values = total_fields_with_values + 1
                 self.write_line(f"@\"{e.name}\" = {e.value}, // desc: {e.description}")

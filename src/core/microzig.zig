@@ -19,7 +19,7 @@ pub const cpu = chip.cpu;
 pub const interrupts = @import("interrupts.zig");
 
 /// Module that provides clock related functions
-pub const clock = @import("clock.zig");
+//pub const clock = @import("clock.zig");
 
 pub const gpio = @import("gpio.zig");
 pub const Gpio = gpio.Gpio;
@@ -75,7 +75,7 @@ pub fn hang() noreturn {
 /// to call into our main function here. If we would use a normal function call, we'd have a
 /// circular dependency between the `microzig` and `chip` package. This function is also likely
 /// to be invoked from assembly, so it's also convenient in that regard.
-export fn microzig_main() noreturn {
+export fn microzig_main() callconv(.C) noreturn {
     if (!@hasDecl(root, "main"))
         @compileError("The root source file must provide a public function main!");
 

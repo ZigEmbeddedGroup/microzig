@@ -27,7 +27,7 @@ pub fn Pin(comptime spec: []const u8) type {
         pub const name = spec;
         pub const source_pin = pin;
 
-        pub fn route(target: pin.Targets) void {
+        pub fn route(comptime target: pin.Targets) void {
             chip.routePin(source_pin, target);
         }
     };
