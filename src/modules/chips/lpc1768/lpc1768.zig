@@ -11,11 +11,38 @@ pub const memory_regions = [_]micro_linker.MemoryRegion{
     micro_linker.MemoryRegion{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
 };
 
-pub const PinTarget = enum(u2) {
-    func00 = 0b00,
-    func01 = 0b01,
-    func10 = 0b10,
-    func11 = 0b11,
+pub fn reset(comptime peripherials: anytype) void {}
+
+pub const PinTarget = enum {
+    gpio,
+    pwm,
+    adc,
+
+    spi0_sclk,
+    spi0_mosi,
+    spi0_miso,
+    spi0_ss,
+
+    spi1_sclk,
+    spi1_mosi,
+    spi1_miso,
+    spi1_ss,
+
+    uart0_tx,
+    uart0_rx,
+    uart0_cts,
+    uart0_rts,
+
+    uart1_tx,
+    uart1_rx,
+    uart1_cts,
+    uart1_rts,
+
+    i2c0_scl,
+    i2c0_sda,
+
+    i2c1_scl,
+    i2c1_sda,
 };
 
 pub fn parsePin(comptime spec: []const u8) type {
@@ -55,7 +82,8 @@ pub fn parsePin(comptime spec: []const u8) type {
 
 pub fn routePin(comptime pin: type, function: PinTarget) void {
     var val = pin.regs.pinsel_reg.read();
-    @field(val, pin.regs.pinsel_field) = @intToEnum(@TypeOf(@field(val, pin.regs.pinsel_field)), @enumToInt(function));
+    // TODO:
+    //@field(val, pin.regs.pinsel_field) = @intToEnum(@TypeOf(@field(val, pin.regs.pinsel_field)), @enumToInt(function));
     pin.regs.pinsel_reg.write(val);
 }
 
@@ -176,8 +204,8 @@ pub fn Uart(comptime index: usize) type {
         pub fn canWrite(self: Self) bool {
             _ = self;
             return switch (UARTn.LSR.read().THRE) {
-                .VALID => true,
-                .THR_IS_EMPTY_ => false,
+                .VALIDDATA => true,
+                .EMPTY => false,
             };
         }
         pub fn tx(self: Self, ch: u8) void {

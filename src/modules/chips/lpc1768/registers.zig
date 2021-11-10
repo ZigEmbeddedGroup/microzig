@@ -21724,4 +21724,3 @@ pub const GPIO = extern struct {
         PINCLR31: u1, // bit offset: 31 desc: Fast GPIO output value Clear bits. Bit 0 in CLRx controls pin Px[0], bit 31 in CLRx controls pin Px[31]. 0 = Controlled pin output is unchanged. 1 = Controlled pin output is set to LOW.
     });
 };
-

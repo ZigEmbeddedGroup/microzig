@@ -86,6 +86,18 @@ pub fn main() !u8 {
 
     try writer.writeAll("}\n\nSECTIONS\n{\n");
     {
+        if (chip.memory_regions[0].offset == 0x10000000) {
+            try writer.writeAll(
+                \\  .microzig_rp2040_boot2 ORIGIN(flash0) :
+                \\  {
+                \\    KEEP(*(.microzig_rp2040_boot2));
+                \\    . = ALIGN(256);
+                \\  } > flash0
+                \\
+                \\
+            );
+        }
+
         try writer.writeAll(
             \\  .text :
             \\  {

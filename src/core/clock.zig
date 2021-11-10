@@ -35,7 +35,7 @@ pub fn ensure() void {
 }
 
 /// Returns the current cpu frequency in hertz.
-pub fn get() callconv(.Inline) u32 {
+pub inline fn get() u32 {
     ensure();
     return @field(clock_source_type, freq_decl_name);
 }

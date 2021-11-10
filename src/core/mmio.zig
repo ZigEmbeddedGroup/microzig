@@ -13,8 +13,8 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
 
     const IntT = std.meta.Int(.unsigned, size);
 
-    if (@sizeOf(PackedT) != (size / 8))
-        @compileError("IntT and PackedT must have the same size!");
+    //if (@sizeOf(PackedT) != (size / 8))
+    //    @compileError("IntT and PackedT must have the same size!");
 
     return extern struct {
         const Self = @This();
@@ -32,6 +32,14 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
             // If the tmp var is not used, result location will fuck things up
             var tmp = @bitCast(IntT, val);
             addr.raw = tmp;
+        }
+
+        pub fn set(addr: *volatile Self, fields: anytype) void {
+            var val = std.mem.zeroes(PackedT);
+            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+                @field(val, field.name) = @field(fields, field.name);
+            }
+            write(addr, val);
         }
 
         pub fn modify(addr: *volatile Self, fields: anytype) void {
