@@ -42,7 +42,7 @@ pub fn main() !void {
         .stop_bits = .one,
         .parity = null,
         .data_bits = .eight,
-    }) catch |err| {
+    }) catch {
         led1.write(.high);
 
         micro.hang();

@@ -1,4 +1,5 @@
 const std = @import("std");
+const root = @import("root");
 
 pub fn sei() void {
     asm volatile ("cpsie i");
@@ -41,32 +42,67 @@ pub fn clrex() void {
 }
 
 pub const startup_logic = struct {
-    const InterruptVector = fn () callconv(.C) void;
+    const InterruptVector = extern union {
+        C: fn () callconv(.C) void,
+        Naked: fn () callconv(.Naked) void,
+        // Interrupt is not supported on arm
+    };
 
     const VectorTable = extern struct {
-        initial_stack_pointer: u32,
-        reset: InterruptVector,
+        initial_stack_pointer: u32 = 0x20000000 + 256 * 1024 - 8, // HACK: hardcoded, do not keep!,
+        reset: InterruptVector = InterruptVector{ .C = _start },
         nmi: InterruptVector = makeUnhandledHandler("nmi"),
         hard_fault: InterruptVector = makeUnhandledHandler("hard_fault"),
         mpu_fault: InterruptVector = makeUnhandledHandler("mpu_fault"),
         bus_fault: InterruptVector = makeUnhandledHandler("bus_fault"),
         usage_fault: InterruptVector = makeUnhandledHandler("usage_fault"),
+        secure_fault: InterruptVector = makeUnhandledHandler("secure_fault"),
 
-        reserved: u32 = 0,
+        reserved: [3]u32 = .{ 0, 0, 0 },
+        svc: InterruptVector = makeUnhandledHandler("svc"),
+        debugmon: InterruptVector = makeUnhandledHandler("debugmon"),
+        reserved1: u32 = 0,
+
+        pendsv: InterruptVector = makeUnhandledHandler("pendsv"),
+        systick: InterruptVector = makeUnhandledHandler("systick"),
     };
 
-    export const vectors linksection("microzig_flash_start") = VectorTable{
-        // TODO: How to compute/get the initial stack pointer?
-        .initial_stack_pointer = 0x20000000 + 256 * 1024 - 8, // HACK: hardcoded, do not keep!
-        .reset = _start,
-    };
+    export const vectors: VectorTable linksection(".vectors") = blk: {
+        var temp: VectorTable = .{};
+        if (@hasDecl(root, "vector_table")) {
+            const vector_table = root.vector_table;
+            inline for (@typeInfo(vector_table).Struct.decls) |decl| {
+                const calling_convention = @typeInfo(decl.data.Fn.fn_type).Fn.calling_convention;
+                const handler = @field(vector_table, decl.name);
+                //@compileLog(decl.name, calling_convention);
+                @field(temp, decl.name) = switch (calling_convention) {
+                    .C => .{ .C = handler },
+                    .Naked => .{ .Naked = handler },
+                    // for unspecified calling convention we are going to generate small wrapper
+                    .Unspecified => .{
+                        .C = struct {
+                            fn wrapper() callconv(.C) void {
+                                if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                                    @call(.{ .modifier = .always_inline }, handler, .{});
+                            }
+                        }.wrapper,
+                    },
 
-    fn makeUnhandledHandler(comptime str: []const u8) fn () callconv(.C) noreturn {
-        return struct {
-            fn unhandledInterrupt() callconv(.C) noreturn {
-                @panic("unhandled interrupt: " ++ str);
+                    else => @compileError("unsupported calling convention for function " ++ decl.name),
+                };
             }
-        }.unhandledInterrupt;
+        }
+        break :blk temp;
+    };
+
+    fn makeUnhandledHandler(comptime str: []const u8) InterruptVector {
+        return InterruptVector{
+            .C = struct {
+                fn unhandledInterrupt() callconv(.C) noreturn {
+                    @panic("unhandled interrupt: " ++ str);
+                }
+            }.unhandledInterrupt,
+        };
     }
 
     extern fn microzig_main() noreturn;

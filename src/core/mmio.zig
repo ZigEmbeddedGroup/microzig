@@ -34,6 +34,14 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
             addr.raw = tmp;
         }
 
+        pub fn set(addr: *volatile Self, fields: anytype) void {
+            var val = std.mem.zeroes(PackedT);
+            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+                @field(val, field.name) = @field(fields, field.name);
+            }
+            write(addr, val);
+        }
+
         pub fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {

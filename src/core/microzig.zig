@@ -21,6 +21,8 @@ pub const interrupts = @import("interrupts.zig");
 /// Module that provides clock related functions
 //pub const clock = @import("clock.zig");
 
+pub const reset = chip.reset;
+
 pub const gpio = @import("gpio.zig");
 pub const Gpio = gpio.Gpio;
 
