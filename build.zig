@@ -206,7 +206,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
 
-    exe.bundle_compiler_rt = false;
+    exe.bundle_compiler_rt = true;
 
     switch (backing) {
         .chip => {
@@ -251,7 +251,6 @@ const Cpu = struct {
     name: []const u8,
     path: []const u8,
     target: std.zig.CrossTarget,
-    linker_script: []const u8,
 };
 
 pub const Backing = union(enum) {
@@ -269,7 +268,6 @@ const pkgs = struct {
         const avr5 = Cpu{
             .name = "AVR5",
             .path = "src/modules/cpus/avr/avr5.zig",
-            .linker_script = "src/modules/cpus/avr/linker.ld",
             .target = std.zig.CrossTarget{
                 .cpu_arch = .avr,
                 .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -279,19 +277,17 @@ const pkgs = struct {
         };
         const cortex_m0p = Cpu{
             .name = "ARM Cortex-M0+",
-            .path = "src/modules/cpus/cortex-m0p/cortex-m0p.zig",
-            .linker_script = "src/modules/cpus/cortex-m0p/linker.ld",
+            .path = "src/modules/cpus/cortex-m/cortex-m.zig",
             .target = std.zig.CrossTarget{
                 .cpu_arch = .arm,
-                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
         };
         const cortex_m3 = Cpu{
             .name = "ARM Cortex-M3",
-            .path = "src/modules/cpus/cortex-m3/cortex-m3.zig",
-            .linker_script = "src/modules/cpus/cortex-m3/linker.ld",
+            .path = "src/modules/cpus/cortex-m/cortex-m.zig",
             .target = std.zig.CrossTarget{
                 .cpu_arch = .arm,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
