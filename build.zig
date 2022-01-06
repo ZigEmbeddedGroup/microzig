@@ -5,7 +5,7 @@
 const std = @import("std");
 const boards = @import("src/modules/boards.zig");
 const chips = @import("src/modules/chips.zig");
-const LinkerscriptStep = @import("src/modules/LinkerscriptStep.zig");
+const LinkerscriptStep = @import("src/modules/LinkerScriptStep.zig");
 
 const Board = boards.Board;
 const Chip = chips.Chip;
