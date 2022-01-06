@@ -1,6 +1,6 @@
 const std = @import("std");
 const MemoryRegion = @import("MemoryRegion.zig");
-const Chip = @import("chips.zig").Chip;
+const Chip = @import("Chip.zig");
 const Step = std.build.Step;
 const Builder = std.build.Builder;
 const GeneratedFile = std.build.GeneratedFile;
