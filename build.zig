@@ -3,6 +3,13 @@
 //! This means we need to use addExecutable() instead of using 
 
 const std = @import("std");
+const boards = @import("src/modules/boards.zig");
+const chips = @import("src/modules/chips.zig");
+const LinkerscriptStep = @import("src/modules/LinkerScriptStep.zig");
+
+const Board = boards.Board;
+const Chip = chips.Chip;
+const Cpu = chips.Cpu;
 
 pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardReleaseOptions();
@@ -12,9 +19,9 @@ pub fn build(b: *std.build.Builder) !void {
     const BuildConfig = struct { name: []const u8, backing: Backing };
     const all_backings = [_]BuildConfig{
         //BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = pkgs.boards.arduino_nano } },
-        BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = pkgs.boards.mbed_lpc1768 } },
+        BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = boards.mbed_lpc1768 } },
         //BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = pkgs.chips.atmega328p } },
-        //BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = pkgs.chips.lpc1768 } },
+        BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = chips.lpc1768 } },
     };
 
     const Test = struct { name: []const u8, source: []const u8 };
@@ -45,7 +52,12 @@ pub fn build(b: *std.build.Builder) !void {
     }
 }
 
-fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: []const u8, backing: Backing) !*std.build.LibExeObjStep {
+fn addEmbeddedExecutable(
+    builder: *std.build.Builder,
+    name: []const u8,
+    source: []const u8,
+    backing: Backing,
+) !*std.build.LibExeObjStep {
     const Pkg = std.build.Pkg;
 
     const microzig_base = Pkg{
@@ -71,38 +83,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
                 .path = .{ .path = chip.cpu.path },
                 .dependencies = &[_]Pkg{ microzig_base, pkgs.mmio },
             },
-            Pkg{
-                .name = "microzig-linker",
-                .path = .{ .path = "src/modules/linker/linker.zig" },
-            },
         },
-    };
-
-    const linker_script_name = blk: {
-        const hash = hash_blk: {
-            var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
-
-            hasher.update(chip.name);
-            hasher.update(chip.path);
-            hasher.update(chip.cpu.name);
-            hasher.update(chip.cpu.path);
-
-            var mac: [16]u8 = undefined;
-            hasher.final(&mac);
-            break :hash_blk mac;
-        };
-
-        const file_prefix = "zig-cache/microzig/";
-        const file_suffix = ".ld";
-
-        var ld_file_name: [file_prefix.len + 2 * hash.len + file_suffix.len]u8 = undefined;
-        const filename = try std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
-            file_prefix,
-            std.fmt.fmtSliceHexLower(&hash),
-            file_suffix,
-        });
-
-        break :blk builder.dupe(filename);
     };
 
     const config_file_name = blk: {
@@ -156,22 +137,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
         .path = .{ .path = config_file_name },
     };
 
-    const build_options = builder.addOptions();
-    build_options.addOption([]const u8, "microzig_chip_name", chip.name);
-    build_options.addOption([]const u8, "microzig_cpu_name", chip.cpu.name);
-    build_options.addOption([]const u8, "microzig_target_triple", try chip.cpu.target.zigTriple(builder.allocator));
-
-    const linkerscript_gen = builder.addExecutable("linkerscript-gen", "src/tools/linkerscript-gen.zig");
-    linkerscript_gen.addPackage(chip_package);
-    linkerscript_gen.addPackage(Pkg{
-        .name = "microzig-linker",
-        .path = .{ .path = "src/modules/linker/linker.zig" },
-    });
-    linkerscript_gen.addOptions("build_options", build_options);
-
-    const linkerscript_invocation = linkerscript_gen.run();
-    linkerscript_invocation.addArg(linker_script_name);
-
+    const linkerscript = try LinkerscriptStep.create(builder, chip);
     const exe = builder.addExecutable(name, source);
 
     // might not be true for all machines (Pi Pico), but
@@ -179,8 +145,7 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     exe.single_threaded = true;
     exe.setTarget(chip.cpu.target);
 
-    exe.setLinkerScriptPath(.{ .path = linker_script_name });
-    exe.step.dependOn(&linkerscript_invocation.step);
+    exe.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
 
     // TODO:
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
@@ -216,25 +181,6 @@ fn addEmbeddedExecutable(builder: *std.build.Builder, name: []const u8, source: 
     return exe;
 }
 
-const Board = struct {
-    name: []const u8,
-    path: []const u8,
-    chip: Chip,
-};
-
-const Chip = struct {
-    name: []const u8,
-    path: []const u8,
-    cpu: Cpu,
-};
-
-const Cpu = struct {
-    name: []const u8,
-    path: []const u8,
-    target: std.zig.CrossTarget,
-    linker_script: []const u8,
-};
-
 pub const Backing = union(enum) {
     board: Board,
     chip: Chip,
@@ -244,56 +190,5 @@ const pkgs = struct {
     const mmio = std.build.Pkg{
         .name = "microzig-mmio",
         .path = .{ .path = "src/core/mmio.zig" },
-    };
-
-    const cpus = struct {
-        const avr5 = Cpu{
-            .name = "AVR5",
-            .path = "src/modules/cpus/avr/avr5.zig",
-            .linker_script = "src/modules/cpus/avr/linker.ld",
-            .target = std.zig.CrossTarget{
-                .cpu_arch = .avr,
-                .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
-                .os_tag = .freestanding,
-                .abi = .eabi,
-            },
-        };
-        const cortex_m3 = Cpu{
-            .name = "ARM Cortex-M3",
-            .path = "src/modules/cpus/cortex-m3/cortex-m3.zig",
-            .linker_script = "src/modules/cpus/cortex-m3/linker.ld",
-            .target = std.zig.CrossTarget{
-                .cpu_arch = .arm,
-                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-                .os_tag = .freestanding,
-                .abi = .none,
-            },
-        };
-    };
-
-    const chips = struct {
-        const atmega328p = Chip{
-            .name = "ATmega328p",
-            .path = "src/modules/chips/atmega328p/atmega328p.zig",
-            .cpu = cpus.avr5,
-        };
-        const lpc1768 = Chip{
-            .name = "NXP LPC1768",
-            .path = "src/modules/chips/lpc1768/lpc1768.zig",
-            .cpu = cpus.cortex_m3,
-        };
-    };
-
-    const boards = struct {
-        const arduino_nano = Board{
-            .name = "Arduino Nano",
-            .path = "src/modules/boards/arduino-nano/arduino-nano.zig",
-            .chip = chips.atmega328p,
-        };
-        const mbed_lpc1768 = Board{
-            .name = "mbed LPC1768",
-            .path = "src/modules/boards/mbed-lpc1768/mbed-lpc1768.zig",
-            .chip = chips.lpc1768,
-        };
     };
 };
