@@ -1,20 +1,21 @@
+const std = @import("std");
 const chips = @import("chips.zig");
+const Board = @import("Board.zig");
 
-const Chip = chips.Chip;
-pub const Board = struct {
-    name: []const u8,
-    path: []const u8,
-    chip: Chip,
-};
+fn root() []const u8 {
+    return std.fs.path.dirname(@src().file) orelse unreachable;
+}
+
+const root_path = root() ++ "/";
 
 pub const arduino_nano = Board{
     .name = "Arduino Nano",
-    .path = "src/modules/boards/arduino-nano/arduino-nano.zig",
+    .path = root_path ++ "boards/arduino-nano/arduino-nano.zig",
     .chip = chips.atmega328p,
 };
 
 pub const mbed_lpc1768 = Board{
     .name = "mbed LPC1768",
-    .path = "src/modules/boards/mbed-lpc1768/mbed-lpc1768.zig",
+    .path = root_path ++ "boards/mbed-lpc1768/mbed-lpc1768.zig",
     .chip = chips.lpc1768,
 };

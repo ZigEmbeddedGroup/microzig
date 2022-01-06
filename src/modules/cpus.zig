@@ -1,16 +1,11 @@
 const std = @import("std");
+const Cpu = @import("Cpu.zig");
 
 fn root() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
 }
 
 const root_path = root() ++ "/";
-
-pub const Cpu = struct {
-    name: []const u8,
-    path: []const u8,
-    target: std.zig.CrossTarget,
-};
 
 pub const avr5 = Cpu{
     .name = "AVR5",
