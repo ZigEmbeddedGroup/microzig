@@ -83,10 +83,6 @@ fn addEmbeddedExecutable(
                 .path = .{ .path = chip.cpu.path },
                 .dependencies = &[_]Pkg{ microzig_base, pkgs.mmio },
             },
-            Pkg{
-                .name = "microzig-linker",
-                .path = .{ .path = "src/modules/linker/linker.zig" },
-            },
         },
     };
 
