@@ -1,8 +1,6 @@
 const std = @import("std");
-const micro_linker = @import("microzig-linker");
 
 pub const cpu = @import("cpu");
-
 const Port = enum(u8) {
     B = 1,
     C = 2,

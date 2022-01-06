@@ -1,6 +1,5 @@
 const std = @import("std");
 const micro = @import("microzig");
-const micro_linker = @import("microzig-linker");
 
 pub const cpu = @import("cpu");
 pub const registers = @import("registers.zig");
