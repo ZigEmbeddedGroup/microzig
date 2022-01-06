@@ -1,5 +1,5 @@
 const std = @import("std");
-const MemoryRegion = @import("linker/linker.zig").MemoryRegion;
+const MemoryRegion = @import("MemoryRegion.zig");
 const Chip = @import("chips.zig").Chip;
 const Step = std.build.Step;
 const Builder = std.build.Builder;

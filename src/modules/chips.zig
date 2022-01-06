@@ -1,12 +1,12 @@
 const cpus = @import("cpus.zig");
-const MemoryRegion = @import("linker/linker.zig").MemoryRegion;
+const MemoryRegion = @import("MemoryRegion.zig");
 
 const Cpu = cpus.Cpu;
 pub const Chip = struct {
     name: []const u8,
     path: []const u8,
     cpu: Cpu,
-    memory_regions: []MemoryRegion,
+    memory_regions: []const MemoryRegion,
 };
 
 pub const atmega328p = Chip{
