@@ -17770,4 +17770,3 @@ pub const USB = extern struct {
         padding1: u1 = 0,
     });
 };
-
