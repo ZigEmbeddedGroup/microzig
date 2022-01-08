@@ -12,6 +12,7 @@ pub const Backing = union(enum) {
     chip: Chip,
 };
 
+const Pkg = std.build.Pkg;
 const root_path = root() ++ "/";
 fn root() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
@@ -23,32 +24,10 @@ pub fn addEmbeddedExecutable(
     source: []const u8,
     backing: Backing,
 ) !*std.build.LibExeObjStep {
-    const Pkg = std.build.Pkg;
-
-    const microzig_base = Pkg{
-        .name = "microzig",
-        .path = .{ .path = root_path ++ "core/microzig.zig" },
-    };
-
+    const has_board = (backing == .board);
     const chip = switch (backing) {
         .chip => |c| c,
         .board => |b| b.chip,
-    };
-
-    const has_board = (backing == .board);
-
-    const chip_package = Pkg{
-        .name = "chip",
-        .path = .{ .path = chip.path },
-        .dependencies = &[_]Pkg{
-            microzig_base,
-            pkgs.mmio,
-            Pkg{
-                .name = "cpu",
-                .path = .{ .path = chip.cpu.path },
-                .dependencies = &[_]Pkg{ microzig_base, pkgs.mmio },
-            },
-        },
     };
 
     const config_file_name = blk: {
@@ -97,47 +76,95 @@ pub fn addEmbeddedExecutable(
         try writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)});
     }
 
+    const microzig_pkg = Pkg{
+        .name = "microzig",
+        .path = .{ .path = root_path ++ "core/microzig.zig" },
+    };
+
+    const chip_pkg = Pkg{
+        .name = "chip",
+        .path = .{ .path = chip.path },
+        .dependencies = &[_]Pkg{
+            microzig_pkg,
+            pkgs.mmio,
+            Pkg{
+                .name = "cpu",
+                .path = .{ .path = chip.cpu.path },
+                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio },
+            },
+        },
+    };
+
     const config_pkg = Pkg{
         .name = "microzig-config",
         .path = .{ .path = config_file_name },
     };
 
-    const linkerscript = try LinkerScriptStep.create(builder, chip);
-    const exe = builder.addExecutable(name, source);
+    const exe = builder.addExecutable(name, root_path ++ "core/start.zig");
 
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.single_threaded = true;
     exe.setTarget(chip.cpu.target);
 
+    const linkerscript = try LinkerScriptStep.create(builder, chip);
     exe.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
 
     // TODO:
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-
     exe.bundle_compiler_rt = false;
-
     switch (backing) {
         .chip => {
             exe.addPackage(Pkg{
-                .name = microzig_base.name,
-                .path = microzig_base.path,
-                .dependencies = &[_]Pkg{ config_pkg, chip_package },
+                .name = "app",
+                .path = .{ .path = source },
+                .dependencies = &[_]Pkg{
+                    Pkg{
+                        .name = microzig_pkg.name,
+                        .path = microzig_pkg.path,
+                        .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
+                    },
+                },
+            });
+            exe.addPackage(Pkg{
+                .name = microzig_pkg.name,
+                .path = microzig_pkg.path,
+                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
             });
         },
         .board => |board| {
             exe.addPackage(Pkg{
-                .name = microzig_base.name,
-                .path = microzig_base.path,
+                .name = "app",
+                .path = .{ .path = source },
+                .dependencies = &[_]Pkg{
+                    Pkg{
+                        .name = microzig_pkg.name,
+                        .path = microzig_pkg.path,
+                        .dependencies = &[_]Pkg{
+                            config_pkg,
+                            chip_pkg,
+                            Pkg{
+                                .name = "board",
+                                .path = .{ .path = board.path },
+                                .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
+                            },
+                        },
+                    },
+                },
+            });
+
+            exe.addPackage(Pkg{
+                .name = microzig_pkg.name,
+                .path = microzig_pkg.path,
                 .dependencies = &[_]Pkg{
                     config_pkg,
-                    chip_package,
+                    chip_pkg,
                     Pkg{
                         .name = "board",
                         .path = .{ .path = board.path },
-                        .dependencies = &[_]Pkg{ microzig_base, chip_package, pkgs.mmio },
+                        .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
                     },
                 },
             });
