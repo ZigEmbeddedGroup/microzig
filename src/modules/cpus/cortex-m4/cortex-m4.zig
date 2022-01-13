@@ -57,7 +57,7 @@ pub const startup_logic = struct {
 
     export const vectors linksection("microzig_flash_start") = VectorTable{
         // TODO: How to compute/get the initial stack pointer?
-        .initial_stack_pointer = 0x2000_9FFC, // HACK: hardcoded, do not keep!
+        .initial_stack_pointer = 0x2000_A000, // HACK: hardcoded, do not keep!
         .reset = _start,
     };
 
