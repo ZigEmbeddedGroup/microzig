@@ -28,3 +28,14 @@ pub const cortex_m3 = Cpu{
         .abi = .none,
     },
 };
+
+pub const cortex_m4 = Cpu{
+    .name = "ARM Cortex-M4",
+    .path = root_path ++ "cpus/cortex-m4/cortex-m4.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
