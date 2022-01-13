@@ -34,8 +34,8 @@ pub const gpio = struct {
     pub fn write(comptime pin: type, state: micro.gpio.State) void {
         _ = pin;
         switch (state) {
-            .low => registers.GPIOE.BRR.modify(.{ .BRR9 = 1 }),
-            .high => registers.GPIOE.BSRR.modify(.{ .BSRR9 = 1 }),
+            .low => registers.GPIOE.BRR.modify(.{ .BR9 = 1 }),
+            .high => registers.GPIOE.BSRR.modify(.{ .BS9 = 1 }),
         }
     }
 };
