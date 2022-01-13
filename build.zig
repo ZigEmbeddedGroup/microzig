@@ -38,7 +38,7 @@ pub fn build(b: *std.build.Builder) !void {
 
             const exe = try microzig.addEmbeddedExecutable(
                 b,
-                "test-" ++ tst.name ++ "-" ++ cfg.name,
+                "test-" ++ tst.name ++ "-" ++ cfg.name ++ ".elf",
                 tst.source,
                 cfg.backing,
             );
@@ -48,6 +48,13 @@ pub fn build(b: *std.build.Builder) !void {
                 exe.install();
 
                 test_step.dependOn(&exe.step);
+
+                const bin = b.addInstallRaw(
+                    exe,
+                    "test-" ++ tst.name ++ "-" ++ cfg.name ++ ".bin",
+                    .{},
+                );
+                b.getInstallStep().dependOn(&bin.step);
             }
         }
     }
