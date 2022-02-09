@@ -54,6 +54,7 @@ pub fn Uart(comptime index: usize) type {
 /// A UART configuration. The config defaults to the *8N1* setting, so "8 data bits, no parity, 1 stop bit" which is the 
 /// most common serial format.
 pub const Config = struct {
+    /// TODO: Make this optional, to support STM32F303 et al. auto baud-rate detection?
     baud_rate: u32,
     stop_bits: StopBits = .one,
     parity: ?Parity = null,
