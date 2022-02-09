@@ -31,7 +31,11 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
             // This is a workaround for a compiler bug related to miscompilation
             // If the tmp var is not used, result location will fuck things up
             var tmp = @bitCast(IntT, val);
-            addr.raw = tmp;
+            addr.writeRaw(tmp);
+        }
+
+        pub fn writeRaw(addr: *volatile Self, val: IntT) void {
+            addr.raw = val;
         }
 
         pub fn modify(addr: *volatile Self, fields: anytype) void {
