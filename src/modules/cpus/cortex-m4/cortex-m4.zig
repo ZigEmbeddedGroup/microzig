@@ -1,4 +1,5 @@
 const std = @import("std");
+const config = @import("microzig-config");
 
 pub fn sei() void {
     asm volatile ("cpsie i");
@@ -56,8 +57,7 @@ pub const startup_logic = struct {
     };
 
     export const vectors linksection("microzig_flash_start") = VectorTable{
-        // TODO: How to compute/get the initial stack pointer?
-        .initial_stack_pointer = 0x2000_A000, // HACK: hardcoded, do not keep!
+        .initial_stack_pointer = config.end_of_stack,
         .reset = _start,
     };
 
