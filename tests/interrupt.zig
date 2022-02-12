@@ -6,7 +6,7 @@ const micro = @import("microzig");
 
 pub const panic = micro.panic;
 pub const vector_table = struct {
-    pub fn systick() callconv(.Naked) void {
+    pub fn systick() void {
         @panic("hit systick!");
     }
 };
