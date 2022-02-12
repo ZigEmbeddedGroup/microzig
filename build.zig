@@ -29,6 +29,9 @@ pub fn build(b: *std.build.Builder) !void {
         Test{ .name = "minimal", .source = "tests/minimal.zig" },
         Test{ .name = "blinky", .source = "tests/blinky.zig" },
         Test{ .name = "uart-sync", .source = "tests/uart-sync.zig", .uses_uart = true },
+
+        // Note: this example uses the systick interrupt and therefore only for arm microcontrollers
+        Test{ .name = "interrupt", .source = "tests/interrupt.zig" },
     };
 
     const filter = b.option(std.Target.Cpu.Arch, "filter-target", "Filters for a certain cpu target");
