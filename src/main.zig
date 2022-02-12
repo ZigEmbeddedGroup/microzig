@@ -63,6 +63,18 @@ pub fn addEmbeddedExecutable(
     };
 
     {
+        // TODO: let the user override which ram section to use the stack on,
+        // for now just using the first ram section in the memory region list
+        const first_ram = blk: {
+            for (chip.memory_regions) |region| {
+                if (region.kind == .ram)
+                    break :blk region;
+            } else {
+                std.log.err("no ram memory region found for setting the end-of-stack address", .{});
+                return error.NoRam;
+            }
+        };
+
         std.fs.cwd().makeDir(std.fs.path.dirname(config_file_name).?) catch {};
         var config_file = try std.fs.cwd().createFile(config_file_name, .{});
         defer config_file.close();
@@ -74,11 +86,17 @@ pub fn addEmbeddedExecutable(
 
         try writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)});
         try writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)});
+        try writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length});
     }
 
     const microzig_pkg = Pkg{
         .name = "microzig",
         .path = .{ .path = root_path ++ "core/microzig.zig" },
+    };
+
+    const config_pkg = Pkg{
+        .name = "microzig-config",
+        .path = .{ .path = config_file_name },
     };
 
     const chip_pkg = Pkg{
@@ -90,14 +108,9 @@ pub fn addEmbeddedExecutable(
             Pkg{
                 .name = "cpu",
                 .path = .{ .path = chip.cpu.path },
-                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio },
+                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio, config_pkg },
             },
         },
-    };
-
-    const config_pkg = Pkg{
-        .name = "microzig-config",
-        .path = .{ .path = config_file_name },
     };
 
     const exe = builder.addExecutable(name, root_path ++ "core/start.zig");
