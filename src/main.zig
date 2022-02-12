@@ -18,11 +18,16 @@ fn root() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
 }
 
+pub const BuildOptions = struct {
+    packages: ?[]const Pkg = null,
+};
+
 pub fn addEmbeddedExecutable(
     builder: *std.build.Builder,
     name: []const u8,
     source: []const u8,
     backing: Backing,
+    options: BuildOptions,
 ) !*std.build.LibExeObjStep {
     const has_board = (backing == .board);
     const chip = switch (backing) {
@@ -130,17 +135,22 @@ pub fn addEmbeddedExecutable(
     exe.bundle_compiler_rt = false;
     switch (backing) {
         .chip => {
+            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
+            try app_pkgs.append(Pkg{
+                .name = microzig_pkg.name,
+                .path = microzig_pkg.path,
+                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
+            });
+
+            if (options.packages) |packages|
+                try app_pkgs.appendSlice(packages);
+
             exe.addPackage(Pkg{
                 .name = "app",
                 .path = .{ .path = source },
-                .dependencies = &[_]Pkg{
-                    Pkg{
-                        .name = microzig_pkg.name,
-                        .path = microzig_pkg.path,
-                        .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
-                    },
-                },
+                .dependencies = app_pkgs.items,
             });
+
             exe.addPackage(Pkg{
                 .name = microzig_pkg.name,
                 .path = microzig_pkg.path,
@@ -148,24 +158,30 @@ pub fn addEmbeddedExecutable(
             });
         },
         .board => |board| {
-            exe.addPackage(Pkg{
-                .name = "app",
-                .path = .{ .path = source },
-                .dependencies = &[_]Pkg{
-                    Pkg{
-                        .name = microzig_pkg.name,
-                        .path = microzig_pkg.path,
-                        .dependencies = &[_]Pkg{
-                            config_pkg,
-                            chip_pkg,
-                            Pkg{
-                                .name = "board",
-                                .path = .{ .path = board.path },
-                                .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
-                            },
+            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
+            try app_pkgs.append(
+                Pkg{
+                    .name = microzig_pkg.name,
+                    .path = microzig_pkg.path,
+                    .dependencies = &[_]Pkg{
+                        config_pkg,
+                        chip_pkg,
+                        Pkg{
+                            .name = "board",
+                            .path = .{ .path = board.path },
+                            .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
                         },
                     },
                 },
+            );
+
+            if (options.packages) |packages|
+                try app_pkgs.appendSlice(packages);
+
+            exe.addPackage(Pkg{
+                .name = "app",
+                .path = .{ .path = source },
+                .dependencies = app_pkgs.items,
             });
 
             exe.addPackage(Pkg{
