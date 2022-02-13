@@ -110,10 +110,11 @@ pub fn addEmbeddedExecutable(
         .dependencies = &[_]Pkg{
             microzig_pkg,
             pkgs.mmio,
+            config_pkg,
             Pkg{
                 .name = "cpu",
                 .path = .{ .path = chip.cpu.path },
-                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio, config_pkg },
+                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio },
             },
         },
     };
