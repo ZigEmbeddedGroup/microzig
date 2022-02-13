@@ -133,7 +133,7 @@ pub fn addEmbeddedExecutable(
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-    exe.bundle_compiler_rt = false;
+    exe.bundle_compiler_rt = true;
     switch (backing) {
         .chip => {
             var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);

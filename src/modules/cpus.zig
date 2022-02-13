@@ -22,7 +22,7 @@ pub const cortex_m3 = Cpu{
     .name = "ARM Cortex-M3",
     .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
     .target = std.zig.CrossTarget{
-        .cpu_arch = .arm,
+        .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
         .os_tag = .freestanding,
         .abi = .none,
