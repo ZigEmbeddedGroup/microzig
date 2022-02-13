@@ -21724,3 +21724,129 @@ pub const GPIO = extern struct {
         PINCLR31: u1, // bit offset: 31 desc: Fast GPIO output value Clear bits. Bit 0 in CLRx controls pin Px[0], bit 31 in CLRx controls pin Px[31]. 0 = Controlled pin output is unchanged. 1 = Controlled pin output is set to LOW.
     });
 };
+
+const std = @import("std");
+const root = @import("root");
+const cpu = @import("cpu");
+const config = @import("microzig-config");
+const InterruptVector = extern union {
+    C: fn () callconv(.C) void,
+    Naked: fn () callconv(.Naked) void,
+    // Interrupt is not supported on arm
+};
+
+fn makeUnhandledHandler(comptime str: []const u8) InterruptVector {
+    return InterruptVector{
+        .C = struct {
+            fn unhandledInterrupt() callconv(.C) noreturn {
+                @panic("unhandled interrupt: " ++ str);
+            }
+        }.unhandledInterrupt,
+    };
+}
+
+pub const VectorTable = extern struct {
+    initial_stack_pointer: u32 = config.end_of_stack,
+    Reset: InterruptVector = InterruptVector{ .C = cpu.startup_logic._start },
+    NMI: InterruptVector = makeUnhandledHandler("NMI"),
+    HardFault: InterruptVector = makeUnhandledHandler("HardFault"),
+    MemManage: InterruptVector = makeUnhandledHandler("MemManage"),
+    BusFault: InterruptVector = makeUnhandledHandler("BusFault"),
+    UsageFault: InterruptVector = makeUnhandledHandler("UsageFault"),
+
+    reserved: [4]u32 = .{ 0, 0, 0, 0 },
+    SVCall: InterruptVector = makeUnhandledHandler("SVCall"),
+    DebugMonitor: InterruptVector = makeUnhandledHandler("DebugMonitor"),
+    reserved1: u32 = 0,
+
+    PendSV: InterruptVector = makeUnhandledHandler("PendSV"),
+    SysTick: InterruptVector = makeUnhandledHandler("SysTick"),
+
+    WDT: InterruptVector = makeUnhandledHandler("WDT"),
+    TIMER0: InterruptVector = makeUnhandledHandler("TIMER0"),
+    TIMER1: InterruptVector = makeUnhandledHandler("TIMER1"),
+    TIMER2: InterruptVector = makeUnhandledHandler("TIMER2"),
+    TIMER3: InterruptVector = makeUnhandledHandler("TIMER3"),
+    UART0: InterruptVector = makeUnhandledHandler("UART0"),
+    UART1: InterruptVector = makeUnhandledHandler("UART1"),
+    UART2: InterruptVector = makeUnhandledHandler("UART2"),
+    UART3: InterruptVector = makeUnhandledHandler("UART3"),
+    PWM1: InterruptVector = makeUnhandledHandler("PWM1"),
+    I2C0: InterruptVector = makeUnhandledHandler("I2C0"),
+    I2C1: InterruptVector = makeUnhandledHandler("I2C1"),
+    I2C2: InterruptVector = makeUnhandledHandler("I2C2"),
+    SPI: InterruptVector = makeUnhandledHandler("SPI"),
+    SSP0: InterruptVector = makeUnhandledHandler("SSP0"),
+    SSP1: InterruptVector = makeUnhandledHandler("SSP1"),
+    PLL0: InterruptVector = makeUnhandledHandler("PLL0"),
+    RTC: InterruptVector = makeUnhandledHandler("RTC"),
+    EINT0: InterruptVector = makeUnhandledHandler("EINT0"),
+    EINT1: InterruptVector = makeUnhandledHandler("EINT1"),
+    EINT2: InterruptVector = makeUnhandledHandler("EINT2"),
+    EINT3: InterruptVector = makeUnhandledHandler("EINT3"),
+    ADC: InterruptVector = makeUnhandledHandler("ADC"),
+    BOD: InterruptVector = makeUnhandledHandler("BOD"),
+    USB: InterruptVector = makeUnhandledHandler("USB"),
+    CAN: InterruptVector = makeUnhandledHandler("CAN"),
+    DMA: InterruptVector = makeUnhandledHandler("DMA"),
+    I2S: InterruptVector = makeUnhandledHandler("I2S"),
+    ENET: InterruptVector = makeUnhandledHandler("ENET"),
+    RIT: InterruptVector = makeUnhandledHandler("RIT"),
+    MCPWM: InterruptVector = makeUnhandledHandler("MCPWM"),
+    QEI: InterruptVector = makeUnhandledHandler("QEI"),
+    PLL1: InterruptVector = makeUnhandledHandler("PLL1"),
+    USBActivity: InterruptVector = makeUnhandledHandler("USBActivity"),
+    CANActivity: InterruptVector = makeUnhandledHandler("CANActivity"),
+};
+
+fn isValidField(field_name: []const u8) bool {
+    return !std.mem.startsWith(u8, field_name, "reserved") and
+        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
+        !std.mem.eql(u8, field_name, "reset");
+}
+
+export const vectors: VectorTable linksection("microzig_flash_start") = blk: {
+    var temp: VectorTable = .{};
+    if (@hasDecl(root, "vector_table")) {
+        const vector_table = root.vector_table;
+        if (@typeInfo(vector_table) != .Struct)
+            @compileLog("root.vector_table must be a struct");
+
+        inline for (@typeInfo(vector_table).Struct.decls) |decl| {
+            const calling_convention = @typeInfo(@TypeOf(@field(vector_table, decl.name))).Fn.calling_convention;
+            const handler = @field(vector_table, decl.name);
+
+            if (!@hasField(VectorTable, decl.name)) {
+                var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "', declarations in 'root.vector_table' must be one of:\n";
+                inline for (std.meta.fields(VectorTable)) |field| {
+                    if (isValidField(field.name)) {
+                        msg = msg ++ "    " ++ field.name ++ "\n";
+                    }
+                }
+
+                @compileError(msg);
+            }
+
+            if (!isValidField(decl.name))
+                @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
+
+            @field(temp, decl.name) = switch (calling_convention) {
+                .C => .{ .C = handler },
+                .Naked => .{ .Naked = handler },
+                // for unspecified calling convention we are going to generate small wrapper
+                .Unspecified => .{
+                    .C = struct {
+                        fn wrapper() callconv(.C) void {
+                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                                @call(.{ .modifier = .always_inline }, handler, .{});
+                        }
+                    }.wrapper,
+                },
+
+                else => @compileError("unsupported calling convention for function " ++ decl.name),
+            };
+        }
+    }
+    break :blk temp;
+};
+

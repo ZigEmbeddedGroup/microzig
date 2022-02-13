@@ -117,14 +117,142 @@ class MMIOFileGenerator:
 
         self.write_line("};")
 
+    # TODO: descriptions on system interrupts/exceptions, turn on system interrupts/exceptions
+    def generate_startup_and_interrupts(self, interrupts):
+        self.write_line("")
+        self.write_line(
+        """
+const std = @import(\"std\");
+const root = @import(\"root\");
+const cpu = @import(\"cpu\");
+const config = @import(\"microzig-config\");
+const InterruptVector = extern union {
+    C: fn () callconv(.C) void,
+    Naked: fn () callconv(.Naked) void,
+    // Interrupt is not supported on arm
+};
+
+fn makeUnhandledHandler(comptime str: []const u8) InterruptVector {
+    return InterruptVector{
+        .C = struct {
+            fn unhandledInterrupt() callconv(.C) noreturn {
+                @panic(\"unhandled interrupt: \" ++ str);
+            }
+        }.unhandledInterrupt,
+    };
+}
+
+pub const VectorTable = extern struct {
+    initial_stack_pointer: u32 = config.end_of_stack,
+    Reset: InterruptVector = InterruptVector{ .C = cpu.startup_logic._start },
+    NMI: InterruptVector = makeUnhandledHandler(\"NMI\"),
+    HardFault: InterruptVector = makeUnhandledHandler(\"HardFault\"),
+    MemManage: InterruptVector = makeUnhandledHandler(\"MemManage\"),
+    BusFault: InterruptVector = makeUnhandledHandler(\"BusFault\"),
+    UsageFault: InterruptVector = makeUnhandledHandler(\"UsageFault\"),
+
+    reserved: [4]u32 = .{ 0, 0, 0, 0 },
+    SVCall: InterruptVector = makeUnhandledHandler(\"SVCall\"),
+    DebugMonitor: InterruptVector = makeUnhandledHandler(\"DebugMonitor\"),
+    reserved1: u32 = 0,
+
+    PendSV: InterruptVector = makeUnhandledHandler(\"PendSV\"),
+    SysTick: InterruptVector = makeUnhandledHandler(\"SysTick\"),\n
+""")
+
+        reserved_count = 2
+        expected_next_value = 0
+        for interrupt in interrupts:
+            if expected_next_value > interrupt.value:
+                raise Exception("out of order interrupt list")
+
+            while expected_next_value < interrupt.value:
+                self.write_line(f"    reserved{reserved_count}: u32 = 0,")
+                expected_next_value += 1
+                reserved_count += 1
+
+            if interrupt.description is not None:
+                self.write_line(f"\n    /// {interrupt.description}")
+            self.write_line(f"    {interrupt.name}: InterruptVector = makeUnhandledHandler(\"{interrupt.name}\"),")
+            expected_next_value += 1
+        self.write_line("};")
+
+        self.write_line(
+        """
+fn isValidField(field_name: []const u8) bool {
+    return !std.mem.startsWith(u8, field_name, "reserved") and
+        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
+        !std.mem.eql(u8, field_name, "reset");
+}
+
+export const vectors: VectorTable linksection(\"microzig_flash_start\") = blk: {
+    var temp: VectorTable = .{};
+    if (@hasDecl(root, \"vector_table\")) {
+        const vector_table = root.vector_table;
+        if (@typeInfo(vector_table) != .Struct)
+            @compileLog(\"root.vector_table must be a struct\");
+
+        inline for (@typeInfo(vector_table).Struct.decls) |decl| {
+            const calling_convention = @typeInfo(@TypeOf(@field(vector_table, decl.name))).Fn.calling_convention;
+            const handler = @field(vector_table, decl.name);
+
+            if (!@hasField(VectorTable, decl.name)) {
+                var msg: []const u8 = \"There is no such interrupt as '\" ++ decl.name ++ \"', declarations in 'root.vector_table' must be one of:\\n\";
+                inline for (std.meta.fields(VectorTable)) |field| {
+                    if (isValidField(field.name)) {
+                        msg = msg ++ \"    \" ++ field.name ++ \"\\n\";
+                    }
+                }
+
+                @compileError(msg);
+            }
+
+            if (!isValidField(decl.name))
+                @compileError(\"You are not allowed to specify \'\" ++ decl.name ++ \"\' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang\");
+
+            @field(temp, decl.name) = switch (calling_convention) {
+                .C => .{ .C = handler },
+                .Naked => .{ .Naked = handler },
+                // for unspecified calling convention we are going to generate small wrapper
+                .Unspecified => .{
+                    .C = struct {
+                        fn wrapper() callconv(.C) void {
+                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                                @call(.{ .modifier = .always_inline }, handler, .{});
+                        }
+                    }.wrapper,
+                },
+
+                else => @compileError(\"unsupported calling convention for function \" ++ decl.name),
+            };
+        }
+    }
+    break :blk temp;
+};
+""")
+
     def generate_file(self, device):
         self.write_line("// generated using svd2zig.py\n// DO NOT EDIT")
         self.write_line(f"// based on {device.name} version {device.version}")
 
         self.write_line("const mmio = @import(\"microzig-mmio\").mmio;")
         self.write_line(f"const Name = \"{device.name}\";")
-        for peripherial in device.peripherals:
-            self.generate_peripherial_declaration(peripherial)
+        interrupts = {}
+        for peripheral in device.peripherals:
+            self.generate_peripherial_declaration(peripheral)
+            if peripheral.interrupts != None:
+                for interrupt in peripheral.interrupts:
+                    if interrupt.value in interrupts and interrupts[interrupt.value].description != interrupt.description:
+                        interrupts[interrupt.value].description += "; " + interrupt.description
+                    else:
+                        interrupts[interrupt.value] = interrupt
+
+        interrupts = list(map(lambda i: i[1], sorted(interrupts.items())))
+        for interrupt in interrupts:
+            if interrupt.description is not None:
+                interrupt.description = ' '.join(interrupt.description.split())
+
+        self.generate_startup_and_interrupts(interrupts)
 
     def write_line(self, line):
         self.f.write(line + "\n")

@@ -23,5 +23,5 @@ pub const mbed_lpc1768 = Board{
 pub const stm32f3discovery = Board{
     .name = "STM32F3DISCOVERY",
     .path = root_path ++ "boards/stm32f3discovery/stm32f3discovery.zig",
-    .chip = chips.stm32f30x,
+    .chip = chips.stm32f303vc,
 };
