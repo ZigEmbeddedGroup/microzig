@@ -1,6 +1,6 @@
 const std = @import("std");
 const micro = @import("microzig.zig");
-const chip = @import("chip");
+const chip = micro.chip;
 
 pub const Mode = enum {
     input,

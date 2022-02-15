@@ -1,6 +1,6 @@
 const std = @import("std");
 const micro = @import("microzig.zig");
-const chip = @import("chip");
+const chip = micro.chip;
 
 pub fn Uart(comptime index: usize) type {
     const SystemUart = chip.Uart(index);

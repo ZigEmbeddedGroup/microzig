@@ -142,8 +142,19 @@ fn makeUnhandledHandler(comptime str: []const u8) InterruptVector {
     };
 }
 
+// TODO: let the user override which ram section to use the stack on,
+// for now just using the first ram section in the memory region list
+const first_ram = blk: {
+    for (config.chip_info.memory_regions) |region| {
+        if (region.kind == .ram)
+            break :blk region;
+    } else {
+        @compileError("no ram memory region found for setting the end-of-stack address");
+    }
+};
+
 pub const VectorTable = extern struct {
-    initial_stack_pointer: u32 = config.end_of_stack,
+    initial_stack_pointer: u32 = first_ram.offset + config.stack_size,
     Reset: InterruptVector = InterruptVector{ .C = cpu.startup_logic._start },
     NMI: InterruptVector = makeUnhandledHandler(\"NMI\"),
     HardFault: InterruptVector = makeUnhandledHandler(\"HardFault\"),

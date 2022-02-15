@@ -1,5 +1,5 @@
 const std = @import("std");
-const root = @import("root");
+const microzig = @import("microzig");
 
 pub fn sei() void {
     asm volatile ("cpsie i");

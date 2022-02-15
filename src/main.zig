@@ -22,12 +22,17 @@ pub const BuildOptions = struct {
     packages: ?[]const Pkg = null,
 };
 
+pub const Config = struct {
+    stack_size: usize = 1024,
+};
+
 pub fn addEmbeddedExecutable(
     builder: *std.build.Builder,
     name: []const u8,
     source: []const u8,
     backing: Backing,
     options: BuildOptions,
+    config: Config,
 ) !*std.build.LibExeObjStep {
     const has_board = (backing == .board);
     const chip = switch (backing) {
@@ -68,18 +73,6 @@ pub fn addEmbeddedExecutable(
     };
 
     {
-        // TODO: let the user override which ram section to use the stack on,
-        // for now just using the first ram section in the memory region list
-        const first_ram = blk: {
-            for (chip.memory_regions) |region| {
-                if (region.kind == .ram)
-                    break :blk region;
-            } else {
-                std.log.err("no ram memory region found for setting the end-of-stack address", .{});
-                return error.NoRam;
-            }
-        };
-
         std.fs.cwd().makeDir(std.fs.path.dirname(config_file_name).?) catch {};
         var config_file = try std.fs.cwd().createFile(config_file_name, .{});
         defer config_file.close();
@@ -91,7 +84,15 @@ pub fn addEmbeddedExecutable(
 
         try writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)});
         try writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)});
-        try writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length});
+        try writer.print("pub const stack_size = 0x{X:0>8};\n", .{config.stack_size});
+
+        inline for (comptime std.meta.declarations(chips)) |decl| {
+            if (decl.is_pub) {
+                if (std.mem.eql(u8, chip.name, @field(chips, decl.name).name)) {
+                    try writer.print("pub const chip_info = @import(\"chips\").{s};\n", .{decl.name});
+                }
+            }
+        }
     }
 
     const microzig_pkg = Pkg{
@@ -102,6 +103,10 @@ pub fn addEmbeddedExecutable(
     const config_pkg = Pkg{
         .name = "microzig-config",
         .path = .{ .path = config_file_name },
+        .dependencies = &[_]Pkg{Pkg{
+            .name = "chips",
+            .path = .{ .path = root_path ++ "modules/chips.zig" },
+        }},
     };
 
     const chip_pkg = Pkg{
@@ -126,7 +131,7 @@ pub fn addEmbeddedExecutable(
     exe.single_threaded = true;
     exe.setTarget(chip.cpu.target);
 
-    const linkerscript = try LinkerScriptStep.create(builder, chip);
+    const linkerscript = try LinkerScriptStep.create(builder, chip, config);
     exe.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
 
     // TODO:
@@ -134,72 +139,34 @@ pub fn addEmbeddedExecutable(
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
     exe.bundle_compiler_rt = true;
+
+    exe.addPackage(microzig_pkg);
+    exe.addPackage(config_pkg);
+    exe.addPackage(chip_pkg);
+
     switch (backing) {
-        .chip => {
-            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
-            try app_pkgs.append(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
-            });
-
-            if (options.packages) |packages|
-                try app_pkgs.appendSlice(packages);
-
-            exe.addPackage(Pkg{
-                .name = "app",
-                .path = .{ .path = source },
-                .dependencies = app_pkgs.items,
-            });
-
-            exe.addPackage(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
-            });
-        },
+        .chip => {},
         .board => |board| {
-            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
-            try app_pkgs.append(
-                Pkg{
-                    .name = microzig_pkg.name,
-                    .path = microzig_pkg.path,
-                    .dependencies = &[_]Pkg{
-                        config_pkg,
-                        chip_pkg,
-                        Pkg{
-                            .name = "board",
-                            .path = .{ .path = board.path },
-                            .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
-                        },
-                    },
-                },
-            );
-
-            if (options.packages) |packages|
-                try app_pkgs.appendSlice(packages);
-
             exe.addPackage(Pkg{
-                .name = "app",
-                .path = .{ .path = source },
-                .dependencies = app_pkgs.items,
-            });
-
-            exe.addPackage(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{
-                    config_pkg,
-                    chip_pkg,
-                    Pkg{
-                        .name = "board",
-                        .path = .{ .path = board.path },
-                        .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
-                    },
-                },
+                .name = "board",
+                .path = .{ .path = board.path },
+                .dependencies = &[_]Pkg{microzig_pkg},
             });
         },
     }
+    var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
+
+    if (options.packages) |packages|
+        try app_pkgs.appendSlice(packages);
+
+    try app_pkgs.append(microzig_pkg);
+
+    exe.addPackage(Pkg{
+        .name = "app",
+        .path = .{ .path = source },
+        .dependencies = app_pkgs.items,
+    });
+
     return exe;
 }
 

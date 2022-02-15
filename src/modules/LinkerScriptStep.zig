@@ -1,6 +1,7 @@
 const std = @import("std");
 const MemoryRegion = @import("MemoryRegion.zig");
 const Chip = @import("Chip.zig");
+const Config = @import("../main.zig").Config;
 const Step = std.build.Step;
 const Builder = std.build.Builder;
 const GeneratedFile = std.build.GeneratedFile;
@@ -11,8 +12,9 @@ step: Step,
 generated_file: std.build.GeneratedFile,
 builder: *Builder,
 chip: Chip,
+config: Config,
 
-pub fn create(builder: *Builder, chip: Chip) !*LinkerscriptStep {
+pub fn create(builder: *Builder, chip: Chip, config: Config) !*LinkerscriptStep {
     var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
 
     hasher.update(chip.name);
@@ -44,6 +46,7 @@ pub fn create(builder: *Builder, chip: Chip) !*LinkerscriptStep {
         },
         .builder = builder,
         .chip = chip,
+        .config = config,
     };
     return ret;
 }
@@ -52,6 +55,7 @@ fn make(step: *Step) !void {
     const linkerscript = @fieldParentPtr(LinkerscriptStep, "step", step);
     const file = try std.fs.cwd().createFile(linkerscript.generated_file.path.?, .{});
     defer file.close();
+    const config = linkerscript.config;
 
     const target = linkerscript.chip.cpu.target;
     if (target.cpu_arch == null) {
@@ -132,13 +136,20 @@ fn make(step: *Step) !void {
             );
         }
 
+        try writer.print(
+            \\  .stack (NOLOAD) :
+            \\  {{
+            \\      . += {};
+            \\  }} > ram0
+        , .{config.stack_size});
+
         try writer.writeAll(
             \\  .data :
             \\  {
-            \\     microzig_data_start = .;
-            \\     *(.rodata*)
-            \\     *(.data*)
-            \\     microzig_data_end = .;
+            \\      microzig_data_start = .;
+            \\      *(.rodata*)
+            \\      *(.data*)
+            \\      microzig_data_end = .;
             \\  } > ram0 AT> flash0
             \\
             \\  .bss (NOLOAD) :
