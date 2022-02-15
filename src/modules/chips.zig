@@ -40,9 +40,9 @@ pub const stm32f103x8 = Chip{
     },
 };
 
-pub const stm32f30x = Chip{
-    .name = "STM32F30x",
-    .path = root_path ++ "chips/stm32f30x/stm32f30x.zig",
+pub const stm32f303vc = Chip{
+    .name = "STM32F303VC",
+    .path = root_path ++ "chips/stm32f303/stm32f303.zig",
     .cpu = cpus.cortex_m4,
     .memory_regions = &.{
         MemoryRegion{ .offset = 0x08000000, .length = 256 * 1024, .kind = .flash },

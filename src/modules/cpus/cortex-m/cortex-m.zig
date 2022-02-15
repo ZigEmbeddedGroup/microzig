@@ -1,5 +1,5 @@
 const std = @import("std");
-const config = @import("microzig-config");
+const root = @import("root");
 
 pub fn sei() void {
     asm volatile ("cpsie i");
@@ -42,33 +42,6 @@ pub fn clrex() void {
 }
 
 pub const startup_logic = struct {
-    const InterruptVector = fn () callconv(.C) void;
-
-    const VectorTable = extern struct {
-        initial_stack_pointer: u32,
-        reset: InterruptVector,
-        nmi: InterruptVector = makeUnhandledHandler("nmi"),
-        hard_fault: InterruptVector = makeUnhandledHandler("hard_fault"),
-        mpu_fault: InterruptVector = makeUnhandledHandler("mpu_fault"),
-        bus_fault: InterruptVector = makeUnhandledHandler("bus_fault"),
-        usage_fault: InterruptVector = makeUnhandledHandler("usage_fault"),
-
-        reserved: u32 = 0,
-    };
-
-    export const vectors linksection("microzig_flash_start") = VectorTable{
-        .initial_stack_pointer = config.end_of_stack,
-        .reset = _start,
-    };
-
-    fn makeUnhandledHandler(comptime str: []const u8) fn () callconv(.C) noreturn {
-        return struct {
-            fn unhandledInterrupt() callconv(.C) noreturn {
-                @panic("unhandled interrupt: " ++ str);
-            }
-        }.unhandledInterrupt;
-    }
-
     extern fn microzig_main() noreturn;
 
     extern var microzig_data_start: anyopaque;
@@ -77,7 +50,7 @@ pub const startup_logic = struct {
     extern var microzig_bss_end: anyopaque;
     extern const microzig_data_load_start: anyopaque;
 
-    fn _start() callconv(.C) noreturn {
+    pub fn _start() callconv(.C) noreturn {
 
         // fill .bss with zeroes
         {

@@ -17770,3 +17770,273 @@ pub const USB = extern struct {
         padding1: u1 = 0,
     });
 };
+
+const std = @import("std");
+const root = @import("root");
+const cpu = @import("cpu");
+const config = @import("microzig-config");
+const InterruptVector = extern union {
+    C: fn () callconv(.C) void,
+    Naked: fn () callconv(.Naked) void,
+    // Interrupt is not supported on arm
+};
+
+fn makeUnhandledHandler(comptime str: []const u8) InterruptVector {
+    return InterruptVector{
+        .C = struct {
+            fn unhandledInterrupt() callconv(.C) noreturn {
+                @panic("unhandled interrupt: " ++ str);
+            }
+        }.unhandledInterrupt,
+    };
+}
+
+pub const VectorTable = extern struct {
+    initial_stack_pointer: u32 = config.end_of_stack,
+    Reset: InterruptVector = InterruptVector{ .C = cpu.startup_logic._start },
+    NMI: InterruptVector = makeUnhandledHandler("NMI"),
+    HardFault: InterruptVector = makeUnhandledHandler("HardFault"),
+    MemManage: InterruptVector = makeUnhandledHandler("MemManage"),
+    BusFault: InterruptVector = makeUnhandledHandler("BusFault"),
+    UsageFault: InterruptVector = makeUnhandledHandler("UsageFault"),
+
+    reserved: [4]u32 = .{ 0, 0, 0, 0 },
+    SVCall: InterruptVector = makeUnhandledHandler("SVCall"),
+    DebugMonitor: InterruptVector = makeUnhandledHandler("DebugMonitor"),
+    reserved1: u32 = 0,
+
+    PendSV: InterruptVector = makeUnhandledHandler("PendSV"),
+    SysTick: InterruptVector = makeUnhandledHandler("SysTick"),
+
+    /// Window Watchdog interrupt
+    WWDG: InterruptVector = makeUnhandledHandler("WWDG"),
+
+    /// PVD through EXTI line detection interrupt
+    PVD: InterruptVector = makeUnhandledHandler("PVD"),
+
+    /// Tamper interrupt
+    TAMPER: InterruptVector = makeUnhandledHandler("TAMPER"),
+
+    /// RTC global interrupt
+    RTC: InterruptVector = makeUnhandledHandler("RTC"),
+
+    /// Flash global interrupt
+    FLASH: InterruptVector = makeUnhandledHandler("FLASH"),
+
+    /// RCC global interrupt
+    RCC: InterruptVector = makeUnhandledHandler("RCC"),
+
+    /// EXTI Line0 interrupt
+    EXTI0: InterruptVector = makeUnhandledHandler("EXTI0"),
+
+    /// EXTI Line1 interrupt
+    EXTI1: InterruptVector = makeUnhandledHandler("EXTI1"),
+
+    /// EXTI Line2 interrupt
+    EXTI2: InterruptVector = makeUnhandledHandler("EXTI2"),
+
+    /// EXTI Line3 interrupt
+    EXTI3: InterruptVector = makeUnhandledHandler("EXTI3"),
+
+    /// EXTI Line4 interrupt
+    EXTI4: InterruptVector = makeUnhandledHandler("EXTI4"),
+
+    /// DMA1 Channel1 global interrupt
+    DMA1_Channel1: InterruptVector = makeUnhandledHandler("DMA1_Channel1"),
+
+    /// DMA1 Channel2 global interrupt
+    DMA1_Channel2: InterruptVector = makeUnhandledHandler("DMA1_Channel2"),
+
+    /// DMA1 Channel3 global interrupt
+    DMA1_Channel3: InterruptVector = makeUnhandledHandler("DMA1_Channel3"),
+
+    /// DMA1 Channel4 global interrupt
+    DMA1_Channel4: InterruptVector = makeUnhandledHandler("DMA1_Channel4"),
+
+    /// DMA1 Channel5 global interrupt
+    DMA1_Channel5: InterruptVector = makeUnhandledHandler("DMA1_Channel5"),
+
+    /// DMA1 Channel6 global interrupt
+    DMA1_Channel6: InterruptVector = makeUnhandledHandler("DMA1_Channel6"),
+
+    /// DMA1 Channel7 global interrupt
+    DMA1_Channel7: InterruptVector = makeUnhandledHandler("DMA1_Channel7"),
+
+    /// ADC1 global interrupt; ADC2 global interrupt
+    ADC: InterruptVector = makeUnhandledHandler("ADC"),
+
+    /// CAN1 TX interrupts
+    CAN1_TX: InterruptVector = makeUnhandledHandler("CAN1_TX"),
+
+    /// CAN1 RX0 interrupts
+    CAN1_RX0: InterruptVector = makeUnhandledHandler("CAN1_RX0"),
+
+    /// CAN1 RX1 interrupt
+    CAN1_RX1: InterruptVector = makeUnhandledHandler("CAN1_RX1"),
+
+    /// CAN1 SCE interrupt
+    CAN1_SCE: InterruptVector = makeUnhandledHandler("CAN1_SCE"),
+
+    /// EXTI Line[9:5] interrupts
+    EXTI9_5: InterruptVector = makeUnhandledHandler("EXTI9_5"),
+
+    /// TIM1 Break interrupt and TIM9 global interrupt
+    TIM1_BRK_TIM9: InterruptVector = makeUnhandledHandler("TIM1_BRK_TIM9"),
+
+    /// TIM1 Update interrupt and TIM10 global interrupt
+    TIM1_UP_TIM10: InterruptVector = makeUnhandledHandler("TIM1_UP_TIM10"),
+
+    /// TIM1 Trigger and Commutation interrupts and TIM11 global interrupt
+    TIM1_TRG_COM_TIM11: InterruptVector = makeUnhandledHandler("TIM1_TRG_COM_TIM11"),
+
+    /// TIM1 Capture Compare interrupt
+    TIM1_CC: InterruptVector = makeUnhandledHandler("TIM1_CC"),
+
+    /// TIM2 global interrupt
+    TIM2: InterruptVector = makeUnhandledHandler("TIM2"),
+
+    /// TIM3 global interrupt
+    TIM3: InterruptVector = makeUnhandledHandler("TIM3"),
+
+    /// TIM4 global interrupt
+    TIM4: InterruptVector = makeUnhandledHandler("TIM4"),
+
+    /// I2C1 event interrupt
+    I2C1_EV: InterruptVector = makeUnhandledHandler("I2C1_EV"),
+
+    /// I2C1 error interrupt
+    I2C1_ER: InterruptVector = makeUnhandledHandler("I2C1_ER"),
+
+    /// I2C2 event interrupt
+    I2C2_EV: InterruptVector = makeUnhandledHandler("I2C2_EV"),
+
+    /// I2C2 error interrupt
+    I2C2_ER: InterruptVector = makeUnhandledHandler("I2C2_ER"),
+
+    /// SPI1 global interrupt
+    SPI1: InterruptVector = makeUnhandledHandler("SPI1"),
+
+    /// SPI2 global interrupt
+    SPI2: InterruptVector = makeUnhandledHandler("SPI2"),
+
+    /// USART1 global interrupt
+    USART1: InterruptVector = makeUnhandledHandler("USART1"),
+
+    /// USART2 global interrupt
+    USART2: InterruptVector = makeUnhandledHandler("USART2"),
+
+    /// USART3 global interrupt
+    USART3: InterruptVector = makeUnhandledHandler("USART3"),
+
+    /// EXTI Line[15:10] interrupts
+    EXTI15_10: InterruptVector = makeUnhandledHandler("EXTI15_10"),
+
+    /// RTC Alarms through EXTI line interrupt
+    RTCAlarm: InterruptVector = makeUnhandledHandler("RTCAlarm"),
+
+    /// USB Device FS Wakeup through EXTI line interrupt
+    USB_FS_WKUP: InterruptVector = makeUnhandledHandler("USB_FS_WKUP"),
+
+    /// TIM8 Break interrupt and TIM12 global interrupt
+    TIM8_BRK_TIM12: InterruptVector = makeUnhandledHandler("TIM8_BRK_TIM12"),
+
+    /// TIM8 Update interrupt and TIM13 global interrupt
+    TIM8_UP_TIM13: InterruptVector = makeUnhandledHandler("TIM8_UP_TIM13"),
+
+    /// TIM8 Trigger and Commutation interrupts and TIM14 global interrupt
+    TIM8_TRG_COM_TIM14: InterruptVector = makeUnhandledHandler("TIM8_TRG_COM_TIM14"),
+
+    /// TIM8 Capture Compare interrupt
+    TIM8_CC: InterruptVector = makeUnhandledHandler("TIM8_CC"),
+
+    /// ADC3 global interrupt
+    ADC3: InterruptVector = makeUnhandledHandler("ADC3"),
+
+    /// FSMC global interrupt
+    FSMC: InterruptVector = makeUnhandledHandler("FSMC"),
+
+    /// SDIO global interrupt
+    SDIO: InterruptVector = makeUnhandledHandler("SDIO"),
+
+    /// TIM5 global interrupt
+    TIM5: InterruptVector = makeUnhandledHandler("TIM5"),
+
+    /// SPI3 global interrupt
+    SPI3: InterruptVector = makeUnhandledHandler("SPI3"),
+
+    /// UART4 global interrupt
+    UART4: InterruptVector = makeUnhandledHandler("UART4"),
+
+    /// UART5 global interrupt
+    UART5: InterruptVector = makeUnhandledHandler("UART5"),
+
+    /// TIM6 global interrupt
+    TIM6: InterruptVector = makeUnhandledHandler("TIM6"),
+
+    /// TIM7 global interrupt
+    TIM7: InterruptVector = makeUnhandledHandler("TIM7"),
+
+    /// DMA2 Channel1 global interrupt
+    DMA2_Channel1: InterruptVector = makeUnhandledHandler("DMA2_Channel1"),
+
+    /// DMA2 Channel2 global interrupt
+    DMA2_Channel2: InterruptVector = makeUnhandledHandler("DMA2_Channel2"),
+
+    /// DMA2 Channel3 global interrupt
+    DMA2_Channel3: InterruptVector = makeUnhandledHandler("DMA2_Channel3"),
+
+    /// DMA2 Channel4 and DMA2 Channel5 global interrupt
+    DMA2_Channel4_5: InterruptVector = makeUnhandledHandler("DMA2_Channel4_5"),
+};
+
+fn isValidField(field_name: []const u8) bool {
+    return !std.mem.startsWith(u8, field_name, "reserved") and
+        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
+        !std.mem.eql(u8, field_name, "reset");
+}
+
+export const vectors: VectorTable linksection("microzig_flash_start") = blk: {
+    var temp: VectorTable = .{};
+    if (@hasDecl(root, "vector_table")) {
+        const vector_table = root.vector_table;
+        if (@typeInfo(vector_table) != .Struct)
+            @compileLog("root.vector_table must be a struct");
+
+        inline for (@typeInfo(vector_table).Struct.decls) |decl| {
+            const calling_convention = @typeInfo(@TypeOf(@field(vector_table, decl.name))).Fn.calling_convention;
+            const handler = @field(vector_table, decl.name);
+
+            if (!@hasField(VectorTable, decl.name)) {
+                var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "', declarations in 'root.vector_table' must be one of:\n";
+                inline for (std.meta.fields(VectorTable)) |field| {
+                    if (isValidField(field.name)) {
+                        msg = msg ++ "    " ++ field.name ++ "\n";
+                    }
+                }
+
+                @compileError(msg);
+            }
+
+            if (!isValidField(decl.name))
+                @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
+
+            @field(temp, decl.name) = switch (calling_convention) {
+                .C => .{ .C = handler },
+                .Naked => .{ .Naked = handler },
+                // for unspecified calling convention we are going to generate small wrapper
+                .Unspecified => .{
+                    .C = struct {
+                        fn wrapper() callconv(.C) void {
+                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                                @call(.{ .modifier = .always_inline }, handler, .{});
+                        }
+                    }.wrapper,
+                },
+
+                else => @compileError("unsupported calling convention for function " ++ decl.name),
+            };
+        }
+    }
+    break :blk temp;
+};
+
