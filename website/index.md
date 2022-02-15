@@ -5,7 +5,8 @@ This group was formed to document and improve the embedded programming experienc
 ## ![](img/goals.svg) Goals
 
 - Provide documents on how to get started with embedded programming (for absolute newbies)
-- Provide example snippets for certain architectures (LPC, STM32, AVR, ...)
+- Provide example snippets for common opperations on certain architectures (LPC, STM32, AVR, ...)
+- Provide example worked through embedded mini-projects 
 - Create register definition libraries
 - Create a common interface/HAL over several architectures
 - Create a <i>performant</i> common set of drivers for external platforms
@@ -14,19 +15,9 @@ This group was formed to document and improve the embedded programming experienc
 
 If you've never done any embedded development before, it's a good point to start with one of our tutorials:
 
-- [Embedded Basics](tutorials/01-embedded-basics.htm)
-- [Embedded Programming for Beginners](tutorials/02-embedded-programming.htm)
-- Getting started with...
-  - [Arduino/AVR](tutorials/03-avr.htm)
-  - [LPC1768](tutorials/03-lpc1768.htm)
-  - [NRF52](tutorials/03-nrf52.htm)
-  - [Raspberry PI Pico](tutorials/03-pi-pico.htm)
-  - [STM32](tutorials/03-stm32.htm)
-  - [MSP430](#) (*missing*)
-  - [ESP2866/ESP32](#) (*missing*)
-  - [Raspberry PI](#) (*missing*)
-- [What device to chose?](tutorials/04-chose-device.htm)
-- [Introduction to HAL 9001](tutorials/05-hal.htm)
+- (*WIP*) [Embedded Basics](tutorials/01-embedded-basics.htm): Aims to provide a basic understanding of the embedded environment.
+- (*WIP*) [Embedded Programming for Beginners](tutorials/02-embedded-programming.htm): Aims to provide a basic understanding of embedded programming concepts.
+- *Coming soon*
 
 ## ![](img/articles.svg) Latest Articles
 
@@ -42,21 +33,16 @@ The latest articles on embedded programming with Zig:
 
 Here are some highlighted projects the ZEG provides:
 
-- [HAL9001 - One HAL to rule them all](#)
-- [STM32 Binding](#)
-- [AVR Binding](#)
-- [LPC1768 Binding](#)
-- [ESP32 Binding](#)
-- [zCOM Network Driver](#)
-- [TinySSL](#)
+- *Coming soon*
 
-[![](img/read-more.svg) See all repositories...](https://github.com/ZigEmbeddedGroup/)
+[![](img/read-more.svg) See all ZEG repositories...](https://github.com/ZigEmbeddedGroup/)
 
 ## ![](img/community.svg) Community
 
-This group uses the already existing community infrastructures that exist for Zig:
+This group uses the already existing [community infrastructures](https://github.com/ziglang/zig/wiki/Community) that exist for Zig. More specifically:
 
-- [Zig Programming Language - Discord Server](https://discord.gg/TyzJXjser6)
+- ZEG members are active on the unofficial Zig [Discord Server](https://discord.gg/TyzJXjser6)
+- For more specific embedded advice and ZEG internal development there is a [ZEG discord server](https://discord.gg/zqa3fgv6Ma)
 
 ## ![](img/members.svg) Members
 

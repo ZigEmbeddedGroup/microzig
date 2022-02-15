@@ -138,12 +138,4 @@ As you might have noticed, we have a function called `_start`. This is our progr
 
 But you might wonder: How is this entry point called? This is very SOC-dependent and is explained in the respective tutorials for each SOC. The same is true for setting up the [stack pointer](https://en.wikipedia.org/wiki/Call_stack) which is required for calling functions and storing temporary variables.
 
-## Interacting with peripherials
-
-## Interrupts and how to get them
-
-## `.text`, `.data` and other curious sections
-
-## Binary formats you might use
-
-## Deploying your application
+## MORE COMING SOON

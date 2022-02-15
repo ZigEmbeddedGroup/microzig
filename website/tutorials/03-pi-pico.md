@@ -1,1 +1,0 @@
-# Getting started with Raspberry&nbsp;Pi&nbsp;Pico

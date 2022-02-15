@@ -32,28 +32,4 @@ An important characteristic that's often required for an embedded system is "rea
 This is simply the ability for the system to respond to an input within a hard deadline, Eg. automatic breaks for a car.
 A general operating system like Linux is not suitable for these applications because it uses time sharing when scheduling tasks/programs, and unreliably responds to important signals.
 
-## Electronics 101
-
-### Current, voltage, power and all 
-
-### Diodes, Resistors, Capacitors
-
-### Ohm's law
-
-### LEDs and pre-resistors
-
-### MosFETs
-
-## Breadboard vs. Soldering
-
-## Digital I/O
-
-## Analog I/O
-
-## Bus Systems
-
-### UART
-
-### SPI
-
-### I²C / TWI
+## MORE COMING SOON
