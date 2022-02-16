@@ -2,8 +2,10 @@
 import sys
 import subprocess
 import re
+import textwrap
 
 from cmsis_svd.parser import SVDParser
+import cmsis_svd.model as model
 
 
 def cleanup_description(description):
@@ -12,12 +14,19 @@ def cleanup_description(description):
 
     return ' '.join(description.replace('\n', ' ').split())
 
+def comment_description(description):
+    if description is None:
+        return None
 
-# register names in some SVDs are using foo[n] for registers names
-# and also for some reaons there are string formatters like %s in the reigster names
-NAME_REGEX = re.compile(r"\[([^\]]+)]")
-def cleanup_name(name):
-    return NAME_REGEX.sub(r"_\1", name).replace("%", "_")
+    description = ' '.join(description.replace('\n', ' ').split())
+    return textwrap.fill(description, width=80, initial_indent='/// ', subsequent_indent='/// ')
+
+
+def escape_field(field):
+    if not field[0].isdigit() and re.match(r'^[A-Za-z0-9_]+$', field):
+        return field
+    else:
+        return f"@\"{field}\""
 
 
 class MMIOFileGenerator:
@@ -32,88 +41,217 @@ class MMIOFileGenerator:
     def generate_enumerated_field(self, field):
         '''
         returns something like:
-            name: enum(u<size>){ // bit offset: 0 desc: foo description
+            name: enum(u<size>){ // foo description
               name = value, // desc: ...
               name = value, // desc:
               _, // non-exhustive
             },
 
         '''
-        field.description = cleanup_description(field.description)
-        self.write_line(f"{field.name}:enum(u{field.bit_width}){{// bit offset: {field.bit_offset} desc: {field.description}")
+        description = comment_description(field.description)
+        self.write_line(description)
+        self.write_line(f"{field.name}: u{field.bit_width} = 0,")
 
-        total_fields_with_values = 0
-        for e in field.enumerated_values:
-            e.description = cleanup_description(e.description)
-            if e.value is None or e.name == "RESERVED":
-                # reserved fields doesn't have a value so we have to comment them out
-                self.write_line(f"// @\"{e.name}\", // desc: {e.description}")
-            else:
-                total_fields_with_values = total_fields_with_values + 1
-                self.write_line(f"@\"{e.name}\" = {e.value}, // desc: {e.description}")
+        # TODO: turn enums back on later
+        #self.write_line(f"{field.name}:enum(u{field.bit_width}){{")
 
-        # if the fields doesn't use all possible values make the enum non-exhaustive
-        if total_fields_with_values < 2**field.bit_width:
-            self.write_line("_, // non-exhaustive")
+        #total_fields_with_values = 0
+        #for e in field.enumerated_values:
+        #    e.description = cleanup_description(e.description)
+        #    if e.value is None or e.name == "RESERVED":
+        #        # reserved fields doesn't have a value so we have to comment them out
+        #        escaped_field_name = escape_field(e.name)
+        #        self.write_line(f"// {escaped_field_name}, // {e.description}")
+        #    else:
+        #        total_fields_with_values = total_fields_with_values + 1
+        #        escaped_field_name = escape_field(e.name)
+        #        if e.name != e.description:
+        #            self.write_line(f"/// {e.description}")
+        #        self.write_line(f"{escaped_field_name} = {e.value},")
 
-        self.write_line("},")
+        ## if the fields doesn't use all possible values make the enum non-exhaustive
+        #if total_fields_with_values < 2**field.bit_width:
+        #    self.write_line("_, // non-exhaustive")
+
+        #self.write_line("},")
         return field.bit_offset + field.bit_width
 
     def generate_register_field(self, field):
         '''
         returns something like:
-            name: u<size>, // bit offset: 0 desc: foo description
+            name: u<size>, // foo description
         '''
-        field.description = cleanup_description(field.description)
-        self.write_line(f"{field.name}:u{field.bit_width},// bit offset: {field.bit_offset} desc: {field.description}")
+        description = comment_description(field.description)
+        if field.name != field.description:
+            self.write_line(description)
+            self.write_line(f"{field.name}:u{field.bit_width} = 0,")
+
         return field.bit_offset + field.bit_width
 
+    def generate_fields(self, fields, size):
+            last_offset = 0
+            reserved_index = 0
+            for field in sorted(fields, key=lambda f: f.bit_offset):
+                # workaround for NXP SVD which has overleaping reserved fields
+                if field.name == "RESERVED":
+                    self.write_line(f"// RESERVED: u{field.bit_width}, // {field.description}")
+                    continue
+
+                if last_offset != field.bit_offset:
+                    reserved_size = field.bit_offset - last_offset
+                    self.generate_padding(reserved_size, "reserved", reserved_index)
+                    reserved_index += reserved_size
+
+                if field.is_enumerated_type:
+                    last_offset = self.generate_enumerated_field(field)
+                else:
+                    last_offset = self.generate_register_field(field)
+
+            if size is not None and size != last_offset:
+                self.generate_padding(size - last_offset, "padding", 0)
+
+    def generate_register_declaration_manual(self, name, description, address_offset, fields, size):
+        num_fields = len(fields)
+        description = comment_description(description)
+
+        self.write_line("")
+        self.write_line(description)
+        if num_fields == 0 or (num_fields == 1 and fields[0].bit_width == 32 and name == fields[0].name):
+            # TODO: hardcoded 32 bit here
+            self.write_line(f"pub const {name} = @intToPtr(*volatile u{size}, Address + 0x{address_offset:08x});")
+        else:
+            self.write_line(f"pub const {name} = mmio(Address + 0x{address_offset:08x}, {size}, packed struct{{")
+            self.generate_fields(fields, size)
+            self.write_line("});")
+
     def generate_register_declaration(self, register):
-        '''
-
-        '''
-        register.description = cleanup_description(register.description)
-        self.write_line(f"// byte offset: {register.address_offset} {register.description}")
-        register.name = cleanup_name(register.name)
-
         size = register.size
         if size == None:
             size = 32 # hack for now...
 
-        self.write_line(f" pub const {register.name} = mmio(Address + 0x{register.address_offset:08x}, {size}, packed struct{{")
-        last_offset = 0
-        reserved_index = 0
-        for field in sorted(register.fields, key=lambda f: f.bit_offset):
-            # workaround for NXP SVD which has overleaping reserved fields
-            if field.name == "RESERVED":
-                self.write_line(f"// RESERVED: u{field.bit_width}, // bit offset: {field.bit_offset} desc: {field.description}")
-                continue
+        num_fields = len(register.fields)
+        description = comment_description(register.description)
 
-            if last_offset != field.bit_offset:
-                reserved_size = field.bit_offset - last_offset
-                self.generate_padding(reserved_size, "reserved", reserved_index)
-                reserved_index = reserved_index + reserved_size
+        self.write_line("")
+        self.write_line(description)
+        if num_fields == 0 or (num_fields == 1 and register.fields[0].bit_width == 32 and register.name == register.fields[0].name):
+            # TODO: hardcoded 32 bit here
+            self.write_line(f"pub const {register.name} = @intToPtr(*volatile u{size}, Address + 0x{register.address_offset:08x});")
+        else:
+            self.write_line(f"pub const {register.name} = mmio(Address + 0x{register.address_offset:08x}, {size}, packed struct{{")
+            self.generate_fields(register.fields, size)
+            self.write_line("});")
+            
+    def generate_register_cluster(self, cluster):
+        if cluster.derived_from is not None:
+            raise Exception("TODO: derived_from")
 
-            if field.is_enumerated_type:
-                last_offset = self.generate_enumerated_field(field)
+        self.write_line("")
+        self.write_line(f"pub const {cluster.name} = struct {{")
+        for register in cluster._register:
+            if isinstance(register, model.SVDRegisterArray):
+                self.generate_register_array(register)
+            elif isinstance(register, model.SVDRegister):
+                self.generate_register_declaration(register)
+
+
+        self.write_line("};")
+
+    def generate_register_cluster_array(self, cluster):
+        max_fields = int(cluster.dim_increment / 4)
+        if len(cluster._register) > max_fields:
+            raise Exception("not enough room for fields")
+
+        name = cluster.name.replace("[%s]", "")
+        self.write_line(f"pub const {name} = @intToPtr(*volatile [{cluster.dim}]packed struct {{")
+        for register in cluster._register:
+
+            size = register.size
+            if size == None:
+                size = 32 # hack for now...
+            last_offset = 0
+            reserved_index = 0
+
+            if size != 32:
+                raise Exception("TODO: handle registers that are not 32-bit")
+
+            description = comment_description(register.description)
+
+            self.write_line("")
+            self.write_line(description)
+            if len(register.fields) == 0 or (len(register.fields) == 1 and register.fields[0].bit_width == size and register.name == register.fields[0].name):
+                self.write_line(f"{register.name}: u{size},")
             else:
-                last_offset = self.generate_register_field(field)
+                self.write_line(register.name + f": MMIO({size}, packed struct {{")
+                self.generate_fields(register.fields, size)
+                self.write_line("}),")
 
-        if size is not None:
-            if len(register.fields) == 0:
-                self.write_line(f"raw: u{size}, // placeholder field")
-            else:
-                self.generate_padding(size - last_offset, "padding", 0)
 
-        self.write_line("});")
+        for i in range(0, max_fields - len(cluster._register)):
+            self.write_line(f"  padding{i}: u32,")
+        
+        # TODO: this would be cleaner, but we'll probably run into packed struct bugs
+        #num_bits = size * (max_fields - len(cluster._register))
+        #self.write_line(f"_: u{num_bits},")
 
-    def generate_peripherial_declaration(self, peripherial):
-        # TODO: write peripherial description
-        self.write_line(f"pub const {peripherial.name} = extern struct {{")
-        self.write_line(f"pub const Address: u32 = 0x{peripherial.base_address:08x};")
+        self.write_line(f" }}, Address + 0x{cluster.address_offset:08x});")
 
-        for register in sorted(peripherial.registers, key=lambda f: f.address_offset):
+
+    # TODO: calculate size in here, fine since everything we're working with rn is 32 bit
+    def generate_register_array(self, register_array):
+        description = comment_description(register_array.description)
+
+        if register_array.dim_indices.start != 0 or ("%s" in register_array.name and not "[%s]" in register_array.name):
+            for i in register_array.dim_indices:
+                fmt = register_array.name.replace("%s", "{}")
+                name = fmt.format(i)
+                self.generate_register_declaration_manual(name,
+                        register_array.description,
+                        register_array.address_offset + (i * register_array.dim_increment),
+                        register_array._fields,
+                        32)
+            return
+
+        if register_array.dim_increment != 4:
+            raise Exception("TODO register " + register_array.name + " dim_increment != 4" + ", it is " + str(register_array.dim_increment))
+
+        name = register_array.name.replace("%s", "").replace("[]", "")
+        self.write_line(description)
+        num_fields = len(register_array._fields)
+
+        # TODO: hardcoded 32 bit here
+        if num_fields == 0 or (num_fields == 1 and register_array._fields[0].bit_width == 32 and name == register_array._fields[0].name):
+
+            # TODO: hardcoded 32 bit here
+            self.write_line(f"pub const {name} = @intToPtr(*volatile [{register_array.dim}]u32, Address + 0x{register_array.address_offset:08x});")
+        else:
+            self.write_line(f"pub const {name} = @intToPtr(*volatile [{register_array.dim}]MMIO(32, packed struct {{")
+            self.generate_fields(register_array._fields, 32)
+
+            self.write_line(f"}}), Address + 0x{register_array.address_offset:08x});")
+            
+    def generate_peripheral_declaration(self, peripheral):
+        # TODO: write peripheral description
+        description = comment_description(peripheral.description)
+        self.write_line("")
+        self.write_line(description)
+        self.write_line(f"pub const {peripheral.name} = extern struct {{")
+        self.write_line(f"pub const Address: u32 = 0x{peripheral.base_address:08x};")
+
+        for register in sorted(peripheral._lookup_possibly_derived_attribute('registers'), key=lambda f: f.address_offset):
             self.generate_register_declaration(register)
+
+        for register_array in sorted(peripheral._lookup_possibly_derived_attribute('register_arrays'), key=lambda f: f.address_offset):
+            self.generate_register_array(register_array)
+
+        for cluster in sorted(peripheral._lookup_possibly_derived_attribute('clusters'), key=lambda f: f.address_offset):
+            if isinstance(cluster, model.SVDRegisterCluster):
+                self.generate_register_cluster(cluster)
+            elif isinstance(cluster, model.SVDRegisterClusterArray):
+                #self.generate_register_cluster_array(cluster)
+                pass
+            else:
+                raise Exception("unhandled cluster type")
 
         self.write_line("};")
 
@@ -172,7 +310,8 @@ pub const VectorTable = extern struct {
                 reserved_count += 1
 
             if interrupt.description is not None:
-                self.write_line(f"\n    /// {interrupt.description}")
+                description = comment_description(interrupt.description)
+                self.write_line(description)
             self.write_line(f"    {interrupt.name}: InterruptVector = makeUnhandledHandler(\"{interrupt.name}\"),")
             expected_next_value += 1
         self.write_line("};")
@@ -235,11 +374,14 @@ export const vectors: VectorTable linksection(\"microzig_flash_start\") = blk: {
         self.write_line("// generated using svd2zig.py\n// DO NOT EDIT")
         self.write_line(f"// based on {device.name} version {device.version}")
 
-        self.write_line("const mmio = @import(\"microzig-mmio\").mmio;")
+
+        self.write_line("const microzig_mmio = @import(\"microzig-mmio\");")
+        self.write_line("const mmio = microzig_mmio.mmio;")
+        self.write_line("const MMIO = microzig_mmio.MMIO;")
         self.write_line(f"const Name = \"{device.name}\";")
         interrupts = {}
         for peripheral in device.peripherals:
-            self.generate_peripherial_declaration(peripheral)
+            self.generate_peripheral_declaration(peripheral)
             if peripheral.interrupts != None:
                 for interrupt in peripheral.interrupts:
                     if interrupt.value in interrupts and interrupts[interrupt.value].description != interrupt.description:
@@ -262,16 +404,8 @@ def main():
     parser = SVDParser.for_packaged_svd(sys.argv[1], sys.argv[2] + '.svd')
     device = parser.get_device()
 
-    zig_fmt = subprocess.Popen(('zig', 'fmt', '--stdin'), stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, encoding='utf8')
-
-    generator = MMIOFileGenerator(zig_fmt.stdin)
+    generator = MMIOFileGenerator(sys.stdout)
     generator.generate_file(device)
-
-    zig_fmt.stdin.flush()
-    zig_fmt.stdin.close()
-    print(zig_fmt.stdout.read())
-
 
 if __name__ == "__main__":
     main()
