@@ -231,7 +231,6 @@ class MMIOFileGenerator:
             self.write_line(f"}}), Address + 0x{register_array.address_offset:08x});")
             
     def generate_peripheral_declaration(self, peripheral):
-        # TODO: write peripheral description
         description = comment_description(peripheral.description)
         self.write_line("")
         self.write_line(description)
