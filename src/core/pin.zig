@@ -1,7 +1,7 @@
 const std = @import("std");
 const micro = @import("microzig.zig");
-const chip = @import("chip");
-const board = @import("board");
+const chip = micro.chip;
+const board = micro.board;
 
 /// Returns a type that will manage the Pin defined by `spec`.
 /// Spec is either the pin as named in the datasheet of the chip

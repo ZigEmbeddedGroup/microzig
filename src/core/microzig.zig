@@ -4,13 +4,13 @@ const root = @import("root");
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
 /// and so on.
-pub const config = @import("microzig-config");
+pub const config = root.config;
 
 /// Provides access to the low level features of the current microchip.
-pub const chip = @import("chip");
+pub const chip = root.chip;
 
 /// Provides access to board features or is `void` when no board is present.
-pub const board = if (config.has_board) @import("board") else void;
+pub const board = if (config.has_board) root.board else void;
 
 /// Provides access to the low level features of the CPU.
 pub const cpu = chip.cpu;

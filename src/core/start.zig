@@ -2,6 +2,11 @@ const std = @import("std");
 const app = @import("app");
 const microzig = @import("microzig");
 
+pub const config = @import("microzig-config");
+pub const chip = @import("chip");
+pub const board = if (config.has_board) @import("board") else void;
+pub const rtt = @import("microzig-rtt");
+
 pub usingnamespace app;
 
 /// This is the logical entry point for microzig.
