@@ -114,8 +114,14 @@ pub fn Uart(comptime index: usize) type {
     return struct {
         const Self = @This();
 
+        pub fn getOrInit(config: micro.uart.Config) !Self {
+            if (registers.USART1.CR1.read().UE == 1) {
+                // UART1 already enabled, don't reinitialize and disturb things
+                return Self{};
+            } else return init(config);
+        }
+
         pub fn init(config: micro.uart.Config) !Self {
-            _ = config;
             // 0b. enable the USART1 clock
             registers.RCC.APB2ENR.modify(.{ .USART1EN = 1 });
             // 0c. enable GPIOC clock
@@ -187,6 +193,10 @@ pub fn Uart(comptime index: usize) type {
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
             registers.USART1.TDR.modify(.{ .TDR = ch });
+        }
+
+        pub fn txflush(_: Self) void {
+            while (registers.USART1.ISR.read().TC == 0) {}
         }
     };
 }

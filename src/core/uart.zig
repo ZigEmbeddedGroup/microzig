@@ -17,6 +17,18 @@ pub fn Uart(comptime index: usize) type {
             };
         }
 
+        /// If the UART is already initialized, try to return a handle to it,
+        /// else initialize with the given config.
+        pub fn getOrInit(config: Config) InitError!Self {
+            if (!@hasDecl(SystemUart, "getOrInit")) {
+                // fallback to reinitializing the UART
+                return init(config);
+            }
+            return Self{
+                .internal = try SystemUart.getOrInit(config),
+            };
+        }
+
         pub fn canRead(self: Self) bool {
             return self.internal.canRead();
         }
