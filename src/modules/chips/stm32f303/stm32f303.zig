@@ -190,6 +190,7 @@ pub fn Uart(comptime index: usize) type {
                 0 => false,
             };
         }
+
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
             registers.USART1.TDR.modify(.{ .TDR = ch });
@@ -197,6 +198,20 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn txflush(_: Self) void {
             while (registers.USART1.ISR.read().TC == 0) {}
+        }
+
+        pub fn canRead(self: Self) bool {
+            _ = self;
+            return switch (registers.USART1.ISR.read().RXNE) {
+                1 => true,
+                0 => false,
+            };
+        }
+
+        pub fn rx(self: Self) u8 {
+            while (!self.canRead()) {} // Wait till the data is received
+            const data_with_parity_bit: u9 = registers.USART1.RDR.read().RDR;
+            return @intCast(u8, data_with_parity_bit & 0xFF);
         }
     };
 }
