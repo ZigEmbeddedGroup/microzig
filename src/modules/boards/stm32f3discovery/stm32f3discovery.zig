@@ -1,4 +1,5 @@
 pub const chip = @import("chip");
+pub const micro = @import("microzig");
 
 pub const cpu_frequency = 8_000_000;
 
@@ -22,3 +23,16 @@ pub const pin_map = .{
     // W green
     .@"LD6" = "PE15",
 };
+
+pub fn debugWrite(string: []const u8) void {
+    const uart1 = micro.Uart(1).getOrInit(.{
+        .baud_rate = 9600,
+        .data_bits = .eight,
+        .parity = null,
+        .stop_bits = .one,
+    }) catch unreachable;
+
+    const writer = uart1.writer();
+    _ = writer.write(string) catch unreachable;
+    uart1.internal.txflush();
+}
