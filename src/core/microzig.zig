@@ -30,6 +30,9 @@ pub const Pin = pin.Pin;
 pub const uart = @import("uart.zig");
 pub const Uart = uart.Uart;
 
+pub const i2c = @import("i2c.zig");
+pub const I2CMaster = i2c.I2CMaster;
+
 pub const debug = @import("debug.zig");
 
 /// The microzig panic handler. Will disable interrupts and loop endlessly.

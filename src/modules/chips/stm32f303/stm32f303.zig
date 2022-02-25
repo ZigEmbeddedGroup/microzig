@@ -232,3 +232,129 @@ pub fn Uart(comptime index: usize) type {
         }
     };
 }
+
+pub fn I2CMaster(comptime index: usize) type {
+    if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
+
+    return struct {
+        const Self = @This();
+
+        pub fn init() !Self {
+            // CONFIGURE I2C1
+            // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
+            // if GPIO port B is configured for alternate function 4 for these PB pins.
+
+            // 1. Enable the I2C CLOCK and GPIO CLOCK
+            registers.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
+            registers.RCC.AHBENR.modify(.{ .IOPBEN = 1 });
+            ////try system.debug("I2C1 configuration step 1 complete\r\n", .{});
+
+            // 2. Configure the I2C PINs for ALternate Functions
+            // 	a) Select Alternate Function in MODER Register
+            registers.GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
+            // 	b) Select Open Drain Output
+            registers.GPIOB.OTYPER.modify(.{ .OT6 = 1, .OT7 = 1 });
+            // 	c) Select High SPEED for the PINs
+            registers.GPIOB.OSPEEDR.modify(.{ .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
+            // 	d) Select Pull-up for both the Pins
+            registers.GPIOB.PUPDR.modify(.{ .PUPDR6 = 0b01, .PUPDR7 = 0b01 });
+            // 	e) Configure the Alternate Function in AFR Register
+            registers.GPIOB.AFRL.modify(.{ .AFRL6 = 4, .AFRL7 = 4 });
+            ////try system.debug("I2C1 configuration step 2 complete\r\n", .{});
+
+            // 3. Reset the I2C
+            registers.I2C1.CR1.modify(.{ .PE = 0 });
+            while (registers.I2C1.CR1.read().PE == 1) {}
+            // DO NOT registers.RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
+            ////try system.debug("I2C1 configuration step 3 complete\r\n", .{});
+
+            // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
+            // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
+            // but copying an example from the reference manual, RM0316 section 28.4.9.)
+            registers.I2C1.TIMINGR.modify(.{
+                .PRESC = 1,
+                .SCLL = 0x13,
+                .SCLH = 0xF,
+                .SDADEL = 0x2,
+                .SCLDEL = 0x4,
+            });
+            ////try system.debug("I2C1 configuration steps 4-6 complete\r\n", .{});
+
+            // 7. Program the I2C_CR1 register to enable the peripheral
+            registers.I2C1.CR1.modify(.{ .PE = 1 });
+            ////try system.debug("I2C1 configuration step 7 complete\r\n", .{});
+
+            return Self{};
+        }
+
+        pub fn write(_: Self, address: u7, bytes: []const u8) !void {
+            std.debug.assert(bytes.len == 1); // TODO: Improve!
+
+            // As master, initiate write from address, 7 bit address, 1 byte
+            registers.I2C1.CR2.modify(.{
+                .ADD10 = 0,
+                .SADD1 = address,
+                .RD_WRN = 0, // write
+                .NBYTES = 1,
+            });
+            ////try system.debug("I2C1 prepared for write of 1 byte to 0b0011001\r\n", .{});
+
+            // Communication START
+            registers.I2C1.CR2.modify(.{ .START = 1 });
+            ////try system.debug("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
+            ////try system.debug("I2C1 STARTed\r\n", .{});
+            ////try system.debug("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
+
+            // Wait for data to be acknowledged
+            while (registers.I2C1.ISR.read().TXIS == 0) {
+                ////try system.debug("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+            }
+            ////try system.debug("I2C1 ready to send (TXIS=1)\r\n", .{});
+
+            // Write first data byte
+            registers.I2C1.TXDR.modify(.{ .TXDATA = bytes[0] });
+            ////try system.debug("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
+            ////try system.debug("I2C1 data written\r\n", .{});
+            ////try system.debug("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
+            while (registers.I2C1.ISR.read().TC == 0) {
+                ////try system.debug("I2C1 waiting for data (TC=0)\r\n", .{});
+            }
+
+            // Communication STOP
+            registers.I2C1.CR2.modify(.{ .STOP = 1 });
+        }
+
+        /// Fails with ReadError if incorrect number of bytes is received.
+        pub fn read(_: Self, address: u7, buffer: []u8) !void {
+            std.debug.assert(buffer.len == 1); // TODO: Improve!
+
+            // As master, initiate read from accelerometer, 7 bit address, 1 byte
+            registers.I2C1.CR2.modify(.{
+                .ADD10 = 0,
+                .SADD1 = address,
+                .RD_WRN = 1, // read
+                .NBYTES = 1,
+            });
+            ////try system.debug("I2C1 prepared for read of 1 byte from 0b0011001\r\n", .{});
+
+            // Communication START
+            registers.I2C1.CR2.modify(.{ .START = 1 });
+            ////try system.debug("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
+            ////try system.debug("I2C1 STARTed\r\n", .{});
+            ////try system.debug("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
+
+            // Wait for data to be received
+            while (registers.I2C1.ISR.read().RXNE == 0) {
+                ////try system.debug("I2C1 waiting for data (RXNE=0)\r\n", .{});
+            }
+            ////try system.debug("I2C1 data ready (RXNE=1)\r\n", .{});
+
+            // Read first data byte
+            buffer[0] = registers.I2C1.RXDR.read().RXDATA;
+            ////try system.debug("I2C1 data: {}\r\n", .{accelerometer_device_id}); // 51 == 0x33
+
+            // Communication STOP
+            registers.I2C1.CR2.modify(.{ .STOP = 1 });
+        }
+    };
+}
