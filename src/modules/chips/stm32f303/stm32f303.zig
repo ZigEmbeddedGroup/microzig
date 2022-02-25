@@ -104,9 +104,10 @@ pub const uart = struct {
         one_and_half = 0b11,
     };
 
-    pub const Parity = enum(u2) {
-        odd,
-        even,
+    /// uses the values of USART_CR1.PS
+    pub const Parity = enum(u1) {
+        even = 0,
+        odd = 1,
     };
 };
 
@@ -152,14 +153,8 @@ pub fn Uart(comptime index: usize) type {
             registers.USART1.CR1.modify(.{ .padding4 = m1, .M = m0 });
 
             // set parity
-            if (config.parity) |p| {
-                registers.USART1.CR1.modify(.{
-                    .PCE = 1,
-                    .PS = @as(u1, switch (p) {
-                        .odd => 1,
-                        .even => 0,
-                    }),
-                });
+            if (config.parity) |parity| {
+                registers.USART1.CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
             } else registers.USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
 
             // set number of stop bits
@@ -171,11 +166,12 @@ pub fn Uart(comptime index: usize) type {
             // In our case, these are accidentally the same at chip reset,
             // if the board doesn't configure e.g. an HSE external crystal.
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
+            // TODO: Do a rounding div, instead of a truncating div?
             const usartdiv = @intCast(u16, @divTrunc(micro.board.cpu_frequency, config.baud_rate));
             registers.USART1.BRR.writeRaw(usartdiv);
             // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
             // those seem to be for another chipset; .svd file bug?
-            // TODO: We assume the default OVER8=0 configuration here.
+            // TODO: We assume the default OVER8=0 configuration above.
 
             // enable USART1, and its transmitter and receiver
             registers.USART1.CR1.modify(.{ .UE = 1 });
