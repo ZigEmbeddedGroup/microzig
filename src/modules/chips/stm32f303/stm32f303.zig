@@ -96,9 +96,12 @@ pub const uart = struct {
         eight = 8,
     };
 
-    pub const StopBits = enum(u1) {
-        one,
-        //TODO: Add the other supported options
+    /// uses the values of USART_CR2.STOP
+    pub const StopBits = enum(u2) {
+        one = 0b00,
+        half = 0b01,
+        two = 0b10,
+        one_and_half = 0b11,
     };
 
     pub const Parity = enum(u2) {
@@ -160,11 +163,7 @@ pub fn Uart(comptime index: usize) type {
             } else registers.USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
 
             // set number of stop bits
-            registers.USART1.CR2.modify(.{
-                .STOP = switch (config.stop_bits) {
-                    .one => 0b00, // chip default
-                },
-            });
+            registers.USART1.CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
 
             // set the baud rate
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
