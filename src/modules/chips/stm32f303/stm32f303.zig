@@ -272,6 +272,8 @@ pub fn I2CMaster(comptime index: usize) type {
             // DO NOT registers.RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
             debugPrint("I2C1 configuration step 3 complete\r\n", .{});
 
+            // TODO: Offer config option to use stricter NOSTRETCH?
+
             // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
             // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
             // but copying an example from the reference manual, RM0316 section 28.4.9.)
@@ -303,6 +305,8 @@ pub fn I2CMaster(comptime index: usize) type {
             });
             debugPrint("I2C1 prepared for write of 1 byte to 0b0011001\r\n", .{});
 
+            // registers.I2C1.CR2.modify(.{ .AUTOEND = 1 });
+
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
             debugPrint("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
@@ -317,6 +321,7 @@ pub fn I2CMaster(comptime index: usize) type {
 
             // Write first data byte
             registers.I2C1.TXDR.modify(.{ .TXDATA = bytes[0] });
+            // waiting for TC==1 must only be done if AUTOEND is not set
             debugPrint("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
             debugPrint("I2C1 data written\r\n", .{});
             debugPrint("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
@@ -340,6 +345,8 @@ pub fn I2CMaster(comptime index: usize) type {
                 .NBYTES = 1,
             });
             debugPrint("I2C1 prepared for read of 1 byte from 0b0011001\r\n", .{});
+
+            //registers.I2C1.CR2.modify(.{ .AUTOEND = 1 });
 
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
