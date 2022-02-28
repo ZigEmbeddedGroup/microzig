@@ -233,6 +233,10 @@ pub fn Uart(comptime index: usize) type {
     };
 }
 
+fn debugPrint(comptime format: []const u8, args: anytype) void {
+    micro.debug.writer().print(format, args) catch {};
+}
+
 pub fn I2CMaster(comptime index: usize) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
 
@@ -247,7 +251,7 @@ pub fn I2CMaster(comptime index: usize) type {
             // 1. Enable the I2C CLOCK and GPIO CLOCK
             registers.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
             registers.RCC.AHBENR.modify(.{ .IOPBEN = 1 });
-            ////try system.debug("I2C1 configuration step 1 complete\r\n", .{});
+            debugPrint("I2C1 configuration step 1 complete\r\n", .{});
 
             // 2. Configure the I2C PINs for ALternate Functions
             // 	a) Select Alternate Function in MODER Register
@@ -260,13 +264,13 @@ pub fn I2CMaster(comptime index: usize) type {
             registers.GPIOB.PUPDR.modify(.{ .PUPDR6 = 0b01, .PUPDR7 = 0b01 });
             // 	e) Configure the Alternate Function in AFR Register
             registers.GPIOB.AFRL.modify(.{ .AFRL6 = 4, .AFRL7 = 4 });
-            ////try system.debug("I2C1 configuration step 2 complete\r\n", .{});
+            debugPrint("I2C1 configuration step 2 complete\r\n", .{});
 
             // 3. Reset the I2C
             registers.I2C1.CR1.modify(.{ .PE = 0 });
             while (registers.I2C1.CR1.read().PE == 1) {}
             // DO NOT registers.RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
-            ////try system.debug("I2C1 configuration step 3 complete\r\n", .{});
+            debugPrint("I2C1 configuration step 3 complete\r\n", .{});
 
             // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
             // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
@@ -278,11 +282,11 @@ pub fn I2CMaster(comptime index: usize) type {
                 .SDADEL = 0x2,
                 .SCLDEL = 0x4,
             });
-            ////try system.debug("I2C1 configuration steps 4-6 complete\r\n", .{});
+            debugPrint("I2C1 configuration steps 4-6 complete\r\n", .{});
 
             // 7. Program the I2C_CR1 register to enable the peripheral
             registers.I2C1.CR1.modify(.{ .PE = 1 });
-            ////try system.debug("I2C1 configuration step 7 complete\r\n", .{});
+            debugPrint("I2C1 configuration step 7 complete\r\n", .{});
 
             return Self{};
         }
@@ -297,27 +301,27 @@ pub fn I2CMaster(comptime index: usize) type {
                 .RD_WRN = 0, // write
                 .NBYTES = 1,
             });
-            ////try system.debug("I2C1 prepared for write of 1 byte to 0b0011001\r\n", .{});
+            debugPrint("I2C1 prepared for write of 1 byte to 0b0011001\r\n", .{});
 
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
-            ////try system.debug("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
-            ////try system.debug("I2C1 STARTed\r\n", .{});
-            ////try system.debug("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
+            debugPrint("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
+            debugPrint("I2C1 STARTed\r\n", .{});
+            debugPrint("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
 
             // Wait for data to be acknowledged
             while (registers.I2C1.ISR.read().TXIS == 0) {
-                ////try system.debug("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+                debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
             }
-            ////try system.debug("I2C1 ready to send (TXIS=1)\r\n", .{});
+            debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
 
             // Write first data byte
             registers.I2C1.TXDR.modify(.{ .TXDATA = bytes[0] });
-            ////try system.debug("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
-            ////try system.debug("I2C1 data written\r\n", .{});
-            ////try system.debug("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
+            debugPrint("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
+            debugPrint("I2C1 data written\r\n", .{});
+            debugPrint("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
             while (registers.I2C1.ISR.read().TC == 0) {
-                ////try system.debug("I2C1 waiting for data (TC=0)\r\n", .{});
+                debugPrint("I2C1 waiting for data (TC=0)\r\n", .{});
             }
 
             // Communication STOP
@@ -335,23 +339,23 @@ pub fn I2CMaster(comptime index: usize) type {
                 .RD_WRN = 1, // read
                 .NBYTES = 1,
             });
-            ////try system.debug("I2C1 prepared for read of 1 byte from 0b0011001\r\n", .{});
+            debugPrint("I2C1 prepared for read of 1 byte from 0b0011001\r\n", .{});
 
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
-            ////try system.debug("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
-            ////try system.debug("I2C1 STARTed\r\n", .{});
-            ////try system.debug("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
+            debugPrint("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
+            debugPrint("I2C1 STARTed\r\n", .{});
+            debugPrint("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
 
             // Wait for data to be received
             while (registers.I2C1.ISR.read().RXNE == 0) {
-                ////try system.debug("I2C1 waiting for data (RXNE=0)\r\n", .{});
+                debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
             }
-            ////try system.debug("I2C1 data ready (RXNE=1)\r\n", .{});
+            debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
 
             // Read first data byte
             buffer[0] = registers.I2C1.RXDR.read().RXDATA;
-            ////try system.debug("I2C1 data: {}\r\n", .{accelerometer_device_id}); // 51 == 0x33
+            debugPrint("I2C1 data: {any}\r\n", .{buffer});
 
             // Communication STOP
             registers.I2C1.CR2.modify(.{ .STOP = 1 });
