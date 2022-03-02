@@ -1,0 +1,6 @@
+[submodule "libs/zig-clap"]
+	path = libs/zig-clap
+	url = https://github.com/Hejsil/zig-clap.git
+[submodule "libs/zig-libxml2"]
+	path = libs/zig-libxml2
+	url = https://github.com/mitchellh/zig-libxml2.git
