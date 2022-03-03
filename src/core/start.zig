@@ -12,7 +12,9 @@ fn isValidField(field_name: []const u8) bool {
 
 const VectorTable = microzig.chip.VectorTable;
 export const vector_table: VectorTable linksection("microzig_flash_start") = blk: {
-    var tmp: microzig.chip.VectorTable = .{};
+    var tmp: microzig.chip.VectorTable = .{
+        .initial_stack_pointer = microzig.config.end_of_stack,
+    };
     if (@hasDecl(app, "interrupts")) {
         if (@typeInfo(app.interrupts) != .Struct)
             @compileLog("root.interrupts must be a struct");
