@@ -1,10 +1,11 @@
 const std = @import("std");
 const micro = @import("microzig");
+const chip = @import("registers.zig");
+const regs = chip.registers;
+
+pub usingnamespace chip;
 
 pub const cpu = @import("cpu");
-pub const registers = @import("registers.zig");
-pub const VectorTable = registers.VectorTable;
-
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
@@ -18,7 +19,7 @@ pub fn parsePin(comptime spec: []const u8) type {
     return struct {
         /// 'A'...'H'
         const gpio_port_name = spec[1..2];
-        const gpio_port = @field(registers, "GPIO" ++ gpio_port_name);
+        const gpio_port = @field(regs, "GPIO" ++ gpio_port_name);
         const suffix = std.fmt.comptimePrint("{d}", .{pin_number});
     };
 }
@@ -31,12 +32,12 @@ fn setRegField(reg: anytype, comptime field_name: anytype, value: anytype) void 
 
 pub const gpio = struct {
     pub fn setOutput(comptime pin: type) void {
-        setRegField(registers.RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
+        setRegField(regs.RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
         setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
     }
 
     pub fn setInput(comptime pin: type) void {
-        setRegField(registers.RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
+        setRegField(regs.RCC.AHBENR, "IOP" ++ pin.gpio_port_name ++ "EN", 1);
         setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
     }
 
