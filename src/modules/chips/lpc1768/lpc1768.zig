@@ -3,7 +3,7 @@ const micro = @import("microzig");
 
 pub const cpu = @import("cpu");
 pub const registers = @import("registers.zig");
-
+pub const VectorTable = registers.VectorTable;
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,

@@ -3,6 +3,7 @@ const micro = @import("microzig");
 
 pub const cpu = @import("cpu");
 pub const registers = @import("registers.zig");
+pub const VectorTable = registers.VectorTable;
 
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
