@@ -82,6 +82,10 @@ const InterruptVector = extern union {
     // Interrupt is not supported on arm
 };
 
-fn unhandled() callconv(.C) noreturn {
-    @panic("unhandled interrupt");
-}
+const unhandled = InterruptVector{
+    .C = struct {
+        fn tmp() callconv(.C) noreturn {
+            @panic("unhandled interrupt");
+        }
+    }.tmp,
+};

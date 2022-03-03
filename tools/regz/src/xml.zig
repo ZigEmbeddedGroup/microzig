@@ -56,19 +56,10 @@ pub fn findValueForKey(node: ?*Node, key: []const u8) ?[]const u8 {
 }
 
 pub fn parseDescription(allocator: Allocator, node: ?*Node, key: []const u8) !?[]const u8 {
-    return if (findValueForKey(node, key)) |value| blk: {
-        var str = std.ArrayList(u8).init(allocator);
-        errdefer str.deinit();
-
-        var it = std.mem.tokenize(u8, value, " \n\t\r");
-        try str.appendSlice(it.next() orelse return null);
-        while (it.next()) |token| {
-            try str.append(' ');
-            try str.appendSlice(token);
-        }
-
-        break :blk str.toOwnedSlice();
-    } else null;
+    return if (findValueForKey(node, key)) |value|
+        try allocator.dupe(u8, value)
+    else
+        null;
 }
 
 pub fn parseIntForKey(comptime T: type, allocator: std.mem.Allocator, node: ?*Node, key: []const u8) !?T {
