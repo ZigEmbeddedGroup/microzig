@@ -233,11 +233,16 @@ pub fn Uart(comptime index: usize) type {
     };
 }
 
+const enable_stm32f303_debug = false;
+
 fn debugPrint(comptime format: []const u8, args: anytype) void {
-    micro.debug.writer().print(format, args) catch {};
+    if (enable_stm32f303_debug) {
+        micro.debug.writer().print(format, args) catch {};
+    }
 }
 
-pub fn I2CMaster(comptime index: usize) type {
+/// This implementation does not use AUTOEND=1
+pub fn I2CController(comptime index: usize) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
 
     return struct {
@@ -272,8 +277,6 @@ pub fn I2CMaster(comptime index: usize) type {
             // DO NOT registers.RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
             debugPrint("I2C1 configuration step 3 complete\r\n", .{});
 
-            // TODO: Offer config option to use stricter NOSTRETCH?
-
             // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
             // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
             // but copying an example from the reference manual, RM0316 section 28.4.9.)
@@ -294,18 +297,16 @@ pub fn I2CMaster(comptime index: usize) type {
         }
 
         pub fn write(_: Self, address: u7, bytes: []const u8) !void {
-            std.debug.assert(bytes.len == 1); // TODO: Improve!
+            std.debug.assert(bytes.len < 256); // TODO: use RELOAD to read more data
 
-            // As master, initiate write from address, 7 bit address, 1 byte
+            // As master, initiate write from address, 7 bit address
             registers.I2C1.CR2.modify(.{
                 .ADD10 = 0,
                 .SADD1 = address,
                 .RD_WRN = 0, // write
-                .NBYTES = 1,
+                .NBYTES = @intCast(u8, bytes.len),
             });
-            debugPrint("I2C1 prepared for write of 1 byte to 0b0011001\r\n", .{});
-
-            // registers.I2C1.CR2.modify(.{ .AUTOEND = 1 });
+            debugPrint("I2C1 prepared for write of {} byte(s) to 0b{b:0<7}\r\n", .{ bytes.len, address });
 
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
@@ -313,14 +314,15 @@ pub fn I2CMaster(comptime index: usize) type {
             debugPrint("I2C1 STARTed\r\n", .{});
             debugPrint("I2C1 TXIS={}\r\n", .{registers.I2C1.ISR.read().TXIS});
 
-            // Wait for data to be acknowledged
-            while (registers.I2C1.ISR.read().TXIS == 0) {
-                debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+            for (bytes) |b| {
+                // Wait for data to be acknowledged
+                while (registers.I2C1.ISR.read().TXIS == 0) {
+                    debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+                }
+                debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
+                // Write data byte
+                registers.I2C1.TXDR.modify(.{ .TXDATA = b });
             }
-            debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
-
-            // Write first data byte
-            registers.I2C1.TXDR.modify(.{ .TXDATA = bytes[0] });
             // waiting for TC==1 must only be done if AUTOEND is not set
             debugPrint("I2C1 TC={}\r\n", .{registers.I2C1.ISR.read().TC});
             debugPrint("I2C1 data written\r\n", .{});
@@ -328,25 +330,20 @@ pub fn I2CMaster(comptime index: usize) type {
             while (registers.I2C1.ISR.read().TC == 0) {
                 debugPrint("I2C1 waiting for data (TC=0)\r\n", .{});
             }
-
-            // Communication STOP
-            registers.I2C1.CR2.modify(.{ .STOP = 1 });
         }
 
         /// Fails with ReadError if incorrect number of bytes is received.
         pub fn read(_: Self, address: u7, buffer: []u8) !void {
-            std.debug.assert(buffer.len == 1); // TODO: Improve!
+            std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
 
-            // As master, initiate read from accelerometer, 7 bit address, 1 byte
+            // As master, initiate read from accelerometer, 7 bit address
             registers.I2C1.CR2.modify(.{
                 .ADD10 = 0,
                 .SADD1 = address,
                 .RD_WRN = 1, // read
-                .NBYTES = 1,
+                .NBYTES = @intCast(u8, buffer.len),
             });
-            debugPrint("I2C1 prepared for read of 1 byte from 0b0011001\r\n", .{});
-
-            //registers.I2C1.CR2.modify(.{ .AUTOEND = 1 });
+            debugPrint("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, address });
 
             // Communication START
             registers.I2C1.CR2.modify(.{ .START = 1 });
@@ -354,18 +351,28 @@ pub fn I2CMaster(comptime index: usize) type {
             debugPrint("I2C1 STARTed\r\n", .{});
             debugPrint("I2C1 RXNE={}\r\n", .{registers.I2C1.ISR.read().RXNE});
 
-            // Wait for data to be received
-            while (registers.I2C1.ISR.read().RXNE == 0) {
-                debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
+            for (buffer) |_, i| {
+                // Wait for data to be received
+                while (registers.I2C1.ISR.read().RXNE == 0) {
+                    debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
+                }
+                debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
+
+                // Read first data byte
+                buffer[i] = registers.I2C1.RXDR.read().RXDATA;
             }
-            debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
-
-            // Read first data byte
-            buffer[0] = registers.I2C1.RXDR.read().RXDATA;
             debugPrint("I2C1 data: {any}\r\n", .{buffer});
+        }
 
+        pub fn stop(_: Self) void {
             // Communication STOP
             registers.I2C1.CR2.modify(.{ .STOP = 1 });
+            while (registers.I2C1.ISR.read().BUSY == 1) {}
+            debugPrint("I2C1 STOPped\r\n", .{});
+        }
+
+        pub fn restart(_: Self) void {
+            debugPrint("I2C1 no action for restart\r\n", .{});
         }
     };
 }
