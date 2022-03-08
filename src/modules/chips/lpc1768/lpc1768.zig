@@ -1,9 +1,11 @@
 const std = @import("std");
 const micro = @import("microzig");
+const chip = @import("registers.zig");
+const regs = chip.registers;
+
+pub usingnamespace chip;
 
 pub const cpu = @import("cpu");
-pub const registers = @import("registers.zig");
-
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,
@@ -26,14 +28,14 @@ pub fn parsePin(comptime spec: []const u8) type {
     const _regs = struct {
         const name_suffix = std.fmt.comptimePrint("{d}", .{_port});
 
-        const pinsel_reg = @field(registers.PINCONNECT, sel_reg_name);
+        const pinsel_reg = @field(regs.PINCONNECT, sel_reg_name);
         const pinsel_field = std.fmt.comptimePrint("P{d}_{d}", .{ _port, _pin });
 
-        const dir = @field(registers.GPIO, "DIR" ++ name_suffix);
-        const pin = @field(registers.GPIO, "PIN" ++ name_suffix);
-        const set = @field(registers.GPIO, "SET" ++ name_suffix);
-        const clr = @field(registers.GPIO, "CLR" ++ name_suffix);
-        const mask = @field(registers.GPIO, "MASK" ++ name_suffix);
+        const dir = @field(regs.GPIO, "DIR" ++ name_suffix);
+        const pin = @field(regs.GPIO, "PIN" ++ name_suffix);
+        const set = @field(regs.GPIO, "SET" ++ name_suffix);
+        const clr = @field(regs.GPIO, "CLR" ++ name_suffix);
+        const mask = @field(regs.GPIO, "MASK" ++ name_suffix);
     };
 
     return struct {
@@ -48,7 +50,7 @@ pub fn parsePin(comptime spec: []const u8) type {
 
 pub fn routePin(comptime pin: type, function: PinTarget) void {
     var val = pin.regs.pinsel_reg.read();
-    @field(val, pin.regs.pinsel_field) = @intToEnum(@TypeOf(@field(val, pin.regs.pinsel_field)), @enumToInt(function));
+    @field(val, pin.regs.pinsel_field) = @enumToInt(function);
     pin.regs.pinsel_reg.write(val);
 }
 
@@ -77,36 +79,40 @@ pub const gpio = struct {
 };
 
 pub const uart = struct {
-    const RegisterDataBitsEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .WLS).field_type;
     pub const DataBits = enum(u2) {
-        five = @enumToInt(RegisterDataBitsEnum.@"5_BIT_CHARACTER_LENG"),
-        six = @enumToInt(RegisterDataBitsEnum.@"6_BIT_CHARACTER_LENG"),
-        seven = @enumToInt(RegisterDataBitsEnum.@"7_BIT_CHARACTER_LENG"),
-        eight = @enumToInt(RegisterDataBitsEnum.@"8_BIT_CHARACTER_LENG"),
+        five = 0,
+        six = 1,
+        seven = 2,
+        eight = 3,
     };
 
-    const RegisterStopBitEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .SBS).field_type;
     pub const StopBits = enum(u1) {
-        one = @enumToInt(RegisterStopBitEnum.@"1_STOP_BIT_"),
-        two = @enumToInt(RegisterStopBitEnum.@"2_STOP_BITS_1_5_IF_"),
+        one = 0,
+        two = 1,
     };
 
-    const RegisterParityEnum = std.meta.fieldInfo(@TypeOf(registers.UART0.LCR.*).underlying_type, .PS).field_type;
     pub const Parity = enum(u2) {
-        odd = @enumToInt(RegisterParityEnum.@"ODD_PARITY_NUMBER_O"),
-        even = @enumToInt(RegisterParityEnum.@"EVEN_PARITY_NUMBER_"),
-        mark = @enumToInt(RegisterParityEnum.@"FORCED_1_STICK_PARIT"),
-        space = @enumToInt(RegisterParityEnum.@"FORCED_0_STICK_PARIT"),
+        odd = 0,
+        even = 1,
+        mark = 2,
+        space = 3,
+    };
+
+    pub const CClkDiv = enum(u2) {
+        four = 0,
+        one = 1,
+        two = 2,
+        eight = 3,
     };
 };
 
 pub fn Uart(comptime index: usize) type {
     return struct {
         const UARTn = switch (index) {
-            0 => registers.UART0,
-            1 => registers.UART1,
-            2 => registers.UART2,
-            3 => registers.UART3,
+            0 => regs.UART0,
+            1 => regs.UART1,
+            2 => regs.UART2,
+            3 => regs.UART3,
             else => @compileError("LPC1768 has 4 UARTs available."),
         };
         const Self = @This();
@@ -115,33 +121,33 @@ pub fn Uart(comptime index: usize) type {
             micro.debug.write("0");
             switch (index) {
                 0 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = .CCLK_DIV_4 });
+                    regs.SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
+                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = @enumToInt(uart.CClkDiv.four) });
                 },
                 1 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = .CCLK_DIV_4 });
+                    regs.SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
+                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = @enumToInt(uart.CClkDiv.four) });
                 },
                 2 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = .CCLK_DIV_4 });
+                    regs.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
+                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
                 },
                 3 => {
-                    registers.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
-                    registers.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = .CCLK_DIV_4 });
+                    regs.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
+                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
                 },
                 else => unreachable,
             }
             micro.debug.write("1");
 
-            UARTn.LCR.write(.{
+            UARTn.LCR.modify(.{
                 // 8N1
-                .WLS = @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .WLS).field_type, @enumToInt(config.data_bits)),
-                .SBS = @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .SBS).field_type, @enumToInt(config.stop_bits)),
-                .PE = if (config.parity) |_| .ENABLE_PARITY_GENERA else .DISABLE_PARITY_GENER,
-                .PS = if (config.parity) |p| @intToEnum(std.meta.fieldInfo(@TypeOf(UARTn.LCR.*).underlying_type, .PS).field_type, @enumToInt(p)) else .ODD_PARITY_NUMBER_O,
-                .BC = .DISABLE_BREAK_TRANSM,
-                .DLAB = .ENABLE_ACCESS_TO_DIV,
+                .WLS = @enumToInt(config.data_bits),
+                .SBS = @enumToInt(config.stop_bits),
+                .PE = if (config.parity) |_| @as(u1, 0) else @as(u1, 1),
+                .PS = if (config.parity) |p| @enumToInt(p) else @enumToInt(uart.Parity.odd),
+                .BC = 0,
+                .DLAB = 1,
             });
             micro.debug.write("2");
 
@@ -158,10 +164,10 @@ pub fn Uart(comptime index: usize) type {
 
             const regval = std.math.cast(u16, divider) catch return error.UnsupportedBaudRate;
 
-            UARTn.DLL.write(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
-            UARTn.DLM.write(.{ .DLMSB = @truncate(u8, regval >> 0x08) });
+            UARTn.DLL.modify(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
+            UARTn.DLM.modify(.{ .DLMSB = @truncate(u8, regval >> 0x08) });
 
-            UARTn.LCR.modify(.{ .DLAB = .DISABLE_ACCESS_TO_DI });
+            UARTn.LCR.modify(.{ .DLAB = 0 });
 
             return Self{};
         }
@@ -169,8 +175,8 @@ pub fn Uart(comptime index: usize) type {
         pub fn canWrite(self: Self) bool {
             _ = self;
             return switch (UARTn.LSR.read().THRE) {
-                .VALID => true,
-                .THR_IS_EMPTY_ => false,
+                0 => true, // valid
+                1 => false, // is empty
             };
         }
         pub fn tx(self: Self, ch: u8) void {
@@ -181,8 +187,8 @@ pub fn Uart(comptime index: usize) type {
         pub fn canRead(self: Self) bool {
             _ = self;
             return switch (UARTn.LSR.read().RDR) {
-                .EMPTY => false,
-                .NOTEMPTY => true,
+                0 => false, // empty
+                1 => true, // not empty
             };
         }
         pub fn rx(self: Self) u8 {
