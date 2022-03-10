@@ -1,4 +1,2 @@
-const std = @import("std");
-
 pub const cpu = @import("cpu");
-pub const registers = @import("registers.zig");
+pub usingnamespace @import("registers.zig");

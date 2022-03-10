@@ -26,32 +26,32 @@ const PLL = struct {
         overclock_pll(3); // 100 MHz
     }
 
-    fn overclock_flash(timing: u5) void {
-        micro.chip.registers.SYSCON.FLASHCFG.write(.{
-            .FLASHTIM = @intToEnum(@TypeOf(micro.chip.registers.SYSCON.FLASHCFG.read().FLASHTIM), @intCast(u4, timing - 1)),
+    fn overclock_flash(timing: u4) void {
+        micro.chip.registers.SYSCON.FLASHCFG.modify(.{
+            .FLASHTIM = timing - 1,
         });
     }
     inline fn feed_pll() void {
-        micro.chip.registers.SYSCON.PLL0FEED.write(.{ .PLL0FEED = 0xAA });
-        micro.chip.registers.SYSCON.PLL0FEED.write(.{ .PLL0FEED = 0x55 });
+        micro.chip.registers.SYSCON.PLL0FEED.modify(.{ .PLL0FEED = 0xAA });
+        micro.chip.registers.SYSCON.PLL0FEED.modify(.{ .PLL0FEED = 0x55 });
     }
 
     fn overclock_pll(divider: u8) void {
         // PLL einrichten für RC
-        micro.chip.registers.SYSCON.PLL0CON.write(.{
+        micro.chip.registers.SYSCON.PLL0CON.modify(.{
             .PLLE0 = 0,
             .PLLC0 = 0,
         });
         feed_pll();
 
-        micro.chip.registers.SYSCON.CLKSRCSEL.write(.{ .CLKSRC = .SELECTS_THE_INTERNAL }); // RC-Oszillator als Quelle
-        micro.chip.registers.SYSCON.PLL0CFG.write(.{
+        micro.chip.registers.SYSCON.CLKSRCSEL.modify(.{ .CLKSRC = 0 }); // RC-Oszillator als Quelle
+        micro.chip.registers.SYSCON.PLL0CFG.modify(.{
             // SysClk = (4MHz / 2) * (2 * 75) = 300 MHz
             .MSEL0 = 74,
             .NSEL0 = 1,
         });
         // CPU Takt = SysClk / divider
-        micro.chip.registers.SYSCON.CCLKCFG.write(.{ .CCLKSEL = divider - 1 });
+        micro.chip.registers.SYSCON.CCLKCFG.modify(.{ .CCLKSEL = divider - 1 });
 
         feed_pll();
 

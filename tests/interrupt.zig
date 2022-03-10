@@ -5,7 +5,8 @@ const micro = @import("microzig");
 // right now.
 
 pub const panic = micro.panic;
-pub const vector_table = struct {
+
+pub const interrupts = struct {
     pub fn SysTick() void {
         @panic("hit systick!");
     }
