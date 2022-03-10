@@ -14,6 +14,7 @@ const VectorTable = microzig.chip.VectorTable;
 export const vector_table: VectorTable linksection("microzig_flash_start") = blk: {
     var tmp: microzig.chip.VectorTable = .{
         .initial_stack_pointer = microzig.config.end_of_stack,
+        .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
     if (@hasDecl(app, "interrupts")) {
         if (@typeInfo(app.interrupts) != .Struct)
