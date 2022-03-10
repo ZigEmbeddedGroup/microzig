@@ -7,14 +7,14 @@
 //! default AHB prescaler = /1 (= values 0..7):
 //!
 //! ```
-//! registers.RCC.CFGR.modify(.{ .HPRE = 0 });
+//! regs.RCC.CFGR.modify(.{ .HPRE = 0 });
 //! ```
 //!
 //! so also HCLK = 8 MHz.
 //! And with the default APB1 prescaler = /2:
 //!
 //! ```
-//! registers.RCC.CFGR.modify(.{ .PPRE1 = 4 });
+//! regs.RCC.CFGR.modify(.{ .PPRE1 = 4 });
 //! ```
 //!
 //! results in PCLK1,
@@ -29,7 +29,7 @@
 //! default APB2 prescaler = /1:
 //!
 //! ```
-//! registers.RCC.CFGR.modify(.{ .PPRE2 = 0 });
+//! regs.RCC.CFGR.modify(.{ .PPRE2 = 0 });
 //! ```
 //!
 //! and therefore USART1 runs on 8 MHz.
@@ -123,23 +123,23 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn init(config: micro.uart.Config) !Self {
             // The following must all be written when the USART is disabled (UE=0).
-            if (registers.USART1.CR1.read().UE == 1)
+            if (regs.USART1.CR1.read().UE == 1)
                 @panic("Trying to initialize USART1 while it is already enabled");
             // LATER: Alternatively, set UE=0 at this point?  Then wait for something?
             // Or add a destroy() function which disables the USART?
 
             // enable the USART1 clock
-            registers.RCC.APB2ENR.modify(.{ .USART1EN = 1 });
+            regs.RCC.APB2ENR.modify(.{ .USART1EN = 1 });
             // enable GPIOC clock
-            registers.RCC.AHBENR.modify(.{ .IOPCEN = 1 });
+            regs.RCC.AHBENR.modify(.{ .IOPCEN = 1 });
             // set PC4+PC5 to alternate function 7, USART1_TX + USART1_RX
-            registers.GPIOC.MODER.modify(.{ .MODER4 = 0b10, .MODER5 = 0b10 });
-            registers.GPIOC.AFRL.modify(.{ .AFRL4 = 7, .AFRL5 = 7 });
+            regs.GPIOC.MODER.modify(.{ .MODER4 = 0b10, .MODER5 = 0b10 });
+            regs.GPIOC.AFRL.modify(.{ .AFRL4 = 7, .AFRL5 = 7 });
 
             // clear USART1 configuration to its default
-            registers.USART1.CR1.writeRaw(@as(u32, 0));
-            registers.USART1.CR2.writeRaw(@as(u32, 0));
-            registers.USART1.CR3.writeRaw(@as(u32, 0));
+            regs.USART1.CR1.raw = 0;
+            regs.USART1.CR2.raw = 0;
+            regs.USART1.CR3.raw = 0;
 
             // set word length
             // Per the reference manual, M[1:0] means
@@ -151,16 +151,16 @@ pub fn Uart(comptime index: usize) type {
             // and M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
             const m1: u1 = if (config.data_bits == .seven and config.parity == null) 1 else 0;
             const m0: u1 = if (config.data_bits == .eight and config.parity != null) 1 else 0;
-            // Note that .padding4 = bit 28 = .M1 (.svd file bug), and .M == .M0.
-            registers.USART1.CR1.modify(.{ .padding4 = m1, .M = m0 });
+            // Note that .padding0 = bit 28 = .M1 (.svd file bug?), and .M == .M0.
+            regs.USART1.CR1.modify(.{ .padding0 = m1, .M = m0 });
 
             // set parity
             if (config.parity) |parity| {
-                registers.USART1.CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
-            } else registers.USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
+                regs.USART1.CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
+            } else regs.USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
 
             // set number of stop bits
-            registers.USART1.CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
+            regs.USART1.CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
 
             // set the baud rate
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
@@ -170,15 +170,15 @@ pub fn Uart(comptime index: usize) type {
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
             const usartdiv = @intCast(u16, @divTrunc(micro.board.cpu_frequency, config.baud_rate));
-            registers.USART1.BRR.writeRaw(usartdiv);
+            regs.USART1.BRR.raw = usartdiv;
             // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
             // those seem to be for another chipset; .svd file bug?
             // TODO: We assume the default OVER8=0 configuration above.
 
             // enable USART1, and its transmitter and receiver
-            registers.USART1.CR1.modify(.{ .UE = 1 });
-            registers.USART1.CR1.modify(.{ .TE = 1 });
-            registers.USART1.CR1.modify(.{ .RE = 1 });
+            regs.USART1.CR1.modify(.{ .UE = 1 });
+            regs.USART1.CR1.modify(.{ .TE = 1 });
+            regs.USART1.CR1.modify(.{ .RE = 1 });
 
             // For code simplicity, at cost of one or more register reads,
             // we read back the actual configuration from the registers,
@@ -187,7 +187,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         pub fn getOrInit(config: micro.uart.Config) !Self {
-            if (registers.USART1.CR1.read().UE == 1) {
+            if (regs.USART1.CR1.read().UE == 1) {
                 // UART1 already enabled, don't reinitialize and disturb things;
                 // instead read and use the actual configuration.
                 return readFromRegisters();
@@ -195,7 +195,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         fn readFromRegisters() Self {
-            const cr1 = registers.USART1.CR1.read();
+            const cr1 = regs.USART1.CR1.read();
             // As documented in `init()`, M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
             // So we always mask away the 9th bit, and if parity is enabled and it is in the 8th bit,
             // then we also mask away the 8th bit.
@@ -204,7 +204,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn canWrite(self: Self) bool {
             _ = self;
-            return switch (registers.USART1.ISR.read().TXE) {
+            return switch (regs.USART1.ISR.read().TXE) {
                 1 => true,
                 0 => false,
             };
@@ -212,16 +212,16 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
-            registers.USART1.TDR.modify(.{ .TDR = ch });
+            regs.USART1.TDR.modify(ch);
         }
 
         pub fn txflush(_: Self) void {
-            while (registers.USART1.ISR.read().TC == 0) {}
+            while (regs.USART1.ISR.read().TC == 0) {}
         }
 
         pub fn canRead(self: Self) bool {
             _ = self;
-            return switch (registers.USART1.ISR.read().RXNE) {
+            return switch (regs.USART1.ISR.read().RXNE) {
                 1 => true,
                 0 => false,
             };
@@ -229,7 +229,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn rx(self: Self) u8 {
             while (!self.canRead()) {} // Wait till the data is received
-            const data_with_parity_bit: u9 = registers.USART1.RDR.read().RDR;
+            const data_with_parity_bit: u9 = regs.USART1.RDR.read().RDR;
             return @intCast(u8, data_with_parity_bit & self.parity_read_mask);
         }
     };
