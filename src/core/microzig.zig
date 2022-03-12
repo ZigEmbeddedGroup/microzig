@@ -42,6 +42,10 @@ pub const debug = @import("debug.zig");
 /// pub const panic = micro.panic;
 /// ```
 pub fn panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+    // utilize logging functions
+    std.log.err("microzig PANIC: {s}", .{message});
+
+    // then use the current debug channel
     var writer = debug.writer();
     writer.print("microzig PANIC: {s}\r\n", .{message}) catch unreachable;
     if (maybe_stack_trace) |stack_trace| {
