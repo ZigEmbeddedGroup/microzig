@@ -84,9 +84,12 @@ pub fn I2CController(comptime index: usize) type {
 
         /// Shorthand for 'register-based' devices
         pub fn readRegisters(self: Device, register_address: u8, buffer: []u8) ReadError!void {
-            const wt = self.transfer(.write);
-            try wt.writer().writeByte(1 << 7 | register_address); // MSB == 'keep sending until I STOP'
-            const rt = wt.restartTransfer(.read);
+            const rt = write_and_restart: {
+                const wt = self.transfer(.write);
+                errdefer wt.stop();
+                try wt.writer().writeByte(1 << 7 | register_address); // MSB == 'keep sending until I STOP'
+                break :write_and_restart wt.restartTransfer(.read);
+            };
             defer rt.stop();
             try rt.reader().readNoEof(buffer);
         }
