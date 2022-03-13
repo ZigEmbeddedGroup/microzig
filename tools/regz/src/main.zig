@@ -18,6 +18,11 @@ const params = [_]clap.Param(clap.Help){
     clap.parseParam("<POS>...") catch unreachable,
 };
 
+const parsers = .{
+    .TYPE = clap.parsers.string,
+    .POS = clap.parsers.string,
+};
+
 pub fn main() !void {
     mainImpl() catch |err| switch (err) {
         error.Explained => std.process.exit(1),
@@ -41,17 +46,17 @@ fn mainImpl() anyerror!void {
     defer _ = gpa.deinit();
 
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+    var res = clap.parse(clap.Help, &params, parsers, .{ .diagnostic = &diag }) catch |err| {
         // Report useful error and exit
         diag.report(std.io.getStdErr().writer(), err) catch {};
         return error.Explained;
     };
-    defer args.deinit();
+    defer res.deinit();
 
-    if (args.flag("--help"))
-        return clap.help(std.io.getStdErr().writer(), &params);
+    if (res.args.help)
+        return clap.help(std.io.getStdErr().writer(), clap.Help, &params);
 
-    var schema: ?Schema = if (args.option("--schema")) |schema_str|
+    var schema: ?Schema = if (res.args.schema) |schema_str|
         if (std.meta.stringToEnum(Schema, schema_str)) |s| s else {
             std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{schema_str});
             return error.Explained;
@@ -59,8 +64,7 @@ fn mainImpl() anyerror!void {
     else
         null;
 
-    const positionals = args.positionals();
-    var db = switch (positionals.len) {
+    var db = switch (res.positionals.len) {
         0 => blk: {
             if (schema == null) {
                 std.log.err("schema must be chosen when reading from stdin", .{});
@@ -80,10 +84,10 @@ fn mainImpl() anyerror!void {
         1 => blk: {
             // if schema is null, then try to determine using file extension
             if (schema == null) {
-                const ext = std.fs.path.extension(positionals[0]);
+                const ext = std.fs.path.extension(res.positionals[0]);
                 if (ext.len > 0) {
                     schema = std.meta.stringToEnum(Schema, ext[1..]) orelse {
-                        std.log.err("unable to determine schema from file extension of '{s}'", .{positionals[0]});
+                        std.log.err("unable to determine schema from file extension of '{s}'", .{res.positionals[0]});
                         return error.Explained;
                     };
                 }
@@ -95,7 +99,7 @@ fn mainImpl() anyerror!void {
             }
 
             // all other schema types are xml based
-            const doc: *xml.Doc = xml.readFile(positionals[0].ptr, null, 0) orelse return error.ReadXmlFile;
+            const doc: *xml.Doc = xml.readFile(res.positionals[0].ptr, null, 0) orelse return error.ReadXmlFile;
             defer xml.freeDoc(doc);
 
             break :blk try parseXmlDatabase(allocator, doc, schema.?);
