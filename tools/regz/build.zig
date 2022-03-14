@@ -12,9 +12,19 @@ pub fn build(b: *std.build.Builder) !void {
     });
     xml.step.install();
 
+    const commit_result = try std.ChildProcess.exec(.{
+        .allocator = b.allocator,
+        .argv = &.{ "git", "rev-parse", "HEAD" },
+        .cwd = std.fs.path.dirname(@src().file) orelse unreachable,
+    });
+
+    const build_options = b.addOptions();
+    build_options.addOption([]const u8, "commit", commit_result.stdout);
+
     const exe = b.addExecutable("regz", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
+    exe.addOptions("build_options", build_options);
     exe.addPackagePath("clap", "libs/zig-clap/clap.zig");
     xml.link(exe);
     exe.install();

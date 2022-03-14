@@ -14,13 +14,8 @@ const svd_schema = @embedFile("cmsis-svd.xsd");
 
 const params = [_]clap.Param(clap.Help){
     clap.parseParam("-h, --help             Display this help and exit") catch unreachable,
-    clap.parseParam("-s, --schema <TYPE>    Explicitly set schema type, one of: svd, atdf, json") catch unreachable,
-    clap.parseParam("<POS>...") catch unreachable,
-};
-
-const parsers = .{
-    .TYPE = clap.parsers.string,
-    .POS = clap.parsers.string,
+    clap.parseParam("-s, --schema <str>    Explicitly set schema type, one of: svd, atdf, json") catch unreachable,
+    clap.parseParam("<str>...") catch unreachable,
 };
 
 pub fn main() !void {
@@ -41,12 +36,17 @@ const Schema = enum {
 fn mainImpl() anyerror!void {
     defer xml.cleanupParser();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{
+        .stack_trace_frames = 20,
+    }){};
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
+    var arena = ArenaAllocator.init(allocator);
+    defer arena.deinit();
+
     var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, parsers, .{ .diagnostic = &diag }) catch |err| {
+    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
         // Report useful error and exit
         diag.report(std.io.getStdErr().writer(), err) catch {};
         return error.Explained;
@@ -127,7 +127,7 @@ fn readFn(ctx: ?*anyopaque, buffer: ?[*]u8, len: c_int) callconv(.C) c_int {
     } else -1;
 }
 
-fn parseXmlDatabase(allocator: std.mem.Allocator, doc: *xml.Doc, schema: Schema) !Database {
+fn parseXmlDatabase(allocator: Allocator, doc: *xml.Doc, schema: Schema) !Database {
     return switch (schema) {
         .json => unreachable,
         .atdf => try Database.initFromAtdf(allocator, doc),

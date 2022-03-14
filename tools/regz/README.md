@@ -2,8 +2,8 @@
 
 regz is a Zig code generator for microcontrollers. Vendors often publish files
 that have the details of special function registers, for ARM this is called a
-"System View Description" (SVD), and this tool outputs a single file for you to
-start interacting with the hardware:
+"System View Description" (SVD), for AVR the format is called ATDF. This tool
+outputs a single file for you to start interacting with the hardware:
 
 ```zig
 const regs = @import("nrf52.zig").registers;
@@ -22,11 +22,14 @@ pub fn main() void {
 
 NOTE: just including that file is not enough to run code on a microcontroller,
 this is a fairly low-level tool and it is intended that the generated code be
-used with [microzig](https://github.com/ZigEmbeddedGroup/microzig) 
+used with something like [microzig](https://github.com/ZigEmbeddedGroup/microzig).
 
-One can get the required SVD file from your vendor, or another good place is
+One can get SVD files from your vendor, or another good place is
 [posborne/cmsis-svd](https://github.com/posborne/cmsis-svd/tree/master/data),
 it's a python based SVD parser and they have a large number of files available.
+
+For ATDF you need to unzip the appropriate atpack from the
+[registry](https://packs.download.microchip.com).
 
 ## Building
 
@@ -38,6 +41,8 @@ zig build
 ```
 
 ## Using regz to generate code
+
+Files provided may be either SVD or ATDF.
 
 Provide path on command line:
 ```
@@ -55,13 +60,6 @@ It seems that manufacturers are using SVD to represent registers on their
 RISC-V based products despite it being an ARM standard. At best regz will
 generate the register definitions without an interrupt table (for now), if you
 run into problems issues will be warmly welcomed!
-
-### How about AVR?
-
-Atmel/Microchip publishes their register definitions for AVRs in ATDF, it is
-not implemented, but we do plan on supporting it. There are tools like
-[Rahix/atdf2svd](https://github.com/Rahix/atdf2svd) if you really can't wait to
-get your hands dirty.
 
 ### What about MSP430?
 
@@ -82,5 +80,5 @@ future. If you know of any others we should look into, please make an issue!
     - [ ] finalize derivation of different components
     - [ ] comprehensive suite of tests
     - [ ] RISC-V interrupt table generation
-- [ ] ATDF: Atmel's register schema format
+- [x] ATDF: AVR's register schema format
 - [ ] insert name of Texus Insturment's register schema format for MSP430

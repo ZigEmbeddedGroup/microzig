@@ -1,6 +1,12 @@
 const std = @import("std");
+const build_options = @import("build_options");
 const svd = @import("svd.zig");
 const xml = @import("xml.zig");
+const atdf = @import("atdf.zig");
+const Peripheral = @import("Peripheral.zig");
+const Register = @import("Register.zig");
+const Field = @import("Field.zig");
+const Enumeration = @import("Enumeration.zig");
 
 const assert = std.debug.assert;
 const ArenaAllocator = std.heap.ArenaAllocator;
@@ -38,58 +44,76 @@ const Nesting = enum {
     contained,
 };
 
-arena: std.heap.ArenaAllocator,
-device: svd.Device,
+allocator: Allocator,
+arena: ArenaAllocator,
+device: ?svd.Device,
 cpu: ?svd.Cpu,
 interrupts: std.ArrayList(svd.Interrupt),
-peripherals: std.ArrayList(svd.Peripheral),
+peripherals: std.ArrayList(Peripheral),
 clusters: std.ArrayList(svd.Cluster),
-registers: std.ArrayList(svd.Register),
-fields: std.ArrayList(svd.Field),
+registers: std.ArrayList(Register),
+fields: std.ArrayList(Field),
+enumerations: std.ArrayList(Enumeration),
 peripherals_use_interrupts: std.ArrayList(PeripheralUsesInterrupt),
 clusters_in_peripherals: std.ArrayList(ClusterInPeripheral),
 clusters_in_clusters: std.ArrayList(ClusterInCluster),
 registers_in_peripherals: std.AutoHashMap(u32, Range),
 registers_in_clusters: std.AutoHashMap(u32, Range),
-fields_in_registers: std.MultiArrayList(FieldsInRegister),
+fields_in_registers: std.AutoHashMap(u32, Range),
+enumerations_in_fields: std.AutoHashMap(u32, Range),
 dimensions: Dimensions,
 
 /// takes ownership of arena allocator
-fn init(arena: std.heap.ArenaAllocator, device: svd.Device) Self {
-    const allocator = arena.child_allocator;
+fn init(allocator: Allocator) Self {
     return Self{
-        .arena = arena,
-        .device = device,
+        .allocator = allocator,
+        .arena = ArenaAllocator.init(allocator),
+        .device = null,
         .cpu = null,
         .interrupts = std.ArrayList(svd.Interrupt).init(allocator),
-        .peripherals = std.ArrayList(svd.Peripheral).init(allocator),
+        .peripherals = std.ArrayList(Peripheral).init(allocator),
         .clusters = std.ArrayList(svd.Cluster).init(allocator),
-        .registers = std.ArrayList(svd.Register).init(allocator),
-        .fields = std.ArrayList(svd.Field).init(allocator),
+        .registers = std.ArrayList(Register).init(allocator),
+        .fields = std.ArrayList(Field).init(allocator),
+        .enumerations = std.ArrayList(Enumeration).init(allocator),
         .peripherals_use_interrupts = std.ArrayList(PeripheralUsesInterrupt).init(allocator),
         .clusters_in_peripherals = std.ArrayList(ClusterInPeripheral).init(allocator),
         .clusters_in_clusters = std.ArrayList(ClusterInCluster).init(allocator),
         .registers_in_peripherals = std.AutoHashMap(u32, Range).init(allocator),
         .registers_in_clusters = std.AutoHashMap(u32, Range).init(allocator),
-        .fields_in_registers = std.MultiArrayList(FieldsInRegister){},
+        .fields_in_registers = std.AutoHashMap(u32, Range).init(allocator),
+        .enumerations_in_fields = std.AutoHashMap(u32, Range).init(allocator),
         .dimensions = Dimensions.init(allocator),
     };
 }
 
-pub fn initFromSvd(allocator: std.mem.Allocator, doc: *xml.Doc) !Self {
+pub fn deinit(self: *Self) void {
+    self.interrupts.deinit();
+    self.peripherals.deinit();
+    self.clusters.deinit();
+    self.registers.deinit();
+    self.fields.deinit();
+    self.enumerations.deinit();
+    self.peripherals_use_interrupts.deinit();
+    self.registers_in_peripherals.deinit();
+    self.fields_in_registers.deinit();
+    self.clusters_in_peripherals.deinit();
+    self.clusters_in_clusters.deinit();
+    self.registers_in_clusters.deinit();
+    self.enumerations_in_fields.deinit();
+    self.dimensions.deinit();
+    self.arena.deinit();
+}
+
+pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
     const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
     const device_node = xml.findNode(root_element, "device") orelse return error.NoDevice;
     const device_nodes: *xml.Node = device_node.children orelse return error.NoDeviceNodes;
 
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    const device = blk: {
-        errdefer arena.deinit();
-        break :blk try svd.Device.parse(&arena, device_nodes);
-    };
-
-    var db = Self.init(arena, device);
+    var db = Self.init(allocator);
     errdefer db.deinit();
 
+    db.device = try svd.Device.parse(&db.arena, device_nodes);
     db.cpu = if (xml.findNode(device_nodes, "cpu")) |cpu_node|
         try svd.Cpu.parse(&db.arena, @ptrCast(*xml.Node, cpu_node.children orelse return error.NoCpu))
     else
@@ -102,7 +126,7 @@ pub fn initFromSvd(allocator: std.mem.Allocator, doc: *xml.Doc) !Self {
         var peripheral_it: ?*xml.Node = xml.findNode(peripherals_node.children, "peripheral"); //peripherals_node.children;
         while (peripheral_it != null) : (peripheral_it = xml.findNode(peripheral_it.?.next, "peripheral")) {
             const peripheral_nodes: *xml.Node = peripheral_it.?.children orelse continue;
-            const peripheral = try svd.Peripheral.parse(&db.arena, peripheral_nodes);
+            const peripheral = try svd.parsePeripheral(&db.arena, peripheral_nodes);
             try db.peripherals.append(peripheral);
 
             const peripheral_idx = @intCast(u32, db.peripherals.items.len - 1);
@@ -231,11 +255,17 @@ pub fn initFromSvd(allocator: std.mem.Allocator, doc: *xml.Doc) !Self {
             const parent_idx = entry.value_ptr.*;
             const child_idx = entry.key_ptr.*;
 
-            if (db.fields_in_registers.items(.field_range)[child_idx].begin !=
-                db.fields_in_registers.items(.field_range)[child_idx].end)
+            // TODO: determine how deriving from a register while having fields
+            // works, does it just merge the fields in?
+            if (db.fields_in_registers.contains(child_idx))
                 return error.Todo;
 
-            db.fields_in_registers.items(.field_range)[child_idx] = db.fields_in_registers.items(.field_range)[parent_idx];
+            if (db.fields_in_registers.get(parent_idx)) |field_range|
+                try db.fields_in_registers.put(child_idx, field_range)
+            else
+                std.log.warn("register '{s}' derived from '{s}', but the latter does not have fields", .{
+                    db.registers.items[child_idx].name, db.registers.items[parent_idx].name,
+                });
         }
     }
 
@@ -250,22 +280,26 @@ fn loadRegisters(
     var register_it: ?*xml.Node = xml.findNode(nodes, "register");
     while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
         const register_nodes: *xml.Node = register_it.?.children orelse continue;
-        const register = try svd.Register.parse(&db.arena, register_nodes, db.device.register_properties.size orelse db.device.width);
+        const register = try svd.parseRegister(&db.arena, register_nodes, db.device.?.register_properties.size orelse db.device.?.width);
+        const register_idx = @intCast(u32, db.registers.items.len);
         try db.registers.append(register);
 
-        const register_idx = @intCast(u32, db.registers.items.len - 1);
         if (xml.getAttribute(register_it, "derivedFrom")) |derived_from|
             try named_derivations.registers.put(register_idx, try db.arena.allocator().dupe(u8, derived_from));
 
         if (try svd.Dimension.parse(&db.arena, register_nodes)) |dimension|
             try db.dimensions.registers.put(register_idx, dimension);
 
-        const field_begin_idx = db.fields.items.len;
+        const field_begin_idx = @intCast(u32, db.fields.items.len);
         if (xml.findNode(register_nodes, "fields")) |fields_node| {
             var field_it: ?*xml.Node = xml.findNode(fields_node.children, "field");
             while (field_it != null) : (field_it = xml.findNode(field_it.?.next, "field")) {
                 const field_nodes: *xml.Node = field_it.?.children orelse continue;
-                const field = try svd.Field.parse(&db.arena, field_nodes);
+                const field_name = xml.findValueForKey(field_nodes, "name") orelse continue;
+                if (useless_field_names.has(field_name))
+                    continue;
+
+                const field = try svd.parseField(&db.arena, field_nodes);
                 try db.fields.append(field);
 
                 const field_idx = @intCast(u32, db.fields.items.len - 1);
@@ -292,7 +326,7 @@ fn loadRegisters(
         }
 
         // sort fields by offset
-        std.sort.sort(svd.Field, db.fields.items[field_begin_idx..], {}, svd.Field.lessThan);
+        std.sort.sort(Field, db.fields.items[field_begin_idx..], {}, Field.lessThan);
 
         // TODO: can we use unions for overlapping fields?
         // remove overlapping fields
@@ -310,14 +344,14 @@ fn loadRegisters(
                     db.fields.items[i - 1].offset + db.fields.items[i - 1].width,
                     register.name,
                 });
-            } else if (db.fields.items[i].offset + db.fields.items[i].width > db.device.width) {
+            } else if (db.fields.items[i].offset + db.fields.items[i].width > db.device.?.width) {
                 const ignored = db.fields.orderedRemove(i);
                 std.log.warn("ignoring field '{s}' ({}-{}) in register '{s}' because it's outside it's size: {}", .{
                     ignored.name,
                     ignored.offset,
                     ignored.offset + ignored.width,
                     register.name,
-                    db.device.width,
+                    db.device.?.width,
                 });
             } else {
                 current_bit = db.fields.items[i].offset + db.fields.items[i].width;
@@ -325,13 +359,11 @@ fn loadRegisters(
             }
         }
 
-        try db.fields_in_registers.append(db.arena.child_allocator, .{
-            .register_idx = @intCast(u32, db.registers.items.len - 1),
-            .field_range = .{
-                .begin = @intCast(u32, field_begin_idx),
+        if (field_begin_idx != db.fields.items.len)
+            try db.fields_in_registers.put(register_idx, .{
+                .begin = field_begin_idx,
                 .end = @intCast(u32, db.fields.items.len),
-            },
-        });
+            });
     }
 }
 
@@ -372,27 +404,238 @@ fn loadNestedClusters(
     }
 }
 
-pub fn initFromAtdf(allocator: std.mem.Allocator, doc: *xml.Doc) !Self {
-    _ = doc;
-    _ = allocator;
-    return error.Todo;
-}
+pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
+    const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
+    const tools_node = xml.findNode(root_element, "avr-tools-device-file") orelse return error.NoToolsNode;
+    var regs_start_addr: usize = 0;
 
-pub fn deinit(self: *Self) void {
-    const allocator = self.arena.child_allocator;
-    self.peripherals.deinit();
-    self.interrupts.deinit();
-    self.registers.deinit();
-    self.fields.deinit();
-    self.clusters.deinit();
-    self.peripherals_use_interrupts.deinit();
-    self.registers_in_peripherals.deinit();
-    self.fields_in_registers.deinit(allocator);
-    self.clusters_in_peripherals.deinit();
-    self.clusters_in_clusters.deinit();
-    self.registers_in_clusters.deinit();
-    self.dimensions.deinit();
-    self.arena.deinit();
+    var peripheral_instances = std.StringHashMap(void).init(allocator);
+    defer peripheral_instances.deinit();
+
+    var db = Self.init(allocator);
+    errdefer db.deinit();
+
+    if (xml.findNode(tools_node.children orelse return error.NoChildren, "devices")) |devices_node| {
+        var device_it: ?*xml.Node = xml.findNode(devices_node.children, "device");
+        while (device_it != null) : (device_it = xml.findNode(device_it.?.next, "device")) {
+            if (db.device != null) {
+                std.log.err("multiple devices defined in this file. TODO: give user list of devices to choose from", .{});
+                return error.Explained;
+            }
+
+            // this name lowercased should line up with a zig target
+            const name: ?[]const u8 = if (xml.getAttribute(device_it, "name")) |n|
+                try db.arena.allocator().dupe(u8, n)
+            else
+                null;
+            const arch: ?[]const u8 = if (xml.getAttribute(device_it, "architecture")) |a|
+                try db.arena.allocator().dupe(u8, a)
+            else
+                null;
+            const family: ?[]const u8 = if (xml.getAttribute(device_it, "family")) |f|
+                try db.arena.allocator().dupe(u8, f)
+            else
+                null;
+
+            db.device = .{
+                .vendor = "Atmel",
+                .series = family,
+                .name = name,
+                .address_unit_bits = 16,
+                .width = 8,
+                .register_properties = .{},
+            };
+
+            db.cpu = svd.Cpu{
+                .name = arch,
+                .revision = "0.0.1",
+                .endian = .little,
+                .nvic_prio_bits = 0,
+                .vendor_systick_config = false,
+                .device_num_interrupts = null,
+            };
+
+            const device_nodes: *xml.Node = device_it.?.children orelse continue;
+            regs_start_addr = if (xml.findNode(device_nodes, "address-spaces")) |address_spaces_node| blk: {
+                var ret: ?usize = null;
+                var address_space_it: ?*xml.Node = xml.findNode(address_spaces_node.children.?, "address-space");
+                while (address_space_it != null) : (address_space_it = xml.findNode(address_space_it.?.next, "address-space")) {
+                    const address_space_nodes: *xml.Node = address_space_it.?.children orelse continue;
+                    var memory_segment_it: ?*xml.Node = xml.findNode(address_space_nodes, "memory-segment");
+                    while (memory_segment_it != null) : (memory_segment_it = xml.findNode(memory_segment_it.?.next, "memory-segment")) {
+                        const memory_type = xml.getAttribute(memory_segment_it, "type") orelse continue;
+                        if (std.mem.eql(u8, "regs", memory_type)) {
+                            if (ret != null) {
+                                std.log.err("multiple register memory segments found, no idea what to do, please cut a ticket: https://github.com/ZigEmbeddedGroup/regz", .{});
+                                return error.Explained;
+                            } else if (xml.getAttribute(memory_segment_it, "start")) |addr_str| {
+                                ret = try std.fmt.parseInt(usize, addr_str, 0);
+                            }
+                        }
+                    }
+                }
+
+                if (ret) |start_address| {
+                    break :blk start_address;
+                } else {
+                    std.log.err("failed to determine the start address for registers", .{});
+                    return error.Explained;
+                }
+            } else unreachable;
+
+            if (xml.findNode(device_nodes, "peripherals")) |peripherals_node| {
+                var module_it: ?*xml.Node = xml.findNode(peripherals_node.children.?, "module");
+                while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
+                    const module_nodes = module_it.?.children orelse continue;
+                    var instance_it: ?*xml.Node = xml.findNode(module_nodes, "instance");
+                    while (instance_it != null) : (instance_it = xml.findNode(instance_it.?.next, "instance")) {
+                        const instance_nodes = instance_it.?.children orelse continue;
+                        const instance_name = xml.getAttribute(instance_it, "name") orelse return error.NoInstanceName;
+                        if (xml.findNode(instance_nodes, "register-group")) |register_group| {
+                            const group_name = xml.getAttribute(register_group, "name") orelse return error.NoRegisterGroupName;
+                            const name_in_module = xml.getAttribute(register_group, "name-in-module") orelse return error.NoNameInModule;
+
+                            if (!std.mem.eql(u8, instance_name, group_name) or !std.mem.eql(u8, group_name, name_in_module)) {
+                                std.log.warn("mismatching names for name-in-module: {s}, ignoring, if you see this please cut a ticket: https://github.com/ZigEmbeddedGroup/regz", .{
+                                    name_in_module,
+                                });
+                                continue;
+                            }
+
+                            try peripheral_instances.put(try db.arena.allocator().dupe(u8, name_in_module), {});
+                        }
+                    }
+                }
+            }
+
+            if (xml.findNode(device_nodes, "interrupts")) |interrupts_node| {
+                var interrupt_it: ?*xml.Node = xml.findNode(interrupts_node.children.?, "interrupt");
+                while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
+                    const interrupt = svd.Interrupt{
+                        .name = if (xml.getAttribute(interrupt_it, "name")) |interrupt_name|
+                            try db.arena.allocator().dupe(u8, interrupt_name)
+                        else
+                            return error.NoName,
+                        .description = if (xml.getAttribute(interrupt_it, "caption")) |caption|
+                            try db.arena.allocator().dupe(u8, caption)
+                        else
+                            return error.NoCaption,
+                        .value = if (xml.getAttribute(interrupt_it, "index")) |index_str|
+                            try std.fmt.parseInt(usize, index_str, 0)
+                        else
+                            return error.NoIndex,
+                    };
+
+                    // if the interrupt doesn't exist then do a sorted insert
+                    if (std.sort.binarySearch(svd.Interrupt, interrupt, db.interrupts.items, {}, svd.Interrupt.compare) == null) {
+                        try db.interrupts.append(interrupt);
+                        std.sort.sort(svd.Interrupt, db.interrupts.items, {}, svd.Interrupt.lessThan);
+                    }
+                }
+            }
+        }
+    }
+
+    if (xml.findNode(tools_node.children orelse return error.NoChildren, "modules")) |modules_node| {
+        var module_it: ?*xml.Node = xml.findNode(modules_node.children.?, "module");
+        while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
+            const module_nodes: *xml.Node = module_it.?.children orelse continue;
+
+            var value_groups = std.StringHashMap(Range).init(allocator);
+            defer value_groups.deinit();
+
+            var value_group_it: ?*xml.Node = xml.findNode(module_nodes, "value-group");
+            while (value_group_it != null) : (value_group_it = xml.findNode(value_group_it.?.next, "value-group")) {
+                const value_group_nodes: *xml.Node = value_group_it.?.children orelse continue;
+                const value_group_name = if (xml.getAttribute(value_group_it, "name")) |name|
+                    try db.arena.allocator().dupe(u8, name)
+                else
+                    continue;
+
+                const first_enum_idx = @intCast(u32, db.enumerations.items.len);
+                var value_it: ?*xml.Node = xml.findNode(value_group_nodes, "value");
+                while (value_it != null) : (value_it = xml.findNode(value_it.?.next, "value")) {
+                    try db.enumerations.append(.{
+                        .value = if (xml.getAttribute(value_it, "value")) |value_str|
+                            try std.fmt.parseInt(usize, value_str, 0)
+                        else
+                            continue,
+                        .description = if (xml.getAttribute(value_it, "caption")) |caption|
+                            try db.arena.allocator().dupe(u8, caption)
+                        else
+                            null,
+                    });
+                }
+
+                std.sort.sort(Enumeration, db.enumerations.items[first_enum_idx..], {}, Enumeration.lessThan);
+                try value_groups.put(value_group_name, .{
+                    .begin = first_enum_idx,
+                    .end = @intCast(u32, db.enumerations.items.len),
+                });
+            }
+
+            var register_group_it: ?*xml.Node = xml.findNode(module_nodes, "register-group");
+            while (register_group_it != null) : (register_group_it = xml.findNode(register_group_it.?.next, "register-group")) {
+                const register_group_nodes: *xml.Node = register_group_it.?.children orelse continue;
+                const group_name = xml.getAttribute(register_group_it, "name") orelse continue;
+                if (!peripheral_instances.contains(group_name))
+                    continue;
+
+                const peripheral_idx = @intCast(u32, db.peripherals.items.len);
+                try db.peripherals.append(try atdf.parsePeripheral(&db.arena, register_group_it.?));
+
+                const reg_begin_idx = @intCast(u32, db.registers.items.len);
+                var register_it: ?*xml.Node = xml.findNode(register_group_nodes, "register");
+                while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
+                    const register_idx = @intCast(u32, db.registers.items.len);
+                    try db.registers.append(try atdf.parseRegister(&db.arena, register_it.?, regs_start_addr, register_it.?.children != null));
+
+                    const register_nodes: *xml.Node = register_it.?.children orelse continue;
+                    const field_begin_idx = @intCast(u32, db.fields.items.len);
+                    var bitfield_it: ?*xml.Node = xml.findNode(register_nodes, "bitfield");
+                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
+                        try db.fields.append(atdf.parseField(&db.arena, bitfield_it.?) catch |err| switch (err) {
+                            error.InvalidMask => continue,
+                            else => return err,
+                        });
+                    }
+
+                    // we expect fields to be sorted by offset
+                    std.sort.sort(Field, db.fields.items[field_begin_idx..], {}, Field.lessThan);
+
+                    // go back through bitfields and get the enumerations
+                    bitfield_it = xml.findNode(register_nodes, "bitfield");
+                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
+                        if (xml.getAttribute(bitfield_it, "values")) |value_group_name| {
+                            const field_name = xml.getAttribute(bitfield_it, "name") orelse continue;
+                            const field_idx = for (db.fields.items[field_begin_idx..]) |field, offset| {
+                                if (std.mem.eql(u8, field_name, field.name))
+                                    break field_begin_idx + @intCast(u32, offset);
+                            } else continue;
+
+                            if (value_groups.get(value_group_name)) |enum_range|
+                                try db.enumerations_in_fields.put(field_idx, enum_range);
+                        }
+                    }
+
+                    try db.fields_in_registers.put(register_idx, .{
+                        .begin = field_begin_idx,
+                        .end = @intCast(u32, db.fields.items.len),
+                    });
+                }
+
+                try db.registers_in_peripherals.put(peripheral_idx, .{
+                    .begin = reg_begin_idx,
+                    .end = @intCast(u32, db.registers.items.len),
+                });
+            }
+        }
+    }
+
+    // there is also pinouts, however that's linked to IC package information,
+    // not exactly sure if we're going to do anything with that
+
+    return db;
 }
 
 fn writeDescription(
@@ -436,11 +679,20 @@ fn writeDescription(
 }
 
 pub fn toZig(self: *Self, writer: anytype) !void {
-    try writer.writeAll("// this file is generated by regz\n//\n");
-    if (self.device.vendor) |vendor_name|
+    if (self.device == null) {
+        std.log.err("failed to find device info", .{});
+        return error.Explained;
+    }
+
+    try writer.print(
+        \\// this file was generated by regz: https://github.com/ZigEmbeddedGroup/regz
+        \\// commit: {s}
+    , .{build_options.commit});
+    try writer.writeAll("//\n");
+    if (self.device.?.vendor) |vendor_name|
         try writer.print("// vendor: {s}\n", .{vendor_name});
 
-    if (self.device.name) |device_name|
+    if (self.device.?.name) |device_name|
         try writer.print("// device: {s}\n", .{device_name});
 
     if (self.cpu) |cpu| if (cpu.name) |cpu_name|
@@ -450,42 +702,45 @@ pub fn toZig(self: *Self, writer: anytype) !void {
         if (svd.CpuName.parse(self.cpu.?.name.?)) |cpu_type| {
             try writer.writeAll("\npub const VectorTable = struct {\n");
 
-            // this is an arm machine
-            try writer.writeAll(
-                \\    initial_stack_pointer: u32,
-                \\    Reset: InterruptVector = unhandled,
-                \\    NMI: InterruptVector = unhandled,
-                \\    HardFault: InterruptVector = unhandled,
-                \\
-            );
+            // TODO: isCortexM()
+            if (cpu_type != .avr) {
+                // this is an arm machine
+                try writer.writeAll(
+                    \\    initial_stack_pointer: u32,
+                    \\    Reset: InterruptVector = unhandled,
+                    \\    NMI: InterruptVector = unhandled,
+                    \\    HardFault: InterruptVector = unhandled,
+                    \\
+                );
 
-            switch (cpu_type) {
-                // Cortex M23 has a security extension and when implemented
-                // there are two vector tables (same layout though)
-                .cortex_m0, .cortex_m0plus, .cortex_m23 => try writer.writeAll(
-                    \\    reserved0: [7]u32 = undefined,
+                switch (cpu_type) {
+                    // Cortex M23 has a security extension and when implemented
+                    // there are two vector tables (same layout though)
+                    .cortex_m0, .cortex_m0plus, .cortex_m23 => try writer.writeAll(
+                        \\    reserved0: [7]u32 = undefined,
+                        \\
+                    ),
+                    .sc300, .cortex_m3, .cortex_m4, .cortex_m7, .cortex_m33 => try writer.writeAll(
+                        \\    MemManage: InterruptVector = unhandled,
+                        \\    BusFault: InterruptVector = unhandled,
+                        \\    UsageFault: InterruptVector = unhandled,
+                        \\    reserved0: [4]u32 = undefined,
+                        \\
+                    ),
+                    else => {
+                        std.log.err("unhandled cpu type: {}", .{cpu_type});
+                        return error.Todo;
+                    },
+                }
+
+                try writer.writeAll(
+                    \\    SVCall: InterruptVector = unhandled,
+                    \\    reserved1: [2]u32 = undefined,
+                    \\    PendSV: InterruptVector = unhandled,
+                    \\    SysTick: InterruptVector = unhandled,
                     \\
-                ),
-                .sc300, .cortex_m3, .cortex_m4, .cortex_m7, .cortex_m33 => try writer.writeAll(
-                    \\    MemManage: InterruptVector = unhandled,
-                    \\    BusFault: InterruptVector = unhandled,
-                    \\    UsageFault: InterruptVector = unhandled,
-                    \\    reserved0: [4]u32 = undefined,
-                    \\
-                ),
-                else => {
-                    std.log.err("unhandled cpu type: {}", .{cpu_type});
-                    return error.Todo;
-                },
+                );
             }
-
-            try writer.writeAll(
-                \\    SVCall: InterruptVector = unhandled,
-                \\    reserved1: [2]u32 = undefined,
-                \\    PendSV: InterruptVector = unhandled,
-                \\    SysTick: InterruptVector = unhandled,
-                \\
-            );
 
             var reserved_count: usize = 2;
             var expected: usize = 0;
@@ -502,7 +757,7 @@ pub fn toZig(self: *Self, writer: anytype) !void {
                     try writer.print("    reserved{}: u32 = undefined,\n", .{reserved_count});
                 }
 
-                if (interrupt.description) |description| if (!isUselessDescription(description))
+                if (interrupt.description) |description| if (!useless_descriptions.has(description))
                     try writeDescription(self.arena.child_allocator, writer, description, 1);
 
                 try writer.print("    {s}: InterruptVector = unhandled,\n", .{std.zig.fmtId(interrupt.name)});
@@ -534,13 +789,15 @@ pub fn toZig(self: *Self, writer: anytype) !void {
             const reg_range = self.registers_in_peripherals.get(peripheral_idx).?;
             const registers = self.registers.items[reg_range.begin..reg_range.end];
             if (registers.len != 0 or has_clusters) {
-                if (peripheral.description) |description| if (!isUselessDescription(description))
+                if (peripheral.description) |description| if (!useless_descriptions.has(description)) {
+                    try writer.writeByte('\n');
                     try writeDescription(self.arena.child_allocator, writer, description, 1);
-                try writer.print(
-                    \\    pub const {s} = struct {{
-                    \\        pub const base_address = 0x{x};
-                    \\
-                , .{ std.zig.fmtId(peripheral.name), peripheral.base_addr });
+                };
+
+                try writer.print("    pub const {s} = struct {{\n", .{std.zig.fmtId(peripheral.name)});
+                if (peripheral.base_addr) |base_addr|
+                    try writer.print("        pub const base_address = 0x{x};\n", .{base_addr});
+
                 if (peripheral.version) |version|
                     try writer.print("        pub const version = \"{s}\";\n", .{version});
 
@@ -575,7 +832,7 @@ pub fn toZig(self: *Self, writer: anytype) !void {
 fn genZigCluster(
     db: *Self,
     writer: anytype,
-    base_addr: usize,
+    base_addr: ?usize,
     cluster_idx: u32,
     indent: usize,
     nesting: Nesting,
@@ -595,7 +852,7 @@ fn genZigCluster(
             const registers = db.registers.items[range.begin..range.end];
             try writer.writeByte('\n');
             if (cluster.description) |description|
-                if (!isUselessDescription(description))
+                if (!useless_descriptions.has(description))
                     try writeDescription(db.arena.child_allocator, writer, description, indent);
 
             if (dimension_opt) |dimension| {
@@ -612,11 +869,11 @@ fn genZigCluster(
                     bits += register.size;
                 }
 
-                if (bits % 8 != 0 or db.device.width % 8 != 0)
+                if (bits % 8 != 0 or db.device.?.width % 8 != 0)
                     return error.InvalidWordSize;
 
                 const bytes = bits / 8;
-                const bytes_per_word = db.device.width / 8;
+                const bytes_per_word = db.device.?.width / 8;
                 if (bytes > dimension.increment)
                     return error.InvalidClusterSize;
 
@@ -624,7 +881,7 @@ fn genZigCluster(
                 var i: usize = 0;
                 while (i < num_padding_words) : (i += 1) {
                     try writer.writeByteNTimes(' ', (indent + 1) * 4);
-                    try writer.print("padding{}: u{},\n", .{ i, db.device.width });
+                    try writer.print("padding{}: u{},\n", .{ i, db.device.?.width });
                 }
 
                 try writer.writeByteNTimes(' ', indent * 4);
@@ -650,25 +907,62 @@ fn genZigSingleRegister(
     writer: anytype,
     name: []const u8,
     width: usize,
+    has_base_addr: bool,
     addr_offset: usize,
-    fields: []svd.Field,
-    first_field_idx: u32,
+    field_range_opt: ?Range,
     array_prefix: []const u8,
     indent: usize,
     nesting: Nesting,
 ) !void {
-    const single_line_declaration = fields.len == 0 or (fields.len == 1 and std.mem.eql(u8, fields[0].name, name));
-    if (single_line_declaration) {
-        if (fields.len == 1 and fields[0].width < width) {
+    if (field_range_opt) |field_range| {
+        const fields = self.fields.items[field_range.begin..field_range.end];
+        assert(fields.len != 0);
+
+        if (fields.len == 1 and std.mem.eql(u8, fields[0].name, name)) {
+            if (fields[0].width > width)
+                return error.BadWidth;
+
             try writer.writeByteNTimes(' ', indent * 4);
-            switch (nesting) {
-                .namespaced => try writer.print("pub const {s} = @intToPtr(*volatile {s}MmioInt({}, u{}), base_address + 0x{x});\n", .{
-                    std.zig.fmtId(name),
-                    array_prefix,
-                    width,
-                    fields[0].width,
-                    addr_offset,
-                }),
+            if (fields[0].width == width)
+                // TODO: oof please refactor this
+                switch (nesting) {
+                    .namespaced => if (has_base_addr)
+                        try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, base_address + 0x{x});\n", .{
+                            std.zig.fmtId(name),
+                            array_prefix,
+                            width,
+                            addr_offset,
+                        })
+                    else
+                        try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, 0x{x});\n", .{
+                            std.zig.fmtId(name),
+                            array_prefix,
+                            width,
+                            addr_offset,
+                        }),
+                    .contained => try writer.print("{s}: {s}u{},\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        width,
+                    }),
+                }
+            else switch (nesting) {
+                .namespaced => if (has_base_addr)
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}MmioInt({}, u{}), base_address + 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        width,
+                        fields[0].width,
+                        addr_offset,
+                    })
+                else
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}MmioInt({}, u{}), 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        width,
+                        fields[0].width,
+                        addr_offset,
+                    }),
                 .contained => try writer.print("{s}: {s}MmioInt({}, u{}),\n", .{
                     std.zig.fmtId(name),
                     array_prefix,
@@ -676,51 +970,60 @@ fn genZigSingleRegister(
                     fields[0].width,
                 }),
             }
-        } else if (fields.len == 1 and fields[0].width > width) {
-            return error.BadWidth;
         } else {
             try writer.writeByteNTimes(' ', indent * 4);
             switch (nesting) {
-                .namespaced => try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, base_address + 0x{x});\n", .{
+                .namespaced => try writer.print("pub const {s} = @intToPtr(*volatile {s}Mmio({}, packed struct {{\n", .{
                     std.zig.fmtId(name),
                     array_prefix,
                     width,
-                    addr_offset,
                 }),
-                .contained => try writer.print("{s}: {s}u{},\n", .{
+                .contained => try writer.print("{s}: {s}Mmio({}, packed struct {{\n", .{
                     std.zig.fmtId(name),
                     array_prefix,
                     width,
                 }),
             }
+
+            try self.genZigFields(
+                writer,
+                width,
+                fields,
+                field_range.begin,
+                indent + 1,
+            );
+
+            try writer.writeByteNTimes(' ', indent * 4);
+            switch (nesting) {
+                .namespaced => if (has_base_addr)
+                    try writer.print("}}), base_address + 0x{x});\n", .{addr_offset})
+                else
+                    try writer.print("}}), 0x{x});\n", .{addr_offset}),
+                .contained => try writer.writeAll("}),\n"),
+            }
         }
     } else {
         try writer.writeByteNTimes(' ', indent * 4);
         switch (nesting) {
-            .namespaced => try writer.print("pub const {s} = @intToPtr(*volatile {s}Mmio({}, packed struct{{\n", .{
+            .namespaced => if (has_base_addr)
+                try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, base_address + 0x{x});\n", .{
+                    std.zig.fmtId(name),
+                    array_prefix,
+                    width,
+                    addr_offset,
+                })
+            else
+                try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, 0x{x});\n", .{
+                    std.zig.fmtId(name),
+                    array_prefix,
+                    width,
+                    addr_offset,
+                }),
+            .contained => try writer.print("{s}: {s}u{},\n", .{
                 std.zig.fmtId(name),
                 array_prefix,
                 width,
             }),
-            .contained => try writer.print("{s}: {s}Mmio({}, packed struct{{\n", .{
-                std.zig.fmtId(name),
-                array_prefix,
-                width,
-            }),
-        }
-
-        try self.genZigFields(
-            writer,
-            width,
-            fields,
-            first_field_idx,
-            indent + 1,
-        );
-
-        try writer.writeByteNTimes(' ', indent * 4);
-        switch (nesting) {
-            .namespaced => try writer.print("}}), base_address + 0x{x});\n", .{addr_offset}),
-            .contained => try writer.writeAll("}),\n"),
         }
     }
 }
@@ -729,7 +1032,7 @@ fn genZigFields(
     self: *Self,
     writer: anytype,
     reg_width: usize,
-    fields: []svd.Field,
+    fields: []Field,
     first_field_idx: u32,
     indent: usize,
 ) !void {
@@ -798,10 +1101,29 @@ fn genZigFields(
             break;
         }
 
+        const enumerations_opt = if (self.enumerations_in_fields.get(field_idx)) |enum_range|
+            self.enumerations.items[enum_range.begin..enum_range.end]
+        else
+            null;
+
         // TODO: default values?
         if (field.description) |description|
-            if (!isUselessDescription(description))
+            if (!useless_descriptions.has(description)) {
                 try writeDescription(self.arena.child_allocator, writer, description, indent);
+                if (enumerations_opt != null) {
+                    try writer.writeByteNTimes(' ', indent * 4);
+                    try writer.writeAll("///\n");
+                }
+            };
+
+        if (enumerations_opt) |enumerations| for (enumerations) |enumeration| {
+            try writer.writeByteNTimes(' ', indent * 4);
+            try writer.print("/// 0x{x}: ", .{enumeration.value});
+            if (enumeration.description) |description|
+                try writer.print("{s}\n", .{description})
+            else
+                try writer.writeAll("undocumented\n");
+        };
 
         try writer.writeByteNTimes(' ', indent * 4);
         try writer.print("{s}: u{},\n", .{ std.zig.fmtId(field.name), field.width });
@@ -823,16 +1145,13 @@ fn genZigFields(
 fn genZigRegister(
     self: *Self,
     writer: anytype,
-    base_addr: usize,
+    base_addr: ?usize,
     reg_idx: u32,
     indent: usize,
     nesting: Nesting,
 ) !void {
     const register = self.registers.items[reg_idx];
-    const fields = blk: {
-        const range = self.fields_in_registers.items(.field_range)[reg_idx];
-        break :blk self.fields.items[range.begin..range.end];
-    };
+    const field_range = if (self.fields_in_registers.get(reg_idx)) |range| range else null;
 
     const dimension_opt = self.dimensions.registers.get(reg_idx);
     if (dimension_opt == null and std.mem.indexOf(u8, register.name, "%s") != null)
@@ -858,8 +1177,9 @@ fn genZigRegister(
 
             try writer.writeByte('\n');
             if (nesting == .namespaced) {
+                const addr = if (base_addr) |base| base + addr_offset else addr_offset;
                 try writer.writeByteNTimes(' ', indent * 4);
-                try writer.print("/// address: 0x{x}\n", .{base_addr + addr_offset});
+                try writer.print("/// address: 0x{x}\n", .{addr});
             }
 
             if (register.description) |description|
@@ -869,9 +1189,9 @@ fn genZigRegister(
                 writer,
                 name,
                 register.size,
+                base_addr != null,
                 addr_offset,
-                fields,
-                self.fields_in_registers.items(.field_range)[reg_idx].begin,
+                field_range,
                 "",
                 indent,
                 nesting,
@@ -893,8 +1213,9 @@ fn genZigRegister(
 
             try writer.writeByte('\n');
             if (nesting == .namespaced) {
+                const addr = if (base_addr) |base| base + addr_offset else addr_offset;
                 try writer.writeByteNTimes(' ', indent * 4);
-                try writer.print("/// address: 0x{x}\n", .{base_addr + addr_offset});
+                try writer.print("/// address: 0x{x}\n", .{addr});
             }
 
             if (register.description) |description|
@@ -904,9 +1225,9 @@ fn genZigRegister(
                 writer,
                 name,
                 register.size,
+                base_addr != null,
                 addr_offset,
-                fields,
-                self.fields_in_registers.items(.field_range)[reg_idx].begin,
+                field_range,
                 "",
                 indent,
                 nesting,
@@ -949,8 +1270,9 @@ fn genZigRegister(
         const name = try std.mem.replaceOwned(u8, self.arena.allocator(), register.name, "[%s]", "");
         try writer.writeByte('\n');
         if (nesting == .namespaced) {
+            const addr = if (base_addr) |base| base + register.addr_offset else register.addr_offset;
             try writer.writeByteNTimes(' ', indent * 4);
-            try writer.print("/// address: 0x{x}\n", .{base_addr + register.addr_offset});
+            try writer.print("/// address: 0x{x}\n", .{addr});
         }
 
         if (register.description) |description|
@@ -960,9 +1282,9 @@ fn genZigRegister(
             writer,
             name,
             register.size,
+            base_addr != null,
             register.addr_offset,
-            fields,
-            self.fields_in_registers.items(.field_range)[reg_idx].begin,
+            field_range,
             array_prefix,
             indent,
             nesting,
@@ -978,7 +1300,6 @@ fn genZigRegister(
         std.log.info("  dim_index: {}", .{dimension.index});
     }
 
-    std.log.info("  fields: {}", .{fields.len});
     assert(false); // haven't figured out this configuration yet
 }
 
@@ -1038,13 +1359,10 @@ const Dimensions = struct {
     }
 };
 
-const useless_descriptions: []const []const u8 = &.{
-    "Unspecified",
-};
+const useless_descriptions = std.ComptimeStringMap(void, .{
+    .{"Unspecified"},
+});
 
-fn isUselessDescription(description: []const u8) bool {
-    return for (useless_descriptions) |useless_description| {
-        if (std.mem.eql(u8, description, useless_description))
-            break true;
-    } else false;
-}
+const useless_field_names = std.ComptimeStringMap(void, .{
+    .{"RESERVED"},
+});

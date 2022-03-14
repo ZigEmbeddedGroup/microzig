@@ -1,27 +1,28 @@
 const std = @import("std");
 const xml = @import("xml.zig");
+const Peripheral = @import("Peripheral.zig");
+const Register = @import("Register.zig");
+const Field = @import("Field.zig");
 
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 
-// TODO: normalize descriptions, watch out for explicit '\n's tho, we want to replicate those newlines in generated text
-
 pub const Device = struct {
-    vendor: ?[]const u8,
-    vendor_id: ?[]const u8,
-    name: ?[]const u8,
-    series: ?[]const u8,
-    version: ?[]const u8,
-    description: ?[]const u8,
-    license_text: ?[]const u8,
+    vendor: ?[]const u8 = null,
+    vendor_id: ?[]const u8 = null,
+    name: ?[]const u8 = null,
+    series: ?[]const u8 = null,
+    version: ?[]const u8 = null,
+    description: ?[]const u8 = null,
+    license_text: ?[]const u8 = null,
     address_unit_bits: usize,
     width: usize,
     register_properties: struct {
-        size: ?usize,
-        access: ?Access,
-        protection: ?[]const u8,
-        reset_value: ?[]const u8,
-        reset_mask: ?[]const u8,
+        size: ?usize = null,
+        access: ?Access = null,
+        protection: ?[]const u8 = null,
+        reset_value: ?[]const u8 = null,
+        reset_mask: ?[]const u8 = null,
     },
 
     pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !Device {
@@ -79,6 +80,9 @@ pub const CpuName = enum {
     cortex_a53,
     cortex_a57,
     cortex_a72,
+
+    // avr
+    avr,
     other,
 
     // TODO: finish
@@ -109,6 +113,8 @@ pub const CpuName = enum {
             CpuName.cortex_m4
         else if (std.mem.eql(u8, "CM7", str))
             CpuName.cortex_m7
+        else if (std.mem.eql(u8, "AVR8", str))
+            CpuName.avr
         else
             null;
     }
@@ -186,25 +192,18 @@ pub const Access = enum {
     }
 };
 
-pub const Peripheral = struct {
-    name: []const u8,
-    version: ?[]const u8,
-    description: ?[]const u8,
-    base_addr: usize,
-
-    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !Peripheral {
-        const allocator = arena.allocator();
-        return Peripheral{
-            .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
-            .version = if (xml.findValueForKey(nodes, "version")) |version|
-                try allocator.dupe(u8, version)
-            else
-                null,
-            .description = try xml.parseDescription(allocator, nodes, "description"),
-            .base_addr = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "baseAddress")) orelse return error.NoBaseAddr, // isDefault?
-        };
-    }
-};
+pub fn parsePeripheral(arena: *ArenaAllocator, nodes: *xml.Node) !Peripheral {
+    const allocator = arena.allocator();
+    return Peripheral{
+        .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
+        .version = if (xml.findValueForKey(nodes, "version")) |version|
+            try allocator.dupe(u8, version)
+        else
+            null,
+        .description = try xml.parseDescription(allocator, nodes, "description"),
+        .base_addr = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "baseAddress")) orelse return error.NoBaseAddr, // isDefault?
+    };
+}
 
 pub const Interrupt = struct {
     name: []const u8,
@@ -234,22 +233,15 @@ pub const Interrupt = struct {
     }
 };
 
-pub const Register = struct {
-    name: []const u8,
-    description: ?[]const u8,
-    addr_offset: usize,
-    size: usize,
-
-    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node, device_width: usize) !Register {
-        const allocator = arena.allocator();
-        return Register{
-            .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
-            .description = try xml.parseDescription(allocator, nodes, "description"),
-            .addr_offset = try std.fmt.parseInt(usize, xml.findValueForKey(nodes, "addressOffset") orelse return error.NoAddrOffset, 0),
-            .size = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size")) orelse device_width,
-        };
-    }
-};
+pub fn parseRegister(arena: *ArenaAllocator, nodes: *xml.Node, device_width: usize) !Register {
+    const allocator = arena.allocator();
+    return Register{
+        .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
+        .description = try xml.parseDescription(allocator, nodes, "description"),
+        .addr_offset = try std.fmt.parseInt(usize, xml.findValueForKey(nodes, "addressOffset") orelse return error.NoAddrOffset, 0),
+        .size = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size")) orelse device_width,
+    };
+}
 
 pub const Cluster = struct {
     name: []const u8,
@@ -271,76 +263,62 @@ const BitRange = struct {
     width: u8,
 };
 
-pub const Field = struct {
-    name: []const u8,
-    description: ?[]const u8,
-    offset: u8,
-    width: u8,
+pub fn parseField(arena: *ArenaAllocator, nodes: *xml.Node) !Field {
+    const allocator = arena.allocator();
+    // TODO:
+    const bit_range = blk: {
+        const lsb_opt = xml.findValueForKey(nodes, "lsb");
+        const msb_opt = xml.findValueForKey(nodes, "msb");
+        if (lsb_opt != null and msb_opt != null) {
+            const lsb = try std.fmt.parseInt(u8, lsb_opt.?, 0);
+            const msb = try std.fmt.parseInt(u8, msb_opt.?, 0);
 
-    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !Field {
-        const allocator = arena.allocator();
-        // TODO:
-        const bit_range = blk: {
-            const lsb_opt = xml.findValueForKey(nodes, "lsb");
-            const msb_opt = xml.findValueForKey(nodes, "msb");
-            if (lsb_opt != null and msb_opt != null) {
-                const lsb = try std.fmt.parseInt(u8, lsb_opt.?, 0);
-                const msb = try std.fmt.parseInt(u8, msb_opt.?, 0);
+            if (msb < lsb)
+                return error.InvalidRange;
 
-                if (msb < lsb)
-                    return error.InvalidRange;
+            break :blk BitRange{
+                .offset = lsb,
+                .width = msb - lsb + 1,
+            };
+        }
 
-                break :blk BitRange{
-                    .offset = lsb,
-                    .width = msb - lsb + 1,
-                };
-            }
+        const bit_offset_opt = xml.findValueForKey(nodes, "bitOffset");
+        const bit_width_opt = xml.findValueForKey(nodes, "bitWidth");
+        if (bit_offset_opt != null and bit_width_opt != null) {
+            const offset = try std.fmt.parseInt(u8, bit_offset_opt.?, 0);
+            const width = try std.fmt.parseInt(u8, bit_width_opt.?, 0);
 
-            const bit_offset_opt = xml.findValueForKey(nodes, "bitOffset");
-            const bit_width_opt = xml.findValueForKey(nodes, "bitWidth");
-            if (bit_offset_opt != null and bit_width_opt != null) {
-                const offset = try std.fmt.parseInt(u8, bit_offset_opt.?, 0);
-                const width = try std.fmt.parseInt(u8, bit_width_opt.?, 0);
+            break :blk BitRange{
+                .offset = offset,
+                .width = width,
+            };
+        }
 
-                break :blk BitRange{
-                    .offset = offset,
-                    .width = width,
-                };
-            }
+        const bit_range_opt = xml.findValueForKey(nodes, "bitRange");
+        if (bit_range_opt) |bit_range_str| {
+            var it = std.mem.tokenize(u8, bit_range_str, "[:]");
+            const msb = try std.fmt.parseInt(u8, it.next() orelse return error.NoMsb, 0);
+            const lsb = try std.fmt.parseInt(u8, it.next() orelse return error.NoLsb, 0);
 
-            const bit_range_opt = xml.findValueForKey(nodes, "bitRange");
-            if (bit_range_opt) |bit_range_str| {
-                var it = std.mem.tokenize(u8, bit_range_str, "[:]");
-                const msb = try std.fmt.parseInt(u8, it.next() orelse return error.NoMsb, 0);
-                const lsb = try std.fmt.parseInt(u8, it.next() orelse return error.NoLsb, 0);
+            if (msb < lsb)
+                return error.InvalidRange;
 
-                if (msb < lsb)
-                    return error.InvalidRange;
+            break :blk BitRange{
+                .offset = lsb,
+                .width = msb - lsb + 1,
+            };
+        }
 
-                break :blk BitRange{
-                    .offset = lsb,
-                    .width = msb - lsb + 1,
-                };
-            }
+        return error.InvalidRange;
+    };
 
-            return error.InvalidRange;
-        };
-
-        return Field{
-            .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
-            .offset = bit_range.offset,
-            .width = bit_range.width,
-            .description = try xml.parseDescription(allocator, nodes, "description"),
-        };
-    }
-
-    pub fn lessThan(_: void, lhs: Field, rhs: Field) bool {
-        return if (lhs.offset == rhs.offset)
-            lhs.width < rhs.width
-        else
-            lhs.offset < rhs.offset;
-    }
-};
+    return Field{
+        .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
+        .offset = bit_range.offset,
+        .width = bit_range.width,
+        .description = try xml.parseDescription(allocator, nodes, "description"),
+    };
+}
 
 pub const EnumeratedValue = struct {
     name: []const u8,
