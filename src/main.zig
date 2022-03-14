@@ -56,27 +56,27 @@ pub fn main() anyerror!void {
         try website.addTutorial(Tutorial{
             .src_file = "website/tutorials/02-embedded-programming.md",
         });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/03-lpc1768.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/03-nrf52.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/03-avr.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/03-pi-pico.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/03-stm32.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/04-chose-device.md",
-        });
-        try website.addTutorial(Tutorial{
-            .src_file = "website/tutorials/05-hal.md",
-        });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/03-lpc1768.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/03-nrf52.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/03-avr.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/03-pi-pico.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/03-stm32.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/04-chose-device.md",
+        // });
+        // try website.addTutorial(Tutorial{
+        //     .src_file = "website/tutorials/05-hal.md",
+        // });
 
         // img articles
         {
@@ -114,7 +114,8 @@ pub fn main() anyerror!void {
                 }
 
                 const date = isValidArticleFileName(entry.name) orelse {
-                    std.log.err("Illegal file name in directory website/articles: {s}", .{entry.name});
+                    if (!std.mem.eql(u8, entry.name, ".keep"))
+                        std.log.err("Illegal file name in directory website/articles: {s}", .{entry.name});
                     continue;
                 };
 
@@ -299,6 +300,7 @@ const Website = struct {
         }
 
         for (self.tutorials.items) |*tutorial| {
+            std.debug.print("{s}\n", .{tutorial.src_file});
             if (try self.findTitle(tutorial.src_file)) |title| {
                 tutorial.title = title;
             }
