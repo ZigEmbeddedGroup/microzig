@@ -1,5 +1,6 @@
 const std = @import("std");
 const app = @import("app");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 
 pub usingnamespace app;
@@ -10,8 +11,18 @@ fn isValidField(field_name: []const u8) bool {
         !std.mem.eql(u8, field_name, "reset");
 }
 
+comptime {
+    if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
+        @export(vector_table, .{
+            .name = "vector_table",
+            .section = "microzig_flash_start",
+            .linkage = .Strong,
+        });
+    }
+}
+
 const VectorTable = microzig.chip.VectorTable;
-export const vector_table: VectorTable linksection("microzig_flash_start") = blk: {
+const vector_table: VectorTable = blk: {
     var tmp: microzig.chip.VectorTable = .{};
     if (@hasDecl(app, "interrupts")) {
         if (@typeInfo(app.interrupts) != .Struct)
