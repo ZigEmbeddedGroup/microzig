@@ -83,8 +83,36 @@ pub fn hang() noreturn {
     }
 }
 
+// Startup logic:
 comptime {
+    // Instantiate the startup logic for the given CPU type.
+    // This usually implements the `_start` symbol that will populate
+    // the sections .data and .bss with the correct data.
+    // .rodata is not always necessary to be populated (flash based systems
+    // can just index flash, while harvard or flash-less architectures need
+    // to copy .rodata into RAM).
     _ = cpu.startup_logic;
+
+    // Export the vector table to flash start if we have any.
+    // For a lot of systems, the vector table provides a reset vector
+    // that is either called (Cortex-M) or executed (AVR) when initalized.
+
+    // Allow board and chip to override CPU vector table.
+    const vector_table = if (board != void and @hasDecl(board, "vector_table"))
+        board.vector_table
+    else if (@hasDecl(chip, "vector_table"))
+        chip.vector_table
+    else if (@hasDecl(cpu, "vector_table"))
+        cpu.vector_table
+    else
+        null;
+    if (@TypeOf(vector_table) != @TypeOf(null)) { // ugh, comptime shenanigans
+        @export(vector_table, .{
+            .name = "vector_table",
+            .section = "microzig_flash_start",
+            .linkage = .Strong,
+        });
+    }
 }
 
 /// This is the logical entry point for microzig.
