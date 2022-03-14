@@ -3,7 +3,7 @@
 // device: LPC176x5x
 // cpu: CM3
 
-pub const VectorTable = struct {
+pub const VectorTable = extern struct {
     initial_stack_pointer: u32,
     Reset: InterruptVector = unhandled,
     NMI: InterruptVector = unhandled,

@@ -4,7 +4,7 @@
 // device: nrf52
 // cpu: CM4
 
-pub const VectorTable = struct {
+pub const VectorTable = extern struct {
     initial_stack_pointer: u32,
     Reset: InterruptVector = unhandled,
     NMI: InterruptVector = unhandled,
@@ -124,7 +124,7 @@ pub const registers = struct {
 
             /// address: 0x10000000
             /// Slope definition A0.
-            pub const A0 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A0 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -151,7 +151,7 @@ pub const registers = struct {
 
             /// address: 0x10000004
             /// Slope definition A1.
-            pub const A1 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A1 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -178,7 +178,7 @@ pub const registers = struct {
 
             /// address: 0x10000008
             /// Slope definition A2.
-            pub const A2 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A2 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -205,7 +205,7 @@ pub const registers = struct {
 
             /// address: 0x1000000c
             /// Slope definition A3.
-            pub const A3 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A3 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -232,7 +232,7 @@ pub const registers = struct {
 
             /// address: 0x10000010
             /// Slope definition A4.
-            pub const A4 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A4 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -259,7 +259,7 @@ pub const registers = struct {
 
             /// address: 0x10000014
             /// Slope definition A5.
-            pub const A5 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A5 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// A (slope definition) register.
                 A: u12,
                 padding0: u1,
@@ -286,7 +286,7 @@ pub const registers = struct {
 
             /// address: 0x10000018
             /// y-intercept B0.
-            pub const B0 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B0 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -311,7 +311,7 @@ pub const registers = struct {
 
             /// address: 0x1000001c
             /// y-intercept B1.
-            pub const B1 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B1 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -336,7 +336,7 @@ pub const registers = struct {
 
             /// address: 0x10000020
             /// y-intercept B2.
-            pub const B2 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B2 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -361,7 +361,7 @@ pub const registers = struct {
 
             /// address: 0x10000024
             /// y-intercept B3.
-            pub const B3 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B3 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -386,7 +386,7 @@ pub const registers = struct {
 
             /// address: 0x10000028
             /// y-intercept B4.
-            pub const B4 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B4 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -411,7 +411,7 @@ pub const registers = struct {
 
             /// address: 0x1000002c
             /// y-intercept B5.
-            pub const B5 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B5 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// B (y-intercept)
                 B: u14,
                 padding0: u1,
@@ -436,7 +436,7 @@ pub const registers = struct {
 
             /// address: 0x10000030
             /// Segment end T0.
-            pub const T0 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const T0 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// T (segment end)register.
                 T: u8,
                 padding0: u1,
@@ -467,7 +467,7 @@ pub const registers = struct {
 
             /// address: 0x10000034
             /// Segment end T1.
-            pub const T1 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const T1 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// T (segment end)register.
                 T: u8,
                 padding0: u1,
@@ -498,7 +498,7 @@ pub const registers = struct {
 
             /// address: 0x10000038
             /// Segment end T2.
-            pub const T2 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const T2 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// T (segment end)register.
                 T: u8,
                 padding0: u1,
@@ -529,7 +529,7 @@ pub const registers = struct {
 
             /// address: 0x1000003c
             /// Segment end T3.
-            pub const T3 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const T3 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// T (segment end)register.
                 T: u8,
                 padding0: u1,
@@ -560,7 +560,7 @@ pub const registers = struct {
 
             /// address: 0x10000040
             /// Segment end T4.
-            pub const T4 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const T4 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// T (segment end)register.
                 T: u8,
                 padding0: u1,
@@ -595,7 +595,7 @@ pub const registers = struct {
             /// address: 0x10000000
             /// Default header for NFC Tag. Software can read these values to populate
             /// NFCID1_3RD_LAST, NFCID1_2ND_LAST and NFCID1_LAST.
-            pub const TAGHEADER0 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const TAGHEADER0 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Default Manufacturer ID: Nordic Semiconductor ASA has ICM 0x5F
                 MFGID: u8,
                 /// Unique identifier byte 1
@@ -609,7 +609,7 @@ pub const registers = struct {
             /// address: 0x10000004
             /// Default header for NFC Tag. Software can read these values to populate
             /// NFCID1_3RD_LAST, NFCID1_2ND_LAST and NFCID1_LAST.
-            pub const TAGHEADER1 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const TAGHEADER1 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Unique identifier byte 4
                 UD4: u8,
                 /// Unique identifier byte 5
@@ -623,7 +623,7 @@ pub const registers = struct {
             /// address: 0x10000008
             /// Default header for NFC Tag. Software can read these values to populate
             /// NFCID1_3RD_LAST, NFCID1_2ND_LAST and NFCID1_LAST.
-            pub const TAGHEADER2 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const TAGHEADER2 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Unique identifier byte 8
                 UD8: u8,
                 /// Unique identifier byte 9
@@ -637,7 +637,7 @@ pub const registers = struct {
             /// address: 0x1000000c
             /// Default header for NFC Tag. Software can read these values to populate
             /// NFCID1_3RD_LAST, NFCID1_2ND_LAST and NFCID1_LAST.
-            pub const TAGHEADER3 = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const TAGHEADER3 = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Unique identifier byte 12
                 UD12: u8,
                 /// Unique identifier byte 13
@@ -684,7 +684,7 @@ pub const registers = struct {
         /// address: 0x10001200
         /// Description collection[0]: Mapping of the nRESET function (see POWER chapter for
         /// details)
-        pub const PSELRESET = @intToPtr(*volatile [2]Mmio(32, packed struct{
+        pub const PSELRESET = @intToPtr(*volatile [2]Mmio(32, packed struct {
             /// GPIO number P0.n onto which Reset is exposed
             PIN: u6,
             reserved0: u1,
@@ -718,7 +718,7 @@ pub const registers = struct {
 
         /// address: 0x10001208
         /// Access Port protection
-        pub const APPROTECT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const APPROTECT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable Access Port protection. Any other value than 0xFF being
             /// written to this field will enable protection.
             PALL: u8,
@@ -750,7 +750,7 @@ pub const registers = struct {
 
         /// address: 0x1000120c
         /// Setting of pins dedicated to NFC functionality: NFC antenna or GPIO
-        pub const NFCPINS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NFCPINS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Setting of pins dedicated to NFC functionality
             PROTECT: u1,
             padding0: u1,
@@ -792,7 +792,7 @@ pub const registers = struct {
 
         /// address: 0x40000600
         /// Block protect configuration register 0
-        pub const CONFIG0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable protection for region 0. Write '0' has no effect.
             REGION0: u1,
             /// Enable protection for region 1. Write '0' has no effect.
@@ -861,7 +861,7 @@ pub const registers = struct {
 
         /// address: 0x40000604
         /// Block protect configuration register 1
-        pub const CONFIG1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable protection for region 32. Write '0' has no effect.
             REGION32: u1,
             /// Enable protection for region 33. Write '0' has no effect.
@@ -938,7 +938,7 @@ pub const registers = struct {
 
         /// address: 0x40000610
         /// Block protect configuration register 2
-        pub const CONFIG2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable protection for region 64. Write '0' has no effect.
             REGION64: u1,
             /// Enable protection for region 65. Write '0' has no effect.
@@ -1007,7 +1007,7 @@ pub const registers = struct {
 
         /// address: 0x40000614
         /// Block protect configuration register 3
-        pub const CONFIG3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable protection for region 96. Write '0' has no effect.
             REGION96: u1,
             /// Enable protection for region 97. Write '0' has no effect.
@@ -1100,7 +1100,7 @@ pub const registers = struct {
 
         /// address: 0x40000304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Enable interrupt for POFWARN event
@@ -1140,7 +1140,7 @@ pub const registers = struct {
 
         /// address: 0x40000308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Disable interrupt for POFWARN event
@@ -1180,7 +1180,7 @@ pub const registers = struct {
 
         /// address: 0x40000400
         /// Reset reason
-        pub const RESETREAS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESETREAS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset from pin-reset detected
             RESETPIN: u1,
             /// Reset from watchdog detected
@@ -1228,7 +1228,7 @@ pub const registers = struct {
 
         /// address: 0x40000428
         /// Deprecated register - RAM status register
-        pub const RAMSTATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RAMSTATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// RAM block 0 is on or off/powering up
             RAMBLOCK0: u1,
             /// RAM block 1 is on or off/powering up
@@ -1273,7 +1273,7 @@ pub const registers = struct {
 
         /// address: 0x40000510
         /// Power failure comparator configuration
-        pub const POFCON = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const POFCON = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable power failure comparator
             POF: u1,
             /// Power failure comparator threshold setting
@@ -1313,7 +1313,7 @@ pub const registers = struct {
 
         /// address: 0x40000520
         /// General purpose retention register
-        pub const GPREGRET2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const GPREGRET2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// General purpose retention register
             GPREGRET: u8,
             padding0: u1,
@@ -1344,7 +1344,7 @@ pub const registers = struct {
 
         /// address: 0x40000524
         /// Deprecated register - RAM on/off register (this register is retained)
-        pub const RAMON = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RAMON = @intToPtr(*volatile Mmio(32, packed struct {
             /// Keep RAM block 0 on or off in system ON Mode
             ONRAM0: u1,
             /// Keep RAM block 1 on or off in system ON Mode
@@ -1385,7 +1385,7 @@ pub const registers = struct {
 
         /// address: 0x40000554
         /// Deprecated register - RAM on/off register (this register is retained)
-        pub const RAMONB = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RAMONB = @intToPtr(*volatile Mmio(32, packed struct {
             /// Keep RAM block 2 on or off in system ON Mode
             ONRAM2: u1,
             /// Keep RAM block 3 on or off in system ON Mode
@@ -1430,7 +1430,7 @@ pub const registers = struct {
 
         pub const RAM = @ptrCast(*volatile [8]packed struct {
             /// Description cluster[0]: RAM0 power control register
-            POWER: Mmio(32, packed struct{
+            POWER: Mmio(32, packed struct {
                 /// Keep RAM section S0 ON or OFF in System ON mode.
                 S0POWER: u1,
                 /// Keep RAM section S1 ON or OFF in System ON mode.
@@ -1470,7 +1470,7 @@ pub const registers = struct {
             }),
 
             /// Description cluster[0]: RAM0 power control set register
-            POWERSET: Mmio(32, packed struct{
+            POWERSET: Mmio(32, packed struct {
                 /// Keep RAM section S0 of RAM0 on or off in System ON mode
                 S0POWER: u1,
                 /// Keep RAM section S1 of RAM0 on or off in System ON mode
@@ -1510,7 +1510,7 @@ pub const registers = struct {
             }),
 
             /// Description cluster[0]: RAM0 power control clear register
-            POWERCLR: Mmio(32, packed struct{
+            POWERCLR: Mmio(32, packed struct {
                 /// Keep RAM section S0 of RAM0 on or off in System ON mode
                 S0POWER: u1,
                 /// Keep RAM section S1 of RAM0 on or off in System ON mode
@@ -1601,7 +1601,7 @@ pub const registers = struct {
 
         /// address: 0x40000304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for HFCLKSTARTED event
             HFCLKSTARTED: u1,
             /// Write '1' to Enable interrupt for LFCLKSTARTED event
@@ -1642,7 +1642,7 @@ pub const registers = struct {
 
         /// address: 0x40000308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for HFCLKSTARTED event
             HFCLKSTARTED: u1,
             /// Write '1' to Disable interrupt for LFCLKSTARTED event
@@ -1683,7 +1683,7 @@ pub const registers = struct {
 
         /// address: 0x40000408
         /// Status indicating that HFCLKSTART task has been triggered
-        pub const HFCLKRUN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const HFCLKRUN = @intToPtr(*volatile Mmio(32, packed struct {
             /// HFCLKSTART task triggered or not
             STATUS: u1,
             padding0: u1,
@@ -1721,7 +1721,7 @@ pub const registers = struct {
 
         /// address: 0x4000040c
         /// HFCLK status
-        pub const HFCLKSTAT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const HFCLKSTAT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Source of HFCLK
             SRC: u1,
             reserved0: u1,
@@ -1760,7 +1760,7 @@ pub const registers = struct {
 
         /// address: 0x40000414
         /// Status indicating that LFCLKSTART task has been triggered
-        pub const LFCLKRUN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LFCLKRUN = @intToPtr(*volatile Mmio(32, packed struct {
             /// LFCLKSTART task triggered or not
             STATUS: u1,
             padding0: u1,
@@ -1798,7 +1798,7 @@ pub const registers = struct {
 
         /// address: 0x40000418
         /// LFCLK status
-        pub const LFCLKSTAT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LFCLKSTAT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Source of LFCLK
             SRC: u2,
             reserved0: u1,
@@ -1836,7 +1836,7 @@ pub const registers = struct {
 
         /// address: 0x4000041c
         /// Copy of LFCLKSRC register, set when LFCLKSTART task was triggered
-        pub const LFCLKSRCCOPY = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LFCLKSRCCOPY = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock source
             SRC: u2,
             padding0: u1,
@@ -1873,7 +1873,7 @@ pub const registers = struct {
 
         /// address: 0x40000518
         /// Clock source for the LFCLK
-        pub const LFCLKSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LFCLKSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock source
             SRC: u2,
             reserved0: u1,
@@ -1916,7 +1916,7 @@ pub const registers = struct {
 
         /// address: 0x4000055c
         /// Clocking options for the Trace Port debug interface
-        pub const TRACECONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const TRACECONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Speed of Trace Port clock. Note that the TRACECLK pin will output this clock
             /// divided by two.
             TRACEPORTSPEED: u2,
@@ -2038,7 +2038,7 @@ pub const registers = struct {
 
         /// address: 0x40001200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between READY event and START task
             READY_START: u1,
             /// Shortcut between END event and DISABLE task
@@ -2083,7 +2083,7 @@ pub const registers = struct {
 
         /// address: 0x40001304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for READY event
             READY: u1,
             /// Write '1' to Enable interrupt for ADDRESS event
@@ -2131,7 +2131,7 @@ pub const registers = struct {
 
         /// address: 0x40001308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for READY event
             READY: u1,
             /// Write '1' to Disable interrupt for ADDRESS event
@@ -2199,7 +2199,7 @@ pub const registers = struct {
 
         /// address: 0x40001508
         /// Frequency
-        pub const FREQUENCY = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FREQUENCY = @intToPtr(*volatile Mmio(32, packed struct {
             /// Radio channel frequency
             FREQUENCY: u7,
             reserved0: u1,
@@ -2240,7 +2240,7 @@ pub const registers = struct {
 
         /// address: 0x40001514
         /// Packet configuration register 0
-        pub const PCNF0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PCNF0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Length on air of LENGTH field in number of bits.
             LFLEN: u4,
             reserved0: u1,
@@ -2276,7 +2276,7 @@ pub const registers = struct {
 
         /// address: 0x40001518
         /// Packet configuration register 1
-        pub const PCNF1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PCNF1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Maximum length of packet payload. If the packet payload is larger than MAXLEN,
             /// the radio will truncate the payload to MAXLEN.
             MAXLEN: u8,
@@ -2312,7 +2312,7 @@ pub const registers = struct {
 
         /// address: 0x40001524
         /// Prefixes bytes for logical addresses 0-3
-        pub const PREFIX0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PREFIX0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address prefix 0.
             AP0: u8,
             /// Address prefix 1.
@@ -2325,7 +2325,7 @@ pub const registers = struct {
 
         /// address: 0x40001528
         /// Prefixes bytes for logical addresses 4-7
-        pub const PREFIX1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PREFIX1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address prefix 4.
             AP4: u8,
             /// Address prefix 5.
@@ -2342,7 +2342,7 @@ pub const registers = struct {
 
         /// address: 0x40001530
         /// Receive address select
-        pub const RXADDRESSES = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RXADDRESSES = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable reception on logical address 0.
             ADDR0: u1,
             /// Enable or disable reception on logical address 1.
@@ -2387,7 +2387,7 @@ pub const registers = struct {
 
         /// address: 0x40001534
         /// CRC configuration
-        pub const CRCCNF = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRCCNF = @intToPtr(*volatile Mmio(32, packed struct {
             /// CRC length in number of bytes.
             LEN: u2,
             reserved0: u1,
@@ -2465,7 +2465,7 @@ pub const registers = struct {
 
         /// address: 0x40001640
         /// Device address match configuration
-        pub const DACNF = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DACNF = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable device address matching using device address 0
             ENA0: u1,
             /// Enable or disable device address matching using device address 1
@@ -2518,7 +2518,7 @@ pub const registers = struct {
 
         /// address: 0x40001650
         /// Radio mode configuration register 0
-        pub const MODECNF0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODECNF0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Radio ramp-up time
             RU: u1,
             reserved0: u1,
@@ -2628,7 +2628,7 @@ pub const registers = struct {
 
         /// address: 0x40002200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -2667,7 +2667,7 @@ pub const registers = struct {
 
         /// address: 0x40002300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for CTS event
             CTS: u1,
             /// Enable or disable interrupt for NCTS event
@@ -2715,7 +2715,7 @@ pub const registers = struct {
 
         /// address: 0x40002304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for CTS event
             CTS: u1,
             /// Write '1' to Enable interrupt for NCTS event
@@ -2763,7 +2763,7 @@ pub const registers = struct {
 
         /// address: 0x40002308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for CTS event
             CTS: u1,
             /// Write '1' to Disable interrupt for NCTS event
@@ -2811,7 +2811,7 @@ pub const registers = struct {
 
         /// address: 0x40002480
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// Parity error
@@ -2860,7 +2860,7 @@ pub const registers = struct {
 
         /// address: 0x4000256c
         /// Configuration of parity and hardware flow control
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Hardware flow control
             HWFC: u1,
             /// Parity
@@ -2899,7 +2899,7 @@ pub const registers = struct {
 
             /// address: 0x40002000
             /// Pin select for RTS signal
-            pub const RTS = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const RTS = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -2934,7 +2934,7 @@ pub const registers = struct {
 
             /// address: 0x40002004
             /// Pin select for TXD signal
-            pub const TXD = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const TXD = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -2969,7 +2969,7 @@ pub const registers = struct {
 
             /// address: 0x40002008
             /// Pin select for CTS signal
-            pub const CTS = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const CTS = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3004,7 +3004,7 @@ pub const registers = struct {
 
             /// address: 0x4000200c
             /// Pin select for RXD signal
-            pub const RXD = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const RXD = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3120,7 +3120,7 @@ pub const registers = struct {
 
         /// address: 0x40002200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -3159,7 +3159,7 @@ pub const registers = struct {
 
         /// address: 0x40002304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for CTS event
             CTS: u1,
             /// Write '1' to Enable interrupt for NCTS event
@@ -3202,7 +3202,7 @@ pub const registers = struct {
 
         /// address: 0x40002308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for CTS event
             CTS: u1,
             /// Write '1' to Disable interrupt for NCTS event
@@ -3245,7 +3245,7 @@ pub const registers = struct {
 
         /// address: 0x40002480
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// Parity error
@@ -3318,7 +3318,7 @@ pub const registers = struct {
 
         /// address: 0x4000256c
         /// Configuration of parity and hardware flow control
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Hardware flow control
             HWFC: u1,
             /// Parity
@@ -3395,7 +3395,7 @@ pub const registers = struct {
 
         /// address: 0x40003200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -3433,7 +3433,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -3475,7 +3475,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -3525,7 +3525,7 @@ pub const registers = struct {
 
         /// address: 0x40003554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -3572,7 +3572,7 @@ pub const registers = struct {
 
             /// address: 0x40003000
             /// Pin select for SCK
-            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3607,7 +3607,7 @@ pub const registers = struct {
 
             /// address: 0x40003004
             /// Pin select for MOSI signal
-            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3642,7 +3642,7 @@ pub const registers = struct {
 
             /// address: 0x40003008
             /// Pin select for MISO signal
-            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3742,7 +3742,7 @@ pub const registers = struct {
 
         /// address: 0x40003200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Shortcut between END event and ACQUIRE task
@@ -3780,7 +3780,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for END event
             END: u1,
@@ -3820,7 +3820,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for END event
             END: u1,
@@ -3864,7 +3864,7 @@ pub const registers = struct {
 
         /// address: 0x40003440
         /// Status from last transaction
-        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// TX buffer over-read detected, and prevented
             OVERREAD: u1,
             /// RX buffer overflow detected, and prevented
@@ -3907,7 +3907,7 @@ pub const registers = struct {
 
         /// address: 0x40003554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -3957,7 +3957,7 @@ pub const registers = struct {
 
             /// address: 0x40003000
             /// Pin select for SCK
-            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -3992,7 +3992,7 @@ pub const registers = struct {
 
             /// address: 0x40003004
             /// Pin select for MISO signal
-            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4027,7 +4027,7 @@ pub const registers = struct {
 
             /// address: 0x40003008
             /// Pin select for MOSI signal
-            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4062,7 +4062,7 @@ pub const registers = struct {
 
             /// address: 0x4000300c
             /// Pin select for CSN signal
-            pub const CSN = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const CSN = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4181,7 +4181,7 @@ pub const registers = struct {
 
         /// address: 0x40003200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -4223,7 +4223,7 @@ pub const registers = struct {
 
         /// address: 0x40003300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -4267,7 +4267,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -4311,7 +4311,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -4355,7 +4355,7 @@ pub const registers = struct {
 
         /// address: 0x400034c4
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// NACK received after sending the address (write '1' to clear)
@@ -4409,7 +4409,7 @@ pub const registers = struct {
 
             /// address: 0x40003000
             /// Pin select for SCL signal
-            pub const SCL = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCL = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4444,7 +4444,7 @@ pub const registers = struct {
 
             /// address: 0x40003004
             /// Pin select for SDA signal
-            pub const SDA = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SDA = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4568,7 +4568,7 @@ pub const registers = struct {
 
         /// address: 0x40003200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -4607,7 +4607,7 @@ pub const registers = struct {
 
         /// address: 0x40003300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -4650,7 +4650,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -4693,7 +4693,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -4736,7 +4736,7 @@ pub const registers = struct {
 
         /// address: 0x400034d0
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// RX buffer overflow detected, and prevented
             OVERFLOW: u1,
             reserved0: u1,
@@ -4788,7 +4788,7 @@ pub const registers = struct {
 
         /// address: 0x40003594
         /// Configuration register for the address match mechanism
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable address matching on ADDRESS[0]
             ADDRESS0: u1,
             /// Enable or disable address matching on ADDRESS[1]
@@ -4834,7 +4834,7 @@ pub const registers = struct {
 
             /// address: 0x40003000
             /// Pin select for SCL signal
-            pub const SCL = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCL = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4869,7 +4869,7 @@ pub const registers = struct {
 
             /// address: 0x40003004
             /// Pin select for SDA signal
-            pub const SDA = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SDA = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -4945,7 +4945,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Enable interrupt for READY event
@@ -4983,7 +4983,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Disable interrupt for READY event
@@ -5037,7 +5037,7 @@ pub const registers = struct {
 
         /// address: 0x40003554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -5079,21 +5079,21 @@ pub const registers = struct {
 
             /// address: 0x40003000
             /// Pin select for SCK
-            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number configuration for SPI SCK signal
                 PSELSCK: u32,
             }), base_address + 0x0);
 
             /// address: 0x40003004
             /// Pin select for MOSI
-            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MOSI = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number configuration for SPI MOSI signal
                 PSELMOSI: u32,
             }), base_address + 0x4);
 
             /// address: 0x40003008
             /// Pin select for MISO
-            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MISO = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number configuration for SPI MISO signal
                 PSELMISO: u32,
             }), base_address + 0x8);
@@ -5149,7 +5149,7 @@ pub const registers = struct {
 
         /// address: 0x40003200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between BB event and SUSPEND task
             BB_SUSPEND: u1,
             /// Shortcut between BB event and STOP task
@@ -5188,7 +5188,7 @@ pub const registers = struct {
 
         /// address: 0x40003304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -5231,7 +5231,7 @@ pub const registers = struct {
 
         /// address: 0x40003308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -5274,7 +5274,7 @@ pub const registers = struct {
 
         /// address: 0x400034c4
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// NACK received after sending the address (write '1' to clear)
@@ -5382,7 +5382,7 @@ pub const registers = struct {
 
         /// address: 0x40004200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -5420,7 +5420,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -5462,7 +5462,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -5512,7 +5512,7 @@ pub const registers = struct {
 
         /// address: 0x40004554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -5581,7 +5581,7 @@ pub const registers = struct {
 
         /// address: 0x40004200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Shortcut between END event and ACQUIRE task
@@ -5619,7 +5619,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for END event
             END: u1,
@@ -5659,7 +5659,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for END event
             END: u1,
@@ -5703,7 +5703,7 @@ pub const registers = struct {
 
         /// address: 0x40004440
         /// Status from last transaction
-        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// TX buffer over-read detected, and prevented
             OVERREAD: u1,
             /// RX buffer overflow detected, and prevented
@@ -5746,7 +5746,7 @@ pub const registers = struct {
 
         /// address: 0x40004554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -5847,7 +5847,7 @@ pub const registers = struct {
 
         /// address: 0x40004200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -5889,7 +5889,7 @@ pub const registers = struct {
 
         /// address: 0x40004300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -5933,7 +5933,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -5977,7 +5977,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -6021,7 +6021,7 @@ pub const registers = struct {
 
         /// address: 0x400044c4
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// NACK received after sending the address (write '1' to clear)
@@ -6121,7 +6121,7 @@ pub const registers = struct {
 
         /// address: 0x40004200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -6160,7 +6160,7 @@ pub const registers = struct {
 
         /// address: 0x40004300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -6203,7 +6203,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -6246,7 +6246,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -6289,7 +6289,7 @@ pub const registers = struct {
 
         /// address: 0x400044d0
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// RX buffer overflow detected, and prevented
             OVERFLOW: u1,
             reserved0: u1,
@@ -6341,7 +6341,7 @@ pub const registers = struct {
 
         /// address: 0x40004594
         /// Configuration register for the address match mechanism
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable address matching on ADDRESS[0]
             ADDRESS0: u1,
             /// Enable or disable address matching on ADDRESS[1]
@@ -6393,7 +6393,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Enable interrupt for READY event
@@ -6431,7 +6431,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Disable interrupt for READY event
@@ -6485,7 +6485,7 @@ pub const registers = struct {
 
         /// address: 0x40004554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -6573,7 +6573,7 @@ pub const registers = struct {
 
         /// address: 0x40004200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between BB event and SUSPEND task
             BB_SUSPEND: u1,
             /// Shortcut between BB event and STOP task
@@ -6612,7 +6612,7 @@ pub const registers = struct {
 
         /// address: 0x40004304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -6655,7 +6655,7 @@ pub const registers = struct {
 
         /// address: 0x40004308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -6698,7 +6698,7 @@ pub const registers = struct {
 
         /// address: 0x400044c4
         /// Error source
-        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSRC = @intToPtr(*volatile Mmio(32, packed struct {
             /// Overrun error
             OVERRUN: u1,
             /// NACK received after sending the address (write '1' to clear)
@@ -6863,7 +6863,7 @@ pub const registers = struct {
 
         /// address: 0x40005200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between FIELDDETECTED event and ACTIVATE task
             FIELDDETECTED_ACTIVATE: u1,
             /// Shortcut between FIELDLOST event and SENSE task
@@ -6902,7 +6902,7 @@ pub const registers = struct {
 
         /// address: 0x40005300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for READY event
             READY: u1,
             /// Enable or disable interrupt for FIELDDETECTED event
@@ -6954,7 +6954,7 @@ pub const registers = struct {
 
         /// address: 0x40005304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for READY event
             READY: u1,
             /// Write '1' to Enable interrupt for FIELDDETECTED event
@@ -7006,7 +7006,7 @@ pub const registers = struct {
 
         /// address: 0x40005308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for READY event
             READY: u1,
             /// Write '1' to Disable interrupt for FIELDDETECTED event
@@ -7058,7 +7058,7 @@ pub const registers = struct {
 
         /// address: 0x40005404
         /// NFC Error Status register
-        pub const ERRORSTATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ERRORSTATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// No STARTTX task triggered before expiration of the time set in FRAMEDELAYMAX
             FRAMEDELAYTIMEOUT: u1,
             reserved0: u1,
@@ -7102,7 +7102,7 @@ pub const registers = struct {
 
         /// address: 0x4000543c
         /// Indicates the presence or not of a valid field
-        pub const FIELDPRESENT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FIELDPRESENT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Indicates the presence or not of a valid field. Available only in the activated
             /// state.
             FIELDPRESENT: u1,
@@ -7154,7 +7154,7 @@ pub const registers = struct {
 
         /// address: 0x40005510
         /// Packet pointer for TXD and RXD data storage in Data RAM
-        pub const PACKETPTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PACKETPTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Packet pointer for TXD and RXD data storage in Data RAM. This address is a byte
             /// aligned RAM address.
             PTR: u32,
@@ -7166,7 +7166,7 @@ pub const registers = struct {
 
         /// address: 0x40005590
         /// Last NFCID1 part (4, 7 or 10 bytes ID)
-        pub const NFCID1_LAST = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NFCID1_LAST = @intToPtr(*volatile Mmio(32, packed struct {
             /// NFCID1 byte Z (very last byte sent)
             NFCID1_Z: u8,
             /// NFCID1 byte Y
@@ -7179,7 +7179,7 @@ pub const registers = struct {
 
         /// address: 0x40005594
         /// Second last NFCID1 part (7 or 10 bytes ID)
-        pub const NFCID1_2ND_LAST = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NFCID1_2ND_LAST = @intToPtr(*volatile Mmio(32, packed struct {
             /// NFCID1 byte V
             NFCID1_V: u8,
             /// NFCID1 byte U
@@ -7198,7 +7198,7 @@ pub const registers = struct {
 
         /// address: 0x40005598
         /// Third last NFCID1 part (10 bytes ID)
-        pub const NFCID1_3RD_LAST = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NFCID1_3RD_LAST = @intToPtr(*volatile Mmio(32, packed struct {
             /// NFCID1 byte S
             NFCID1_S: u8,
             /// NFCID1 byte R
@@ -7217,7 +7217,7 @@ pub const registers = struct {
 
         /// address: 0x400055a0
         /// NFC-A SENS_RES auto-response settings
-        pub const SENSRES = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SENSRES = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit frame SDD as defined by the b5:b1 of byte 1 in SENS_RES response in the NFC
             /// Forum, NFC Digital Protocol Technical Specification
             BITFRAMESDD: u5,
@@ -7250,7 +7250,7 @@ pub const registers = struct {
 
         /// address: 0x400055a4
         /// NFC-A SEL_RES auto-response settings
-        pub const SELRES = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SELRES = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reserved for future use. Shall be 0.
             RFU10: u2,
             /// Cascade bit (controlled by hardware, write has no effect)
@@ -7292,7 +7292,7 @@ pub const registers = struct {
 
             /// address: 0x40005000
             /// Result of last incoming frames
-            pub const RX = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const RX = @intToPtr(*volatile Mmio(32, packed struct {
                 /// No valid End of Frame detected
                 CRCERROR: u1,
                 reserved0: u1,
@@ -7335,7 +7335,7 @@ pub const registers = struct {
 
             /// address: 0x40005000
             /// Configuration of outgoing frames
-            pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Adding parity or not in the frame
                 PARITY: u1,
                 /// Discarding unused bits in start or at end of a Frame
@@ -7376,7 +7376,7 @@ pub const registers = struct {
 
             /// address: 0x40005004
             /// Size of outgoing frame
-            pub const AMOUNT = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const AMOUNT = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Number of bits in the last or first byte read from RAM that shall be included in
                 /// the frame (excluding parity bit).
                 TXDATABITS: u3,
@@ -7410,7 +7410,7 @@ pub const registers = struct {
 
             /// address: 0x40005000
             /// Configuration of incoming frames
-            pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Parity expected or not in RX frame
                 PARITY: u1,
                 reserved0: u1,
@@ -7450,7 +7450,7 @@ pub const registers = struct {
 
             /// address: 0x40005004
             /// Size of last incoming frame
-            pub const AMOUNT = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const AMOUNT = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Number of bits in the last byte in the frame, if less than 8 (including CRC, but
                 /// excluding parity and SoF/EoF framing).
                 RXDATABITS: u3,
@@ -7509,7 +7509,7 @@ pub const registers = struct {
 
         /// address: 0x40006304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for IN[0] event
             IN0: u1,
             /// Write '1' to Enable interrupt for IN[1] event
@@ -7555,7 +7555,7 @@ pub const registers = struct {
 
         /// address: 0x40006308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for IN[0] event
             IN0: u1,
             /// Write '1' to Disable interrupt for IN[1] event
@@ -7602,7 +7602,7 @@ pub const registers = struct {
         /// address: 0x40006510
         /// Description collection[0]: Configuration for OUT[n], SET[n] and CLR[n] tasks and
         /// IN[n] event
-        pub const CONFIG = @intToPtr(*volatile [8]Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile [8]Mmio(32, packed struct {
             /// Mode
             MODE: u2,
             reserved0: u1,
@@ -7685,7 +7685,7 @@ pub const registers = struct {
 
         /// address: 0x40007300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for STARTED event
             STARTED: u1,
             /// Enable or disable interrupt for END event
@@ -7744,7 +7744,7 @@ pub const registers = struct {
 
         /// address: 0x40007304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for STARTED event
             STARTED: u1,
             /// Write '1' to Enable interrupt for END event
@@ -7803,7 +7803,7 @@ pub const registers = struct {
 
         /// address: 0x40007308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for STARTED event
             STARTED: u1,
             /// Write '1' to Disable interrupt for END event
@@ -7870,7 +7870,7 @@ pub const registers = struct {
 
         /// address: 0x400075f0
         /// Resolution configuration
-        pub const RESOLUTION = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESOLUTION = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set the resolution
             VAL: u3,
             padding0: u1,
@@ -7912,7 +7912,7 @@ pub const registers = struct {
 
         /// address: 0x400075f8
         /// Controls normal or continuous sample rate
-        pub const SAMPLERATE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SAMPLERATE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture and compare value. Sample rate is 16 MHz/CC
             CC: u11,
             reserved0: u1,
@@ -7955,7 +7955,7 @@ pub const registers = struct {
             PSELN: MmioInt(32, u5),
 
             /// Description cluster[0]: Input configuration for CH[0]
-            CONFIG: Mmio(32, packed struct{
+            CONFIG: Mmio(32, packed struct {
                 /// Positive channel resistor control
                 RESP: u2,
                 reserved0: u1,
@@ -7992,7 +7992,7 @@ pub const registers = struct {
             }),
 
             /// Description cluster[0]: High/low limits for event monitoring a channel
-            LIMIT: Mmio(32, packed struct{
+            LIMIT: Mmio(32, packed struct {
                 /// Low level limit
                 LOW: u16,
                 /// High level limit
@@ -8050,7 +8050,7 @@ pub const registers = struct {
 
         /// address: 0x40008200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between COMPARE[0] event and CLEAR task
             COMPARE0_CLEAR: u1,
             /// Shortcut between COMPARE[1] event and CLEAR task
@@ -8099,7 +8099,7 @@ pub const registers = struct {
 
         /// address: 0x40008304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8142,7 +8142,7 @@ pub const registers = struct {
 
         /// address: 0x40008308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8233,7 +8233,7 @@ pub const registers = struct {
 
         /// address: 0x40009200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between COMPARE[0] event and CLEAR task
             COMPARE0_CLEAR: u1,
             /// Shortcut between COMPARE[1] event and CLEAR task
@@ -8282,7 +8282,7 @@ pub const registers = struct {
 
         /// address: 0x40009304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8325,7 +8325,7 @@ pub const registers = struct {
 
         /// address: 0x40009308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8416,7 +8416,7 @@ pub const registers = struct {
 
         /// address: 0x4000a200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between COMPARE[0] event and CLEAR task
             COMPARE0_CLEAR: u1,
             /// Shortcut between COMPARE[1] event and CLEAR task
@@ -8465,7 +8465,7 @@ pub const registers = struct {
 
         /// address: 0x4000a304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8508,7 +8508,7 @@ pub const registers = struct {
 
         /// address: 0x4000a308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -8599,7 +8599,7 @@ pub const registers = struct {
 
         /// address: 0x4000b304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Enable interrupt for OVRFLW event
@@ -8642,7 +8642,7 @@ pub const registers = struct {
 
         /// address: 0x4000b308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Disable interrupt for OVRFLW event
@@ -8685,7 +8685,7 @@ pub const registers = struct {
 
         /// address: 0x4000b340
         /// Enable or disable event routing
-        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable event routing for TICK event
             TICK: u1,
             /// Enable or disable event routing for OVRFLW event
@@ -8728,7 +8728,7 @@ pub const registers = struct {
 
         /// address: 0x4000b344
         /// Enable event routing
-        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable event routing for TICK event
             TICK: u1,
             /// Write '1' to Enable event routing for OVRFLW event
@@ -8771,7 +8771,7 @@ pub const registers = struct {
 
         /// address: 0x4000b348
         /// Disable event routing
-        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable event routing for TICK event
             TICK: u1,
             /// Write '1' to Disable event routing for OVRFLW event
@@ -8823,7 +8823,7 @@ pub const registers = struct {
 
         /// address: 0x4000b540
         /// Description collection[0]: Compare register 0
-        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct{
+        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct {
             /// Compare value
             COMPARE: u24,
             padding0: u1,
@@ -8854,7 +8854,7 @@ pub const registers = struct {
 
         /// address: 0x4000c304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for DATARDY event
             DATARDY: u1,
             padding0: u1,
@@ -8892,7 +8892,7 @@ pub const registers = struct {
 
         /// address: 0x4000c308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for DATARDY event
             DATARDY: u1,
             padding0: u1,
@@ -9018,7 +9018,7 @@ pub const registers = struct {
 
         /// address: 0x4000d200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between VALRDY event and STOP task
             VALRDY_STOP: u1,
             padding0: u1,
@@ -9056,7 +9056,7 @@ pub const registers = struct {
 
         /// address: 0x4000d304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for VALRDY event
             VALRDY: u1,
             padding0: u1,
@@ -9094,7 +9094,7 @@ pub const registers = struct {
 
         /// address: 0x4000d308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for VALRDY event
             VALRDY: u1,
             padding0: u1,
@@ -9132,7 +9132,7 @@ pub const registers = struct {
 
         /// address: 0x4000d504
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bias correction
             DERCEN: u1,
             padding0: u1,
@@ -9194,7 +9194,7 @@ pub const registers = struct {
 
         /// address: 0x4000e304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for ENDECB event
             ENDECB: u1,
             /// Write '1' to Enable interrupt for ERRORECB event
@@ -9233,7 +9233,7 @@ pub const registers = struct {
 
         /// address: 0x4000e308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for ENDECB event
             ENDECB: u1,
             /// Write '1' to Disable interrupt for ERRORECB event
@@ -9305,7 +9305,7 @@ pub const registers = struct {
 
         /// address: 0x4000f200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between ENDKSGEN event and CRYPT task
             ENDKSGEN_CRYPT: u1,
             padding0: u1,
@@ -9343,7 +9343,7 @@ pub const registers = struct {
 
         /// address: 0x4000f304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for ENDKSGEN event
             ENDKSGEN: u1,
             /// Write '1' to Enable interrupt for ENDCRYPT event
@@ -9383,7 +9383,7 @@ pub const registers = struct {
 
         /// address: 0x4000f308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for ENDKSGEN event
             ENDKSGEN: u1,
             /// Write '1' to Disable interrupt for ENDCRYPT event
@@ -9431,7 +9431,7 @@ pub const registers = struct {
 
         /// address: 0x4000f504
         /// Operation mode
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// The mode of operation to be used
             MODE: u1,
             reserved0: u1,
@@ -9511,7 +9511,7 @@ pub const registers = struct {
 
         /// address: 0x4000f304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for END event
             END: u1,
             /// Write '1' to Enable interrupt for RESOLVED event
@@ -9551,7 +9551,7 @@ pub const registers = struct {
 
         /// address: 0x4000f308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for END event
             END: u1,
             /// Write '1' to Disable interrupt for RESOLVED event
@@ -9627,7 +9627,7 @@ pub const registers = struct {
 
         /// address: 0x40010304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TIMEOUT event
             TIMEOUT: u1,
             padding0: u1,
@@ -9665,7 +9665,7 @@ pub const registers = struct {
 
         /// address: 0x40010308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TIMEOUT event
             TIMEOUT: u1,
             padding0: u1,
@@ -9707,7 +9707,7 @@ pub const registers = struct {
 
         /// address: 0x40010404
         /// Request status
-        pub const REQSTATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const REQSTATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Request status for RR[0] register
             RR0: u1,
             /// Request status for RR[1] register
@@ -9756,7 +9756,7 @@ pub const registers = struct {
 
         /// address: 0x40010508
         /// Enable register for reload request registers
-        pub const RREN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RREN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable RR[0] register
             RR0: u1,
             /// Enable or disable RR[1] register
@@ -9801,7 +9801,7 @@ pub const registers = struct {
 
         /// address: 0x4001050c
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Configure the watchdog to either be paused, or kept running, while the CPU is
             /// sleeping
             SLEEP: u1,
@@ -9878,7 +9878,7 @@ pub const registers = struct {
 
         /// address: 0x40011304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Enable interrupt for OVRFLW event
@@ -9921,7 +9921,7 @@ pub const registers = struct {
 
         /// address: 0x40011308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Disable interrupt for OVRFLW event
@@ -9964,7 +9964,7 @@ pub const registers = struct {
 
         /// address: 0x40011340
         /// Enable or disable event routing
-        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable event routing for TICK event
             TICK: u1,
             /// Enable or disable event routing for OVRFLW event
@@ -10007,7 +10007,7 @@ pub const registers = struct {
 
         /// address: 0x40011344
         /// Enable event routing
-        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable event routing for TICK event
             TICK: u1,
             /// Write '1' to Enable event routing for OVRFLW event
@@ -10050,7 +10050,7 @@ pub const registers = struct {
 
         /// address: 0x40011348
         /// Disable event routing
-        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable event routing for TICK event
             TICK: u1,
             /// Write '1' to Disable event routing for OVRFLW event
@@ -10102,7 +10102,7 @@ pub const registers = struct {
 
         /// address: 0x40011540
         /// Description collection[0]: Compare register 0
-        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct{
+        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct {
             /// Compare value
             COMPARE: u24,
             padding0: u1,
@@ -10161,7 +10161,7 @@ pub const registers = struct {
 
         /// address: 0x40012200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between REPORTRDY event and READCLRACC task
             REPORTRDY_READCLRACC: u1,
             /// Shortcut between SAMPLERDY event and STOP task
@@ -10205,7 +10205,7 @@ pub const registers = struct {
 
         /// address: 0x40012304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for SAMPLERDY event
             SAMPLERDY: u1,
             /// Write '1' to Enable interrupt for REPORTRDY event
@@ -10247,7 +10247,7 @@ pub const registers = struct {
 
         /// address: 0x40012308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for SAMPLERDY event
             SAMPLERDY: u1,
             /// Write '1' to Disable interrupt for REPORTRDY event
@@ -10336,7 +10336,7 @@ pub const registers = struct {
 
             /// address: 0x40012000
             /// Pin select for LED signal
-            pub const LED = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const LED = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -10371,7 +10371,7 @@ pub const registers = struct {
 
             /// address: 0x40012004
             /// Pin select for A signal
-            pub const A = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const A = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -10406,7 +10406,7 @@ pub const registers = struct {
 
             /// address: 0x40012008
             /// Pin select for B signal
-            pub const B = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const B = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -10474,7 +10474,7 @@ pub const registers = struct {
 
         /// address: 0x40013200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between READY event and SAMPLE task
             READY_SAMPLE: u1,
             /// Shortcut between READY event and STOP task
@@ -10516,7 +10516,7 @@ pub const registers = struct {
 
         /// address: 0x40013300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for READY event
             READY: u1,
             /// Enable or disable interrupt for DOWN event
@@ -10557,7 +10557,7 @@ pub const registers = struct {
 
         /// address: 0x40013304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for READY event
             READY: u1,
             /// Write '1' to Enable interrupt for DOWN event
@@ -10598,7 +10598,7 @@ pub const registers = struct {
 
         /// address: 0x40013308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for READY event
             READY: u1,
             /// Write '1' to Disable interrupt for DOWN event
@@ -10659,7 +10659,7 @@ pub const registers = struct {
 
         /// address: 0x40013530
         /// Threshold configuration for hysteresis unit
-        pub const TH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const TH = @intToPtr(*volatile Mmio(32, packed struct {
             /// VDOWN = (THDOWN+1)/64*VREF
             THDOWN: u6,
             reserved0: u1,
@@ -10688,7 +10688,7 @@ pub const registers = struct {
 
         /// address: 0x40013534
         /// Mode configuration
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Speed and power modes
             SP: u2,
             reserved0: u1,
@@ -10766,7 +10766,7 @@ pub const registers = struct {
 
         /// address: 0x40013200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between READY event and SAMPLE task
             READY_SAMPLE: u1,
             /// Shortcut between READY event and STOP task
@@ -10808,7 +10808,7 @@ pub const registers = struct {
 
         /// address: 0x40013304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for READY event
             READY: u1,
             /// Write '1' to Enable interrupt for DOWN event
@@ -10849,7 +10849,7 @@ pub const registers = struct {
 
         /// address: 0x40013308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for READY event
             READY: u1,
             /// Write '1' to Disable interrupt for DOWN event
@@ -10940,7 +10940,7 @@ pub const registers = struct {
 
         /// address: 0x40014300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -10993,7 +10993,7 @@ pub const registers = struct {
 
         /// address: 0x40014304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11046,7 +11046,7 @@ pub const registers = struct {
 
         /// address: 0x40014308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -11121,7 +11121,7 @@ pub const registers = struct {
 
         /// address: 0x40015300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -11174,7 +11174,7 @@ pub const registers = struct {
 
         /// address: 0x40015304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11227,7 +11227,7 @@ pub const registers = struct {
 
         /// address: 0x40015308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -11302,7 +11302,7 @@ pub const registers = struct {
 
         /// address: 0x40016300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -11355,7 +11355,7 @@ pub const registers = struct {
 
         /// address: 0x40016304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11408,7 +11408,7 @@ pub const registers = struct {
 
         /// address: 0x40016308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -11483,7 +11483,7 @@ pub const registers = struct {
 
         /// address: 0x40017300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -11536,7 +11536,7 @@ pub const registers = struct {
 
         /// address: 0x40017304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11589,7 +11589,7 @@ pub const registers = struct {
 
         /// address: 0x40017308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -11664,7 +11664,7 @@ pub const registers = struct {
 
         /// address: 0x40018300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -11717,7 +11717,7 @@ pub const registers = struct {
 
         /// address: 0x40018304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11770,7 +11770,7 @@ pub const registers = struct {
 
         /// address: 0x40018308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -11845,7 +11845,7 @@ pub const registers = struct {
 
         /// address: 0x40019300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Enable or disable interrupt for TRIGGERED[1] event
@@ -11898,7 +11898,7 @@ pub const registers = struct {
 
         /// address: 0x40019304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Enable interrupt for TRIGGERED[1] event
@@ -11951,7 +11951,7 @@ pub const registers = struct {
 
         /// address: 0x40019308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TRIGGERED[0] event
             TRIGGERED0: u1,
             /// Write '1' to Disable interrupt for TRIGGERED[1] event
@@ -12036,7 +12036,7 @@ pub const registers = struct {
 
         /// address: 0x4001a200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between COMPARE[0] event and CLEAR task
             COMPARE0_CLEAR: u1,
             /// Shortcut between COMPARE[1] event and CLEAR task
@@ -12085,7 +12085,7 @@ pub const registers = struct {
 
         /// address: 0x4001a304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12128,7 +12128,7 @@ pub const registers = struct {
 
         /// address: 0x4001a308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12219,7 +12219,7 @@ pub const registers = struct {
 
         /// address: 0x4001b200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between COMPARE[0] event and CLEAR task
             COMPARE0_CLEAR: u1,
             /// Shortcut between COMPARE[1] event and CLEAR task
@@ -12268,7 +12268,7 @@ pub const registers = struct {
 
         /// address: 0x4001b304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12311,7 +12311,7 @@ pub const registers = struct {
 
         /// address: 0x4001b308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12413,7 +12413,7 @@ pub const registers = struct {
 
         /// address: 0x4001c200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between SEQEND[0] event and STOP task
             SEQEND0_STOP: u1,
             /// Shortcut between SEQEND[1] event and STOP task
@@ -12455,7 +12455,7 @@ pub const registers = struct {
 
         /// address: 0x4001c300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -12499,7 +12499,7 @@ pub const registers = struct {
 
         /// address: 0x4001c304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -12543,7 +12543,7 @@ pub const registers = struct {
 
         /// address: 0x4001c308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -12591,7 +12591,7 @@ pub const registers = struct {
 
         /// address: 0x4001c504
         /// Selects operating mode of the wave counter
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Selects up or up and down as wave counter mode
             UPDOWN: u1,
             padding0: u1,
@@ -12637,7 +12637,7 @@ pub const registers = struct {
 
         /// address: 0x4001c510
         /// Configuration of the decoder
-        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct {
             /// How a sequence is read from RAM and spread to the compare register
             LOAD: u2,
             reserved0: u1,
@@ -12675,7 +12675,7 @@ pub const registers = struct {
 
         /// address: 0x4001c514
         /// Amount of playback of a loop
-        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct {
             /// Amount of playback of pattern cycles
             CNT: u16,
             padding0: u1,
@@ -12705,7 +12705,7 @@ pub const registers = struct {
 
             /// Description cluster[0]: Amount of additional PWM periods between samples loaded
             /// into compare register
-            REFRESH: Mmio(32, packed struct{
+            REFRESH: Mmio(32, packed struct {
                 /// Amount of additional PWM periods between samples loaded into compare register
                 /// (load every REFRESH.CNT+1 PWM periods)
                 CNT: u24,
@@ -12720,7 +12720,7 @@ pub const registers = struct {
             }),
 
             /// Description cluster[0]: Time added after the sequence
-            ENDDELAY: Mmio(32, packed struct{
+            ENDDELAY: Mmio(32, packed struct {
                 /// Time added after the sequence in PWM periods
                 CNT: u24,
                 padding0: u1,
@@ -12742,7 +12742,7 @@ pub const registers = struct {
 
             /// address: 0x4001c000
             /// Description collection[0]: Output pin select for PWM channel 0
-            pub const OUT = @intToPtr(*volatile [4]Mmio(32, packed struct{
+            pub const OUT = @intToPtr(*volatile [4]Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -12803,7 +12803,7 @@ pub const registers = struct {
 
         /// address: 0x4001d300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for STARTED event
             STARTED: u1,
             /// Enable or disable interrupt for STOPPED event
@@ -12843,7 +12843,7 @@ pub const registers = struct {
 
         /// address: 0x4001d304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for STARTED event
             STARTED: u1,
             /// Write '1' to Enable interrupt for STOPPED event
@@ -12883,7 +12883,7 @@ pub const registers = struct {
 
         /// address: 0x4001d308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for STARTED event
             STARTED: u1,
             /// Write '1' to Disable interrupt for STOPPED event
@@ -12927,14 +12927,14 @@ pub const registers = struct {
 
         /// address: 0x4001d504
         /// PDM clock generator control
-        pub const PDMCLKCTRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PDMCLKCTRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// PDM_CLK frequency
             FREQ: u32,
         }), base_address + 0x504);
 
         /// address: 0x4001d508
         /// Defines the routing of the connected PDM microphones' signals
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Mono or stereo operation
             OPERATION: u1,
             /// Defines on which PDM_CLK edge Left (or mono) is sampled
@@ -12983,7 +12983,7 @@ pub const registers = struct {
 
             /// address: 0x4001d000
             /// Pin number configuration for PDM CLK signal
-            pub const CLK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const CLK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -13018,7 +13018,7 @@ pub const registers = struct {
 
             /// address: 0x4001d004
             /// Pin number configuration for PDM DIN signal
-            pub const DIN = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const DIN = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -13056,14 +13056,14 @@ pub const registers = struct {
 
             /// address: 0x4001d000
             /// RAM address pointer to write samples to with EasyDMA
-            pub const PTR = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const PTR = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Address to write PDM samples to over DMA
                 SAMPLEPTR: u32,
             }), base_address + 0x0);
 
             /// address: 0x4001d004
             /// Number of samples to allocate memory for in EasyDMA mode
-            pub const MAXCNT = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MAXCNT = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Length of DMA RAM allocation in number of samples
                 BUFFSIZE: u15,
                 padding0: u1,
@@ -13096,7 +13096,7 @@ pub const registers = struct {
 
         /// address: 0x4001e504
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Program memory access mode. It is strongly recommended to only activate erase
             /// and write modes when they are actively used. Enabling write or erase will
             /// invalidate the cache and keep it invalidated.
@@ -13157,7 +13157,7 @@ pub const registers = struct {
 
         /// address: 0x4001e540
         /// I-Code cache configuration register.
-        pub const ICACHECNF = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICACHECNF = @intToPtr(*volatile Mmio(32, packed struct {
             /// Cache enable
             CACHEEN: u1,
             reserved0: u1,
@@ -13196,14 +13196,14 @@ pub const registers = struct {
 
         /// address: 0x4001e548
         /// I-Code cache hit counter.
-        pub const IHIT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IHIT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of cache hits
             HITS: u32,
         }), base_address + 0x548);
 
         /// address: 0x4001e54c
         /// I-Code cache miss counter.
-        pub const IMISS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IMISS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of cache misses
             MISSES: u32,
         }), base_address + 0x54c);
@@ -13214,7 +13214,7 @@ pub const registers = struct {
 
         /// address: 0x4001f500
         /// Channel enable register
-        pub const CHEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CHEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable channel 0
             CH0: u1,
             /// Enable or disable channel 1
@@ -13283,7 +13283,7 @@ pub const registers = struct {
 
         /// address: 0x4001f504
         /// Channel enable set register
-        pub const CHENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CHENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 0 enable set register. Writing '0' has no effect
             CH0: u1,
             /// Channel 1 enable set register. Writing '0' has no effect
@@ -13352,7 +13352,7 @@ pub const registers = struct {
 
         /// address: 0x4001f508
         /// Channel enable clear register
-        pub const CHENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CHENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 0 enable clear register. Writing '0' has no effect
             CH0: u1,
             /// Channel 1 enable clear register. Writing '0' has no effect
@@ -13421,7 +13421,7 @@ pub const registers = struct {
 
         /// address: 0x4001f800
         /// Description collection[0]: Channel group 0
-        pub const CHG = @intToPtr(*volatile [6]Mmio(32, packed struct{
+        pub const CHG = @intToPtr(*volatile [6]Mmio(32, packed struct {
             /// Include or exclude channel 0
             CH0: u1,
             /// Include or exclude channel 1
@@ -13518,7 +13518,7 @@ pub const registers = struct {
 
         /// address: 0x40020300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Enable or disable interrupt for REGION[0].RA event
@@ -13567,7 +13567,7 @@ pub const registers = struct {
 
         /// address: 0x40020304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Write '1' to Enable interrupt for REGION[0].RA event
@@ -13616,7 +13616,7 @@ pub const registers = struct {
 
         /// address: 0x40020308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Write '1' to Disable interrupt for REGION[0].RA event
@@ -13665,7 +13665,7 @@ pub const registers = struct {
 
         /// address: 0x40020320
         /// Enable or disable non-maskable interrupt
-        pub const NMIEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NMIEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable non-maskable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Enable or disable non-maskable interrupt for REGION[0].RA event
@@ -13714,7 +13714,7 @@ pub const registers = struct {
 
         /// address: 0x40020324
         /// Enable non-maskable interrupt
-        pub const NMIENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NMIENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable non-maskable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Write '1' to Enable non-maskable interrupt for REGION[0].RA event
@@ -13763,7 +13763,7 @@ pub const registers = struct {
 
         /// address: 0x40020328
         /// Disable non-maskable interrupt
-        pub const NMIENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const NMIENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable non-maskable interrupt for REGION[0].WA event
             REGION0WA: u1,
             /// Write '1' to Disable non-maskable interrupt for REGION[0].RA event
@@ -13812,7 +13812,7 @@ pub const registers = struct {
 
         /// address: 0x40020510
         /// Enable/disable regions watch
-        pub const REGIONEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const REGIONEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable/disable write access watch in region[0]
             RGN0WA: u1,
             /// Enable/disable read access watch in region[0]
@@ -13861,7 +13861,7 @@ pub const registers = struct {
 
         /// address: 0x40020514
         /// Enable regions watch
-        pub const REGIONENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const REGIONENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable write access watch in region[0]
             RGN0WA: u1,
             /// Enable read access watch in region[0]
@@ -13910,7 +13910,7 @@ pub const registers = struct {
 
         /// address: 0x40020518
         /// Disable regions watch
-        pub const REGIONENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const REGIONENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Disable write access watch in region[0]
             RGN0WA: u1,
             /// Disable read access watch in region[0]
@@ -13976,7 +13976,7 @@ pub const registers = struct {
         pub const PERREGION = @ptrCast(*volatile [2]packed struct {
             /// Description cluster[0]: Source of event/interrupt in region 0, write access
             /// detected while corresponding subregion was enabled for watching
-            SUBSTATWA: Mmio(32, packed struct{
+            SUBSTATWA: Mmio(32, packed struct {
                 /// Subregion 0 in region 0 (write '1' to clear)
                 SR0: u1,
                 /// Subregion 1 in region 0 (write '1' to clear)
@@ -14045,7 +14045,7 @@ pub const registers = struct {
 
             /// Description cluster[0]: Source of event/interrupt in region 0, read access
             /// detected while corresponding subregion was enabled for watching
-            SUBSTATRA: Mmio(32, packed struct{
+            SUBSTATRA: Mmio(32, packed struct {
                 /// Subregion 0 in region 0 (write '1' to clear)
                 SR0: u1,
                 /// Subregion 1 in region 0 (write '1' to clear)
@@ -14131,7 +14131,7 @@ pub const registers = struct {
             END: u32,
 
             /// Description cluster[0]: Subregions of region 0
-            SUBS: Mmio(32, packed struct{
+            SUBS: Mmio(32, packed struct {
                 /// Include or exclude subregion 0 in region
                 SR0: u1,
                 /// Include or exclude subregion 1 in region
@@ -14245,7 +14245,7 @@ pub const registers = struct {
 
         /// address: 0x40021200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between SEQEND[0] event and STOP task
             SEQEND0_STOP: u1,
             /// Shortcut between SEQEND[1] event and STOP task
@@ -14287,7 +14287,7 @@ pub const registers = struct {
 
         /// address: 0x40021300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -14331,7 +14331,7 @@ pub const registers = struct {
 
         /// address: 0x40021304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -14375,7 +14375,7 @@ pub const registers = struct {
 
         /// address: 0x40021308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -14423,7 +14423,7 @@ pub const registers = struct {
 
         /// address: 0x40021504
         /// Selects operating mode of the wave counter
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Selects up or up and down as wave counter mode
             UPDOWN: u1,
             padding0: u1,
@@ -14469,7 +14469,7 @@ pub const registers = struct {
 
         /// address: 0x40021510
         /// Configuration of the decoder
-        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct {
             /// How a sequence is read from RAM and spread to the compare register
             LOAD: u2,
             reserved0: u1,
@@ -14507,7 +14507,7 @@ pub const registers = struct {
 
         /// address: 0x40021514
         /// Amount of playback of a loop
-        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct {
             /// Amount of playback of pattern cycles
             CNT: u16,
             padding0: u1,
@@ -14573,7 +14573,7 @@ pub const registers = struct {
 
         /// address: 0x40022200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             /// Shortcut between SEQEND[0] event and STOP task
             SEQEND0_STOP: u1,
             /// Shortcut between SEQEND[1] event and STOP task
@@ -14615,7 +14615,7 @@ pub const registers = struct {
 
         /// address: 0x40022300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for STOPPED event
             STOPPED: u1,
@@ -14659,7 +14659,7 @@ pub const registers = struct {
 
         /// address: 0x40022304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -14703,7 +14703,7 @@ pub const registers = struct {
 
         /// address: 0x40022308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -14751,7 +14751,7 @@ pub const registers = struct {
 
         /// address: 0x40022504
         /// Selects operating mode of the wave counter
-        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// Selects up or up and down as wave counter mode
             UPDOWN: u1,
             padding0: u1,
@@ -14797,7 +14797,7 @@ pub const registers = struct {
 
         /// address: 0x40022510
         /// Configuration of the decoder
-        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DECODER = @intToPtr(*volatile Mmio(32, packed struct {
             /// How a sequence is read from RAM and spread to the compare register
             LOAD: u2,
             reserved0: u1,
@@ -14835,7 +14835,7 @@ pub const registers = struct {
 
         /// address: 0x40022514
         /// Amount of playback of a loop
-        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LOOP = @intToPtr(*volatile Mmio(32, packed struct {
             /// Amount of playback of pattern cycles
             CNT: u16,
             padding0: u1,
@@ -14898,7 +14898,7 @@ pub const registers = struct {
 
         /// address: 0x40023200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -14936,7 +14936,7 @@ pub const registers = struct {
 
         /// address: 0x40023304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for STOPPED event
             STOPPED: u1,
@@ -14978,7 +14978,7 @@ pub const registers = struct {
 
         /// address: 0x40023308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for STOPPED event
             STOPPED: u1,
@@ -15028,7 +15028,7 @@ pub const registers = struct {
 
         /// address: 0x40023554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -15097,7 +15097,7 @@ pub const registers = struct {
 
         /// address: 0x40023200
         /// Shortcut register
-        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SHORTS = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Shortcut between END event and ACQUIRE task
@@ -15135,7 +15135,7 @@ pub const registers = struct {
 
         /// address: 0x40023304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for END event
             END: u1,
@@ -15175,7 +15175,7 @@ pub const registers = struct {
 
         /// address: 0x40023308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for END event
             END: u1,
@@ -15219,7 +15219,7 @@ pub const registers = struct {
 
         /// address: 0x40023440
         /// Status from last transaction
-        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const STATUS = @intToPtr(*volatile Mmio(32, packed struct {
             /// TX buffer over-read detected, and prevented
             OVERREAD: u1,
             /// RX buffer overflow detected, and prevented
@@ -15262,7 +15262,7 @@ pub const registers = struct {
 
         /// address: 0x40023554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -15318,7 +15318,7 @@ pub const registers = struct {
 
         /// address: 0x40023304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Enable interrupt for READY event
@@ -15356,7 +15356,7 @@ pub const registers = struct {
 
         /// address: 0x40023308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             /// Write '1' to Disable interrupt for READY event
@@ -15410,7 +15410,7 @@ pub const registers = struct {
 
         /// address: 0x40023554
         /// Configuration register
-        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CONFIG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Bit order
             ORDER: u1,
             /// Serial clock (SCK) phase
@@ -15482,7 +15482,7 @@ pub const registers = struct {
 
         /// address: 0x40024304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Enable interrupt for OVRFLW event
@@ -15525,7 +15525,7 @@ pub const registers = struct {
 
         /// address: 0x40024308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable interrupt for TICK event
             TICK: u1,
             /// Write '1' to Disable interrupt for OVRFLW event
@@ -15568,7 +15568,7 @@ pub const registers = struct {
 
         /// address: 0x40024340
         /// Enable or disable event routing
-        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Enable or disable event routing for TICK event
             TICK: u1,
             /// Enable or disable event routing for OVRFLW event
@@ -15611,7 +15611,7 @@ pub const registers = struct {
 
         /// address: 0x40024344
         /// Enable event routing
-        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Enable event routing for TICK event
             TICK: u1,
             /// Write '1' to Enable event routing for OVRFLW event
@@ -15654,7 +15654,7 @@ pub const registers = struct {
 
         /// address: 0x40024348
         /// Disable event routing
-        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write '1' to Disable event routing for TICK event
             TICK: u1,
             /// Write '1' to Disable event routing for OVRFLW event
@@ -15706,7 +15706,7 @@ pub const registers = struct {
 
         /// address: 0x40024540
         /// Description collection[0]: Compare register 0
-        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct{
+        pub const CC = @intToPtr(*volatile [4]Mmio(32, packed struct {
             /// Compare value
             COMPARE: u24,
             padding0: u1,
@@ -15750,7 +15750,7 @@ pub const registers = struct {
 
         /// address: 0x40025300
         /// Enable or disable interrupt
-        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTEN = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Enable or disable interrupt for RXPTRUPD event
             RXPTRUPD: u1,
@@ -15790,7 +15790,7 @@ pub const registers = struct {
 
         /// address: 0x40025304
         /// Enable interrupt
-        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENSET = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Enable interrupt for RXPTRUPD event
             RXPTRUPD: u1,
@@ -15830,7 +15830,7 @@ pub const registers = struct {
 
         /// address: 0x40025308
         /// Disable interrupt
-        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const INTENCLR = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// Write '1' to Disable interrupt for RXPTRUPD event
             RXPTRUPD: u1,
@@ -15940,7 +15940,7 @@ pub const registers = struct {
 
             /// address: 0x40025000
             /// Pin select for MCK signal.
-            pub const MCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const MCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -15975,7 +15975,7 @@ pub const registers = struct {
 
             /// address: 0x40025004
             /// Pin select for SCK signal.
-            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -16010,7 +16010,7 @@ pub const registers = struct {
 
             /// address: 0x40025008
             /// Pin select for LRCK signal.
-            pub const LRCK = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const LRCK = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -16045,7 +16045,7 @@ pub const registers = struct {
 
             /// address: 0x4002500c
             /// Pin select for SDIN signal.
-            pub const SDIN = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SDIN = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -16080,7 +16080,7 @@ pub const registers = struct {
 
             /// address: 0x40025010
             /// Pin select for SDOUT signal.
-            pub const SDOUT = @intToPtr(*volatile Mmio(32, packed struct{
+            pub const SDOUT = @intToPtr(*volatile Mmio(32, packed struct {
                 /// Pin number
                 PIN: u5,
                 reserved0: u1,
@@ -16128,7 +16128,7 @@ pub const registers = struct {
 
         /// address: 0x50000504
         /// Write GPIO port
-        pub const OUT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OUT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin 0
             PIN0: u1,
             /// Pin 1
@@ -16197,7 +16197,7 @@ pub const registers = struct {
 
         /// address: 0x50000508
         /// Set individual bits in GPIO port
-        pub const OUTSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OUTSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin 0
             PIN0: u1,
             /// Pin 1
@@ -16266,7 +16266,7 @@ pub const registers = struct {
 
         /// address: 0x5000050c
         /// Clear individual bits in GPIO port
-        pub const OUTCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OUTCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin 0
             PIN0: u1,
             /// Pin 1
@@ -16335,7 +16335,7 @@ pub const registers = struct {
 
         /// address: 0x50000510
         /// Read GPIO port
-        pub const IN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin 0
             PIN0: u1,
             /// Pin 1
@@ -16404,7 +16404,7 @@ pub const registers = struct {
 
         /// address: 0x50000514
         /// Direction of GPIO pins
-        pub const DIR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin 0
             PIN0: u1,
             /// Pin 1
@@ -16473,7 +16473,7 @@ pub const registers = struct {
 
         /// address: 0x50000518
         /// DIR set register
-        pub const DIRSET = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIRSET = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set as output pin 0
             PIN0: u1,
             /// Set as output pin 1
@@ -16542,7 +16542,7 @@ pub const registers = struct {
 
         /// address: 0x5000051c
         /// DIR clear register
-        pub const DIRCLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIRCLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set as input pin 0
             PIN0: u1,
             /// Set as input pin 1
@@ -16612,7 +16612,7 @@ pub const registers = struct {
         /// address: 0x50000520
         /// Latch register indicating what GPIO pins that have met the criteria set in the
         /// PIN_CNF[n].SENSE registers
-        pub const LATCH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LATCH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Status on whether PIN0 has met criteria set in PIN_CNF0.SENSE register. Write
             /// '1' to clear.
             PIN0: u1,
@@ -16717,7 +16717,7 @@ pub const registers = struct {
 
         /// address: 0x50000700
         /// Description collection[0]: Configuration of GPIO pins
-        pub const PIN_CNF = @intToPtr(*volatile [32]Mmio(32, packed struct{
+        pub const PIN_CNF = @intToPtr(*volatile [32]Mmio(32, packed struct {
             /// Pin direction. Same physical register as DIR register
             DIR: u1,
             /// Connect or disconnect input buffer

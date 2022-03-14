@@ -38,7 +38,7 @@ pub fn build(b: *std.build.Builder) !void {
 
     for (all_backings) |cfg| {
         for (all_tests) |tst| {
-            if (tst.uses_uart and !cfg.supports_uart) continue;
+            if (tst.uses_uart and !cfg.supports_uart_test) continue;
             if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
 
             const exe = try microzig.addEmbeddedExecutable(
