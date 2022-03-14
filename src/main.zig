@@ -565,6 +565,11 @@ const Website = struct {
             \\    font-family: sans;
             \\  }
             \\
+            \\  @media screen and (max-width: 600px) {
+            \\    body {
+            \\      padding: 2em;
+            \\    }
+            \\  }
             // Align top-level headings
             \\  h1 {
             \\    text-align: center;
