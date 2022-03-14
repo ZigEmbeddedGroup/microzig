@@ -23,18 +23,18 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
 
         pub const underlying_type = PackedT;
 
-        pub fn read(addr: *volatile Self) PackedT {
+        pub inline fn read(addr: *volatile Self) PackedT {
             return @bitCast(PackedT, addr.raw);
         }
 
-        pub fn write(addr: *volatile Self, val: PackedT) void {
+        pub inline fn write(addr: *volatile Self, val: PackedT) void {
             // This is a workaround for a compiler bug related to miscompilation
             // If the tmp var is not used, result location will fuck things up
             var tmp = @bitCast(IntT, val);
             addr.raw = tmp;
         }
 
-        pub fn modify(addr: *volatile Self, fields: anytype) void {
+        pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
@@ -42,7 +42,7 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
             write(addr, val);
         }
 
-        pub fn toggle(addr: *volatile Self, fields: anytype) void {
+        pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, @tagName(field.default_value.?)) = !@field(val, @tagName(field.default_value.?));
@@ -58,11 +58,11 @@ pub fn MmioInt(comptime size: u8, comptime T: type) type {
 
         raw: std.meta.Int(.unsigned, size),
 
-        pub fn read(addr: *volatile Self) T {
+        pub inline fn read(addr: *volatile Self) T {
             return @truncate(T, addr.raw);
         }
 
-        pub fn modify(addr: *volatile Self, val: T) void {
+        pub inline fn modify(addr: *volatile Self, val: T) void {
             const Int = std.meta.Int(.unsigned, size);
             const mask = ~@as(Int, (1 << @bitSizeOf(T)) - 1);
 
