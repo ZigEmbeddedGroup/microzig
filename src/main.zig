@@ -7,9 +7,17 @@ pub const cpus = @import("modules/cpus.zig");
 pub const Board = @import("modules/Board.zig");
 pub const Chip = @import("modules/Chip.zig");
 pub const Cpu = @import("modules/Cpu.zig");
+
 pub const Backing = union(enum) {
     board: Board,
     chip: Chip,
+
+    pub fn getTarget(self: @This()) std.zig.CrossTarget {
+        return switch (self) {
+            .board => |brd| brd.chip.cpu.target,
+            .chip => |chip| chip.cpu.target,
+        };
+    }
 };
 
 const Pkg = std.build.Pkg;
@@ -133,7 +141,7 @@ pub fn addEmbeddedExecutable(
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-    exe.bundle_compiler_rt = true;
+    exe.bundle_compiler_rt = (exe.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
     switch (backing) {
         .chip => {
             var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);

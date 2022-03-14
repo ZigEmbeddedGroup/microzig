@@ -1,5 +1,6 @@
 const std = @import("std");
 const root = @import("root");
+const builtin = @import("builtin");
 
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
@@ -39,22 +40,24 @@ pub const debug = @import("debug.zig");
 /// pub const panic = micro.panic;
 /// ```
 pub fn panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+
     // utilize logging functions
     std.log.err("microzig PANIC: {s}", .{message});
 
-    // then use the current debug channel
-    var writer = debug.writer();
-    writer.print("microzig PANIC: {s}\r\n", .{message}) catch unreachable;
-    if (maybe_stack_trace) |stack_trace| {
-        var frame_index: usize = 0;
-        var frames_left: usize = std.math.min(stack_trace.index, stack_trace.instruction_addresses.len);
+    if (builtin.cpu.arch != .avr) {
+        var writer = debug.writer();
+        writer.print("microzig PANIC: {s}\r\n", .{message}) catch unreachable;
 
-        while (frames_left != 0) : ({
-            frames_left -= 1;
-            frame_index = (frame_index + 1) % stack_trace.instruction_addresses.len;
-        }) {
-            const return_address = stack_trace.instruction_addresses[frame_index];
-            writer.print("0x{X:0>8}\r\n", .{return_address}) catch unreachable;
+        if (maybe_stack_trace) |stack_trace| {
+            var frame_index: usize = 0;
+            var frames_left: usize = std.math.min(stack_trace.index, stack_trace.instruction_addresses.len);
+            while (frames_left != 0) : ({
+                frames_left -= 1;
+                frame_index = (frame_index + 1) % stack_trace.instruction_addresses.len;
+            }) {
+                const return_address = stack_trace.instruction_addresses[frame_index];
+                writer.print("0x{X:0>8}\r\n", .{return_address}) catch unreachable;
+            }
         }
     }
     hang();

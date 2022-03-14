@@ -16,33 +16,34 @@ pub fn build(b: *std.build.Builder) !void {
 
     const BuildConfig = struct { name: []const u8, backing: Backing, supports_uart_test: bool = true };
     const all_backings = [_]BuildConfig{
-        //BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = boards.arduino_nano } },
+        BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = boards.arduino_nano } },
         BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = boards.mbed_lpc1768 } },
-        //BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = pkgs.chips.atmega328p } },
+        BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = chips.atmega328p } },
         BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = chips.lpc1768 } },
         //BuildConfig{ .name = "chips.stm32f103x8", .backing = Backing{ .chip = chips.stm32f103x8 } },
         BuildConfig{ .name = "boards.stm32f3discovery", .backing = Backing{ .board = boards.stm32f3discovery }, .supports_uart_test = false },
     };
 
-    const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false };
+    const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false, on_avr: bool = true };
     const all_tests = [_]Test{
         Test{ .name = "minimal", .source = "tests/minimal.zig" },
         Test{ .name = "blinky", .source = "tests/blinky.zig" },
-        Test{ .name = "uart-sync", .source = "tests/uart-sync.zig", .uses_uart = true },
+        Test{ .name = "uart-sync", .source = "tests/uart-sync.zig", .uses_uart = true, .on_avr = false },
 
         // Note: this example uses the systick interrupt and therefore only for arm microcontrollers
-        Test{ .name = "interrupt", .source = "tests/interrupt.zig" },
+        Test{ .name = "interrupt", .source = "tests/interrupt.zig", .on_avr = false },
     };
 
     const filter = b.option(std.Target.Cpu.Arch, "filter-target", "Filters for a certain cpu target");
 
-    inline for (all_backings) |cfg| {
-        inline for (all_tests) |tst| {
+    for (all_backings) |cfg| {
+        for (all_tests) |tst| {
             if (tst.uses_uart and !cfg.supports_uart_test) continue;
+            if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
 
             const exe = try microzig.addEmbeddedExecutable(
                 b,
-                "test-" ++ tst.name ++ "-" ++ cfg.name ++ ".elf",
+                b.fmt("test-{s}-{s}.elf", .{ tst.name, cfg.name }),
                 tst.source,
                 cfg.backing,
                 .{},
@@ -56,7 +57,7 @@ pub fn build(b: *std.build.Builder) !void {
 
                 const bin = b.addInstallRaw(
                     exe,
-                    "test-" ++ tst.name ++ "-" ++ cfg.name ++ ".bin",
+                    b.fmt("test-{s}-{s}.bin", .{ tst.name, cfg.name }),
                     .{},
                 );
                 b.getInstallStep().dependOn(&bin.step);
