@@ -17,6 +17,18 @@ pub fn Uart(comptime index: usize) type {
             };
         }
 
+        /// If the UART is already initialized, try to return a handle to it,
+        /// else initialize with the given config.
+        pub fn getOrInit(config: Config) InitError!Self {
+            if (!@hasDecl(SystemUart, "getOrInit")) {
+                // fallback to reinitializing the UART
+                return init(config);
+            }
+            return Self{
+                .internal = try SystemUart.getOrInit(config),
+            };
+        }
+
         pub fn canRead(self: Self) bool {
             return self.internal.canRead();
         }
@@ -54,6 +66,7 @@ pub fn Uart(comptime index: usize) type {
 /// A UART configuration. The config defaults to the *8N1* setting, so "8 data bits, no parity, 1 stop bit" which is the 
 /// most common serial format.
 pub const Config = struct {
+    /// TODO: Make this optional, to support STM32F303 et al. auto baud-rate detection?
     baud_rate: u32,
     stop_bits: StopBits = .one,
     parity: ?Parity = null,

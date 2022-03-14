@@ -23,7 +23,11 @@ comptime {
 
 const VectorTable = microzig.chip.VectorTable;
 const vector_table: VectorTable = blk: {
-    var tmp: microzig.chip.VectorTable = .{};
+    var tmp: microzig.chip.VectorTable = .{
+        .initial_stack_pointer = microzig.config.end_of_stack,
+        .Reset = .{ .C = microzig.cpu.startup_logic._start },
+    };
+
     if (@hasDecl(app, "interrupts")) {
         if (@typeInfo(app.interrupts) != .Struct)
             @compileLog("root.interrupts must be a struct");
