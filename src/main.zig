@@ -33,7 +33,7 @@ pub fn main() anyerror!void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    const allocator = &gpa.allocator;
+    const allocator = gpa.allocator();
 
     var website = Website{
         .allocator = allocator,
@@ -91,7 +91,7 @@ pub fn main() anyerror!void {
                     continue;
                 }
 
-                const path = try std.fs.path.join(&website.arena.allocator, &[_][]const u8{
+                const path = try std.fs.path.join(website.arena.allocator(), &[_][]const u8{
                     "website",
                     "img",
                     entry.name,
@@ -124,7 +124,7 @@ pub fn main() anyerror!void {
                     .date = date,
                 };
 
-                article.src_file = try std.fs.path.join(&website.arena.allocator, &[_][]const u8{
+                article.src_file = try std.fs.path.join(website.arena.allocator(), &[_][]const u8{
                     "website",
                     "articles",
                     entry.name,
@@ -185,6 +185,8 @@ const Date = struct {
     }
 
     pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         try writer.print("{d:0>4}-{d:0>2}-{d:0>2}", .{
             self.year, self.month, self.day,
         });
@@ -206,7 +208,7 @@ const Website = struct {
     const Self = @This();
 
     is_prepared: bool = false,
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
     articles: std.ArrayList(Article),
     tutorials: std.ArrayList(Tutorial),
@@ -224,22 +226,22 @@ const Website = struct {
         self.is_prepared = false;
         try self.articles.append(Article{
             .date = article.date,
-            .src_file = try self.arena.allocator.dupe(u8, article.src_file),
-            .title = try self.arena.allocator.dupe(u8, article.title),
+            .src_file = try self.arena.allocator().dupe(u8, article.src_file),
+            .title = try self.arena.allocator().dupe(u8, article.title),
         });
     }
 
     fn addTutorial(self: *Self, tutorial: Tutorial) !void {
         self.is_prepared = false;
         try self.tutorials.append(Tutorial{
-            .src_file = try self.arena.allocator.dupe(u8, tutorial.src_file),
-            .title = try self.arena.allocator.dupe(u8, tutorial.title),
+            .src_file = try self.arena.allocator().dupe(u8, tutorial.src_file),
+            .title = try self.arena.allocator().dupe(u8, tutorial.title),
         });
     }
 
     fn addImage(self: *Self, path: []const u8) !void {
         self.is_prepared = false;
-        try self.images.append(try self.arena.allocator.dupe(u8, path));
+        try self.images.append(try self.arena.allocator().dupe(u8, path));
     }
 
     fn findTitle(self: *Self, file: []const u8) !?[]const u8 {
@@ -268,13 +270,13 @@ const Website = struct {
         } else null;
 
         if (heading_or_null) |heading| {
-            var list = std.ArrayList(u8).init(&self.arena.allocator);
+            var list = std.ArrayList(u8).init(self.arena.allocator());
             defer list.deinit();
 
             var options = markdown_options;
             options.render.header_anchors = false;
 
-            try koino.html.print(list.writer(), &self.arena.allocator, options, heading);
+            try koino.html.print(list.writer(), self.arena.allocator(), options, heading);
 
             const string = list.toOwnedSlice();
 
@@ -306,6 +308,7 @@ const Website = struct {
     }
 
     fn sortArticlesDesc(self: Self, lhs: Article, rhs: Article) bool {
+        _ = self;
         if (lhs.date.lessThan(rhs.date))
             return false;
         if (rhs.date.lessThan(lhs.date))
@@ -319,7 +322,7 @@ const Website = struct {
     }
 
     fn changeExtension(self: *Self, src_name: []const u8, new_ext: []const u8) ![]const u8 {
-        return std.mem.join(&self.arena.allocator, "", &[_][]const u8{
+        return std.mem.join(self.arena.allocator(), "", &[_][]const u8{
             removeExtension(src_name),
             new_ext,
         });
@@ -336,7 +339,7 @@ const Website = struct {
                 @as(usize, 1);
         }
 
-        const buf = try self.arena.allocator.alloc(u8, len);
+        const buf = try self.arena.allocator().alloc(u8, len);
         var offset: usize = 0;
         for (text) |c| {
             if (std.mem.indexOfScalar(u8, legal_character, c) == null) {
@@ -406,7 +409,7 @@ const Website = struct {
         std.debug.assert(self.is_prepared);
 
         var doc: *koino.nodes.AstNode = blk: {
-            var p = try koino.parser.Parser.init(&self.arena.allocator, markdown_options);
+            var p = try koino.parser.Parser.init(self.arena.allocator(), markdown_options);
             try p.feed(source);
             defer p.deinit();
             break :blk try p.finish();
@@ -422,7 +425,7 @@ const Website = struct {
 
         try self.renderHeader(writer);
         {
-            var renderer = koino.html.makeHtmlFormatter(writer, &self.arena.allocator, markdown_options);
+            var renderer = koino.html.makeHtmlFormatter(writer, self.arena.allocator(), markdown_options);
             defer renderer.deinit();
 
             var iter = doc.first_child;
@@ -472,7 +475,7 @@ const Website = struct {
                                     while (i) |c| : (i = c.next) {
                                         try koino.html.print(
                                             writer,
-                                            &self.arena.allocator,
+                                            self.arena.allocator(),
                                             heading_options,
                                             c,
                                         );
@@ -700,12 +703,12 @@ const Website = struct {
         }
     }
 
-    fn renderArticle(self: *Website, article: Article, dst_dir: std.fs.Dir, dst_name: []const u8) !void {
-        var formatter = HtmlFormatter.init(allocator, options);
-        defer formatter.deinit();
+    // fn renderArticle(self: *Website, article: Article, dst_dir: std.fs.Dir, dst_name: []const u8) !void {
+    //     var formatter = HtmlFormatter.init(allocator, options);
+    //     defer formatter.deinit();
 
-        try formatter.format(root, false);
+    //     try formatter.format(root, false);
 
-        return formatter.buffer.toOwnedSlice();
-    }
+    //     return formatter.buffer.toOwnedSlice();
+    // }
 };
