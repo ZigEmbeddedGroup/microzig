@@ -25,9 +25,7 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
     );
 }
 
-// TODO: this needs to be exported in src/core/microzig.zig for consistency and
-// readability, this is a workaround for a compiler bug
-const vector_table linksection("microzig_flash_start") = blk: {
+pub const vector_table = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
     var asm_str: []const u8 = "jmp microzig_start\n";
 
