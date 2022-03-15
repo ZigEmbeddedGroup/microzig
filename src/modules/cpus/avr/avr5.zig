@@ -27,7 +27,7 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
 
 pub const vector_table = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
-    var asm_str: []const u8 = "jmp _start\n";
+    var asm_str: []const u8 = "jmp _microzig_start\n";
 
     const has_interrupts = @hasDecl(microzig.app, "interrupts");
     if (has_interrupts) {
@@ -67,13 +67,14 @@ pub const vector_table = blk: {
                     else => @compileError("Just leave interrupt handlers with an unspecified calling convention"),
                 };
 
-                const options = .{ .name = field.name, .linkage = .Strong };
+                const exported_name = "microzig_isr_" ++ field.name;
+                const options = .{ .name = exported_name, .linkage = .Strong };
                 @export(exported_fn, options);
-                break :overload "jmp " ++ field.name;
+                break :overload "jmp " ++ exported_name;
             } else {
-                break :overload "jmp _unhandled_vector";
+                break :overload "jmp microzig_unhandled_vector";
             }
-        } else "jmp _unhandled_vector";
+        } else "jmp microzig_unhandled_vector";
 
         asm_str = asm_str ++ new_insn ++ "\n";
     }
@@ -82,13 +83,13 @@ pub const vector_table = blk: {
 };
 
 pub const startup_logic = struct {
-    export fn _unhandled_vector() callconv(.Naked) noreturn {
+    export fn _microzig_unhandled_vector() callconv(.Naked) noreturn {
         @panic("Unhandled interrupt");
     }
 
     extern fn microzig_main() noreturn;
 
-    export fn _start() callconv(.Naked) noreturn {
+    export fn microzig_start() callconv(.Naked) noreturn {
         // At startup the stack pointer is at the end of RAM
         // so, no need to set it manually!
 
