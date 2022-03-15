@@ -1,8 +1,5 @@
 const micro = @import("microzig");
 
-// this will instantiate microzig and pull in all dependencies
-pub const panic = micro.panic;
-
 // Configures the led_pin to a hardware pin
 const led_pin = if (micro.config.has_board)
     switch (micro.config.board_name) {
