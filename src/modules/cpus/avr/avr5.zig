@@ -27,7 +27,7 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
 
 pub const vector_table = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
-    var asm_str: []const u8 = "jmp _microzig_start\n";
+    var asm_str: []const u8 = "jmp microzig_start\n";
 
     const has_interrupts = @hasDecl(microzig.app, "interrupts");
     if (has_interrupts) {
@@ -83,7 +83,7 @@ pub const vector_table = blk: {
 };
 
 pub const startup_logic = struct {
-    export fn _microzig_unhandled_vector() callconv(.Naked) noreturn {
+    export fn microzig_unhandled_vector() callconv(.Naked) noreturn {
         @panic("Unhandled interrupt");
     }
 
