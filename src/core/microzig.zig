@@ -106,6 +106,7 @@ comptime {
         cpu.vector_table
     else
         null;
+    // TODO: see src/modules/cpus/avr/avr5.zig for the workaround
     if (@TypeOf(vector_table) != @TypeOf(null)) { // ugh, comptime shenanigans
         @export(vector_table, .{
             .name = "vector_table",
