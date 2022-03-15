@@ -81,7 +81,13 @@ const vector_table linksection("microzig_flash_start") = blk: {
         asm_str = asm_str ++ new_insn ++ "\n";
     }
 
-    break :blk asm (asm_str);
+    const T = struct {
+        fn _start() callconv(.Naked) void {
+            asm volatile (asm_str);
+        }
+    };
+
+    break :blk T._start;
 };
 
 pub const startup_logic = struct {
