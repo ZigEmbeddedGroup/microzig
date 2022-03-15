@@ -700,7 +700,7 @@ pub fn toZig(self: *Self, writer: anytype) !void {
 
     if (self.interrupts.items.len > 0 and self.cpu != null) {
         if (svd.CpuName.parse(self.cpu.?.name.?)) |cpu_type| {
-            try writer.writeAll("\npub const VectorTable = struct {\n");
+            try writer.writeAll("\npub const VectorTable = extern struct {\n");
 
             // TODO: isCortexM()
             if (cpu_type != .avr) {
