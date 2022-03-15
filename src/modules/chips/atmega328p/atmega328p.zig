@@ -1,7 +1,7 @@
 const std = @import("std");
 const micro = @import("microzig");
 
-pub const cpu = @import("cpu");
+pub const cpu = micro.cpu;
 const Port = enum(u8) {
     B = 1,
     C = 2,
