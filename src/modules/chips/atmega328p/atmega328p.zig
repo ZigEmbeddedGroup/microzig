@@ -1,5 +1,6 @@
 const std = @import("std");
 const micro = @import("microzig");
+pub usingnamespace @import("registers.zig");
 
 pub const cpu = micro.cpu;
 const Port = enum(u8) {
