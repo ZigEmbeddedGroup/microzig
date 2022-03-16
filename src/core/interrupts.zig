@@ -23,13 +23,13 @@ pub fn isEnabled(comptime interrupt: anytype) bool {
 /// *Set Enable Interrupt*, will enable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub fn sei() void {
-    micro.chip.cpu.sei();
+    micro.cpu.sei();
 }
 
 /// *Clear Enable Interrupt*, will disable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub fn cli() void {
-    micro.chip.cpu.cli();
+    micro.cpu.cli();
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.

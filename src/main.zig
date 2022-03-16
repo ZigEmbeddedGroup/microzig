@@ -7,9 +7,17 @@ pub const cpus = @import("modules/cpus.zig");
 pub const Board = @import("modules/Board.zig");
 pub const Chip = @import("modules/Chip.zig");
 pub const Cpu = @import("modules/Cpu.zig");
+
 pub const Backing = union(enum) {
     board: Board,
     chip: Chip,
+
+    pub fn getTarget(self: @This()) std.zig.CrossTarget {
+        return switch (self) {
+            .board => |brd| brd.chip.cpu.target,
+            .chip => |chip| chip.cpu.target,
+        };
+    }
 };
 
 const Pkg = std.build.Pkg;
@@ -94,11 +102,6 @@ pub fn addEmbeddedExecutable(
         try writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length});
     }
 
-    const microzig_pkg = Pkg{
-        .name = "microzig",
-        .path = .{ .path = root_path ++ "core/microzig.zig" },
-    };
-
     const config_pkg = Pkg{
         .name = "microzig-config",
         .path = .{ .path = config_file_name },
@@ -107,19 +110,16 @@ pub fn addEmbeddedExecutable(
     const chip_pkg = Pkg{
         .name = "chip",
         .path = .{ .path = chip.path },
-        .dependencies = &[_]Pkg{
-            microzig_pkg,
-            pkgs.mmio,
-            config_pkg,
-            Pkg{
-                .name = "cpu",
-                .path = .{ .path = chip.cpu.path },
-                .dependencies = &[_]Pkg{ microzig_pkg, pkgs.mmio },
-            },
-        },
+        .dependencies = &.{pkgs.microzig},
     };
 
-    const exe = builder.addExecutable(name, root_path ++ "core/start.zig");
+    const cpu_pkg = Pkg{
+        .name = "cpu",
+        .path = .{ .path = chip.cpu.path },
+        .dependencies = &.{pkgs.microzig},
+    };
+
+    const exe = builder.addExecutable(name, root_path ++ "core/microzig.zig");
 
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
@@ -133,73 +133,40 @@ pub fn addEmbeddedExecutable(
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-    exe.bundle_compiler_rt = true;
+    exe.bundle_compiler_rt = (exe.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
+
+    const app_pkg = blk: {
+        var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
+
+        try app_pkgs.append(pkgs.microzig); // proxy package
+        if (options.packages) |packages|
+            try app_pkgs.appendSlice(packages);
+
+        break :blk std.build.Pkg{
+            .name = "app",
+            .path = .{ .path = source },
+            .dependencies = app_pkgs.items,
+        };
+    };
+
+    // these packages will be re-exported from core/microzig.zig
+
+    exe.addPackage(app_pkg);
+    exe.addPackage(config_pkg);
+    exe.addPackage(chip_pkg);
+    exe.addPackage(cpu_pkg);
+
     switch (backing) {
-        .chip => {
-            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
-            try app_pkgs.append(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
-            });
-
-            if (options.packages) |packages|
-                try app_pkgs.appendSlice(packages);
-
-            exe.addPackage(Pkg{
-                .name = "app",
-                .path = .{ .path = source },
-                .dependencies = app_pkgs.items,
-            });
-
-            exe.addPackage(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{ config_pkg, chip_pkg },
-            });
-        },
         .board => |board| {
-            var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
-            try app_pkgs.append(
-                Pkg{
-                    .name = microzig_pkg.name,
-                    .path = microzig_pkg.path,
-                    .dependencies = &[_]Pkg{
-                        config_pkg,
-                        chip_pkg,
-                        Pkg{
-                            .name = "board",
-                            .path = .{ .path = board.path },
-                            .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
-                        },
-                    },
-                },
-            );
-
-            if (options.packages) |packages|
-                try app_pkgs.appendSlice(packages);
-
-            exe.addPackage(Pkg{
-                .name = "app",
-                .path = .{ .path = source },
-                .dependencies = app_pkgs.items,
-            });
-
-            exe.addPackage(Pkg{
-                .name = microzig_pkg.name,
-                .path = microzig_pkg.path,
-                .dependencies = &[_]Pkg{
-                    config_pkg,
-                    chip_pkg,
-                    Pkg{
-                        .name = "board",
-                        .path = .{ .path = board.path },
-                        .dependencies = &[_]Pkg{ microzig_pkg, chip_pkg, pkgs.mmio },
-                    },
-                },
+            exe.addPackage(std.build.Pkg{
+                .name = "board",
+                .path = .{ .path = board.path },
+                .dependencies = &.{pkgs.microzig},
             });
         },
+        else => {},
     }
+
     return exe;
 }
 
@@ -207,5 +174,10 @@ const pkgs = struct {
     const mmio = std.build.Pkg{
         .name = "microzig-mmio",
         .path = .{ .path = root_path ++ "core/mmio.zig" },
+    };
+
+    const microzig = std.build.Pkg{
+        .name = "microzig",
+        .path = .{ .path = root_path ++ "core/import-package.zig" },
     };
 };
