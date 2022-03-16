@@ -396,7 +396,7 @@ pub fn I2CController(comptime index: usize) type {
 
             /// Fails with ReadError if incorrect number of bytes is received.
             pub fn readNoEof(self: *ReadState, buffer: []u8) !void {
-                if (!self.read_allowed) @panic("second read call not allowed");
+                if (runtime_safety and !self.read_allowed) @panic("second read call not allowed");
                 std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
 
                 // As master, initiate read from accelerometer, 7 bit address
