@@ -298,83 +298,120 @@ pub fn I2CController(comptime index: usize) type {
             return Self{};
         }
 
-        pub fn write(_: Self, address: u7, bytes: []const u8) !void {
-            std.debug.assert(bytes.len < 256); // TODO: use RELOAD to read more data
+        pub const WriteState = struct {
+            address: u7,
 
-            // As master, initiate write from address, 7 bit address
-            regs.I2C1.CR2.modify(.{
-                .ADD10 = 0,
-                .SADD1 = address,
-                .RD_WRN = 0, // write
-                .NBYTES = @intCast(u8, bytes.len),
-            });
-            debugPrint("I2C1 prepared for write of {} byte(s) to 0b{b:0<7}\r\n", .{ bytes.len, address });
+            pub fn start(address: u7) !WriteState {
+                return WriteState{ .address = address };
+            }
 
-            // Communication START
-            regs.I2C1.CR2.modify(.{ .START = 1 });
-            debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
-            debugPrint("I2C1 STARTed\r\n", .{});
-            debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
+            pub fn writeAll(self: *WriteState, bytes: []const u8) !void {
+                std.debug.assert(bytes.len < 256); // TODO: use RELOAD to read more data
 
-            for (bytes) |b| {
-                // Wait for data to be acknowledged
-                while (regs.I2C1.ISR.read().TXIS == 0) {
-                    debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+                // As master, initiate write from address, 7 bit address
+                regs.I2C1.CR2.modify(.{
+                    .ADD10 = 0,
+                    .SADD1 = self.address,
+                    .RD_WRN = 0, // write
+                    .NBYTES = @intCast(u8, bytes.len),
+                });
+                debugPrint("I2C1 prepared for write of {} byte(s) to 0b{b:0<7}\r\n", .{ bytes.len, self.address });
+
+                // Communication START
+                regs.I2C1.CR2.modify(.{ .START = 1 });
+                debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
+                debugPrint("I2C1 STARTed\r\n", .{});
+                debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
+
+                for (bytes) |b| {
+                    // Wait for data to be acknowledged
+                    while (regs.I2C1.ISR.read().TXIS == 0) {
+                        debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
+                    // Write data byte
+                    regs.I2C1.TXDR.modify(.{ .TXDATA = b });
                 }
-                debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
-                // Write data byte
-                regs.I2C1.TXDR.modify(.{ .TXDATA = b });
-            }
-            // waiting for TC==1 must only be done if AUTOEND is not set
-            debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
-            debugPrint("I2C1 data written\r\n", .{});
-            debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
-            while (regs.I2C1.ISR.read().TC == 0) {
-                debugPrint("I2C1 waiting for data (TC=0)\r\n", .{});
-            }
-        }
-
-        /// Fails with ReadError if incorrect number of bytes is received.
-        pub fn read(_: Self, address: u7, buffer: []u8) !void {
-            std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
-
-            // As master, initiate read from accelerometer, 7 bit address
-            regs.I2C1.CR2.modify(.{
-                .ADD10 = 0,
-                .SADD1 = address,
-                .RD_WRN = 1, // read
-                .NBYTES = @intCast(u8, buffer.len),
-            });
-            debugPrint("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, address });
-
-            // Communication START
-            regs.I2C1.CR2.modify(.{ .START = 1 });
-            debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
-            debugPrint("I2C1 STARTed\r\n", .{});
-            debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
-
-            for (buffer) |_, i| {
-                // Wait for data to be received
-                while (regs.I2C1.ISR.read().RXNE == 0) {
-                    debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
+                // waiting for TC==1 must only be done if AUTOEND is not set
+                debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
+                debugPrint("I2C1 data written\r\n", .{});
+                debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
+                while (regs.I2C1.ISR.read().TC == 0) {
+                    debugPrint("I2C1 waiting for data (TC=0)\r\n", .{});
                 }
-                debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
-
-                // Read first data byte
-                buffer[i] = regs.I2C1.RXDR.read().RXDATA;
             }
-            debugPrint("I2C1 data: {any}\r\n", .{buffer});
-        }
 
-        pub fn stop(_: Self) void {
-            // Communication STOP
-            regs.I2C1.CR2.modify(.{ .STOP = 1 });
-            while (regs.I2C1.ISR.read().BUSY == 1) {}
-            debugPrint("I2C1 STOPped\r\n", .{});
-        }
+            pub fn stop(_: *WriteState) void {
+                // Communication STOP
+                regs.I2C1.CR2.modify(.{ .STOP = 1 });
+                while (regs.I2C1.ISR.read().BUSY == 1) {}
+                debugPrint("I2C1 STOPped\r\n", .{});
+            }
 
-        pub fn restart(_: Self) void {
-            debugPrint("I2C1 no action for restart\r\n", .{});
-        }
+            pub fn restartRead(self: *WriteState) !ReadState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *WriteState) !WriteState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return WriteState{ .address = self.address };
+            }
+        };
+
+        pub const ReadState = struct {
+            address: u7,
+
+            pub fn start(address: u7) !ReadState {
+                return ReadState{ .address = address };
+            }
+
+            /// Fails with ReadError if incorrect number of bytes is received.
+            pub fn readNoEof(self: *ReadState, buffer: []u8) !void {
+                std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
+
+                // As master, initiate read from accelerometer, 7 bit address
+                regs.I2C1.CR2.modify(.{
+                    .ADD10 = 0,
+                    .SADD1 = self.address,
+                    .RD_WRN = 1, // read
+                    .NBYTES = @intCast(u8, buffer.len),
+                });
+                debugPrint("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, self.address });
+
+                // Communication START
+                regs.I2C1.CR2.modify(.{ .START = 1 });
+                debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
+                debugPrint("I2C1 STARTed\r\n", .{});
+                debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
+
+                for (buffer) |_, i| {
+                    // Wait for data to be received
+                    while (regs.I2C1.ISR.read().RXNE == 0) {
+                        debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
+
+                    // Read first data byte
+                    buffer[i] = regs.I2C1.RXDR.read().RXDATA;
+                }
+                debugPrint("I2C1 data: {any}\r\n", .{buffer});
+            }
+
+            pub fn stop(_: *ReadState) void {
+                // Communication STOP
+                regs.I2C1.CR2.modify(.{ .STOP = 1 });
+                while (regs.I2C1.ISR.read().BUSY == 1) {}
+                debugPrint("I2C1 STOPped\r\n", .{});
+            }
+
+            pub fn restartRead(self: *ReadState) !ReadState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *ReadState) !WriteState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return WriteState{ .address = self.address };
+            }
+        };
     };
 }
