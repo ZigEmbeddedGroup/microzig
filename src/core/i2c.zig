@@ -21,6 +21,8 @@ pub fn I2CController(comptime index: usize) type {
 
                     pub const Reader = std.io.Reader(*Self, ReadError, readSome);
 
+                    /// NOTE that some platforms, notably most (all?) STM32 microcontrollers,
+                    /// allow only a single read call per transfer.
                     pub fn reader(self: *Self) Reader {
                         return Reader{ .context = self };
                     }
@@ -31,11 +33,13 @@ pub fn I2CController(comptime index: usize) type {
                     }
 
                     /// STOP the transfer, invalidating this object.
-                    pub fn stop(self: *Self) void {
-                        self.state.stop();
+                    pub fn stop(self: *Self) !void {
+                        try self.state.stop();
                     }
 
                     /// RESTART to a new transfer, invalidating this object.
+                    /// Note that some platforms set the repeated START condition
+                    /// on the first read or write call.
                     pub fn restartTransfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
                         return Transfer(direction){ .state = try self.state.restartTransfer(new_direction) };
                     }
@@ -47,6 +51,9 @@ pub fn I2CController(comptime index: usize) type {
 
                     pub const Writer = std.io.Writer(*Self, WriteError, writeSome);
 
+                    /// NOTE that some platforms, notably most (all?) STM32 microcontrollers,
+                    /// will not immediately write all bytes, but postpone that
+                    /// to the next write call, or to the stop() call.
                     pub fn writer(self: *Self) Writer {
                         return Writer{ .context = self };
                     }
@@ -57,11 +64,13 @@ pub fn I2CController(comptime index: usize) type {
                     }
 
                     /// STOP the transfer, invalidating this object.
-                    pub fn stop(self: *Self) void {
-                        self.state.stop();
+                    pub fn stop(self: *Self) !void {
+                        try self.state.stop();
                     }
 
                     /// RESTART to a new transfer, invalidating this object.
+                    /// Note that some platforms set the repeated START condition
+                    /// on the first read or write call.
                     pub fn restartTransfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
                         return switch (new_direction) {
                             .read => Transfer(new_direction){ .state = try self.state.restartRead() },
@@ -72,7 +81,9 @@ pub fn I2CController(comptime index: usize) type {
             };
         }
 
-        /// START a new transfer
+        /// START a new transfer.
+        /// Note that some platforms set the START condition
+        /// on the first read or write call.
         pub fn startTransfer(self: Device, comptime direction: Direction) !Transfer(direction) {
             return switch (direction) {
                 .read => Transfer(direction){ .state = try SystemI2CController.ReadState.start(self.address) },
@@ -91,11 +102,11 @@ pub fn I2CController(comptime index: usize) type {
         pub fn readRegisters(self: Device, register_address: u8, buffer: []u8) ReadError!void {
             var rt = write_and_restart: {
                 var wt = try self.startTransfer(.write);
-                errdefer wt.stop();
+                errdefer wt.stop() catch {};
                 try wt.writer().writeByte(1 << 7 | register_address); // MSB == 'keep sending until I STOP'
                 break :write_and_restart try wt.restartTransfer(.read);
             };
-            defer rt.stop();
+            defer rt.stop() catch {};
             try rt.reader().readNoEof(buffer);
         }
     };

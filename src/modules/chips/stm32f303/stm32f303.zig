@@ -35,6 +35,7 @@
 //! and therefore USART1 runs on 8 MHz.
 
 const std = @import("std");
+const runtime_safety = std.debug.runtime_safety;
 const micro = @import("microzig");
 const chip = @import("registers.zig");
 const regs = chip.registers;
@@ -341,7 +342,7 @@ pub fn I2CController(comptime index: usize) type {
                 }
             }
 
-            pub fn stop(_: *WriteState) void {
+            pub fn stop(_: *WriteState) !void {
                 // Communication STOP
                 regs.I2C1.CR2.modify(.{ .STOP = 1 });
                 while (regs.I2C1.ISR.read().BUSY == 1) {}
@@ -360,6 +361,7 @@ pub fn I2CController(comptime index: usize) type {
 
         pub const ReadState = struct {
             address: u7,
+            read_allowed: if (runtime_safety) bool else void = if (runtime_safety) true else {},
 
             pub fn start(address: u7) !ReadState {
                 return ReadState{ .address = address };
@@ -367,6 +369,7 @@ pub fn I2CController(comptime index: usize) type {
 
             /// Fails with ReadError if incorrect number of bytes is received.
             pub fn readNoEof(self: *ReadState, buffer: []u8) !void {
+                if (!self.read_allowed) @panic("second read call not allowed");
                 std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
 
                 // As master, initiate read from accelerometer, 7 bit address
@@ -384,6 +387,8 @@ pub fn I2CController(comptime index: usize) type {
                 debugPrint("I2C1 STARTed\r\n", .{});
                 debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
 
+                if (runtime_safety) self.read_allowed = false;
+
                 for (buffer) |_, i| {
                     // Wait for data to be received
                     while (regs.I2C1.ISR.read().RXNE == 0) {
@@ -397,7 +402,7 @@ pub fn I2CController(comptime index: usize) type {
                 debugPrint("I2C1 data: {any}\r\n", .{buffer});
             }
 
-            pub fn stop(_: *ReadState) void {
+            pub fn stop(_: *ReadState) !void {
                 // Communication STOP
                 regs.I2C1.CR2.modify(.{ .STOP = 1 });
                 while (regs.I2C1.ISR.read().BUSY == 1) {}
