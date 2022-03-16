@@ -3,7 +3,7 @@
 // device: LPC176x5x
 // cpu: CM3
 
-pub const VectorTable = struct {
+pub const VectorTable = extern struct {
     initial_stack_pointer: u32,
     Reset: InterruptVector = unhandled,
     NMI: InterruptVector = unhandled,
@@ -552,7 +552,8 @@ pub const registers = struct {
             /// FIFO and the transmitter is available.
             THR: u8,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x0);
 
         /// address: 0x4000c000
@@ -564,7 +565,8 @@ pub const registers = struct {
             /// the baud rate of the UARTn.
             DLLSB: u8,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x0);
 
         /// address: 0x4000c004
@@ -576,7 +578,8 @@ pub const registers = struct {
             /// the baud rate of the UARTn.
             DLMSB: u8,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x4);
 
         /// address: 0x4000c004
@@ -644,7 +647,8 @@ pub const registers = struct {
             /// characters must be written before an interrupt or DMA request is activated.
             RXTRIGLVL: u2,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+           RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x8);
 
         /// address: 0x4000c00c
@@ -734,7 +738,8 @@ pub const registers = struct {
             /// errors in the UARTn FIFO.
             RXFE: u1,
             /// Reserved. The value read from a reserved bit is not defined.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x14);
 
         /// address: 0x4000c01c
@@ -743,7 +748,8 @@ pub const registers = struct {
             /// A readable, writable byte.
             PAD: u8,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x1c);
 
         /// address: 0x4000c020
@@ -778,7 +784,8 @@ pub const registers = struct {
             /// generator is used or not.
             MULVAL: u4,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x28);
 
         /// address: 0x4000c030
@@ -797,7 +804,8 @@ pub const registers = struct {
             /// (DC3). Software can set this bit again when it receives an XON (DC1) character.
             TXEN: u1,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x30);
 
         /// address: 0x4000c04c
@@ -838,7 +846,8 @@ pub const registers = struct {
             /// conjunction with an 8-bit counter.
             DLY: u8,
             /// Reserved. Read value is undefined, only zero should be written.
-            RESERVED: u24,
+            RESERVED0: u8,
+            RESERVED1: u16,
         }), base_address + 0x54);
     };
     /// UART1
@@ -5954,7 +5963,8 @@ pub const registers = struct {
             CPSDVSR: u8,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            RESERVED: u24,
+            RESERVED0: u8 = 0,
+            RESERVED1: u16 = 0,
         }), base_address + 0x10);
 
         /// address: 0x40088014
@@ -8670,13 +8680,13 @@ pub const registers = struct {
         /// Flash Accelerator Configuration Register. Controls flash access timing.
         pub const FLASHCFG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reserved, user software should not change these bits from the reset value.
-            reserved0: u12,
+            reserved0: u12 = 0,
             /// Flash access time. The value of this field plus 1 gives the number of CPU clocks
             /// used for a flash access. Warning: improper setting of this value may result in
             /// incorrect operation of the device. Other values are reserved.
             FLASHTIM: u4,
             /// Reserved. The value read from a reserved bit is not defined.
-            reserved1: u16,
+            reserved1: u16 = 0,
         }), base_address + 0x0);
 
         /// address: 0x400fc080
@@ -8693,7 +8703,7 @@ pub const registers = struct {
             PLLC0: u1,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            RESERVED: u30,
+            RESERVED: u30=0,
         }), base_address + 0x80);
 
         /// address: 0x400fc084
@@ -8705,13 +8715,13 @@ pub const registers = struct {
             MSEL0: u15,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            reserved0: u1,
+            reserved0: u1 = 0,
             /// PLL0 Pre-Divider value. Supplies the value N in PLL0 frequency calculations. The
             /// value stored here is N - 1. Supported values for N are 1 through 32.
             NSEL0: u8,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            reserved1: u8,
+            reserved1: u8 = 0,
         }), base_address + 0x84);
 
         /// address: 0x400fc088
@@ -8753,30 +8763,30 @@ pub const registers = struct {
             PLL0FEED: u8,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            padding0: u1,
-            padding1: u1,
-            padding2: u1,
-            padding3: u1,
-            padding4: u1,
-            padding5: u1,
-            padding6: u1,
-            padding7: u1,
-            padding8: u1,
-            padding9: u1,
-            padding10: u1,
-            padding11: u1,
-            padding12: u1,
-            padding13: u1,
-            padding14: u1,
-            padding15: u1,
-            padding16: u1,
-            padding17: u1,
-            padding18: u1,
-            padding19: u1,
-            padding20: u1,
-            padding21: u1,
-            padding22: u1,
-            padding23: u1,
+            padding0: u1 = 0,
+            padding1: u1 = 0,
+            padding2: u1 = 0,
+            padding3: u1 = 0,
+            padding4: u1 = 0,
+            padding5: u1 = 0,
+            padding6: u1 = 0,
+            padding7: u1 = 0,
+            padding8: u1 = 0,
+            padding9: u1 = 0,
+            padding10: u1 = 0,
+            padding11: u1 = 0,
+            padding12: u1 = 0,
+            padding13: u1 = 0,
+            padding14: u1 = 0,
+            padding15: u1 = 0,
+            padding16: u1 = 0,
+            padding17: u1 = 0,
+            padding18: u1 = 0,
+            padding19: u1 = 0,
+            padding20: u1 = 0,
+            padding21: u1 = 0,
+            padding22: u1 = 0,
+            padding23: u1 = 0,
         }), base_address + 0x8c);
 
         /// address: 0x400fc0a0
@@ -8976,30 +8986,30 @@ pub const registers = struct {
             CCLKSEL: u8,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            padding0: u1,
-            padding1: u1,
-            padding2: u1,
-            padding3: u1,
-            padding4: u1,
-            padding5: u1,
-            padding6: u1,
-            padding7: u1,
-            padding8: u1,
-            padding9: u1,
-            padding10: u1,
-            padding11: u1,
-            padding12: u1,
-            padding13: u1,
-            padding14: u1,
-            padding15: u1,
-            padding16: u1,
-            padding17: u1,
-            padding18: u1,
-            padding19: u1,
-            padding20: u1,
-            padding21: u1,
-            padding22: u1,
-            padding23: u1,
+            padding0: u1 = 0,
+            padding1: u1 = 0,
+            padding2: u1 = 0,
+            padding3: u1 = 0,
+            padding4: u1 = 0,
+            padding5: u1 = 0,
+            padding6: u1 = 0,
+            padding7: u1 = 0,
+            padding8: u1 = 0,
+            padding9: u1 = 0,
+            padding10: u1 = 0,
+            padding11: u1 = 0,
+            padding12: u1 = 0,
+            padding13: u1 = 0,
+            padding14: u1 = 0,
+            padding15: u1 = 0,
+            padding16: u1 = 0,
+            padding17: u1 = 0,
+            padding18: u1 = 0,
+            padding19: u1 = 0,
+            padding20: u1 = 0,
+            padding21: u1 = 0,
+            padding22: u1 = 0,
+            padding23: u1 = 0,
         }), base_address + 0x104);
 
         /// address: 0x400fc108
@@ -9026,7 +9036,7 @@ pub const registers = struct {
             CLKSRC: u2,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            RESERVED: u30,
+            RESERVED: u30=0,
         }), base_address + 0x10c);
 
         /// address: 0x400fc110
@@ -9228,7 +9238,7 @@ pub const registers = struct {
             /// Peripheral clock selection for I2C1.
             PCLK_I2C1: u2,
             /// Reserved.
-            RESERVED: u2,
+            RESERVED0: u2=1,
             /// Peripheral clock selection for SSP0.
             PCLK_SSP0: u2,
             /// Peripheral clock selection for TIMER2.
@@ -9244,7 +9254,7 @@ pub const registers = struct {
             /// Peripheral clock selection for I2S.
             PCLK_I2S: u2,
             /// Reserved.
-            RESERVED: u2,
+            RESERVED1: u2=1,
             /// Peripheral clock selection for Repetitive Interrupt Timer.
             PCLK_RIT: u2,
             /// Peripheral clock selection for the System Control block.

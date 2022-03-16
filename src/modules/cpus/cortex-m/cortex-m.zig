@@ -1,5 +1,6 @@
 const std = @import("std");
-const root = @import("root");
+const microzig = @import("microzig");
+const app = microzig.app;
 
 pub fn sei() void {
     asm volatile ("cpsie i");
@@ -73,4 +74,60 @@ pub const startup_logic = struct {
 
         microzig_main();
     }
+};
+
+fn isValidField(field_name: []const u8) bool {
+    return !std.mem.startsWith(u8, field_name, "reserved") and
+        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
+        !std.mem.eql(u8, field_name, "reset");
+}
+
+const VectorTable = microzig.chip.VectorTable;
+
+// will be imported by microzig.zig to allow system startup.
+pub const vector_table: VectorTable = blk: {
+    var tmp: microzig.chip.VectorTable = .{
+        .initial_stack_pointer = microzig.config.end_of_stack,
+        .Reset = .{ .C = microzig.cpu.startup_logic._start },
+    };
+    if (@hasDecl(app, "interrupts")) {
+        if (@typeInfo(app.interrupts) != .Struct)
+            @compileLog("root.interrupts must be a struct");
+
+        inline for (@typeInfo(app.interrupts).Struct.decls) |decl| {
+            const calling_convention = @typeInfo(@TypeOf(@field(app.interrupts, decl.name))).Fn.calling_convention;
+            const handler = @field(app.interrupts, decl.name);
+
+            if (!@hasField(VectorTable, decl.name)) {
+                var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
+                inline for (std.meta.fields(VectorTable)) |field| {
+                    if (isValidField(field.name)) {
+                        msg = msg ++ "    " ++ field.name ++ "\n";
+                    }
+                }
+
+                @compileError(msg);
+            }
+
+            if (!isValidField(decl.name))
+                @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
+
+            @field(tmp, decl.name) = switch (calling_convention) {
+                .C => .{ .C = handler },
+                .Naked => .{ .Naked = handler },
+                // for unspecified calling convention we are going to generate small wrapper
+                .Unspecified => .{
+                    .C = struct {
+                        fn wrapper() callconv(.C) void {
+                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                                @call(.{ .modifier = .always_inline }, handler, .{});
+                        }
+                    }.wrapper,
+                },
+
+                else => @compileError("unsupported calling convention for function " ++ decl.name),
+            };
+        }
+    }
+    break :blk tmp;
 };

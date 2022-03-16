@@ -10,7 +10,7 @@ pub const registers = struct {
         /// address: 0xa0000000
         /// SRAM/NOR-Flash chip-select control register
         /// 1
-        pub const BCR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BCR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MBKEN
             MBKEN: u1,
             /// MUXEN
@@ -59,7 +59,7 @@ pub const registers = struct {
         /// address: 0xa0000004
         /// SRAM/NOR-Flash chip-select timing register
         /// 1
-        pub const BTR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BTR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -81,7 +81,7 @@ pub const registers = struct {
         /// address: 0xa0000008
         /// SRAM/NOR-Flash chip-select control register
         /// 2
-        pub const BCR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BCR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MBKEN
             MBKEN: u1,
             /// MUXEN
@@ -131,7 +131,7 @@ pub const registers = struct {
         /// address: 0xa000000c
         /// SRAM/NOR-Flash chip-select timing register
         /// 2
-        pub const BTR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BTR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -153,7 +153,7 @@ pub const registers = struct {
         /// address: 0xa0000010
         /// SRAM/NOR-Flash chip-select control register
         /// 3
-        pub const BCR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BCR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MBKEN
             MBKEN: u1,
             /// MUXEN
@@ -203,7 +203,7 @@ pub const registers = struct {
         /// address: 0xa0000014
         /// SRAM/NOR-Flash chip-select timing register
         /// 3
-        pub const BTR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BTR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -225,7 +225,7 @@ pub const registers = struct {
         /// address: 0xa0000018
         /// SRAM/NOR-Flash chip-select control register
         /// 4
-        pub const BCR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BCR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MBKEN
             MBKEN: u1,
             /// MUXEN
@@ -275,7 +275,7 @@ pub const registers = struct {
         /// address: 0xa000001c
         /// SRAM/NOR-Flash chip-select timing register
         /// 4
-        pub const BTR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BTR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -297,7 +297,7 @@ pub const registers = struct {
         /// address: 0xa0000060
         /// PC Card/NAND Flash control register
         /// 2
-        pub const PCR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PCR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// PWAITEN
             PWAITEN: u1,
@@ -334,7 +334,7 @@ pub const registers = struct {
         /// address: 0xa0000064
         /// FIFO status and interrupt register
         /// 2
-        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IRS
             IRS: u1,
             /// ILS
@@ -379,7 +379,7 @@ pub const registers = struct {
         /// address: 0xa0000068
         /// Common memory space timing register
         /// 2
-        pub const PMEM2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PMEM2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MEMSETx
             MEMSETx: u8,
             /// MEMWAITx
@@ -393,7 +393,7 @@ pub const registers = struct {
         /// address: 0xa000006c
         /// Attribute memory space timing register
         /// 2
-        pub const PATT2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PATT2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Attribute memory x setup
             /// time
             ATTSETx: u8,
@@ -410,7 +410,7 @@ pub const registers = struct {
 
         /// address: 0xa0000074
         /// ECC result register 2
-        pub const ECCR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ECCR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ECC result
             ECCx: u32,
         }), base_address + 0x74);
@@ -418,7 +418,7 @@ pub const registers = struct {
         /// address: 0xa0000080
         /// PC Card/NAND Flash control register
         /// 3
-        pub const PCR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PCR3 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// PWAITEN
             PWAITEN: u1,
@@ -455,7 +455,7 @@ pub const registers = struct {
         /// address: 0xa0000084
         /// FIFO status and interrupt register
         /// 3
-        pub const SR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IRS
             IRS: u1,
             /// ILS
@@ -500,7 +500,7 @@ pub const registers = struct {
         /// address: 0xa0000088
         /// Common memory space timing register
         /// 3
-        pub const PMEM3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PMEM3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MEMSETx
             MEMSETx: u8,
             /// MEMWAITx
@@ -514,7 +514,7 @@ pub const registers = struct {
         /// address: 0xa000008c
         /// Attribute memory space timing register
         /// 3
-        pub const PATT3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PATT3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ATTSETx
             ATTSETx: u8,
             /// ATTWAITx
@@ -527,7 +527,7 @@ pub const registers = struct {
 
         /// address: 0xa0000094
         /// ECC result register 3
-        pub const ECCR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ECCR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ECCx
             ECCx: u32,
         }), base_address + 0x94);
@@ -535,7 +535,7 @@ pub const registers = struct {
         /// address: 0xa00000a0
         /// PC Card/NAND Flash control register
         /// 4
-        pub const PCR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PCR4 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// PWAITEN
             PWAITEN: u1,
@@ -572,7 +572,7 @@ pub const registers = struct {
         /// address: 0xa00000a4
         /// FIFO status and interrupt register
         /// 4
-        pub const SR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IRS
             IRS: u1,
             /// ILS
@@ -617,7 +617,7 @@ pub const registers = struct {
         /// address: 0xa00000a8
         /// Common memory space timing register
         /// 4
-        pub const PMEM4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PMEM4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// MEMSETx
             MEMSETx: u8,
             /// MEMWAITx
@@ -631,7 +631,7 @@ pub const registers = struct {
         /// address: 0xa00000ac
         /// Attribute memory space timing register
         /// 4
-        pub const PATT4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PATT4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ATTSETx
             ATTSETx: u8,
             /// ATTWAITx
@@ -644,7 +644,7 @@ pub const registers = struct {
 
         /// address: 0xa00000b0
         /// I/O space timing register 4
-        pub const PIO4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PIO4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IOSETx
             IOSETx: u8,
             /// IOWAITx
@@ -658,7 +658,7 @@ pub const registers = struct {
         /// address: 0xa0000104
         /// SRAM/NOR-Flash write timing registers
         /// 1
-        pub const BWTR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BWTR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -682,7 +682,7 @@ pub const registers = struct {
         /// address: 0xa000010c
         /// SRAM/NOR-Flash write timing registers
         /// 2
-        pub const BWTR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BWTR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -706,7 +706,7 @@ pub const registers = struct {
         /// address: 0xa0000114
         /// SRAM/NOR-Flash write timing registers
         /// 3
-        pub const BWTR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BWTR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -730,7 +730,7 @@ pub const registers = struct {
         /// address: 0xa000011c
         /// SRAM/NOR-Flash write timing registers
         /// 4
-        pub const BWTR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BWTR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADDSET
             ADDSET: u4,
             /// ADDHLD
@@ -758,7 +758,7 @@ pub const registers = struct {
         /// address: 0x40007000
         /// Power control register
         /// (PWR_CR)
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Low Power Deep Sleep
             LPDS: u1,
             /// Power Down Deep Sleep
@@ -803,7 +803,7 @@ pub const registers = struct {
         /// address: 0x40007004
         /// Power control register
         /// (PWR_CR)
-        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Wake-Up Flag
             WUF: u1,
             /// STANDBY Flag
@@ -848,7 +848,7 @@ pub const registers = struct {
 
         /// address: 0x40021000
         /// Clock control register
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Internal High Speed clock
             /// enable
             HSION: u1,
@@ -893,7 +893,7 @@ pub const registers = struct {
         /// address: 0x40021004
         /// Clock configuration register
         /// (RCC_CFGR)
-        pub const CFGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CFGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// System clock Switch
             SW: u2,
             /// System Clock Switch Status
@@ -930,7 +930,7 @@ pub const registers = struct {
         /// address: 0x40021008
         /// Clock interrupt register
         /// (RCC_CIR)
-        pub const CIR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CIR = @intToPtr(*volatile Mmio(32, packed struct {
             /// LSI Ready Interrupt flag
             LSIRDYF: u1,
             /// LSE Ready Interrupt flag
@@ -987,7 +987,7 @@ pub const registers = struct {
         /// address: 0x4002100c
         /// APB2 peripheral reset register
         /// (RCC_APB2RSTR)
-        pub const APB2RSTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const APB2RSTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Alternate function I/O
             /// reset
             AFIORST: u1,
@@ -1044,7 +1044,7 @@ pub const registers = struct {
         /// address: 0x40021010
         /// APB1 peripheral reset register
         /// (RCC_APB1RSTR)
-        pub const APB1RSTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const APB1RSTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Timer 2 reset
             TIM2RST: u1,
             /// Timer 3 reset
@@ -1105,7 +1105,7 @@ pub const registers = struct {
         /// address: 0x40021014
         /// AHB Peripheral Clock enable register
         /// (RCC_AHBENR)
-        pub const AHBENR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const AHBENR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA1 clock enable
             DMA1EN: u1,
             /// DMA2 clock enable
@@ -1151,7 +1151,7 @@ pub const registers = struct {
         /// address: 0x40021018
         /// APB2 peripheral clock enable register
         /// (RCC_APB2ENR)
-        pub const APB2ENR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const APB2ENR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Alternate function I/O clock
             /// enable
             AFIOEN: u1,
@@ -1211,7 +1211,7 @@ pub const registers = struct {
         /// address: 0x4002101c
         /// APB1 peripheral clock enable register
         /// (RCC_APB1ENR)
-        pub const APB1ENR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const APB1ENR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Timer 2 clock enable
             TIM2EN: u1,
             /// Timer 3 clock enable
@@ -1275,7 +1275,7 @@ pub const registers = struct {
         /// address: 0x40021020
         /// Backup domain control register
         /// (RCC_BDCR)
-        pub const BDCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BDCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// External Low Speed oscillator
             /// enable
             LSEON: u1,
@@ -1322,7 +1322,7 @@ pub const registers = struct {
         /// address: 0x40021024
         /// Control/status register
         /// (RCC_CSR)
-        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Internal low speed oscillator
             /// enable
             LSION: u1,
@@ -1376,7 +1376,7 @@ pub const registers = struct {
         /// address: 0x40010800
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -1422,7 +1422,7 @@ pub const registers = struct {
         /// address: 0x40010804
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -1468,7 +1468,7 @@ pub const registers = struct {
         /// address: 0x40010808
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -1522,7 +1522,7 @@ pub const registers = struct {
         /// address: 0x4001080c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -1576,7 +1576,7 @@ pub const registers = struct {
         /// address: 0x40010810
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -1646,7 +1646,7 @@ pub const registers = struct {
         /// address: 0x40010814
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -1700,7 +1700,7 @@ pub const registers = struct {
         /// address: 0x40010818
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -1758,7 +1758,7 @@ pub const registers = struct {
         /// address: 0x40010c00
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -1804,7 +1804,7 @@ pub const registers = struct {
         /// address: 0x40010c04
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -1850,7 +1850,7 @@ pub const registers = struct {
         /// address: 0x40010c08
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -1904,7 +1904,7 @@ pub const registers = struct {
         /// address: 0x40010c0c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -1958,7 +1958,7 @@ pub const registers = struct {
         /// address: 0x40010c10
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -2028,7 +2028,7 @@ pub const registers = struct {
         /// address: 0x40010c14
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -2082,7 +2082,7 @@ pub const registers = struct {
         /// address: 0x40010c18
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -2140,7 +2140,7 @@ pub const registers = struct {
         /// address: 0x40011000
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -2186,7 +2186,7 @@ pub const registers = struct {
         /// address: 0x40011004
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -2232,7 +2232,7 @@ pub const registers = struct {
         /// address: 0x40011008
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -2286,7 +2286,7 @@ pub const registers = struct {
         /// address: 0x4001100c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -2340,7 +2340,7 @@ pub const registers = struct {
         /// address: 0x40011010
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -2410,7 +2410,7 @@ pub const registers = struct {
         /// address: 0x40011014
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -2464,7 +2464,7 @@ pub const registers = struct {
         /// address: 0x40011018
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -2522,7 +2522,7 @@ pub const registers = struct {
         /// address: 0x40011400
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -2568,7 +2568,7 @@ pub const registers = struct {
         /// address: 0x40011404
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -2614,7 +2614,7 @@ pub const registers = struct {
         /// address: 0x40011408
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -2668,7 +2668,7 @@ pub const registers = struct {
         /// address: 0x4001140c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -2722,7 +2722,7 @@ pub const registers = struct {
         /// address: 0x40011410
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -2792,7 +2792,7 @@ pub const registers = struct {
         /// address: 0x40011414
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -2846,7 +2846,7 @@ pub const registers = struct {
         /// address: 0x40011418
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -2904,7 +2904,7 @@ pub const registers = struct {
         /// address: 0x40011800
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -2950,7 +2950,7 @@ pub const registers = struct {
         /// address: 0x40011804
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -2996,7 +2996,7 @@ pub const registers = struct {
         /// address: 0x40011808
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -3050,7 +3050,7 @@ pub const registers = struct {
         /// address: 0x4001180c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -3104,7 +3104,7 @@ pub const registers = struct {
         /// address: 0x40011810
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -3174,7 +3174,7 @@ pub const registers = struct {
         /// address: 0x40011814
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -3228,7 +3228,7 @@ pub const registers = struct {
         /// address: 0x40011818
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -3286,7 +3286,7 @@ pub const registers = struct {
         /// address: 0x40011c00
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -3332,7 +3332,7 @@ pub const registers = struct {
         /// address: 0x40011c04
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -3378,7 +3378,7 @@ pub const registers = struct {
         /// address: 0x40011c08
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -3432,7 +3432,7 @@ pub const registers = struct {
         /// address: 0x40011c0c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -3486,7 +3486,7 @@ pub const registers = struct {
         /// address: 0x40011c10
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -3556,7 +3556,7 @@ pub const registers = struct {
         /// address: 0x40011c14
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -3610,7 +3610,7 @@ pub const registers = struct {
         /// address: 0x40011c18
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -3668,7 +3668,7 @@ pub const registers = struct {
         /// address: 0x40012000
         /// Port configuration register low
         /// (GPIOn_CRL)
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.0 mode bits
             MODE0: u2,
             /// Port n.0 configuration
@@ -3714,7 +3714,7 @@ pub const registers = struct {
         /// address: 0x40012004
         /// Port configuration register high
         /// (GPIOn_CRL)
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port n.8 mode bits
             MODE8: u2,
             /// Port n.8 configuration
@@ -3760,7 +3760,7 @@ pub const registers = struct {
         /// address: 0x40012008
         /// Port input data register
         /// (GPIOn_IDR)
-        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port input data
             IDR0: u1,
             /// Port input data
@@ -3814,7 +3814,7 @@ pub const registers = struct {
         /// address: 0x4001200c
         /// Port output data register
         /// (GPIOn_ODR)
-        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ODR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port output data
             ODR0: u1,
             /// Port output data
@@ -3868,7 +3868,7 @@ pub const registers = struct {
         /// address: 0x40012010
         /// Port bit set/reset register
         /// (GPIOn_BSRR)
-        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BSRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Set bit 0
             BS0: u1,
             /// Set bit 1
@@ -3938,7 +3938,7 @@ pub const registers = struct {
         /// address: 0x40012014
         /// Port bit reset register
         /// (GPIOn_BRR)
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit 0
             BR0: u1,
             /// Reset bit 1
@@ -3992,7 +3992,7 @@ pub const registers = struct {
         /// address: 0x40012018
         /// Port configuration lock
         /// register
-        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LCKR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Port A Lock bit 0
             LCK0: u1,
             /// Port A Lock bit 1
@@ -4051,7 +4051,7 @@ pub const registers = struct {
         /// address: 0x40010000
         /// Event Control Register
         /// (AFIO_EVCR)
-        pub const EVCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EVCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pin selection
             PIN: u4,
             /// Port selection
@@ -4087,7 +4087,7 @@ pub const registers = struct {
         /// address: 0x40010004
         /// AF remap and debug I/O configuration
         /// register (AFIO_MAPR)
-        pub const MAPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MAPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// SPI1 remapping
             SPI1_REMAP: u1,
             /// I2C1 remapping
@@ -4142,7 +4142,7 @@ pub const registers = struct {
         /// address: 0x40010008
         /// External interrupt configuration register 1
         /// (AFIO_EXTICR1)
-        pub const EXTICR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EXTICR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// EXTI0 configuration
             EXTI0: u4,
             /// EXTI1 configuration
@@ -4172,7 +4172,7 @@ pub const registers = struct {
         /// address: 0x4001000c
         /// External interrupt configuration register 2
         /// (AFIO_EXTICR2)
-        pub const EXTICR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EXTICR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// EXTI4 configuration
             EXTI4: u4,
             /// EXTI5 configuration
@@ -4202,7 +4202,7 @@ pub const registers = struct {
         /// address: 0x40010010
         /// External interrupt configuration register 3
         /// (AFIO_EXTICR3)
-        pub const EXTICR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EXTICR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// EXTI8 configuration
             EXTI8: u4,
             /// EXTI9 configuration
@@ -4232,7 +4232,7 @@ pub const registers = struct {
         /// address: 0x40010014
         /// External interrupt configuration register 4
         /// (AFIO_EXTICR4)
-        pub const EXTICR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EXTICR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// EXTI12 configuration
             EXTI12: u4,
             /// EXTI13 configuration
@@ -4262,7 +4262,7 @@ pub const registers = struct {
         /// address: 0x4001001c
         /// AF remap and debug I/O configuration
         /// register
-        pub const MAPR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MAPR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -4310,7 +4310,7 @@ pub const registers = struct {
         /// address: 0x40010400
         /// Interrupt mask register
         /// (EXTI_IMR)
-        pub const IMR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IMR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Interrupt Mask on line 0
             MR0: u1,
             /// Interrupt Mask on line 1
@@ -4366,7 +4366,7 @@ pub const registers = struct {
 
         /// address: 0x40010404
         /// Event mask register (EXTI_EMR)
-        pub const EMR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EMR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Event Mask on line 0
             MR0: u1,
             /// Event Mask on line 1
@@ -4423,7 +4423,7 @@ pub const registers = struct {
         /// address: 0x40010408
         /// Rising Trigger selection register
         /// (EXTI_RTSR)
-        pub const RTSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RTSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rising trigger event configuration of
             /// line 0
             TR0: u1,
@@ -4499,7 +4499,7 @@ pub const registers = struct {
         /// address: 0x4001040c
         /// Falling Trigger selection register
         /// (EXTI_FTSR)
-        pub const FTSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FTSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Falling trigger event configuration of
             /// line 0
             TR0: u1,
@@ -4575,7 +4575,7 @@ pub const registers = struct {
         /// address: 0x40010410
         /// Software interrupt event register
         /// (EXTI_SWIER)
-        pub const SWIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SWIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Software Interrupt on line
             /// 0
             SWIER0: u1,
@@ -4650,7 +4650,7 @@ pub const registers = struct {
 
         /// address: 0x40010414
         /// Pending register (EXTI_PR)
-        pub const PR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const PR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Pending bit 0
             PR0: u1,
             /// Pending bit 1
@@ -4711,7 +4711,7 @@ pub const registers = struct {
         /// address: 0x40020000
         /// DMA interrupt status register
         /// (DMA_ISR)
-        pub const ISR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 1 Global interrupt
             /// flag
             GIF1: u1,
@@ -4805,7 +4805,7 @@ pub const registers = struct {
         /// address: 0x40020004
         /// DMA interrupt flag clear register
         /// (DMA_IFCR)
-        pub const IFCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IFCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 1 Global interrupt
             /// clear
             CGIF1: u1,
@@ -4899,7 +4899,7 @@ pub const registers = struct {
         /// address: 0x40020008
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -4949,7 +4949,7 @@ pub const registers = struct {
         /// address: 0x4002000c
         /// DMA channel 1 number of data
         /// register
-        pub const CNDTR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -4973,7 +4973,7 @@ pub const registers = struct {
         /// address: 0x40020010
         /// DMA channel 1 peripheral address
         /// register
-        pub const CPAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x10);
@@ -4981,7 +4981,7 @@ pub const registers = struct {
         /// address: 0x40020014
         /// DMA channel 1 memory address
         /// register
-        pub const CMAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x14);
@@ -4989,7 +4989,7 @@ pub const registers = struct {
         /// address: 0x4002001c
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5039,7 +5039,7 @@ pub const registers = struct {
         /// address: 0x40020020
         /// DMA channel 2 number of data
         /// register
-        pub const CNDTR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5063,7 +5063,7 @@ pub const registers = struct {
         /// address: 0x40020024
         /// DMA channel 2 peripheral address
         /// register
-        pub const CPAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x24);
@@ -5071,7 +5071,7 @@ pub const registers = struct {
         /// address: 0x40020028
         /// DMA channel 2 memory address
         /// register
-        pub const CMAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x28);
@@ -5079,7 +5079,7 @@ pub const registers = struct {
         /// address: 0x40020030
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5129,7 +5129,7 @@ pub const registers = struct {
         /// address: 0x40020034
         /// DMA channel 3 number of data
         /// register
-        pub const CNDTR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5153,7 +5153,7 @@ pub const registers = struct {
         /// address: 0x40020038
         /// DMA channel 3 peripheral address
         /// register
-        pub const CPAR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x38);
@@ -5161,7 +5161,7 @@ pub const registers = struct {
         /// address: 0x4002003c
         /// DMA channel 3 memory address
         /// register
-        pub const CMAR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x3c);
@@ -5169,7 +5169,7 @@ pub const registers = struct {
         /// address: 0x40020044
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5219,7 +5219,7 @@ pub const registers = struct {
         /// address: 0x40020048
         /// DMA channel 4 number of data
         /// register
-        pub const CNDTR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5243,7 +5243,7 @@ pub const registers = struct {
         /// address: 0x4002004c
         /// DMA channel 4 peripheral address
         /// register
-        pub const CPAR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x4c);
@@ -5251,7 +5251,7 @@ pub const registers = struct {
         /// address: 0x40020050
         /// DMA channel 4 memory address
         /// register
-        pub const CMAR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x50);
@@ -5259,7 +5259,7 @@ pub const registers = struct {
         /// address: 0x40020058
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5309,7 +5309,7 @@ pub const registers = struct {
         /// address: 0x4002005c
         /// DMA channel 5 number of data
         /// register
-        pub const CNDTR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5333,7 +5333,7 @@ pub const registers = struct {
         /// address: 0x40020060
         /// DMA channel 5 peripheral address
         /// register
-        pub const CPAR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x60);
@@ -5341,7 +5341,7 @@ pub const registers = struct {
         /// address: 0x40020064
         /// DMA channel 5 memory address
         /// register
-        pub const CMAR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x64);
@@ -5349,7 +5349,7 @@ pub const registers = struct {
         /// address: 0x4002006c
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5399,7 +5399,7 @@ pub const registers = struct {
         /// address: 0x40020070
         /// DMA channel 6 number of data
         /// register
-        pub const CNDTR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5423,7 +5423,7 @@ pub const registers = struct {
         /// address: 0x40020074
         /// DMA channel 6 peripheral address
         /// register
-        pub const CPAR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x74);
@@ -5431,7 +5431,7 @@ pub const registers = struct {
         /// address: 0x40020078
         /// DMA channel 6 memory address
         /// register
-        pub const CMAR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x78);
@@ -5439,7 +5439,7 @@ pub const registers = struct {
         /// address: 0x40020080
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5489,7 +5489,7 @@ pub const registers = struct {
         /// address: 0x40020084
         /// DMA channel 7 number of data
         /// register
-        pub const CNDTR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5513,7 +5513,7 @@ pub const registers = struct {
         /// address: 0x40020088
         /// DMA channel 7 peripheral address
         /// register
-        pub const CPAR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x88);
@@ -5521,7 +5521,7 @@ pub const registers = struct {
         /// address: 0x4002008c
         /// DMA channel 7 memory address
         /// register
-        pub const CMAR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x8c);
@@ -5532,7 +5532,7 @@ pub const registers = struct {
         /// address: 0x40020400
         /// DMA interrupt status register
         /// (DMA_ISR)
-        pub const ISR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 1 Global interrupt
             /// flag
             GIF1: u1,
@@ -5626,7 +5626,7 @@ pub const registers = struct {
         /// address: 0x40020404
         /// DMA interrupt flag clear register
         /// (DMA_IFCR)
-        pub const IFCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IFCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 1 Global interrupt
             /// clear
             CGIF1: u1,
@@ -5720,7 +5720,7 @@ pub const registers = struct {
         /// address: 0x40020408
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5770,7 +5770,7 @@ pub const registers = struct {
         /// address: 0x4002040c
         /// DMA channel 1 number of data
         /// register
-        pub const CNDTR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5794,7 +5794,7 @@ pub const registers = struct {
         /// address: 0x40020410
         /// DMA channel 1 peripheral address
         /// register
-        pub const CPAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x10);
@@ -5802,7 +5802,7 @@ pub const registers = struct {
         /// address: 0x40020414
         /// DMA channel 1 memory address
         /// register
-        pub const CMAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x14);
@@ -5810,7 +5810,7 @@ pub const registers = struct {
         /// address: 0x4002041c
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5860,7 +5860,7 @@ pub const registers = struct {
         /// address: 0x40020420
         /// DMA channel 2 number of data
         /// register
-        pub const CNDTR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5884,7 +5884,7 @@ pub const registers = struct {
         /// address: 0x40020424
         /// DMA channel 2 peripheral address
         /// register
-        pub const CPAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x24);
@@ -5892,7 +5892,7 @@ pub const registers = struct {
         /// address: 0x40020428
         /// DMA channel 2 memory address
         /// register
-        pub const CMAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x28);
@@ -5900,7 +5900,7 @@ pub const registers = struct {
         /// address: 0x40020430
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -5950,7 +5950,7 @@ pub const registers = struct {
         /// address: 0x40020434
         /// DMA channel 3 number of data
         /// register
-        pub const CNDTR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -5974,7 +5974,7 @@ pub const registers = struct {
         /// address: 0x40020438
         /// DMA channel 3 peripheral address
         /// register
-        pub const CPAR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x38);
@@ -5982,7 +5982,7 @@ pub const registers = struct {
         /// address: 0x4002043c
         /// DMA channel 3 memory address
         /// register
-        pub const CMAR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x3c);
@@ -5990,7 +5990,7 @@ pub const registers = struct {
         /// address: 0x40020444
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -6040,7 +6040,7 @@ pub const registers = struct {
         /// address: 0x40020448
         /// DMA channel 4 number of data
         /// register
-        pub const CNDTR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -6064,7 +6064,7 @@ pub const registers = struct {
         /// address: 0x4002044c
         /// DMA channel 4 peripheral address
         /// register
-        pub const CPAR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x4c);
@@ -6072,7 +6072,7 @@ pub const registers = struct {
         /// address: 0x40020450
         /// DMA channel 4 memory address
         /// register
-        pub const CMAR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x50);
@@ -6080,7 +6080,7 @@ pub const registers = struct {
         /// address: 0x40020458
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -6130,7 +6130,7 @@ pub const registers = struct {
         /// address: 0x4002045c
         /// DMA channel 5 number of data
         /// register
-        pub const CNDTR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -6154,7 +6154,7 @@ pub const registers = struct {
         /// address: 0x40020460
         /// DMA channel 5 peripheral address
         /// register
-        pub const CPAR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x60);
@@ -6162,7 +6162,7 @@ pub const registers = struct {
         /// address: 0x40020464
         /// DMA channel 5 memory address
         /// register
-        pub const CMAR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x64);
@@ -6170,7 +6170,7 @@ pub const registers = struct {
         /// address: 0x4002046c
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -6220,7 +6220,7 @@ pub const registers = struct {
         /// address: 0x40020470
         /// DMA channel 6 number of data
         /// register
-        pub const CNDTR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -6244,7 +6244,7 @@ pub const registers = struct {
         /// address: 0x40020474
         /// DMA channel 6 peripheral address
         /// register
-        pub const CPAR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x74);
@@ -6252,7 +6252,7 @@ pub const registers = struct {
         /// address: 0x40020478
         /// DMA channel 6 memory address
         /// register
-        pub const CMAR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x78);
@@ -6260,7 +6260,7 @@ pub const registers = struct {
         /// address: 0x40020480
         /// DMA channel configuration register
         /// (DMA_CCR)
-        pub const CCR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel enable
             EN: u1,
             /// Transfer complete interrupt
@@ -6310,7 +6310,7 @@ pub const registers = struct {
         /// address: 0x40020484
         /// DMA channel 7 number of data
         /// register
-        pub const CNDTR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNDTR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Number of data to transfer
             NDT: u16,
             padding0: u1,
@@ -6334,7 +6334,7 @@ pub const registers = struct {
         /// address: 0x40020488
         /// DMA channel 7 peripheral address
         /// register
-        pub const CPAR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CPAR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral address
             PA: u32,
         }), base_address + 0x88);
@@ -6342,7 +6342,7 @@ pub const registers = struct {
         /// address: 0x4002048c
         /// DMA channel 7 memory address
         /// register
-        pub const CMAR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMAR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Memory address
             MA: u32,
         }), base_address + 0x8c);
@@ -6355,7 +6355,7 @@ pub const registers = struct {
         /// address: 0x40018000
         /// Bits 1:0 = PWRCTRL: Power supply control
         /// bits
-        pub const POWER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const POWER = @intToPtr(*volatile Mmio(32, packed struct {
             /// PWRCTRL
             PWRCTRL: u2,
             padding0: u1,
@@ -6393,7 +6393,7 @@ pub const registers = struct {
         /// address: 0x40018004
         /// SDI clock control register
         /// (SDIO_CLKCR)
-        pub const CLKCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CLKCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock divide factor
             CLKDIV: u8,
             /// Clock enable bit
@@ -6432,7 +6432,7 @@ pub const registers = struct {
 
         /// address: 0x40018008
         /// Bits 31:0 = : Command argument
-        pub const ARG = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ARG = @intToPtr(*volatile Mmio(32, packed struct {
             /// Command argument
             CMDARG: u32,
         }), base_address + 0x8);
@@ -6440,7 +6440,7 @@ pub const registers = struct {
         /// address: 0x4001800c
         /// SDIO command register
         /// (SDIO_CMD)
-        pub const CMD = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CMD = @intToPtr(*volatile Mmio(32, packed struct {
             /// CMDINDEX
             CMDINDEX: u6,
             /// WAITRESP
@@ -6484,28 +6484,28 @@ pub const registers = struct {
 
         /// address: 0x40018014
         /// Bits 31:0 = CARDSTATUS1
-        pub const RESPI1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESPI1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CARDSTATUS1
             CARDSTATUS1: u32,
         }), base_address + 0x14);
 
         /// address: 0x40018018
         /// Bits 31:0 = CARDSTATUS2
-        pub const RESP2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESP2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CARDSTATUS2
             CARDSTATUS2: u32,
         }), base_address + 0x18);
 
         /// address: 0x4001801c
         /// Bits 31:0 = CARDSTATUS3
-        pub const RESP3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESP3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CARDSTATUS3
             CARDSTATUS3: u32,
         }), base_address + 0x1c);
 
         /// address: 0x40018020
         /// Bits 31:0 = CARDSTATUS4
-        pub const RESP4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RESP4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CARDSTATUS4
             CARDSTATUS4: u32,
         }), base_address + 0x20);
@@ -6513,7 +6513,7 @@ pub const registers = struct {
         /// address: 0x40018024
         /// Bits 31:0 = DATATIME: Data timeout
         /// period
-        pub const DTIMER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DTIMER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data timeout period
             DATATIME: u32,
         }), base_address + 0x24);
@@ -6521,7 +6521,7 @@ pub const registers = struct {
         /// address: 0x40018028
         /// Bits 24:0 = DATALENGTH: Data length
         /// value
-        pub const DLEN = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DLEN = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data length value
             DATALENGTH: u25,
             padding0: u1,
@@ -6536,7 +6536,7 @@ pub const registers = struct {
         /// address: 0x4001802c
         /// SDIO data control register
         /// (SDIO_DCTRL)
-        pub const DCTRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCTRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// DTEN
             DTEN: u1,
             /// DTDIR
@@ -6580,7 +6580,7 @@ pub const registers = struct {
         /// address: 0x40018030
         /// Bits 24:0 = DATACOUNT: Data count
         /// value
-        pub const DCOUNT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCOUNT = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data count value
             DATACOUNT: u25,
             padding0: u1,
@@ -6595,7 +6595,7 @@ pub const registers = struct {
         /// address: 0x40018034
         /// SDIO status register
         /// (SDIO_STA)
-        pub const STA = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const STA = @intToPtr(*volatile Mmio(32, packed struct {
             /// CCRCFAIL
             CCRCFAIL: u1,
             /// DCRCFAIL
@@ -6657,7 +6657,7 @@ pub const registers = struct {
         /// address: 0x40018038
         /// SDIO interrupt clear register
         /// (SDIO_ICR)
-        pub const ICR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICR = @intToPtr(*volatile Mmio(32, packed struct {
             /// CCRCFAILC
             CCRCFAILC: u1,
             /// DCRCFAILC
@@ -6707,7 +6707,7 @@ pub const registers = struct {
 
         /// address: 0x4001803c
         /// SDIO mask register (SDIO_MASK)
-        pub const MASK = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const MASK = @intToPtr(*volatile Mmio(32, packed struct {
             /// CCRCFAILIE
             CCRCFAILIE: u1,
             /// DCRCFAILIE
@@ -6770,7 +6770,7 @@ pub const registers = struct {
         /// Bits 23:0 = FIFOCOUNT: Remaining number of
         /// words to be written to or read from the
         /// FIFO
-        pub const FIFOCNT = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FIFOCNT = @intToPtr(*volatile Mmio(32, packed struct {
             /// FIF0COUNT
             FIF0COUNT: u24,
             padding0: u1,
@@ -6786,7 +6786,7 @@ pub const registers = struct {
         /// address: 0x40018080
         /// bits 31:0 = FIFOData: Receive and transmit
         /// FIFO data
-        pub const FIFO = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FIFO = @intToPtr(*volatile Mmio(32, packed struct {
             /// FIFOData
             FIFOData: u32,
         }), base_address + 0x80);
@@ -6797,7 +6797,7 @@ pub const registers = struct {
 
         /// address: 0x40002800
         /// RTC Control Register High
-        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRH = @intToPtr(*volatile Mmio(32, packed struct {
             /// Second interrupt Enable
             SECIE: u1,
             /// Alarm interrupt Enable
@@ -6837,7 +6837,7 @@ pub const registers = struct {
 
         /// address: 0x40002804
         /// RTC Control Register Low
-        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRL = @intToPtr(*volatile Mmio(32, packed struct {
             /// Second Flag
             SECF: u1,
             /// Alarm Flag
@@ -6921,7 +6921,7 @@ pub const registers = struct {
 
         /// address: 0x40006c04
         /// Backup data register (BKP_DR)
-        pub const DR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D1: u16,
             padding0: u1,
@@ -6944,7 +6944,7 @@ pub const registers = struct {
 
         /// address: 0x40006c08
         /// Backup data register (BKP_DR)
-        pub const DR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D2: u16,
             padding0: u1,
@@ -6967,7 +6967,7 @@ pub const registers = struct {
 
         /// address: 0x40006c0c
         /// Backup data register (BKP_DR)
-        pub const DR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D3: u16,
             padding0: u1,
@@ -6990,7 +6990,7 @@ pub const registers = struct {
 
         /// address: 0x40006c10
         /// Backup data register (BKP_DR)
-        pub const DR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D4: u16,
             padding0: u1,
@@ -7013,7 +7013,7 @@ pub const registers = struct {
 
         /// address: 0x40006c14
         /// Backup data register (BKP_DR)
-        pub const DR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D5: u16,
             padding0: u1,
@@ -7036,7 +7036,7 @@ pub const registers = struct {
 
         /// address: 0x40006c18
         /// Backup data register (BKP_DR)
-        pub const DR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D6: u16,
             padding0: u1,
@@ -7059,7 +7059,7 @@ pub const registers = struct {
 
         /// address: 0x40006c1c
         /// Backup data register (BKP_DR)
-        pub const DR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D7: u16,
             padding0: u1,
@@ -7082,7 +7082,7 @@ pub const registers = struct {
 
         /// address: 0x40006c20
         /// Backup data register (BKP_DR)
-        pub const DR8 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR8 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D8: u16,
             padding0: u1,
@@ -7105,7 +7105,7 @@ pub const registers = struct {
 
         /// address: 0x40006c24
         /// Backup data register (BKP_DR)
-        pub const DR9 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR9 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D9: u16,
             padding0: u1,
@@ -7128,7 +7128,7 @@ pub const registers = struct {
 
         /// address: 0x40006c28
         /// Backup data register (BKP_DR)
-        pub const DR10 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR10 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D10: u16,
             padding0: u1,
@@ -7163,7 +7163,7 @@ pub const registers = struct {
 
         /// address: 0x40006c4c
         /// Backup data register (BKP_DR)
-        pub const DR14 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR14 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D14: u16,
             padding0: u1,
@@ -7186,7 +7186,7 @@ pub const registers = struct {
 
         /// address: 0x40006c50
         /// Backup data register (BKP_DR)
-        pub const DR15 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR15 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D15: u16,
             padding0: u1,
@@ -7209,7 +7209,7 @@ pub const registers = struct {
 
         /// address: 0x40006c54
         /// Backup data register (BKP_DR)
-        pub const DR16 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR16 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D16: u16,
             padding0: u1,
@@ -7232,7 +7232,7 @@ pub const registers = struct {
 
         /// address: 0x40006c58
         /// Backup data register (BKP_DR)
-        pub const DR17 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR17 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D17: u16,
             padding0: u1,
@@ -7255,7 +7255,7 @@ pub const registers = struct {
 
         /// address: 0x40006c5c
         /// Backup data register (BKP_DR)
-        pub const DR18 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR18 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D18: u16,
             padding0: u1,
@@ -7278,7 +7278,7 @@ pub const registers = struct {
 
         /// address: 0x40006c60
         /// Backup data register (BKP_DR)
-        pub const DR19 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR19 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D19: u16,
             padding0: u1,
@@ -7301,7 +7301,7 @@ pub const registers = struct {
 
         /// address: 0x40006c64
         /// Backup data register (BKP_DR)
-        pub const DR20 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR20 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D20: u16,
             padding0: u1,
@@ -7324,7 +7324,7 @@ pub const registers = struct {
 
         /// address: 0x40006c68
         /// Backup data register (BKP_DR)
-        pub const DR21 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR21 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D21: u16,
             padding0: u1,
@@ -7347,7 +7347,7 @@ pub const registers = struct {
 
         /// address: 0x40006c6c
         /// Backup data register (BKP_DR)
-        pub const DR22 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR22 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D22: u16,
             padding0: u1,
@@ -7370,7 +7370,7 @@ pub const registers = struct {
 
         /// address: 0x40006c70
         /// Backup data register (BKP_DR)
-        pub const DR23 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR23 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D23: u16,
             padding0: u1,
@@ -7393,7 +7393,7 @@ pub const registers = struct {
 
         /// address: 0x40006c74
         /// Backup data register (BKP_DR)
-        pub const DR24 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR24 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D24: u16,
             padding0: u1,
@@ -7416,7 +7416,7 @@ pub const registers = struct {
 
         /// address: 0x40006c78
         /// Backup data register (BKP_DR)
-        pub const DR25 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR25 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D25: u16,
             padding0: u1,
@@ -7439,7 +7439,7 @@ pub const registers = struct {
 
         /// address: 0x40006c7c
         /// Backup data register (BKP_DR)
-        pub const DR26 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR26 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D26: u16,
             padding0: u1,
@@ -7462,7 +7462,7 @@ pub const registers = struct {
 
         /// address: 0x40006c80
         /// Backup data register (BKP_DR)
-        pub const DR27 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR27 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D27: u16,
             padding0: u1,
@@ -7485,7 +7485,7 @@ pub const registers = struct {
 
         /// address: 0x40006c84
         /// Backup data register (BKP_DR)
-        pub const DR28 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR28 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D28: u16,
             padding0: u1,
@@ -7508,7 +7508,7 @@ pub const registers = struct {
 
         /// address: 0x40006c88
         /// Backup data register (BKP_DR)
-        pub const DR29 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR29 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D29: u16,
             padding0: u1,
@@ -7531,7 +7531,7 @@ pub const registers = struct {
 
         /// address: 0x40006c8c
         /// Backup data register (BKP_DR)
-        pub const DR30 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR30 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D30: u16,
             padding0: u1,
@@ -7554,7 +7554,7 @@ pub const registers = struct {
 
         /// address: 0x40006c90
         /// Backup data register (BKP_DR)
-        pub const DR31 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR31 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D31: u16,
             padding0: u1,
@@ -7577,7 +7577,7 @@ pub const registers = struct {
 
         /// address: 0x40006c94
         /// Backup data register (BKP_DR)
-        pub const DR32 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR32 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D32: u16,
             padding0: u1,
@@ -7600,7 +7600,7 @@ pub const registers = struct {
 
         /// address: 0x40006c98
         /// Backup data register (BKP_DR)
-        pub const DR33 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR33 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D33: u16,
             padding0: u1,
@@ -7623,7 +7623,7 @@ pub const registers = struct {
 
         /// address: 0x40006c9c
         /// Backup data register (BKP_DR)
-        pub const DR34 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR34 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D34: u16,
             padding0: u1,
@@ -7646,7 +7646,7 @@ pub const registers = struct {
 
         /// address: 0x40006ca0
         /// Backup data register (BKP_DR)
-        pub const DR35 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR35 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D35: u16,
             padding0: u1,
@@ -7669,7 +7669,7 @@ pub const registers = struct {
 
         /// address: 0x40006ca4
         /// Backup data register (BKP_DR)
-        pub const DR36 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR36 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D36: u16,
             padding0: u1,
@@ -7692,7 +7692,7 @@ pub const registers = struct {
 
         /// address: 0x40006ca8
         /// Backup data register (BKP_DR)
-        pub const DR37 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR37 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D37: u16,
             padding0: u1,
@@ -7715,7 +7715,7 @@ pub const registers = struct {
 
         /// address: 0x40006cac
         /// Backup data register (BKP_DR)
-        pub const DR38 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR38 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D38: u16,
             padding0: u1,
@@ -7738,7 +7738,7 @@ pub const registers = struct {
 
         /// address: 0x40006cb0
         /// Backup data register (BKP_DR)
-        pub const DR39 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR39 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D39: u16,
             padding0: u1,
@@ -7761,7 +7761,7 @@ pub const registers = struct {
 
         /// address: 0x40006cb4
         /// Backup data register (BKP_DR)
-        pub const DR40 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR40 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D40: u16,
             padding0: u1,
@@ -7784,7 +7784,7 @@ pub const registers = struct {
 
         /// address: 0x40006cb8
         /// Backup data register (BKP_DR)
-        pub const DR41 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR41 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D41: u16,
             padding0: u1,
@@ -7807,7 +7807,7 @@ pub const registers = struct {
 
         /// address: 0x40006cbc
         /// Backup data register (BKP_DR)
-        pub const DR42 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR42 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Backup data
             D42: u16,
             padding0: u1,
@@ -7831,7 +7831,7 @@ pub const registers = struct {
         /// address: 0x40006c2c
         /// RTC clock calibration register
         /// (BKP_RTCCR)
-        pub const RTCCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RTCCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Calibration value
             CAL: u7,
             /// Calibration Clock Output
@@ -7869,7 +7869,7 @@ pub const registers = struct {
         /// address: 0x40006c30
         /// Backup control register
         /// (BKP_CR)
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Tamper pin enable
             TPE: u1,
             /// Tamper pin active level
@@ -7909,7 +7909,7 @@ pub const registers = struct {
         /// address: 0x40006c34
         /// BKP_CSR control/status register
         /// (BKP_CSR)
-        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clear Tamper event
             CTE: u1,
             /// Clear Tamper Interrupt
@@ -7956,7 +7956,7 @@ pub const registers = struct {
 
         /// address: 0x40003000
         /// Key register (IWDG_KR)
-        pub const KR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const KR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Key value
             KEY: u16,
             padding0: u1,
@@ -7983,7 +7983,7 @@ pub const registers = struct {
 
         /// address: 0x40003008
         /// Reload register (IWDG_RLR)
-        pub const RLR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RLR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Watchdog counter reload
             /// value
             RL: u12,
@@ -8011,7 +8011,7 @@ pub const registers = struct {
 
         /// address: 0x4000300c
         /// Status register (IWDG_SR)
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Watchdog prescaler value
             /// update
             PVU: u1,
@@ -8056,7 +8056,7 @@ pub const registers = struct {
 
         /// address: 0x40002c00
         /// Control register (WWDG_CR)
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// 7-bit counter (MSB to LSB)
             T: u7,
             /// Activation bit
@@ -8090,7 +8090,7 @@ pub const registers = struct {
         /// address: 0x40002c04
         /// Configuration register
         /// (WWDG_CFR)
-        pub const CFR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CFR = @intToPtr(*volatile Mmio(32, packed struct {
             /// 7-bit window value
             W: u7,
             /// Timer Base
@@ -8123,7 +8123,7 @@ pub const registers = struct {
 
         /// address: 0x40002c08
         /// Status register (WWDG_SR)
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Early Wakeup Interrupt
             EWI: u1,
             padding0: u1,
@@ -8165,7 +8165,7 @@ pub const registers = struct {
 
         /// address: 0x40012c00
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -8209,7 +8209,7 @@ pub const registers = struct {
 
         /// address: 0x40012c04
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/compare preloaded
             /// control
             CCPC: u1,
@@ -8259,7 +8259,7 @@ pub const registers = struct {
 
         /// address: 0x40012c08
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -8295,7 +8295,7 @@ pub const registers = struct {
 
         /// address: 0x40012c0c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -8355,7 +8355,7 @@ pub const registers = struct {
 
         /// address: 0x40012c10
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -8412,7 +8412,7 @@ pub const registers = struct {
 
         /// address: 0x40012c14
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -8463,7 +8463,7 @@ pub const registers = struct {
         /// address: 0x40012c18
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -8513,7 +8513,7 @@ pub const registers = struct {
         /// address: 0x40012c18
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -8549,7 +8549,7 @@ pub const registers = struct {
         /// address: 0x40012c1c
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -8599,7 +8599,7 @@ pub const registers = struct {
         /// address: 0x40012c1c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/compare 3
             /// selection
             CC3S: u2,
@@ -8635,7 +8635,7 @@ pub const registers = struct {
         /// address: 0x40012c20
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -8728,7 +8728,7 @@ pub const registers = struct {
 
         /// address: 0x40012c48
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -8759,7 +8759,7 @@ pub const registers = struct {
 
         /// address: 0x40012c4c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -8783,7 +8783,7 @@ pub const registers = struct {
 
         /// address: 0x40012c30
         /// repetition counter register
-        pub const RCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Repetition counter value
             REP: u8,
             padding0: u1,
@@ -8814,7 +8814,7 @@ pub const registers = struct {
 
         /// address: 0x40012c44
         /// break and dead-time register
-        pub const BDTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BDTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Dead-time generator setup
             DTG: u8,
             /// Lock configuration
@@ -8856,7 +8856,7 @@ pub const registers = struct {
 
         /// address: 0x40013400
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -8900,7 +8900,7 @@ pub const registers = struct {
 
         /// address: 0x40013404
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/compare preloaded
             /// control
             CCPC: u1,
@@ -8950,7 +8950,7 @@ pub const registers = struct {
 
         /// address: 0x40013408
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -8986,7 +8986,7 @@ pub const registers = struct {
 
         /// address: 0x4001340c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -9046,7 +9046,7 @@ pub const registers = struct {
 
         /// address: 0x40013410
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -9103,7 +9103,7 @@ pub const registers = struct {
 
         /// address: 0x40013414
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -9154,7 +9154,7 @@ pub const registers = struct {
         /// address: 0x40013418
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -9204,7 +9204,7 @@ pub const registers = struct {
         /// address: 0x40013418
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -9240,7 +9240,7 @@ pub const registers = struct {
         /// address: 0x4001341c
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -9290,7 +9290,7 @@ pub const registers = struct {
         /// address: 0x4001341c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/compare 3
             /// selection
             CC3S: u2,
@@ -9326,7 +9326,7 @@ pub const registers = struct {
         /// address: 0x40013420
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -9419,7 +9419,7 @@ pub const registers = struct {
 
         /// address: 0x40013448
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -9450,7 +9450,7 @@ pub const registers = struct {
 
         /// address: 0x4001344c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -9474,7 +9474,7 @@ pub const registers = struct {
 
         /// address: 0x40013430
         /// repetition counter register
-        pub const RCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Repetition counter value
             REP: u8,
             padding0: u1,
@@ -9505,7 +9505,7 @@ pub const registers = struct {
 
         /// address: 0x40013444
         /// break and dead-time register
-        pub const BDTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BDTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Dead-time generator setup
             DTG: u8,
             /// Lock configuration
@@ -9548,7 +9548,7 @@ pub const registers = struct {
 
         /// address: 0x40000000
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -9592,7 +9592,7 @@ pub const registers = struct {
 
         /// address: 0x40000004
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -9631,7 +9631,7 @@ pub const registers = struct {
 
         /// address: 0x40000008
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -9667,7 +9667,7 @@ pub const registers = struct {
 
         /// address: 0x4000000c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -9724,7 +9724,7 @@ pub const registers = struct {
 
         /// address: 0x40000010
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -9779,7 +9779,7 @@ pub const registers = struct {
 
         /// address: 0x40000014
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -9827,7 +9827,7 @@ pub const registers = struct {
         /// address: 0x40000018
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -9877,7 +9877,7 @@ pub const registers = struct {
         /// address: 0x40000018
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -9913,7 +9913,7 @@ pub const registers = struct {
         /// address: 0x4000001c
         /// capture/compare mode register 2 (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -9963,7 +9963,7 @@ pub const registers = struct {
         /// address: 0x4000001c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -9999,7 +9999,7 @@ pub const registers = struct {
         /// address: 0x40000020
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -10080,7 +10080,7 @@ pub const registers = struct {
 
         /// address: 0x40000048
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -10111,7 +10111,7 @@ pub const registers = struct {
 
         /// address: 0x4000004c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -10138,7 +10138,7 @@ pub const registers = struct {
 
         /// address: 0x40000400
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -10182,7 +10182,7 @@ pub const registers = struct {
 
         /// address: 0x40000404
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -10221,7 +10221,7 @@ pub const registers = struct {
 
         /// address: 0x40000408
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -10257,7 +10257,7 @@ pub const registers = struct {
 
         /// address: 0x4000040c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -10314,7 +10314,7 @@ pub const registers = struct {
 
         /// address: 0x40000410
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -10369,7 +10369,7 @@ pub const registers = struct {
 
         /// address: 0x40000414
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -10417,7 +10417,7 @@ pub const registers = struct {
         /// address: 0x40000418
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -10467,7 +10467,7 @@ pub const registers = struct {
         /// address: 0x40000418
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -10503,7 +10503,7 @@ pub const registers = struct {
         /// address: 0x4000041c
         /// capture/compare mode register 2 (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -10553,7 +10553,7 @@ pub const registers = struct {
         /// address: 0x4000041c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -10589,7 +10589,7 @@ pub const registers = struct {
         /// address: 0x40000420
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -10670,7 +10670,7 @@ pub const registers = struct {
 
         /// address: 0x40000448
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -10701,7 +10701,7 @@ pub const registers = struct {
 
         /// address: 0x4000044c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -10728,7 +10728,7 @@ pub const registers = struct {
 
         /// address: 0x40000800
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -10772,7 +10772,7 @@ pub const registers = struct {
 
         /// address: 0x40000804
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -10811,7 +10811,7 @@ pub const registers = struct {
 
         /// address: 0x40000808
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -10847,7 +10847,7 @@ pub const registers = struct {
 
         /// address: 0x4000080c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -10904,7 +10904,7 @@ pub const registers = struct {
 
         /// address: 0x40000810
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -10959,7 +10959,7 @@ pub const registers = struct {
 
         /// address: 0x40000814
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -11007,7 +11007,7 @@ pub const registers = struct {
         /// address: 0x40000818
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -11057,7 +11057,7 @@ pub const registers = struct {
         /// address: 0x40000818
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -11093,7 +11093,7 @@ pub const registers = struct {
         /// address: 0x4000081c
         /// capture/compare mode register 2 (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -11143,7 +11143,7 @@ pub const registers = struct {
         /// address: 0x4000081c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -11179,7 +11179,7 @@ pub const registers = struct {
         /// address: 0x40000820
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -11260,7 +11260,7 @@ pub const registers = struct {
 
         /// address: 0x40000848
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -11291,7 +11291,7 @@ pub const registers = struct {
 
         /// address: 0x4000084c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -11318,7 +11318,7 @@ pub const registers = struct {
 
         /// address: 0x40000c00
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -11362,7 +11362,7 @@ pub const registers = struct {
 
         /// address: 0x40000c04
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -11401,7 +11401,7 @@ pub const registers = struct {
 
         /// address: 0x40000c08
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -11437,7 +11437,7 @@ pub const registers = struct {
 
         /// address: 0x40000c0c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -11494,7 +11494,7 @@ pub const registers = struct {
 
         /// address: 0x40000c10
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -11549,7 +11549,7 @@ pub const registers = struct {
 
         /// address: 0x40000c14
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -11597,7 +11597,7 @@ pub const registers = struct {
         /// address: 0x40000c18
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -11647,7 +11647,7 @@ pub const registers = struct {
         /// address: 0x40000c18
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -11683,7 +11683,7 @@ pub const registers = struct {
         /// address: 0x40000c1c
         /// capture/compare mode register 2 (output
         /// mode)
-        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -11733,7 +11733,7 @@ pub const registers = struct {
         /// address: 0x40000c1c
         /// capture/compare mode register 2 (input
         /// mode)
-        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR2_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 3
             /// selection
             CC3S: u2,
@@ -11769,7 +11769,7 @@ pub const registers = struct {
         /// address: 0x40000c20
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -11850,7 +11850,7 @@ pub const registers = struct {
 
         /// address: 0x40000c48
         /// DMA control register
-        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA base address
             DBA: u5,
             reserved0: u1,
@@ -11881,7 +11881,7 @@ pub const registers = struct {
 
         /// address: 0x40000c4c
         /// DMA address for full transfer
-        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DMAR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DMA register for burst
             /// accesses
             DMAB: u16,
@@ -11909,7 +11909,7 @@ pub const registers = struct {
 
         /// address: 0x40014c00
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -11951,7 +11951,7 @@ pub const registers = struct {
 
         /// address: 0x40014c04
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -11987,7 +11987,7 @@ pub const registers = struct {
 
         /// address: 0x40014c08
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -12023,7 +12023,7 @@ pub const registers = struct {
 
         /// address: 0x40014c0c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -12066,7 +12066,7 @@ pub const registers = struct {
 
         /// address: 0x40014c10
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -12113,7 +12113,7 @@ pub const registers = struct {
 
         /// address: 0x40014c14
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -12157,7 +12157,7 @@ pub const registers = struct {
         /// address: 0x40014c18
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12203,7 +12203,7 @@ pub const registers = struct {
         /// address: 0x40014c18
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12239,7 +12239,7 @@ pub const registers = struct {
         /// address: 0x40014c20
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -12311,7 +12311,7 @@ pub const registers = struct {
 
         /// address: 0x40001800
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -12353,7 +12353,7 @@ pub const registers = struct {
 
         /// address: 0x40001804
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12389,7 +12389,7 @@ pub const registers = struct {
 
         /// address: 0x40001808
         /// slave mode control register
-        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Slave mode selection
             SMS: u3,
             reserved0: u1,
@@ -12425,7 +12425,7 @@ pub const registers = struct {
 
         /// address: 0x4000180c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -12468,7 +12468,7 @@ pub const registers = struct {
 
         /// address: 0x40001810
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -12515,7 +12515,7 @@ pub const registers = struct {
 
         /// address: 0x40001814
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -12559,7 +12559,7 @@ pub const registers = struct {
         /// address: 0x40001818
         /// capture/compare mode register 1 (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12605,7 +12605,7 @@ pub const registers = struct {
         /// address: 0x40001818
         /// capture/compare mode register 1 (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12641,7 +12641,7 @@ pub const registers = struct {
         /// address: 0x40001820
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -12714,7 +12714,7 @@ pub const registers = struct {
 
         /// address: 0x40015000
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -12755,7 +12755,7 @@ pub const registers = struct {
 
         /// address: 0x40015004
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -12791,7 +12791,7 @@ pub const registers = struct {
 
         /// address: 0x4001500c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -12831,7 +12831,7 @@ pub const registers = struct {
 
         /// address: 0x40015010
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -12873,7 +12873,7 @@ pub const registers = struct {
 
         /// address: 0x40015014
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -12914,7 +12914,7 @@ pub const registers = struct {
         /// address: 0x40015018
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12954,7 +12954,7 @@ pub const registers = struct {
         /// address: 0x40015018
         /// capture/compare mode register (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -12991,7 +12991,7 @@ pub const registers = struct {
         /// address: 0x40015020
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -13053,7 +13053,7 @@ pub const registers = struct {
 
         /// address: 0x40015400
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -13094,7 +13094,7 @@ pub const registers = struct {
 
         /// address: 0x40015404
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -13130,7 +13130,7 @@ pub const registers = struct {
 
         /// address: 0x4001540c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -13170,7 +13170,7 @@ pub const registers = struct {
 
         /// address: 0x40015410
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -13212,7 +13212,7 @@ pub const registers = struct {
 
         /// address: 0x40015414
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -13253,7 +13253,7 @@ pub const registers = struct {
         /// address: 0x40015418
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -13293,7 +13293,7 @@ pub const registers = struct {
         /// address: 0x40015418
         /// capture/compare mode register (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -13330,7 +13330,7 @@ pub const registers = struct {
         /// address: 0x40015420
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -13392,7 +13392,7 @@ pub const registers = struct {
 
         /// address: 0x40001c00
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -13433,7 +13433,7 @@ pub const registers = struct {
 
         /// address: 0x40001c04
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -13469,7 +13469,7 @@ pub const registers = struct {
 
         /// address: 0x40001c0c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -13509,7 +13509,7 @@ pub const registers = struct {
 
         /// address: 0x40001c10
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -13551,7 +13551,7 @@ pub const registers = struct {
 
         /// address: 0x40001c14
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -13592,7 +13592,7 @@ pub const registers = struct {
         /// address: 0x40001c18
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -13632,7 +13632,7 @@ pub const registers = struct {
         /// address: 0x40001c18
         /// capture/compare mode register (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -13669,7 +13669,7 @@ pub const registers = struct {
         /// address: 0x40001c20
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -13731,7 +13731,7 @@ pub const registers = struct {
 
         /// address: 0x40002000
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -13772,7 +13772,7 @@ pub const registers = struct {
 
         /// address: 0x40002004
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -13808,7 +13808,7 @@ pub const registers = struct {
 
         /// address: 0x4000200c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             /// Capture/Compare 1 interrupt
@@ -13848,7 +13848,7 @@ pub const registers = struct {
 
         /// address: 0x40002010
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             /// Capture/compare 1 interrupt
@@ -13890,7 +13890,7 @@ pub const registers = struct {
 
         /// address: 0x40002014
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             /// Capture/compare 1
@@ -13931,7 +13931,7 @@ pub const registers = struct {
         /// address: 0x40002018
         /// capture/compare mode register (output
         /// mode)
-        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Output = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -13971,7 +13971,7 @@ pub const registers = struct {
         /// address: 0x40002018
         /// capture/compare mode register (input
         /// mode)
-        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCMR1_Input = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1
             /// selection
             CC1S: u2,
@@ -14008,7 +14008,7 @@ pub const registers = struct {
         /// address: 0x40002020
         /// capture/compare enable
         /// register
-        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Capture/Compare 1 output
             /// enable
             CC1E: u1,
@@ -14071,7 +14071,7 @@ pub const registers = struct {
 
         /// address: 0x40001000
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -14113,7 +14113,7 @@ pub const registers = struct {
 
         /// address: 0x40001004
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -14149,7 +14149,7 @@ pub const registers = struct {
 
         /// address: 0x4000100c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             reserved0: u1,
@@ -14188,7 +14188,7 @@ pub const registers = struct {
 
         /// address: 0x40001010
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             padding0: u1,
@@ -14226,7 +14226,7 @@ pub const registers = struct {
 
         /// address: 0x40001014
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             padding0: u1,
@@ -14279,7 +14279,7 @@ pub const registers = struct {
 
         /// address: 0x40001400
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Counter enable
             CEN: u1,
             /// Update disable
@@ -14321,7 +14321,7 @@ pub const registers = struct {
 
         /// address: 0x40001404
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -14357,7 +14357,7 @@ pub const registers = struct {
 
         /// address: 0x4000140c
         /// DMA/Interrupt enable register
-        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DIER = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt enable
             UIE: u1,
             reserved0: u1,
@@ -14396,7 +14396,7 @@ pub const registers = struct {
 
         /// address: 0x40001410
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update interrupt flag
             UIF: u1,
             padding0: u1,
@@ -14434,7 +14434,7 @@ pub const registers = struct {
 
         /// address: 0x40001414
         /// event generation register
-        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Update generation
             UG: u1,
             padding0: u1,
@@ -14488,7 +14488,7 @@ pub const registers = struct {
 
         /// address: 0x40005400
         /// Control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral enable
             PE: u1,
             /// SMBus mode
@@ -14541,7 +14541,7 @@ pub const registers = struct {
 
         /// address: 0x40005404
         /// Control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral clock frequency
             FREQ: u6,
             reserved0: u1,
@@ -14579,7 +14579,7 @@ pub const registers = struct {
 
         /// address: 0x40005408
         /// Own address register 1
-        pub const OAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Interface address
             ADD0: u1,
             /// Interface address
@@ -14614,7 +14614,7 @@ pub const registers = struct {
 
         /// address: 0x4000540c
         /// Own address register 2
-        pub const OAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Dual addressing mode
             /// enable
             ENDUAL: u1,
@@ -14652,7 +14652,7 @@ pub const registers = struct {
 
         /// address: 0x40005414
         /// Status register 1
-        pub const SR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Start bit (Master mode)
             SB: u1,
             /// Address sent (master mode)/matched
@@ -14709,7 +14709,7 @@ pub const registers = struct {
 
         /// address: 0x40005418
         /// Status register 2
-        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Master/slave
             MSL: u1,
             /// Bus busy
@@ -14751,7 +14751,7 @@ pub const registers = struct {
 
         /// address: 0x4000541c
         /// Clock control register
-        pub const CCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock control register in Fast/Standard
             /// mode (Master mode)
             CCR: u12,
@@ -14788,7 +14788,7 @@ pub const registers = struct {
 
         /// address: 0x40005800
         /// Control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral enable
             PE: u1,
             /// SMBus mode
@@ -14841,7 +14841,7 @@ pub const registers = struct {
 
         /// address: 0x40005804
         /// Control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Peripheral clock frequency
             FREQ: u6,
             reserved0: u1,
@@ -14879,7 +14879,7 @@ pub const registers = struct {
 
         /// address: 0x40005808
         /// Own address register 1
-        pub const OAR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OAR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Interface address
             ADD0: u1,
             /// Interface address
@@ -14914,7 +14914,7 @@ pub const registers = struct {
 
         /// address: 0x4000580c
         /// Own address register 2
-        pub const OAR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OAR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Dual addressing mode
             /// enable
             ENDUAL: u1,
@@ -14952,7 +14952,7 @@ pub const registers = struct {
 
         /// address: 0x40005814
         /// Status register 1
-        pub const SR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Start bit (Master mode)
             SB: u1,
             /// Address sent (master mode)/matched
@@ -15009,7 +15009,7 @@ pub const registers = struct {
 
         /// address: 0x40005818
         /// Status register 2
-        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Master/slave
             MSL: u1,
             /// Bus busy
@@ -15051,7 +15051,7 @@ pub const registers = struct {
 
         /// address: 0x4000581c
         /// Clock control register
-        pub const CCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock control register in Fast/Standard
             /// mode (Master mode)
             CCR: u12,
@@ -15089,7 +15089,7 @@ pub const registers = struct {
 
         /// address: 0x40013000
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock phase
             CPHA: u1,
             /// Clock polarity
@@ -15141,7 +15141,7 @@ pub const registers = struct {
 
         /// address: 0x40013004
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx buffer DMA enable
             RXDMAEN: u1,
             /// Tx buffer DMA enable
@@ -15186,7 +15186,7 @@ pub const registers = struct {
 
         /// address: 0x40013008
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Receive buffer not empty
             RXNE: u1,
             /// Transmit buffer empty
@@ -15235,7 +15235,7 @@ pub const registers = struct {
 
         /// address: 0x40013010
         /// CRC polynomial register
-        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// CRC polynomial register
             CRCPOLY: u16,
             padding0: u1,
@@ -15258,7 +15258,7 @@ pub const registers = struct {
 
         /// address: 0x40013014
         /// RX CRC register
-        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx CRC register
             RxCRC: u16,
             padding0: u1,
@@ -15281,7 +15281,7 @@ pub const registers = struct {
 
         /// address: 0x40013018
         /// TX CRC register
-        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Tx CRC register
             TxCRC: u16,
             padding0: u1,
@@ -15304,7 +15304,7 @@ pub const registers = struct {
 
         /// address: 0x4001301c
         /// I2S configuration register
-        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel length (number of bits per audio
             /// channel)
             CHLEN: u1,
@@ -15349,7 +15349,7 @@ pub const registers = struct {
 
         /// address: 0x40013020
         /// I2S prescaler register
-        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// I2S Linear prescaler
             I2SDIV: u8,
             /// Odd factor for the
@@ -15386,7 +15386,7 @@ pub const registers = struct {
 
         /// address: 0x40003800
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock phase
             CPHA: u1,
             /// Clock polarity
@@ -15438,7 +15438,7 @@ pub const registers = struct {
 
         /// address: 0x40003804
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx buffer DMA enable
             RXDMAEN: u1,
             /// Tx buffer DMA enable
@@ -15483,7 +15483,7 @@ pub const registers = struct {
 
         /// address: 0x40003808
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Receive buffer not empty
             RXNE: u1,
             /// Transmit buffer empty
@@ -15532,7 +15532,7 @@ pub const registers = struct {
 
         /// address: 0x40003810
         /// CRC polynomial register
-        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// CRC polynomial register
             CRCPOLY: u16,
             padding0: u1,
@@ -15555,7 +15555,7 @@ pub const registers = struct {
 
         /// address: 0x40003814
         /// RX CRC register
-        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx CRC register
             RxCRC: u16,
             padding0: u1,
@@ -15578,7 +15578,7 @@ pub const registers = struct {
 
         /// address: 0x40003818
         /// TX CRC register
-        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Tx CRC register
             TxCRC: u16,
             padding0: u1,
@@ -15601,7 +15601,7 @@ pub const registers = struct {
 
         /// address: 0x4000381c
         /// I2S configuration register
-        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel length (number of bits per audio
             /// channel)
             CHLEN: u1,
@@ -15646,7 +15646,7 @@ pub const registers = struct {
 
         /// address: 0x40003820
         /// I2S prescaler register
-        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// I2S Linear prescaler
             I2SDIV: u8,
             /// Odd factor for the
@@ -15683,7 +15683,7 @@ pub const registers = struct {
 
         /// address: 0x40003c00
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Clock phase
             CPHA: u1,
             /// Clock polarity
@@ -15735,7 +15735,7 @@ pub const registers = struct {
 
         /// address: 0x40003c04
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx buffer DMA enable
             RXDMAEN: u1,
             /// Tx buffer DMA enable
@@ -15780,7 +15780,7 @@ pub const registers = struct {
 
         /// address: 0x40003c08
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Receive buffer not empty
             RXNE: u1,
             /// Transmit buffer empty
@@ -15829,7 +15829,7 @@ pub const registers = struct {
 
         /// address: 0x40003c10
         /// CRC polynomial register
-        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CRCPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// CRC polynomial register
             CRCPOLY: u16,
             padding0: u1,
@@ -15852,7 +15852,7 @@ pub const registers = struct {
 
         /// address: 0x40003c14
         /// RX CRC register
-        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const RXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Rx CRC register
             RxCRC: u16,
             padding0: u1,
@@ -15875,7 +15875,7 @@ pub const registers = struct {
 
         /// address: 0x40003c18
         /// TX CRC register
-        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const TXCRCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Tx CRC register
             TxCRC: u16,
             padding0: u1,
@@ -15898,7 +15898,7 @@ pub const registers = struct {
 
         /// address: 0x40003c1c
         /// I2S configuration register
-        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SCFGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel length (number of bits per audio
             /// channel)
             CHLEN: u1,
@@ -15943,7 +15943,7 @@ pub const registers = struct {
 
         /// address: 0x40003c20
         /// I2S prescaler register
-        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const I2SPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// I2S Linear prescaler
             I2SDIV: u8,
             /// Odd factor for the
@@ -15982,7 +15982,7 @@ pub const registers = struct {
 
         /// address: 0x40013800
         /// Status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Parity error
             PE: u1,
             /// Framing error
@@ -16035,7 +16035,7 @@ pub const registers = struct {
 
         /// address: 0x40013808
         /// Baud rate register
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// fraction of USARTDIV
             DIV_Fraction: u4,
             /// mantissa of USARTDIV
@@ -16060,7 +16060,7 @@ pub const registers = struct {
 
         /// address: 0x4001380c
         /// Control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Send break
             SBK: u1,
             /// Receiver wakeup
@@ -16112,7 +16112,7 @@ pub const registers = struct {
 
         /// address: 0x40013810
         /// Control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address of the USART node
             ADD: u4,
             reserved0: u1,
@@ -16155,7 +16155,7 @@ pub const registers = struct {
 
         /// address: 0x40013814
         /// Control register 3
-        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Error interrupt enable
             EIE: u1,
             /// IrDA mode enable
@@ -16204,7 +16204,7 @@ pub const registers = struct {
         /// address: 0x40013818
         /// Guard time and prescaler
         /// register
-        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Prescaler value
             PSC: u8,
             /// Guard time value
@@ -16232,7 +16232,7 @@ pub const registers = struct {
 
         /// address: 0x40004400
         /// Status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Parity error
             PE: u1,
             /// Framing error
@@ -16285,7 +16285,7 @@ pub const registers = struct {
 
         /// address: 0x40004408
         /// Baud rate register
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// fraction of USARTDIV
             DIV_Fraction: u4,
             /// mantissa of USARTDIV
@@ -16310,7 +16310,7 @@ pub const registers = struct {
 
         /// address: 0x4000440c
         /// Control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Send break
             SBK: u1,
             /// Receiver wakeup
@@ -16362,7 +16362,7 @@ pub const registers = struct {
 
         /// address: 0x40004410
         /// Control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address of the USART node
             ADD: u4,
             reserved0: u1,
@@ -16405,7 +16405,7 @@ pub const registers = struct {
 
         /// address: 0x40004414
         /// Control register 3
-        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Error interrupt enable
             EIE: u1,
             /// IrDA mode enable
@@ -16454,7 +16454,7 @@ pub const registers = struct {
         /// address: 0x40004418
         /// Guard time and prescaler
         /// register
-        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Prescaler value
             PSC: u8,
             /// Guard time value
@@ -16482,7 +16482,7 @@ pub const registers = struct {
 
         /// address: 0x40004800
         /// Status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Parity error
             PE: u1,
             /// Framing error
@@ -16535,7 +16535,7 @@ pub const registers = struct {
 
         /// address: 0x40004808
         /// Baud rate register
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// fraction of USARTDIV
             DIV_Fraction: u4,
             /// mantissa of USARTDIV
@@ -16560,7 +16560,7 @@ pub const registers = struct {
 
         /// address: 0x4000480c
         /// Control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Send break
             SBK: u1,
             /// Receiver wakeup
@@ -16612,7 +16612,7 @@ pub const registers = struct {
 
         /// address: 0x40004810
         /// Control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address of the USART node
             ADD: u4,
             reserved0: u1,
@@ -16655,7 +16655,7 @@ pub const registers = struct {
 
         /// address: 0x40004814
         /// Control register 3
-        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Error interrupt enable
             EIE: u1,
             /// IrDA mode enable
@@ -16704,7 +16704,7 @@ pub const registers = struct {
         /// address: 0x40004818
         /// Guard time and prescaler
         /// register
-        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const GTPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Prescaler value
             PSC: u8,
             /// Guard time value
@@ -16733,7 +16733,7 @@ pub const registers = struct {
 
         /// address: 0x40012400
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog flag
             AWD: u1,
             /// Regular channel end of
@@ -16778,7 +16778,7 @@ pub const registers = struct {
 
         /// address: 0x40012404
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog channel select
             /// bits
             AWDCH: u5,
@@ -16829,7 +16829,7 @@ pub const registers = struct {
 
         /// address: 0x40012408
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// A/D converter ON / OFF
             ADON: u1,
             /// Continuous conversion
@@ -16882,7 +16882,7 @@ pub const registers = struct {
 
         /// address: 0x4001240c
         /// sample time register 1
-        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 10 sample time
             /// selection
             SMP10: u3,
@@ -16919,7 +16919,7 @@ pub const registers = struct {
 
         /// address: 0x40012410
         /// sample time register 2
-        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 0 sample time
             /// selection
             SMP0: u3,
@@ -16957,7 +16957,7 @@ pub const registers = struct {
         /// address: 0x40012414
         /// injected channel data offset register
         /// x
-        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET1: u12,
@@ -16986,7 +16986,7 @@ pub const registers = struct {
         /// address: 0x40012418
         /// injected channel data offset register
         /// x
-        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET2: u12,
@@ -17015,7 +17015,7 @@ pub const registers = struct {
         /// address: 0x4001241c
         /// injected channel data offset register
         /// x
-        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET3: u12,
@@ -17044,7 +17044,7 @@ pub const registers = struct {
         /// address: 0x40012420
         /// injected channel data offset register
         /// x
-        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET4: u12,
@@ -17073,7 +17073,7 @@ pub const registers = struct {
         /// address: 0x40012424
         /// watchdog higher threshold
         /// register
-        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog higher
             /// threshold
             HT: u12,
@@ -17102,7 +17102,7 @@ pub const registers = struct {
         /// address: 0x40012428
         /// watchdog lower threshold
         /// register
-        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog lower
             /// threshold
             LT: u12,
@@ -17130,7 +17130,7 @@ pub const registers = struct {
 
         /// address: 0x4001242c
         /// regular sequence register 1
-        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 13th conversion in regular
             /// sequence
             SQ13: u5,
@@ -17158,7 +17158,7 @@ pub const registers = struct {
 
         /// address: 0x40012430
         /// regular sequence register 2
-        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 7th conversion in regular
             /// sequence
             SQ7: u5,
@@ -17183,7 +17183,7 @@ pub const registers = struct {
 
         /// address: 0x40012434
         /// regular sequence register 3
-        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in regular
             /// sequence
             SQ1: u5,
@@ -17208,7 +17208,7 @@ pub const registers = struct {
 
         /// address: 0x40012438
         /// injected sequence register
-        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in injected
             /// sequence
             JSQ1: u5,
@@ -17237,7 +17237,7 @@ pub const registers = struct {
 
         /// address: 0x4001243c
         /// injected data register x
-        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17260,7 +17260,7 @@ pub const registers = struct {
 
         /// address: 0x40012440
         /// injected data register x
-        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17283,7 +17283,7 @@ pub const registers = struct {
 
         /// address: 0x40012444
         /// injected data register x
-        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17306,7 +17306,7 @@ pub const registers = struct {
 
         /// address: 0x40012448
         /// injected data register x
-        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17329,7 +17329,7 @@ pub const registers = struct {
 
         /// address: 0x4001244c
         /// regular data register
-        pub const DR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Regular data
             DATA: u16,
             /// ADC2 data
@@ -17342,7 +17342,7 @@ pub const registers = struct {
 
         /// address: 0x40012800
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog flag
             AWD: u1,
             /// Regular channel end of
@@ -17387,7 +17387,7 @@ pub const registers = struct {
 
         /// address: 0x40012804
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog channel select
             /// bits
             AWDCH: u5,
@@ -17440,7 +17440,7 @@ pub const registers = struct {
 
         /// address: 0x40012808
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// A/D converter ON / OFF
             ADON: u1,
             /// Continuous conversion
@@ -17493,7 +17493,7 @@ pub const registers = struct {
 
         /// address: 0x4001280c
         /// sample time register 1
-        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 10 sample time
             /// selection
             SMP10: u3,
@@ -17530,7 +17530,7 @@ pub const registers = struct {
 
         /// address: 0x40012810
         /// sample time register 2
-        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 0 sample time
             /// selection
             SMP0: u3,
@@ -17568,7 +17568,7 @@ pub const registers = struct {
         /// address: 0x40012814
         /// injected channel data offset register
         /// x
-        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET1: u12,
@@ -17597,7 +17597,7 @@ pub const registers = struct {
         /// address: 0x40012818
         /// injected channel data offset register
         /// x
-        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET2: u12,
@@ -17626,7 +17626,7 @@ pub const registers = struct {
         /// address: 0x4001281c
         /// injected channel data offset register
         /// x
-        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET3: u12,
@@ -17655,7 +17655,7 @@ pub const registers = struct {
         /// address: 0x40012820
         /// injected channel data offset register
         /// x
-        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET4: u12,
@@ -17684,7 +17684,7 @@ pub const registers = struct {
         /// address: 0x40012824
         /// watchdog higher threshold
         /// register
-        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog higher
             /// threshold
             HT: u12,
@@ -17713,7 +17713,7 @@ pub const registers = struct {
         /// address: 0x40012828
         /// watchdog lower threshold
         /// register
-        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog lower
             /// threshold
             LT: u12,
@@ -17741,7 +17741,7 @@ pub const registers = struct {
 
         /// address: 0x4001282c
         /// regular sequence register 1
-        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 13th conversion in regular
             /// sequence
             SQ13: u5,
@@ -17769,7 +17769,7 @@ pub const registers = struct {
 
         /// address: 0x40012830
         /// regular sequence register 2
-        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 7th conversion in regular
             /// sequence
             SQ7: u5,
@@ -17794,7 +17794,7 @@ pub const registers = struct {
 
         /// address: 0x40012834
         /// regular sequence register 3
-        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in regular
             /// sequence
             SQ1: u5,
@@ -17819,7 +17819,7 @@ pub const registers = struct {
 
         /// address: 0x40012838
         /// injected sequence register
-        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in injected
             /// sequence
             JSQ1: u5,
@@ -17848,7 +17848,7 @@ pub const registers = struct {
 
         /// address: 0x4001283c
         /// injected data register x
-        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17871,7 +17871,7 @@ pub const registers = struct {
 
         /// address: 0x40012840
         /// injected data register x
-        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17894,7 +17894,7 @@ pub const registers = struct {
 
         /// address: 0x40012844
         /// injected data register x
-        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17917,7 +17917,7 @@ pub const registers = struct {
 
         /// address: 0x40012848
         /// injected data register x
-        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -17940,7 +17940,7 @@ pub const registers = struct {
 
         /// address: 0x4001284c
         /// regular data register
-        pub const DR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Regular data
             DATA: u16,
             padding0: u1,
@@ -17966,7 +17966,7 @@ pub const registers = struct {
 
         /// address: 0x40013c00
         /// status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog flag
             AWD: u1,
             /// Regular channel end of
@@ -18011,7 +18011,7 @@ pub const registers = struct {
 
         /// address: 0x40013c04
         /// control register 1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog channel select
             /// bits
             AWDCH: u5,
@@ -18064,7 +18064,7 @@ pub const registers = struct {
 
         /// address: 0x40013c08
         /// control register 2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// A/D converter ON / OFF
             ADON: u1,
             /// Continuous conversion
@@ -18117,7 +18117,7 @@ pub const registers = struct {
 
         /// address: 0x40013c0c
         /// sample time register 1
-        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 10 sample time
             /// selection
             SMP10: u3,
@@ -18154,7 +18154,7 @@ pub const registers = struct {
 
         /// address: 0x40013c10
         /// sample time register 2
-        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SMPR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Channel 0 sample time
             /// selection
             SMP0: u3,
@@ -18192,7 +18192,7 @@ pub const registers = struct {
         /// address: 0x40013c14
         /// injected channel data offset register
         /// x
-        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET1: u12,
@@ -18221,7 +18221,7 @@ pub const registers = struct {
         /// address: 0x40013c18
         /// injected channel data offset register
         /// x
-        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET2: u12,
@@ -18250,7 +18250,7 @@ pub const registers = struct {
         /// address: 0x40013c1c
         /// injected channel data offset register
         /// x
-        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET3: u12,
@@ -18279,7 +18279,7 @@ pub const registers = struct {
         /// address: 0x40013c20
         /// injected channel data offset register
         /// x
-        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JOFR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Data offset for injected channel
             /// x
             JOFFSET4: u12,
@@ -18308,7 +18308,7 @@ pub const registers = struct {
         /// address: 0x40013c24
         /// watchdog higher threshold
         /// register
-        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const HTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog higher
             /// threshold
             HT: u12,
@@ -18337,7 +18337,7 @@ pub const registers = struct {
         /// address: 0x40013c28
         /// watchdog lower threshold
         /// register
-        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const LTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Analog watchdog lower
             /// threshold
             LT: u12,
@@ -18365,7 +18365,7 @@ pub const registers = struct {
 
         /// address: 0x40013c2c
         /// regular sequence register 1
-        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 13th conversion in regular
             /// sequence
             SQ13: u5,
@@ -18393,7 +18393,7 @@ pub const registers = struct {
 
         /// address: 0x40013c30
         /// regular sequence register 2
-        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 7th conversion in regular
             /// sequence
             SQ7: u5,
@@ -18418,7 +18418,7 @@ pub const registers = struct {
 
         /// address: 0x40013c34
         /// regular sequence register 3
-        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SQR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in regular
             /// sequence
             SQ1: u5,
@@ -18443,7 +18443,7 @@ pub const registers = struct {
 
         /// address: 0x40013c38
         /// injected sequence register
-        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JSQR = @intToPtr(*volatile Mmio(32, packed struct {
             /// 1st conversion in injected
             /// sequence
             JSQ1: u5,
@@ -18472,7 +18472,7 @@ pub const registers = struct {
 
         /// address: 0x40013c3c
         /// injected data register x
-        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -18495,7 +18495,7 @@ pub const registers = struct {
 
         /// address: 0x40013c40
         /// injected data register x
-        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -18518,7 +18518,7 @@ pub const registers = struct {
 
         /// address: 0x40013c44
         /// injected data register x
-        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -18541,7 +18541,7 @@ pub const registers = struct {
 
         /// address: 0x40013c48
         /// injected data register x
-        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const JDR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Injected data
             JDATA: u16,
             padding0: u1,
@@ -18564,7 +18564,7 @@ pub const registers = struct {
 
         /// address: 0x40013c4c
         /// regular data register
-        pub const DR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Regular data
             DATA: u16,
             padding0: u1,
@@ -18591,7 +18591,7 @@ pub const registers = struct {
 
         /// address: 0x40006400
         /// CAN_MCR
-        pub const CAN_MCR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_MCR = @intToPtr(*volatile Mmio(32, packed struct {
             /// INRQ
             INRQ: u1,
             /// SLEEP
@@ -18638,7 +18638,7 @@ pub const registers = struct {
 
         /// address: 0x40006404
         /// CAN_MSR
-        pub const CAN_MSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_MSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// INAK
             INAK: u1,
             /// SLAK
@@ -18684,7 +18684,7 @@ pub const registers = struct {
 
         /// address: 0x40006408
         /// CAN_TSR
-        pub const CAN_TSR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TSR = @intToPtr(*volatile Mmio(32, packed struct {
             /// RQCP0
             RQCP0: u1,
             /// TXOK0
@@ -18748,7 +18748,7 @@ pub const registers = struct {
 
         /// address: 0x4000640c
         /// CAN_RF0R
-        pub const CAN_RF0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RF0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// FMP0
             FMP0: u2,
             reserved0: u1,
@@ -18788,7 +18788,7 @@ pub const registers = struct {
 
         /// address: 0x40006410
         /// CAN_RF1R
-        pub const CAN_RF1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RF1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// FMP1
             FMP1: u2,
             reserved0: u1,
@@ -18828,7 +18828,7 @@ pub const registers = struct {
 
         /// address: 0x40006414
         /// CAN_IER
-        pub const CAN_IER = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_IER = @intToPtr(*volatile Mmio(32, packed struct {
             /// TMEIE
             TMEIE: u1,
             /// FMPIE0
@@ -18879,7 +18879,7 @@ pub const registers = struct {
 
         /// address: 0x40006418
         /// CAN_ESR
-        pub const CAN_ESR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_ESR = @intToPtr(*volatile Mmio(32, packed struct {
             /// EWGF
             EWGF: u1,
             /// EPVF
@@ -18906,7 +18906,7 @@ pub const registers = struct {
 
         /// address: 0x4000641c
         /// CAN_BTR
-        pub const CAN_BTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_BTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// BRP
             BRP: u10,
             reserved0: u1,
@@ -18934,7 +18934,7 @@ pub const registers = struct {
 
         /// address: 0x40006580
         /// CAN_TI0R
-        pub const CAN_TI0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TI0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// TXRQ
             TXRQ: u1,
             /// RTR
@@ -18949,7 +18949,7 @@ pub const registers = struct {
 
         /// address: 0x40006584
         /// CAN_TDT0R
-        pub const CAN_TDT0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDT0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DLC
             DLC: u4,
             reserved0: u1,
@@ -18971,7 +18971,7 @@ pub const registers = struct {
 
         /// address: 0x40006588
         /// CAN_TDL0R
-        pub const CAN_TDL0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDL0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA0
             DATA0: u8,
             /// DATA1
@@ -18984,7 +18984,7 @@ pub const registers = struct {
 
         /// address: 0x4000658c
         /// CAN_TDH0R
-        pub const CAN_TDH0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDH0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA4
             DATA4: u8,
             /// DATA5
@@ -18997,7 +18997,7 @@ pub const registers = struct {
 
         /// address: 0x40006590
         /// CAN_TI1R
-        pub const CAN_TI1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TI1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// TXRQ
             TXRQ: u1,
             /// RTR
@@ -19012,7 +19012,7 @@ pub const registers = struct {
 
         /// address: 0x40006594
         /// CAN_TDT1R
-        pub const CAN_TDT1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDT1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DLC
             DLC: u4,
             reserved0: u1,
@@ -19034,7 +19034,7 @@ pub const registers = struct {
 
         /// address: 0x40006598
         /// CAN_TDL1R
-        pub const CAN_TDL1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDL1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA0
             DATA0: u8,
             /// DATA1
@@ -19047,7 +19047,7 @@ pub const registers = struct {
 
         /// address: 0x4000659c
         /// CAN_TDH1R
-        pub const CAN_TDH1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDH1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA4
             DATA4: u8,
             /// DATA5
@@ -19060,7 +19060,7 @@ pub const registers = struct {
 
         /// address: 0x400065a0
         /// CAN_TI2R
-        pub const CAN_TI2R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TI2R = @intToPtr(*volatile Mmio(32, packed struct {
             /// TXRQ
             TXRQ: u1,
             /// RTR
@@ -19075,7 +19075,7 @@ pub const registers = struct {
 
         /// address: 0x400065a4
         /// CAN_TDT2R
-        pub const CAN_TDT2R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDT2R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DLC
             DLC: u4,
             reserved0: u1,
@@ -19097,7 +19097,7 @@ pub const registers = struct {
 
         /// address: 0x400065a8
         /// CAN_TDL2R
-        pub const CAN_TDL2R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDL2R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA0
             DATA0: u8,
             /// DATA1
@@ -19110,7 +19110,7 @@ pub const registers = struct {
 
         /// address: 0x400065ac
         /// CAN_TDH2R
-        pub const CAN_TDH2R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_TDH2R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA4
             DATA4: u8,
             /// DATA5
@@ -19123,7 +19123,7 @@ pub const registers = struct {
 
         /// address: 0x400065b0
         /// CAN_RI0R
-        pub const CAN_RI0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RI0R = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// RTR
             RTR: u1,
@@ -19137,7 +19137,7 @@ pub const registers = struct {
 
         /// address: 0x400065b4
         /// CAN_RDT0R
-        pub const CAN_RDT0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDT0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DLC
             DLC: u4,
             reserved0: u1,
@@ -19152,7 +19152,7 @@ pub const registers = struct {
 
         /// address: 0x400065b8
         /// CAN_RDL0R
-        pub const CAN_RDL0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDL0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA0
             DATA0: u8,
             /// DATA1
@@ -19165,7 +19165,7 @@ pub const registers = struct {
 
         /// address: 0x400065bc
         /// CAN_RDH0R
-        pub const CAN_RDH0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDH0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA4
             DATA4: u8,
             /// DATA5
@@ -19178,7 +19178,7 @@ pub const registers = struct {
 
         /// address: 0x400065c0
         /// CAN_RI1R
-        pub const CAN_RI1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RI1R = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             /// RTR
             RTR: u1,
@@ -19192,7 +19192,7 @@ pub const registers = struct {
 
         /// address: 0x400065c4
         /// CAN_RDT1R
-        pub const CAN_RDT1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDT1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DLC
             DLC: u4,
             reserved0: u1,
@@ -19207,7 +19207,7 @@ pub const registers = struct {
 
         /// address: 0x400065c8
         /// CAN_RDL1R
-        pub const CAN_RDL1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDL1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA0
             DATA0: u8,
             /// DATA1
@@ -19220,7 +19220,7 @@ pub const registers = struct {
 
         /// address: 0x400065cc
         /// CAN_RDH1R
-        pub const CAN_RDH1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_RDH1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// DATA4
             DATA4: u8,
             /// DATA5
@@ -19233,7 +19233,7 @@ pub const registers = struct {
 
         /// address: 0x40006600
         /// CAN_FMR
-        pub const CAN_FMR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_FMR = @intToPtr(*volatile Mmio(32, packed struct {
             /// FINIT
             FINIT: u1,
             padding0: u1,
@@ -19271,7 +19271,7 @@ pub const registers = struct {
 
         /// address: 0x40006604
         /// CAN_FM1R
-        pub const CAN_FM1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_FM1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter mode
             FBM0: u1,
             /// Filter mode
@@ -19322,7 +19322,7 @@ pub const registers = struct {
 
         /// address: 0x4000660c
         /// CAN_FS1R
-        pub const CAN_FS1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_FS1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter scale configuration
             FSC0: u1,
             /// Filter scale configuration
@@ -19373,7 +19373,7 @@ pub const registers = struct {
 
         /// address: 0x40006614
         /// CAN_FFA1R
-        pub const CAN_FFA1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_FFA1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter FIFO assignment for filter
             /// 0
             FFA0: u1,
@@ -19438,7 +19438,7 @@ pub const registers = struct {
 
         /// address: 0x4000661c
         /// CAN_FA1R
-        pub const CAN_FA1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CAN_FA1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter active
             FACT0: u1,
             /// Filter active
@@ -19489,7 +19489,7 @@ pub const registers = struct {
 
         /// address: 0x40006640
         /// Filter bank 0 register 1
-        pub const F0R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F0R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19558,7 +19558,7 @@ pub const registers = struct {
 
         /// address: 0x40006644
         /// Filter bank 0 register 2
-        pub const F0R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F0R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19627,7 +19627,7 @@ pub const registers = struct {
 
         /// address: 0x40006648
         /// Filter bank 1 register 1
-        pub const F1R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F1R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19696,7 +19696,7 @@ pub const registers = struct {
 
         /// address: 0x4000664c
         /// Filter bank 1 register 2
-        pub const F1R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F1R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19765,7 +19765,7 @@ pub const registers = struct {
 
         /// address: 0x40006650
         /// Filter bank 2 register 1
-        pub const F2R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F2R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19834,7 +19834,7 @@ pub const registers = struct {
 
         /// address: 0x40006654
         /// Filter bank 2 register 2
-        pub const F2R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F2R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19903,7 +19903,7 @@ pub const registers = struct {
 
         /// address: 0x40006658
         /// Filter bank 3 register 1
-        pub const F3R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F3R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -19972,7 +19972,7 @@ pub const registers = struct {
 
         /// address: 0x4000665c
         /// Filter bank 3 register 2
-        pub const F3R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F3R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20041,7 +20041,7 @@ pub const registers = struct {
 
         /// address: 0x40006660
         /// Filter bank 4 register 1
-        pub const F4R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F4R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20110,7 +20110,7 @@ pub const registers = struct {
 
         /// address: 0x40006664
         /// Filter bank 4 register 2
-        pub const F4R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F4R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20179,7 +20179,7 @@ pub const registers = struct {
 
         /// address: 0x40006668
         /// Filter bank 5 register 1
-        pub const F5R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F5R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20248,7 +20248,7 @@ pub const registers = struct {
 
         /// address: 0x4000666c
         /// Filter bank 5 register 2
-        pub const F5R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F5R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20317,7 +20317,7 @@ pub const registers = struct {
 
         /// address: 0x40006670
         /// Filter bank 6 register 1
-        pub const F6R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F6R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20386,7 +20386,7 @@ pub const registers = struct {
 
         /// address: 0x40006674
         /// Filter bank 6 register 2
-        pub const F6R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F6R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20455,7 +20455,7 @@ pub const registers = struct {
 
         /// address: 0x40006678
         /// Filter bank 7 register 1
-        pub const F7R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F7R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20524,7 +20524,7 @@ pub const registers = struct {
 
         /// address: 0x4000667c
         /// Filter bank 7 register 2
-        pub const F7R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F7R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20593,7 +20593,7 @@ pub const registers = struct {
 
         /// address: 0x40006680
         /// Filter bank 8 register 1
-        pub const F8R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F8R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20662,7 +20662,7 @@ pub const registers = struct {
 
         /// address: 0x40006684
         /// Filter bank 8 register 2
-        pub const F8R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F8R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20731,7 +20731,7 @@ pub const registers = struct {
 
         /// address: 0x40006688
         /// Filter bank 9 register 1
-        pub const F9R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F9R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20800,7 +20800,7 @@ pub const registers = struct {
 
         /// address: 0x4000668c
         /// Filter bank 9 register 2
-        pub const F9R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F9R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20869,7 +20869,7 @@ pub const registers = struct {
 
         /// address: 0x40006690
         /// Filter bank 10 register 1
-        pub const F10R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F10R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -20938,7 +20938,7 @@ pub const registers = struct {
 
         /// address: 0x40006694
         /// Filter bank 10 register 2
-        pub const F10R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F10R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21007,7 +21007,7 @@ pub const registers = struct {
 
         /// address: 0x40006698
         /// Filter bank 11 register 1
-        pub const F11R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F11R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21076,7 +21076,7 @@ pub const registers = struct {
 
         /// address: 0x4000669c
         /// Filter bank 11 register 2
-        pub const F11R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F11R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21145,7 +21145,7 @@ pub const registers = struct {
 
         /// address: 0x400066a0
         /// Filter bank 4 register 1
-        pub const F12R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F12R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21214,7 +21214,7 @@ pub const registers = struct {
 
         /// address: 0x400066a4
         /// Filter bank 12 register 2
-        pub const F12R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F12R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21283,7 +21283,7 @@ pub const registers = struct {
 
         /// address: 0x400066a8
         /// Filter bank 13 register 1
-        pub const F13R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F13R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21352,7 +21352,7 @@ pub const registers = struct {
 
         /// address: 0x400066ac
         /// Filter bank 13 register 2
-        pub const F13R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const F13R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Filter bits
             FB0: u1,
             /// Filter bits
@@ -21425,7 +21425,7 @@ pub const registers = struct {
 
         /// address: 0x40007400
         /// Control register (DAC_CR)
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 enable
             EN1: u1,
             /// DAC channel1 output buffer
@@ -21475,7 +21475,7 @@ pub const registers = struct {
         /// address: 0x40007404
         /// DAC software trigger register
         /// (DAC_SWTRIGR)
-        pub const SWTRIGR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SWTRIGR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 software
             /// trigger
             SWTRIG1: u1,
@@ -21517,7 +21517,7 @@ pub const registers = struct {
         /// address: 0x40007408
         /// DAC channel1 12-bit right-aligned data
         /// holding register(DAC_DHR12R1)
-        pub const DHR12R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 12-bit right-aligned
             /// data
             DACC1DHR: u12,
@@ -21546,7 +21546,7 @@ pub const registers = struct {
         /// address: 0x4000740c
         /// DAC channel1 12-bit left aligned data
         /// holding register (DAC_DHR12L1)
-        pub const DHR12L1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12L1 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -21575,7 +21575,7 @@ pub const registers = struct {
         /// address: 0x40007410
         /// DAC channel1 8-bit right aligned data
         /// holding register (DAC_DHR8R1)
-        pub const DHR8R1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR8R1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 8-bit right-aligned
             /// data
             DACC1DHR: u8,
@@ -21608,7 +21608,7 @@ pub const registers = struct {
         /// address: 0x40007414
         /// DAC channel2 12-bit right aligned data
         /// holding register (DAC_DHR12R2)
-        pub const DHR12R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel2 12-bit right-aligned
             /// data
             DACC2DHR: u12,
@@ -21637,7 +21637,7 @@ pub const registers = struct {
         /// address: 0x40007418
         /// DAC channel2 12-bit left aligned data
         /// holding register (DAC_DHR12L2)
-        pub const DHR12L2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12L2 = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -21666,7 +21666,7 @@ pub const registers = struct {
         /// address: 0x4000741c
         /// DAC channel2 8-bit right-aligned data
         /// holding register (DAC_DHR8R2)
-        pub const DHR8R2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR8R2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel2 8-bit right-aligned
             /// data
             DACC2DHR: u8,
@@ -21700,7 +21700,7 @@ pub const registers = struct {
         /// Dual DAC 12-bit right-aligned data holding
         /// register (DAC_DHR12RD), Bits 31:28 Reserved, Bits 15:12
         /// Reserved
-        pub const DHR12RD = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12RD = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 12-bit right-aligned
             /// data
             DACC1DHR: u12,
@@ -21721,7 +21721,7 @@ pub const registers = struct {
         /// DUAL DAC 12-bit left aligned data holding
         /// register (DAC_DHR12LD), Bits 19:16 Reserved, Bits 3:0
         /// Reserved
-        pub const DHR12LD = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR12LD = @intToPtr(*volatile Mmio(32, packed struct {
             reserved0: u1,
             reserved1: u1,
             reserved2: u1,
@@ -21741,7 +21741,7 @@ pub const registers = struct {
         /// address: 0x40007428
         /// DUAL DAC 8-bit right aligned data holding
         /// register (DAC_DHR8RD), Bits 31:16 Reserved
-        pub const DHR8RD = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DHR8RD = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 8-bit right-aligned
             /// data
             DACC1DHR: u8,
@@ -21769,7 +21769,7 @@ pub const registers = struct {
         /// address: 0x4000742c
         /// DAC channel1 data output register
         /// (DAC_DOR1)
-        pub const DOR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DOR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel1 data output
             DACC1DOR: u12,
             padding0: u1,
@@ -21797,7 +21797,7 @@ pub const registers = struct {
         /// address: 0x40007430
         /// DAC channel2 data output register
         /// (DAC_DOR2)
-        pub const DOR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DOR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// DAC channel2 data output
             DACC2DOR: u12,
             padding0: u1,
@@ -21828,7 +21828,7 @@ pub const registers = struct {
 
         /// address: 0xe0042000
         /// DBGMCU_IDCODE
-        pub const IDCODE = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IDCODE = @intToPtr(*volatile Mmio(32, packed struct {
             /// DEV_ID
             DEV_ID: u12,
             reserved0: u1,
@@ -21841,7 +21841,7 @@ pub const registers = struct {
 
         /// address: 0xe0042004
         /// DBGMCU_CR
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DBG_SLEEP
             DBG_SLEEP: u1,
             /// DBG_STOP
@@ -21901,7 +21901,7 @@ pub const registers = struct {
 
         /// address: 0x40004c00
         /// UART4_SR
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Parity error
             PE: u1,
             /// Framing error
@@ -21953,7 +21953,7 @@ pub const registers = struct {
 
         /// address: 0x40004c08
         /// UART4_BRR
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DIV_Fraction
             DIV_Fraction: u4,
             /// DIV_Mantissa
@@ -21978,7 +21978,7 @@ pub const registers = struct {
 
         /// address: 0x40004c0c
         /// UART4_CR1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Send break
             SBK: u1,
             /// Receiver wakeup
@@ -22030,7 +22030,7 @@ pub const registers = struct {
 
         /// address: 0x40004c10
         /// UART4_CR2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Address of the USART node
             ADD: u4,
             reserved0: u1,
@@ -22069,7 +22069,7 @@ pub const registers = struct {
 
         /// address: 0x40004c14
         /// UART4_CR3
-        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Error interrupt enable
             EIE: u1,
             /// IrDA mode enable
@@ -22117,7 +22117,7 @@ pub const registers = struct {
 
         /// address: 0x40005000
         /// UART4_SR
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// PE
             PE: u1,
             /// FE
@@ -22167,7 +22167,7 @@ pub const registers = struct {
 
         /// address: 0x40005008
         /// UART4_BRR
-        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const BRR = @intToPtr(*volatile Mmio(32, packed struct {
             /// DIV_Fraction
             DIV_Fraction: u4,
             /// DIV_Mantissa
@@ -22192,7 +22192,7 @@ pub const registers = struct {
 
         /// address: 0x4000500c
         /// UART4_CR1
-        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// SBK
             SBK: u1,
             /// RWU
@@ -22243,7 +22243,7 @@ pub const registers = struct {
 
         /// address: 0x40005010
         /// UART4_CR2
-        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ADD
             ADD: u4,
             reserved0: u1,
@@ -22281,7 +22281,7 @@ pub const registers = struct {
 
         /// address: 0x40005014
         /// UART4_CR3
-        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// Error interrupt enable
             EIE: u1,
             /// IrDA mode enable
@@ -22335,7 +22335,7 @@ pub const registers = struct {
 
         /// address: 0x40023008
         /// Control register
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Reset bit
             RESET: u1,
             padding0: u1,
@@ -22377,7 +22377,7 @@ pub const registers = struct {
 
         /// address: 0x40022000
         /// Flash access control register
-        pub const ACR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ACR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Latency
             LATENCY: u3,
             /// Flash half cycle access
@@ -22417,21 +22417,21 @@ pub const registers = struct {
 
         /// address: 0x40022004
         /// Flash key register
-        pub const KEYR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const KEYR = @intToPtr(*volatile Mmio(32, packed struct {
             /// FPEC key
             KEY: u32,
         }), base_address + 0x4);
 
         /// address: 0x40022008
         /// Flash option key register
-        pub const OPTKEYR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OPTKEYR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Option byte key
             OPTKEY: u32,
         }), base_address + 0x8);
 
         /// address: 0x4002200c
         /// Status register
-        pub const SR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const SR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Busy
             BSY: u1,
             reserved0: u1,
@@ -22472,7 +22472,7 @@ pub const registers = struct {
 
         /// address: 0x40022010
         /// Control register
-        pub const CR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Programming
             PG: u1,
             /// Page Erase
@@ -22520,14 +22520,14 @@ pub const registers = struct {
 
         /// address: 0x40022014
         /// Flash address register
-        pub const AR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const AR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Flash Address
             FAR: u32,
         }), base_address + 0x14);
 
         /// address: 0x4002201c
         /// Option byte register
-        pub const OBR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const OBR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Option byte error
             OPTERR: u1,
             /// Read protection
@@ -22557,7 +22557,7 @@ pub const registers = struct {
 
         /// address: 0x40022020
         /// Write protection register
-        pub const WRPR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const WRPR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Write protect
             WRP: u32,
         }), base_address + 0x20);
@@ -22570,7 +22570,7 @@ pub const registers = struct {
         /// address: 0xe000e004
         /// Interrupt Controller Type
         /// Register
-        pub const ICTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Total number of interrupt lines in
             /// groups
             INTLINESNUM: u4,
@@ -22607,7 +22607,7 @@ pub const registers = struct {
         /// address: 0xe000ef00
         /// Software Triggered Interrupt
         /// Register
-        pub const STIR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const STIR = @intToPtr(*volatile Mmio(32, packed struct {
             /// interrupt to be triggered
             INTID: u9,
             padding0: u1,
@@ -22637,14 +22637,14 @@ pub const registers = struct {
 
         /// address: 0xe000e100
         /// Interrupt Set-Enable Register
-        pub const ISER0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISER0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// SETENA
             SETENA: u32,
         }), base_address + 0x100);
 
         /// address: 0xe000e104
         /// Interrupt Set-Enable Register
-        pub const ISER1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISER1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// SETENA
             SETENA: u32,
         }), base_address + 0x104);
@@ -22652,7 +22652,7 @@ pub const registers = struct {
         /// address: 0xe000e180
         /// Interrupt Clear-Enable
         /// Register
-        pub const ICER0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICER0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CLRENA
             CLRENA: u32,
         }), base_address + 0x180);
@@ -22660,21 +22660,21 @@ pub const registers = struct {
         /// address: 0xe000e184
         /// Interrupt Clear-Enable
         /// Register
-        pub const ICER1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICER1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CLRENA
             CLRENA: u32,
         }), base_address + 0x184);
 
         /// address: 0xe000e200
         /// Interrupt Set-Pending Register
-        pub const ISPR0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISPR0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// SETPEND
             SETPEND: u32,
         }), base_address + 0x200);
 
         /// address: 0xe000e204
         /// Interrupt Set-Pending Register
-        pub const ISPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// SETPEND
             SETPEND: u32,
         }), base_address + 0x204);
@@ -22682,7 +22682,7 @@ pub const registers = struct {
         /// address: 0xe000e280
         /// Interrupt Clear-Pending
         /// Register
-        pub const ICPR0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICPR0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CLRPEND
             CLRPEND: u32,
         }), base_address + 0x280);
@@ -22690,28 +22690,28 @@ pub const registers = struct {
         /// address: 0xe000e284
         /// Interrupt Clear-Pending
         /// Register
-        pub const ICPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ICPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// CLRPEND
             CLRPEND: u32,
         }), base_address + 0x284);
 
         /// address: 0xe000e300
         /// Interrupt Active Bit Register
-        pub const IABR0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IABR0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ACTIVE
             ACTIVE: u32,
         }), base_address + 0x300);
 
         /// address: 0xe000e304
         /// Interrupt Active Bit Register
-        pub const IABR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IABR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// ACTIVE
             ACTIVE: u32,
         }), base_address + 0x304);
 
         /// address: 0xe000e400
         /// Interrupt Priority Register
-        pub const IPR0 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR0 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22724,7 +22724,7 @@ pub const registers = struct {
 
         /// address: 0xe000e404
         /// Interrupt Priority Register
-        pub const IPR1 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR1 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22737,7 +22737,7 @@ pub const registers = struct {
 
         /// address: 0xe000e408
         /// Interrupt Priority Register
-        pub const IPR2 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR2 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22750,7 +22750,7 @@ pub const registers = struct {
 
         /// address: 0xe000e40c
         /// Interrupt Priority Register
-        pub const IPR3 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR3 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22763,7 +22763,7 @@ pub const registers = struct {
 
         /// address: 0xe000e410
         /// Interrupt Priority Register
-        pub const IPR4 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR4 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22776,7 +22776,7 @@ pub const registers = struct {
 
         /// address: 0xe000e414
         /// Interrupt Priority Register
-        pub const IPR5 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR5 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22789,7 +22789,7 @@ pub const registers = struct {
 
         /// address: 0xe000e418
         /// Interrupt Priority Register
-        pub const IPR6 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR6 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22802,7 +22802,7 @@ pub const registers = struct {
 
         /// address: 0xe000e41c
         /// Interrupt Priority Register
-        pub const IPR7 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR7 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22815,7 +22815,7 @@ pub const registers = struct {
 
         /// address: 0xe000e420
         /// Interrupt Priority Register
-        pub const IPR8 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR8 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22828,7 +22828,7 @@ pub const registers = struct {
 
         /// address: 0xe000e424
         /// Interrupt Priority Register
-        pub const IPR9 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR9 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22841,7 +22841,7 @@ pub const registers = struct {
 
         /// address: 0xe000e428
         /// Interrupt Priority Register
-        pub const IPR10 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR10 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22854,7 +22854,7 @@ pub const registers = struct {
 
         /// address: 0xe000e42c
         /// Interrupt Priority Register
-        pub const IPR11 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR11 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22867,7 +22867,7 @@ pub const registers = struct {
 
         /// address: 0xe000e430
         /// Interrupt Priority Register
-        pub const IPR12 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR12 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22880,7 +22880,7 @@ pub const registers = struct {
 
         /// address: 0xe000e434
         /// Interrupt Priority Register
-        pub const IPR13 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR13 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22893,7 +22893,7 @@ pub const registers = struct {
 
         /// address: 0xe000e438
         /// Interrupt Priority Register
-        pub const IPR14 = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const IPR14 = @intToPtr(*volatile Mmio(32, packed struct {
             /// IPR_N0
             IPR_N0: u8,
             /// IPR_N1
@@ -22911,7 +22911,7 @@ pub const registers = struct {
 
         /// address: 0x40005c00
         /// endpoint 0 register
-        pub const EP0R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP0R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -22959,7 +22959,7 @@ pub const registers = struct {
 
         /// address: 0x40005c04
         /// endpoint 1 register
-        pub const EP1R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP1R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23007,7 +23007,7 @@ pub const registers = struct {
 
         /// address: 0x40005c08
         /// endpoint 2 register
-        pub const EP2R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP2R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23055,7 +23055,7 @@ pub const registers = struct {
 
         /// address: 0x40005c0c
         /// endpoint 3 register
-        pub const EP3R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP3R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23103,7 +23103,7 @@ pub const registers = struct {
 
         /// address: 0x40005c10
         /// endpoint 4 register
-        pub const EP4R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP4R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23151,7 +23151,7 @@ pub const registers = struct {
 
         /// address: 0x40005c14
         /// endpoint 5 register
-        pub const EP5R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP5R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23199,7 +23199,7 @@ pub const registers = struct {
 
         /// address: 0x40005c18
         /// endpoint 6 register
-        pub const EP6R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP6R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23247,7 +23247,7 @@ pub const registers = struct {
 
         /// address: 0x40005c1c
         /// endpoint 7 register
-        pub const EP7R = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const EP7R = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint address
             EA: u4,
             /// Status bits, for transmission
@@ -23295,7 +23295,7 @@ pub const registers = struct {
 
         /// address: 0x40005c40
         /// control register
-        pub const CNTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const CNTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Force USB Reset
             FRES: u1,
             /// Power down
@@ -23350,7 +23350,7 @@ pub const registers = struct {
 
         /// address: 0x40005c44
         /// interrupt status register
-        pub const ISTR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const ISTR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Endpoint Identifier
             EP_ID: u4,
             /// Direction of transaction
@@ -23395,7 +23395,7 @@ pub const registers = struct {
 
         /// address: 0x40005c48
         /// frame number register
-        pub const FNR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const FNR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Frame number
             FN: u11,
             /// Lost SOF
@@ -23426,7 +23426,7 @@ pub const registers = struct {
 
         /// address: 0x40005c4c
         /// device address
-        pub const DADDR = @intToPtr(*volatile Mmio(32, packed struct{
+        pub const DADDR = @intToPtr(*volatile Mmio(32, packed struct {
             /// Device address
             ADD: u7,
             /// Enable function

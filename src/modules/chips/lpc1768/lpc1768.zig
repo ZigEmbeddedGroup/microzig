@@ -5,7 +5,6 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
-pub const cpu = @import("cpu");
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,
@@ -144,7 +143,7 @@ pub fn Uart(comptime index: usize) type {
                 // 8N1
                 .WLS = @enumToInt(config.data_bits),
                 .SBS = @enumToInt(config.stop_bits),
-                .PE = if (config.parity) |_| @as(u1, 0) else @as(u1, 1),
+                .PE = if (config.parity != null) @as(u1, 1) else @as(u1, 0),
                 .PS = if (config.parity) |p| @enumToInt(p) else @enumToInt(uart.Parity.odd),
                 .BC = 0,
                 .DLAB = 1,
@@ -174,10 +173,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn canWrite(self: Self) bool {
             _ = self;
-            return switch (UARTn.LSR.read().THRE) {
-                0 => true, // valid
-                1 => false, // is empty
-            };
+            return (UARTn.LSR.read().THRE == 1);
         }
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
@@ -186,10 +182,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn canRead(self: Self) bool {
             _ = self;
-            return switch (UARTn.LSR.read().RDR) {
-                0 => false, // empty
-                1 => true, // not empty
-            };
+            return (UARTn.LSR.read().RDR == 1);
         }
         pub fn rx(self: Self) u8 {
             while (!self.canRead()) {} // Wait till the data is received

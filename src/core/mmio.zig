@@ -23,18 +23,22 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
 
         pub const underlying_type = PackedT;
 
-        pub fn read(addr: *volatile Self) PackedT {
+        pub inline fn read(addr: *volatile Self) PackedT {
             return @bitCast(PackedT, addr.raw);
         }
 
-        pub fn write(addr: *volatile Self, val: PackedT) void {
+        pub inline fn write(addr: *volatile Self, val: PackedT) void {
             // This is a workaround for a compiler bug related to miscompilation
             // If the tmp var is not used, result location will fuck things up
             var tmp = @bitCast(IntT, val);
-            addr.raw = tmp;
+            addr.writeRaw(tmp);
         }
 
-        pub fn modify(addr: *volatile Self, fields: anytype) void {
+        pub fn writeRaw(addr: *volatile Self, val: IntT) void {
+            addr.raw = val;
+        }
+
+        pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
@@ -42,7 +46,7 @@ pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
             write(addr, val);
         }
 
-        pub fn toggle(addr: *volatile Self, fields: anytype) void {
+        pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
                 @field(val, @tagName(field.default_value.?)) = !@field(val, @tagName(field.default_value.?));

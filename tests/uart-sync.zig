@@ -1,8 +1,5 @@
 const micro = @import("microzig");
 
-// this will instantiate microzig and pull in all dependencies
-pub const panic = micro.panic;
-
 // Configures the led_pin to a hardware pin
 const uart_txd_pin = micro.Pin("P0.15");
 const uart_rxd_pin = micro.Pin("P0.16");
