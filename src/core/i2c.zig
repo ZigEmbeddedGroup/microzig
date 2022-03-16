@@ -92,6 +92,19 @@ pub fn I2CController(comptime index: usize) type {
         }
 
         /// Shorthand for 'register-based' devices
+        pub fn writeRegister(self: Device, register_address: u8, byte: u8) ReadError!void {
+            try self.writeRegisters(register_address, &.{byte});
+        }
+
+        /// Shorthand for 'register-based' devices
+        pub fn writeRegisters(self: Device, register_address: u8, buffer: []u8) ReadError!void {
+            var wt = try self.startTransfer(.write);
+            defer wt.stop() catch {};
+            try wt.writer().writeByte(register_address);
+            try wt.writer().writeAll(buffer);
+        }
+
+        /// Shorthand for 'register-based' devices
         pub fn readRegister(self: Device, register_address: u8) ReadError!u8 {
             var buffer: [1]u8 = undefined;
             try self.readRegisters(register_address, &buffer);
