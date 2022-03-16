@@ -301,60 +301,87 @@ pub fn I2CController(comptime index: usize) type {
 
         pub const WriteState = struct {
             address: u7,
+            buffer: [255]u8 = undefined,
+            buffer_size: u8 = 0,
 
             pub fn start(address: u7) !WriteState {
                 return WriteState{ .address = address };
             }
 
             pub fn writeAll(self: *WriteState, bytes: []const u8) !void {
-                std.debug.assert(bytes.len < 256); // TODO: use RELOAD to read more data
+                debugPrint("I2C1 writeAll() with {d} byte(s); buffer={any}\r\n", .{ bytes.len, self.buffer[0..self.buffer_size] });
+
+                std.debug.assert(self.buffer_size < 255);
+                for (bytes) |b| {
+                    self.buffer[self.buffer_size] = b;
+                    self.buffer_size += 1;
+                    if (self.buffer_size == 255) {
+                        try self.sendBuffer(1);
+                    }
+                }
+            }
+
+            fn sendBuffer(self: *WriteState, reload: u1) !void {
+                debugPrint("I2C1 sendBuffer() with {d} byte(s); RELOAD={d}; buffer={any}\r\n", .{ self.buffer_size, reload, self.buffer[0..self.buffer_size] });
+                if (self.buffer_size == 0) @panic("write of 0 bytes not supported");
+
+                std.debug.assert(reload == 0 or self.buffer_size == 255); // see TODOs below
 
                 // As master, initiate write from address, 7 bit address
                 regs.I2C1.CR2.modify(.{
                     .ADD10 = 0,
                     .SADD1 = self.address,
                     .RD_WRN = 0, // write
-                    .NBYTES = @intCast(u8, bytes.len),
+                    .NBYTES = self.buffer_size,
+                    .RELOAD = reload,
                 });
-                debugPrint("I2C1 prepared for write of {} byte(s) to 0b{b:0<7}\r\n", .{ bytes.len, self.address });
-
-                // Communication START
-                regs.I2C1.CR2.modify(.{ .START = 1 });
-                debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
-                debugPrint("I2C1 STARTed\r\n", .{});
-                debugPrint("I2C1 TXIS={}\r\n", .{regs.I2C1.ISR.read().TXIS});
-
-                for (bytes) |b| {
-                    // Wait for data to be acknowledged
-                    while (regs.I2C1.ISR.read().TXIS == 0) {
-                        debugPrint("I2C1 waiting for ready to send (TXIS=0)\r\n", .{});
+                if (reload == 0) {
+                    regs.I2C1.CR2.modify(.{ .START = 1 });
+                } else {
+                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
+                    // even though we make sure that we set NBYTES=255 per the docs.
+                }
+                for (self.buffer[0..self.buffer_size]) |b| {
+                    // wait for empty transmit buffer
+                    while (regs.I2C1.ISR.read().TXE == 0) {
+                        debugPrint("I2C1 waiting for ready to send (TXE=0)\r\n", .{});
                     }
-                    debugPrint("I2C1 ready to send (TXIS=1)\r\n", .{});
+                    debugPrint("I2C1 ready to send (TXE=1)\r\n", .{});
                     // Write data byte
                     regs.I2C1.TXDR.modify(.{ .TXDATA = b });
                 }
-                // waiting for TC==1 must only be done if AUTOEND is not set
-                debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
+                self.buffer_size = 0;
                 debugPrint("I2C1 data written\r\n", .{});
-                debugPrint("I2C1 TC={}\r\n", .{regs.I2C1.ISR.read().TC});
-                while (regs.I2C1.ISR.read().TC == 0) {
-                    debugPrint("I2C1 waiting for data (TC=0)\r\n", .{});
+                if (reload == 1) {
+                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
+                    // the following loop never seems to finish.
+                    while (regs.I2C1.ISR.read().TCR == 0) {
+                        debugPrint("I2C1 waiting transmit complete (TCR=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 transmit complete (TCR=1)\r\n", .{});
+                } else {
+                    while (regs.I2C1.ISR.read().TC == 0) {
+                        debugPrint("I2C1 waiting for transmit complete (TC=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 transmit complete (TC=1)\r\n", .{});
                 }
             }
 
-            pub fn stop(_: *WriteState) !void {
+            pub fn stop(self: *WriteState) !void {
+                try self.sendBuffer(0);
                 // Communication STOP
+                debugPrint("I2C1 STOPping\r\n", .{});
                 regs.I2C1.CR2.modify(.{ .STOP = 1 });
                 while (regs.I2C1.ISR.read().BUSY == 1) {}
                 debugPrint("I2C1 STOPped\r\n", .{});
             }
 
             pub fn restartRead(self: *WriteState) !ReadState {
-                debugPrint("I2C1 no action for restart\r\n", .{});
+                try self.sendBuffer(0);
                 return ReadState{ .address = self.address };
             }
             pub fn restartWrite(self: *WriteState) !WriteState {
-                debugPrint("I2C1 no action for restart\r\n", .{});
+                try self.sendBuffer(0);
                 return WriteState{ .address = self.address };
             }
         };
