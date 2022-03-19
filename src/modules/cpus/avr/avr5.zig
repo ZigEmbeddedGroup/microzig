@@ -59,12 +59,14 @@ pub const vector_table = blk: {
 
                 const exported_fn = switch (calling_convention) {
                     .Unspecified => struct {
-                        fn wrapper() callconv(.Interrupt) void {
+                        fn wrapper() callconv(.Signal) void {
                             if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
                                 @call(.{ .modifier = .always_inline }, handler, .{});
                         }
                     }.wrapper,
-                    else => @compileError("Just leave interrupt handlers with an unspecified calling convention"),
+                    .Signal => handler,
+                    .Interrupt => handler,
+                    else => @compileError("Calling conventions for interrupts must be 'Interrupt', 'Signal', or unspecified. The signal calling convention leaves global interrupts disabled during the ISR, where the interrupt calling conventions enables global interrupts for nested ISRs."),
                 };
 
                 const exported_name = "microzig_isr_" ++ field.name;
