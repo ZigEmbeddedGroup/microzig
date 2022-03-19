@@ -59,7 +59,7 @@ pub const vector_table = blk: {
 
                 const exported_fn = switch (calling_convention) {
                     .Unspecified => struct {
-                        fn wrapper() callconv(.C) void {
+                        fn wrapper() callconv(.Interrupt) void {
                             if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
                                 @call(.{ .modifier = .always_inline }, handler, .{});
                         }
