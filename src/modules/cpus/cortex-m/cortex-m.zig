@@ -85,7 +85,7 @@ fn isValidField(field_name: []const u8) bool {
 const VectorTable = microzig.chip.VectorTable;
 
 // will be imported by microzig.zig to allow system startup.
-pub const vector_table: VectorTable = blk: {
+pub var vector_table: VectorTable = blk: {
     var tmp: microzig.chip.VectorTable = .{
         .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
