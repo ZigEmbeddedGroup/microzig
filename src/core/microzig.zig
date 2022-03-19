@@ -100,15 +100,6 @@ comptime {
     // For a lot of systems, the vector table provides a reset vector
     // that is either called (Cortex-M) or executed (AVR) when initalized.
 
-    // Allow board and chip to override CPU vector table.
-    const vector_table = if (board != void and @hasDecl(board, "vector_table"))
-        board.vector_table
-    else if (@hasDecl(chip, "vector_table"))
-        chip.vector_table
-    else if (@hasDecl(cpu, "vector_table"))
-        cpu.vector_table
-    else
-        null;
     if (@TypeOf(vector_table) != @TypeOf(null)) { // ugh, comptime shenanigans
         @export(vector_table, .{
             .name = "vector_table",
@@ -117,6 +108,18 @@ comptime {
         });
     }
 }
+
+/// Allow board and chip to override CPU vector table.
+/// This must be a non-`comptime` `var` to be exported properly,
+/// see https://github.com/ziglang/zig/issues/5157#issuecomment-618933196 .
+var vector_table = if (board != void and @hasDecl(board, "vector_table"))
+    board.vector_table
+else if (@hasDecl(chip, "vector_table"))
+    chip.vector_table
+else if (@hasDecl(cpu, "vector_table"))
+    cpu.vector_table
+else
+    null;
 
 /// This is the logical entry point for microzig.
 /// It will invoke the main function from the root source file
