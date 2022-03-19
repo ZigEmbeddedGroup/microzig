@@ -101,21 +101,20 @@ comptime {
     // that is either called (Cortex-M) or executed (AVR) when initalized.
 
     // Allow board and chip to override CPU vector table.
-    const vector_table = if (board != void and @hasDecl(board, "vector_table"))
-        board.vector_table
+    const export_opts = .{
+        .name = "vector_table",
+        .section = "microzig_flash_start",
+        .linkage = .Strong,
+    };
+
+    if ((board != void and @hasDecl(board, "vector_table")))
+        @export(board.vector_table, export_opts)
     else if (@hasDecl(chip, "vector_table"))
-        chip.vector_table
+        @export(chip.vector_table, export_opts)
     else if (@hasDecl(cpu, "vector_table"))
-        cpu.vector_table
-    else
-        null;
-    if (@TypeOf(vector_table) != @TypeOf(null)) { // ugh, comptime shenanigans
-        @export(vector_table, .{
-            .name = "vector_table",
-            .section = "microzig_flash_start",
-            .linkage = .Strong,
-        });
-    }
+        @export(cpu.vector_table, export_opts)
+    else if (@hasDecl(app, "interrupts"))
+        @compileError("interrupts not configured");
 }
 
 /// This is the logical entry point for microzig.
