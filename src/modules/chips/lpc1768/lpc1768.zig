@@ -5,7 +5,6 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
-pub const cpu = @import("cpu");
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,

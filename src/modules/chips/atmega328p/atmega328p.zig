@@ -1,6 +1,8 @@
 const std = @import("std");
+const micro = @import("microzig");
+pub usingnamespace @import("registers.zig");
 
-pub const cpu = @import("cpu");
+pub const cpu = micro.cpu;
 const Port = enum(u8) {
     B = 1,
     C = 2,
@@ -42,15 +44,15 @@ pub const gpio = struct {
         cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
-    pub fn read(comptime pin: type) u1 {
+    pub fn read(comptime pin: type) micro.gpio.State {
         return if ((regs(pin).pin.* & (1 << pin.pin)) != 0)
-            @as(u1, 1)
+            .high
         else
-            0;
+            .low;
     }
 
-    pub fn write(comptime pin: type, state: u1) void {
-        if (state == 1) {
+    pub fn write(comptime pin: type, state: micro.gpio.State) void {
+        if (state == .high) {
             cpu.sbi(regs(pin).port_addr, pin.pin);
         } else {
             cpu.cbi(regs(pin).port_addr, pin.pin);

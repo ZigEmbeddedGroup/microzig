@@ -1,5 +1,4 @@
 const std = @import("std");
-const root = @import("root");
 const micro = @import("microzig.zig");
 
 /// An enumeration of clock sources.
@@ -20,7 +19,7 @@ pub const is_dynamic = has_clock and !@typeInfo(@TypeOf(&@field(clock_source_typ
 
 /// Contains the source which provides microzig with clock information.
 pub const source: Source = switch (clock_source_type) {
-    root => .application,
+    micro.app => .application,
     micro.board => .board,
     micro.chip => .chip,
     micro.cpu => .cpu,
@@ -43,8 +42,8 @@ pub inline fn get() u32 {
 const freq_decl_name = "cpu_frequency";
 
 const no_clock_source_type = opaque {};
-const clock_source_type = if (@hasDecl(root, freq_decl_name))
-    root
+const clock_source_type = if (@hasDecl(micro.app, freq_decl_name))
+    micro.app
 else if (micro.config.has_board and @hasDecl(micro.board, freq_decl_name))
     micro.board
 else if (@hasDecl(micro.chip, freq_decl_name))
