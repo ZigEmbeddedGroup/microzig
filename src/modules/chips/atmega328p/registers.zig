@@ -279,7 +279,7 @@ pub const registers = struct {
 
         /// address: 0xc4
         /// USART Baud Rate Register Bytes
-        pub const UBRR0 = @intToPtr(*volatile u12, 0xc4);
+        pub const UBRR0 = @intToPtr(*volatile MmioInt(16, u12), 0xc4);
     };
 
     /// Two Wire Serial Interface
@@ -1110,7 +1110,7 @@ pub const registers = struct {
 
         /// address: 0x5d
         /// Stack Pointer
-        pub const SP = @intToPtr(*volatile u12, 0x5d);
+        pub const SP = @intToPtr(*volatile MmioInt(16, u12), 0x5d);
 
         /// address: 0x57
         /// Store Program Memory Control and Status Register
