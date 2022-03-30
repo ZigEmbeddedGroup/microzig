@@ -28,10 +28,12 @@ pub fn parsePin(comptime spec: []const u8) type {
 pub const gpio = struct {
     fn regs(comptime desc: type) type {
         return struct {
+            // io address
             const pin_addr: u5 = 3 * @enumToInt(desc.port) + 0x00;
             const dir_addr: u5 = 3 * @enumToInt(desc.port) + 0x01;
             const port_addr: u5 = 3 * @enumToInt(desc.port) + 0x02;
 
+            // ram mapping
             const pin = @intToPtr(*volatile u8, 0x20 + @as(usize, pin_addr));
             const dir = @intToPtr(*volatile u8, 0x20 + @as(usize, dir_addr));
             const port = @intToPtr(*volatile u8, 0x20 + @as(usize, port_addr));
