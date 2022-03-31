@@ -52,27 +52,10 @@ pub const vector_table = blk: {
         const new_insn = if (has_interrupts) overload: {
             if (@hasDecl(microzig.app.interrupts, field.name)) {
                 const handler = @field(microzig.app.interrupts, field.name);
-                const calling_convention = switch (@typeInfo(@TypeOf(@field(microzig.app.interrupts, field.name)))) {
-                    .Fn => |info| info.calling_convention,
-                    else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ field.name ++ "' is not a function"),
-                };
 
-                const exported_fn = switch (calling_convention) {
-                    .Unspecified => struct {
-                        fn wrapper() callconv(.Signal) void {
-                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
-                                @call(.{ .modifier = .always_inline }, handler, .{});
-                        }
-                    }.wrapper,
-                    .Signal => handler,
-                    .Interrupt => handler,
-                    else => @compileError("Calling conventions for interrupts must be 'Interrupt', 'Signal', or unspecified. The signal calling convention leaves global interrupts disabled during the ISR, where the interrupt calling conventions enables global interrupts for nested ISRs."),
-                };
+                const isr = makeIsrHandler(field.name, handler);
 
-                const exported_name = "microzig_isr_" ++ field.name;
-                const options = .{ .name = exported_name, .linkage = .Strong };
-                @export(exported_fn, options);
-                break :overload "jmp " ++ exported_name;
+                break :overload "jmp " ++ isr.exported_name;
             } else {
                 break :overload "jmp microzig_unhandled_vector";
             }
@@ -89,6 +72,31 @@ pub const vector_table = blk: {
 
     break :blk T._start;
 };
+
+fn makeIsrHandler(comptime name: []const u8, comptime func: anytype) type {
+    const calling_convention = switch (@typeInfo(@TypeOf(func))) {
+        .Fn => |info| info.calling_convention,
+        else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
+    };
+
+    switch (calling_convention) {
+        .Unspecified, .Signal, .Interrupt => {},
+        else => @compileError("Calling conventions for interrupts must be 'Interrupt', 'Signal', or unspecified. The signal calling convention leaves global interrupts disabled during the ISR, where the interrupt calling conventions enables global interrupts for nested ISRs."),
+    }
+
+    return struct {
+        pub const exported_name = "microzig_isr_" ++ name;
+
+        pub fn isr_vector() callconv(.Signal) void {
+            @call(.{ .modifier = .always_inline }, func, .{});
+        }
+
+        comptime {
+            const options = .{ .name = exported_name, .linkage = .Strong };
+            @export(isr_vector, options);
+        }
+    };
+}
 
 pub const startup_logic = struct {
     export fn microzig_unhandled_vector() callconv(.Naked) noreturn {
