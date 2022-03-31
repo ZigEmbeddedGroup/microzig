@@ -13,6 +13,10 @@ pub const Mode = enum {
 pub const State = enum(u1) {
     low = 0,
     high = 1,
+
+    pub fn value(self: State) u1 {
+        return @enumToInt(self);
+    }
 };
 
 pub const Drive = enum(u1) {
