@@ -9,13 +9,12 @@ APIs will likely break in the future
 Table of Contents
 =================
 
-* [microzig](#microzig)
-   * [Contributing](#contributing)
-   * [Introduction](#introduction)
-   * [How to](#how-to)
-      * [Embedded project with "supported" chip/board](#embedded-project-with-supported-chipboard)
-      * [Embedded project with "unsupported" chip](#embedded-project-with-unsupported-chip)
-      * [Interrupts](#interrupts)
+ * [Contributing](#contributing)
+ * [Introduction](#introduction)
+ * [How to](#how-to)
+    * [Embedded project with "supported" chip/board](#embedded-project-with-supported-chipboard)
+    * [Embedded project with "unsupported" chip](#embedded-project-with-unsupported-chip)
+    * [Interrupts](#interrupts)
 
 <!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
