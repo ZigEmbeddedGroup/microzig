@@ -38,10 +38,14 @@ pub fn build(b: *std.build.Builder) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const exe_tests = b.addTest("src/main.zig");
-    exe_tests.setTarget(target);
-    exe_tests.setBuildMode(mode);
+    const tests = b.addTest("tests/main.zig");
+    tests.setTarget(target);
+    tests.setBuildMode(mode);
+    tests.addOptions("build_options", build_options);
+    tests.addPackagePath("xml", "src/xml.zig");
+    tests.addPackagePath("Database", "src/Database.zig");
+    xml.link(tests);
 
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&exe_tests.step);
+    test_step.dependOn(&tests.step);
 }

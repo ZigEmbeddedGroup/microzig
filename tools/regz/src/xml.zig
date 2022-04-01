@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @cImport({
+pub const c = @cImport({
     @cDefine("LIBXML_TREE_ENABLED", {});
     @cDefine("LIBXML_SCHEMAS_ENABLED", {});
     @cDefine("LIBXML_READER_ENABLED", {});
@@ -15,6 +15,10 @@ pub const readIo = c.xmlReadIO;
 pub const cleanupParser = c.xmlCleanupParser;
 pub const freeDoc = c.xmlFreeDoc;
 pub const docGetRootElement = c.xmlDocGetRootElement;
+
+pub fn readFromMemory(text: []const u8) !*Doc {
+    return c.xmlReadMemory(text.ptr, @intCast(c_int, text.len), null, null, 0) orelse error.XmlReadMemory;
+}
 
 pub fn getAttribute(node: ?*Node, key: [:0]const u8) ?[]const u8 {
     if (c.xmlHasProp(node, key.ptr)) |prop| {
