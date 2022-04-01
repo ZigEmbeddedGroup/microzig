@@ -189,4 +189,10 @@ pub const drivers = struct {
         .path = .{ .path = root_path ++ "drivers/quadrature.zig" },
         .dependencies = &.{pkgs.microzig},
     };
+
+    pub const button = std.build.Pkg{
+        .name = "microzig.button",
+        .path = .{ .path = root_path ++ "drivers/button.zig" },
+        .dependencies = &.{pkgs.microzig},
+    };
 };
