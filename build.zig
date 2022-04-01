@@ -23,6 +23,7 @@ pub fn build(b: *std.build.Builder) !void {
         //BuildConfig{ .name = "chips.stm32f103x8", .backing = Backing{ .chip = chips.stm32f103x8 } },
         BuildConfig{ .name = "boards.stm32f3discovery", .backing = Backing{ .board = boards.stm32f3discovery }, .supports_uart_test = false },
         BuildConfig{ .name = "boards.stm32f4discovery", .backing = Backing{ .board = boards.stm32f4discovery }, .supports_uart_test = false },
+        BuildConfig{ .name = "boards.stm32f429idiscovery", .backing = Backing{ .board = boards.stm32f429idiscovery }, .supports_uart_test = false },
     };
 
     const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false, on_avr: bool = true };

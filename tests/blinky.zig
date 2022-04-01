@@ -7,6 +7,7 @@ const led_pin = if (micro.config.has_board)
         .@"mbed LPC1768" => micro.Pin("LED-1"),
         .@"STM32F3DISCOVERY" => micro.Pin("LD3"),
         .@"STM32F4DISCOVERY" => micro.Pin("LD5"),
+        .@"STM32F429IDISCOVERY" => micro.Pin("LD4"),
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
