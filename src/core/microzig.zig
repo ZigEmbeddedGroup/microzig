@@ -39,6 +39,9 @@ pub const Pin = pin.Pin;
 pub const uart = @import("uart.zig");
 pub const Uart = uart.Uart;
 
+pub const spi = @import("spi.zig");
+pub const Spi = spi.Spi;
+
 pub const i2c = @import("i2c.zig");
 pub const I2CController = i2c.I2CController;
 

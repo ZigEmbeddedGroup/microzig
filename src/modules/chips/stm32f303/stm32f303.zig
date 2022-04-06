@@ -236,7 +236,7 @@ pub fn Uart(comptime index: usize) type {
     };
 }
 
-const enable_stm32f303_debug = false;
+const enable_stm32f303_debug = true;
 
 fn debugPrint(comptime format: []const u8, args: anytype) void {
     if (enable_stm32f303_debug) {
@@ -445,5 +445,61 @@ pub fn I2CController(comptime index: usize) type {
                 return WriteState{ .address = self.address };
             }
         };
+    };
+}
+
+pub fn Spi(comptime index: usize) type {
+    if (!(index == 1)) @compileError("TODO: only SPI1 is currently supported");
+
+    return struct {
+        const Self = @This();
+
+        pub fn init(config: micro.spi.BusConfig) !Self {
+            _ = config; // unused for now
+
+            // CONFIGURE SPI1
+            // connected to APB2, MCU pins PA5 + PA7 + PA6 = SPC + SDI + SDO,
+            // if GPIO port A is configured for alternate function 5 for these PA pins.
+
+            // Enable the GPIO CLOCK
+            regs.RCC.AHBENR.modify(.{ .IOPAEN = 1 });
+
+            // Configure the I2C PINs for ALternate Functions
+            // 	- Select Alternate Function in MODER Register
+            regs.GPIOA.MODER.modify(.{ .MODER5 = 0b10, .MODER6 = 0b10, .MODER7 = 0b10 });
+            // 	- Select High SPEED for the PINs
+            regs.GPIOA.OSPEEDR.modify(.{ .OSPEEDR5 = 0b11, .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
+            // 	- Configure the Alternate Function in AFR Register
+            regs.GPIOA.AFRL.modify(.{ .AFRL5 = 5, .AFRL6 = 5, .AFRL7 = 5 });
+
+            // TODO: Make the use of PE3 configured via the STM32F3DISCOVERY board
+            regs.RCC.AHBENR.modify(.{ .IOPEEN = 1 });
+            regs.GPIOE.MODER.modify(.{ .MODER3 = 0b01 });
+            regs.GPIOE.OTYPER.modify(.{ .OT3 = 1 });
+            regs.GPIOE.OSPEEDR.modify(.{ .OSPEEDR3 = 0b11 });
+            regs.GPIOE.PUPDR.modify(.{ .PUPDR3 = 0b10 }); // pull down, to enable SPI
+
+            // Enable the SPI1 CLOCK
+            regs.RCC.APB2ENR.modify(.{ .SPI1EN = 1 });
+
+            regs.SPI1.CR1.modify(.{
+                .CPOL = 1, // TODO: make configurable
+                .CPHA = 1, // TODO: make configurable
+                .MSTR = 1,
+                .BR = 0b111, // 1/256 the of PCLK TODO: make configurable
+                .LSBFIRST = 0, // MSB first TODO: make configurable
+                .SSM = 1,
+                .SSI = 1,
+                .RXONLY = 0,
+                .SPE = 1,
+            });
+            regs.SPI1.CR2.raw = 0;
+            regs.SPI1.CR2.modify(.{
+                .DS = 0b0111, // 8-bit data frames, seems default via '0b0000 is interpreted as 0b0111'
+                .FRXTH = 1, // RXNE event after 1 byte received
+            });
+
+            return Self{};
+        }
     };
 }
