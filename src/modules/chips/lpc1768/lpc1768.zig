@@ -5,6 +5,8 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
+pub const cpu_frequency: u32 = 100_000_000; // 100 MHz
+
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,
