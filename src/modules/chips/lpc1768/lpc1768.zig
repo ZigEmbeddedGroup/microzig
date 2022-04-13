@@ -131,11 +131,11 @@ pub fn Uart(comptime index: usize) type {
                 },
                 2 => {
                     regs.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
+                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
                 },
                 3 => {
                     regs.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
+                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
                 },
                 else => unreachable,
             }
