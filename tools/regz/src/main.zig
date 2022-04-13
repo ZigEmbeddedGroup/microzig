@@ -14,7 +14,8 @@ const svd_schema = @embedFile("cmsis-svd.xsd");
 
 const params = [_]clap.Param(clap.Help){
     clap.parseParam("-h, --help             Display this help and exit") catch unreachable,
-    clap.parseParam("-s, --schema <str>    Explicitly set schema type, one of: svd, atdf, json") catch unreachable,
+    clap.parseParam("-s, --schema <str>     Explicitly set schema type, one of: svd, atdf, json") catch unreachable,
+    clap.parseParam("-o, --output_path <str>     Write to a file") catch unreachable,
     clap.parseParam("<str>...") catch unreachable,
 };
 
@@ -111,9 +112,24 @@ fn mainImpl() anyerror!void {
     };
     defer db.deinit();
 
-    var buffered = std.io.bufferedWriter(std.io.getStdOut().writer());
-    try db.toZig(std.io.getStdOut().writer()); //buffered.writer());
-    try buffered.flush();
+    const writer = if (res.args.output_path) |output_path|
+        if (std.fs.path.isAbsolute(output_path)) writer: {
+            if (std.fs.path.dirname(output_path)) |dirname| {
+                _ = dirname;
+                // TODO: recursively create absolute path if it doesn't exist
+            }
+
+            break :writer (try std.fs.createFileAbsolute(output_path, .{})).writer();
+        } else writer: {
+            if (std.fs.path.dirname(output_path)) |dirname|
+                try std.fs.cwd().makePath(dirname);
+
+            break :writer (try std.fs.cwd().createFile(output_path, .{})).writer();
+        }
+    else
+        std.io.getStdOut().writer();
+
+    try db.toZig(writer);
 }
 
 fn readFn(ctx: ?*anyopaque, buffer: ?[*]u8, len: c_int) callconv(.C) c_int {

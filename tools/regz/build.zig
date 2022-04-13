@@ -1,35 +1,103 @@
 const std = @import("std");
 const libxml2 = @import("libs/zig-libxml2/libxml2.zig");
 
+const Builder = std.build.Builder;
+const LibExeObjStep = std.build.LibExeObjStep;
+const Step = std.build.Step;
+const GeneratedFile = std.build.GeneratedFile;
+
+fn root() []const u8 {
+    return (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
+}
+
+pub const Regz = struct {
+    builder: *Builder,
+    exe: *LibExeObjStep,
+    build_options: *std.build.OptionsStep,
+    xml: libxml2.Library,
+
+    pub const Options = struct {
+        target: ?std.zig.CrossTarget = null,
+        mode: ?std.builtin.Mode = null,
+    };
+
+    pub fn create(builder: *Builder, opts: Options) *Regz {
+        const target = opts.target orelse std.zig.CrossTarget{};
+        const mode = opts.mode orelse .Debug;
+
+        const xml = libxml2.create(builder, target, mode, .{
+            .iconv = false,
+            .lzma = false,
+            .zlib = false,
+        }) catch unreachable;
+        xml.step.install();
+
+        const commit_result = std.ChildProcess.exec(.{
+            .allocator = builder.allocator,
+            .argv = &.{ "git", "rev-parse", "HEAD" },
+            .cwd = root(),
+        }) catch unreachable;
+
+        const build_options = builder.addOptions();
+        build_options.addOption([]const u8, "commit", commit_result.stdout);
+
+        const exe = builder.addExecutable("regz", root() ++ "src/main.zig");
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
+        exe.addOptions("build_options", build_options);
+        exe.addPackagePath("clap", root() ++ "libs/zig-clap/clap.zig");
+        xml.link(exe);
+
+        var regz = builder.allocator.create(Regz) catch unreachable;
+        regz.* = Regz{
+            .builder = builder,
+            .exe = exe,
+            .build_options = build_options,
+            .xml = xml,
+        };
+
+        return regz;
+    }
+
+    pub fn addGeneratedChipFile(regz: *Regz, schema_path: []const u8) GeneratedFile {
+        // generate path where the schema will go
+        // TODO: improve collision resistance
+        const basename = std.fs.path.basename(schema_path);
+        const extension = std.fs.path.extension(basename);
+        const destination_path = std.fs.path.join(regz.builder.allocator, &.{
+            regz.builder.cache_root,
+            "regz",
+            std.mem.join(regz.builder.allocator, "", &.{
+                basename[0 .. basename.len - extension.len],
+                ".zig",
+            }) catch unreachable,
+        }) catch unreachable;
+
+        const run_step = regz.exe.run();
+        run_step.addArgs(&.{
+            schema_path,
+            "-o",
+            destination_path,
+        });
+
+        return GeneratedFile{
+            .step = &run_step.step,
+            .path = destination_path,
+        };
+    }
+};
+
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
-    const xml = try libxml2.create(b, target, mode, .{
-        .iconv = false,
-        .lzma = false,
-        .zlib = false,
+    const regz = Regz.create(b, .{
+        .target = target,
+        .mode = mode,
     });
-    xml.step.install();
+    regz.exe.install();
 
-    const commit_result = try std.ChildProcess.exec(.{
-        .allocator = b.allocator,
-        .argv = &.{ "git", "rev-parse", "HEAD" },
-        .cwd = std.fs.path.dirname(@src().file) orelse unreachable,
-    });
-
-    const build_options = b.addOptions();
-    build_options.addOption([]const u8, "commit", commit_result.stdout);
-
-    const exe = b.addExecutable("regz", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.addOptions("build_options", build_options);
-    exe.addPackagePath("clap", "libs/zig-clap/clap.zig");
-    xml.link(exe);
-    exe.install();
-
-    const run_cmd = exe.run();
+    const run_cmd = regz.exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
@@ -38,14 +106,17 @@ pub fn build(b: *std.build.Builder) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+    const test_chip_file = regz.addGeneratedChipFile("tests/svd/cmsis-example.svd");
+
     const tests = b.addTest("tests/main.zig");
     tests.setTarget(target);
     tests.setBuildMode(mode);
-    tests.addOptions("build_options", build_options);
+    tests.addOptions("build_options", regz.build_options);
     tests.addPackagePath("xml", "src/xml.zig");
     tests.addPackagePath("Database", "src/Database.zig");
-    xml.link(tests);
+    regz.xml.link(tests);
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&tests.step);
+    test_step.dependOn(test_chip_file.step);
 }
