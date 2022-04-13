@@ -53,9 +53,8 @@ pub fn parsePin(comptime spec: []const u8) type {
     if (spec[1] < 'A' or spec[1] > 'I')
         @compileError(invalid_format_msg);
 
-    const pin_number: comptime_int = std.fmt.parseInt(u4, spec[2..], 10) catch @compileError(invalid_format_msg);
-
     return struct {
+        const pin_number: comptime_int = std.fmt.parseInt(u4, spec[2..], 10) catch @compileError(invalid_format_msg);
         /// 'A'...'I'
         const gpio_port_name = spec[1..2];
         const gpio_port = @field(regs, "GPIO" ++ gpio_port_name);
@@ -70,6 +69,25 @@ fn setRegField(reg: anytype, comptime field_name: anytype, value: anytype) void 
 }
 
 pub const gpio = struct {
+    pub const AlternateFunction = enum(u4) {
+        af0,
+        af1,
+        af2,
+        af3,
+        af4,
+        af5,
+        af6,
+        af7,
+        af8,
+        af9,
+        af10,
+        af11,
+        af12,
+        af13,
+        af14,
+        af15,
+    };
+
     pub fn setOutput(comptime pin: type) void {
         setRegField(regs.RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
@@ -78,6 +96,16 @@ pub const gpio = struct {
     pub fn setInput(comptime pin: type) void {
         setRegField(regs.RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
+    }
+
+    pub fn setAlternateFunction(comptime pin: type, af: AlternateFunction) void {
+        setRegField(regs.RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b10);
+        if (pin.pin_number < 8) {
+            setRegField(@field(pin.gpio_port, "AFRL"), "AFRL" ++ pin.suffix, @enumToInt(af));
+        } else {
+            setRegField(@field(pin.gpio_port, "AFRH"), "AFRH" ++ pin.suffix, @enumToInt(af));
+        }
     }
 
     pub fn read(comptime pin: type) micro.gpio.State {
@@ -118,7 +146,27 @@ pub const uart = struct {
 };
 
 pub fn Uart(comptime index: usize) type {
-    if (!(index == 2)) @compileError("TODO: only USART2 is currently supported");
+    if (index < 1 or index > 6) @compileError("Valid USART index are 1..6");
+
+    const usart_name = std.fmt.comptimePrint("USART{d}", .{index});
+    // TODO: support alternative pins
+    const pins = switch (index) {
+        1 => .{ .tx = micro.Pin("PA9"), .rx = micro.Pin("PA10") },
+        2 => .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
+        3 => .{ .tx = micro.Pin("PD8"), .rx = micro.Pin("PD9") },
+        4 => .{ .tx = micro.Pin("PC10"), .rx = micro.Pin("PC11") },
+        5 => .{ .tx = micro.Pin("PC12"), .rx = micro.Pin("PD2") },
+        6 => .{ .tx = micro.Pin("PC6"), .rx = micro.Pin("PC7") },
+        else => unreachable,
+    };
+    const tx_gpio = micro.Gpio(pins.tx, .{
+        .mode = .alternate_function,
+        .alternate_function = .af7,
+    });
+    const rx_gpio = micro.Gpio(pins.rx, .{
+        .mode = .alternate_function,
+        .alternate_function = .af7,
+    });
 
     return struct {
         parity_read_mask: u8,
@@ -127,23 +175,26 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn init(config: micro.uart.Config) !Self {
             // The following must all be written when the USART is disabled (UE=0).
-            if (regs.USART2.CR1.read().UE == 1)
-                @panic("Trying to initialize USART2 while it is already enabled");
+            if (@field(regs, usart_name).CR1.read().UE == 1)
+                @panic("Trying to initialize " ++ usart_name ++ " while it is already enabled");
             // LATER: Alternatively, set UE=0 at this point?  Then wait for something?
             // Or add a destroy() function which disables the USART?
 
-            // enable the USART2 clock
-            regs.RCC.APB1ENR.modify(.{ .USART2EN = 1 });
-            // enable GPIOA clock
-            regs.RCC.AHB1ENR.modify(.{ .GPIOAEN = 1 });
-            // set PA2+PA3 to alternate function 7, USART2_TX + USART2_RX
-            regs.GPIOA.MODER.modify(.{ .MODER2 = 0b10, .MODER3 = 0b10 });
-            regs.GPIOA.AFRL.modify(.{ .AFRL2 = 7, .AFRL3 = 7 });
+            // enable the USART clock
+            const clk_enable_reg = switch (index) {
+                1, 6 => regs.RCC.APB2ENR,
+                2...5 => regs.RCC.APB1ENR,
+                else => unreachable,
+            };
+            setRegField(clk_enable_reg, usart_name ++ "EN", 1);
 
-            // clear USART2 configuration to its default
-            regs.USART2.CR1.raw = 0;
-            regs.USART2.CR2.raw = 0;
-            regs.USART2.CR3.raw = 0;
+            tx_gpio.init();
+            rx_gpio.init();
+
+            // clear USART configuration to its default
+            @field(regs, usart_name).CR1.raw = 0;
+            @field(regs, usart_name).CR2.raw = 0;
+            @field(regs, usart_name).CR3.raw = 0;
 
             // Return error for unsupported combinations
             if (config.data_bits == .nine and config.parity != null) {
@@ -159,15 +210,15 @@ pub fn Uart(comptime index: usize) type {
             // - 0: 1 start bit, 8 data bits (7 data + 1 parity, or 8 data), n stop bits, the chip default
             // - 1: 1 start bit, 9 data bits (8 data + 1 parity, or 9 data), n stop bits
             const m: u1 = if (config.data_bits == .nine or (config.data_bits == .eight and config.parity != null)) 1 else 0;
-            regs.USART2.CR1.modify(.{ .M = m });
+            @field(regs, usart_name).CR1.modify(.{ .M = m });
 
             // set parity
             if (config.parity) |parity| {
-                regs.USART2.CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
+                @field(regs, usart_name).CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
             } // otherwise, no need to set no parity since we reset Control Registers above, and it's the default
 
             // set number of stop bits
-            regs.USART2.CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
+            @field(regs, usart_name).CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
 
             // set the baud rate
             // Despite the reference manual talking about fractional calculation and other buzzwords,
@@ -177,12 +228,12 @@ pub fn Uart(comptime index: usize) type {
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
             const usartdiv = @intCast(u16, @divTrunc(apb1_frequency, config.baud_rate));
-            regs.USART2.BRR.raw = usartdiv;
+            @field(regs, usart_name).BRR.raw = usartdiv;
 
-            // enable USART2, and its transmitter and receiver
-            regs.USART2.CR1.modify(.{ .UE = 1 });
-            regs.USART2.CR1.modify(.{ .TE = 1 });
-            regs.USART2.CR1.modify(.{ .RE = 1 });
+            // enable USART, and its transmitter and receiver
+            @field(regs, usart_name).CR1.modify(.{ .UE = 1 });
+            @field(regs, usart_name).CR1.modify(.{ .TE = 1 });
+            @field(regs, usart_name).CR1.modify(.{ .RE = 1 });
 
             // For code simplicity, at cost of one or more register reads,
             // we read back the actual configuration from the registers,
@@ -191,7 +242,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         pub fn getOrInit(config: micro.uart.Config) !Self {
-            if (regs.USART2.CR1.read().UE == 1) {
+            if (@field(regs, usart_name).CR1.read().UE == 1) {
                 // UART1 already enabled, don't reinitialize and disturb things;
                 // instead read and use the actual configuration.
                 return readFromRegisters();
@@ -199,7 +250,7 @@ pub fn Uart(comptime index: usize) type {
         }
 
         fn readFromRegisters() Self {
-            const cr1 = regs.USART2.CR1.read();
+            const cr1 = @field(regs, usart_name).CR1.read();
             // As documented in `init()`, M0==1 means 'the 9th bit (not the 8th bit) is the parity bit'.
             // So we always mask away the 9th bit, and if parity is enabled and it is in the 8th bit,
             // then we also mask away the 8th bit.
@@ -208,7 +259,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn canWrite(self: Self) bool {
             _ = self;
-            return switch (regs.USART2.SR.read().TXE) {
+            return switch (@field(regs, usart_name).SR.read().TXE) {
                 1 => true,
                 0 => false,
             };
@@ -216,16 +267,16 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
-            regs.USART2.DR.modify(ch);
+            @field(regs, usart_name).DR.modify(ch);
         }
 
         pub fn txflush(_: Self) void {
-            while (regs.USART2.SR.read().TC == 0) {}
+            while (@field(regs, usart_name).SR.read().TC == 0) {}
         }
 
         pub fn canRead(self: Self) bool {
             _ = self;
-            return switch (regs.USART2.SR.read().RXNE) {
+            return switch (@field(regs, usart_name).SR.read().RXNE) {
                 1 => true,
                 0 => false,
             };
@@ -233,7 +284,7 @@ pub fn Uart(comptime index: usize) type {
 
         pub fn rx(self: Self) u8 {
             while (!self.canRead()) {} // Wait till the data is received
-            const data_with_parity_bit: u9 = regs.USART2.DR.read();
+            const data_with_parity_bit: u9 = @field(regs, usart_name).DR.read();
             return @intCast(u8, data_with_parity_bit & self.parity_read_mask);
         }
     };
