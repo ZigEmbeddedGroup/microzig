@@ -1,120 +1,76 @@
 const micro = @import("microzig");
 
 // Configures the led_pin to a hardware pin
-const uart_txd_pin = micro.Pin("P0.15");
-const uart_rxd_pin = micro.Pin("P0.16");
-
-const debug_pin = micro.Pin("P0.17");
-
-const led1_pin = micro.Pin("P1.18");
-const led2_pin = micro.Pin("P1.20");
-const led3_pin = micro.Pin("P1.21");
-const led4_pin = micro.Pin("P1.23");
-
-pub const cpu_frequency: u32 = 100_000_000; // 100 MHz
-
-const PLL = struct {
-    fn init() void {
-        reset_overclocking();
+const led_pin = if (micro.config.has_board)
+    switch (micro.config.board_name) {
+        .@"Arduino Nano" => micro.Pin("D13"),
+        .@"mbed LPC1768" => micro.Pin("LED-1"),
+        .@"STM32F3DISCOVERY" => micro.Pin("LD3"),
+        .@"STM32F4DISCOVERY" => micro.Pin("LD5"),
+        .@"STM32F429IDISCOVERY" => micro.Pin("LD4"),
+        else => @compileError("unknown board"),
     }
+else switch (micro.config.chip_name) {
+    .@"ATmega328p" => micro.Pin("PB5"),
+    .@"NXP LPC1768" => micro.Pin("P1.18"),
+    .@"STM32F103x8" => micro.Pin("PC13"),
+    else => @compileError("unknown chip"),
+};
 
-    fn reset_overclocking() void {
-        overclock_flash(5); // 5 cycles access time
-        overclock_pll(3); // 100 MHz
+// Configures the uart index
+const uart_idx = if (micro.config.has_board)
+    switch (micro.config.board_name) {
+        .@"mbed LPC1768" => 1,
+        .@"STM32F3DISCOVERY" => 1,
+        .@"STM32F4DISCOVERY" => 2,
+        else => @compileError("unknown board"),
     }
-
-    fn overclock_flash(timing: u4) void {
-        micro.chip.registers.SYSCON.FLASHCFG.modify(.{
-            .FLASHTIM = timing - 1,
-        });
-    }
-    inline fn feed_pll() void {
-        micro.chip.registers.SYSCON.PLL0FEED.modify(.{ .PLL0FEED = 0xAA });
-        micro.chip.registers.SYSCON.PLL0FEED.modify(.{ .PLL0FEED = 0x55 });
-    }
-
-    fn overclock_pll(divider: u8) void {
-        // PLL einrichten für RC
-        micro.chip.registers.SYSCON.PLL0CON.modify(.{
-            .PLLE0 = 0,
-            .PLLC0 = 0,
-        });
-        feed_pll();
-
-        micro.chip.registers.SYSCON.CLKSRCSEL.modify(.{ .CLKSRC = 0 }); // RC-Oszillator als Quelle
-        micro.chip.registers.SYSCON.PLL0CFG.modify(.{
-            // SysClk = (4MHz / 2) * (2 * 75) = 300 MHz
-            .MSEL0 = 74,
-            .NSEL0 = 1,
-        });
-        // CPU Takt = SysClk / divider
-        micro.chip.registers.SYSCON.CCLKCFG.modify(.{ .CCLKSEL = divider - 1 });
-
-        feed_pll();
-
-        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLE0 = 1 }); // PLL einschalten
-        feed_pll();
-
-        var i: usize = 0;
-        while (i < 1_000) : (i += 1) {
-            micro.cpu.nop();
-        }
-
-        micro.chip.registers.SYSCON.PLL0CON.modify(.{ .PLLC0 = 1 });
-        feed_pll();
-    }
+else switch (micro.config.chip_name) {
+    .@"NXP LPC1768" => 1,
+    else => @compileError("unknown chip"),
 };
 
 pub fn main() !void {
-    const gpio_init = .{ .mode = .output, .initial_state = .low };
-
-    const led1 = micro.Gpio(led1_pin, gpio_init);
-    const led2 = micro.Gpio(led2_pin, gpio_init);
-    const led3 = micro.Gpio(led3_pin, gpio_init);
-    const led4 = micro.Gpio(led4_pin, gpio_init);
-
-    const status = micro.Gpio(debug_pin, .{
+    const led = micro.Gpio(led_pin, .{
         .mode = .output,
-        .initial_state = .high,
+        .initial_state = .low,
     });
-    status.init();
-    led1.init();
-    led2.init();
-    led3.init();
-    led4.init();
+    led.init();
 
-    uart_txd_pin.route(.func01);
-    uart_rxd_pin.route(.func01);
-
-    PLL.init();
-    led1.setToHigh();
-
-    var debug_port = micro.Uart(1).init(.{
+    var uart = micro.Uart(uart_idx).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
         .parity = null,
         .data_bits = .eight,
     }) catch |err| {
-        led1.write(if (err == error.UnsupportedBaudRate) micro.gpio.State.low else .high);
-        led2.write(if (err == error.UnsupportedParity) micro.gpio.State.low else .high);
-        led3.write(if (err == error.UnsupportedStopBitCount) micro.gpio.State.low else .high);
-        led4.write(if (err == error.UnsupportedWordSize) micro.gpio.State.low else .high);
+        blinkError(led, err);
 
         micro.hang();
     };
-    led2.setToHigh();
 
-    var out = debug_port.writer();
-    var in = debug_port.reader();
-    _ = in;
-
-    try out.writeAll("Please enter a sentence:\r\n");
-
-    led3.setToHigh();
+    var out = uart.writer();
 
     while (true) {
-        try out.writeAll(".");
-        led4.toggle();
+        led.setToHigh();
+        try out.writeAll("Hello microzig!\r\n");
+        led.setToLow();
         micro.debug.busySleep(100_000);
+    }
+}
+
+fn blinkError(led: anytype, err: micro.uart.InitError) void {
+    var blinks: u3 =
+        switch (err) {
+        error.UnsupportedBaudRate => 1,
+        error.UnsupportedParity => 2,
+        error.UnsupportedStopBitCount => 3,
+        error.UnsupportedWordSize => 4,
+    };
+
+    while (blinks > 0) : (blinks -= 1) {
+        led.setToHigh();
+        micro.debug.busySleep(1_000_000);
+        led.setToLow();
+        micro.debug.busySleep(1_000_000);
     }
 }
