@@ -1,43 +1,26 @@
 const micro = @import("microzig");
 
-// Configures the led_pin to a hardware pin
-const led_pin = if (micro.config.has_board)
+// Configures the led_pin and uart index
+const cfg = if (micro.config.has_board)
     switch (micro.config.board_name) {
-        .@"Arduino Nano" => micro.Pin("D13"),
-        .@"mbed LPC1768" => micro.Pin("LED-1"),
-        .@"STM32F3DISCOVERY" => micro.Pin("LD3"),
-        .@"STM32F4DISCOVERY" => micro.Pin("LD5"),
-        .@"STM32F429IDISCOVERY" => micro.Pin("LD4"),
+        .@"mbed LPC1768" => .{ .led_pin = micro.Pin("LED-1"), .uart_idx = 1 },
+        .@"STM32F3DISCOVERY" => .{ .led_pin = micro.Pin("LD3"), .uart_idx = 1 },
+        .@"STM32F4DISCOVERY" => .{ .led_pin = micro.Pin("LD5"), .uart_idx = 2 },
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
-    .@"ATmega328p" => micro.Pin("PB5"),
-    .@"NXP LPC1768" => micro.Pin("P1.18"),
-    .@"STM32F103x8" => micro.Pin("PC13"),
-    else => @compileError("unknown chip"),
-};
-
-// Configures the uart index
-const uart_idx = if (micro.config.has_board)
-    switch (micro.config.board_name) {
-        .@"mbed LPC1768" => 1,
-        .@"STM32F3DISCOVERY" => 1,
-        .@"STM32F4DISCOVERY" => 2,
-        else => @compileError("unknown board"),
-    }
-else switch (micro.config.chip_name) {
-    .@"NXP LPC1768" => 1,
+    .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1 },
     else => @compileError("unknown chip"),
 };
 
 pub fn main() !void {
-    const led = micro.Gpio(led_pin, .{
+    const led = micro.Gpio(cfg.led_pin, .{
         .mode = .output,
         .initial_state = .low,
     });
     led.init();
 
-    var uart = micro.Uart(uart_idx).init(.{
+    var uart = micro.Uart(cfg.uart_idx).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
         .parity = null,
