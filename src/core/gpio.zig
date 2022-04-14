@@ -8,6 +8,7 @@ pub const Mode = enum {
     input_output,
     open_drain,
     generic,
+    alternate_function,
 };
 
 pub const State = enum(u1) {
@@ -56,6 +57,14 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
                         .driven => Drive.enabled,
                         else => @compileError("An open_drain pin requires initial_state to be either .floating or .driven"),
                     });
+                },
+                .alternate_function => {
+                    if (comptime @hasDecl(chip.gpio, "AlternateFunction")) {
+                        const alternate_function = @as(chip.gpio.AlternateFunction, config.alternate_function);
+                        setAlternateFunction(alternate_function);
+                    } else {
+                        @compileError("Alternate Function not supported yet");
+                    }
                 },
             }
         }
@@ -112,6 +121,11 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
         fn getDrive() Drive {
             @compileError("open drain not implemented yet!");
         }
+
+        // alternate function
+        fn setAlternateFunction(af: chip.gpio.AlternateFunction) void {
+            chip.gpio.setAlternateFunction(pin.source_pin, af);
+        }
     };
     // return only a subset of Generic for the requested pin.
     switch (mode) {
@@ -141,6 +155,9 @@ pub fn Gpio(comptime pin: type, config: anytype) type {
             pub const read = Generic.read;
             pub const setDrive = Generic.setDrive;
             pub const getDrive = Generic.getDrive;
+        },
+        .alternate_function => return struct {
+            pub const init = Generic.init;
         },
         .generic => Generic,
     }
