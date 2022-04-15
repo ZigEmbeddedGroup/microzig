@@ -1,0 +1,3 @@
+[submodule "deps/uf2"]
+	path = deps/uf2
+	url = https://github.com/microsoft/uf2.git
