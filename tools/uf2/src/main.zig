@@ -24,16 +24,17 @@ const LibExeObjStep = std.build.LibExeObjStep;
 const prog_page_size = 256;
 const uf2_alignment = 4;
 
+pub const Options = struct {
+    // TODO: when implemented set to true by default
+    bundle_source: bool = false,
+    family_id: ?FamilyId = null,
+};
+
 pub const Uf2Step = struct {
     step: std.build.Step,
     exe: *LibExeObjStep,
     opts: Options,
     path: ?[]const u8 = null,
-
-    pub const Options = struct {
-        bundle_source: bool = true,
-        family_id: ?FamilyId = null,
-    };
 
     pub fn create(exe: *LibExeObjStep, opts: Options) *Uf2Step {
         assert(exe.kind == .exe);
@@ -56,18 +57,14 @@ pub const Uf2Step = struct {
 
     /// uf2 is typically used to flash via a mass storage device, this step
     /// writes the file contents to the mounted directory
-    pub fn addFlashOperation(self: *Uf2Step, path: []const u8) *std.build.WriteFileStep {
-        _ = self;
-        _ = path;
-
-        @panic("TODO");
+    pub fn addFlashOperation(self: *Uf2Step, path: []const u8) *FlashOpStep {
+        return FlashOpStep.create(self, path);
     }
 
     fn make(step: *std.build.Step) !void {
         const self = @fieldParentPtr(Uf2Step, "step", step);
         const file_source = self.exe.getOutputSource();
         const exe_path = file_source.getPath(self.exe.builder);
-
         const dest_path = try std.mem.join(self.exe.builder.allocator, "", &.{
             exe_path,
             ".uf2",
@@ -76,7 +73,7 @@ pub const Uf2Step = struct {
         var archive = try Archive.initFromElf(
             self.exe.builder.allocator,
             self.exe,
-            self.opts.family_id,
+            self.opts,
         );
         defer archive.deinit();
 
@@ -88,15 +85,67 @@ pub const Uf2Step = struct {
     }
 };
 
+/// for uf2, a flash op is just copying a file to a directory.
+pub const FlashOpStep = struct {
+    step: std.build.Step,
+    uf2_step: *Uf2Step,
+    mass_storage_path: []const u8,
+
+    pub fn create(uf2_step: *Uf2Step, mass_storage_path: []const u8) *FlashOpStep {
+        var ret = uf2_step.exe.builder.allocator.create(FlashOpStep) catch
+            @panic("failed to allocate flash operation step");
+        ret.* = .{
+            .step = std.build.Step.init(
+                .custom,
+                "flash_op",
+                uf2_step.exe.builder.allocator,
+                make,
+            ),
+            .uf2_step = uf2_step,
+            .mass_storage_path = mass_storage_path,
+        };
+
+        ret.step.dependOn(&uf2_step.step);
+        return ret;
+    }
+
+    fn openMassStorage(self: FlashOpStep) !std.fs.Dir {
+        return if (std.fs.path.isAbsolute(self.mass_storage_path))
+            try std.fs.openDirAbsolute(self.mass_storage_path, .{})
+        else
+            try std.fs.cwd().openDir(self.mass_storage_path, .{});
+    }
+
+    fn make(step: *std.build.Step) !void {
+        const self = @fieldParentPtr(FlashOpStep, "step", step);
+
+        var mass_storage = self.openMassStorage() catch |err| switch (err) {
+            error.FileNotFound => {
+                std.log.err("failed to open mass storage device: '{s}'", .{
+                    self.mass_storage_path,
+                });
+                return err;
+            },
+            else => return err,
+        };
+        defer mass_storage.close();
+
+        try std.fs.cwd().copyFile(
+            self.uf2_step.path.?,
+            mass_storage,
+            std.fs.path.basename(self.uf2_step.path.?),
+            .{},
+        );
+    }
+};
+
 pub const Archive = struct {
     blocks: std.ArrayList(Block),
 
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Archive {
-        return Self{
-            .blocks = std.ArrayList(Block).init(allocator),
-        };
+        return Self{ .blocks = std.ArrayList(Block).init(allocator) };
     }
 
     pub fn deinit(self: *Self) void {
@@ -106,7 +155,7 @@ pub const Archive = struct {
     pub fn initFromElf(
         allocator: std.mem.Allocator,
         exe: *LibExeObjStep,
-        family_id_opt: ?FamilyId,
+        opts: Options,
     ) !Archive {
         var archive = Self.init(allocator);
         errdefer archive.deinit();
@@ -120,12 +169,13 @@ pub const Archive = struct {
         var it = header.program_header_iterator(exe_file);
 
         while (try it.next()) |prog_hdr| if (prog_hdr.p_type == std.elf.PT_LOAD) {
-            const num_blocks = (prog_hdr.p_filesz + prog_page_size - 1) / prog_page_size;
+            const num_blocks =
+                (prog_hdr.p_filesz + prog_page_size - 1) / prog_page_size;
             try archive.blocks.appendNTimes(.{
                 .flags = .{
                     .not_main_flash = false,
                     .file_container = false,
-                    .family_id_present = family_id_opt != null,
+                    .family_id_present = opts.family_id != null,
                     .md5_checksum_present = false,
                     .extension_tags_present = false,
                 },
@@ -134,7 +184,10 @@ pub const Archive = struct {
                 .block_number = undefined,
                 .total_blocks = undefined,
                 .file_size_or_family_id = .{
-                    .family_id = if (family_id_opt) |family_id| family_id else @intToEnum(FamilyId, 0),
+                    .family_id = if (opts.family_id) |family_id|
+                        family_id
+                    else
+                        @intToEnum(FamilyId, 0),
                 },
                 .data = undefined,
             }, num_blocks);
@@ -145,19 +198,19 @@ pub const Archive = struct {
             }
 
             try exe_file.seekTo(prog_hdr.p_offset);
-            const new_blocks = archive.blocks.items[archive.blocks.items.len - num_blocks ..];
+            const new_blocks =
+                archive.blocks.items[archive.blocks.items.len - num_blocks ..];
             for (new_blocks) |*block, i| {
-                block.target_addr = @intCast(u32, prog_hdr.p_paddr + (i * prog_page_size));
-                // not super sure about aligning this forward, would end up
-                // reading extra bytes from the elf file, maybe they're
-                // zeroed out normal? TODO: add an assert for this
+                block.target_addr =
+                    @intCast(u32, prog_hdr.p_paddr + (i * prog_page_size));
                 block.payload_size = if (i == new_blocks.len - 1)
                     @intCast(u32, prog_hdr.p_filesz % prog_page_size)
                 else
                     prog_page_size;
 
                 const dest_size = std.math.min(block.payload_size, prog_page_size);
-                const n_read = try exe_file.reader().readAll(block.data[0..dest_size]);
+                const n_read =
+                    try exe_file.reader().readAll(block.data[0..dest_size]);
                 if (n_read != block.payload_size) {
                     return error.InvalidElf;
                 }
@@ -169,12 +222,18 @@ pub const Archive = struct {
                 // this will just have zero padding in the final flashing
                 if (!std.mem.isAligned(block.payload_size, uf2_alignment)) {
                     assert(block.payload_size < prog_page_size);
-                    block.payload_size = @intCast(u32, std.mem.alignForward(block.payload_size, uf2_alignment));
+                    block.payload_size = @intCast(
+                        u32,
+                        std.mem.alignForward(block.payload_size, uf2_alignment),
+                    );
                 }
 
                 assert(std.mem.isAligned(block.target_addr, uf2_alignment));
             }
         };
+
+        if (opts.bundle_source)
+            @panic("TODO");
 
         return archive;
     }
@@ -208,9 +267,7 @@ pub const Archive = struct {
                     .md5_checksum_present = false,
                     .extension_tags_present = false,
                 },
-                // offset in file (seekTo() is called on this) (FOUR_BYTE_ALIGNED)
                 .target_addr = target_addr,
-                // data in this block (FOUR BYTE ALIGNED)
                 .payload_size = 0,
                 .block_number = undefined,
                 .total_blocks = undefined,
@@ -312,7 +369,8 @@ pub const Block = extern struct {
                 },
                 else => {
                     assert(4 == @sizeOf(field.field_type));
-                    @field(block, field.name) = @bitCast(field.field_type, try reader.readIntLittle(u32));
+                    @field(block, field.name) =
+                        @bitCast(field.field_type, try reader.readIntLittle(u32));
                 },
             }
         }
@@ -327,7 +385,10 @@ pub const Block = extern struct {
                 [476]u8 => try writer.writeAll(&@field(self, field.name)),
                 else => {
                     assert(4 == @sizeOf(field.field_type));
-                    try writer.writeIntLittle(u32, @bitCast(u32, @field(self, field.name)));
+                    try writer.writeIntLittle(
+                        u32,
+                        @bitCast(u32, @field(self, field.name)),
+                    );
                 },
             }
         }
@@ -335,9 +396,9 @@ pub const Block = extern struct {
 };
 
 fn expectEqualBlock(expected: Block, actual: Block) !void {
-    try testing.expectEqual(first_magic, actual.magic_start1);
+    try testing.expectEqual(@as(u32, first_magic), actual.magic_start1);
     try testing.expectEqual(expected.magic_start1, actual.magic_start1);
-    try testing.expectEqual(second_magic, actual.magic_start2);
+    try testing.expectEqual(@as(u32, second_magic), actual.magic_start2);
     try testing.expectEqual(expected.magic_start2, actual.magic_start2);
 
     try testing.expectEqual(expected.flags, actual.flags);
@@ -351,7 +412,7 @@ fn expectEqualBlock(expected: Block, actual: Block) !void {
     );
     try testing.expectEqual(expected.data, actual.data);
 
-    try testing.expectEqual(last_magic, actual.magic_end);
+    try testing.expectEqual(@as(u32, last_magic), actual.magic_end);
     try testing.expectEqual(expected.magic_end, actual.magic_end);
 }
 
