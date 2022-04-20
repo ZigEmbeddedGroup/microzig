@@ -19,4 +19,7 @@ pub fn build(b: *std.build.Builder) void {
     const gen_run_step = gen.run();
     const gen_step = b.step("gen", "Generate family id enum");
     gen_step.dependOn(&gen_run_step.step);
+
+    const exe = b.addExecutable("example", "src/example.zig");
+    exe.install();
 }

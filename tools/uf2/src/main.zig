@@ -20,6 +20,7 @@ const std = @import("std");
 const testing = std.testing;
 const assert = std.debug.assert;
 const LibExeObjStep = std.build.LibExeObjStep;
+const Allocator = std.mem.Allocator;
 
 const prog_page_size = 256;
 const uf2_alignment = 4;
@@ -70,12 +71,10 @@ pub const Uf2Step = struct {
             ".uf2",
         });
 
-        var archive = try Archive.initFromElf(
-            self.exe.builder.allocator,
-            self.exe,
-            self.opts,
-        );
-        defer archive.deinit();
+        var archive = Archive.init(self.exe.builder.allocator);
+        errdefer archive.deinit();
+
+        try archive.addElf(exe_path, self.opts);
 
         const dest_file = try std.fs.cwd().createFile(dest_path, .{});
         defer dest_file.close();
@@ -140,38 +139,110 @@ pub const FlashOpStep = struct {
 };
 
 pub const Archive = struct {
+    allocator: Allocator,
     blocks: std.ArrayList(Block),
+    families: std.AutoHashMap(FamilyId, void),
+    // TODO: keep track of contained files
 
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Archive {
-        return Self{ .blocks = std.ArrayList(Block).init(allocator) };
+        return Self{
+            .allocator = allocator,
+            .blocks = std.ArrayList(Block).init(allocator),
+            .families = std.AutoHashMap(FamilyId, void).init(allocator),
+        };
     }
 
     pub fn deinit(self: *Self) void {
         self.blocks.deinit();
+        self.families.deinit();
     }
 
-    pub fn initFromElf(
-        allocator: std.mem.Allocator,
-        exe: *LibExeObjStep,
-        opts: Options,
-    ) !Archive {
-        var archive = Self.init(allocator);
-        errdefer archive.deinit();
+    pub fn addElf(self: *Self, path: []const u8, opts: Options) !void {
+        // TODO: ensures this reports an error if there is a collision
+        if (opts.family_id) |family_id|
+            try self.families.putNoClobber(family_id, {});
 
-        const file_source = exe.getOutputSource();
-        const exe_path = file_source.getPath(exe.builder);
-        const exe_file = try std.fs.cwd().openFile(exe_path, .{});
-        defer exe_file.close();
+        const file = try std.fs.cwd().openFile(path, .{});
+        defer file.close();
 
-        const header = try std.elf.Header.read(exe_file);
-        var it = header.program_header_iterator(exe_file);
+        const Segment = struct {
+            addr: u32,
+            file_offset: u32,
+            size: u32,
 
-        while (try it.next()) |prog_hdr| if (prog_hdr.p_type == std.elf.PT_LOAD) {
-            const num_blocks =
-                (prog_hdr.p_filesz + prog_page_size - 1) / prog_page_size;
-            try archive.blocks.appendNTimes(.{
+            fn lessThan(_: void, lhs: @This(), rhs: @This()) bool {
+                return lhs.addr < rhs.addr;
+            }
+        };
+
+        var segments = std.ArrayList(Segment).init(self.allocator);
+        defer segments.deinit();
+
+        const header = try std.elf.Header.read(file);
+        var it = header.program_header_iterator(file);
+        while (try it.next()) |prog_hdr|
+            if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
+                try segments.append(.{
+                    .addr = @intCast(u32, prog_hdr.p_paddr),
+                    .file_offset = @intCast(u32, prog_hdr.p_offset),
+                    .size = @intCast(u32, prog_hdr.p_memsz),
+                });
+            };
+
+        if (segments.items.len == 0)
+            return error.NoSegments;
+
+        std.sort.sort(Segment, segments.items, {}, Segment.lessThan);
+        // TODO: check for overlaps, assert no zero sized segments
+
+        var blocks = std.ArrayList(Block).init(self.allocator);
+        defer blocks.deinit();
+
+        const last_segment_end = last_segment_end: {
+            const last_segment = &segments.items[segments.items.len - 1];
+            break :last_segment_end last_segment.addr + last_segment.size;
+        };
+
+        var segment_idx: usize = 0;
+        var addr = std.mem.alignBackwardGeneric(u32, segments.items[0].addr, prog_page_size);
+        while (addr < last_segment_end) {
+            const segment = &segments.items[segment_idx];
+            const segment_end = segment.addr + segment.size;
+
+            // if the last segment is not full, then there was a partial write
+            // of the end of the last segment, and we've started processing a
+            // new segment
+            if (blocks.items.len > 0 and blocks.items[blocks.items.len - 1].payload_size != prog_page_size) {
+                const block = &blocks.items[blocks.items.len - 1];
+                assert(segment.addr >= block.target_addr);
+                const block_end = block.target_addr + prog_page_size;
+
+                if (segment.addr < block_end) {
+                    const n_bytes = std.math.min(segment.size, block_end - segment.addr);
+                    try file.seekTo(segment.file_offset);
+                    const block_offset = segment.addr - block.target_addr;
+                    const n_read = try file.reader().readAll(block.data[block_offset .. block_offset + n_bytes]);
+                    if (n_read != n_bytes)
+                        return error.ExpectedMoreElf;
+
+                    addr += n_bytes;
+                    block.payload_size += n_bytes;
+
+                    // in this case the segment can fit in the page and there
+                    // is room for an additional segment
+                    if (block.payload_size < prog_page_size) {
+                        segment_idx += 1;
+                        continue;
+                    }
+                } else {
+                    block.payload_size = prog_page_size;
+                    addr = std.mem.alignBackwardGeneric(u32, segment.addr, prog_page_size);
+                }
+            }
+
+            try blocks.append(.{
                 .flags = .{
                     .not_main_flash = false,
                     .file_container = false,
@@ -179,8 +250,8 @@ pub const Archive = struct {
                     .md5_checksum_present = false,
                     .extension_tags_present = false,
                 },
-                .target_addr = undefined,
-                .payload_size = undefined,
+                .target_addr = addr,
+                .payload_size = std.math.min(prog_page_size, segment_end - addr),
                 .block_number = undefined,
                 .total_blocks = undefined,
                 .file_size_or_family_id = .{
@@ -189,53 +260,38 @@ pub const Archive = struct {
                     else
                         @intToEnum(FamilyId, 0),
                 },
-                .data = undefined,
-            }, num_blocks);
-            errdefer {
-                var i: usize = 0;
-                while (i < num_blocks) : (i += 1)
-                    _ = archive.blocks.pop();
-            }
+                .data = std.mem.zeroes([476]u8),
+            });
 
-            try exe_file.seekTo(prog_hdr.p_offset);
-            const new_blocks =
-                archive.blocks.items[archive.blocks.items.len - num_blocks ..];
-            for (new_blocks) |*block, i| {
-                block.target_addr =
-                    @intCast(u32, prog_hdr.p_paddr + (i * prog_page_size));
-                block.payload_size = if (i == new_blocks.len - 1)
-                    @intCast(u32, prog_hdr.p_filesz % prog_page_size)
-                else
-                    prog_page_size;
+            const block = &blocks.items[blocks.items.len - 1];
 
-                const dest_size = std.math.min(block.payload_size, prog_page_size);
-                const n_read =
-                    try exe_file.reader().readAll(block.data[0..dest_size]);
-                if (n_read != block.payload_size) {
-                    return error.InvalidElf;
-                }
+            // in the case where padding is prepended to the block
+            if (addr < segment.addr)
+                addr = segment.addr;
 
-                // set rest of data block to zero
-                std.mem.set(u8, block.data[block.payload_size..], 0);
+            const n_bytes = (block.target_addr + block.payload_size) - addr;
+            assert(n_bytes <= prog_page_size);
 
-                // this is to follow the spec of the payload being aligned,
-                // this will just have zero padding in the final flashing
-                if (!std.mem.isAligned(block.payload_size, uf2_alignment)) {
-                    assert(block.payload_size < prog_page_size);
-                    block.payload_size = @intCast(
-                        u32,
-                        std.mem.alignForward(block.payload_size, uf2_alignment),
-                    );
-                }
+            try file.seekTo(segment.file_offset + addr - segment.addr);
+            const block_offset = addr - block.target_addr;
+            const n_read = try file.reader().readAll(block.data[block_offset .. block_offset + n_bytes]);
+            if (n_read != n_bytes)
+                return error.ExpectedMoreElf;
 
-                assert(std.mem.isAligned(block.target_addr, uf2_alignment));
-            }
-        };
+            addr += n_bytes;
 
+            assert(addr <= segment_end);
+            if (addr == segment_end)
+                segment_idx += 1;
+        }
+
+        // pad last page with zeros
+        if (blocks.items.len > 0)
+            blocks.items[blocks.items.len - 1].payload_size = prog_page_size;
+
+        try self.blocks.appendSlice(blocks.items);
         if (opts.bundle_source)
             @panic("TODO");
-
-        return archive;
     }
 
     pub fn writeTo(self: *Self, writer: anytype) !void {
@@ -357,7 +413,7 @@ pub const Block = extern struct {
         assert(512 == @sizeOf(Block));
     }
 
-    fn fromReader(reader: anytype) !Block {
+    pub fn fromReader(reader: anytype) !Block {
         var block: Block = undefined;
         inline for (std.meta.fields(Block)) |field| {
             switch (field.field_type) {
