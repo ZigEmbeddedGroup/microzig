@@ -181,3 +181,18 @@ const pkgs = struct {
         .path = .{ .path = root_path ++ "core/import-package.zig" },
     };
 };
+
+/// Generic purpose drivers shipped with microzig
+pub const drivers = struct {
+    pub const quadrature = std.build.Pkg{
+        .name = "microzig.quadrature",
+        .path = .{ .path = root_path ++ "drivers/quadrature.zig" },
+        .dependencies = &.{pkgs.microzig},
+    };
+
+    pub const button = std.build.Pkg{
+        .name = "microzig.button",
+        .path = .{ .path = root_path ++ "drivers/button.zig" },
+        .dependencies = &.{pkgs.microzig},
+    };
+};

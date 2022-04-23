@@ -35,6 +35,7 @@
 //! and therefore USART1 runs on 8 MHz.
 
 const std = @import("std");
+const runtime_safety = std.debug.runtime_safety;
 const micro = @import("microzig");
 const chip = @import("registers.zig");
 const regs = chip.registers;
@@ -232,5 +233,217 @@ pub fn Uart(comptime index: usize) type {
             const data_with_parity_bit: u9 = regs.USART1.RDR.read().RDR;
             return @intCast(u8, data_with_parity_bit & self.parity_read_mask);
         }
+    };
+}
+
+const enable_stm32f303_debug = false;
+
+fn debugPrint(comptime format: []const u8, args: anytype) void {
+    if (enable_stm32f303_debug) {
+        micro.debug.writer().print(format, args) catch {};
+    }
+}
+
+/// This implementation does not use AUTOEND=1
+pub fn I2CController(comptime index: usize) type {
+    if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
+
+    return struct {
+        const Self = @This();
+
+        pub fn init() !Self {
+            // CONFIGURE I2C1
+            // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
+            // if GPIO port B is configured for alternate function 4 for these PB pins.
+
+            // 1. Enable the I2C CLOCK and GPIO CLOCK
+            regs.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
+            regs.RCC.AHBENR.modify(.{ .IOPBEN = 1 });
+            debugPrint("I2C1 configuration step 1 complete\r\n", .{});
+
+            // 2. Configure the I2C PINs for ALternate Functions
+            // 	a) Select Alternate Function in MODER Register
+            regs.GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
+            // 	b) Select Open Drain Output
+            regs.GPIOB.OTYPER.modify(.{ .OT6 = 1, .OT7 = 1 });
+            // 	c) Select High SPEED for the PINs
+            regs.GPIOB.OSPEEDR.modify(.{ .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
+            // 	d) Select Pull-up for both the Pins
+            regs.GPIOB.PUPDR.modify(.{ .PUPDR6 = 0b01, .PUPDR7 = 0b01 });
+            // 	e) Configure the Alternate Function in AFR Register
+            regs.GPIOB.AFRL.modify(.{ .AFRL6 = 4, .AFRL7 = 4 });
+            debugPrint("I2C1 configuration step 2 complete\r\n", .{});
+
+            // 3. Reset the I2C
+            regs.I2C1.CR1.modify(.{ .PE = 0 });
+            while (regs.I2C1.CR1.read().PE == 1) {}
+            // DO NOT regs.RCC.APB1RSTR.modify(.{ .I2C1RST = 1 });
+            debugPrint("I2C1 configuration step 3 complete\r\n", .{});
+
+            // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
+            // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
+            // but copying an example from the reference manual, RM0316 section 28.4.9.)
+            regs.I2C1.TIMINGR.modify(.{
+                .PRESC = 1,
+                .SCLL = 0x13,
+                .SCLH = 0xF,
+                .SDADEL = 0x2,
+                .SCLDEL = 0x4,
+            });
+            debugPrint("I2C1 configuration steps 4-6 complete\r\n", .{});
+
+            // 7. Program the I2C_CR1 register to enable the peripheral
+            regs.I2C1.CR1.modify(.{ .PE = 1 });
+            debugPrint("I2C1 configuration step 7 complete\r\n", .{});
+
+            return Self{};
+        }
+
+        pub const WriteState = struct {
+            address: u7,
+            buffer: [255]u8 = undefined,
+            buffer_size: u8 = 0,
+
+            pub fn start(address: u7) !WriteState {
+                return WriteState{ .address = address };
+            }
+
+            pub fn writeAll(self: *WriteState, bytes: []const u8) !void {
+                debugPrint("I2C1 writeAll() with {d} byte(s); buffer={any}\r\n", .{ bytes.len, self.buffer[0..self.buffer_size] });
+
+                std.debug.assert(self.buffer_size < 255);
+                for (bytes) |b| {
+                    self.buffer[self.buffer_size] = b;
+                    self.buffer_size += 1;
+                    if (self.buffer_size == 255) {
+                        try self.sendBuffer(1);
+                    }
+                }
+            }
+
+            fn sendBuffer(self: *WriteState, reload: u1) !void {
+                debugPrint("I2C1 sendBuffer() with {d} byte(s); RELOAD={d}; buffer={any}\r\n", .{ self.buffer_size, reload, self.buffer[0..self.buffer_size] });
+                if (self.buffer_size == 0) @panic("write of 0 bytes not supported");
+
+                std.debug.assert(reload == 0 or self.buffer_size == 255); // see TODOs below
+
+                // As master, initiate write from address, 7 bit address
+                regs.I2C1.CR2.modify(.{
+                    .ADD10 = 0,
+                    .SADD1 = self.address,
+                    .RD_WRN = 0, // write
+                    .NBYTES = self.buffer_size,
+                    .RELOAD = reload,
+                });
+                if (reload == 0) {
+                    regs.I2C1.CR2.modify(.{ .START = 1 });
+                } else {
+                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
+                    // even though we make sure that we set NBYTES=255 per the docs.
+                }
+                for (self.buffer[0..self.buffer_size]) |b| {
+                    // wait for empty transmit buffer
+                    while (regs.I2C1.ISR.read().TXE == 0) {
+                        debugPrint("I2C1 waiting for ready to send (TXE=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 ready to send (TXE=1)\r\n", .{});
+                    // Write data byte
+                    regs.I2C1.TXDR.modify(.{ .TXDATA = b });
+                }
+                self.buffer_size = 0;
+                debugPrint("I2C1 data written\r\n", .{});
+                if (reload == 1) {
+                    // TODO: The RELOAD=1 path is untested but doesn't seem to work yet,
+                    // the following loop never seems to finish.
+                    while (regs.I2C1.ISR.read().TCR == 0) {
+                        debugPrint("I2C1 waiting transmit complete (TCR=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 transmit complete (TCR=1)\r\n", .{});
+                } else {
+                    while (regs.I2C1.ISR.read().TC == 0) {
+                        debugPrint("I2C1 waiting for transmit complete (TC=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 transmit complete (TC=1)\r\n", .{});
+                }
+            }
+
+            pub fn stop(self: *WriteState) !void {
+                try self.sendBuffer(0);
+                // Communication STOP
+                debugPrint("I2C1 STOPping\r\n", .{});
+                regs.I2C1.CR2.modify(.{ .STOP = 1 });
+                while (regs.I2C1.ISR.read().BUSY == 1) {}
+                debugPrint("I2C1 STOPped\r\n", .{});
+            }
+
+            pub fn restartRead(self: *WriteState) !ReadState {
+                try self.sendBuffer(0);
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *WriteState) !WriteState {
+                try self.sendBuffer(0);
+                return WriteState{ .address = self.address };
+            }
+        };
+
+        pub const ReadState = struct {
+            address: u7,
+            read_allowed: if (runtime_safety) bool else void = if (runtime_safety) true else {},
+
+            pub fn start(address: u7) !ReadState {
+                return ReadState{ .address = address };
+            }
+
+            /// Fails with ReadError if incorrect number of bytes is received.
+            pub fn readNoEof(self: *ReadState, buffer: []u8) !void {
+                if (runtime_safety and !self.read_allowed) @panic("second read call not allowed");
+                std.debug.assert(buffer.len < 256); // TODO: use RELOAD to read more data
+
+                // As master, initiate read from accelerometer, 7 bit address
+                regs.I2C1.CR2.modify(.{
+                    .ADD10 = 0,
+                    .SADD1 = self.address,
+                    .RD_WRN = 1, // read
+                    .NBYTES = @intCast(u8, buffer.len),
+                });
+                debugPrint("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, self.address });
+
+                // Communication START
+                regs.I2C1.CR2.modify(.{ .START = 1 });
+                debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
+                debugPrint("I2C1 STARTed\r\n", .{});
+                debugPrint("I2C1 RXNE={}\r\n", .{regs.I2C1.ISR.read().RXNE});
+
+                if (runtime_safety) self.read_allowed = false;
+
+                for (buffer) |_, i| {
+                    // Wait for data to be received
+                    while (regs.I2C1.ISR.read().RXNE == 0) {
+                        debugPrint("I2C1 waiting for data (RXNE=0)\r\n", .{});
+                    }
+                    debugPrint("I2C1 data ready (RXNE=1)\r\n", .{});
+
+                    // Read first data byte
+                    buffer[i] = regs.I2C1.RXDR.read().RXDATA;
+                }
+                debugPrint("I2C1 data: {any}\r\n", .{buffer});
+            }
+
+            pub fn stop(_: *ReadState) !void {
+                // Communication STOP
+                regs.I2C1.CR2.modify(.{ .STOP = 1 });
+                while (regs.I2C1.ISR.read().BUSY == 1) {}
+                debugPrint("I2C1 STOPped\r\n", .{});
+            }
+
+            pub fn restartRead(self: *ReadState) !ReadState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *ReadState) !WriteState {
+                debugPrint("I2C1 no action for restart\r\n", .{});
+                return WriteState{ .address = self.address };
+            }
+        };
     };
 }

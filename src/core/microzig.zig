@@ -39,17 +39,37 @@ pub const Pin = pin.Pin;
 pub const uart = @import("uart.zig");
 pub const Uart = uart.Uart;
 
+pub const i2c = @import("i2c.zig");
+pub const I2CController = i2c.I2CController;
+
 pub const debug = @import("debug.zig");
 
 pub const mmio = @import("mmio.zig");
 
-/// The microzig panic handler. Will disable interrupts and loop endlessly.
-/// Export this symbol from your main file to enable microzig:
-/// ```
-/// const micro = @import("microzig");
-/// pub const panic = micro.panic;
-/// ```
-pub fn panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+// Allow app to override the panic handler
+pub const panic = if (@hasDecl(app, "panic"))
+    app.panic
+else
+    microzig_panic;
+
+// Conditionally export log_level if the app has it defined.
+usingnamespace if (@hasDecl(app, "log_level"))
+    struct {
+        pub const log_level = app.log_level;
+    }
+else
+    struct {};
+
+// Conditionally export log() if the app has it defined.
+usingnamespace if (@hasDecl(app, "log"))
+    struct {
+        pub const log = app.log;
+    }
+else
+    struct {};
+
+/// The microzig default panic handler. Will disable interrupts and loop endlessly.
+pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
 
     // utilize logging functions
     std.log.err("microzig PANIC: {s}", .{message});
