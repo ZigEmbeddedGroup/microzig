@@ -37,6 +37,7 @@ regz targets zig master.
 
 ```
 git clone https://github.com/ZigEmbeddedGroup/regz.git
+cd regz
 zig build
 ```
 
