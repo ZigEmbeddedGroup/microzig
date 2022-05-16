@@ -1,0 +1,6 @@
+[submodule "libxml2"]
+	path = libxml2
+	url = https://github.com/GNOME/libxml2.git
+[submodule "test/zig-zlib"]
+	path = test/zig-zlib
+	url = https://github.com/mattnite/zig-zlib

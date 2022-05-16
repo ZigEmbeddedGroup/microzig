@@ -1,0 +1,12 @@
+deps:
+  clap:
+    git:
+      url: "https://github.com/Hejsil/zig-clap.git"
+      ref: master
+      root: clap.zig
+build_deps:
+  libxml2:
+    git:
+      url: "https://github.com/mitchellh/zig-libxml2.git"
+      ref: db7805026143d753a1deb84c23580d8050471223
+      root: libxml2.zig

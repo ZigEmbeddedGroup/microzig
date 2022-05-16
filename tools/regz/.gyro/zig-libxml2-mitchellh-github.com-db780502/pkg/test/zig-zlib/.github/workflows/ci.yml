@@ -1,0 +1,90 @@
+name: ci
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: "0 7 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [
+          riscv64-linux-gnu,
+          riscv64-linux-musl,
+          aarch64-linux-gnu,
+          aarch64-linux-musl,
+          aarch64-macos,
+          i386-linux-gnu,
+          i386-linux-musl,
+          i386-windows,
+          x86_64-linux-gnu,
+          x86_64-linux-musl,
+          x86_64-macos,
+          x86_64-windows-gnu,
+        ]
+        mode: [
+          debug,
+          release-safe,
+          release-fast,
+          release-small,
+        ]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v1.3.0
+      with:
+        version: master
+
+    - name: Build Debug
+      if: ${{ matrix.mode == 'debug' }}
+      run: zig build -Dtarget=${{ matrix.target }} 
+
+    - name: Build Release
+      if: ${{ matrix.mode != 'debug' }}
+      run: zig build -D${{ matrix.mode }} -Dtarget=${{ matrix.target }} 
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+        mode: [
+          debug,
+          release-safe,
+          release-fast,
+          release-small,
+        ]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v1.3.0
+      with:
+        version: master
+
+    - name: Build and Test Debug
+      if: ${{ matrix.mode == 'debug' }}
+      run: zig build test
+
+    - name: Build and Test Release
+      if: ${{ matrix.mode != 'debug' }}
+      run: zig build test -D${{ matrix.mode }}
+
+

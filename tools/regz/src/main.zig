@@ -12,12 +12,13 @@ pub const log_level: std.log.Level = .info;
 
 const svd_schema = @embedFile("cmsis-svd.xsd");
 
-const params = [_]clap.Param(clap.Help){
-    clap.parseParam("-h, --help             Display this help and exit") catch unreachable,
-    clap.parseParam("-s, --schema <str>     Explicitly set schema type, one of: svd, atdf, json") catch unreachable,
-    clap.parseParam("-o, --output_path <str>     Write to a file") catch unreachable,
-    clap.parseParam("<str>...") catch unreachable,
-};
+const params = clap.parseParamsComptime(
+    \\-h, --help                Display this help and exit
+    \\-s, --schema <str>        Explicitly set schema type, one of: svd, atdf, json
+    \\-o, --output_path <str>   Write to a file
+    \\<str>...
+    \\
+);
 
 pub fn main() !void {
     mainImpl() catch |err| switch (err) {
@@ -47,7 +48,9 @@ fn mainImpl() anyerror!void {
     defer arena.deinit();
 
     var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
+    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
+        .diagnostic = &diag,
+    }) catch |err| {
         // Report useful error and exit
         diag.report(std.io.getStdErr().writer(), err) catch {};
         return error.Explained;
@@ -55,11 +58,16 @@ fn mainImpl() anyerror!void {
     defer res.deinit();
 
     if (res.args.help)
-        return clap.help(std.io.getStdErr().writer(), clap.Help, &params);
+        return clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
 
     var schema: ?Schema = if (res.args.schema) |schema_str|
         if (std.meta.stringToEnum(Schema, schema_str)) |s| s else {
-            std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{schema_str});
+            std.log.err(
+                "Unknown schema type: {s}, must be one of: svd, atdf, json",
+                .{
+                    schema_str,
+                },
+            );
             return error.Explained;
         }
     else

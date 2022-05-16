@@ -1,6 +1,8 @@
 const std = @import("std");
-const libxml2 = @import("libs/zig-libxml2/libxml2.zig");
+const deps = @import("deps.zig");
 
+const pkgs = deps.pkgs;
+const libxml2 = deps.build_pkgs.libxml2;
 const Builder = std.build.Builder;
 const LibExeObjStep = std.build.LibExeObjStep;
 const Step = std.build.Step;
@@ -45,7 +47,7 @@ pub const Regz = struct {
         exe.setTarget(target);
         exe.setBuildMode(mode);
         exe.addOptions("build_options", build_options);
-        exe.addPackagePath("clap", root() ++ "libs/zig-clap/clap.zig");
+        exe.addPackagePath("clap", root() ++ pkgs.clap.path.path);
         xml.link(exe);
 
         var regz = builder.allocator.create(Regz) catch unreachable;

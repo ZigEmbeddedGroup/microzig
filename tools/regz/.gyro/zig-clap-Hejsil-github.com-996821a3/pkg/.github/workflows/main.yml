@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: goto-bus-stop/setup-zig@v1.3.0
+        with:
+          version: master
+      - run: zig build
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: goto-bus-stop/setup-zig@v1.3.0
+        with:
+          version: master
+      - run: zig fmt --check .
