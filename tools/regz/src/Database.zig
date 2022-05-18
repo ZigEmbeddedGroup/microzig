@@ -14,34 +14,69 @@ const Allocator = std.mem.Allocator;
 
 const Self = @This();
 
-const Range = struct {
-    begin: u32,
-    end: u32,
-};
+const PeripheralIndex = u32;
+const ClusterIndex = u32;
+const RegisterIndex = u32;
+const FieldIndex = u32;
+const EnumIndex = u32;
+
+fn IndexRange(comptime Index: type) type {
+    return struct {
+        begin: Index,
+        end: Index,
+
+        fn contains(self: @This(), index: Index) bool {
+            return index >= self.begin and index < self.end;
+        }
+    };
+}
 
 const PeripheralUsesInterrupt = struct {
-    peripheral_idx: u32,
+    peripheral_idx: PeripheralIndex,
     interrupt_value: u32,
 };
 
 const FieldsInRegister = struct {
-    register_idx: u32,
-    field_range: Range,
+    register_idx: RegisterIndex,
+    field_range: IndexRange(FieldIndex),
 };
 
 const ClusterInPeripheral = struct {
-    peripheral_idx: u32,
-    cluster_idx: u32,
+    peripheral_idx: PeripheralIndex,
+    cluster_idx: ClusterIndex,
 };
 
 const ClusterInCluster = struct {
-    parent_idx: u32,
-    child_idx: u32,
+    parent_idx: ClusterIndex,
+    child_idx: ClusterIndex,
 };
 
 const Nesting = enum {
     namespaced,
     contained,
+};
+
+fn RegisterProperties(comptime IndexType: type) type {
+    return struct {
+        /// register size in bits
+        size: std.AutoHashMapUnmanaged(IndexType, usize) = .{},
+
+        fn deinit(self: *@This(), allocator: Allocator) void {
+            self.size.deinit(allocator);
+        }
+    };
+}
+
+const RegisterPropertyTables = struct {
+    register: RegisterProperties(RegisterIndex) = .{},
+    cluster: RegisterProperties(ClusterIndex) = .{},
+    peripheral: RegisterProperties(PeripheralIndex) = .{},
+
+    fn deinit(self: *RegisterPropertyTables, allocator: Allocator) void {
+        self.register.deinit(allocator);
+        self.cluster.deinit(allocator);
+        self.peripheral.deinit(allocator);
+    }
 };
 
 allocator: Allocator,
@@ -57,11 +92,12 @@ enumerations: std.ArrayList(Enumeration),
 peripherals_use_interrupts: std.ArrayList(PeripheralUsesInterrupt),
 clusters_in_peripherals: std.ArrayList(ClusterInPeripheral),
 clusters_in_clusters: std.ArrayList(ClusterInCluster),
-registers_in_peripherals: std.AutoHashMap(u32, Range),
-registers_in_clusters: std.AutoHashMap(u32, Range),
-fields_in_registers: std.AutoHashMap(u32, Range),
-enumerations_in_fields: std.AutoHashMap(u32, Range),
+registers_in_peripherals: std.AutoHashMap(PeripheralIndex, IndexRange(RegisterIndex)),
+registers_in_clusters: std.AutoHashMap(ClusterIndex, IndexRange(RegisterIndex)),
+fields_in_registers: std.AutoHashMap(RegisterIndex, IndexRange(FieldIndex)),
+enumerations_in_fields: std.AutoHashMap(FieldIndex, IndexRange(EnumIndex)),
 dimensions: Dimensions,
+register_properties: RegisterPropertyTables = .{},
 
 /// takes ownership of arena allocator
 fn init(allocator: Allocator) Self {
@@ -79,10 +115,10 @@ fn init(allocator: Allocator) Self {
         .peripherals_use_interrupts = std.ArrayList(PeripheralUsesInterrupt).init(allocator),
         .clusters_in_peripherals = std.ArrayList(ClusterInPeripheral).init(allocator),
         .clusters_in_clusters = std.ArrayList(ClusterInCluster).init(allocator),
-        .registers_in_peripherals = std.AutoHashMap(u32, Range).init(allocator),
-        .registers_in_clusters = std.AutoHashMap(u32, Range).init(allocator),
-        .fields_in_registers = std.AutoHashMap(u32, Range).init(allocator),
-        .enumerations_in_fields = std.AutoHashMap(u32, Range).init(allocator),
+        .registers_in_peripherals = std.AutoHashMap(PeripheralIndex, IndexRange(RegisterIndex)).init(allocator),
+        .registers_in_clusters = std.AutoHashMap(ClusterIndex, IndexRange(RegisterIndex)).init(allocator),
+        .fields_in_registers = std.AutoHashMap(RegisterIndex, IndexRange(FieldIndex)).init(allocator),
+        .enumerations_in_fields = std.AutoHashMap(FieldIndex, IndexRange(EnumIndex)).init(allocator),
         .dimensions = Dimensions.init(allocator),
     };
 }
@@ -102,6 +138,7 @@ pub fn deinit(self: *Self) void {
     self.registers_in_clusters.deinit();
     self.enumerations_in_fields.deinit();
     self.dimensions.deinit();
+    self.register_properties.deinit(self.allocator);
     self.arena.deinit();
 }
 
@@ -129,12 +166,16 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
             const peripheral = try svd.parsePeripheral(&db.arena, peripheral_nodes);
             try db.peripherals.append(peripheral);
 
-            const peripheral_idx = @intCast(u32, db.peripherals.items.len - 1);
+            const peripheral_idx = @intCast(PeripheralIndex, db.peripherals.items.len - 1);
             if (xml.getAttribute(peripheral_it, "derivedFrom")) |derived_from|
                 try named_derivations.peripherals.put(peripheral_idx, try db.arena.allocator().dupe(u8, derived_from));
 
             if (try svd.Dimension.parse(&db.arena, peripheral_nodes)) |dimension|
                 try db.dimensions.peripherals.put(peripheral_idx, dimension);
+
+            const register_properties = try svd.RegisterProperties.parse(&db.arena, peripheral_nodes);
+            if (register_properties.size) |size|
+                try db.register_properties.peripheral.size.put(db.allocator, peripheral_idx, size);
 
             var interrupt_it: ?*xml.Node = xml.findNode(peripheral_nodes, "interrupt");
             while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
@@ -157,8 +198,8 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
                 const reg_begin_idx = db.registers.items.len;
                 try db.loadRegisters(registers_node.children, &named_derivations);
                 try db.registers_in_peripherals.put(peripheral_idx, .{
-                    .begin = @intCast(u32, reg_begin_idx),
-                    .end = @intCast(u32, db.registers.items.len),
+                    .begin = @intCast(RegisterIndex, reg_begin_idx),
+                    .end = @intCast(RegisterIndex, db.registers.items.len),
                 });
 
                 // process clusters, this might need to be recursive
@@ -168,12 +209,17 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
                     const cluster = try svd.Cluster.parse(&db.arena, cluster_nodes);
                     try db.clusters.append(cluster);
 
-                    const cluster_idx = @intCast(u32, db.clusters.items.len - 1);
+                    const cluster_idx = @intCast(ClusterIndex, db.clusters.items.len - 1);
                     if (xml.getAttribute(cluster_it, "derivedFrom")) |derived_from|
                         try named_derivations.clusters.put(cluster_idx, try db.arena.allocator().dupe(u8, derived_from));
 
                     if (try svd.Dimension.parse(&db.arena, cluster_nodes)) |dimension|
                         try db.dimensions.clusters.put(cluster_idx, dimension);
+
+                    // TODO: rest of the fields
+                    const cluster_register_props = try svd.RegisterProperties.parse(&db.arena, cluster_nodes);
+                    if (cluster_register_props.size) |size|
+                        try db.register_properties.cluster.size.put(db.allocator, cluster_idx, size);
 
                     try db.clusters_in_peripherals.append(.{
                         .cluster_idx = cluster_idx,
@@ -183,8 +229,8 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
                     const first_reg_idx = db.registers.items.len;
                     try db.loadRegisters(cluster_nodes, &named_derivations);
                     try db.registers_in_clusters.put(cluster_idx, .{
-                        .begin = @intCast(u32, first_reg_idx),
-                        .end = @intCast(u32, db.registers.items.len),
+                        .begin = @intCast(RegisterIndex, first_reg_idx),
+                        .end = @intCast(RegisterIndex, db.registers.items.len),
                     });
 
                     try db.loadNestedClusters(cluster_nodes, &named_derivations);
@@ -210,7 +256,7 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
         var it = named_derivations.peripherals.iterator();
         while (it.next()) |entry| {
             const base_name = entry.value_ptr.*;
-            const idx = @intCast(u32, for (db.peripherals.items) |peripheral, i| {
+            const idx = @intCast(PeripheralIndex, for (db.peripherals.items) |peripheral, i| {
                 if (std.mem.eql(u8, base_name, peripheral.name))
                     break i;
             } else return error.DerivationNotFound);
@@ -220,7 +266,7 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
         it = named_derivations.registers.iterator();
         while (it.next()) |entry| {
             const base_name = entry.value_ptr.*;
-            const idx = @intCast(u32, for (db.registers.items) |register, i| {
+            const idx = @intCast(RegisterIndex, for (db.registers.items) |register, i| {
                 if (std.mem.eql(u8, base_name, register.name))
                     break i;
             } else return error.DerivationNotFound);
@@ -280,8 +326,8 @@ fn loadRegisters(
     var register_it: ?*xml.Node = xml.findNode(nodes, "register");
     while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
         const register_nodes: *xml.Node = register_it.?.children orelse continue;
-        const register = try svd.parseRegister(&db.arena, register_nodes, db.device.?.register_properties.size orelse db.device.?.width);
-        const register_idx = @intCast(u32, db.registers.items.len);
+        const register = try svd.parseRegister(&db.arena, register_nodes);
+        const register_idx = @intCast(RegisterIndex, db.registers.items.len);
         try db.registers.append(register);
 
         if (xml.getAttribute(register_it, "derivedFrom")) |derived_from|
@@ -290,7 +336,11 @@ fn loadRegisters(
         if (try svd.Dimension.parse(&db.arena, register_nodes)) |dimension|
             try db.dimensions.registers.put(register_idx, dimension);
 
-        const field_begin_idx = @intCast(u32, db.fields.items.len);
+        const register_properties = try svd.RegisterProperties.parse(&db.arena, register_nodes);
+        if (register_properties.size) |size|
+            try db.register_properties.register.size.put(db.allocator, register_idx, size);
+
+        const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
         if (xml.findNode(register_nodes, "fields")) |fields_node| {
             var field_it: ?*xml.Node = xml.findNode(fields_node.children, "field");
             while (field_it != null) : (field_it = xml.findNode(field_it.?.next, "field")) {
@@ -302,7 +352,7 @@ fn loadRegisters(
                 const field = try svd.parseField(&db.arena, field_nodes);
                 try db.fields.append(field);
 
-                const field_idx = @intCast(u32, db.fields.items.len - 1);
+                const field_idx = @intCast(FieldIndex, db.fields.items.len - 1);
                 if (xml.getAttribute(field_it, "derivedFrom")) |derived_from|
                     try named_derivations.fields.put(field_idx, try db.arena.allocator().dupe(u8, derived_from));
 
@@ -328,7 +378,6 @@ fn loadRegisters(
         // sort fields by offset
         std.sort.sort(Field, db.fields.items[field_begin_idx..], {}, Field.lessThan);
 
-        // TODO: can we use unions for overlapping fields?
         // remove overlapping fields
         var i = field_begin_idx;
         var current_bit: usize = 0;
@@ -362,7 +411,7 @@ fn loadRegisters(
         if (field_begin_idx != db.fields.items.len)
             try db.fields_in_registers.put(register_idx, .{
                 .begin = field_begin_idx,
-                .end = @intCast(u32, db.fields.items.len),
+                .end = @intCast(FieldIndex, db.fields.items.len),
             });
     }
 }
@@ -373,7 +422,7 @@ fn loadNestedClusters(
     nodes: ?*xml.Node,
     named_derivations: *Derivations([]const u8),
 ) anyerror!void {
-    const parent_idx = @intCast(u32, db.clusters.items.len - 1);
+    const parent_idx = @intCast(ClusterIndex, db.clusters.items.len - 1);
 
     var cluster_it: ?*xml.Node = xml.findNode(nodes, "cluster");
     while (cluster_it != null) : (cluster_it = xml.findNode(cluster_it.?.next, "cluster")) {
@@ -381,12 +430,16 @@ fn loadNestedClusters(
         const cluster = try svd.Cluster.parse(&db.arena, cluster_nodes);
         try db.clusters.append(cluster);
 
-        const cluster_idx = @intCast(u32, db.clusters.items.len - 1);
+        const cluster_idx = @intCast(ClusterIndex, db.clusters.items.len - 1);
         if (xml.getAttribute(cluster_it, "derivedFrom")) |derived_from|
             try named_derivations.clusters.put(cluster_idx, try db.arena.allocator().dupe(u8, derived_from));
 
         if (try svd.Dimension.parse(&db.arena, cluster_nodes)) |dimension|
             try db.dimensions.clusters.put(cluster_idx, dimension);
+
+        const register_properties = try svd.RegisterProperties.parse(&db.arena, cluster_nodes);
+        if (register_properties.size) |size|
+            try db.register_properties.cluster.size.put(db.allocator, cluster_idx, size);
 
         try db.clusters_in_clusters.append(.{
             .parent_idx = parent_idx,
@@ -396,8 +449,8 @@ fn loadNestedClusters(
         const first_reg_idx = db.registers.items.len;
         try db.loadRegisters(cluster_nodes, named_derivations);
         try db.registers_in_clusters.put(cluster_idx, .{
-            .begin = @intCast(u32, first_reg_idx),
-            .end = @intCast(u32, db.registers.items.len),
+            .begin = @intCast(RegisterIndex, first_reg_idx),
+            .end = @intCast(RegisterIndex, db.registers.items.len),
         });
 
         try db.loadNestedClusters(cluster_nodes, named_derivations);
@@ -541,7 +594,7 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
         while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
             const module_nodes: *xml.Node = module_it.?.children orelse continue;
 
-            var value_groups = std.StringHashMap(Range).init(allocator);
+            var value_groups = std.StringHashMap(IndexRange(u32)).init(allocator);
             defer value_groups.deinit();
 
             var value_group_it: ?*xml.Node = xml.findNode(module_nodes, "value-group");
@@ -552,7 +605,7 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
                 else
                     continue;
 
-                const first_enum_idx = @intCast(u32, db.enumerations.items.len);
+                const first_enum_idx = @intCast(EnumIndex, db.enumerations.items.len);
                 var value_it: ?*xml.Node = xml.findNode(value_group_nodes, "value");
                 while (value_it != null) : (value_it = xml.findNode(value_it.?.next, "value")) {
                     try db.enumerations.append(.{
@@ -570,7 +623,7 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
                 std.sort.sort(Enumeration, db.enumerations.items[first_enum_idx..], {}, Enumeration.lessThan);
                 try value_groups.put(value_group_name, .{
                     .begin = first_enum_idx,
-                    .end = @intCast(u32, db.enumerations.items.len),
+                    .end = @intCast(EnumIndex, db.enumerations.items.len),
                 });
             }
 
@@ -581,17 +634,17 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
                 if (!peripheral_instances.contains(group_name))
                     continue;
 
-                const peripheral_idx = @intCast(u32, db.peripherals.items.len);
+                const peripheral_idx = @intCast(PeripheralIndex, db.peripherals.items.len);
                 try db.peripherals.append(try atdf.parsePeripheral(&db.arena, register_group_it.?));
 
-                const reg_begin_idx = @intCast(u32, db.registers.items.len);
+                const reg_begin_idx = @intCast(RegisterIndex, db.registers.items.len);
                 var register_it: ?*xml.Node = xml.findNode(register_group_nodes, "register");
                 while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
-                    const register_idx = @intCast(u32, db.registers.items.len);
+                    const register_idx = @intCast(RegisterIndex, db.registers.items.len);
                     try db.registers.append(try atdf.parseRegister(&db.arena, register_it.?, regs_start_addr, register_it.?.children != null));
 
                     const register_nodes: *xml.Node = register_it.?.children orelse continue;
-                    const field_begin_idx = @intCast(u32, db.fields.items.len);
+                    const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
                     var bitfield_it: ?*xml.Node = xml.findNode(register_nodes, "bitfield");
                     while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
                         try db.fields.append(atdf.parseField(&db.arena, bitfield_it.?) catch |err| switch (err) {
@@ -610,7 +663,7 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
                             const field_name = xml.getAttribute(bitfield_it, "name") orelse continue;
                             const field_idx = for (db.fields.items[field_begin_idx..]) |field, offset| {
                                 if (std.mem.eql(u8, field_name, field.name))
-                                    break field_begin_idx + @intCast(u32, offset);
+                                    break field_begin_idx + @intCast(FieldIndex, offset);
                             } else continue;
 
                             if (value_groups.get(value_group_name)) |enum_range|
@@ -620,13 +673,13 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Self {
 
                     try db.fields_in_registers.put(register_idx, .{
                         .begin = field_begin_idx,
-                        .end = @intCast(u32, db.fields.items.len),
+                        .end = @intCast(FieldIndex, db.fields.items.len),
                     });
                 }
 
                 try db.registers_in_peripherals.put(peripheral_idx, .{
                     .begin = reg_begin_idx,
-                    .end = @intCast(u32, db.registers.items.len),
+                    .end = @intCast(RegisterIndex, db.registers.items.len),
                 });
             }
         }
@@ -803,8 +856,9 @@ pub fn toZig(self: *Self, out_writer: anytype) !void {
                     try writer.print("        pub const version = \"{s}\";\n", .{version});
 
                 for (registers) |_, range_offset| {
-                    const reg_idx = @intCast(u32, reg_range.begin + range_offset);
-                    try self.genZigRegister(writer, peripheral.base_addr, reg_idx, .namespaced);
+                    const reg_idx = @intCast(RegisterIndex, reg_range.begin + range_offset);
+                    const register = try self.getRegister(reg_idx);
+                    try self.genZigRegister(writer, peripheral.base_addr, reg_idx, register, .namespaced);
                 }
 
                 if (has_clusters) {
@@ -845,7 +899,7 @@ fn genZigCluster(
     db: *Self,
     writer: anytype,
     base_addr: ?usize,
-    cluster_idx: u32,
+    cluster_idx: ClusterIndex,
     nesting: Nesting,
 ) !void {
     const cluster = db.clusters.items[cluster_idx];
@@ -873,10 +927,11 @@ fn genZigCluster(
 
                 // TODO: check address offset of register wrt the cluster
                 var bits: usize = 0;
-                for (registers) |register, offset| {
-                    const reg_idx = @intCast(u32, range.begin + offset);
-                    try db.genZigRegister(writer, base_addr, reg_idx, .contained);
-                    bits += register.size;
+                for (registers) |_, offset| {
+                    const reg_idx = @intCast(RegisterIndex, range.begin + offset);
+                    const register = try db.getRegister(reg_idx);
+                    try db.genZigRegister(writer, base_addr, reg_idx, register, .contained);
+                    bits += register.size.?;
                 }
 
                 if (bits % 8 != 0 or db.device.?.width % 8 != 0)
@@ -897,8 +952,9 @@ fn genZigCluster(
             } else {
                 try writer.print("pub const {s} = struct {{\n", .{std.zig.fmtId(cluster.name)});
                 for (registers) |_, offset| {
-                    const reg_idx = @intCast(u32, range.begin + offset);
-                    try db.genZigRegister(writer, base_addr, reg_idx, .namespaced);
+                    const reg_idx = @intCast(RegisterIndex, range.begin + offset);
+                    const register = try db.getRegister(reg_idx);
+                    try db.genZigRegister(writer, base_addr, reg_idx, register, .namespaced);
                 }
 
                 try writer.writeAll("};\n");
@@ -915,7 +971,7 @@ fn genZigSingleRegister(
     width: usize,
     has_base_addr: bool,
     addr_offset: usize,
-    field_range_opt: ?Range,
+    field_range_opt: ?IndexRange(FieldIndex),
     array_prefix: []const u8,
     nesting: Nesting,
 ) !void {
@@ -1033,12 +1089,12 @@ fn genZigFields(
     writer: anytype,
     reg_width: usize,
     fields: []Field,
-    first_field_idx: u32,
+    first_field_idx: FieldIndex,
 ) !void {
     var expected_bit: usize = 0;
     var reserved_num: usize = 0;
     for (fields) |field, offset| {
-        const field_idx = @intCast(u32, first_field_idx + offset);
+        const field_idx = @intCast(FieldIndex, first_field_idx + offset);
         const dimension_opt = self.dimensions.fields.get(field_idx);
 
         if (dimension_opt) |dimension| {
@@ -1138,10 +1194,10 @@ fn genZigRegister(
     self: *Self,
     writer: anytype,
     base_addr: ?usize,
-    reg_idx: u32,
+    reg_idx: RegisterIndex,
+    register: Register,
     nesting: Nesting,
 ) !void {
-    const register = self.registers.items[reg_idx];
     const field_range = if (self.fields_in_registers.get(reg_idx)) |range| range else null;
 
     const dimension_opt = self.dimensions.registers.get(reg_idx);
@@ -1178,7 +1234,7 @@ fn genZigRegister(
             try self.genZigSingleRegister(
                 writer,
                 name,
-                register.size,
+                register.size.?,
                 base_addr != null,
                 addr_offset,
                 field_range,
@@ -1212,7 +1268,7 @@ fn genZigRegister(
             try self.genZigSingleRegister(
                 writer,
                 name,
-                register.size,
+                register.size.?,
                 base_addr != null,
                 addr_offset,
                 field_range,
@@ -1229,7 +1285,7 @@ fn genZigRegister(
         }
 
         const array_prefix: []const u8 = if (dimension_opt) |dimension| blk: {
-            if (dimension.increment != register.size / 8) {
+            if (dimension.increment != register.size.? / 8) {
                 std.log.err("register: {s}", .{register.name});
                 std.log.err("size: {}", .{register.size});
                 std.log.err("dimension: {}", .{dimension});
@@ -1267,7 +1323,7 @@ fn genZigRegister(
         try self.genZigSingleRegister(
             writer,
             name,
-            register.size,
+            register.size.?,
             base_addr != null,
             register.addr_offset,
             field_range,
@@ -1293,21 +1349,97 @@ pub fn toJson(writer: anytype) !void {
     return error.Todo;
 }
 
+// TODO: might have to make the index type a param
+fn findIndexOfContainer(self: Self, comptime map_field: []const u8, contained_idx: u32) ?u32 {
+    var iterator = @field(self, map_field).iterator();
+    return while (iterator.next()) |entry| {
+        if (entry.value_ptr.contains(contained_idx))
+            break entry.key_ptr.*;
+    } else null;
+}
+
+fn findClusterContainingRegister(self: Self, reg_idx: RegisterIndex) ?ClusterIndex {
+    return self.findIndexOfContainer("registers_in_clusters", reg_idx);
+}
+
+fn findClusterContainingCluster(self: Self, cluster_idx: ClusterIndex) ?ClusterIndex {
+    return for (self.clusters_in_clusters.items) |cic| {
+        if (cic.child_idx == cluster_idx)
+            break cic.parent_idx;
+    } else null;
+}
+
+fn findPeripheralContainingRegister(self: Self, reg_idx: RegisterIndex) ?PeripheralIndex {
+    return self.findIndexOfContainer("registers_in_peripherals", reg_idx);
+}
+
+fn findPeripheralContainingCluster(self: Self, cluster_idx: ClusterIndex) ?PeripheralIndex {
+    return for (self.clusters_in_peripherals.items) |cip| {
+        if (cip.cluster_idx == cluster_idx)
+            break cip.peripheral_idx;
+    } else null;
+}
+
+// TODO: get register properties from cluster
+pub fn getRegister(
+    self: Self,
+    reg_idx: RegisterIndex,
+) !Register {
+    const register = self.registers.items[reg_idx];
+
+    // build full "path" to register
+    // first check if
+    var clusters = std.ArrayListUnmanaged(ClusterIndex){};
+    defer clusters.deinit(self.allocator);
+
+    while (true) {
+        const cluster_idx = if (clusters.items.len == 0)
+            self.findClusterContainingRegister(reg_idx) orelse break
+        else
+            self.findClusterContainingCluster(clusters.items[clusters.items.len - 1]) orelse break;
+
+        try clusters.append(self.allocator, cluster_idx);
+    }
+
+    const peripheral_idx = if (clusters.items.len == 0)
+        self.findPeripheralContainingRegister(reg_idx) orelse
+            return error.PeripheralNotFound
+    else
+        self.findPeripheralContainingCluster(clusters.items[clusters.items.len - 1]) orelse
+            return error.PeripheralNotFound;
+
+    // TODO do upwards search of register, cluster(s), peripheral, and device
+    const size = self.register_properties.register.size.get(reg_idx) orelse
+        for (clusters.items) |cluster_idx|
+    {
+        if (self.register_properties.cluster.size.get(cluster_idx)) |size|
+            break size;
+    } else self.register_properties.peripheral.size.get(peripheral_idx) orelse
+        self.device.?.register_properties.size orelse return error.SizeNotFound;
+
+    return Register{
+        .name = register.name,
+        .description = register.description,
+        .addr_offset = register.addr_offset,
+        .size = size,
+    };
+}
+
 fn Derivations(comptime T: type) type {
     return struct {
-        enumerations: std.AutoHashMap(u32, T),
-        fields: std.AutoHashMap(u32, T),
-        registers: std.AutoHashMap(u32, T),
-        clusters: std.AutoHashMap(u32, T),
-        peripherals: std.AutoHashMap(u32, T),
+        enumerations: std.AutoHashMap(EnumIndex, T),
+        fields: std.AutoHashMap(FieldIndex, T),
+        registers: std.AutoHashMap(RegisterIndex, T),
+        clusters: std.AutoHashMap(ClusterIndex, T),
+        peripherals: std.AutoHashMap(PeripheralIndex, T),
 
         fn init(allocator: Allocator) @This() {
             return @This(){
-                .enumerations = std.AutoHashMap(u32, T).init(allocator),
-                .fields = std.AutoHashMap(u32, T).init(allocator),
-                .registers = std.AutoHashMap(u32, T).init(allocator),
-                .clusters = std.AutoHashMap(u32, T).init(allocator),
-                .peripherals = std.AutoHashMap(u32, T).init(allocator),
+                .enumerations = std.AutoHashMap(EnumIndex, T).init(allocator),
+                .fields = std.AutoHashMap(FieldIndex, T).init(allocator),
+                .registers = std.AutoHashMap(RegisterIndex, T).init(allocator),
+                .clusters = std.AutoHashMap(ClusterIndex, T).init(allocator),
+                .peripherals = std.AutoHashMap(PeripheralIndex, T).init(allocator),
             };
         }
 
@@ -1322,17 +1454,17 @@ fn Derivations(comptime T: type) type {
 }
 
 const Dimensions = struct {
-    fields: std.AutoHashMap(u32, svd.Dimension),
-    registers: std.AutoHashMap(u32, svd.Dimension),
-    clusters: std.AutoHashMap(u32, svd.Dimension),
-    peripherals: std.AutoHashMap(u32, svd.Dimension),
+    fields: std.AutoHashMap(FieldIndex, svd.Dimension),
+    registers: std.AutoHashMap(RegisterIndex, svd.Dimension),
+    clusters: std.AutoHashMap(ClusterIndex, svd.Dimension),
+    peripherals: std.AutoHashMap(PeripheralIndex, svd.Dimension),
 
     fn init(allocator: Allocator) @This() {
         return @This(){
-            .fields = std.AutoHashMap(u32, svd.Dimension).init(allocator),
-            .registers = std.AutoHashMap(u32, svd.Dimension).init(allocator),
-            .clusters = std.AutoHashMap(u32, svd.Dimension).init(allocator),
-            .peripherals = std.AutoHashMap(u32, svd.Dimension).init(allocator),
+            .fields = std.AutoHashMap(FieldIndex, svd.Dimension).init(allocator),
+            .registers = std.AutoHashMap(RegisterIndex, svd.Dimension).init(allocator),
+            .clusters = std.AutoHashMap(ClusterIndex, svd.Dimension).init(allocator),
+            .peripherals = std.AutoHashMap(PeripheralIndex, svd.Dimension).init(allocator),
         };
     }
 

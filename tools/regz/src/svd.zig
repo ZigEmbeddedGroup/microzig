@@ -233,13 +233,13 @@ pub const Interrupt = struct {
     }
 };
 
-pub fn parseRegister(arena: *ArenaAllocator, nodes: *xml.Node, device_width: usize) !Register {
+pub fn parseRegister(arena: *ArenaAllocator, nodes: *xml.Node) !Register {
     const allocator = arena.allocator();
     return Register{
         .name = try allocator.dupe(u8, xml.findValueForKey(nodes, "name") orelse return error.NoName),
         .description = try xml.parseDescription(allocator, nodes, "description"),
         .addr_offset = try std.fmt.parseInt(usize, xml.findValueForKey(nodes, "addressOffset") orelse return error.NoAddrOffset, 0),
-        .size = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size")) orelse device_width,
+        .size = null,
     };
 }
 
@@ -389,6 +389,17 @@ pub const Dimension = struct {
                 try allocator.dupe(u8, name_str)
             else
                 null,
+        };
+    }
+};
+
+pub const RegisterProperties = struct {
+    size: ?usize,
+
+    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !RegisterProperties {
+        _ = arena;
+        return RegisterProperties{
+            .size = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size")),
         };
     }
 };
