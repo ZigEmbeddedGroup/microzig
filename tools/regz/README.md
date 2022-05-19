@@ -76,7 +76,7 @@ future. If you know of any others we should look into, please make an issue!
 ## Roadmap
 
 - SVD: mostly implemented and usable for mosts MCUs, but a few finishing touches in order to suss out any bugs:
-    - [ ] nested clusters
+    - [x] nested clusters
     - [ ] order generated exactly as defined in schema
     - [ ] finalize derivation of different components
     - [ ] comprehensive suite of tests
