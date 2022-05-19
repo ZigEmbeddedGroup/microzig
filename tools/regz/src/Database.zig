@@ -1127,9 +1127,14 @@ fn genZigFields(
                     try writer.print("{s}: u{},\n", .{ std.zig.fmtId(name), field.width });
                     expected_bit += field.width;
                 },
-                .num => {
-                    std.log.warn("dimensioned register fields not supported yet: {s}", .{field.name});
-                    assert(false);
+                .num => |num| {
+                    var i: usize = 0;
+                    while (i < num) : (i += 1) {
+                        const idx = try std.fmt.allocPrint(self.arena.allocator(), "{}", .{i});
+                        const name = try std.mem.replaceOwned(u8, self.arena.allocator(), field.name, "%s", idx);
+                        try writer.print("{s}: u{},\n", .{ std.zig.fmtId(name), field.width });
+                        expected_bit += field.width;
+                    }
                 },
             } else {
                 var i: usize = 0;
