@@ -7,6 +7,7 @@ const Peripheral = @import("Peripheral.zig");
 const Register = @import("Register.zig");
 const Field = @import("Field.zig");
 const Enumeration = @import("Enumeration.zig");
+pub const Access = svd.Access;
 
 const assert = std.debug.assert;
 const ArenaAllocator = std.heap.ArenaAllocator;
@@ -60,9 +61,11 @@ fn RegisterProperties(comptime IndexType: type) type {
     return struct {
         /// register size in bits
         size: std.AutoHashMapUnmanaged(IndexType, usize) = .{},
+        access: std.AutoHashMapUnmanaged(IndexType, Access) = .{},
 
         fn deinit(self: *@This(), allocator: Allocator) void {
             self.size.deinit(allocator);
+            self.access.deinit(allocator);
         }
     };
 }
@@ -98,6 +101,7 @@ fields_in_registers: std.AutoHashMap(RegisterIndex, IndexRange(FieldIndex)),
 enumerations_in_fields: std.AutoHashMap(FieldIndex, IndexRange(EnumIndex)),
 dimensions: Dimensions,
 register_properties: RegisterPropertyTables = .{},
+field_access: std.AutoArrayHashMapUnmanaged(FieldIndex, Access) = .{},
 
 /// takes ownership of arena allocator
 fn init(allocator: Allocator) Self {
@@ -139,6 +143,7 @@ pub fn deinit(self: *Self) void {
     self.enumerations_in_fields.deinit();
     self.dimensions.deinit();
     self.register_properties.deinit(self.allocator);
+    self.field_access.deinit(self.allocator);
     self.arena.deinit();
 }
 
@@ -176,6 +181,9 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
             const register_properties = try svd.RegisterProperties.parse(&db.arena, peripheral_nodes);
             if (register_properties.size) |size|
                 try db.register_properties.peripheral.size.put(db.allocator, peripheral_idx, size);
+
+            if (register_properties.access) |access|
+                try db.register_properties.peripheral.access.put(db.allocator, peripheral_idx, access);
 
             var interrupt_it: ?*xml.Node = xml.findNode(peripheral_nodes, "interrupt");
             while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
@@ -220,6 +228,10 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Self {
                     const cluster_register_props = try svd.RegisterProperties.parse(&db.arena, cluster_nodes);
                     if (cluster_register_props.size) |size|
                         try db.register_properties.cluster.size.put(db.allocator, cluster_idx, size);
+
+                    if (cluster_register_props.access) |access| {
+                        try db.register_properties.cluster.access.put(db.allocator, cluster_idx, access);
+                    }
 
                     try db.clusters_in_peripherals.append(.{
                         .cluster_idx = cluster_idx,
@@ -340,6 +352,9 @@ fn loadRegisters(
         if (register_properties.size) |size|
             try db.register_properties.register.size.put(db.allocator, register_idx, size);
 
+        if (register_properties.access) |access|
+            try db.register_properties.register.access.put(db.allocator, register_idx, access);
+
         const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
         if (xml.findNode(register_nodes, "fields")) |fields_node| {
             var field_it: ?*xml.Node = xml.findNode(fields_node.children, "field");
@@ -358,6 +373,9 @@ fn loadRegisters(
 
                 if (try svd.Dimension.parse(&db.arena, field_nodes)) |dimension|
                     try db.dimensions.fields.put(field_idx, dimension);
+
+                if (field.access) |access|
+                    try db.field_access.put(db.allocator, field_idx, access);
 
                 // TODO: enumerations at some point when there's a solid plan
                 //if (xml.findNode(field_nodes, "enumeratedValues")) |enum_values_node| {
@@ -440,6 +458,9 @@ fn loadNestedClusters(
         const register_properties = try svd.RegisterProperties.parse(&db.arena, cluster_nodes);
         if (register_properties.size) |size|
             try db.register_properties.cluster.size.put(db.allocator, cluster_idx, size);
+
+        if (register_properties.access) |access|
+            try db.register_properties.cluster.access.put(db.allocator, cluster_idx, access);
 
         try db.clusters_in_clusters.append(.{
             .parent_idx = parent_idx,
@@ -1380,15 +1401,30 @@ fn findPeripheralContainingCluster(self: Self, cluster_idx: ClusterIndex) ?Perip
     } else null;
 }
 
-// TODO: get register properties from cluster
+fn registerPropertyUpwardsSearch(
+    self: Self,
+    comptime T: type,
+    comptime field: []const u8,
+    reg_idx: RegisterIndex,
+    clusters: []const ClusterIndex,
+    peripheral_idx: PeripheralIndex,
+) ?T {
+    return @field(self.register_properties.register, field).get(reg_idx) orelse
+        for (clusters) |cluster_idx|
+    {
+        if (@field(self.register_properties.cluster, field).get(cluster_idx)) |value| {
+            break value;
+        }
+    } else @field(self.register_properties.peripheral, field).get(peripheral_idx) orelse
+        @field(self.device.?.register_properties, field);
+}
+
 pub fn getRegister(
     self: Self,
     reg_idx: RegisterIndex,
 ) !Register {
     const register = self.registers.items[reg_idx];
 
-    // build full "path" to register
-    // first check if
     var clusters = std.ArrayListUnmanaged(ClusterIndex){};
     defer clusters.deinit(self.allocator);
 
@@ -1408,20 +1444,28 @@ pub fn getRegister(
         self.findPeripheralContainingCluster(clusters.items[clusters.items.len - 1]) orelse
             return error.PeripheralNotFound;
 
-    // TODO do upwards search of register, cluster(s), peripheral, and device
-    const size = self.register_properties.register.size.get(reg_idx) orelse
-        for (clusters.items) |cluster_idx|
-    {
-        if (self.register_properties.cluster.size.get(cluster_idx)) |size|
-            break size;
-    } else self.register_properties.peripheral.size.get(peripheral_idx) orelse
-        self.device.?.register_properties.size orelse return error.SizeNotFound;
+    const size = self.registerPropertyUpwardsSearch(
+        usize,
+        "size",
+        reg_idx,
+        clusters.items,
+        peripheral_idx,
+    ) orelse if (self.device) |device| device.width else return error.SizeNotFound;
+
+    const access: Access = self.registerPropertyUpwardsSearch(
+        Access,
+        "access",
+        reg_idx,
+        clusters.items,
+        peripheral_idx,
+    ) orelse .read_write;
 
     return Register{
         .name = register.name,
         .description = register.description,
         .addr_offset = register.addr_offset,
         .size = size,
+        .access = access,
     };
 }
 

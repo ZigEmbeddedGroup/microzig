@@ -240,6 +240,7 @@ pub fn parseRegister(arena: *ArenaAllocator, nodes: *xml.Node) !Register {
         .description = try xml.parseDescription(allocator, nodes, "description"),
         .addr_offset = try std.fmt.parseInt(usize, xml.findValueForKey(nodes, "addressOffset") orelse return error.NoAddrOffset, 0),
         .size = null,
+        .access = .read_write,
     };
 }
 
@@ -317,6 +318,10 @@ pub fn parseField(arena: *ArenaAllocator, nodes: *xml.Node) !Field {
         .offset = bit_range.offset,
         .width = bit_range.width,
         .description = try xml.parseDescription(allocator, nodes, "description"),
+        .access = if (xml.findValueForKey(nodes, "access")) |access_str|
+            try Access.parse(access_str)
+        else
+            null,
     };
 }
 
@@ -395,11 +400,16 @@ pub const Dimension = struct {
 
 pub const RegisterProperties = struct {
     size: ?usize,
+    access: ?Access,
 
     pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !RegisterProperties {
         _ = arena;
         return RegisterProperties{
-            .size = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size")),
+            .size = try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size"),
+            .access = if (xml.findValueForKey(nodes, "access")) |access_str|
+                try Access.parse(access_str)
+            else
+                null,
         };
     }
 };

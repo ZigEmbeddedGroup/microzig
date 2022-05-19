@@ -59,6 +59,8 @@ pub fn parseRegister(arena: *ArenaAllocator, node: *xml.Node, regs_start_addr: u
 
             break :blk full_size;
         } else return error.NoSize, // if this shows up then we need to determine the default size of a register
+        // TODO: ATDF register access
+        .access = .read_write,
     };
 }
 
@@ -88,5 +90,7 @@ pub fn parseField(arena: *ArenaAllocator, node: *xml.Node) !Field {
             null,
         .offset = offset,
         .width = width,
+        // TODO: does atdf have a field level access?
+        .access = null,
     };
 }
