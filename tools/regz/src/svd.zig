@@ -21,8 +21,8 @@ pub const Device = struct {
         size: ?usize = null,
         access: ?Access = null,
         protection: ?[]const u8 = null,
-        reset_value: ?[]const u8 = null,
-        reset_mask: ?[]const u8 = null,
+        reset_value: ?u64 = null,
+        reset_mask: ?u64 = null,
     },
 
     pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !Device {
@@ -48,8 +48,14 @@ pub const Device = struct {
                 else
                     null,
                 .protection = if (xml.findValueForKey(nodes, "protection")) |str| try allocator.dupe(u8, str) else null,
-                .reset_value = if (xml.findValueForKey(nodes, "resetValue")) |str| try allocator.dupe(u8, str) else null,
-                .reset_mask = if (xml.findValueForKey(nodes, "resetMask")) |str| try allocator.dupe(u8, str) else null,
+                .reset_value = if (xml.findValueForKey(nodes, "resetValue")) |size_str|
+                    try std.fmt.parseInt(u64, size_str, 0)
+                else
+                    null,
+                .reset_mask = if (xml.findValueForKey(nodes, "resetMask")) |size_str|
+                    try std.fmt.parseInt(u64, size_str, 0)
+                else
+                    null,
             },
         };
     }
@@ -241,6 +247,14 @@ pub fn parseRegister(arena: *ArenaAllocator, nodes: *xml.Node) !Register {
         .addr_offset = try std.fmt.parseInt(usize, xml.findValueForKey(nodes, "addressOffset") orelse return error.NoAddrOffset, 0),
         .size = null,
         .access = .read_write,
+        .reset_value = if (xml.findValueForKey(nodes, "resetValue")) |value|
+            try std.fmt.parseInt(u64, value, 0)
+        else
+            null,
+        .reset_mask = if (xml.findValueForKey(nodes, "resetMask")) |value|
+            try std.fmt.parseInt(u64, value, 0)
+        else
+            null,
     };
 }
 
@@ -401,11 +415,15 @@ pub const Dimension = struct {
 pub const RegisterProperties = struct {
     size: ?usize,
     access: ?Access,
+    reset_value: ?u64,
+    reset_mask: ?u64,
 
     pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !RegisterProperties {
         _ = arena;
         return RegisterProperties{
             .size = try xml.parseIntForKey(usize, arena.child_allocator, nodes, "size"),
+            .reset_value = try xml.parseIntForKey(u64, arena.child_allocator, nodes, "resetValue"),
+            .reset_mask = try xml.parseIntForKey(u64, arena.child_allocator, nodes, "resetMask"),
             .access = if (xml.findValueForKey(nodes, "access")) |access_str|
                 try Access.parse(access_str)
             else

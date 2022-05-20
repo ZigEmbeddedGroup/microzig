@@ -62,10 +62,14 @@ fn RegisterProperties(comptime IndexType: type) type {
         /// register size in bits
         size: std.AutoHashMapUnmanaged(IndexType, usize) = .{},
         access: std.AutoHashMapUnmanaged(IndexType, Access) = .{},
+        reset_value: std.AutoHashMapUnmanaged(IndexType, u64) = .{},
+        reset_mask: std.AutoHashMapUnmanaged(IndexType, u64) = .{},
 
         fn deinit(register_properties: *@This(), allocator: Allocator) void {
             register_properties.size.deinit(allocator);
             register_properties.access.deinit(allocator);
+            register_properties.reset_value.deinit(allocator);
+            register_properties.reset_mask.deinit(allocator);
         }
     };
 }
@@ -166,6 +170,12 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
             if (register_properties.access) |access|
                 try db.register_properties.peripheral.access.put(db.gpa, peripheral_idx, access);
 
+            if (register_properties.reset_value) |reset_value|
+                try db.register_properties.peripheral.reset_value.put(db.gpa, peripheral_idx, reset_value);
+
+            if (register_properties.reset_mask) |reset_mask|
+                try db.register_properties.peripheral.reset_mask.put(db.gpa, peripheral_idx, reset_mask);
+
             var interrupt_it: ?*xml.Node = xml.findNode(peripheral_nodes, "interrupt");
             while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
                 const interrupt_nodes: *xml.Node = interrupt_it.?.children orelse continue;
@@ -210,9 +220,14 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
                     if (cluster_register_props.size) |size|
                         try db.register_properties.cluster.size.put(db.gpa, cluster_idx, size);
 
-                    if (cluster_register_props.access) |access| {
+                    if (cluster_register_props.access) |access|
                         try db.register_properties.cluster.access.put(db.gpa, cluster_idx, access);
-                    }
+
+                    if (cluster_register_props.reset_value) |reset_value|
+                        try db.register_properties.cluster.reset_value.put(db.gpa, cluster_idx, reset_value);
+
+                    if (cluster_register_props.reset_mask) |reset_mask|
+                        try db.register_properties.cluster.reset_mask.put(db.gpa, cluster_idx, reset_mask);
 
                     try db.clusters_in_peripherals.append(db.gpa, .{
                         .cluster_idx = cluster_idx,
@@ -336,6 +351,12 @@ fn loadRegisters(
         if (register_properties.access) |access|
             try db.register_properties.register.access.put(db.gpa, register_idx, access);
 
+        if (register_properties.reset_value) |reset_value|
+            try db.register_properties.register.reset_value.put(db.gpa, register_idx, reset_value);
+
+        if (register_properties.reset_mask) |reset_mask|
+            try db.register_properties.register.reset_mask.put(db.gpa, register_idx, reset_mask);
+
         const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
         if (xml.findNode(register_nodes, "fields")) |fields_node| {
             var field_it: ?*xml.Node = xml.findNode(fields_node.children, "field");
@@ -442,6 +463,12 @@ fn loadNestedClusters(
 
         if (register_properties.access) |access|
             try db.register_properties.cluster.access.put(db.gpa, cluster_idx, access);
+
+        if (register_properties.reset_value) |reset_value|
+            try db.register_properties.cluster.reset_value.put(db.gpa, cluster_idx, reset_value);
+
+        if (register_properties.reset_mask) |reset_mask|
+            try db.register_properties.cluster.reset_mask.put(db.gpa, cluster_idx, reset_mask);
 
         try db.clusters_in_clusters.append(db.gpa, .{
             .parent_idx = parent_idx,
@@ -1451,12 +1478,30 @@ pub fn getRegister(
         peripheral_idx,
     ) orelse .read_write;
 
+    const reset_value: u64 = db.registerPropertyUpwardsSearch(
+        u64,
+        "reset_value",
+        reg_idx,
+        clusters.items,
+        peripheral_idx,
+    ) orelse 0;
+
+    const reset_mask: u64 = db.registerPropertyUpwardsSearch(
+        u64,
+        "reset_mask",
+        reg_idx,
+        clusters.items,
+        peripheral_idx,
+    ) orelse std.math.maxInt(u64);
+
     return Register{
         .name = register.name,
         .description = register.description,
         .addr_offset = register.addr_offset,
         .size = size,
         .access = access,
+        .reset_value = reset_value,
+        .reset_mask = reset_mask,
     };
 }
 
