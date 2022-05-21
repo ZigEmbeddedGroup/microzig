@@ -28,6 +28,10 @@ fn root() []const u8 {
 
 pub const BuildOptions = struct {
     packages: ?[]const Pkg = null,
+
+    // a hal package is a package with ergonomic wrappers for registers for a
+    // given mcu, it's only dependency can be microzig
+    hal_package_path: ?std.build.FileSource = null,
 };
 
 pub fn addEmbeddedExecutable(
@@ -155,6 +159,13 @@ pub fn addEmbeddedExecutable(
     exe.addPackage(config_pkg);
     exe.addPackage(chip_pkg);
     exe.addPackage(cpu_pkg);
+
+    if (options.hal_package_path) |hal_package_path|
+        exe.addPackage(.{
+            .name = "hal",
+            .path = hal_package_path,
+            .dependencies = &.{pkgs.microzig},
+        });
 
     switch (backing) {
         .board => |board| {
