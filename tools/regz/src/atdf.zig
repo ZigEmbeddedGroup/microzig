@@ -24,7 +24,12 @@ pub fn parsePeripheral(arena: *ArenaAllocator, node: *xml.Node) !Peripheral {
     };
 }
 
-pub fn parseRegister(arena: *ArenaAllocator, node: *xml.Node, regs_start_addr: usize, has_fields: bool) !Register {
+pub fn parseRegister(
+    arena: *ArenaAllocator,
+    node: *xml.Node,
+    register_group_offset: ?usize,
+    has_fields: bool,
+) !Register {
     const allocator = arena.allocator();
     return Register{
         .name = try allocator.dupe(u8, xml.getAttribute(node, "name") orelse return error.NoName),
@@ -32,10 +37,13 @@ pub fn parseRegister(arena: *ArenaAllocator, node: *xml.Node, regs_start_addr: u
             try allocator.dupe(u8, caption)
         else
             null,
-        .addr_offset = if (xml.getAttribute(node, "offset")) |reg_offset_str|
-            regs_start_addr + try std.fmt.parseInt(usize, reg_offset_str, 0)
-        else
-            return error.NoAddrOffset,
+        .addr_offset = if (xml.getAttribute(node, "offset")) |reg_offset_str| addr_offset: {
+            const reg_offset = try std.fmt.parseInt(usize, reg_offset_str, 0);
+            break :addr_offset if (register_group_offset) |group_offset|
+                group_offset + reg_offset
+            else
+                reg_offset;
+        } else return error.NoAddrOffset,
         .size = if (xml.getAttribute(node, "size")) |size_str| blk: {
             const full_size = 8 * try std.fmt.parseInt(usize, size_str, 0);
             if (!has_fields) {

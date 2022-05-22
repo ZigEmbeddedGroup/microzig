@@ -489,7 +489,6 @@ fn loadNestedClusters(
 pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
     const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
     const tools_node = xml.findNode(root_element, "avr-tools-device-file") orelse return error.NoToolsNode;
-    var regs_start_addr: usize = 0;
 
     var peripheral_instances = std.StringHashMap(void).init(allocator);
     defer peripheral_instances.deinit();
@@ -543,33 +542,6 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
             };
 
             const device_nodes: *xml.Node = device_it.?.children orelse continue;
-            regs_start_addr = if (xml.findNode(device_nodes, "address-spaces")) |address_spaces_node| blk: {
-                var ret: ?usize = null;
-                var address_space_it: ?*xml.Node = xml.findNode(address_spaces_node.children.?, "address-space");
-                while (address_space_it != null) : (address_space_it = xml.findNode(address_space_it.?.next, "address-space")) {
-                    const address_space_nodes: *xml.Node = address_space_it.?.children orelse continue;
-                    var memory_segment_it: ?*xml.Node = xml.findNode(address_space_nodes, "memory-segment");
-                    while (memory_segment_it != null) : (memory_segment_it = xml.findNode(memory_segment_it.?.next, "memory-segment")) {
-                        const memory_type = xml.getAttribute(memory_segment_it, "type") orelse continue;
-                        if (std.mem.eql(u8, "regs", memory_type)) {
-                            if (ret != null) {
-                                std.log.err("multiple register memory segments found, no idea what to do, please cut a ticket: https://github.com/ZigEmbeddedGroup/regz", .{});
-                                return error.Explained;
-                            } else if (xml.getAttribute(memory_segment_it, "start")) |addr_str| {
-                                ret = try std.fmt.parseInt(usize, addr_str, 0);
-                            }
-                        }
-                    }
-                }
-
-                if (ret) |start_address| {
-                    break :blk start_address;
-                } else {
-                    std.log.err("failed to determine the start address for registers", .{});
-                    return error.Explained;
-                }
-            } else unreachable;
-
             if (xml.findNode(device_nodes, "peripherals")) |peripherals_node| {
                 var module_it: ?*xml.Node = xml.findNode(peripherals_node.children.?, "module");
                 while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
@@ -668,14 +640,21 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                 if (!peripheral_instances.contains(group_name))
                     continue;
 
+                const register_group_offset = try xml.parseIntForKey(usize, db.gpa, register_group_nodes, "offset");
+
                 const peripheral_idx = @intCast(PeripheralIndex, db.peripherals.items.len);
                 try db.peripherals.append(db.gpa, try atdf.parsePeripheral(&db.arena, register_group_it.?));
 
                 const reg_begin_idx = @intCast(RegisterIndex, db.registers.items.len);
                 var register_it: ?*xml.Node = xml.findNode(register_group_nodes, "register");
                 while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
+                    const register = try atdf.parseRegister(&db.arena, register_it.?, register_group_offset, register_it.?.children != null);
+
                     const register_idx = @intCast(RegisterIndex, db.registers.items.len);
-                    try db.registers.append(db.gpa, try atdf.parseRegister(&db.arena, register_it.?, regs_start_addr, register_it.?.children != null));
+                    try db.registers.append(db.gpa, register);
+
+                    if (register.size) |size|
+                        try db.register_properties.register.size.put(db.gpa, register_idx, size);
 
                     const register_nodes: *xml.Node = register_it.?.children orelse continue;
                     const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
@@ -1096,19 +1075,60 @@ fn genZigSingleRegister(
     } else {
         switch (nesting) {
             .namespaced => if (has_base_addr)
-                try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, base_address + 0x{x});\n", .{
-                    std.zig.fmtId(name),
-                    array_prefix,
-                    width,
-                    addr_offset,
-                })
-            else
-                try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, 0x{x});\n", .{
-                    std.zig.fmtId(name),
-                    array_prefix,
-                    width,
-                    addr_offset,
-                }),
+                if (width >= 8 and std.math.isPowerOfTwo(width))
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, base_address + 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        width,
+                        addr_offset,
+                    })
+                else {
+                    const reg_width = reg_width: {
+                        var reg_width: usize = 8;
+                        while (reg_width < width) : (reg_width *= 2) {
+                            if (reg_width > 128)
+                                return error.TooBig; // artificial limit, probably something weird going on
+                        }
+
+                        break :reg_width reg_width;
+                    };
+
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}MmioInt({}, u{}), base_address + 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        reg_width,
+                        width,
+                        addr_offset,
+                    });
+                }
+            else {
+                if (width >= 8 and std.math.isPowerOfTwo(width))
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}u{}, 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        width,
+                        addr_offset,
+                    })
+                else {
+                    const reg_width = reg_width: {
+                        var reg_width: usize = 8;
+                        while (reg_width < width) : (reg_width *= 2) {
+                            if (reg_width > 128)
+                                return error.TooBig; // artificial limit, probably something weird going on
+                        }
+
+                        break :reg_width reg_width;
+                    };
+
+                    try writer.print("pub const {s} = @intToPtr(*volatile {s}MmioInt({}, u{}), 0x{x});\n", .{
+                        std.zig.fmtId(name),
+                        array_prefix,
+                        reg_width,
+                        width,
+                        addr_offset,
+                    });
+                }
+            },
             .contained => try writer.print("{s}: {s}u{},\n", .{
                 std.zig.fmtId(name),
                 array_prefix,
@@ -1441,8 +1461,10 @@ pub fn getRegister(
     db: Database,
     reg_idx: RegisterIndex,
 ) !Register {
-    const register = db.registers.items[reg_idx];
+    if (reg_idx >= db.registers.items.len)
+        return error.NotFound;
 
+    const register = db.registers.items[reg_idx];
     var clusters = std.ArrayListUnmanaged(ClusterIndex){};
     defer clusters.deinit(db.gpa);
 
@@ -1544,3 +1566,38 @@ const useless_descriptions = std.ComptimeStringMap(void, .{
 const useless_field_names = std.ComptimeStringMap(void, .{
     .{"RESERVED"},
 });
+
+pub fn format(
+    db: Database,
+    comptime fmt: []const u8,
+    options: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    _ = db;
+    _ = options;
+    _ = fmt;
+    try writer.writeAll("Regz Database:\n");
+    if (db.interrupts.items.len > 0) {
+        try writer.writeAll("  Interrupts:\n");
+        for (db.interrupts.items) |interrupt|
+            try writer.print("    {}\n", .{interrupt});
+    }
+
+    if (db.peripherals.items.len > 0) {
+        try writer.writeAll("  Peripherals:\n");
+        for (db.peripherals.items) |peripheral, i|
+            try writer.print("    {}: {}\n", .{ i, peripheral });
+    }
+
+    if (db.registers.items.len > 0) {
+        try writer.writeAll("  Registers:\n");
+        for (db.registers.items) |register, i|
+            try writer.print("    {}: {}\n", .{ i, register });
+    }
+
+    if (db.fields.items.len > 0) {
+        try writer.writeAll("  Fields:\n");
+        for (db.fields.items) |field, i|
+            try writer.print("    {}: {}\n", .{ i, field });
+    }
+}
