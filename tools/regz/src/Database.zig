@@ -7,6 +7,7 @@ const Peripheral = @import("Peripheral.zig");
 const Register = @import("Register.zig");
 const Field = @import("Field.zig");
 const Enumeration = @import("Enumeration.zig");
+const cmsis = @import("cmsis.zig");
 pub const Access = svd.Access;
 
 const assert = std.debug.assert;
@@ -15,11 +16,11 @@ const Allocator = std.mem.Allocator;
 
 const Database = @This();
 
-const PeripheralIndex = u32;
-const ClusterIndex = u32;
-const RegisterIndex = u32;
-const FieldIndex = u32;
-const EnumIndex = u32;
+pub const PeripheralIndex = u32;
+pub const ClusterIndex = u32;
+pub const RegisterIndex = u32;
+pub const FieldIndex = u32;
+pub const EnumIndex = u32;
 
 fn IndexRange(comptime Index: type) type {
     return struct {
@@ -145,6 +146,10 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
         try svd.Cpu.parse(&db.arena, @ptrCast(*xml.Node, cpu_node.children orelse return error.NoCpu))
     else
         null;
+
+    if (db.cpu) |cpu| if (cpu.name) |cpu_name|
+        if (svd.CpuName.parse(cpu_name)) |cpu_type|
+            try cmsis.addCoreRegisters(&db, cpu_type);
 
     var named_derivations = Derivations([]const u8){};
     defer named_derivations.deinit(allocator);
@@ -539,6 +544,8 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                 .nvic_prio_bits = 0,
                 .vendor_systick_config = false,
                 .device_num_interrupts = null,
+                .vtor_present = false,
+                .mpu_present = false,
             };
 
             const device_nodes: *xml.Node = device_it.?.children orelse continue;
@@ -853,42 +860,42 @@ pub fn toZig(db: *Database, out_writer: anytype) !void {
                 continue;
             }
 
-            const reg_range = db.registers_in_peripherals.get(peripheral_idx).?;
-            const registers = db.registers.items[reg_range.begin..reg_range.end];
-            if (registers.len != 0 or has_clusters) {
-                if (peripheral.description) |description| if (!useless_descriptions.has(description)) {
-                    try writer.writeByte('\n');
-                    try writeDescription(db.arena.child_allocator, writer, description);
-                };
+            if (peripheral.description) |description| if (!useless_descriptions.has(description)) {
+                try writer.writeByte('\n');
+                try writeDescription(db.arena.child_allocator, writer, description);
+            };
 
-                try writer.print("    pub const {s} = struct {{\n", .{std.zig.fmtId(peripheral.name)});
-                if (peripheral.base_addr) |base_addr|
-                    try writer.print("        pub const base_address = 0x{x};\n", .{base_addr});
+            try writer.print("    pub const {s} = struct {{\n", .{std.zig.fmtId(peripheral.name)});
+            if (peripheral.base_addr) |base_addr|
+                try writer.print("        pub const base_address = 0x{x};\n", .{base_addr});
 
-                if (peripheral.version) |version|
-                    try writer.print("        pub const version = \"{s}\";\n", .{version});
+            if (peripheral.version) |version|
+                try writer.print("        pub const version = \"{s}\";\n", .{version});
+
+            if (db.registers_in_peripherals.get(peripheral_idx)) |reg_range| {
+                const registers = db.registers.items[reg_range.begin..reg_range.end];
 
                 for (registers) |_, range_offset| {
                     const reg_idx = @intCast(RegisterIndex, reg_range.begin + range_offset);
                     const register = try db.getRegister(reg_idx);
-                    try db.genZigRegister(writer, peripheral.base_addr, reg_idx, register, .namespaced);
+                    try db.genZigRegister(writer, peripheral.base_addr, null, reg_idx, register, .namespaced);
                 }
-
-                if (has_clusters) {
-                    for (db.clusters_in_peripherals.items) |cip| {
-                        if (cip.peripheral_idx == peripheral_idx) {
-                            try db.genZigCluster(writer, peripheral.base_addr, cip.cluster_idx, .namespaced);
-                        }
-                    }
-
-                    for (db.clusters_in_clusters.items) |cic| {
-                        const nested = db.clusters.items[cic.child_idx];
-                        std.log.warn("nested clusters not supported yet: {s}", .{nested.name});
-                    }
-                }
-
-                try writer.writeAll("    };\n");
             }
+
+            if (has_clusters) {
+                for (db.clusters_in_peripherals.items) |cip| {
+                    if (cip.peripheral_idx == peripheral_idx) {
+                        try db.genZigCluster(writer, peripheral.base_addr, cip.cluster_idx, .namespaced);
+                    }
+                }
+
+                for (db.clusters_in_clusters.items) |cic| {
+                    const nested = db.clusters.items[cic.child_idx];
+                    std.log.warn("nested clusters not supported yet: {s}", .{nested.name});
+                }
+            }
+
+            try writer.writeAll("    };\n");
         }
 
         try writer.writeAll("};\n");
@@ -938,12 +945,11 @@ fn genZigCluster(
 
                 try writer.print("pub const {s} = @ptrCast(*volatile [{}]packed struct {{", .{ name, dimension.dim });
 
-                // TODO: check address offset of register wrt the cluster
                 var bits: usize = 0;
                 for (registers) |_, offset| {
                     const reg_idx = @intCast(RegisterIndex, range.begin + offset);
                     const register = try db.getRegister(reg_idx);
-                    try db.genZigRegister(writer, base_addr, reg_idx, register, .contained);
+                    try db.genZigRegister(writer, base_addr, cluster.addr_offset, reg_idx, register, .contained);
                     bits += register.size.?;
                 }
 
@@ -967,7 +973,7 @@ fn genZigCluster(
                 for (registers) |_, offset| {
                     const reg_idx = @intCast(RegisterIndex, range.begin + offset);
                     const register = try db.getRegister(reg_idx);
-                    try db.genZigRegister(writer, base_addr, reg_idx, register, .namespaced);
+                    try db.genZigRegister(writer, base_addr, cluster.addr_offset, reg_idx, register, .namespaced);
                 }
 
                 try writer.writeAll("};\n");
@@ -1253,6 +1259,7 @@ fn genZigRegister(
     db: *Database,
     writer: anytype,
     base_addr: ?usize,
+    cluster_offset: ?usize,
     reg_idx: RegisterIndex,
     register: Register,
     nesting: Nesting,
@@ -1283,7 +1290,12 @@ fn genZigRegister(
 
             try writer.writeByte('\n');
             if (nesting == .namespaced) {
-                const addr = if (base_addr) |base| base + addr_offset else addr_offset;
+                var addr: u64 = addr_offset;
+                if (cluster_offset) |offset|
+                    addr += offset;
+                if (base_addr) |base|
+                    addr += base;
+
                 try writer.print("/// address: 0x{x}\n", .{addr});
             }
 
@@ -1295,7 +1307,13 @@ fn genZigRegister(
                 name,
                 register.size.?,
                 base_addr != null,
-                addr_offset,
+                if (nesting == .namespaced)
+                    if (cluster_offset) |offset|
+                        offset + addr_offset
+                    else
+                        addr_offset
+                else
+                    addr_offset,
                 field_range,
                 "",
                 nesting,
@@ -1317,7 +1335,12 @@ fn genZigRegister(
 
             try writer.writeByte('\n');
             if (nesting == .namespaced) {
-                const addr = if (base_addr) |base| base + addr_offset else addr_offset;
+                var addr: u64 = addr_offset;
+                if (cluster_offset) |offset|
+                    addr += offset;
+                if (base_addr) |base|
+                    addr += base;
+
                 try writer.print("/// address: 0x{x}\n", .{addr});
             }
 
@@ -1329,7 +1352,13 @@ fn genZigRegister(
                 name,
                 register.size.?,
                 base_addr != null,
-                addr_offset,
+                if (nesting == .namespaced)
+                    if (cluster_offset) |offset|
+                        offset + addr_offset
+                    else
+                        addr_offset
+                else
+                    addr_offset,
                 field_range,
                 "",
                 nesting,
@@ -1372,7 +1401,12 @@ fn genZigRegister(
         const name = try std.mem.replaceOwned(u8, db.arena.allocator(), register.name, "[%s]", "");
         try writer.writeByte('\n');
         if (nesting == .namespaced) {
-            const addr = if (base_addr) |base| base + register.addr_offset else register.addr_offset;
+            var addr = register.addr_offset;
+            if (cluster_offset) |offset|
+                addr += offset;
+            if (base_addr) |base|
+                addr += base;
+
             try writer.print("/// address: 0x{x}\n", .{addr});
         }
 
@@ -1384,7 +1418,13 @@ fn genZigRegister(
             name,
             register.size.?,
             base_addr != null,
-            register.addr_offset,
+            if (nesting == .namespaced)
+                if (cluster_offset) |offset|
+                    offset + register.addr_offset
+                else
+                    register.addr_offset
+            else
+                register.addr_offset,
             field_range,
             array_prefix,
             nesting,
@@ -1525,6 +1565,45 @@ pub fn getRegister(
         .reset_value = reset_value,
         .reset_mask = reset_mask,
     };
+}
+
+pub fn addClusterToPeripheral(
+    db: *Database,
+    peripheral: PeripheralIndex,
+    cluster: svd.Cluster,
+) !ClusterIndex {
+    const cluster_idx = @intCast(ClusterIndex, db.clusters.items.len);
+    try db.clusters.append(db.gpa, cluster);
+    try db.clusters_in_peripherals.append(db.gpa, .{
+        .peripheral_idx = peripheral,
+        .cluster_idx = cluster_idx,
+    });
+
+    // TODO: register properties and dimensions
+    return cluster_idx;
+}
+
+pub fn addFieldsToRegister(db: *Database, register: RegisterIndex, fields: []const Field) !void {
+    const begin = @intCast(FieldIndex, db.fields.items.len);
+    try db.fields.appendSlice(db.gpa, fields);
+    try db.fields_in_registers.put(db.gpa, register, .{
+        .begin = begin,
+        .end = @intCast(FieldIndex, db.fields.items.len),
+    });
+}
+
+pub fn addRegistersToCluster(db: *Database, cluster: ClusterIndex, registers: []const Register) !IndexRange(RegisterIndex) {
+    const begin = @intCast(RegisterIndex, db.registers.items.len);
+    try db.registers.appendSlice(db.gpa, registers);
+
+    const range = IndexRange(RegisterIndex){
+        .begin = begin,
+        .end = @intCast(RegisterIndex, db.registers.items.len),
+    };
+    try db.registers_in_clusters.put(db.gpa, cluster, range);
+
+    // TODO: register properties and dimensions
+    return range;
 }
 
 fn Derivations(comptime T: type) type {

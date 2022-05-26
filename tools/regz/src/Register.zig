@@ -1,12 +1,12 @@
 const std = @import("std");
 
 name: []const u8,
-description: ?[]const u8,
+description: ?[]const u8 = null,
 addr_offset: usize,
-size: ?usize,
-access: ?@import("svd.zig").Access,
-reset_value: ?u64,
-reset_mask: ?u64,
+size: ?usize = null,
+access: ?@import("svd.zig").Access = null,
+reset_value: ?u64 = null,
+reset_mask: ?u64 = null,
 
 pub fn format(
     register: @This(),

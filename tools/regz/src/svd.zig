@@ -145,7 +145,7 @@ pub const Cpu = struct {
     name: ?[]const u8,
     revision: []const u8,
     endian: Endian,
-    //mpu_present: bool,
+    mpu_present: bool,
     //fpu_present: bool,
     //fpu_dp: bool,
     //dsp_present: bool,
@@ -153,7 +153,7 @@ pub const Cpu = struct {
     //dcache_present: bool,
     //itcm_present: bool,
     //dtcm_present: bool,
-    //vtor_present: bool,
+    vtor_present: bool,
     nvic_prio_bits: usize,
     vendor_systick_config: bool,
     device_num_interrupts: ?usize,
@@ -171,6 +171,8 @@ pub const Cpu = struct {
                 try std.fmt.parseInt(usize, size_str, 0)
             else
                 null,
+            .vtor_present = (try xml.parseBoolean(arena.child_allocator, nodes, "vtorPresent")) orelse false,
+            .mpu_present = (try xml.parseBoolean(arena.child_allocator, nodes, "mpuPresent")) orelse false,
         };
     }
 };
