@@ -24,6 +24,8 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Provides access to the low level features of the CPU.
 pub const cpu = @import("cpu");
 
+pub const hal = @import("hal");
+
 /// Module that helps with interrupt handling.
 pub const interrupts = @import("interrupts.zig");
 
