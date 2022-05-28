@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="900mm"
+   height="120mm"
+   viewBox="0 0 900 120"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="logo-text-inkscape.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.38689959"
+     inkscape:cx="829.67263"
+     inkscape:cy="85.293448"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <image
+       preserveAspectRatio="none"
+       inkscape:svg-dpi="96"
+       width="112.7125"
+       height="112.7125"
+       xlink:href="logo.svg"
+       id="image896"
+       x="4.4005466"
+       y="3.6437492" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:102.597px;line-height:1.25;font-family:'Dash Horizon';-inkscape-font-specification:'Dash Horizon, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.61326"
+       x="116.56063"
+       y="91.984642"
+       id="text1714"
+       transform="scale(0.97877737,1.0216828)"><tspan
+         sodipodi:role="line"
+         id="tspan1712"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:102.597px;font-family:'Dash Horizon';-inkscape-font-specification:'Dash Horizon, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:2.61326"
+         x="116.56063"
+         y="91.984642">MicroZig</tspan></text>
+  </g>
+</svg>
