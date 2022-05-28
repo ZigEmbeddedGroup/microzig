@@ -1,4 +1,4 @@
-![microzig logo](design/logo-text-brightmode.svg)
+![microzig logo](design/logo-text-auto.svg)
 
 [![discord](https://img.shields.io/discord/824493524413710336.svg?logo=discord)](https://discord.gg/ShUWykk38X)
 
@@ -6,15 +6,14 @@
 
 APIs will likely break in the future
 
-Table of Contents
-=================
+# Table of Contents
 
- * [Contributing](#contributing)
- * [Introduction](#introduction)
- * [How to](#how-to)
-    * [Embedded project with "supported" chip/board](#embedded-project-with-supported-chipboard)
-    * [Embedded project with "unsupported" chip](#embedded-project-with-unsupported-chip)
-    * [Interrupts](#interrupts)
+- [Contributing](#contributing)
+- [Introduction](#introduction)
+- [How to](#how-to)
+  - [Embedded project with "supported" chip/board](#embedded-project-with-supported-chipboard)
+  - [Embedded project with "unsupported" chip](#embedded-project-with-unsupported-chip)
+  - [Interrupts](#interrupts)
 
 <!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
@@ -26,6 +25,7 @@ There will be issues marked as `good first issue`, or drafts for larger ideas th
 ## Introduction
 
 This repo contains the infrastructure for getting started in an embedded Zig project, as well as some code to interact with some chips/boards. Specifically it offers:
+
 - a single easy-to-use builder function that:
   - generates your linker script
   - sets up packages and start code
@@ -87,6 +87,7 @@ pub fn main() !void {
 
 If you have a board/chip that isn't defined in microzig, you can set it up yourself!
 You need to have:
+
 - SVD or ATDF file defining registers
 - flash and ram address and sizes
 
