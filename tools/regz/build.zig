@@ -47,7 +47,7 @@ pub const Regz = struct {
         exe.setTarget(target);
         exe.setBuildMode(mode);
         exe.addOptions("build_options", build_options);
-        exe.addPackagePath("clap", root() ++ pkgs.clap.path.path);
+        exe.addPackagePath("clap", root() ++ pkgs.clap.source.path);
         xml.link(exe);
 
         var regz = builder.allocator.create(Regz) catch unreachable;
