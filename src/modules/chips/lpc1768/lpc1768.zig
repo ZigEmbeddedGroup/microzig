@@ -163,7 +163,7 @@ pub fn Uart(comptime index: usize) type {
             const pclk = micro.clock.get() / 4;
             const divider = (pclk / (16 * config.baud_rate));
 
-            const regval = std.math.cast(u16, divider) catch return error.UnsupportedBaudRate;
+            const regval = std.math.cast(u16, divider) orelse return error.UnsupportedBaudRate;
 
             UARTn.DLL.modify(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
             UARTn.DLM.modify(.{ .DLMSB = @truncate(u8, regval >> 0x08) });
