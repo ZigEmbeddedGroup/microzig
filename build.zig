@@ -3,12 +3,12 @@ const std = @import("std");
 const pkgs = struct {
     const koino = std.build.Pkg{
         .name = "koino",
-        .path = .{ .path = "./deps/koino/src/koino.zig" },
+        .source = .{ .path = "./deps/koino/src/koino.zig" },
         .dependencies = &[_]std.build.Pkg{
-            std.build.Pkg{ .name = "libpcre", .path = .{ .path = "deps/koino/vendor/libpcre.zig/src/main.zig" } },
-            std.build.Pkg{ .name = "htmlentities", .path = .{ .path = "deps/koino/vendor/htmlentities.zig/src/main.zig" } },
-            std.build.Pkg{ .name = "clap", .path = .{ .path = "deps/koino/vendor/zig-clap/clap.zig" } },
-            std.build.Pkg{ .name = "zunicode", .path = .{ .path = "deps/koino/vendor/zunicode/src/zunicode.zig" } },
+            std.build.Pkg{ .name = "libpcre", .source = .{ .path = "deps/koino/vendor/libpcre.zig/src/main.zig" } },
+            std.build.Pkg{ .name = "htmlentities", .source = .{ .path = "deps/koino/vendor/htmlentities.zig/src/main.zig" } },
+            std.build.Pkg{ .name = "clap", .source = .{ .path = "deps/koino/vendor/zig-clap/clap.zig" } },
+            std.build.Pkg{ .name = "zunicode", .source = .{ .path = "deps/koino/vendor/zunicode/src/zunicode.zig" } },
         },
     };
 };

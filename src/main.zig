@@ -143,7 +143,9 @@ pub fn main() anyerror!void {
         var root_dir = try std.fs.cwd().makeOpenPath("render", .{});
         defer root_dir.close();
 
-        try website.renderMarkdownFile("website/index.md", root_dir, "index.htm");
+        try root_dir.writeFile("style.css", @embedFile("style.css"));
+
+        try website.renderHtmlFile("website/index.htm", root_dir, "index.htm");
 
         try website.renderArticleIndex(root_dir, "articles.htm");
 
@@ -537,7 +539,17 @@ const Website = struct {
         try self.renderFooter(writer);
     }
 
-    /// Render the markdown body into `dst_path`.
+    /// Render a given markdown file into `dst_path`.
+    fn renderHtmlFile(self: *Self, src_path: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
+        std.debug.assert(self.is_prepared);
+
+        var html_input = try std.fs.cwd().readFileAlloc(self.allocator, src_path, 10_000_000);
+        defer self.allocator.free(html_input);
+
+        try self.renderHtml(html_input, dst_dir, dst_path);
+    }
+
+    /// Render the html body into `dst_path`.
     fn renderHtml(self: Self, source: []const u8, dst_dir: std.fs.Dir, dst_path: []const u8) !void {
         std.debug.assert(self.is_prepared);
 
@@ -561,66 +573,7 @@ const Website = struct {
             \\  <meta charset="utf-8">
             \\  <meta name="viewport" content="width=device-width, initial-scale=1">
             \\  <title>ZEG</title>
-            \\<style>
-            //  Limit the text width of the body to roughly 40 characters
-            \\  body {
-            \\    max-width: 40em;
-            \\    margin-left: auto;
-            \\    margin-right: auto;
-            \\    font-family: sans;
-            \\  }
-            \\
-            \\  @media screen and (max-width: 600px) {
-            \\    body {
-            \\      padding: 2em;
-            \\    }
-            \\  }
-            // Align top-level headings
-            \\  h1 {
-            \\    text-align: center;
-            \\  }
-            \\
-            // Make images in headings and links exactly 1 character high.
-            \\  h1 img, h2 img, h3 img, h3 img, h4 img, h5 img, h6 img, a img {
-            \\    width: 1em;
-            \\    height: 1em;
-            \\    vertical-align: middle;
-            \\  }
-            \\
-            // center images in a paragraph and display them as a block
-            \\  p > img {
-            \\    display: block;
-            \\    max-width: 100%;
-            \\    margin-left: auto;
-            \\    margin-right: auto;
-            \\  }
-            \\ 
-            // Make nice top-level codeblocks
-            \\  body > pre {
-            \\    background-color: #EEE;
-            \\    padding: 0.5em;
-            \\  }
-            \\
-            // Make nice top-level blockquotes
-            \\  body > blockquote {
-            \\    border-left: 3pt solid cornflowerblue;
-            \\    padding-left: 0.5em;
-            \\    margin-left: 0.5em;
-            \\ }
-            \\
-            // Make links in headings invisible
-            \\  h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
-            \\    text-decoration: none;
-            \\    font-weight: lighter;
-            \\    color: unset;
-            \\    opacity: 10%;
-            \\    margin-left: -1.5em;
-            \\    padding-left: 0.5em;
-            \\  }
-            \\  h1:hover a, h2:hover a, h3:hover a, h4:hover a, h5:hover a, h6:hover a {
-            \\    opacity: 50%;
-            \\  }
-            \\</style>
+            \\  <link rel="stylesheet" href="/style.css">
             \\</head>
             \\<body>
         );
