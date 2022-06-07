@@ -1,3 +1,0 @@
-[submodule "microzig"]
-	path = microzig
-	url = git@github.com:ZigEmbeddedGroup/microzig.git
