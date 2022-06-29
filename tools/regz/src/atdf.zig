@@ -45,7 +45,7 @@ pub fn parseRegister(
                 reg_offset;
         } else return error.NoAddrOffset,
         .size = if (xml.getAttribute(node, "size")) |size_str| blk: {
-            const full_size = 8 * try std.fmt.parseInt(usize, size_str, 0);
+            const full_size = 8 * try std.fmt.parseInt(u16, size_str, 0);
             if (!has_fields) {
                 const mask = try std.fmt.parseInt(u64, xml.getAttribute(node, "mask") orelse break :blk full_size, 0);
 

@@ -8,7 +8,6 @@ const Register = @import("Register.zig");
 const Field = @import("Field.zig");
 const Enumeration = @import("Enumeration.zig");
 const cmsis = @import("cmsis.zig");
-pub const Access = svd.Access;
 
 const assert = std.debug.assert;
 const ArenaAllocator = std.heap.ArenaAllocator;
@@ -16,6 +15,7 @@ const Allocator = std.mem.Allocator;
 
 const Database = @This();
 
+pub const Access = svd.Access;
 pub const PeripheralIndex = u32;
 pub const ClusterIndex = u32;
 pub const RegisterIndex = u32;
@@ -61,7 +61,7 @@ const Nesting = enum {
 fn RegisterProperties(comptime IndexType: type) type {
     return struct {
         /// register size in bits
-        size: std.AutoHashMapUnmanaged(IndexType, usize) = .{},
+        size: std.AutoHashMapUnmanaged(IndexType, u16) = .{},
         access: std.AutoHashMapUnmanaged(IndexType, Access) = .{},
         reset_value: std.AutoHashMapUnmanaged(IndexType, u64) = .{},
         reset_mask: std.AutoHashMapUnmanaged(IndexType, u64) = .{},
@@ -108,6 +108,10 @@ dimensions: Dimensions = .{},
 register_properties: RegisterPropertyTables = .{},
 field_access: std.AutoArrayHashMapUnmanaged(FieldIndex, Access) = .{},
 
+/// Register addresses of registers we know will exist on an MCU, it's used for
+/// deduplication when a vendor includes xml entries for those registers
+system_reg_addrs: std.AutoArrayHashMapUnmanaged(u64, void) = .{},
+
 pub fn deinit(db: *Database) void {
     db.interrupts.deinit(db.gpa);
     db.peripherals.deinit(db.gpa);
@@ -125,6 +129,7 @@ pub fn deinit(db: *Database) void {
     db.dimensions.deinit(db.gpa);
     db.register_properties.deinit(db.gpa);
     db.field_access.deinit(db.gpa);
+    db.system_reg_addrs.deinit(db.gpa);
     db.arena.deinit();
 }
 
@@ -147,6 +152,25 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
     else
         null;
 
+    if (xml.findNode(device_nodes, "peripherals")) |peripherals_node| {
+        var peripheral_it: ?*xml.Node = xml.findNode(peripherals_node.children, "peripheral"); //peripherals_node.children;
+        while (peripheral_it != null) : (peripheral_it = xml.findNode(peripheral_it.?.next, "peripheral")) {
+            const peripheral_nodes: *xml.Node = peripheral_it.?.children orelse continue;
+
+            var interrupt_it: ?*xml.Node = xml.findNode(peripheral_nodes, "interrupt");
+            while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
+                const interrupt_nodes: *xml.Node = interrupt_it.?.children orelse continue;
+                const interrupt = try svd.Interrupt.parse(&db.arena, interrupt_nodes);
+
+                // if the interrupt doesn't exist then do a sorted insert
+                if (std.sort.binarySearch(svd.Interrupt, interrupt, db.interrupts.items, {}, svd.Interrupt.compare) == null) {
+                    try db.interrupts.append(db.gpa, interrupt);
+                    std.sort.sort(svd.Interrupt, db.interrupts.items, {}, svd.Interrupt.lessThan);
+                }
+            }
+        }
+    }
+
     if (db.cpu) |cpu| if (cpu.name) |cpu_name|
         if (svd.CpuName.parse(cpu_name)) |cpu_type|
             try cmsis.addCoreRegisters(&db, cpu_type);
@@ -155,7 +179,7 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
     defer named_derivations.deinit(allocator);
 
     if (xml.findNode(device_nodes, "peripherals")) |peripherals_node| {
-        var peripheral_it: ?*xml.Node = xml.findNode(peripherals_node.children, "peripheral"); //peripherals_node.children;
+        var peripheral_it: ?*xml.Node = xml.findNode(peripherals_node.children, "peripheral");
         while (peripheral_it != null) : (peripheral_it = xml.findNode(peripheral_it.?.next, "peripheral")) {
             const peripheral_nodes: *xml.Node = peripheral_it.?.children orelse continue;
             const peripheral = try svd.parsePeripheral(&db.arena, peripheral_nodes);
@@ -190,21 +214,18 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
                     .peripheral_idx = peripheral_idx,
                     .interrupt_value = @intCast(u32, interrupt.value),
                 });
-
-                // if the interrupt doesn't exist then do a sorted insert
-                if (std.sort.binarySearch(svd.Interrupt, interrupt, db.interrupts.items, {}, svd.Interrupt.compare) == null) {
-                    try db.interrupts.append(db.gpa, interrupt);
-                    std.sort.sort(svd.Interrupt, db.interrupts.items, {}, svd.Interrupt.lessThan);
-                }
             }
 
             if (xml.findNode(peripheral_nodes, "registers")) |registers_node| {
                 const reg_begin_idx = db.registers.items.len;
-                try db.loadRegisters(registers_node.children, &named_derivations);
-                try db.registers_in_peripherals.put(db.gpa, peripheral_idx, .{
-                    .begin = @intCast(RegisterIndex, reg_begin_idx),
-                    .end = @intCast(RegisterIndex, db.registers.items.len),
-                });
+                {
+                    const base_addr = if (peripheral.base_addr) |periph_base_addr| periph_base_addr else 0;
+                    try db.loadRegisters(registers_node.children, base_addr, &named_derivations);
+                    try db.registers_in_peripherals.put(db.gpa, peripheral_idx, .{
+                        .begin = @intCast(RegisterIndex, reg_begin_idx),
+                        .end = @intCast(RegisterIndex, db.registers.items.len),
+                    });
+                }
 
                 // process clusters, this might need to be recursive
                 var cluster_it: ?*xml.Node = xml.findNode(registers_node.children, "cluster");
@@ -239,8 +260,13 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
                         .peripheral_idx = peripheral_idx,
                     });
 
+                    const base_addr = if (peripheral.base_addr) |periph_base|
+                        periph_base + cluster.addr_offset
+                    else
+                        cluster.addr_offset;
+
                     const first_reg_idx = db.registers.items.len;
-                    try db.loadRegisters(cluster_nodes, &named_derivations);
+                    try db.loadRegisters(cluster_nodes, base_addr, &named_derivations);
                     try db.registers_in_clusters.put(db.gpa, cluster_idx, .{
                         .begin = @intCast(RegisterIndex, first_reg_idx),
                         .end = @intCast(RegisterIndex, db.registers.items.len),
@@ -334,12 +360,19 @@ pub fn initFromSvd(allocator: Allocator, doc: *xml.Doc) !Database {
 fn loadRegisters(
     db: *Database,
     nodes: ?*xml.Node,
+    base_addr: ?u64,
     named_derivations: *Derivations([]const u8),
 ) !void {
     var register_it: ?*xml.Node = xml.findNode(nodes, "register");
     while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
         const register_nodes: *xml.Node = register_it.?.children orelse continue;
         const register = try svd.parseRegister(&db.arena, register_nodes);
+        if (base_addr) |ba|
+            if (db.system_reg_addrs.contains(ba + register.addr_offset)) {
+                std.log.debug("skipping register {s}, it is a system register", .{register.name});
+                continue;
+            };
+
         const register_idx = @intCast(RegisterIndex, db.registers.items.len);
         try db.registers.append(db.gpa, register);
 
@@ -481,7 +514,7 @@ fn loadNestedClusters(
         });
 
         const first_reg_idx = db.registers.items.len;
-        try db.loadRegisters(cluster_nodes, named_derivations);
+        try db.loadRegisters(cluster_nodes, null, named_derivations);
         try db.registers_in_clusters.put(db.gpa, cluster_idx, .{
             .begin = @intCast(RegisterIndex, first_reg_idx),
             .end = @intCast(RegisterIndex, db.registers.items.len),
@@ -918,7 +951,7 @@ pub fn toZig(db: *Database, out_writer: anytype) !void {
 fn genZigCluster(
     db: *Database,
     writer: anytype,
-    base_addr: ?usize,
+    base_addr: ?u64,
     cluster_idx: ClusterIndex,
     nesting: Nesting,
 ) !void {
@@ -987,9 +1020,9 @@ fn genZigSingleRegister(
     db: *Database,
     writer: anytype,
     name: []const u8,
-    width: usize,
+    width: u32,
     has_base_addr: bool,
-    addr_offset: usize,
+    addr_offset: u64,
     field_range_opt: ?IndexRange(FieldIndex),
     array_prefix: []const u8,
     nesting: Nesting,
@@ -1258,8 +1291,8 @@ fn genZigFields(
 fn genZigRegister(
     db: *Database,
     writer: anytype,
-    base_addr: ?usize,
-    cluster_offset: ?usize,
+    base_addr: ?u64,
+    cluster_offset: ?u64,
     reg_idx: RegisterIndex,
     register: Register,
     nesting: Nesting,
@@ -1524,8 +1557,8 @@ pub fn getRegister(
         db.findPeripheralContainingCluster(clusters.items[clusters.items.len - 1]) orelse
             return error.PeripheralNotFound;
 
-    const size = db.registerPropertyUpwardsSearch(
-        usize,
+    const size: u16 = db.registerPropertyUpwardsSearch(
+        u16,
         "size",
         reg_idx,
         clusters.items,
@@ -1604,6 +1637,25 @@ pub fn addRegistersToCluster(db: *Database, cluster: ClusterIndex, registers: []
 
     // TODO: register properties and dimensions
     return range;
+}
+
+pub fn addSystemRegisterAddresses(
+    db: *Database,
+    peripheral_idx: PeripheralIndex,
+    cluster_idx: ?ClusterIndex,
+    regs: IndexRange(RegisterIndex),
+) !void {
+    const peripheral = db.peripherals.items[peripheral_idx];
+    const base_address = if (peripheral.base_addr) |periph_base_addr|
+        if (cluster_idx) |ci|
+            periph_base_addr + db.clusters.items[ci].addr_offset
+        else
+            periph_base_addr
+    else
+        0;
+
+    for (db.registers.items[regs.begin..regs.end]) |register|
+        try db.system_reg_addrs.put(db.gpa, base_address + register.addr_offset, {});
 }
 
 fn Derivations(comptime T: type) type {

@@ -1,47 +1,11 @@
 const std = @import("std");
 const Database = @import("../Database.zig");
 const Register = @import("../Register.zig");
+const Field = @import("../Field.zig");
+const cortex_m0 = @import("cortex_m0.zig");
 
 pub fn addCoreRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
-    _ = db;
-    _ = scs;
-
-    const nvic = try db.addClusterToPeripheral(scs, .{
-        .name = "NVIC",
-        .description = "Nested Vectored Interrupt Controller",
-        .addr_offset = 0x100,
-    });
-
-    _ = try db.addRegistersToCluster(nvic, &.{
-        .{
-            .name = "ISER",
-            .description = "Interrupt Set Enable Register",
-            .addr_offset = 0x000,
-        },
-        .{
-            .name = "ICER",
-            .description = "Interrupt Clear Enable Register",
-            .addr_offset = 0x80,
-        },
-        .{
-            .name = "ISPR",
-            .description = "Interrupt Set Pending Register",
-            .addr_offset = 0x100,
-        },
-        .{
-            .name = "ICPR",
-            .description = "Interrupt Clear Pending Register",
-            .addr_offset = 0x180,
-        },
-        .{
-            .name = "IP",
-            .description = "Interrupt Priority Register",
-            .addr_offset = 0x300,
-            //.dimension = .{
-            //    .dim = 8,
-            //},
-        },
-    });
+    try cortex_m0.addNvicCluster(db, scs);
 
     const scb = try db.addClusterToPeripheral(scs, .{
         .name = "SCB",
@@ -162,6 +126,8 @@ pub fn addCoreRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
 
     if (db.cpu) |cpu| if (cpu.mpu_present)
         try addMpuRegisters(db, scs);
+
+    try db.addSystemRegisterAddresses(scs, scb, regs);
 }
 
 fn addMpuRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
@@ -238,4 +204,6 @@ fn addMpuRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
         .{ .name = "AP", .offset = 24, .width = 3 },
         .{ .name = "XN", .offset = 28, .width = 1 },
     });
+
+    try db.addSystemRegisterAddresses(scs, mpu, regs);
 }

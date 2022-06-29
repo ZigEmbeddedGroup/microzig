@@ -3,7 +3,7 @@ const std = @import("std");
 name: []const u8,
 version: ?[]const u8,
 description: ?[]const u8,
-base_addr: ?usize,
+base_addr: ?u64,
 
 pub fn format(
     peripheral: @This(),

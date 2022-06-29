@@ -3,7 +3,9 @@ const svd = @import("svd.zig");
 const Database = @import("Database.zig");
 
 const cores = struct {
+    const cortex_m0 = @import("cmsis/cortex_m0.zig");
     const cortex_m0plus = @import("cmsis/cortex_m0plus.zig");
+    const cortex_m1 = @import("cmsis/cortex_m1.zig");
 };
 
 fn addSysTickRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
@@ -61,6 +63,8 @@ fn addSysTickRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
         .{ .name = "SKEW", .offset = 30, .width = 1 },
         .{ .name = "NOREF", .offset = 31, .width = 1 },
     });
+
+    try db.addSystemRegisterAddresses(scs, systick, regs);
 }
 
 pub fn addCoreRegisters(db: *Database, cpu_name: svd.CpuName) !void {

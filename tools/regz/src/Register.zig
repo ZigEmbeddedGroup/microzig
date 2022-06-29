@@ -2,8 +2,8 @@ const std = @import("std");
 
 name: []const u8,
 description: ?[]const u8 = null,
-addr_offset: usize,
-size: ?usize = null,
+addr_offset: u64,
+size: ?u16 = null,
 access: ?@import("svd.zig").Access = null,
 reset_value: ?u64 = null,
 reset_mask: ?u64 = null,
