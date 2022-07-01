@@ -21,6 +21,7 @@ const testing = std.testing;
 const assert = std.debug.assert;
 const LibExeObjStep = std.build.LibExeObjStep;
 const Allocator = std.mem.Allocator;
+const GeneratedFile = std.build.GeneratedFile;
 
 const prog_page_size = 256;
 const uf2_alignment = 4;
@@ -35,7 +36,7 @@ pub const Uf2Step = struct {
     step: std.build.Step,
     exe: *LibExeObjStep,
     opts: Options,
-    path: ?[]const u8 = null,
+    output_file: GeneratedFile,
 
     pub fn create(exe: *LibExeObjStep, opts: Options) *Uf2Step {
         assert(exe.kind == .exe);
@@ -50,6 +51,7 @@ pub const Uf2Step = struct {
             ),
             .exe = exe,
             .opts = opts,
+            .output_file = .{ .step = &ret.step },
         };
 
         ret.step.dependOn(&exe.step);
@@ -62,25 +64,35 @@ pub const Uf2Step = struct {
         return FlashOpStep.create(self, path);
     }
 
+    pub fn install(uf2_step: *Uf2Step) void {
+        const builder = uf2_step.exe.builder;
+        const name = std.mem.join(builder.allocator, "", &.{ uf2_step.exe.name, ".uf2" }) catch @panic("failed to join");
+        const install_step = builder.addInstallFileWithDir(.{
+            .generated = &uf2_step.output_file,
+        }, .bin, name);
+        builder.getInstallStep().dependOn(&uf2_step.step);
+        builder.getInstallStep().dependOn(&install_step.step);
+    }
+
     fn make(step: *std.build.Step) !void {
-        const self = @fieldParentPtr(Uf2Step, "step", step);
-        const file_source = self.exe.getOutputSource();
-        const exe_path = file_source.getPath(self.exe.builder);
-        const dest_path = try std.mem.join(self.exe.builder.allocator, "", &.{
+        const uf2_step = @fieldParentPtr(Uf2Step, "step", step);
+        const file_source = uf2_step.exe.getOutputSource();
+        const exe_path = file_source.getPath(uf2_step.exe.builder);
+        const dest_path = try std.mem.join(uf2_step.exe.builder.allocator, "", &.{
             exe_path,
             ".uf2",
         });
 
-        var archive = Archive.init(self.exe.builder.allocator);
+        var archive = Archive.init(uf2_step.exe.builder.allocator);
         errdefer archive.deinit();
 
-        try archive.addElf(exe_path, self.opts);
+        try archive.addElf(exe_path, uf2_step.opts);
 
         const dest_file = try std.fs.cwd().createFile(dest_path, .{});
         defer dest_file.close();
 
         try archive.writeTo(dest_file.writer());
-        self.path = dest_path;
+        uf2_step.output_file.path = dest_path;
     }
 };
 
