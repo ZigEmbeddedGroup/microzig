@@ -39,11 +39,22 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+        ahb,
+        apb1,
+        apb2,
+    };
+};
+
 // Default clock frequencies after reset, see top comment for calculation
-// TODO: these would need to change when we support multiple clock configurations
-pub const ahb_frequency = 16_000_000;
-pub const apb1_frequency = 16_000_000;
-pub const apb2_frequency = 16_000_000;
+pub const clock_frequencies = .{
+    .cpu = 16_000_000,
+    .ahb = 16_000_000,
+    .apb1 = 16_000_000,
+    .apb2 = 16_000_000,
+};
 
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
@@ -227,7 +238,7 @@ pub fn Uart(comptime index: usize) type {
             // TODO: We assume the default OVER8=0 configuration above (i.e. 16x oversampling).
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @intCast(u16, @divTrunc(apb1_frequency, config.baud_rate));
+            const usartdiv = @intCast(u16, @divTrunc(micro.clock.get().apb1, config.baud_rate));
             @field(regs, usart_name).BRR.raw = usartdiv;
 
             // enable USART, and its transmitter and receiver

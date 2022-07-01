@@ -27,6 +27,23 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+        ahb,
+        apb1,
+        apb2,
+    };
+};
+
+// Default clock frequencies after reset, see top comment for calculation
+pub const clock_frequencies = .{
+    .cpu = 16_000_000,
+    .ahb = 16_000_000,
+    .apb1 = 16_000_000,
+    .apb2 = 16_000_000,
+};
+
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
