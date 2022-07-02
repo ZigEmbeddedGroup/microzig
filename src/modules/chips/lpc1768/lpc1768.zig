@@ -5,7 +5,15 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
-pub const cpu_frequency: u32 = 100_000_000; // 100 MHz
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+    };
+};
+
+pub const clock_frequencies = .{
+    .cpu = 100_000_000, // 100 Mhz
+};
 
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
@@ -156,11 +164,11 @@ pub fn Uart(comptime index: usize) type {
             //UARTn.FCR.modify(.{ .FIFOEN = .UARTN_FIFOS_ARE_DISA });
 
             micro.debug.writer().print("clock: {} baud: {} ", .{
-                micro.clock.get(),
+                micro.clock.get().cpu,
                 config.baud_rate,
             }) catch {};
 
-            const pclk = micro.clock.get() / 4;
+            const pclk = micro.clock.get().cpu / 4;
             const divider = (pclk / (16 * config.baud_rate));
 
             const regval = std.math.cast(u16, divider) orelse return error.UnsupportedBaudRate;

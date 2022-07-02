@@ -11,6 +11,12 @@ const Port = enum(u8) {
     D = 3,
 };
 
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+    };
+};
+
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
@@ -94,14 +100,14 @@ pub fn Uart(comptime index: usize) type {
         const Self = @This();
 
         fn computeDivider(baud_rate: u32) !u12 {
-            const pclk = micro.clock.get();
+            const pclk = micro.clock.get().cpu;
             const divider = ((pclk + (8 * baud_rate)) / (16 * baud_rate)) - 1;
 
             return std.math.cast(u12, divider) catch return error.UnsupportedBaudRate;
         }
 
         fn computeBaudRate(divider: u12) u32 {
-            return micro.clock.get() / (16 * @as(u32, divider) + 1);
+            return micro.clock.get().cpu / (16 * @as(u32, divider) + 1);
         }
 
         pub fn init(config: micro.uart.Config) !Self {

@@ -1,8 +1,6 @@
 pub const chip = @import("chip");
 pub const micro = @import("microzig");
 
-pub const cpu_frequency = 16_000_000;
-
 pub const pin_map = .{
     // LED cross, connected to GPIOD bits 12..15
     // N orange
