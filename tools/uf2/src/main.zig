@@ -219,7 +219,7 @@ pub const Archive = struct {
 
         var segment_idx: usize = 0;
         var addr = std.mem.alignBackwardGeneric(u32, segments.items[0].addr, prog_page_size);
-        while (addr < last_segment_end) {
+        while (addr < last_segment_end and segment_idx < segments.items.len) {
             const segment = &segments.items[segment_idx];
             const segment_end = segment.addr + segment.size;
 
