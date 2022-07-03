@@ -90,6 +90,12 @@ pub const Enabled = enum {
     enabled,
 };
 
+pub inline fn reset() void {
+    regs.RESETS.RESET.modify(.{ .io_bank0 = 1, .pads_bank0 = 1 });
+    while (regs.RESETS.RESET_DONE.read().io_bank0 == 1) {}
+    while (regs.RESETS.RESET_DONE.read().pads_bank0 == 1) {}
+}
+
 //const gpio_num = gpio_num: {
 //    // calculate max gpios using comptime parsing
 //};
@@ -122,8 +128,14 @@ pub inline fn put(comptime gpio: u32, value: u1) void {
 }
 
 pub inline fn setFunction(comptime gpio: u32, function: Function) void {
-    const reg_name = comptime std.fmt.comptimePrint("GPIO{}_CTRL", .{gpio});
-    @field(regs.IO_BANK0, reg_name).write(.{
+    const pad_bank_reg = comptime std.fmt.comptimePrint("GPIO{}", .{gpio});
+    @field(regs.PADS_BANK0, pad_bank_reg).modify(.{
+        .IE = 1,
+        .OD = 0,
+    });
+
+    const io_bank_reg = comptime std.fmt.comptimePrint("GPIO{}_CTRL", .{gpio});
+    @field(regs.IO_BANK0, io_bank_reg).write(.{
         .FUNCSEL = @enumToInt(function),
         .OUTOVER = 0,
         .INOVER = 0,
