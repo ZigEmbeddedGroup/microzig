@@ -94,8 +94,11 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     if (index != 0) @compileError("Atmega328p only has a single uart!");
+    if (pins.tx != null or pins.rx != null)
+        @compileError("Atmega328p has fixed pins for uart!");
+
     return struct {
         const Self = @This();
 

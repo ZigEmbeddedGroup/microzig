@@ -3,13 +3,25 @@ const micro = @import("microzig");
 // Configures the led_pin and uart index
 const cfg = if (micro.config.has_board)
     switch (micro.config.board_name) {
-        .@"mbed LPC1768" => .{ .led_pin = micro.Pin("LED-1"), .uart_idx = 1 },
-        .@"STM32F3DISCOVERY" => .{ .led_pin = micro.Pin("LD3"), .uart_idx = 1 },
-        .@"STM32F4DISCOVERY" => .{ .led_pin = micro.Pin("LD5"), .uart_idx = 2 },
+        .@"mbed LPC1768" => .{
+            .led_pin = micro.Pin("LED-1"),
+            .uart_idx = 1,
+            .pins = .{},
+        },
+        .@"STM32F3DISCOVERY" => .{
+            .led_pin = micro.Pin("LD3"),
+            .uart_idx = 1,
+            .pins = .{},
+        },
+        .@"STM32F4DISCOVERY" => .{
+            .led_pin = micro.Pin("LD5"),
+            .uart_idx = 2,
+            .pins = .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
+        },
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
-    .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1 },
+    .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
     else => @compileError("unknown chip"),
 };
 
@@ -20,7 +32,7 @@ pub fn main() !void {
     });
     led.init();
 
-    var uart = micro.Uart(cfg.uart_idx).init(.{
+    var uart = micro.Uart(cfg.uart_idx, cfg.pins).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
         .parity = null,

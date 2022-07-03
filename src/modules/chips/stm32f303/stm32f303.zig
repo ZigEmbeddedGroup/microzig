@@ -132,8 +132,10 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     if (!(index == 1)) @compileError("TODO: only USART1 is currently supported");
+    if (pins.tx != null or pins.rx != null)
+        @compileError("TODO: custom pins are not currently supported");
 
     return struct {
         parity_read_mask: u8,

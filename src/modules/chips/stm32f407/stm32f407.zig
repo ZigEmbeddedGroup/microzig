@@ -154,29 +154,85 @@ pub const uart = struct {
         even = 0,
         odd = 1,
     };
+
+    const PinDirection = std.meta.FieldEnum(micro.uart.Pins);
+
+    /// Checks if a pin is valid for a given uart index and direction
+    pub fn isValidPin(comptime pin: type, comptime index: usize, comptime direction: PinDirection) bool {
+        const pin_name = pin.name;
+
+        return switch (direction) {
+            .tx => switch (index) {
+                1 => std.mem.eql(u8, pin_name, "PA9") or std.mem.eql(u8, pin_name, "PB6"),
+                2 => std.mem.eql(u8, pin_name, "PA2") or std.mem.eql(u8, pin_name, "PD5"),
+                3 => std.mem.eql(u8, pin_name, "PB10") or std.mem.eql(u8, pin_name, "PC10") or std.mem.eql(u8, pin_name, "PD8"),
+                4 => std.mem.eql(u8, pin_name, "PA0") or std.mem.eql(u8, pin_name, "PC10"),
+                5 => std.mem.eql(u8, pin_name, "PC12"),
+                6 => std.mem.eql(u8, pin_name, "PC6") or std.mem.eql(u8, pin_name, "PG14"),
+                else => unreachable,
+            },
+            // Valid RX pins for the UARTs
+            .rx => switch (index) {
+                1 => std.mem.eql(u8, pin_name, "PA10") or std.mem.eql(u8, pin_name, "PB7"),
+                2 => std.mem.eql(u8, pin_name, "PA3") or std.mem.eql(u8, pin_name, "PD6"),
+                3 => std.mem.eql(u8, pin_name, "PB11") or std.mem.eql(u8, pin_name, "PC11") or std.mem.eql(u8, pin_name, "PD9"),
+                4 => std.mem.eql(u8, pin_name, "PA1") or std.mem.eql(u8, pin_name, "PC11"),
+                5 => std.mem.eql(u8, pin_name, "PD2"),
+                6 => std.mem.eql(u8, pin_name, "PC7") or std.mem.eql(u8, pin_name, "PG9"),
+                else => unreachable,
+            },
+        };
+    }
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     if (index < 1 or index > 6) @compileError("Valid USART index are 1..6");
 
     const usart_name = std.fmt.comptimePrint("USART{d}", .{index});
-    // TODO: support alternative pins
-    const pins = switch (index) {
-        1 => .{ .tx = micro.Pin("PA9"), .rx = micro.Pin("PA10") },
-        2 => .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
-        3 => .{ .tx = micro.Pin("PD8"), .rx = micro.Pin("PD9") },
-        4 => .{ .tx = micro.Pin("PC10"), .rx = micro.Pin("PC11") },
-        5 => .{ .tx = micro.Pin("PC12"), .rx = micro.Pin("PD2") },
-        6 => .{ .tx = micro.Pin("PC6"), .rx = micro.Pin("PC7") },
+    const tx_pin =
+        if (pins.tx) |tx|
+        if (uart.isValidPin(tx, index, .tx))
+            tx
+        else
+            @compileError(std.fmt.comptimePrint("Tx pin {s} is not valid for UART{}", .{ tx.name, index }))
+    else switch (index) {
+        // Provide default tx pins if no pin is specified
+        1 => micro.Pin("PA9"),
+        2 => micro.Pin("PA2"),
+        3 => micro.Pin("PB10"),
+        4 => micro.Pin("PA0"),
+        5 => micro.Pin("PC12"),
+        6 => micro.Pin("PC6"),
         else => unreachable,
     };
-    const tx_gpio = micro.Gpio(pins.tx, .{
+
+    const rx_pin =
+        if (pins.rx) |rx|
+        if (uart.isValidPin(rx, index, .rx))
+            rx
+        else
+            @compileError(std.fmt.comptimePrint("Rx pin {s} is not valid for UART{}", .{ rx.name, index }))
+    else switch (index) {
+        // Provide default rx pins if no pin is specified
+        1 => micro.Pin("PA10"),
+        2 => micro.Pin("PA3"),
+        3 => micro.Pin("PB11"),
+        4 => micro.Pin("PA1"),
+        5 => micro.Pin("PD2"),
+        6 => micro.Pin("PC7"),
+        else => unreachable,
+    };
+
+    // USART1..3 are AF7, USART 4..6 are AF8
+    const alternate_function = if (index <= 3) .af7 else .af8;
+
+    const tx_gpio = micro.Gpio(tx_pin, .{
         .mode = .alternate_function,
-        .alternate_function = .af7,
+        .alternate_function = alternate_function,
     });
-    const rx_gpio = micro.Gpio(pins.rx, .{
+    const rx_gpio = micro.Gpio(rx_pin, .{
         .mode = .alternate_function,
-        .alternate_function = .af7,
+        .alternate_function = alternate_function,
     });
 
     return struct {

@@ -115,7 +115,10 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+    if (pins.tx != null or pins.rx != null)
+        @compileError("TODO: custom pins are not currently supported");
+
     return struct {
         const UARTn = switch (index) {
             0 => regs.UART0,
