@@ -362,3 +362,265 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         }
     };
 }
+
+pub const i2c = struct {
+    const PinLine = std.meta.FieldEnum(micro.i2c.Pins);
+
+    /// Checks if a pin is valid for a given i2c index and line
+    pub fn isValidPin(comptime pin: type, comptime index: usize, comptime line: PinLine) bool {
+        const pin_name = pin.name;
+
+        return switch (line) {
+            .scl => switch (index) {
+                1 => std.mem.eql(u8, pin_name, "PB6") or std.mem.eql(u8, pin_name, "PB8"),
+                2 => std.mem.eql(u8, pin_name, "PB10") or std.mem.eql(u8, pin_name, "PF1") or std.mem.eql(u8, pin_name, "PH4"),
+                3 => std.mem.eql(u8, pin_name, "PA8") or std.mem.eql(u8, pin_name, "PH7"),
+                else => unreachable,
+            },
+            // Valid RX pins for the UARTs
+            .sda => switch (index) {
+                1 => std.mem.eql(u8, pin_name, "PB7") or std.mem.eql(u8, pin_name, "PB9"),
+                2 => std.mem.eql(u8, pin_name, "PB11") or std.mem.eql(u8, pin_name, "PF0") or std.mem.eql(u8, pin_name, "PH5"),
+                3 => std.mem.eql(u8, pin_name, "PC9") or std.mem.eql(u8, pin_name, "PH8"),
+                else => unreachable,
+            },
+        };
+    }
+};
+
+pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
+    if (index < 1 or index > 3) @compileError("Valid I2C index are 1..3");
+
+    const i2c_name = std.fmt.comptimePrint("I2C{d}", .{index});
+    const scl_pin =
+        if (pins.scl) |scl|
+        if (uart.isValidPin(scl, index, .scl))
+            scl
+        else
+            @compileError(std.fmt.comptimePrint("SCL pin {s} is not valid for I2C{}", .{ scl.name, index }))
+    else switch (index) {
+        // Provide default scl pins if no pin is specified
+        1 => micro.Pin("PB6"),
+        2 => micro.Pin("PB10"),
+        3 => micro.Pin("PA8"),
+        else => unreachable,
+    };
+
+    const sda_pin =
+        if (pins.sda) |sda|
+        if (uart.isValidPin(sda, index, .sda))
+            sda
+        else
+            @compileError(std.fmt.comptimePrint("SDA pin {s} is not valid for UART{}", .{ sda.name, index }))
+    else switch (index) {
+        // Provide default sda pins if no pin is specified
+        1 => micro.Pin("PB7"),
+        2 => micro.Pin("PB11"),
+        3 => micro.Pin("PC9"),
+        else => unreachable,
+    };
+
+    const scl_gpio = micro.Gpio(scl_pin, .{
+        .mode = .alternate_function,
+        .alternate_function = .af4,
+    });
+    const sda_gpio = micro.Gpio(sda_pin, .{
+        .mode = .alternate_function,
+        .alternate_function = .af4,
+    });
+
+    // Base field of the specific I2C peripheral
+    const i2c_base = @field(regs, i2c_name);
+
+    return struct {
+        const Self = @This();
+
+        pub fn init(config: micro.i2c.Config) !Self {
+            // Configure I2C
+
+            // 1. Enable the I2C CLOCK and GPIO CLOCK
+            regs.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
+            regs.RCC.AHB1ENR.modify(.{ .GPIOBEN = 1 });
+
+            // 2. Configure the I2C PINs
+            // This takes care of setting them alternate function mode with the correct AF
+            scl_gpio.init();
+            sda_gpio.init();
+
+            // TODO: the stuff below will probably use the microzig gpio API in the future
+            const scl = scl_pin.source_pin;
+            const sda = sda_pin.source_pin;
+            // Select Open Drain Output
+            setRegField(@field(scl.gpio_port, "OTYPER"), "OT" ++ scl.suffix, 1);
+            setRegField(@field(sda.gpio_port, "OTYPER"), "OT" ++ sda.suffix, 1);
+            // Select High Speed
+            setRegField(@field(scl.gpio_port, "OSPEEDR"), "OSPEEDR" ++ scl.suffix, 0b10);
+            setRegField(@field(sda.gpio_port, "OSPEEDR"), "OSPEEDR" ++ sda.suffix, 0b10);
+            // Activate Pull-up
+            setRegField(@field(scl.gpio_port, "PUPDR"), "PUPDR" ++ scl.suffix, 0b01);
+            setRegField(@field(sda.gpio_port, "PUPDR"), "PUPDR" ++ sda.suffix, 0b01);
+
+            // 3. Reset the I2C
+            i2c_base.CR1.modify(.{ .PE = 0 });
+            while (i2c_base.CR1.read().PE == 1) {}
+
+            // 4. Configure I2C timing
+            const bus_frequency_hz = micro.clock.get().apb1;
+            const bus_frequency_mhz: u6 = @intCast(u6, @divExact(bus_frequency_hz, 1_000_000));
+
+            if (bus_frequency_mhz < 2 or bus_frequency_mhz > 50) {
+                return error.InvalidBusFrequency;
+            }
+
+            // .FREQ is set to the bus frequency in Mhz
+            i2c_base.CR2.modify(.{ .FREQ = bus_frequency_mhz });
+
+            switch (config.target_speed) {
+                10_000...100_000 => {
+                    // CCR is bus_freq / (target_speed * 2). We use floor to avoid exceeding the target speed.
+                    const ccr = @intCast(u12, @divFloor(bus_frequency_hz, config.target_speed * 2));
+                    i2c_base.CCR.modify(.{ .CCR = ccr });
+                    // Trise is bus frequency in Mhz + 1
+                    i2c_base.TRISE.modify(bus_frequency_mhz + 1);
+                },
+                100_001...400_000 => {
+                    // TODO: handle fast mode
+                    return error.InvalidSpeed;
+                },
+                else => return error.InvalidSpeed,
+            }
+
+            // 5. Program the I2C_CR1 register to enable the peripheral
+            i2c_base.CR1.modify(.{ .PE = 1 });
+
+            return Self{};
+        }
+
+        pub const WriteState = struct {
+            address: u7,
+            buffer: [255]u8 = undefined,
+            buffer_size: u8 = 0,
+
+            pub fn start(address: u7) !WriteState {
+                return WriteState{ .address = address };
+            }
+
+            pub fn writeAll(self: *WriteState, bytes: []const u8) !void {
+                std.debug.assert(self.buffer_size < 255);
+                for (bytes) |b| {
+                    self.buffer[self.buffer_size] = b;
+                    self.buffer_size += 1;
+                    if (self.buffer_size == 255) {
+                        try self.sendBuffer();
+                    }
+                }
+            }
+
+            fn sendBuffer(self: *WriteState) !void {
+                if (self.buffer_size == 0) @panic("write of 0 bytes not supported");
+
+                // Wait for the bus to be free
+                while (i2c_base.SR2.read().BUSY == 1) {}
+
+                // Send start
+                i2c_base.CR1.modify(.{ .START = 1 });
+
+                // Wait for the end of the start condition, master mode selected, and BUSY bit set
+                while ((i2c_base.SR1.read().SB == 0 or
+                    i2c_base.SR2.read().MSL == 0 or
+                    i2c_base.SR2.read().BUSY == 0))
+                {}
+
+                // Write the address to bits 7..1, bit 0 stays at 0 to indicate write operation
+                i2c_base.DR.modify(@intCast(u8, self.address) << 1);
+
+                // Wait for address confirmation
+                while (i2c_base.SR1.read().ADDR == 0) {}
+
+                // Read SR2 to clear address condition
+                _ = i2c_base.SR2.read();
+
+                for (self.buffer[0..self.buffer_size]) |b| {
+                    // Write data byte
+                    i2c_base.DR.modify(b);
+                    // Wait for transfer finished
+                    while (i2c_base.SR1.read().BTF == 0) {}
+                }
+                self.buffer_size = 0;
+            }
+
+            pub fn stop(self: *WriteState) !void {
+                try self.sendBuffer();
+                // Communication STOP
+                i2c_base.CR1.modify(.{ .STOP = 1 });
+                while (i2c_base.SR2.read().BUSY == 1) {}
+            }
+
+            pub fn restartRead(self: *WriteState) !ReadState {
+                try self.sendBuffer();
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *WriteState) !WriteState {
+                try self.sendBuffer();
+                return WriteState{ .address = self.address };
+            }
+        };
+
+        pub const ReadState = struct {
+            address: u7,
+
+            pub fn start(address: u7) !ReadState {
+                return ReadState{ .address = address };
+            }
+
+            /// Fails with ReadError if incorrect number of bytes is received.
+            pub fn readNoEof(self: *ReadState, buffer: []u8) !void {
+                std.debug.assert(buffer.len < 256);
+
+                // Send start and enable ACK
+                i2c_base.CR1.modify(.{ .START = 1, .ACK = 1 });
+
+                // Wait for the end of the start condition, master mode selected, and BUSY bit set
+                while ((i2c_base.SR1.read().SB == 0 or
+                    i2c_base.SR2.read().MSL == 0 or
+                    i2c_base.SR2.read().BUSY == 0))
+                {}
+
+                // Write the address to bits 7..1, bit 0 set to 1 to indicate read operation
+                i2c_base.DR.modify((@intCast(u8, self.address) << 1) | 1);
+
+                // Wait for address confirmation
+                while (i2c_base.SR1.read().ADDR == 0) {}
+
+                // Read SR2 to clear address condition
+                _ = i2c_base.SR2.read();
+
+                for (buffer) |_, i| {
+                    if (i == buffer.len - 1) {
+                        // Disable ACK
+                        i2c_base.CR1.modify(.{ .ACK = 0 });
+                    }
+
+                    // Wait for data to be received
+                    while (i2c_base.SR1.read().RxNE == 0) {}
+
+                    // Read data byte
+                    buffer[i] = i2c_base.DR.read();
+                }
+            }
+
+            pub fn stop(_: *ReadState) !void {
+                // Communication STOP
+                i2c_base.CR1.modify(.{ .STOP = 1 });
+                while (i2c_base.SR2.read().BUSY == 1) {}
+            }
+
+            pub fn restartRead(self: *ReadState) !ReadState {
+                return ReadState{ .address = self.address };
+            }
+            pub fn restartWrite(self: *ReadState) !WriteState {
+                return WriteState{ .address = self.address };
+            }
+        };
+    };
+}

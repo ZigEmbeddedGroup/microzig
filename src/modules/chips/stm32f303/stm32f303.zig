@@ -265,13 +265,17 @@ fn debugPrint(comptime format: []const u8, args: anytype) void {
 }
 
 /// This implementation does not use AUTOEND=1
-pub fn I2CController(comptime index: usize) type {
+pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
+    if (pins.scl != null or pins.sda != null)
+        @compileError("TODO: custom pins are not currently supported");
 
     return struct {
         const Self = @This();
 
-        pub fn init() !Self {
+        pub fn init(config: micro.i2c.Config) !Self {
+            // TODO: use config
+            _ = config;
             // CONFIGURE I2C1
             // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
             // if GPIO port B is configured for alternate function 4 for these PB pins.
