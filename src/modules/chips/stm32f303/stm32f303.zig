@@ -271,7 +271,9 @@ pub fn I2CController(comptime index: usize) type {
     return struct {
         const Self = @This();
 
-        pub fn init() !Self {
+        pub fn init(config: micro.i2c.Config) !Self {
+            // TODO: use config
+            _ = config;
             // CONFIGURE I2C1
             // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
             // if GPIO port B is configured for alternate function 4 for these PB pins.

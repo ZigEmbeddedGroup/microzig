@@ -129,9 +129,9 @@ pub fn I2CController(comptime index: usize) type {
 
         internal: SystemI2CController,
 
-        pub fn init() InitError!Self {
+        pub fn init(config: Config) InitError!Self {
             return Self{
-                .internal = try SystemI2CController.init(),
+                .internal = try SystemI2CController.init(config),
             };
         }
 
@@ -141,7 +141,17 @@ pub fn I2CController(comptime index: usize) type {
     };
 }
 
-pub const InitError = error{};
+/// A UART configuration. The config defaults to the *8N1* setting, so "8 data bits, no parity, 1 stop bit" which is the
+/// most common serial format.
+pub const Config = struct {
+    /// The target speed in bit/s. Note that the actual speed can differ from this, due to prescaler rounding.
+    target_speed: u32,
+};
+
+pub const InitError = error{
+    InvalidBusFrequency,
+    InvalidSpeed,
+};
 pub const WriteError = error{};
 pub const ReadError = error{
     EndOfStream,
