@@ -5,21 +5,21 @@ const assert = std.debug.assert;
 
 pub const fifo = struct {
     /// Check if the FIFO has valid data for reading.
-    pub fn is_read_ready() bool {
+    pub fn isReadReady() bool {
         return regs.SIO.FIFO_ST.read().VLD == 1;
     }
 
     /// Read from the FIFO
     /// Will return null if it is empty.
     pub fn read() ?u32 {
-        if (!is_read_ready())
+        if (!isReadReady())
             return null;
 
         return regs.SIO.FIFO_RD.*;
     }
 
     /// Read from the FIFO, waiting for data if there is none.
-    pub fn read_blocking() u32 {
+    pub fn readBloacking() u32 {
         while (true) {
             if (read()) |value| return value;
             microzig.cpu.wfe();
@@ -32,7 +32,7 @@ pub const fifo = struct {
     }
 
     /// Check if the FIFO is ready to receive data.
-    pub fn is_write_ready() bool {
+    pub fn isWriteReady() bool {
         return regs.SIO.FIFO_ST.read().RDY == 1;
     }
 
@@ -44,8 +44,8 @@ pub const fifo = struct {
     }
 
     /// Write to the FIFO, waiting for room if it is full.
-    pub fn write_blocking(value: u32) void {
-        while (!is_write_ready())
+    pub fn writeBlocking(value: u32) void {
+        while (!isWriteReady())
             std.mem.doNotOptimizeAway(value);
 
         write(value);
@@ -102,8 +102,8 @@ pub fn launchCore1WithStack(entrypoint: fn () void, stack: []u32) void {
             microzig.cpu.sev();
         }
 
-        fifo.write_blocking(cmd);
+        fifo.writeBlocking(cmd);
         // the second core should respond with the same value, if it doesnt't lets start over
-        seq = if (cmd == fifo.read_blocking()) seq + 1 else 0;
+        seq = if (cmd == fifo.readBloacking()) seq + 1 else 0;
     }
 }
