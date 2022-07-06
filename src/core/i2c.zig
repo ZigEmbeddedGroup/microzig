@@ -2,8 +2,8 @@ const std = @import("std");
 const micro = @import("microzig.zig");
 const chip = @import("chip");
 
-pub fn I2CController(comptime index: usize) type {
-    const SystemI2CController = chip.I2CController(index);
+pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
+    const SystemI2CController = chip.I2CController(index, pins);
 
     const I2CDevice = struct {
         const Device = @This();
@@ -140,6 +140,13 @@ pub fn I2CController(comptime index: usize) type {
         }
     };
 }
+
+/// The pin configuration. This is used to optionally configure specific pins to be used with the chosen I2C.
+/// This makes sense only with microcontrollers supporting multiple pins for an I2C peripheral.
+pub const Pins = struct {
+    scl: ?type = null,
+    sda: ?type = null,
+};
 
 /// A UART configuration. The config defaults to the *8N1* setting, so "8 data bits, no parity, 1 stop bit" which is the
 /// most common serial format.

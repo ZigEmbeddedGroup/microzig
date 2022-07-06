@@ -265,8 +265,10 @@ fn debugPrint(comptime format: []const u8, args: anytype) void {
 }
 
 /// This implementation does not use AUTOEND=1
-pub fn I2CController(comptime index: usize) type {
+pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
+    if (pins.scl != null or pins.sda != null)
+        @compileError("TODO: custom pins are not currently supported");
 
     return struct {
         const Self = @This();
