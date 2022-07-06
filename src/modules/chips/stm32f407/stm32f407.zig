@@ -294,7 +294,13 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             // TODO: We assume the default OVER8=0 configuration above (i.e. 16x oversampling).
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @intCast(u16, @divTrunc(micro.clock.get().apb1, config.baud_rate));
+            const clocks = micro.clock.get();
+            const bus_frequency = switch (index) {
+                1, 6 => clocks.apb2,
+                2...5 => clocks.apb1,
+                else => unreachable,
+            };
+            const usartdiv = @intCast(u16, @divTrunc(bus_frequency, config.baud_rate));
             @field(regs, usart_name).BRR.raw = usartdiv;
 
             // enable USART, and its transmitter and receiver
