@@ -28,7 +28,7 @@ pub fn Pin(comptime spec: []const u8) type {
         chip.parsePin(spec);
 
     return struct {
-        pub const name = if (std.mem.startsWith(u8, spec, board_namespace.len))
+        pub const name = if (std.mem.startsWith(u8, spec, board_namespace))
             // Remove the board: prefix
             spec[board_namespace.len..]
         else if (std.mem.startsWith(u8, spec, chip_namespace))
