@@ -15,7 +15,13 @@ pub fn addNvicCluster(db: *Database, scs: Database.PeripheralIndex) !void {
         .addr_offset = 0x100,
     });
 
-    const regs = try db.addRegistersToCluster(nvic, &.{
+    var register_fields = std.ArrayList([]Field).init(db.gpa);
+    defer register_fields.deinit();
+
+    var registers = std.ArrayList(Register).init(db.gpa);
+    defer registers.deinit();
+
+    try registers.appendSlice(&.{
         .{
             .name = "ISER",
             .description = "Interrupt Set Enable Register",
@@ -38,30 +44,59 @@ pub fn addNvicCluster(db: *Database, scs: Database.PeripheralIndex) !void {
         },
     });
 
-    var fields = std.ArrayList(Field).init(db.gpa);
-    defer fields.deinit();
+    var interrupt_bitfield = std.ArrayList(Field).init(db.gpa);
+    defer interrupt_bitfield.deinit();
 
     for (db.interrupts.items) |interrupt|
-        try fields.append(.{
+        try interrupt_bitfield.append(.{
             .name = interrupt.name,
             .offset = @intCast(u8, interrupt.value),
             .width = 1,
         });
 
-    const iser = regs.begin;
-    try db.addFieldsToRegister(iser, fields.items);
+    for (registers.items) |_|
+        try register_fields.append(interrupt_bitfield.items);
 
-    const icer = regs.begin + 1;
-    try db.addFieldsToRegister(icer, fields.items);
+    // interrupt priority registers
+    if (db.cpu) |cpu| if (cpu.nvic_prio_bits > 0) {
+        const ip_addr_offset = 0x300;
+        const nvic_prio_bits = db.cpu.?.nvic_prio_bits;
 
-    const ispr = regs.begin + 2;
-    try db.addFieldsToRegister(ispr, fields.items);
+        var i: u32 = 0;
+        while (i < 8) : (i += 1) {
+            // TODO: assert no duplicates in the interrupt table
+            var fields = std.ArrayListUnmanaged(Field){};
+            errdefer fields.deinit(db.arena.allocator());
 
-    const icpr = regs.begin + 3;
-    try db.addFieldsToRegister(icpr, fields.items);
+            for (db.interrupts.items) |interrupt| {
+                if (i == interrupt.value / 4) {
+                    try fields.append(db.arena.allocator(), .{
+                        .name = interrupt.name,
+                        .offset = (8 * (@intCast(u8, interrupt.value) % 4)) + (8 - nvic_prio_bits),
+                        .width = nvic_prio_bits,
+                    });
+                }
+            }
 
-    if (db.cpu) |cpu| if (cpu.nvic_prio_bits > 0)
-        try addInterruptPriorityRegisters(db, scs, nvic);
+            const addr_offset = ip_addr_offset + (i * 4);
+            const reg_name = try std.fmt.allocPrint(db.arena.allocator(), "IP{}", .{
+                i,
+            });
+
+            try registers.append(.{
+                .name = reg_name,
+                .description = "Interrupt Priority Register",
+                .addr_offset = addr_offset,
+            });
+
+            if (fields.items.len > 0)
+                try register_fields.append(fields.toOwnedSlice(db.arena.allocator()));
+        }
+    };
+
+    const regs = try db.addRegistersToCluster(nvic, registers.items);
+    for (register_fields.items) |fields, i|
+        try db.addFieldsToRegister(regs.begin + @intCast(u32, i), fields);
 
     try db.addSystemRegisterAddresses(scs, nvic, regs);
 }
