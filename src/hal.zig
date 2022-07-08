@@ -3,6 +3,7 @@ const regs = microzig.chip.regsisters;
 pub const gpio = @import("hal/gpio.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const multicore = @import("hal/multicore.zig");
+pub const time = @import("hal/time.zig");
 
 pub const default_clock_config = clocks.GlobalConfiguration.init(.{
     //.ref = .{ .source = .src_xosc },
