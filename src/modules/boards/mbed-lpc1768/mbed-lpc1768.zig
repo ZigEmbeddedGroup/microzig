@@ -1,7 +1,9 @@
 pub const chip = @import("chip");
 pub const micro = @import("microzig");
 
-pub const cpu_frequency: u32 = 100_000_000; // 100 MHz
+pub const clock_frequencies = .{
+    .cpu = 100_000_000, // 100 Mhz
+};
 
 pub fn debugWrite(string: []const u8) void {
     const clk_pin = micro.Pin("DIP5");

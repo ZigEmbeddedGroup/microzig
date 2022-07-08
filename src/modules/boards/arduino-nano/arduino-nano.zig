@@ -1,6 +1,8 @@
 pub const chip = @import("chip");
 
-pub const cpu_frequency = 16_000_000;
+pub const clock_frequencies = .{
+    .cpu = 16_000_000,
+};
 
 pub const pin_map = .{
     // Port A

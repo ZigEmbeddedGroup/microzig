@@ -68,7 +68,22 @@ usingnamespace if (@hasDecl(app, "log"))
         pub const log = app.log;
     }
 else
-    struct {};
+    struct {
+        // log is a no-op by default. Parts of microzig use the stdlib logging
+        // facility and compilations will now fail on freestanding systems that
+        // use it but do not explicitly set `root.log`
+        pub fn log(
+            comptime message_level: std.log.Level,
+            comptime scope: @Type(.EnumLiteral),
+            comptime format: []const u8,
+            args: anytype,
+        ) void {
+            _ = message_level;
+            _ = scope;
+            _ = format;
+            _ = args;
+        }
+    };
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {

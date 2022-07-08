@@ -25,7 +25,7 @@ pub const pin_map = .{
 };
 
 pub fn debugWrite(string: []const u8) void {
-    const uart1 = micro.Uart(1).getOrInit(.{
+    const uart1 = micro.Uart(1, .{}).getOrInit(.{
         .baud_rate = 9600,
         .data_bits = .eight,
         .parity = null,

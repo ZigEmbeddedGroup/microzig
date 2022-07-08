@@ -93,7 +93,6 @@ pub const registers = struct {
 
         /// Device info
         pub const INFO = struct {
-
             /// address: 0x10000000
             /// Part code
             pub const PART = @intToPtr(*volatile u32, base_address + 0x0);
@@ -121,7 +120,6 @@ pub const registers = struct {
 
         /// Registers storing factory TEMP module linearization coefficients
         pub const TEMP = struct {
-
             /// address: 0x10000000
             /// Slope definition A0.
             pub const A0 = @intToPtr(*volatile Mmio(32, packed struct {
@@ -591,7 +589,6 @@ pub const registers = struct {
         };
 
         pub const NFC = struct {
-
             /// address: 0x10000000
             /// Default header for NFC Tag. Software can read these values to populate
             /// NFCID1_3RD_LAST, NFCID1_2ND_LAST and NFCID1_LAST.
@@ -2896,7 +2893,6 @@ pub const registers = struct {
         }), base_address + 0x56c);
 
         pub const PSEL = struct {
-
             /// address: 0x40002000
             /// Pin select for RTS signal
             pub const RTS = @intToPtr(*volatile Mmio(32, packed struct {
@@ -3040,7 +3036,6 @@ pub const registers = struct {
 
         /// RXD EasyDMA channel
         pub const RXD = struct {
-
             /// address: 0x40002000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -3056,7 +3051,6 @@ pub const registers = struct {
 
         /// TXD EasyDMA channel
         pub const TXD = struct {
-
             /// address: 0x40002000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -3569,7 +3563,6 @@ pub const registers = struct {
         pub const ORC = @intToPtr(*volatile MmioInt(32, u8), base_address + 0x5c0);
 
         pub const PSEL = struct {
-
             /// address: 0x40003000
             /// Pin select for SCK
             pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
@@ -3678,7 +3671,6 @@ pub const registers = struct {
 
         /// RXD EasyDMA channel
         pub const RXD = struct {
-
             /// address: 0x40003000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -3698,7 +3690,6 @@ pub const registers = struct {
 
         /// TXD EasyDMA channel
         pub const TXD = struct {
-
             /// address: 0x40003000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -3954,7 +3945,6 @@ pub const registers = struct {
         pub const ORC = @intToPtr(*volatile MmioInt(32, u8), base_address + 0x5c0);
 
         pub const PSEL = struct {
-
             /// address: 0x40003000
             /// Pin select for SCK
             pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
@@ -4097,7 +4087,6 @@ pub const registers = struct {
         };
 
         pub const RXD = struct {
-
             /// address: 0x40003000
             /// RXD data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -4112,7 +4101,6 @@ pub const registers = struct {
         };
 
         pub const TXD = struct {
-
             /// address: 0x40003000
             /// TXD data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -4406,7 +4394,6 @@ pub const registers = struct {
         pub const ADDRESS = @intToPtr(*volatile MmioInt(32, u7), base_address + 0x588);
 
         pub const PSEL = struct {
-
             /// address: 0x40003000
             /// Pin select for SCL signal
             pub const SCL = @intToPtr(*volatile Mmio(32, packed struct {
@@ -4480,7 +4467,6 @@ pub const registers = struct {
 
         /// RXD EasyDMA channel
         pub const RXD = struct {
-
             /// address: 0x40003000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -4500,7 +4486,6 @@ pub const registers = struct {
 
         /// TXD EasyDMA channel
         pub const TXD = struct {
-
             /// address: 0x40003000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -4831,7 +4816,6 @@ pub const registers = struct {
         pub const ORC = @intToPtr(*volatile MmioInt(32, u8), base_address + 0x5c0);
 
         pub const PSEL = struct {
-
             /// address: 0x40003000
             /// Pin select for SCL signal
             pub const SCL = @intToPtr(*volatile Mmio(32, packed struct {
@@ -4905,7 +4889,6 @@ pub const registers = struct {
 
         /// RXD EasyDMA channel
         pub const RXD = struct {
-
             /// address: 0x40003000
             /// RXD Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -4921,7 +4904,6 @@ pub const registers = struct {
 
         /// TXD EasyDMA channel
         pub const TXD = struct {
-
             /// address: 0x40003000
             /// TXD Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -5076,7 +5058,6 @@ pub const registers = struct {
         }), base_address + 0x554);
 
         pub const PSEL = struct {
-
             /// address: 0x40003000
             /// Pin select for SCK
             pub const SCK = @intToPtr(*volatile Mmio(32, packed struct {
@@ -7289,7 +7270,6 @@ pub const registers = struct {
         }), base_address + 0x5a4);
 
         pub const FRAMESTATUS = struct {
-
             /// address: 0x40005000
             /// Result of last incoming frames
             pub const RX = @intToPtr(*volatile Mmio(32, packed struct {
@@ -7332,7 +7312,6 @@ pub const registers = struct {
         };
 
         pub const TXD = struct {
-
             /// address: 0x40005000
             /// Configuration of outgoing frames
             pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct {
@@ -7407,7 +7386,6 @@ pub const registers = struct {
         };
 
         pub const RXD = struct {
-
             /// address: 0x40005000
             /// Configuration of incoming frames
             pub const FRAMECONFIG = @intToPtr(*volatile Mmio(32, packed struct {
@@ -8002,7 +7980,6 @@ pub const registers = struct {
 
         /// RESULT EasyDMA channel
         pub const RESULT = struct {
-
             /// address: 0x40007000
             /// Data pointer
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
@@ -10333,7 +10310,6 @@ pub const registers = struct {
         pub const ACCDBLREAD = @intToPtr(*volatile MmioInt(32, u4), base_address + 0x548);
 
         pub const PSEL = struct {
-
             /// address: 0x40012000
             /// Pin select for LED signal
             pub const LED = @intToPtr(*volatile Mmio(32, packed struct {
@@ -12739,7 +12715,6 @@ pub const registers = struct {
         }, base_address + 0x520);
 
         pub const PSEL = struct {
-
             /// address: 0x4001c000
             /// Description collection[0]: Output pin select for PWM channel 0
             pub const OUT = @intToPtr(*volatile [4]Mmio(32, packed struct {
@@ -12980,7 +12955,6 @@ pub const registers = struct {
         pub const GAINR = @intToPtr(*volatile MmioInt(32, u8), base_address + 0x51c);
 
         pub const PSEL = struct {
-
             /// address: 0x4001d000
             /// Pin number configuration for PDM CLK signal
             pub const CLK = @intToPtr(*volatile Mmio(32, packed struct {
@@ -13053,7 +13027,6 @@ pub const registers = struct {
         };
 
         pub const SAMPLE = struct {
-
             /// address: 0x4001d000
             /// RAM address pointer to write samples to with EasyDMA
             pub const PTR = @intToPtr(*volatile Mmio(32, packed struct {
@@ -15873,7 +15846,6 @@ pub const registers = struct {
         pub const ENABLE = @intToPtr(*volatile MmioInt(32, u1), base_address + 0x500);
 
         pub const CONFIG = struct {
-
             /// address: 0x40025000
             /// I2S mode.
             pub const MODE = @intToPtr(*volatile MmioInt(32, u1), base_address + 0x0);
@@ -15916,28 +15888,24 @@ pub const registers = struct {
         };
 
         pub const RXD = struct {
-
             /// address: 0x40025000
             /// Receive buffer RAM start address.
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
         };
 
         pub const TXD = struct {
-
             /// address: 0x40025000
             /// Transmit buffer RAM start address.
             pub const PTR = @intToPtr(*volatile u32, base_address + 0x0);
         };
 
         pub const RXTXD = struct {
-
             /// address: 0x40025000
             /// Size of RXD and TXD buffers.
             pub const MAXCNT = @intToPtr(*volatile MmioInt(32, u14), base_address + 0x0);
         };
 
         pub const PSEL = struct {
-
             /// address: 0x40025000
             /// Pin select for MCK signal.
             pub const MCK = @intToPtr(*volatile Mmio(32, packed struct {
@@ -16833,7 +16801,7 @@ pub fn mmioInt(addr: usize, comptime size: usize, comptime T: type) *volatile Mm
     return @intToPtr(*volatile MmioInt(size, T), addr);
 }
 
-const InterruptVector = extern union {
+pub const InterruptVector = extern union {
     C: fn () callconv(.C) void,
     Naked: fn () callconv(.Naked) void,
     // Interrupt is not supported on arm
