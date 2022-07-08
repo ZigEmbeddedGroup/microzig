@@ -647,7 +647,7 @@ pub const registers = struct {
             /// characters must be written before an interrupt or DMA request is activated.
             RXTRIGLVL: u2,
             /// Reserved. Read value is undefined, only zero should be written.
-           RESERVED0: u8,
+            RESERVED0: u8,
             RESERVED1: u16,
         }), base_address + 0x8);
 
@@ -8703,7 +8703,7 @@ pub const registers = struct {
             PLLC0: u1,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            RESERVED: u30=0,
+            RESERVED: u30 = 0,
         }), base_address + 0x80);
 
         /// address: 0x400fc084
@@ -9036,7 +9036,7 @@ pub const registers = struct {
             CLKSRC: u2,
             /// Reserved, user software should not write ones to reserved bits. The value read
             /// from a reserved bit is not defined.
-            RESERVED: u30=0,
+            RESERVED: u30 = 0,
         }), base_address + 0x10c);
 
         /// address: 0x400fc110
@@ -9238,7 +9238,7 @@ pub const registers = struct {
             /// Peripheral clock selection for I2C1.
             PCLK_I2C1: u2,
             /// Reserved.
-            RESERVED0: u2=1,
+            RESERVED0: u2 = 1,
             /// Peripheral clock selection for SSP0.
             PCLK_SSP0: u2,
             /// Peripheral clock selection for TIMER2.
@@ -9254,7 +9254,7 @@ pub const registers = struct {
             /// Peripheral clock selection for I2S.
             PCLK_I2S: u2,
             /// Reserved.
-            RESERVED1: u2=1,
+            RESERVED1: u2 = 1,
             /// Peripheral clock selection for Repetitive Interrupt Timer.
             PCLK_RIT: u2,
             /// Peripheral clock selection for the System Control block.
@@ -18796,7 +18796,7 @@ pub fn mmioInt(addr: usize, comptime size: usize, comptime T: type) *volatile Mm
     return @intToPtr(*volatile MmioInt(size, T), addr);
 }
 
-const InterruptVector = extern union {
+pub const InterruptVector = extern union {
     C: fn () callconv(.C) void,
     Naked: fn () callconv(.Naked) void,
     // Interrupt is not supported on arm
