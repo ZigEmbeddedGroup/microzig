@@ -79,10 +79,10 @@ pub const SlewRate = enum {
 };
 
 pub const DriveStrength = enum {
-    ma_2,
-    ma_4,
-    ma_8,
-    ma_12,
+    @"2mA",
+    @"4mA",
+    @"8mA",
+    @"12mA",
 };
 
 pub const Enabled = enum {
@@ -92,18 +92,20 @@ pub const Enabled = enum {
 
 pub inline fn reset() void {
     regs.RESETS.RESET.modify(.{ .io_bank0 = 1, .pads_bank0 = 1 });
-    while (regs.RESETS.RESET_DONE.read().io_bank0 == 1) {}
-    while (regs.RESETS.RESET_DONE.read().pads_bank0 == 1) {}
-}
+    regs.RESETS.RESET.modify(.{ .io_bank0 = 0, .pads_bank0 = 0 });
 
-//const gpio_num = gpio_num: {
-//    // calculate max gpios using comptime parsing
-//};
+    while (true) {
+        const reset_done = regs.RESETS.RESET_DONE.read();
+        if (reset_done.io_bank0 == 1 and reset_done.pads_bank0 == 1)
+            break;
+    }
+}
 
 /// Initialize a GPIO, set func to SIO
 pub inline fn init(comptime gpio: u32) void {
-    regs.SIO.GPIO_OE_CLR.raw = 1 << gpio;
-    regs.SIO.GPIO_OUT_CLR.raw = 1 << gpio;
+    const mask = 1 << gpio;
+    regs.SIO.GPIO_OE_CLR.raw = mask;
+    regs.SIO.GPIO_OUT_CLR.raw = mask;
     setFunction(gpio, .sio);
 }
 
@@ -113,17 +115,19 @@ pub inline fn deinit(comptime gpio: u32) void {
 }
 
 pub inline fn setDir(comptime gpio: u32, direction: Direction) void {
+    const mask = 1 << gpio;
     switch (direction) {
-        .in => regs.SIO.GPIO_OE_CLR.raw |= (1 << gpio),
-        .out => regs.SIO.GPIO_OE_SET.raw &= (1 << gpio),
+        .in => regs.SIO.GPIO_OE_CLR.raw = mask,
+        .out => regs.SIO.GPIO_OE_SET.raw = mask,
     }
 }
 
 /// Drive a single GPIO high/low
 pub inline fn put(comptime gpio: u32, value: u1) void {
+    const mask = 1 << gpio;
     switch (value) {
-        0 => regs.SIO.GPIO_OUT.raw &= ~@as(u32, 1 << gpio),
-        1 => regs.SIO.GPIO_OUT.raw |= (1 << gpio),
+        0 => regs.SIO.GPIO_OUT_CLR.raw = mask,
+        1 => regs.SIO.GPIO_OUT_SET.raw = mask,
     }
 }
 
