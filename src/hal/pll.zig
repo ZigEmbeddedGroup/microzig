@@ -12,44 +12,36 @@ pub const Configuration = struct {
     postdiv2: u3,
 };
 
-pub const sys = @intToPtr(*volatile PLL, regs.PLL_SYS.base_address);
-pub const usb = @intToPtr(*volatile PLL, regs.PLL_USB.base_address);
+pub const PLL = enum {
+    sys,
+    usb,
 
-pub const PLL = packed struct {
-    cs: @TypeOf(regs.PLL_SYS.CS),
-    pwr: @TypeOf(regs.PLL_SYS.PWR),
-    fbdiv_int: @TypeOf(regs.PLL_SYS.FBDIV_INT),
-    prim: @TypeOf(regs.PLL_SYS.PRIM),
-
-    comptime {
-        // bunch of comptime checks in here to validate the layout
-        assert(0 == @bitOffsetOf(PLL, "cs"));
-        assert(32 == @bitOffsetOf(PLL, "pwr"));
-        assert(64 == @bitOffsetOf(PLL, "fbdiv_int"));
-        assert(96 == @bitOffsetOf(PLL, "prim"));
+    fn getRegs(pll: PLL) *volatile PllRegs {
+        return &plls[@enumToInt(pll)];
     }
 
-    pub fn isLocked(pll: *const volatile PLL) bool {
-        return pll.cs.read().LOCK == 1;
-    }
-
-    pub fn reset(pll: *const volatile PLL) void {
+    pub fn reset(pll: PLL) void {
         switch (pll) {
-            sys => {
+            .sys => {
                 regs.RESETS.RESET.modify(.{ .pll_sys = 1 });
                 regs.RESETS.RESET.modify(.{ .pll_sys = 0 });
-                while (regs.RESETS.RESET_DONE.read().pll_sys == 1) {}
+                while (regs.RESETS.RESET_DONE.read().pll_sys != 1) {}
             },
-            usb => {
+            .usb => {
                 regs.RESETS.RESET.modify(.{ .pll_usb = 1 });
                 regs.RESETS.RESET.modify(.{ .pll_usb = 0 });
-                while (regs.RESETS.RESET_DONE.read().pll_usb == 1) {}
+                while (regs.RESETS.RESET_DONE.read().pll_usb != 1) {}
             },
-            else => unreachable,
         }
     }
 
-    pub fn apply(pll: *volatile PLL, comptime config: Configuration) void {
+    pub fn isLocked(pll: PLL) bool {
+        const pll_regs = pll.getRegs();
+        return pll_regs.cs.read().LOCK == 1;
+    }
+
+    pub fn apply(pll: PLL, comptime config: Configuration) void {
+        const pll_regs = pll.getRegs();
         const ref_freq = xosc_freq / @as(u32, config.refdiv);
         const fbdiv = @intCast(u12, config.vco_freq / ref_freq);
 
@@ -67,10 +59,10 @@ pub const PLL = packed struct {
 
         // do not bother a PLL which is already configured
         if (pll.isLocked() and
-            config.refdiv == pll.cs.read().REFDIV and
-            fbdiv == pll.fbdiv_int.read() and
-            config.postdiv1 == pll.prim.read().POSTDIV1 and
-            config.postdiv2 == pll.prim.read().POSTDIV2)
+            config.refdiv == pll_regs.cs.read().REFDIV and
+            fbdiv == pll_regs.fbdiv_int.read() and
+            config.postdiv1 == pll_regs.prim.read().POSTDIV1 and
+            config.postdiv2 == pll_regs.prim.read().POSTDIV2)
         {
             return;
         }
@@ -78,20 +70,39 @@ pub const PLL = packed struct {
         pll.reset();
 
         // load vco related dividers
-        pll.cs.modify(.{ .REFDIV = config.refdiv });
-        pll.fbdiv_int.modify(fbdiv);
+        pll_regs.cs.modify(.{ .REFDIV = config.refdiv });
+        pll_regs.fbdiv_int.modify(fbdiv);
 
         // turn on PLL
-        pll.pwr.modify(.{ .PD = 0, .VCOPD = 0 });
+        pll_regs.pwr.modify(.{ .PD = 0, .VCOPD = 0 });
 
         // wait for PLL to lock
         while (!pll.isLocked()) {}
 
-        pll.prim.modify(.{
+        pll_regs.prim.modify(.{
             .POSTDIV1 = config.postdiv1,
             .POSTDIV2 = config.postdiv2,
         });
 
-        pll.pwr.modify(.{ .POSTDIVPD = 0 });
+        pll_regs.pwr.modify(.{ .POSTDIVPD = 0 });
     }
+};
+
+const plls = @intToPtr(*volatile [2]PllRegs, regs.PLL_SYS.base_address);
+comptime {
+    assert(@sizeOf(PllRegs) == (regs.PLL_USB.base_address - regs.PLL_SYS.base_address));
+}
+
+const CsReg = @typeInfo(@TypeOf(regs.PLL_SYS.CS)).Pointer.child;
+const PwrReg = @typeInfo(@TypeOf(regs.PLL_SYS.PWR)).Pointer.child;
+const FbdivIntReg = @typeInfo(@TypeOf(regs.PLL_SYS.FBDIV_INT)).Pointer.child;
+const PrimReg = @typeInfo(@TypeOf(regs.PLL_SYS.PRIM)).Pointer.child;
+
+pub const PllRegs = extern struct {
+    cs: CsReg,
+    pwr: PwrReg,
+    fbdiv_int: FbdivIntReg,
+    prim: PrimReg,
+
+    padding: [4092]u32,
 };
