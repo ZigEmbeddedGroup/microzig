@@ -176,6 +176,15 @@ export fn microzig_main() noreturn {
     if (info.Fn.calling_convention == .Async)
         @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
 
+    // The user can specify a clock config that gets applied before main, and
+    // if they're using a hal, it can provide a default clock config. The user
+    // may export a clock config as `void` to ensure no clock configuration
+    // takes place
+    if (@hasDecl(app, "clock_confg") and app.clock_config != void)
+        app.clock_config.apply()
+    else if (@hasDecl(hal, "clock_config"))
+        hal.clock_config.apply();
+
     if (@typeInfo(return_type) == .ErrorUnion) {
         main() catch |err| {
             // TODO:
