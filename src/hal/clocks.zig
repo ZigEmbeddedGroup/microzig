@@ -536,6 +536,7 @@ pub const Configuration = struct {
             generator.disable();
             var delay_cycles = sys_config.output_freq / config.output_freq + 1;
             asm volatile (
+                \\.syntax unified
                 \\1:
                 \\subs %[cycles], #1
                 \\bne 1b
