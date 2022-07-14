@@ -35,8 +35,8 @@ pub const stm32f103x8 = Chip{
     .path = root_path ++ "chips/stm32f103/stm32f103.zig",
     .cpu = cpus.cortex_m3,
     .memory_regions = &.{
-        MemoryRegion{ .offset = 0x00000000, .length = 64 * 1024, .kind = .flash },
-        MemoryRegion{ .offset = 0x10000000, .length = 20 * 1024, .kind = .ram },
+        MemoryRegion{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
+        MemoryRegion{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
     },
 };
 
