@@ -83,6 +83,10 @@ pub const Generator = enum {
         regs.CLOCKS.base_address,
     );
 
+    fn getRegs(generator: Generator) *volatile GeneratorRegs {
+        return &generators[@enumToInt(generator)];
+    }
+
     pub fn hasGlitchlessMux(generator: Generator) bool {
         return switch (generator) {
             .sys, .ref => true,
@@ -93,7 +97,7 @@ pub const Generator = enum {
     pub fn enable(generator: Generator) void {
         switch (generator) {
             .ref, .sys => {},
-            else => generators[@enumToInt(generator)].ctrl |= (1 << 11),
+            else => generator.getRegs().ctrl |= (1 << 11),
         }
     }
 
@@ -101,14 +105,14 @@ pub const Generator = enum {
         if (generator == .peri)
             return;
 
-        generators[@enumToInt(generator)].div = div;
+        generator.getRegs().div = div;
     }
 
     pub fn getDiv(generator: Generator) u32 {
         if (generator == .peri)
             return 1;
 
-        return generators[@enumToInt(generator)].div;
+        return generator.getRegs().div;
     }
 
     // The bitfields for the *_SELECTED registers are actually a mask of which
@@ -118,17 +122,17 @@ pub const Generator = enum {
     //
     // Some mention that this is only for the glitchless mux, so if it is non-glitchless then return true
     pub fn selected(generator: Generator) bool {
-        return (0 != generators[@enumToInt(generator)].selected);
+        return (0 != generator.getRegs().selected);
     }
 
     pub fn clearSource(generator: Generator) void {
-        generators[@enumToInt(generator)].ctrl &= ~@as(u32, 0x3);
+        generator.getRegs().ctrl &= ~@as(u32, 0x3);
     }
 
     pub fn disable(generator: Generator) void {
         switch (generator) {
             .sys, .ref => {},
-            else => generators[@enumToInt(generator)].ctrl &= ~@as(u32, 1 << 11),
+            else => generator.getRegs().ctrl &= ~@as(u32, 1 << 11),
         }
     }
 
@@ -147,15 +151,17 @@ pub const Generator = enum {
     }
 
     pub fn setSource(generator: Generator, src: u32) void {
+        const gen_regs = generator.getRegs();
         const mask = ~@as(u32, 0x3);
-        const ctrl_value = generators[@enumToInt(generator)].ctrl;
-        generators[@enumToInt(generator)].ctrl = (ctrl_value & mask) | src;
+        const ctrl_value = gen_regs.ctrl;
+        gen_regs.ctrl = (ctrl_value & mask) | src;
     }
 
     pub fn setAuxSource(generator: Generator, auxsrc: u32) void {
+        const gen_regs = generator.getRegs();
         const mask = ~@as(u32, 0x1e0);
-        const ctrl_value = generators[@enumToInt(generator)].ctrl;
-        generators[@enumToInt(generator)].ctrl = (ctrl_value & mask) | (auxsrc << 5);
+        const ctrl_value = gen_regs.ctrl;
+        gen_regs.ctrl = (ctrl_value & mask) | (auxsrc << 5);
     }
 };
 
@@ -264,16 +270,20 @@ fn auxSrcValue(generator: Generator, source: Source) u32 {
 }
 
 pub const GlobalConfiguration = struct {
-    xosc_configured: bool,
-    sys: ?Configuration,
-    ref: ?Configuration,
-    usb: ?Configuration,
-    adc: ?Configuration,
-    rtc: ?Configuration,
-    peri: ?Configuration,
+    xosc_configured: bool = false,
+    sys: ?Configuration = null,
+    ref: ?Configuration = null,
+    usb: ?Configuration = null,
+    adc: ?Configuration = null,
+    rtc: ?Configuration = null,
+    peri: ?Configuration = null,
+    gpout0: ?Configuration = null,
+    gpout1: ?Configuration = null,
+    gpout2: ?Configuration = null,
+    gpout3: ?Configuration = null,
 
-    pll_sys: ?pll.Configuration,
-    pll_usb: ?pll.Configuration,
+    pll_sys: ?pll.Configuration = null,
+    pll_usb: ?pll.Configuration = null,
 
     pub const Option = struct {
         source: Source,
@@ -287,173 +297,220 @@ pub const GlobalConfiguration = struct {
         adc: ?Option = null,
         rtc: ?Option = null,
         peri: ?Option = null,
+        gpout0: ?Option = null,
+        gpout1: ?Option = null,
+        gpout2: ?Option = null,
+        gpout3: ?Option = null,
         // TODO: allow user to configure PLLs to optimize for low-jitter, low-power, or manually specify
     };
+
+    pub fn getFrequency(config: GlobalConfiguration, source: Source) ?u32 {
+        return switch (source) {
+            .src_xosc => xosc_freq,
+            .src_rosc => rosc_freq,
+            .clk_sys => if (config.sys) |sys_config| sys_config.output_freq else null,
+            .clk_usb => if (config.usb) |usb_config| usb_config.output_freq else null,
+            .clk_ref => if (config.ref) |ref_config| ref_config.output_freq else null,
+            .pll_sys => if (config.pll_sys) |pll_sys_config| pll_sys_config.frequency() else null,
+            .pll_usb => if (config.pll_usb) |pll_usb_config| pll_usb_config.frequency() else null,
+            else => null,
+        };
+    }
 
     /// this function reasons about how to configure the clock system. It will
     /// assert if the configuration is invalid
     pub fn init(comptime opts: Options) GlobalConfiguration {
-        var xosc_configured = false;
-        var pll_sys: ?pll.Configuration = null;
-        var pll_usb: ?pll.Configuration = null;
+        var config = GlobalConfiguration{};
 
-        return GlobalConfiguration{
-            // the system clock can either use rosc, xosc, or the sys PLL
-            .sys = if (opts.sys) |sys_opts| sys_config: {
-                var output_freq: ?u32 = null;
-                break :sys_config .{
-                    .generator = .sys,
-                    .input = switch (sys_opts.source) {
-                        .src_rosc => input: {
-                            output_freq = sys_opts.freq orelse rosc_freq;
-                            assert(output_freq.? <= rosc_freq);
-                            break :input .{
-                                .source = .src_rosc,
-                                .freq = rosc_freq,
-                                .src_value = srcValue(.sys, .src_rosc),
-                                .auxsrc_value = auxSrcValue(.sys, .src_rosc),
-                            };
-                        },
-                        .src_xosc => input: {
-                            xosc_configured = true;
-                            output_freq = sys_opts.freq orelse xosc_freq;
-                            assert(output_freq.? <= xosc_freq);
-                            break :input .{
-                                .source = .src_xosc,
-                                .freq = xosc_freq,
-                                .src_value = srcValue(.sys, .src_xosc),
-                                .auxsrc_value = auxSrcValue(.sys, .src_xosc),
-                            };
-                        },
-                        .pll_sys => input: {
-                            xosc_configured = true;
-                            output_freq = sys_opts.freq orelse 125_000_000;
-                            assert(output_freq.? <= 125_000_000);
+        // I THINK that if either pll is configured here, then that means
+        // that the ref clock generator MUST use xosc to feed the PLLs?
+        config.ref = if (opts.ref) |ref_opts| ref_config: {
+            assert(ref_opts.source == .src_xosc);
+            break :ref_config .{
+                .generator = .ref,
+                .input = .{
+                    .source = ref_opts.source,
+                    .freq = config.getFrequency(ref_opts.source).?,
+                    .src_value = srcValue(.ref, ref_opts.source),
+                    .auxsrc_value = auxSrcValue(.ref, ref_opts.source),
+                },
+                .output_freq = config.getFrequency(ref_opts.source).?,
+            };
+        } else if (config.pll_sys != null or config.pll_usb != null) ref_config: {
+            config.xosc_configured = true;
+            break :ref_config .{
+                .generator = .ref,
+                .input = .{
+                    .source = .src_xosc,
+                    .freq = xosc_freq,
+                    .src_value = srcValue(.ref, .src_xosc),
+                    .auxsrc_value = auxSrcValue(.ref, .src_xosc),
+                },
+                .output_freq = xosc_freq,
+            };
+        } else null;
 
-                            // TODO: proper values for 125MHz
-                            pll_sys = .{
-                                .refdiv = 2,
-                                .vco_freq = 1_440_000_000,
-                                .postdiv1 = 6,
-                                .postdiv2 = 5,
-                            };
-
-                            break :input .{
-                                .source = .pll_sys,
-                                // TODO: not really sure what frequency to
-                                // drive pll at yet, but this is an okay start
-                                .freq = 125_000_000,
-                                .src_value = srcValue(.sys, .pll_sys),
-                                .auxsrc_value = auxSrcValue(.sys, .pll_sys),
-                            };
-                        },
-
-                        else => unreachable, // not an available input
+        // the system clock can either use rosc, xosc, or the sys PLL
+        config.sys = if (opts.sys) |sys_opts| sys_config: {
+            var output_freq: ?u32 = null;
+            break :sys_config .{
+                .generator = .sys,
+                .input = switch (sys_opts.source) {
+                    .src_rosc => input: {
+                        output_freq = sys_opts.freq orelse rosc_freq;
+                        assert(output_freq.? <= rosc_freq);
+                        break :input .{
+                            .source = .src_rosc,
+                            .freq = rosc_freq,
+                            .src_value = srcValue(.sys, .src_rosc),
+                            .auxsrc_value = auxSrcValue(.sys, .src_rosc),
+                        };
                     },
-                    .output_freq = output_freq.?,
-                };
-            } else null,
+                    .src_xosc => input: {
+                        config.xosc_configured = true;
+                        output_freq = sys_opts.freq orelse xosc_freq;
+                        assert(output_freq.? <= xosc_freq);
+                        break :input .{
+                            .source = .src_xosc,
+                            .freq = xosc_freq,
+                            .src_value = srcValue(.sys, .src_xosc),
+                            .auxsrc_value = auxSrcValue(.sys, .src_xosc),
+                        };
+                    },
+                    .pll_sys => input: {
+                        config.xosc_configured = true;
+                        output_freq = sys_opts.freq orelse 125_000_000;
+                        assert(output_freq.? == 125_000_000); // if using pll use 125MHz for now
 
-            // to keep things simple for now, we'll make it so that the usb
-            // generator can only be hooked up to the usb PLL, and only have
-            // one configuration for the usb PLL
-            .usb = if (opts.usb) |usb_opts| usb_config: {
-                assert(pll_usb == null);
-                assert(usb_opts.source == .pll_usb);
+                        // TODO: proper values for 125MHz
+                        config.pll_sys = .{
+                            .refdiv = 1,
+                            .fbdiv = 125,
+                            .postdiv1 = 6,
+                            .postdiv2 = 2,
+                        };
 
-                xosc_configured = true;
-                pll_usb = .{
+                        break :input .{
+                            .source = .pll_sys,
+                            // TODO: not really sure what frequency to
+                            // drive pll at yet, but this is an okay start
+                            .freq = 125_000_000,
+                            .src_value = srcValue(.sys, .pll_sys),
+                            .auxsrc_value = auxSrcValue(.sys, .pll_sys),
+                        };
+                    },
+
+                    else => unreachable, // not an available input
+                },
+                .output_freq = output_freq.?,
+            };
+        } else null;
+
+        // to keep things simple for now, we'll make it so that the usb
+        // generator can only be hooked up to the usb PLL, and only have
+        // one configuration for the usb PLL
+        config.usb = if (opts.usb) |usb_opts| usb_config: {
+            assert(config.pll_usb == null);
+            assert(usb_opts.source == .pll_usb);
+
+            config.xosc_configured = true;
+            config.pll_usb = .{
+                .refdiv = 1,
+                .fbdiv = 40,
+                .postdiv1 = 5,
+                .postdiv2 = 2,
+            };
+
+            break :usb_config .{
+                .generator = .usb,
+                .input = .{
+                    .source = .pll_usb,
+                    .freq = 48_000_000,
+                    .src_value = srcValue(.usb, .pll_usb),
+                    .auxsrc_value = auxSrcValue(.usb, .pll_usb),
+                },
+                .output_freq = 48_000_000,
+            };
+        } else null;
+
+        // for the rest of the generators we'll make it so that they can
+        // either use the ROSC, XOSC, or sys PLL, with whatever dividing
+        // they need
+
+        // adc requires a 48MHz clock, so only ever let it get hooked up to
+        // the usb PLL
+        config.adc = if (opts.adc) |adc_opts| adc_config: {
+            assert(adc_opts.source == .pll_usb);
+            config.xosc_configured = true;
+
+            // TODO: some safety checks for overwriting this
+            if (config.pll_usb) |pll_usb| {
+                assert(pll_usb.refdiv == 1);
+                assert(pll_usb.fbdiv == 40);
+                assert(pll_usb.postdiv1 == 5);
+                assert(pll_usb.postdiv2 == 2);
+            } else {
+                config.pll_usb = .{
                     .refdiv = 1,
-                    .vco_freq = 1_440_000_000,
-                    .postdiv1 = 6,
-                    .postdiv2 = 5,
+                    .fbdiv = 40,
+                    .postdiv1 = 5,
+                    .postdiv2 = 2,
                 };
+            }
 
-                break :usb_config .{
-                    .generator = .usb,
-                    .input = .{
-                        .source = .pll_usb,
-                        .freq = 48_000_000,
-                        .src_value = srcValue(.usb, .pll_usb),
-                        .auxsrc_value = auxSrcValue(.usb, .pll_usb),
-                    },
-                    .output_freq = 48_000_000,
-                };
-            } else null,
+            break :adc_config .{
+                .generator = .usb,
+                .input = .{
+                    .source = .pll_usb,
+                    .freq = 48_000_000,
+                    .src_value = srcValue(.adc, .pll_usb),
+                    .auxsrc_value = auxSrcValue(.adc, .pll_usb),
+                },
+                .output_freq = 48_000_000,
+            };
+        } else null;
 
-            // I THINK that if either pll is configured here, then that means
-            // that the ref clock generator MUST use xosc to feed the PLLs?
-            .ref = if (opts.ref) |_|
-                unreachable // don't explicitly configure for now
-            else if (pll_sys != null or pll_usb != null) ref_config: {
-                xosc_configured = true;
-                break :ref_config .{
-                    .generator = .ref,
-                    .input = .{
-                        .source = .src_xosc,
-                        .freq = xosc_freq,
-                        .src_value = srcValue(.ref, .src_xosc),
-                        .auxsrc_value = auxSrcValue(.ref, .src_xosc),
-                    },
-                    .output_freq = xosc_freq,
-                };
-            } else null,
+        config.rtc = if (opts.rtc) |_|
+            unreachable // TODO
+        else
+            null;
 
-            // for the rest of the generators we'll make it so that they can
-            // either use the ROSC, XOSC, or sys PLL, with whatever dividing
-            // they need
+        config.peri = if (opts.peri) |peri_opts| peri_config: {
+            if (peri_opts.source == .src_xosc)
+                config.xosc_configured = true;
 
-            // adc requires a 48MHz clock, so only ever let it get hooked up to
-            // the usb PLL
-            .adc = if (opts.adc) |adc_opts| adc_config: {
-                assert(adc_opts.source == .pll_usb);
-                xosc_configured = true;
+            break :peri_config .{
+                .generator = .peri,
+                .input = .{
+                    .source = peri_opts.source,
+                    .freq = config.getFrequency(peri_opts.source) orelse
+                        @compileError("you need to configure the source: " ++ @tagName(peri_opts.source)),
+                    .src_value = srcValue(.peri, peri_opts.source),
+                    .auxsrc_value = auxSrcValue(.peri, peri_opts.source),
+                },
+                .output_freq = if (peri_opts.freq) |output_freq|
+                    output_freq
+                else
+                    config.getFrequency(peri_opts.source).?,
+            };
+        } else null;
 
-                // TODO: some safety checks for overwriting this
-                pll_usb = .{
-                    .refdiv = 1,
-                    .vco_freq = 1_440_000_000,
-                    .postdiv1 = 6,
-                    .postdiv2 = 5,
-                };
-
-                break :adc_config .{
-                    .generator = .usb,
-                    .input = .{
-                        .source = .pll_usb,
-                        .freq = 48_000_000,
-                        .src_value = srcValue(.adc, .pll_usb),
-                        .auxsrc_value = auxSrcValue(.adc, .pll_usb),
-                    },
-                    .output_freq = 48_000_000,
-                };
-            } else null,
-
-            .rtc = if (opts.rtc) |_|
-                unreachable // TODO
+        config.gpout0 = if (opts.gpout0) |gpout0_opts| .{
+            .generator = .gpout0,
+            .input = .{
+                .source = gpout0_opts.source,
+                .freq = config.getFrequency(gpout0_opts.source) orelse
+                    @compileError("you need to configure the source: " ++ @tagName(gpout0_opts.source)),
+                .src_value = srcValue(.gpout0, gpout0_opts.source),
+                .auxsrc_value = auxSrcValue(.gpout0, gpout0_opts.source),
+            },
+            .output_freq = if (gpout0_opts.freq) |output_freq|
+                output_freq
             else
-                null,
+                config.getFrequency(gpout0_opts.source).?,
+        } else null;
 
-            .peri = if (opts.peri) |peri_opts| peri_config: {
-                if (peri_opts.source == .src_xosc)
-                    xosc_configured = true;
-
-                break :peri_config .{
-                    .generator = .peri,
-                    .input = .{
-                        .source = peri_opts.source,
-                        .freq = xosc_freq,
-                        .src_value = srcValue(.peri, peri_opts.source),
-                        .auxsrc_value = auxSrcValue(.peri, peri_opts.source),
-                    },
-                    .output_freq = xosc_freq,
-                };
-            } else null,
-
-            .xosc_configured = xosc_configured,
-            .pll_sys = pll_sys,
-            .pll_usb = pll_usb,
-        };
+        return config;
     }
 
     /// this is explicitly comptime to encourage the user to have separate
@@ -476,7 +533,7 @@ pub const GlobalConfiguration = struct {
         if (config.sys) |sys| switch (sys.input.source) {
             .pll_usb, .pll_sys => {
                 regs.CLOCKS.CLK_SYS_CTRL.modify(.{ .SRC = 0 });
-                while (regs.CLOCKS.CLK_SYS_SELECTED.* == 0) {}
+                while (!Generator.sys.selected()) {}
             },
             else => {},
         };
@@ -484,7 +541,7 @@ pub const GlobalConfiguration = struct {
         if (config.ref) |ref| switch (ref.input.source) {
             .pll_usb, .pll_sys => {
                 regs.CLOCKS.CLK_REF_CTRL.modify(.{ .SRC = 0 });
-                while (regs.CLOCKS.CLK_REF_SELECTED.* == 0) {}
+                while (!Generator.ref.selected()) {}
             },
             else => {},
         };
@@ -495,10 +552,15 @@ pub const GlobalConfiguration = struct {
 
         //// initialize clock generators
         if (config.ref) |ref| ref.apply(config.sys);
+        if (config.sys) |sys| sys.apply(config.sys);
         if (config.usb) |usb| usb.apply(config.sys);
         if (config.adc) |adc| adc.apply(config.sys);
         if (config.rtc) |rtc| rtc.apply(config.sys);
         if (config.peri) |peri| peri.apply(config.sys);
+        if (config.gpout0) |gpout0| gpout0.apply(config.sys);
+        if (config.gpout1) |gpout1| gpout1.apply(config.sys);
+        if (config.gpout2) |gpout2| gpout2.apply(config.sys);
+        if (config.gpout3) |gpout3| gpout3.apply(config.sys);
     }
 };
 
@@ -522,13 +584,12 @@ pub const Configuration = struct {
         // source frequency has to be faster because dividing will always reduce.
         assert(input.freq >= output_freq);
 
-        const div = @intCast(u32, (@intCast(u64, input.freq) << 8) / 8);
+        const div = @intCast(u32, (@intCast(u64, input.freq) << 8) / output_freq);
 
         // check divisor
         if (div > generator.getDiv())
             generator.setDiv(div);
 
-        // TODO what _is_ an aux source?
         if (generator.hasGlitchlessMux() and input.src_value == 1) {
             generator.clearSource();
             while (!generator.selected()) {}
@@ -557,17 +618,18 @@ pub const Configuration = struct {
     }
 };
 
+// NOTE: untested
 pub fn countFrequencyKhz(source: Source, comptime clock_config: GlobalConfiguration) u32 {
     const ref_freq = clock_config.ref.?.output_freq;
 
     // wait for counter to be done
     while (CLOCKS.FC0_STATUS.read().RUNNING == 1) {}
 
-    CLOCKS.FC0_REF_KHZ.* = ref_freq / 1000;
-    CLOCKS.FC0_INTERVAL.* = 10;
-    CLOCKS.FC0_MIN_KHZ.* = 0;
-    CLOCKS.FC0_MAX_KHZ.* = std.math.maxInt(u32);
-    CLOCKS.FC0_SRC.* = @enumToInt(source);
+    CLOCKS.FC0_REF_KHZ.raw = ref_freq / 1000;
+    CLOCKS.FC0_INTERVAL.raw = 10;
+    CLOCKS.FC0_MIN_KHZ.raw = 0;
+    CLOCKS.FC0_MAX_KHZ.raw = std.math.maxInt(u32);
+    CLOCKS.FC0_SRC.raw = @enumToInt(source);
 
     while (CLOCKS.FC0_STATUS.read().DONE != 1) {}
 

@@ -7,9 +7,13 @@ const xosc_freq = microzig.board.xosc_freq;
 
 pub const Configuration = struct {
     refdiv: u6,
-    vco_freq: u32,
+    fbdiv: u32,
     postdiv1: u3,
     postdiv2: u3,
+
+    pub fn frequency(config: Configuration) u32 {
+        return @as(u32, xosc_freq) / config.refdiv * config.fbdiv / config.postdiv1 / config.postdiv2;
+    }
 };
 
 pub const PLL = enum {
@@ -41,15 +45,15 @@ pub const PLL = enum {
     }
 
     pub fn apply(pll: PLL, comptime config: Configuration) void {
-        const pll_regs = pll.getRegs();
-        const ref_freq = xosc_freq / @as(u32, config.refdiv);
-        const fbdiv = @intCast(u12, config.vco_freq / ref_freq);
-
-        assert(fbdiv >= 16 and fbdiv <= 320);
+        assert(config.fbdiv >= 16 and config.fbdiv <= 320);
         assert(config.postdiv1 >= 1 and config.postdiv1 <= 7);
         assert(config.postdiv2 >= 1 and config.postdiv2 <= 7);
         assert(config.postdiv2 <= config.postdiv1);
-        assert(ref_freq <= config.vco_freq / 16);
+
+        const pll_regs = pll.getRegs();
+        const ref_freq = xosc_freq / @as(u32, config.refdiv);
+        const vco_freq = ref_freq * config.fbdiv;
+        assert(ref_freq <= vco_freq / 16);
 
         // 1. program reference clock divider
         // 2. program feedback divider
@@ -60,7 +64,7 @@ pub const PLL = enum {
         // do not bother a PLL which is already configured
         if (pll.isLocked() and
             config.refdiv == pll_regs.cs.read().REFDIV and
-            fbdiv == pll_regs.fbdiv_int.read() and
+            config.fbdiv == pll_regs.fbdiv_int.read() and
             config.postdiv1 == pll_regs.prim.read().POSTDIV1 and
             config.postdiv2 == pll_regs.prim.read().POSTDIV2)
         {
@@ -71,7 +75,7 @@ pub const PLL = enum {
 
         // load vco related dividers
         pll_regs.cs.modify(.{ .REFDIV = config.refdiv });
-        pll_regs.fbdiv_int.modify(fbdiv);
+        pll_regs.fbdiv_int.modify(config.fbdiv);
 
         // turn on PLL
         pll_regs.pwr.modify(.{ .PD = 0, .VCOPD = 0 });

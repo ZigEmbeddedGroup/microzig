@@ -131,6 +131,10 @@ pub inline fn put(comptime gpio: u32, value: u1) void {
     }
 }
 
+pub inline fn toggle(comptime gpio: u32) void {
+    regs.SIO.GPIO_OUT_XOR.raw = (1 << gpio);
+}
+
 pub inline fn setFunction(comptime gpio: u32, function: Function) void {
     const pad_bank_reg = comptime std.fmt.comptimePrint("GPIO{}", .{gpio});
     @field(regs.PADS_BANK0, pad_bank_reg).modify(.{

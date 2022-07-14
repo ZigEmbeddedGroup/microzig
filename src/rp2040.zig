@@ -44,14 +44,12 @@ pub const VectorTable = extern struct {
 };
 
 pub const registers = struct {
-
     /// System Control Space
     pub const SCS = struct {
         pub const base_address = 0xe000e000;
 
         /// System Tick Timer
         pub const SysTick = struct {
-
             /// address: 0xe000e010
             /// SysTick Control and Status Register
             pub const CTRL = @intToPtr(*volatile Mmio(32, packed struct {
@@ -134,7 +132,6 @@ pub const registers = struct {
 
         /// Nested Vectored Interrupt Controller
         pub const NVIC = struct {
-
             /// address: 0xe000e100
             /// Interrupt Set Enable Register
             pub const ISER = @intToPtr(*volatile u32, base_address + 0x100);
@@ -158,7 +155,6 @@ pub const registers = struct {
 
         /// System Control Block
         pub const SCB = struct {
-
             /// address: 0xe000ed00
             pub const CPUID = @intToPtr(*volatile Mmio(32, packed struct {
                 REVISION: u4,
@@ -343,7 +339,6 @@ pub const registers = struct {
 
         /// Memory Protection Unit
         pub const MPU = struct {
-
             /// address: 0xe000ed90
             /// MPU Type Register
             pub const TYPE = @intToPtr(*volatile Mmio(32, packed struct {
