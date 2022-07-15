@@ -160,12 +160,13 @@ pub fn addEmbeddedExecutable(
     exe.addPackage(chip_pkg);
     exe.addPackage(cpu_pkg);
 
-    if (options.hal_package_path) |hal_package_path|
-        exe.addPackage(.{
-            .name = "hal",
-            .source = hal_package_path,
-            .dependencies = &.{pkgs.microzig},
-        });
+    exe.addPackage(.{
+        .name = "hal",
+        .source = if (options.hal_package_path) |hal_package_path|
+            hal_package_path
+        else .{ .path = root_path ++ "core/empty.zig" },
+        .dependencies = &.{pkgs.microzig},
+    });
 
     switch (backing) {
         .board => |board| {
