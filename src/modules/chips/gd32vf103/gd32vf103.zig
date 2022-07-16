@@ -1,13 +1,12 @@
 pub const cpu = @import("cpu");
 pub const micro = @import("microzig");
 pub const chip = @import("registers.zig");
-const micro = @import("microzig");
 const regs = chip.registers;
 
 pub usingnamespace chip;
 
 pub const clock_frequencies = .{
-    .cpu = 8_000_000,
+    .cpu = 8_000_000, // 8 MHz
 };
 
 pub fn parsePin(comptime spec: []const u8) type {
@@ -18,12 +17,8 @@ pub fn parsePin(comptime spec: []const u8) type {
     if (spec[1] < 'A' or spec[1] > 'E')
         @compileError(invalid_format_msg);
 
-    const _regs = struct {
-        const name_suffix = std.fmt.comptimePrint("{d}", .{_port});
-        // TODO: This is a hack. We need to figure out how to get the port number from the register name.
-    };
     return struct {
-        const pin_number: comptime_int = @import("std").fmt.parseInt(u3, spec[2..], 10) catch @compileError(invalid_format_msg);
+        const pin_number: comptime_int = @import("std").fmt.parseInt(u2, spec[2..], 10) catch @compileError(invalid_format_msg);
         // 'A'...'E'
         const gpio_port_name = spec[1..2];
         const gpio_port = @field(regs, "GPIO" ++ gpio_port_name);
@@ -31,28 +26,41 @@ pub fn parsePin(comptime spec: []const u8) type {
     };
 }
 
+fn setRegField(reg: anytype, comptime field_name: anytype, value: anytype) void {
+    var temp = reg.read();
+    @field(temp, field_name) = value;
+    reg.write(temp);
+}
+
 pub const gpio = struct {
     pub fn setOutput(comptime pin: type) void {
-        pin.regs.dir.raw |= pin.gpio_mask;
+        // TODO: check if pin is already configured as output
     }
     pub fn setInput(comptime pin: type) void {
-        pin.regs.dir.raw &= ~pin.gpio_mask;
+        // TODO: check if pin is already configured as input
     }
 
     pub fn read(comptime pin: type) micro.gpio.State {
-        return if ((pin.regs.pin.raw & pin.gpio_mask) != 0)
-            micro.gpio.State.high
-        else
-            micro.gpio.State.low;
+        // TODO: check if pin is configured as input
     }
 
     pub fn write(comptime pin: type, state: micro.gpio.State) void {
-        if (state == .high) {
-            pin.regs.set.raw = pin.gpio_mask;
-        } else {
-            pin.regs.clr.raw = pin.gpio_mask;
-        }
+        // TODO: check if pin is configured as output
     }
+};
+
+pub const uart = struct {
+    pub const DataBits = enum(u2) {
+        five = 0,
+        six = 1,
+        seven = 2,
+        eight = 3,
+    };
+
+    pub const StopBits = enum(u1) {
+        one = 0,
+        two = 1,
+    };
 };
 
 pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {

@@ -1,9 +1,10 @@
 pub const chip = @import("chip");
 pub const micro = @import("microzig");
 
-pub const cpu_frequency = 8_000_000;
+pub const cpu_frequency = 8_000_000; // 8 MHz
 
 pub const pin_map = .{
+
     // Port A
     .PA0 = "PA0",
     .PA1 = "PA1",
@@ -39,9 +40,58 @@ pub const pin_map = .{
     .PB15 = "PB15",
 
     // Port C
+    .PC0 = "PC0",
+    .PC1 = "PC1",
+    .PC2 = "PC2",
+    .PC3 = "PC3",
+    .PC4 = "PC4",
+    .PC5 = "PC5",
+    .PC6 = "PC6",
+    .PC7 = "PC7",
+    .PC8 = "PC8",
+    .PC9 = "PC9",
+    .PC10 = "PC10",
+    .PC11 = "PC11",
+    .PC12 = "PC12",
     .PC13 = "PC13",
     .PC14 = "PC14",
     .PC15 = "PC15",
+
+    // Port D
+    .PD0 = "PD0",
+    .PD1 = "PD1",
+    .PD2 = "PD2",
+    .PD3 = "PD3",
+    .PD4 = "PD4",
+    .PD5 = "PD5",
+    .PD6 = "PD6",
+    .PD7 = "PD7",
+    .PD8 = "PD8",
+    .PD9 = "PD9",
+    .PD10 = "PD10",
+    .PD11 = "PD11",
+    .PD12 = "PD12",
+    .PD13 = "PD13",
+    .PD14 = "PD14",
+    .PD15 = "PD15",
+
+    // Port E
+    .PE0 = "PE0",
+    .PE1 = "PE1",
+    .PE2 = "PE2",
+    .PE3 = "PE3",
+    .PE4 = "PE4",
+    .PE5 = "PE5",
+    .PE6 = "PE6",
+    .PE7 = "PE7",
+    .PE8 = "PE8",
+    .PE9 = "PE9",
+    .PE10 = "PE10",
+    .PE11 = "PE11",
+    .PE12 = "PE12",
+    .PE13 = "PE13",
+    .PE14 = "PE14",
+    .PE15 = "PE15",
 
     // Colors LED
     // LCD_COLOR_WHITE     0xFFFF
@@ -57,14 +107,5 @@ pub const pin_map = .{
 };
 
 pub fn debugWrite(string: []const u8) void {
-    const uart0 = micro.Uart(0).getOrInit(.{
-        .baud_rate = 115200,
-        .data_bits = .eight,
-        .parity = null,
-        .stop_bits = .one,
-    }) catch unreachable;
-
-    const writer = uart0.writer();
-    _ = writer.write(string) catch unreachable;
-    uart0.internal.txflush();
+    // TODO: implement
 }
