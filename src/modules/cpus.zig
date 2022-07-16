@@ -56,7 +56,7 @@ pub const riscv32_imac = Cpu{
     .path = root_path ++ "cpus/rv32-imac/riscv32.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .riscv32,
-        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv32 },
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
         .os_tag = .freestanding,
         .abi = .none,
     },

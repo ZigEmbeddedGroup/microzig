@@ -20,19 +20,11 @@ pub fn parsePin(comptime spec: []const u8) type {
 
     const _regs = struct {
         const name_suffix = std.fmt.comptimePrint("{d}", .{_port});
-
-        const pinsel_reg = @field(regs.CRC, sel_reg_name);
-        const pinsel_field = std.fmt.comptimePrint("P{d}_{d}", .{ _port, _pin });
-
-        const dir = @field(regs.GPIO, "DIR" ++ name_suffix);
-        const pin = @field(regs.GPIO, "PIN" ++ name_suffix);
-        const set = @field(regs.GPIO, "SET" ++ name_suffix);
-        const clr = @field(regs.GPIO, "CLR" ++ name_suffix);
-        const mask = @field(regs.GPIO, "MASK" ++ name_suffix);
+        // TODO: This is a hack. We need to figure out how to get the port number from the register name.
     };
     return struct {
         const pin_number: comptime_int = @import("std").fmt.parseInt(u3, spec[2..], 10) catch @compileError(invalid_format_msg);
-        /// 'A'...'E'
+        // 'A'...'E'
         const gpio_port_name = spec[1..2];
         const gpio_port = @field(regs, "GPIO" ++ gpio_port_name);
         const suffix = @import("std").fmt.comptimePrint("{d}", .{pin_number});
