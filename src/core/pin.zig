@@ -13,18 +13,30 @@ const board = @import("board");
 pub fn Pin(comptime spec: []const u8) type {
     // TODO: Depened on board and chip here
 
-    // Pins can be namespaced with "Board:" for board and "Chip:" for chip
-    const pin = if (std.mem.startsWith(u8, spec, "board:"))
-        chip.parsePin(@field(board.pin_map, spec))
-    else if (std.mem.startsWith(u8, spec, "chip:"))
-        chip.parsePin(spec)
+    const board_namespace = "board:";
+    const chip_namespace = "chip:";
+
+    // Pins can be namespaced with "board:" for board and "chip:" for chip
+    // These namespaces are not passed to chip.parsePin
+    const pin = if (std.mem.startsWith(u8, spec, board_namespace))
+        chip.parsePin(@field(board.pin_map, spec[board_namespace.len..]))
+    else if (std.mem.startsWith(u8, spec, chip_namespace))
+        chip.parsePin(spec[chip_namespace.len..])
     else if (micro.config.has_board and @hasField(@TypeOf(board.pin_map), spec))
         chip.parsePin(@field(board.pin_map, spec))
     else
         chip.parsePin(spec);
 
     return struct {
-        pub const name = spec;
+        pub const name = if (std.mem.startsWith(u8, spec, board_namespace))
+            // Remove the board: prefix
+            spec[board_namespace.len..]
+        else if (std.mem.startsWith(u8, spec, chip_namespace))
+            // Remove the chip: prefix
+            spec[chip_namespace.len..]
+        else
+            spec;
+
         pub const source_pin = pin;
 
         pub fn route(target: pin.Targets) void {

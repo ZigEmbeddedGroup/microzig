@@ -43,6 +43,24 @@ const regs = chip.registers;
 pub usingnamespace chip;
 
 pub const cpu = @import("cpu");
+
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+        ahb,
+        apb1,
+        apb2,
+    };
+};
+
+// Default clock frequencies after reset, see top comment for calculation
+pub const clock_frequencies = .{
+    .cpu = 8_000_000,
+    .ahb = 8_000_000,
+    .apb1 = 8_000_000,
+    .apb2 = 8_000_000,
+};
+
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
@@ -114,8 +132,10 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     if (!(index == 1)) @compileError("TODO: only USART1 is currently supported");
+    if (pins.tx != null or pins.rx != null)
+        @compileError("TODO: custom pins are not currently supported");
 
     return struct {
         parity_read_mask: u8,
@@ -170,7 +190,7 @@ pub fn Uart(comptime index: usize) type {
             // if the board doesn't configure e.g. an HSE external crystal.
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @intCast(u16, @divTrunc(micro.board.cpu_frequency, config.baud_rate));
+            const usartdiv = @intCast(u16, @divTrunc(micro.clock.get().apb1, config.baud_rate));
             regs.USART1.BRR.raw = usartdiv;
             // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
             // those seem to be for another chipset; .svd file bug?
@@ -245,13 +265,17 @@ fn debugPrint(comptime format: []const u8, args: anytype) void {
 }
 
 /// This implementation does not use AUTOEND=1
-pub fn I2CController(comptime index: usize) type {
+pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
+    if (pins.scl != null or pins.sda != null)
+        @compileError("TODO: custom pins are not currently supported");
 
     return struct {
         const Self = @This();
 
-        pub fn init() !Self {
+        pub fn init(config: micro.i2c.Config) !Self {
+            // TODO: use config
+            _ = config;
             // CONFIGURE I2C1
             // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
             // if GPIO port B is configured for alternate function 4 for these PB pins.

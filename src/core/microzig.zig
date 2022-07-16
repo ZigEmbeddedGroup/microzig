@@ -24,6 +24,8 @@ pub const board = if (config.has_board) @import("board") else void;
 /// Provides access to the low level features of the CPU.
 pub const cpu = @import("cpu");
 
+pub const hal = @import("hal");
+
 /// Module that helps with interrupt handling.
 pub const interrupts = @import("interrupts.zig");
 
@@ -66,7 +68,22 @@ usingnamespace if (@hasDecl(app, "log"))
         pub const log = app.log;
     }
 else
-    struct {};
+    struct {
+        // log is a no-op by default. Parts of microzig use the stdlib logging
+        // facility and compilations will now fail on freestanding systems that
+        // use it but do not explicitly set `root.log`
+        pub fn log(
+            comptime message_level: std.log.Level,
+            comptime scope: @Type(.EnumLiteral),
+            comptime format: []const u8,
+            args: anytype,
+        ) void {
+            _ = message_level;
+            _ = scope;
+            _ = format;
+            _ = args;
+        }
+    };
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
@@ -158,6 +175,15 @@ export fn microzig_main() noreturn {
 
     if (info.Fn.calling_convention == .Async)
         @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
+
+    // A hal can export a default init function that runs before main for
+    // procedures like clock configuration. The user may override and customize
+    // this functionality by providing their own init function.
+    // function.
+    if (@hasDecl(app, "init"))
+        app.init()
+    else if (@hasDecl(hal, "init"))
+        hal.init();
 
     if (@typeInfo(return_type) == .ErrorUnion) {
         main() catch |err| {

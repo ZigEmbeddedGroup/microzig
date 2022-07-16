@@ -18,6 +18,17 @@ pub const avr5 = Cpu{
     },
 };
 
+pub const cortex_m0plus = Cpu{
+    .name = "ARM Cortex-M0+",
+    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
+
 pub const cortex_m3 = Cpu{
     .name = "ARM Cortex-M3",
     .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
