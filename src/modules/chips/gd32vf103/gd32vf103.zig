@@ -34,17 +34,23 @@ fn setRegField(reg: anytype, comptime field_name: anytype, value: anytype) void 
 
 pub const gpio = struct {
     pub fn setOutput(comptime pin: type) void {
+        _ = pin;
         // TODO: check if pin is already configured as output
     }
     pub fn setInput(comptime pin: type) void {
+        _ = pin;
         // TODO: check if pin is already configured as input
     }
 
     pub fn read(comptime pin: type) micro.gpio.State {
+        _ = pin;
         // TODO: check if pin is configured as input
+        return .low;
     }
 
     pub fn write(comptime pin: type, state: micro.gpio.State) void {
+        _ = pin;
+        _ = state;
         // TODO: check if pin is configured as output
     }
 };
@@ -61,6 +67,13 @@ pub const uart = struct {
         one = 0,
         two = 1,
     };
+
+    pub const Parity = enum(u2) {
+        odd = 0,
+        even = 1,
+        mark = 2,
+        space = 3,
+    };
 };
 
 pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
@@ -74,5 +87,28 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             else => @compileError("GD32VF103 has 2 UARTs available."),
         };
         const Self = @This();
+
+        pub fn init(config: micro.uart.Config) !Self {
+            _ = config;
+            return Self{};
+        }
+
+        pub fn canWrite(self: Self) bool {
+            _ = self;
+            return false;
+        }
+        pub fn tx(self: Self, ch: u8) void {
+            _ = ch;
+            while (!self.canWrite()) {} // Wait for Previous transmission
+        }
+
+        pub fn canRead(self: Self) bool {
+            _ = self;
+            return false;
+        }
+        pub fn rx(self: Self) u8 {
+            while (!self.canRead()) {} // Wait till the data is received
+            return 1; // Read received data
+        }
     };
 }

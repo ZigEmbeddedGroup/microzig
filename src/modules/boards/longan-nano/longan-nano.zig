@@ -107,5 +107,6 @@ pub const pin_map = .{
 };
 
 pub fn debugWrite(string: []const u8) void {
+    _ = string;
     // TODO: implement
 }

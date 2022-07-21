@@ -18,6 +18,11 @@ const cfg = if (micro.config.has_board)
             .uart_idx = 2,
             .pins = .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
         },
+        .@"Longan Nano" => .{
+            .led_pin = micro.Pin("PA2"),
+            .uart_idx = 1,
+            .pins = .{ .tx = null, .rx = null },
+        },
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {

@@ -11,7 +11,6 @@ const Backing = microzig.Backing;
 
 pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardReleaseOptions();
-    b.prominent_compile_errors = true;
 
     const test_step = b.step("test", "Builds and runs the library test suite");
 
@@ -27,7 +26,7 @@ pub fn build(b: *std.build.Builder) !void {
         BuildConfig{ .name = "boards.stm32f429idiscovery", .backing = Backing{ .board = boards.stm32f429idiscovery }, .supports_uart_test = false },
         // BuildConfig{ .name = "chips.stm32f103x8", .backing = Backing{ .chip = chips.stm32f103x8 } },
         // BuildConfig{ .name = "chips.gd32vf103x8", .backing = Backing{ .chip = chips.gd32vf103x8 } },
-        BuildConfig{ .name = "boards.longan_nano", .backing = Backing{ .board = boards.longan_nano } },
+        // BuildConfig{ .name = "boards.longan_nano", .backing = Backing{ .board = boards.longan_nano } },
     };
 
     const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false, on_avr: bool = true };
