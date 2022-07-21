@@ -27,6 +27,7 @@ const cfg = if (micro.config.has_board)
     }
 else switch (micro.config.chip_name) {
     .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
+    .@"GD32VF103x8" => .{ .led_pin = micro.Pin("PA2"), .uart_idx = 1, .pins = .{} },
     else => @compileError("unknown chip"),
 };
 
