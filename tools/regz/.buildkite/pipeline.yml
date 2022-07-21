@@ -1,0 +1,3 @@
+steps:
+  - label: Build and Test
+    command: zig build test
