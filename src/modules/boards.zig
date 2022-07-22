@@ -37,3 +37,9 @@ pub const stm32f429idiscovery = Board{
     .path = root_path ++ "boards/stm32f429idiscovery/stm32f429idiscovery.zig",
     .chip = chips.stm32f429zit6u,
 };
+
+pub const longan_nano = Board{
+    .name = "Longan Nano",
+    .path = root_path ++ "boards/longan-nano/longan-nano.zig",
+    .chip = chips.gd32vf103xb,
+};

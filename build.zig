@@ -1,6 +1,6 @@
 //! Some words on the build script here:
 //! We cannot use a test runner here as we're building for freestanding.
-//! This means we need to use addExecutable() instead of using 
+//! This means we need to use addExecutable() instead of using
 
 const std = @import("std");
 const microzig = @import("src/main.zig");
@@ -24,6 +24,8 @@ pub fn build(b: *std.build.Builder) !void {
         BuildConfig{ .name = "boards.stm32f3discovery", .backing = Backing{ .board = boards.stm32f3discovery } },
         BuildConfig{ .name = "boards.stm32f4discovery", .backing = Backing{ .board = boards.stm32f4discovery } },
         BuildConfig{ .name = "boards.stm32f429idiscovery", .backing = Backing{ .board = boards.stm32f429idiscovery }, .supports_uart_test = false },
+        BuildConfig{ .name = "chips.gd32vf103x8", .backing = Backing{ .chip = chips.gd32vf103x8 } },
+        BuildConfig{ .name = "boards.longan_nano", .backing = Backing{ .board = boards.longan_nano } },
     };
 
     const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false, on_avr: bool = true };
