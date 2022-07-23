@@ -901,21 +901,3 @@ pub const CAUSE_USER_ECALL = 0x8;
 pub const CAUSE_SUPERVISOR_ECALL = 0x9;
 pub const CAUSE_HYPERVISOR_ECALL = 0xa;
 pub const CAUSE_MACHINE_ECALL = 0xb;
-
-const VectorTable = microzig.chip.VectorTable;
-
-// will be imported by microzig.zig to allow system startup.
-pub var vector_table: VectorTable = blk: {
-    var tmp: microzig.chip.VectorTable = .{
-        .initial_stack_pointer = microzig.config.end_of_stack,
-        .Reset = .{ .C = microzig.cpu.startup_logic._start },
-    };
-    break :blk tmp;
-};
-
-fn createInterruptVector(
-    comptime function: anytype,
-) microzig.chip.InterruptVector {
-    const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
-    return calling_convention;
-}

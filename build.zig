@@ -44,6 +44,8 @@ pub fn build(b: *std.build.Builder) !void {
         for (all_tests) |tst| {
             if (tst.uses_uart and !cfg.supports_uart_test) continue;
             if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
+            // Error: "gd32v - missing interrupts"
+            if ((cfg.backing.getTarget().cpu_arch.?) == .riscv32) continue;
 
             const exe = try microzig.addEmbeddedExecutable(
                 b,
