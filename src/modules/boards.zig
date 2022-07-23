@@ -25,3 +25,15 @@ pub const stm32f3discovery = Board{
     .path = root_path ++ "boards/stm32f3discovery/stm32f3discovery.zig",
     .chip = chips.stm32f303vc,
 };
+
+pub const stm32f4discovery = Board{
+    .name = "STM32F4DISCOVERY",
+    .path = root_path ++ "boards/stm32f4discovery/stm32f4discovery.zig",
+    .chip = chips.stm32f407vg,
+};
+
+pub const stm32f429idiscovery = Board{
+    .name = "STM32F429IDISCOVERY",
+    .path = root_path ++ "boards/stm32f429idiscovery/stm32f429idiscovery.zig",
+    .chip = chips.stm32f429zit6u,
+};

@@ -61,10 +61,8 @@ pub const VectorTable = extern struct {
 };
 
 pub const registers = struct {
-
     /// Fuses
     pub const FUSE = struct {
-
         /// address: 0x2
         pub const EXTENDED = @intToPtr(*volatile Mmio(8, packed struct {
             /// Brown-out Detector trigger level
@@ -173,7 +171,6 @@ pub const registers = struct {
 
     /// Lockbits
     pub const LOCKBIT = struct {
-
         /// address: 0x0
         pub const LOCKBIT = @intToPtr(*volatile Mmio(8, packed struct {
             /// Memory Lock
@@ -203,7 +200,6 @@ pub const registers = struct {
 
     /// USART
     pub const USART0 = struct {
-
         /// address: 0xc6
         /// USART I/O Data Register
         pub const UDR0 = @intToPtr(*volatile u8, 0xc6);
@@ -279,12 +275,11 @@ pub const registers = struct {
 
         /// address: 0xc4
         /// USART Baud Rate Register Bytes
-        pub const UBRR0 = @intToPtr(*volatile u12, 0xc4);
+        pub const UBRR0 = @intToPtr(*volatile MmioInt(16, u12), 0xc4);
     };
 
     /// Two Wire Serial Interface
     pub const TWI = struct {
-
         /// address: 0xbd
         /// TWI (Slave) Address Mask Register
         pub const TWAMR = @intToPtr(*volatile Mmio(8, packed struct {
@@ -347,7 +342,6 @@ pub const registers = struct {
 
     /// Timer/Counter, 16-bit
     pub const TC1 = struct {
-
         /// address: 0x6f
         /// Timer/Counter Interrupt Mask Register
         pub const TIMSK1 = @intToPtr(*volatile Mmio(8, packed struct {
@@ -465,7 +459,6 @@ pub const registers = struct {
 
     /// Timer/Counter, 8-bit Async
     pub const TC2 = struct {
-
         /// address: 0x70
         /// Timer/Counter Interrupt Mask register
         pub const TIMSK2 = @intToPtr(*volatile Mmio(8, packed struct {
@@ -585,7 +578,6 @@ pub const registers = struct {
 
     /// Analog-to-Digital Converter
     pub const ADC = struct {
-
         /// address: 0x7c
         /// The ADC multiplexer Selection Register
         pub const ADMUX = @intToPtr(*volatile Mmio(8, packed struct {
@@ -682,7 +674,6 @@ pub const registers = struct {
 
     /// Analog Comparator
     pub const AC = struct {
-
         /// address: 0x50
         /// Analog Comparator Control And Status Register
         pub const ACSR = @intToPtr(*volatile Mmio(8, packed struct {
@@ -725,7 +716,6 @@ pub const registers = struct {
 
     /// I/O Port
     pub const PORTB = struct {
-
         /// address: 0x25
         /// Port B Data Register
         pub const PORTB = @intToPtr(*volatile u8, 0x25);
@@ -741,7 +731,6 @@ pub const registers = struct {
 
     /// I/O Port
     pub const PORTC = struct {
-
         /// address: 0x28
         /// Port C Data Register
         pub const PORTC = @intToPtr(*volatile u7, 0x28);
@@ -757,7 +746,6 @@ pub const registers = struct {
 
     /// I/O Port
     pub const PORTD = struct {
-
         /// address: 0x2b
         /// Port D Data Register
         pub const PORTD = @intToPtr(*volatile u8, 0x2b);
@@ -773,7 +761,6 @@ pub const registers = struct {
 
     /// Timer/Counter, 8-bit
     pub const TC0 = struct {
-
         /// address: 0x48
         /// Timer/Counter0 Output Compare Register
         pub const OCR0B = @intToPtr(*volatile u8, 0x48);
@@ -872,7 +859,6 @@ pub const registers = struct {
 
     /// External Interrupts
     pub const EXINT = struct {
-
         /// address: 0x69
         /// External Interrupt Control Register
         pub const EICRA = @intToPtr(*volatile Mmio(8, packed struct {
@@ -971,7 +957,6 @@ pub const registers = struct {
 
     /// Serial Peripheral Interface
     pub const SPI = struct {
-
         /// address: 0x4e
         /// SPI Data Register
         pub const SPDR = @intToPtr(*volatile u8, 0x4e);
@@ -1019,7 +1004,6 @@ pub const registers = struct {
 
     /// Watchdog Timer
     pub const WDT = struct {
-
         /// address: 0x60
         /// Watchdog Timer Control Register
         pub const WDTCSR = @intToPtr(*volatile Mmio(8, packed struct {
@@ -1040,7 +1024,6 @@ pub const registers = struct {
 
     /// CPU Registers
     pub const CPU = struct {
-
         /// address: 0x64
         /// Power Reduction Register
         pub const PRR = @intToPtr(*volatile Mmio(8, packed struct {
@@ -1110,7 +1093,7 @@ pub const registers = struct {
 
         /// address: 0x5d
         /// Stack Pointer
-        pub const SP = @intToPtr(*volatile u12, 0x5d);
+        pub const SP = @intToPtr(*volatile MmioInt(16, u12), 0x5d);
 
         /// address: 0x57
         /// Store Program Memory Control and Status Register
@@ -1202,7 +1185,6 @@ pub const registers = struct {
 
     /// EEPROM
     pub const EEPROM = struct {
-
         /// address: 0x41
         /// EEPROM Address Register Bytes
         pub const EEAR = @intToPtr(*volatile u10, 0x41);
@@ -1312,7 +1294,7 @@ pub fn mmioInt(addr: usize, comptime size: usize, comptime T: type) *volatile Mm
     return @intToPtr(*volatile MmioInt(size, T), addr);
 }
 
-const InterruptVector = extern union {
+pub const InterruptVector = extern union {
     C: fn () callconv(.C) void,
     Naked: fn () callconv(.Naked) void,
     // Interrupt is not supported on arm

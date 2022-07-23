@@ -28,6 +28,10 @@ fn root() []const u8 {
 
 pub const BuildOptions = struct {
     packages: ?[]const Pkg = null,
+
+    // a hal package is a package with ergonomic wrappers for registers for a
+    // given mcu, it's only dependency can be microzig
+    hal_package_path: ?std.build.FileSource = null,
 };
 
 pub fn addEmbeddedExecutable(
@@ -104,18 +108,18 @@ pub fn addEmbeddedExecutable(
 
     const config_pkg = Pkg{
         .name = "microzig-config",
-        .path = .{ .path = config_file_name },
+        .source = .{ .path = config_file_name },
     };
 
     const chip_pkg = Pkg{
         .name = "chip",
-        .path = .{ .path = chip.path },
+        .source = .{ .path = chip.path },
         .dependencies = &.{pkgs.microzig},
     };
 
     const cpu_pkg = Pkg{
         .name = "cpu",
-        .path = .{ .path = chip.cpu.path },
+        .source = .{ .path = chip.cpu.path },
         .dependencies = &.{pkgs.microzig},
     };
 
@@ -144,7 +148,7 @@ pub fn addEmbeddedExecutable(
 
         break :blk std.build.Pkg{
             .name = "app",
-            .path = .{ .path = source },
+            .source = .{ .path = source },
             .dependencies = app_pkgs.items,
         };
     };
@@ -156,11 +160,19 @@ pub fn addEmbeddedExecutable(
     exe.addPackage(chip_pkg);
     exe.addPackage(cpu_pkg);
 
+    exe.addPackage(.{
+        .name = "hal",
+        .source = if (options.hal_package_path) |hal_package_path|
+            hal_package_path
+        else .{ .path = root_path ++ "core/empty.zig" },
+        .dependencies = &.{pkgs.microzig},
+    });
+
     switch (backing) {
         .board => |board| {
             exe.addPackage(std.build.Pkg{
                 .name = "board",
-                .path = .{ .path = board.path },
+                .source = .{ .path = board.path },
                 .dependencies = &.{pkgs.microzig},
             });
         },
@@ -173,11 +185,26 @@ pub fn addEmbeddedExecutable(
 const pkgs = struct {
     const mmio = std.build.Pkg{
         .name = "microzig-mmio",
-        .path = .{ .path = root_path ++ "core/mmio.zig" },
+        .source = .{ .path = root_path ++ "core/mmio.zig" },
     };
 
     const microzig = std.build.Pkg{
         .name = "microzig",
-        .path = .{ .path = root_path ++ "core/import-package.zig" },
+        .source = .{ .path = root_path ++ "core/import-package.zig" },
+    };
+};
+
+/// Generic purpose drivers shipped with microzig
+pub const drivers = struct {
+    pub const quadrature = std.build.Pkg{
+        .name = "microzig.quadrature",
+        .source = .{ .path = root_path ++ "drivers/quadrature.zig" },
+        .dependencies = &.{pkgs.microzig},
+    };
+
+    pub const button = std.build.Pkg{
+        .name = "microzig.button",
+        .source = .{ .path = root_path ++ "drivers/button.zig" },
+        .dependencies = &.{pkgs.microzig},
     };
 };

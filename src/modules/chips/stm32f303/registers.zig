@@ -34397,7 +34397,7 @@ pub fn mmioInt(addr: usize, comptime size: usize, comptime T: type) *volatile Mm
     return @intToPtr(*volatile MmioInt(size, T), addr);
 }
 
-const InterruptVector = extern union {
+pub const InterruptVector = extern union {
     C: fn () callconv(.C) void,
     Naked: fn () callconv(.Naked) void,
     // Interrupt is not supported on arm
