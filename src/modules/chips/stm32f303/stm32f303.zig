@@ -274,8 +274,6 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
         const Self = @This();
 
         pub fn init(config: micro.i2c.Config) !Self {
-            // TODO: use config
-            _ = config;
             // CONFIGURE I2C1
             // connected to APB1, MCU pins PB6 + PB7 = I2C1_SCL + I2C1_SDA,
             // if GPIO port B is configured for alternate function 4 for these PB pins.
@@ -307,6 +305,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             // 4-6. Configure I2C1 timing, based on 8 MHz I2C clock, run at 100 kHz
             // (Not using https://controllerstech.com/stm32-i2c-configuration-using-registers/
             // but copying an example from the reference manual, RM0316 section 28.4.9.)
+            if (config.target_speed != 100_000) @panic("TODO: Support speeds other than 100 kHz");
             regs.I2C1.TIMINGR.modify(.{
                 .PRESC = 1,
                 .SCLL = 0x13,
