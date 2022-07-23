@@ -1,5 +1,7 @@
 # regz
 
+[![Build status](https://badge.buildkite.com/58b618b0a1ce7917d66f28d48745cdb35b23ce522036495f40.svg)](https://buildkite.com/zig-embedded-group/regz)
+
 regz is a Zig code generator for microcontrollers. Vendors often publish files
 that have the details of special function registers, for ARM this is called a
 "System View Description" (SVD), for AVR the format is called ATDF. This tool
@@ -83,3 +85,4 @@ future. If you know of any others we should look into, please make an issue!
     - [ ] RISC-V interrupt table generation
 - [x] ATDF: AVR's register schema format
 - [ ] insert name of Texus Insturment's register schema format for MSP430
+
