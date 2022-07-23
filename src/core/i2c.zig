@@ -148,8 +148,7 @@ pub const Pins = struct {
     sda: ?type = null,
 };
 
-/// A UART configuration. The config defaults to the *8N1* setting, so "8 data bits, no parity, 1 stop bit" which is the
-/// most common serial format.
+/// An I2C configuration.
 pub const Config = struct {
     /// The target speed in bit/s. Note that the actual speed can differ from this, due to prescaler rounding.
     target_speed: u32,
