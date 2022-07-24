@@ -8,12 +8,14 @@ const led_pin = if (micro.config.has_board)
         .@"STM32F3DISCOVERY" => micro.Pin("LD3"),
         .@"STM32F4DISCOVERY" => micro.Pin("LD5"),
         .@"STM32F429IDISCOVERY" => micro.Pin("LD4"),
+        .@"Longan Nano" => micro.Pin("PA2"),
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
     .@"ATmega328p" => micro.Pin("PB5"),
     .@"NXP LPC1768" => micro.Pin("P1.18"),
     .@"STM32F103x8" => micro.Pin("PC13"),
+    .@"GD32VF103x8" => micro.Pin("PA2"),
     else => @compileError("unknown chip"),
 };
 

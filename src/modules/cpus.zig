@@ -50,3 +50,14 @@ pub const cortex_m4 = Cpu{
         .abi = .none,
     },
 };
+
+pub const riscv32_imac = Cpu{
+    .name = "RISC-V 32-bit",
+    .path = root_path ++ "cpus/rv32-imac/riscv32.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
