@@ -14,7 +14,7 @@ pub fn build(b: *std.build.Builder) !void {
 
     const test_step = b.step("test", "Builds and runs the library test suite");
 
-    const BuildConfig = struct { name: []const u8, backing: Backing, supports_uart_test: bool = true, supports_interrupt_test: bool = true };
+    const BuildConfig = struct { name: []const u8, backing: Backing, supports_uart_test: bool = true };
     const all_backings = [_]BuildConfig{
         BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = boards.arduino_nano } },
         BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = boards.mbed_lpc1768 } },
@@ -24,8 +24,8 @@ pub fn build(b: *std.build.Builder) !void {
         BuildConfig{ .name = "boards.stm32f3discovery", .backing = Backing{ .board = boards.stm32f3discovery } },
         BuildConfig{ .name = "boards.stm32f4discovery", .backing = Backing{ .board = boards.stm32f4discovery } },
         BuildConfig{ .name = "boards.stm32f429idiscovery", .backing = Backing{ .board = boards.stm32f429idiscovery }, .supports_uart_test = false },
-        BuildConfig{ .name = "chips.gd32vf103x8", .backing = Backing{ .chip = chips.gd32vf103x8 }, .supports_interrupt_test = false },
-        BuildConfig{ .name = "boards.longan_nano", .backing = Backing{ .board = boards.longan_nano }, .supports_interrupt_test = false },
+        BuildConfig{ .name = "chips.gd32vf103x8", .backing = Backing{ .chip = chips.gd32vf103x8 } },
+        BuildConfig{ .name = "boards.longan_nano", .backing = Backing{ .board = boards.longan_nano } },
     };
 
     const Test = struct { name: []const u8, source: []const u8, uses_uart: bool = false, on_riscv32: bool = true, on_avr: bool = true };
@@ -44,7 +44,7 @@ pub fn build(b: *std.build.Builder) !void {
         for (all_tests) |tst| {
             if (tst.uses_uart and !cfg.supports_uart_test) continue;
             if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
-            if (!tst.on_riscv32 and !cfg.supports_interrupt_test) continue;
+            if (!tst.on_riscv32) continue;
 
             const exe = try microzig.addEmbeddedExecutable(
                 b,
