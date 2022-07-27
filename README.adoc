@@ -1,5 +1,5 @@
 :imagesdir: design
-:toc:
+:toc: macro
 
 image::logo-text-auto.svg[]
 
