@@ -1,0 +1,3 @@
+:imagesdir: design
+
+image::logo-text-auto.svg[]
