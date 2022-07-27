@@ -1,4 +1,5 @@
 :imagesdir: design
+:toc:
 
 image::logo-text-auto.svg[]
 
@@ -6,8 +7,6 @@ image::https://img.shields.io/discord/824493524413710336.svg?logo=discord[link=h
 
 [NOTE]
 This is in development, breaks in the API are bound to happen
-
-:toc:
 
 == Contributing
 
