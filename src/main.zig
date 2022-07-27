@@ -8,6 +8,8 @@ pub const Board = @import("modules/Board.zig");
 pub const Chip = @import("modules/Chip.zig");
 pub const Cpu = @import("modules/Cpu.zig");
 
+const LibExeObjStep = std.build.LibExeObjStep;
+
 pub const Backing = union(enum) {
     board: Board,
     chip: Chip,
@@ -27,11 +29,25 @@ fn root() []const u8 {
 }
 
 pub const BuildOptions = struct {
-    packages: ?[]const Pkg = null,
-
     // a hal package is a package with ergonomic wrappers for registers for a
     // given mcu, it's only dependency can be microzig
     hal_package_path: ?std.build.FileSource = null,
+};
+
+pub const EmbeddedExecutable = struct {
+    inner: *LibExeObjStep,
+    app_packages: std.ArrayList(Pkg),
+
+    pub fn addPackage(exe: *EmbeddedExecutable, pkg: Pkg) void {
+        exe.app_packages.append(pkg) catch @panic("failed to append");
+
+        for (exe.inner.packages.items) |*entry| {
+            if (std.mem.eql(u8, "app", entry.name)) {
+                entry.dependencies = exe.app_packages.items;
+                break;
+            }
+        } else @panic("app package not found");
+    }
 };
 
 pub fn addEmbeddedExecutable(
@@ -40,7 +56,7 @@ pub fn addEmbeddedExecutable(
     source: []const u8,
     backing: Backing,
     options: BuildOptions,
-) !*std.build.LibExeObjStep {
+) EmbeddedExecutable {
     const has_board = (backing == .board);
     const chip = switch (backing) {
         .chip => |c| c,
@@ -70,11 +86,11 @@ pub fn addEmbeddedExecutable(
         const file_suffix = ".zig";
 
         var ld_file_name: [file_prefix.len + 2 * hash.len + file_suffix.len]u8 = undefined;
-        const filename = try std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
+        const filename = std.fmt.bufPrint(&ld_file_name, "{s}{}{s}", .{
             file_prefix,
             std.fmt.fmtSliceHexLower(&hash),
             file_suffix,
-        });
+        }) catch unreachable;
 
         break :blk builder.dupe(filename);
     };
@@ -86,24 +102,21 @@ pub fn addEmbeddedExecutable(
             for (chip.memory_regions) |region| {
                 if (region.kind == .ram)
                     break :blk region;
-            } else {
-                std.log.err("no ram memory region found for setting the end-of-stack address", .{});
-                return error.NoRam;
-            }
+            } else @panic("no ram memory region found for setting the end-of-stack address");
         };
 
         std.fs.cwd().makeDir(std.fs.path.dirname(config_file_name).?) catch {};
-        var config_file = try std.fs.cwd().createFile(config_file_name, .{});
+        var config_file = std.fs.cwd().createFile(config_file_name, .{}) catch unreachable;
         defer config_file.close();
 
         var writer = config_file.writer();
-        try writer.print("pub const has_board = {};\n", .{has_board});
+        writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
         if (has_board)
-            try writer.print("pub const board_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)});
+            writer.print("pub const board_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
 
-        try writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)});
-        try writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)});
-        try writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length});
+        writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
+        writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
+        writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length}) catch unreachable;
     }
 
     const config_pkg = Pkg{
@@ -123,44 +136,31 @@ pub fn addEmbeddedExecutable(
         .dependencies = &.{pkgs.microzig},
     };
 
-    const exe = builder.addExecutable(name, root_path ++ "core/microzig.zig");
+    var exe = EmbeddedExecutable{
+        .inner = builder.addExecutable(name, root_path ++ "core/microzig.zig"),
+        .app_packages = std.ArrayList(Pkg).init(builder.allocator),
+    };
 
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
-    exe.single_threaded = true;
-    exe.setTarget(chip.cpu.target);
+    exe.inner.single_threaded = true;
+    exe.inner.setTarget(chip.cpu.target);
 
-    const linkerscript = try LinkerScriptStep.create(builder, chip);
-    exe.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
+    const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
+    exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
 
     // TODO:
     // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-    exe.bundle_compiler_rt = (exe.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
-
-    const app_pkg = blk: {
-        var app_pkgs = std.ArrayList(Pkg).init(builder.allocator);
-
-        try app_pkgs.append(pkgs.microzig); // proxy package
-        if (options.packages) |packages|
-            try app_pkgs.appendSlice(packages);
-
-        break :blk std.build.Pkg{
-            .name = "app",
-            .source = .{ .path = source },
-            .dependencies = app_pkgs.items,
-        };
-    };
+    exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
 
     // these packages will be re-exported from core/microzig.zig
+    exe.inner.addPackage(config_pkg);
+    exe.inner.addPackage(chip_pkg);
+    exe.inner.addPackage(cpu_pkg);
 
-    exe.addPackage(app_pkg);
-    exe.addPackage(config_pkg);
-    exe.addPackage(chip_pkg);
-    exe.addPackage(cpu_pkg);
-
-    exe.addPackage(.{
+    exe.inner.addPackage(.{
         .name = "hal",
         .source = if (options.hal_package_path) |hal_package_path|
             hal_package_path
@@ -170,7 +170,7 @@ pub fn addEmbeddedExecutable(
 
     switch (backing) {
         .board => |board| {
-            exe.addPackage(std.build.Pkg{
+            exe.inner.addPackage(std.build.Pkg{
                 .name = "board",
                 .source = .{ .path = board.path },
                 .dependencies = &.{pkgs.microzig},
@@ -178,6 +178,12 @@ pub fn addEmbeddedExecutable(
         },
         else => {},
     }
+
+    exe.inner.addPackage(.{
+        .name = "app",
+        .source = .{ .path = source },
+    });
+    exe.addPackage(pkgs.microzig);
 
     return exe;
 }

@@ -46,7 +46,7 @@ pub fn build(b: *std.build.Builder) !void {
             if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
             if (!tst.on_riscv32) continue;
 
-            const exe = try microzig.addEmbeddedExecutable(
+            const exe = microzig.addEmbeddedExecutable(
                 b,
                 b.fmt("test-{s}-{s}.elf", .{ tst.name, cfg.name }),
                 tst.source,
@@ -54,14 +54,14 @@ pub fn build(b: *std.build.Builder) !void {
                 .{},
             );
 
-            if (filter == null or exe.target.cpu_arch.? == filter.?) {
-                exe.setBuildMode(mode);
-                exe.install();
+            if (filter == null or exe.inner.target.cpu_arch.? == filter.?) {
+                exe.inner.setBuildMode(mode);
+                exe.inner.install();
 
-                test_step.dependOn(&exe.step);
+                test_step.dependOn(&exe.inner.step);
 
                 const bin = b.addInstallRaw(
-                    exe,
+                    exe.inner,
                     b.fmt("test-{s}-{s}.bin", .{ tst.name, cfg.name }),
                     .{},
                 );
