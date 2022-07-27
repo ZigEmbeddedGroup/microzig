@@ -3,3 +3,13 @@
 image::logo-text-auto.svg[]
 
 image::https://img.shields.io/discord/824493524413710336.svg?logo=discord[link=https://discord.gg/ShUWykk38X]
+
+[NOTE]
+This is in development, breaks in the API are bound to happen
+
+:toc:
+
+== Contributing
+
+Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], its used as a place to brainstorm and organize work in ZEG.
+There will be issues marked as `good first issue`, or drafts for larger ideas that need scoping/breaking ground on.
