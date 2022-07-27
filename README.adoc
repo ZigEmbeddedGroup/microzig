@@ -25,7 +25,7 @@ Specifically it offers:
 ** sets up packages and start code
 * generalized interfaces for common devices, such as UART.
 * device drivers for interacting with external hardware
-* an uncomplicated method to define [interrupts](#interrupts)
+* an uncomplicated method to define xref:interrupts[interrupts]
 
 == How to
 
