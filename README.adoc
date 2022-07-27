@@ -8,9 +8,59 @@ image::https://img.shields.io/discord/824493524413710336.svg?logo=discord[link=h
 [NOTE]
 This is in development, breaks in the API are bound to happen
 
+toc::[]
+
 == Contributing
 
 Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], its used as a place to brainstorm and organize work in ZEG.
 There will be issues marked as `good first issue`, or drafts for larger ideas that need scoping/breaking ground on.
 
-toc::[]
+== Introduction
+
+This repo contains the infrastructure for getting started in an embedded Zig project, as well as some code to interact with some chips/boards.
+Specifically it offers:
+
+* a single easy-to-use builder function that:
+** generates your linker script
+** sets up packages and start code
+* generalized interfaces for common devices, such as UART.
+* device drivers for interacting with external hardware
+* an uncomplicated method to define [interrupts](#interrupts)
+
+== How to
+
+Here's a number of things you might be interested in doing, and how to achieve them with microzig and other ZEG tools.
+
+=== Embedded project with "supported" chip/board
+
+Start with an empty Zig project by running `zig init-exe`, and add microzig as a git submodule (or your choice of package manager).
+Then in your `build.zig`:
+
+[source,zig]
+----
+const std = @import("std");
+const microzig = @import("path/to/microzig/src/main.zig");
+
+pub fn build(b: *std.build.Builder) !void {
+    const backing = .{
+        .board = microzig.boards.arduino_nano,
+
+        // if you don't have one of the boards, but do have one of the
+        // "supported" chips:
+        // .chip = microzig.chips.atmega328p,
+    };
+
+    const exe = try microzig.addEmbeddedExecutable(
+        b,
+        "my-executable",
+        "src/main.zig",
+        backing,
+        .{
+          // optional slice of packages that can be imported into your app:
+          // .packages = &my_packages,
+        },
+    );
+    exe.setBuildMode(.ReleaseSmall);
+    exe.install();
+}
+----
