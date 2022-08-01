@@ -1312,7 +1312,7 @@ fn genZigRegister(
     if (is_list) {
         if (std.mem.indexOf(u8, register.name, "[%s]") != null) {
             std.log.info("register name: {s}", .{register.name});
-            std.log.info("dimension: {s}", .{dimension_opt});
+            std.log.info("dimension: {?}", .{dimension_opt});
             return error.InvalidRegisterName;
         }
 
@@ -1408,7 +1408,7 @@ fn genZigRegister(
         const array_prefix: []const u8 = if (dimension_opt) |dimension| blk: {
             if (dimension.increment != register.size.? / 8) {
                 std.log.err("register: {s}", .{register.name});
-                std.log.err("size: {}", .{register.size});
+                std.log.err("size: {?}", .{register.size});
                 std.log.err("dimension: {}", .{dimension});
                 return error.InvalidArrayIncrement;
             }

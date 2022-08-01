@@ -934,7 +934,7 @@ test "str and u64" {
     defer res.deinit();
 }
 
-test "" {
+test "everything" {
     const params = comptime parseParamsComptime(
         \\-a, --aa
         \\-b, --bb

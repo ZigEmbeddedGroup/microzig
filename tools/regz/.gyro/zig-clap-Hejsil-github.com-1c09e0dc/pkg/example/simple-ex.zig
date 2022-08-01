@@ -11,6 +11,7 @@ pub fn main() !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help             Display this help and exit.
         \\-n, --number <INT>     An option parameter, which takes a value.
+        \\-a, --answer <ANSWER>  An option parameter which takes an enum.
         \\-s, --string <STR>...  An option parameter which can be specified multiple times.
         \\<FILE>...
         \\
@@ -18,10 +19,12 @@ pub fn main() !void {
 
     // Declare our own parsers which are used to map the argument strings to other
     // types.
+    const YesNo = enum { yes, no };
     const parsers = comptime .{
         .STR = clap.parsers.string,
         .FILE = clap.parsers.string,
         .INT = clap.parsers.int(usize, 10),
+        .ANSWER = clap.parsers.enumeration(YesNo),
     };
 
     var diag = clap.Diagnostic{};
@@ -37,6 +40,8 @@ pub fn main() !void {
         debug.print("--help\n", .{});
     if (res.args.number) |n|
         debug.print("--number = {}\n", .{n});
+    if (res.args.answer) |a|
+        debug.print("--answer = {s}\n", .{@tagName(a)});
     for (res.args.string) |s|
         debug.print("--string = {s}\n", .{s});
     for (res.positionals) |pos|
