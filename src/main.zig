@@ -188,13 +188,13 @@ pub fn addEmbeddedExecutable(
     return exe;
 }
 
-const pkgs = struct {
+pub const pkgs = struct {
     const mmio = std.build.Pkg{
         .name = "microzig-mmio",
         .source = .{ .path = root_path ++ "core/mmio.zig" },
     };
 
-    const microzig = std.build.Pkg{
+    pub const microzig = std.build.Pkg{
         .name = "microzig",
         .source = .{ .path = root_path ++ "core/import-package.zig" },
     };
