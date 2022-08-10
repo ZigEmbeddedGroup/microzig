@@ -76,7 +76,7 @@ const microzig = @import("microzig");
 // `microzig.config`: comptime access to configuration
 //                  - chip_name: name of the chip
 //                  - has_board: true if board is configured
-//                  - board_name: name of the board is has_board is truc
+//                  - board_name: name of the board is has_board is true
 //                  - cpu_name: name of the CPU
 
 pub fn main() !void {
