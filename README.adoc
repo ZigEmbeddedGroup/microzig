@@ -73,6 +73,11 @@ In your application you can import `microzig` in order to interact with the hard
 const microzig = @import("microzig");
 
 // `microzig.chip.registers`: access to register definitions
+// `microzig.config`: comptime access to configuration
+//                  - chip_name: name of the chip
+//                  - has_board: true if board is configured
+//                  - board_name: name of the board is has_board is truc
+//                  - cpu_name: name of the CPU
 
 pub fn main() !void {
     // your program here
