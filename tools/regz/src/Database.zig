@@ -976,7 +976,7 @@ fn genZigCluster(
             if (dimension_opt) |dimension| {
                 const name = try std.mem.replaceOwned(u8, db.arena.allocator(), cluster.name, "[%s]", "");
 
-                try writer.print("pub const {s} = @ptrCast(*volatile [{}]packed struct {{", .{ name, dimension.dim });
+                try writer.print("pub const {s} = @intToPtr(*volatile [{}]packed struct {{", .{ name, dimension.dim });
 
                 var bits: usize = 0;
                 for (registers) |_, offset| {
