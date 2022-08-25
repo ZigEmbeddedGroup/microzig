@@ -141,6 +141,8 @@ pub fn addEmbeddedExecutable(
         .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
+    exe.inner.use_stage1 = true;
+
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.inner.single_threaded = true;
