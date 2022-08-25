@@ -488,7 +488,8 @@ test "Block loopback" {
     var buf: [512]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
 
-    var rand = std.rand.DefaultPrng.init(0xf163bfab).random();
+    var prng = std.rand.DefaultPrng.init(0xf163bfab);
+    var rand = prng.random();
     var expected = Block{
         .flags = @bitCast(Flags, rand.int(u32)),
         .target_addr = rand.int(u32),
