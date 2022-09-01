@@ -82,11 +82,16 @@ fn isValidField(field_name: []const u8) bool {
         !std.mem.eql(u8, field_name, "reset");
 }
 
-const VectorTable = microzig.chip.VectorTable;
+const VectorTable = if (@hasDecl(microzig.app, "VectorTable"))
+    microzig.app.VectorTable
+else if (@hasDecl(microzig.hal, "VectorTable"))
+    microzig.hal.VectorTable
+else
+    microzig.chip.VectorTable;
 
 // will be imported by microzig.zig to allow system startup.
 pub var vector_table: VectorTable = blk: {
-    var tmp: microzig.chip.VectorTable = .{
+    var tmp: VectorTable = .{
         .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
@@ -117,9 +122,16 @@ pub var vector_table: VectorTable = blk: {
     break :blk tmp;
 };
 
+const InterruptVector = if (@hasDecl(microzig.app, "InterruptVector"))
+    microzig.app.InterruptVector
+else if (@hasDecl(microzig.hal, "InterruptVector"))
+    microzig.hal.InterruptVector
+else
+    microzig.chip.InterruptVector;
+
 fn createInterruptVector(
     comptime function: anytype,
-) microzig.chip.InterruptVector {
+) InterruptVector {
     const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
     return switch (calling_convention) {
         .C => .{ .C = function },
