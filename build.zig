@@ -2,21 +2,25 @@ const std = @import("std");
 
 const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
+const comptimePrint = std.fmt.comptimePrint;
 
-pub const BuildOptions = struct {
-    packages: ?[]const Pkg = null,
-};
+const chip_path = comptimePrint("{s}/src/rp2040.zig", .{root()});
+const board_path = comptimePrint("{s}/src/raspberry_pi_pico.zig", .{root()});
+const hal_path = comptimePrint("{s}/src/hal.zig", .{root()});
+const linkerscript_path = comptimePrint("{s}/rp2040.ld", .{root()});
+
+pub const BuildOptions = struct {};
 
 pub fn addPiPicoExecutable(
     comptime microzig: type,
     builder: *Builder,
     name: []const u8,
     source: []const u8,
-    options: BuildOptions,
-) *std.build.LibExeObjStep {
+    _: BuildOptions,
+) microzig.EmbeddedExecutable {
     const rp2040 = microzig.Chip{
         .name = "RP2040",
-        .path = root() ++ "src/rp2040.zig",
+        .path = chip_path,
         .cpu = microzig.cpus.cortex_m0plus,
         .memory_regions = &.{
             .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
@@ -27,7 +31,7 @@ pub fn addPiPicoExecutable(
 
     const raspberry_pi_pico = microzig.Board{
         .name = "Raspberry Pi Pico",
-        .path = root() ++ "src/raspberry_pi_pico.zig",
+        .path = board_path,
         .chip = rp2040,
     };
 
@@ -37,15 +41,14 @@ pub fn addPiPicoExecutable(
         source,
         .{ .board = raspberry_pi_pico },
         .{
-            .packages = options.packages,
-            .hal_package_path = .{ .path = root() ++ "src/hal.zig" },
+            .hal_package_path = .{ .path = hal_path },
         },
-    ) catch @panic("failed to create embedded executable");
-    ret.setLinkerScriptPath(.{ .path = root() ++ "rp2040.ld" });
+    );
+    ret.inner.setLinkerScriptPath(.{ .path = linkerscript_path });
 
     return ret;
 }
 
 fn root() []const u8 {
-    return (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
+    return std.fs.path.dirname(@src().file) orelse ".";
 }

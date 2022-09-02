@@ -2,6 +2,9 @@ const std = @import("std");
 const microzig = @import("microzig");
 const assert = std.debug.assert;
 
+// TODO: remove
+const gpio = @import("gpio.zig");
+
 const regs = microzig.chip.registers;
 const xosc_freq = microzig.board.xosc_freq;
 
