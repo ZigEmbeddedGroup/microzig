@@ -103,10 +103,10 @@ pub fn create(
 
     try flags.appendSlice(&.{
         // Version info, hardcoded
-        "-DLIBXML_VERSION=" ++ Version.number(),
-        "-DLIBXML_VERSION_STRING=" ++ Version.string(),
+        comptime "-DLIBXML_VERSION=" ++ Version.number(),
+        comptime "-DLIBXML_VERSION_STRING=" ++ Version.string(),
         "-DLIBXML_VERSION_EXTRA=\"\"",
-        "-DLIBXML_DOTTED_VERSION=" ++ Version.dottedString(),
+        comptime "-DLIBXML_DOTTED_VERSION=" ++ Version.dottedString(),
 
         // These might now always be true (particularly Windows) but for
         // now we just set them all. We should do some detection later.
@@ -174,7 +174,7 @@ pub fn create(
     // C files
     ret.addCSourceFiles(srcs, flags.items);
     if (opts.sax1) {
-        ret.addCSourceFile(root() ++ "libxml2/DOCBparser.c", flags.items);
+        ret.addCSourceFile(comptime root() ++ "libxml2/DOCBparser.c", flags.items);
     }
 
     ret.addIncludeDir(include_dir);
@@ -191,7 +191,7 @@ pub fn create(
 }
 
 fn root() []const u8 {
-    return (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
+    return comptime (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
 }
 
 /// Directories with our includes.

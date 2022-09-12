@@ -16,7 +16,8 @@ steps:
           - "aarch64-macos"
           - "i386-linux-gnu"
           - "i386-linux-musl"
-          - "i386-windows"
+            # TODO: when _tls_index is fixed
+            #- "i386-windows"
           - "x86_64-linux-gnu"
           - "x86_64-linux-musl"
           - "x86_64-macos"

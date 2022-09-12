@@ -9,7 +9,7 @@ const Step = std.build.Step;
 const GeneratedFile = std.build.GeneratedFile;
 
 fn root() []const u8 {
-    return (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
+    return comptime (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
 }
 
 pub const Regz = struct {
@@ -37,17 +37,17 @@ pub const Regz = struct {
         const commit_result = std.ChildProcess.exec(.{
             .allocator = builder.allocator,
             .argv = &.{ "git", "rev-parse", "HEAD" },
-            .cwd = root(),
+            .cwd = comptime root(),
         }) catch unreachable;
 
         const build_options = builder.addOptions();
         build_options.addOption([]const u8, "commit", commit_result.stdout);
 
-        const exe = builder.addExecutable("regz", root() ++ "src/main.zig");
+        const exe = builder.addExecutable("regz", comptime root() ++ "src/main.zig");
         exe.setTarget(target);
         exe.setBuildMode(mode);
         exe.addOptions("build_options", build_options);
-        exe.addPackagePath("clap", root() ++ pkgs.clap.source.path);
+        exe.addPackagePath("clap", comptime root() ++ pkgs.clap.source.path);
         xml.link(exe);
 
         var regz = builder.allocator.create(Regz) catch unreachable;

@@ -6,6 +6,7 @@ const heap = std.heap;
 const io = std.io;
 const math = std.math;
 const mem = std.mem;
+const meta = std.meta;
 const process = std.process;
 const testing = std.testing;
 
@@ -25,6 +26,7 @@ pub const Names = struct {
     /// '--' prefix
     long: ?[]const u8 = null,
 
+    /// The longest of the possible names this `Names` struct can represent.
     pub fn longest(names: *const Names) Longest {
         if (names.long) |long|
             return .{ .kind = .long, .name = long };
@@ -73,7 +75,7 @@ pub const Values = enum {
 ///     * Positional parameters must take a value.
 pub fn Param(comptime Id: type) type {
     return struct {
-        id: Id = Id{},
+        id: Id,
         names: Names = Names{},
         takes_value: Values = .none,
     };
@@ -199,7 +201,7 @@ pub fn parseParamEx(str: []const u8, end: *usize) !Param(Help) {
     // * Someone points out how this is a really bad idea.
     @setEvalBranchQuota(std.math.maxInt(u32));
 
-    var res = Param(Help){};
+    var res = Param(Help){ .id = .{} };
     var start: usize = 0;
     var state: enum {
         start,
@@ -449,11 +451,11 @@ test "parseParams" {
         \\--bb This should be a new param
         \\
     , &.{
-        .{ .names = .{ .short = 's' } },
-        .{ .names = .{ .long = "str" } },
-        .{ .names = .{ .long = "str-str" } },
-        .{ .names = .{ .long = "str_str" } },
-        .{ .names = .{ .short = 's', .long = "str" } },
+        .{ .id = .{}, .names = .{ .short = 's' } },
+        .{ .id = .{}, .names = .{ .long = "str" } },
+        .{ .id = .{}, .names = .{ .long = "str-str" } },
+        .{ .id = .{}, .names = .{ .long = "str_str" } },
+        .{ .id = .{}, .names = .{ .short = 's', .long = "str" } },
         .{
             .id = .{ .val = "str" },
             .names = .{ .long = "str" },
@@ -671,6 +673,7 @@ pub fn parse(
     };
 }
 
+/// The result of `parse`. Is owned by the caller and should be freed with `deinit`.
 pub fn Result(
     comptime Id: type,
     comptime params: []const Param(Id),
@@ -721,14 +724,13 @@ pub fn parseEx(
     opt: ParseOptions,
 ) !ResultEx(Id, params, value_parsers) {
     const allocator = opt.allocator;
-    var positionals = std.ArrayList(
-        FindPositionalType(Id, params, value_parsers),
-    ).init(allocator);
+    const Positional = FindPositionalType(Id, params, value_parsers);
 
+    var positionals = std.ArrayList(Positional).init(allocator);
     var arguments = Arguments(Id, params, value_parsers, .list){};
-    errdefer deinitArgs(Id, params, value_parsers, .list, allocator, &arguments);
+    errdefer deinitArgs(Id, params, allocator, &arguments);
 
-    var stream = streaming.Clap(Id, @typeInfo(@TypeOf(iter)).Pointer.child){
+    var stream = streaming.Clap(Id, meta.Child(@TypeOf(iter))){
         .params = params,
         .iter = iter,
         .diagnostic = opt.diagnostic,
@@ -756,8 +758,10 @@ pub fn parseEx(
         try res;
     }
 
+    // We are done parsing, but our arguments are stored in lists, and not slices. Map the list
+    // fields to slices and return that.
     var result_args = Arguments(Id, params, value_parsers, .slice){};
-    inline for (@typeInfo(@TypeOf(arguments)).Struct.fields) |field| {
+    inline for (meta.fields(@TypeOf(arguments))) |field| {
         if (@typeInfo(field.field_type) == .Struct and
             @hasDecl(field.field_type, "toOwnedSlice"))
         {
@@ -803,6 +807,7 @@ fn parseArg(
     }
 }
 
+/// The result of `parseEx`. Is owned by the caller and should be freed with `deinit`.
 pub fn ResultEx(
     comptime Id: type,
     comptime params: []const Param(Id),
@@ -814,7 +819,7 @@ pub fn ResultEx(
         allocator: mem.Allocator,
 
         pub fn deinit(result: *@This()) void {
-            deinitArgs(Id, params, value_parsers, .slice, result.allocator, &result.args);
+            deinitArgs(Id, params, result.allocator, &result.args);
             result.allocator.free(result.positionals);
         }
     };
@@ -825,15 +830,22 @@ fn FindPositionalType(
     comptime params: []const Param(Id),
     comptime value_parsers: anytype,
 ) type {
+    const pos = findPositional(Id, params) orelse return []const u8;
+    return ParamType(Id, pos, value_parsers);
+}
+
+fn findPositional(comptime Id: type, params: []const Param(Id)) ?Param(Id) {
     for (params) |param| {
         const longest = param.names.longest();
         if (longest.kind == .positinal)
-            return ParamType(Id, param, value_parsers);
+            return param;
     }
 
-    return []const u8;
+    return null;
 }
 
+/// Given a parameter figure out which type that parameter is parsed into when using the correct
+/// parser from `value_parsers`.
 fn ParamType(
     comptime Id: type,
     comptime param: Param(Id),
@@ -846,13 +858,13 @@ fn ParamType(
     return parsers.Result(@TypeOf(parser));
 }
 
+/// Deinitializes a struct of type `Argument`. Since the `Argument` type is generated, and we
+/// cannot add the deinit declaration to it, we declare it here instead.
 fn deinitArgs(
     comptime Id: type,
     comptime params: []const Param(Id),
-    comptime value_parsers: anytype,
-    comptime multi_arg_kind: MultiArgKind,
     allocator: mem.Allocator,
-    arguments: *Arguments(Id, params, value_parsers, multi_arg_kind),
+    arguments: anytype,
 ) void {
     inline for (params) |param| {
         const longest = comptime param.names.longest();
@@ -861,15 +873,22 @@ fn deinitArgs(
         if (param.takes_value != .many)
             continue;
 
-        switch (multi_arg_kind) {
-            .slice => allocator.free(@field(arguments, longest.name)),
-            .list => @field(arguments, longest.name).deinit(allocator),
+        const field = @field(arguments, longest.name);
+
+        // If the multi value field is a struct, we know it is a list and should be deinited.
+        // Otherwise, it is a slice that should be freed.
+        switch (@typeInfo(@TypeOf(field))) {
+            .Struct => @field(arguments, longest.name).deinit(allocator),
+            else => allocator.free(@field(arguments, longest.name)),
         }
     }
 }
 
 const MultiArgKind = enum { slice, list };
 
+/// Turn a list of parameters into a struct with one field for each none positional parameter.
+/// The type of each parameter field is determined by `ParamType`. Positional arguments will not
+/// havea field in this struct.
 fn Arguments(
     comptime Id: type,
     comptime params: []const Param(Id),
@@ -885,27 +904,21 @@ fn Arguments(
             continue;
 
         const T = ParamType(Id, param, value_parsers);
-        const FieldType = switch (param.takes_value) {
-            .none => bool,
-            .one => ?T,
+        const default_value = switch (param.takes_value) {
+            .none => false,
+            .one => @as(?T, null),
             .many => switch (multi_arg_kind) {
-                .slice => []const T,
-                .list => std.ArrayListUnmanaged(T),
+                .slice => @as([]const T, &[_]T{}),
+                .list => std.ArrayListUnmanaged(T){},
             },
         };
+
         fields[i] = .{
             .name = longest.name,
-            .field_type = FieldType,
-            .default_value = switch (param.takes_value) {
-                .none => &false,
-                .one => &@as(?T, null),
-                .many => switch (multi_arg_kind) {
-                    .slice => &@as([]const T, &[_]T{}),
-                    .list => &std.ArrayListUnmanaged(T){},
-                },
-            },
+            .field_type = @TypeOf(default_value),
+            .default_value = @ptrCast(*const anyopaque, &default_value),
             .is_comptime = false,
-            .alignment = @alignOf(FieldType),
+            .alignment = @alignOf(@TypeOf(default_value)),
         };
         i += 1;
     }
