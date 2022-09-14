@@ -48,6 +48,37 @@ pub const EmbeddedExecutable = struct {
             }
         } else @panic("app package not found");
     }
+
+    pub fn addPackagePath(exe: *EmbeddedExecutable, name: []const u8, pkg_index_path: []const u8) void {
+        exe.addPackage(Pkg{
+            .name = exe.inner.builder.allocator.dupe(u8, name) catch unreachable,
+            .source = .{ .path = exe.inner.builder.allocator.dupe(u8, pkg_index_path) catch unreachable },
+        });
+    }
+
+    pub fn setBuildMode(exe: *EmbeddedExecutable, mode: std.builtin.Mode) void {
+        exe.inner.setBuildMode(mode);
+    }
+
+    pub fn install(exe: *EmbeddedExecutable) void {
+        exe.inner.install();
+    }
+
+    pub fn installRaw(exe: *EmbeddedExecutable, dest_filename: []const u8, options: std.build.InstallRawStep.CreateOptions) *std.build.InstallRawStep {
+        return exe.inner.installRaw(dest_filename, options);
+    }
+
+    pub fn addIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
+        exe.addIncludePath(path);
+    }
+
+    pub fn addSystemIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
+        return exe.inner.addSystemIncludePath(path);
+    }
+
+    pub fn addCSourceFile(exe: *EmbeddedExecutable, file: []const u8, flags: []const []const u8) void {
+        exe.inner.addCSourceFile(file, flags);
+    }
 };
 
 pub fn addEmbeddedExecutable(
