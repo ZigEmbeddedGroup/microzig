@@ -1704,7 +1704,6 @@ pub fn format(
     options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    _ = db;
     _ = options;
     _ = fmt;
     try writer.writeAll("Regz Database:\n");

@@ -424,7 +424,6 @@ pub const RegisterProperties = struct {
     reset_mask: ?u64,
 
     pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !RegisterProperties {
-        _ = arena;
         return RegisterProperties{
             .size = try xml.parseIntForKey(u16, arena.child_allocator, nodes, "size"),
             .reset_value = try xml.parseIntForKey(u64, arena.child_allocator, nodes, "resetValue"),
