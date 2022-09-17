@@ -2,6 +2,8 @@ const std = @import("std");
 const microzig = @import("microzig");
 const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
+const resets = @import("resets.zig");
+const time = @import("time.zig");
 
 const assert = std.debug.assert;
 const regs = microzig.chip.registers;
@@ -39,7 +41,7 @@ pub const UartRegs = extern struct {
     rsr: u32,
     reserved0: [4]u32,
     fr: @typeInfo(@TypeOf(regs.UART0.UARTFR)).Pointer.child,
-    resertev1: [1]u32,
+    reserved1: [1]u32,
     ilpr: u32,
     ibrd: u32,
     fbrd: u32,
@@ -149,16 +151,8 @@ pub const UART = enum {
 
     pub fn reset(uart: UART) void {
         switch (uart) {
-            .uart0 => {
-                regs.RESETS.RESET.modify(.{ .uart0 = 1 });
-                regs.RESETS.RESET.modify(.{ .uart0 = 0 });
-                while (regs.RESETS.RESET_DONE.read().uart0 != 1) {}
-            },
-            .uart1 => {
-                regs.RESETS.RESET.modify(.{ .uart1 = 1 });
-                regs.RESETS.RESET.modify(.{ .uart1 = 0 });
-                while (regs.RESETS.RESET_DONE.read().uart1 != 1) {}
-            },
+            .uart0 => resets.reset(&.{.uart0}),
+            .uart1 => resets.reset(&.{.uart1}),
         }
     }
 
@@ -180,11 +174,13 @@ pub const UART = enum {
                 .one => @as(u1, 0),
                 .two => @as(u1, 1),
             },
-            .PEN = if (parity != .none) @as(u1, 1) else @as(u1, 0),
+            .PEN = switch (parity) {
+                .none => @as(u1, 0),
+                .even, .odd => @as(u1, 1),
+            },
             .EPS = switch (parity) {
                 .even => @as(u1, 1),
-                .odd => @as(u1, 0),
-                else => @as(u1, 0),
+                .odd, .none => @as(u1, 0),
             },
         });
     }
@@ -210,3 +206,30 @@ pub const UART = enum {
         uart_regs.lcr_h.modify(.{});
     }
 };
+
+var uart_logger: ?UART.Writer = null;
+
+pub fn initLogger(uart: UART) void {
+    uart_logger = uart.writer();
+}
+
+pub fn log(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+    const prefix = comptime level_prefix ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (uart_logger) |uart| {
+        const current_time = time.getTimeSinceBoot();
+        const seconds = current_time.us_since_boot / std.time.us_per_s;
+        const microseconds = current_time.us_since_boot % std.time.us_per_s;
+
+        uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+    }
+}

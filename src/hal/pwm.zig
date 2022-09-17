@@ -1,5 +1,8 @@
+const std = @import("std");
 const microzig = @import("microzig");
 const regs = microzig.chip.registers;
+
+const log = std.log.scoped(.pwm);
 
 pub const Config = struct {};
 
@@ -67,12 +70,14 @@ const Regs = extern struct {
 };
 
 pub inline fn setSlicePhaseCorrect(comptime slice: u32, phase_correct: bool) void {
+    log.debug("PWM{} set phase correct: {}", .{ slice, phase_correct });
     getRegs(slice).csr.modify(.{
         .PH_CORRECT = if (phase_correct) 1 else 0,
     });
 }
 
 pub inline fn setSliceClkDiv(comptime slice: u32, integer: u8, fraction: u4) void {
+    log.debug("PWM{} set clk div: {}.{}", .{ slice, integer, fraction });
     getRegs(slice).div.modify(.{
         .INT = integer,
         .FRAC = fraction,
@@ -80,6 +85,7 @@ pub inline fn setSliceClkDiv(comptime slice: u32, integer: u8, fraction: u4) voi
 }
 
 pub inline fn setSliceClkDivMode(comptime slice: u32, mode: ClkDivMode) void {
+    log.debug("PWM{} set clk div mode: {}", .{ slice, mode });
     getRegs(slice).csr.modify(.{
         .DIVMODE = @enumToInt(mode),
     });
@@ -101,6 +107,7 @@ pub inline fn setChannelInversion(
 }
 
 pub inline fn setSliceWrap(comptime slice: u32, wrap: u16) void {
+    log.debug("PWM{} set wrap: {}", .{ slice, wrap });
     getRegs(slice).top.raw = wrap;
 }
 
@@ -109,6 +116,7 @@ pub inline fn setChannelLevel(
     comptime channel: Channel,
     level: u16,
 ) void {
+    log.debug("PWM{} {} set level: {}", .{ slice, channel, level });
     switch (channel) {
         .a => getRegs(slice).cc.modify(.{ .A = level }),
         .b => getRegs(slice).cc.modify(.{ .B = level }),

@@ -4,6 +4,8 @@ const resets = @import("resets.zig");
 const regs = microzig.chip.registers;
 const assert = std.debug.assert;
 
+const log = std.log.scoped(.gpio);
+
 pub const Function = enum(u5) {
     xip,
     spi,
@@ -83,6 +85,7 @@ pub inline fn setDir(comptime gpio: u32, direction: Direction) void {
 
 /// Drive a single GPIO high/low
 pub inline fn put(comptime gpio: u32, value: u1) void {
+    std.log.debug("GPIO{} put: {}", .{ gpio, value });
     const mask = 1 << gpio;
     switch (value) {
         0 => regs.SIO.GPIO_OUT_CLR.raw = mask,

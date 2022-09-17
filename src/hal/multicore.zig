@@ -88,7 +88,7 @@ pub fn launchCore1WithStack(entrypoint: fn () void, stack: []u32) void {
         0,
         0,
         1,
-        regs.PPB.VTOR.raw,
+        regs.SCS.SCB.VTOR.raw,
         stack_ptr,
         @ptrToInt(wrapper),
     };

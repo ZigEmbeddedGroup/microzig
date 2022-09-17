@@ -1,8 +1,9 @@
 const std = @import("std");
-
 const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
+
+const microzig = @import("deps/microzig/src/main.zig");
 
 const chip_path = comptimePrint("{s}/src/rp2040.zig", .{root()});
 const board_path = comptimePrint("{s}/src/raspberry_pi_pico.zig", .{root()});
@@ -12,7 +13,6 @@ const linkerscript_path = comptimePrint("{s}/rp2040.ld", .{root()});
 pub const BuildOptions = struct {};
 
 pub fn addPiPicoExecutable(
-    comptime microzig: type,
     builder: *Builder,
     name: []const u8,
     source: []const u8,
@@ -49,6 +49,44 @@ pub fn addPiPicoExecutable(
     return ret;
 }
 
+// this build script is mostly for testing and verification of this
+// package. In an attempt to modularize -- designing for a case where a
+// project requires multiple HALs, it accepts microzig as a param
+pub fn build(b: *Builder) !void {
+    const mode = b.standardReleaseOptions();
+    var examples = Examples.init(b, mode);
+    examples.install();
+}
+
 fn root() []const u8 {
     return std.fs.path.dirname(@src().file) orelse ".";
 }
+
+pub const Examples = struct {
+    blinky: microzig.EmbeddedExecutable,
+    blinky_core1: microzig.EmbeddedExecutable,
+    gpio_clk: microzig.EmbeddedExecutable,
+    pwm: microzig.EmbeddedExecutable,
+    uart: microzig.EmbeddedExecutable,
+    //uart_pins: microzig.EmbeddedExecutable,
+
+    pub fn init(b: *Builder, mode: std.builtin.Mode) Examples {
+        var ret: Examples = undefined;
+        inline for (@typeInfo(Examples).Struct.fields) |field| {
+            @field(ret, field.name) = addPiPicoExecutable(
+                b,
+                field.name,
+                comptime root() ++ "/examples/" ++ field.name ++ ".zig",
+                .{},
+            );
+            @field(ret, field.name).setBuildMode(mode);
+        }
+
+        return ret;
+    }
+
+    pub fn install(examples: *Examples) void {
+        inline for (@typeInfo(Examples).Struct.fields) |field|
+            @field(examples, field.name).install();
+    }
+};
