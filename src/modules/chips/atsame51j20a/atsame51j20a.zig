@@ -277,9 +277,57 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             return UARTn.INTFLAG.read().RXC == 1;
         }
         pub fn rx(self: Self) u8 {
-            _ = self;
             while (!self.canRead()) {} // Wait till the data is received
             return @intCast(u8, UARTn.DATA.*); // Read received data
         }
     };
 }
+
+// #############################################################################
+// Crypto
+// #############################################################################
+
+pub fn enableTrng() void {
+    // Enable the TRNG bus clock.
+    regs.MCLK.APBCMASK.modify(.{ .TRNG_ = 1 });
+}
+
+pub const crypto = struct {
+    pub const random = struct {
+        /// Fill the given slice with random data.
+        pub fn getBlock(buffer: []u8) void {
+            var rand: u32 = undefined;
+
+            var i: usize = 0;
+            while (i < buffer.len) : (i += 1) {
+                if (i % 4 == 0) {
+                    // Get a fresh 32 bit integer every 4th iteration.
+                    rand = getWord();
+                }
+
+                // The shift value is always between 0 and 24, i.e. int cast will always succeed.
+                buffer[i] = @intCast(u8, (rand >> @intCast(u5, (8 * (i % 4)))) & 0xff);
+            }
+        }
+
+        /// Get a real 32 bit random integer.
+        ///
+        /// In most cases you'll want to use `getBlock` instead.
+        pub fn getWord() u32 {
+            regs.TRNG.CTRLA.modify(.{ .ENABLE = 1 });
+            while (regs.TRNG.INTFLAG.read().DATARDY == 0) {
+                // a new random number is generated every
+                // 84 CLK_TRNG_APB clock cycles (p. 1421).
+            }
+            regs.TRNG.CTRLA.modify(.{ .ENABLE = 0 });
+            return regs.TRNG.DATA.*;
+        }
+
+        /// Get a real 8 bit random integer.
+        ///
+        /// In most cases you'll want to use `getBlock` instead.
+        pub fn getByte() u8 {
+            return @intCast(u8, getWord() & 0xFF);
+        }
+    };
+};
