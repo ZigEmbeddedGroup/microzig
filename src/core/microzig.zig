@@ -86,7 +86,7 @@ else
     };
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
-pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace, _: ?usize) noreturn {
 
     // utilize logging functions
     std.log.err("microzig PANIC: {s}", .{message});
@@ -165,7 +165,7 @@ export fn microzig_main() noreturn {
         @compileError("The root source file must provide a public function main!");
 
     const main = @field(app, "main");
-    const info: std.builtin.TypeInfo = @typeInfo(@TypeOf(main));
+    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
     if (info != .Fn or info.Fn.args.len > 0)
