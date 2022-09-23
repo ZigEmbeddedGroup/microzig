@@ -69,7 +69,7 @@ pub const EmbeddedExecutable = struct {
     }
 
     pub fn addIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
-        exe.inner.addIncludePath(path);
+        exe.addIncludePath(path);
     }
 
     pub fn addSystemIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
@@ -78,15 +78,6 @@ pub const EmbeddedExecutable = struct {
 
     pub fn addCSourceFile(exe: *EmbeddedExecutable, file: []const u8, flags: []const []const u8) void {
         exe.inner.addCSourceFile(file, flags);
-    }
-
-    pub fn addOptions(exe: *EmbeddedExecutable, package_name: []const u8, options: *std.build.OptionsStep) void {
-        exe.inner.addOptions(package_name, options);
-        exe.addPackage(.{ .name = package_name, .source = options.getSource() });
-    }
-
-    pub fn addObjectFile(exe: *EmbeddedExecutable, source_file: []const u8) void {
-        exe.inner.addObjectFile(source_file);
     }
 };
 
