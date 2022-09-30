@@ -86,7 +86,8 @@ else
     };
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
-pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace, return_address: ?usize) noreturn {
+    _ = return_address; // what is this?
 
     // utilize logging functions
     std.log.err("microzig PANIC: {s}", .{message});
@@ -102,8 +103,8 @@ pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.Stac
                 frames_left -= 1;
                 frame_index = (frame_index + 1) % stack_trace.instruction_addresses.len;
             }) {
-                const return_address = stack_trace.instruction_addresses[frame_index];
-                writer.print("0x{X:0>8}\r\n", .{return_address}) catch unreachable;
+                const stack_addr = stack_trace.instruction_addresses[frame_index];
+                writer.print("0x{X:0>8}\r\n", .{stack_addr}) catch unreachable;
             }
         }
     }
@@ -165,7 +166,7 @@ export fn microzig_main() noreturn {
         @compileError("The root source file must provide a public function main!");
 
     const main = @field(app, "main");
-    const info: std.builtin.TypeInfo = @typeInfo(@TypeOf(main));
+    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
     if (info != .Fn or info.Fn.args.len > 0)
