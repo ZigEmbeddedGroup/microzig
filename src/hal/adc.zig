@@ -161,34 +161,40 @@ pub inline fn run(enable: bool) void {
     ADC.CS.modify(.{ .START_MANY = if (enable) @as(u1, 1) else @as(u1, 0) });
 }
 
-/// TODO: implement
-pub inline fn setClkDiv() void {}
+pub inline fn setClkDiv() void {
+    @compileError("todo");
+}
 
 /// The fifo is 4 samples long, if a conversion is completed and the FIFO is
 /// full, the result is dropped.
 pub const fifo = struct {
-    /// TODO: implement
     pub inline fn setup() void {
+        @compileError("todo");
         // There are a number of considerations wrt DMA and error detection
     }
 
-    /// TODO: implement
     /// Return true if FIFO is empty.
-    pub inline fn isEmpty() bool {}
+    pub inline fn isEmpty() bool {
+        @compileError("todo");
+    }
 
-    /// TODO: implement
     /// Read how many samples are in the FIFO.
-    pub inline fn getLevel() u8 {}
+    pub inline fn getLevel() u8 {
+        @compileError("todo");
+    }
 
-    /// TODO: implement
     /// Pop latest result from FIFO.
-    pub inline fn get() u16 {}
+    pub inline fn get() u16 {
+        @compileError("todo");
+    }
 
-    /// TODO: implement
     /// Block until result is available in FIFO, then pop it.
-    pub inline fn getBlocking() u16 {}
+    pub inline fn getBlocking() u16 {
+        @compileError("todo");
+    }
 
-    /// TODO: implement
     /// Wait for conversion to complete then discard results in FIFO.
-    pub inline fn drain() void {}
+    pub inline fn drain() void {
+        @compileError("todo");
+    }
 };
