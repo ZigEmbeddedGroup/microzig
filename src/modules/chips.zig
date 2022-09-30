@@ -103,3 +103,14 @@ pub const nrf52832 = Chip{
         MemoryRegion{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
     },
 };
+
+pub const atsame51j20a = Chip{
+    .name = "ATSAME51J20A",
+    .path = root_path ++ "chips/atsame51j20a/atsame51j20a.zig",
+    .cpu = cpus.cortex_m4,
+    .memory_regions = &.{
+        // SAM D5x/E5x Family Data Sheet page 53
+        MemoryRegion{ .offset = 0x00000000, .length = 1024 * 1024, .kind = .flash },
+        MemoryRegion{ .offset = 0x20000000, .length = 256 * 1024, .kind = .ram },
+    },
+};
