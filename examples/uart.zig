@@ -12,7 +12,7 @@ const baud_rate = 115200;
 const uart_tx_pin = 0;
 const uart_rx_pin = 1;
 
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace) noreturn {
+pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
     @breakpoint();
     while (true) {}

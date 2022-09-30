@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const regs = microzig.chip.registers;
-const EnumField = std.builtin.TypeInfo.EnumField;
+const EnumField = std.builtin.Type.EnumField;
 const Mask = @typeInfo(@TypeOf(regs.RESETS.RESET)).Pointer.child.underlying_type;
 
 pub const Module = enum {

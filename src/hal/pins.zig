@@ -5,7 +5,7 @@ const regs = @import("microzig").chip.registers;
 
 const assert = std.debug.assert;
 const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.TypeInfo.StructField;
+const StructField = std.builtin.Type.StructField;
 
 pub const Pin = enum {
     GPIO0,
