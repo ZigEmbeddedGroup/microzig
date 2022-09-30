@@ -63,6 +63,7 @@ fn root() []const u8 {
 }
 
 pub const Examples = struct {
+    adc: microzig.EmbeddedExecutable,
     blinky: microzig.EmbeddedExecutable,
     blinky_core1: microzig.EmbeddedExecutable,
     gpio_clk: microzig.EmbeddedExecutable,

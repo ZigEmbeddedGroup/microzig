@@ -1,6 +1,7 @@
 const microzig = @import("microzig");
 const regs = microzig.chip.registers;
 
+pub const adc = @import("hal/adc.zig");
 pub const pins = @import("hal/pins.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const clocks = @import("hal/clocks.zig");
