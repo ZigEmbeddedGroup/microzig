@@ -3,7 +3,7 @@ const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
 
-const microzig = @import("deps/microzig/src/main.zig");
+pub const microzig = @import("deps/microzig/src/main.zig");
 
 const chip_path = comptimePrint("{s}/src/rp2040.zig", .{root()});
 const board_path = comptimePrint("{s}/src/raspberry_pi_pico.zig", .{root()});

@@ -97,6 +97,14 @@ pub inline fn toggle(comptime gpio: u32) void {
     regs.SIO.GPIO_OUT_XOR.raw = (1 << gpio);
 }
 
+pub inline fn read(comptime gpio: u32) u1 {
+    const mask = 1 << gpio;
+    return if ((regs.SIO.GPIO_IN.raw & mask) != 0)
+        1
+    else
+        0;
+}
+
 pub inline fn setFunction(comptime gpio: u32, function: Function) void {
     const pad_bank_reg = comptime std.fmt.comptimePrint("GPIO{}", .{gpio});
     @field(regs.PADS_BANK0, pad_bank_reg).modify(.{

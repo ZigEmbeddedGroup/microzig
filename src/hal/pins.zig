@@ -50,11 +50,15 @@ pub const Pin = enum {
         // schmitt trigger
         // hysteresis
 
-        pub fn getDirection(config: Configuration) gpio.Direction {
+        pub fn getDirection(comptime config: Configuration) gpio.Direction {
             return if (config.direction) |direction|
                 direction
-            else if (config.function.isPwm())
+            else if (comptime config.function.isPwm())
                 .out
+            else if (comptime config.function.isUartTx())
+                .out
+            else if (comptime config.function.isUartRx())
+                .in
             else
                 @panic("TODO");
         }
@@ -152,6 +156,24 @@ pub const Function = enum {
             .PWM6_B,
             .PWM7_A,
             .PWM7_B,
+            => true,
+            else => false,
+        };
+    }
+
+    pub fn isUartTx(function: Function) bool {
+        return switch (function) {
+            .UART0_TX,
+            .UART1_TX,
+            => true,
+            else => false,
+        };
+    }
+
+    pub fn isUartRx(function: Function) bool {
+        return switch (function) {
+            .UART0_RX,
+            .UART1_RX,
             => true,
             else => false,
         };
@@ -280,7 +302,7 @@ pub fn GPIO(comptime num: u5, comptime direction: gpio.Direction) type {
 
             pub inline fn read(self: @This()) u1 {
                 _ = self;
-                @compileError("TODO");
+                return gpio.read(gpio_num);
             }
         },
         .out => struct {
@@ -423,6 +445,21 @@ pub const GlobalConfiguration = struct {
 
         if (output_gpios != 0)
             regs.SIO.GPIO_OE_SET.raw = output_gpios;
+
+        if (input_gpios != 0) {
+            inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
+                if (@field(config, field.name)) |pin_config| {
+                    const pull = pin_config.pull orelse continue;
+                    if (comptime pin_config.getDirection() != .in)
+                        @compileError("Only input pins can have pull up/down enabled");
+
+                    const gpio_regs = @field(regs.PADS_BANK0, field.name);
+                    gpio_regs.modify(comptime .{
+                        .PUE = @boolToInt(pull == .up),
+                        .PDE = @boolToInt(pull == .down),
+                    });
+                };
+        }
 
         // TODO: pwm initialization
 
