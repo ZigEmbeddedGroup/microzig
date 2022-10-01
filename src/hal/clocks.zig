@@ -56,8 +56,8 @@ fn uppercase(bytes: []const u8) std.fmt.Formatter(formatUppercase) {
     return .{ .data = bytes };
 }
 
-pub const Generator = enum {
-    gpout0,
+pub const Generator = enum(u32) {
+    gpout0 = 0,
     gpout1,
     gpout2,
     gpout3,
@@ -70,7 +70,7 @@ pub const Generator = enum {
 
     // in some cases we can pretend the Generators are a homogenous array of
     // register clusters for the sake of smaller codegen
-    const GeneratorRegs = packed struct {
+    const GeneratorRegs = extern struct {
         ctrl: u32,
         div: u32,
         selected: u32,
@@ -82,7 +82,7 @@ pub const Generator = enum {
     }
 
     const generators = @intToPtr(
-        *volatile [9]GeneratorRegs,
+        *volatile [10]GeneratorRegs,
         regs.CLOCKS.base_address,
     );
 
@@ -154,6 +154,7 @@ pub const Generator = enum {
     }
 
     pub fn setSource(generator: Generator, src: u32) void {
+        std.debug.assert(generator.hasGlitchlessMux());
         const gen_regs = generator.getRegs();
         const mask = ~@as(u32, 0x3);
         const ctrl_value = gen_regs.ctrl;
@@ -314,9 +315,12 @@ pub const GlobalConfiguration = struct {
             .clk_sys => if (config.sys) |sys_config| sys_config.output_freq else null,
             .clk_usb => if (config.usb) |usb_config| usb_config.output_freq else null,
             .clk_ref => if (config.ref) |ref_config| ref_config.output_freq else null,
+            .clk_adc => if (config.adc) |adc_config| adc_config.output_freq else null,
+            .clk_rtc => if (config.rtc) |rtc_config| rtc_config.output_freq else null,
             .pll_sys => if (config.pll_sys) |pll_sys_config| pll_sys_config.frequency() else null,
             .pll_usb => if (config.pll_usb) |pll_usb_config| pll_usb_config.frequency() else null,
-            else => null,
+
+            .src_gpin0, .src_gpin1 => null,
         };
     }
 
@@ -462,7 +466,7 @@ pub const GlobalConfiguration = struct {
             }
 
             break :adc_config .{
-                .generator = .usb,
+                .generator = .adc,
                 .input = .{
                     .source = .pll_usb,
                     .freq = 48_000_000,
@@ -493,7 +497,7 @@ pub const GlobalConfiguration = struct {
             }
 
             break :rtc_config .{
-                .generator = .usb,
+                .generator = .rtc,
                 .input = .{
                     .source = .pll_usb,
                     .freq = 48_000_000,
