@@ -105,7 +105,9 @@ pub const InputMask = InputMask: {
 
 /// Initialize ADC hardware
 pub fn init() void {
+    std.log.info("init.a", .{});
     resets.reset(&.{.adc});
+    std.log.info("init.b", .{});
     ADC.CS.write(.{
         .EN = 1,
         .TS_EN = 0,
@@ -117,8 +119,9 @@ pub fn init() void {
         .AINSEL = 0,
         .RROBIN = 0,
     });
-
+    std.log.info("init.c", .{});
     while (ADC.CS.read().READY == 0) {}
+    std.log.info("init.d", .{});
 }
 
 /// Enable/disable ADC interrupt

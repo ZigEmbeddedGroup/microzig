@@ -8,7 +8,8 @@ pub const Config = struct {};
 
 fn getRegs(comptime slice: u32) *volatile Regs {
     @import("std").debug.assert(slice < 8);
-    return @intToPtr(*volatile Regs, regs.PWM.base_address); // + (slice * 0x14));
+    const reg_diff = comptime (@ptrToInt(regs.PWM.CH1_CSR) - @ptrToInt(regs.PWM.CH0_CSR));
+    return @intToPtr(*volatile Regs, regs.PWM.base_address + reg_diff * slice);
 }
 
 pub fn PWM(comptime slice_num: u32, comptime chan: Channel) type {
@@ -72,7 +73,7 @@ const Regs = extern struct {
 pub inline fn setSlicePhaseCorrect(comptime slice: u32, phase_correct: bool) void {
     log.debug("PWM{} set phase correct: {}", .{ slice, phase_correct });
     getRegs(slice).csr.modify(.{
-        .PH_CORRECT = if (phase_correct) 1 else 0,
+        .PH_CORRECT = @boolToInt(phase_correct),
     });
 }
 
@@ -98,10 +99,10 @@ pub inline fn setChannelInversion(
 ) void {
     switch (channel) {
         .a => getRegs(slice).csr.modify(.{
-            .A_INV = if (invert) 1 else 0,
+            .A_INV = @boolToInt(invert),
         }),
         .b => getRegs(slice).csr.modifi(.{
-            .B_INV = if (invert) 1 else 0,
+            .B_INV = @boolToInt(invert),
         }),
     }
 }

@@ -40,8 +40,32 @@ pub inline fn reset(comptime modules: []const Module) void {
         @field(mask, @tagName(module)) = 1;
 
     const raw_mask = @bitCast(u32, mask);
-    regs.RESETS.RESET.raw = raw_mask;
-    regs.RESETS.RESET.raw = 0;
 
-    while (regs.RESETS.RESET_DONE.raw & raw_mask != raw_mask) {}
+    // std.log.info("resets done before: {X:0>8} ", .{regs.RESETS.RESET_DONE.raw});
+
+    // std.log.info("reset on", .{});
+    regs.RESETS.RESET.raw = raw_mask;
+    // std.log.info("=> {X:0>8}\n", .{regs.RESETS.RESET.raw});
+    // std.log.info("reset off", .{});
+    asm volatile ("nop" ::: "memory"); // delay at least a bit
+    regs.RESETS.RESET.raw = 0;
+    // std.log.info("=> {X:0>8}\n", .{regs.RESETS.RESET.raw});
+
+    // std.log.info("reset wait", .{});
+
+    var last: u32 = 0;
+    while (true) {
+        const raw = regs.RESETS.RESET_DONE.raw;
+        if (last != raw) {
+            // std.log.info("raw: {X:0>8} {X:0>8}", .{ raw, raw & raw_mask });
+            last = raw;
+        }
+        if ((raw & raw_mask) == raw_mask)
+            break;
+        asm volatile ("" ::: "memory");
+    }
+
+    // std.log.info("resets done after: {X:0>8}", .{regs.RESETS.RESET_DONE.raw});
+
+    // std.log.info("reset done", .{});
 }
