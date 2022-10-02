@@ -7,7 +7,7 @@ const assert = std.debug.assert;
 const log = std.log.scoped(.gpio);
 
 pub const Function = enum(u5) {
-    xip,
+    xip = 0,
     spi,
     uart,
     i2c,

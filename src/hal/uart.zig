@@ -28,8 +28,8 @@ pub const Parity = enum {
 
 pub const Config = struct {
     clock_config: clocks.GlobalConfiguration,
-    tx_pin: u32,
-    rx_pin: u32,
+    tx_pin: ?u32 = null,
+    rx_pin: ?u32 = null,
     baud_rate: u32,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
@@ -116,8 +116,8 @@ pub const UART = enum {
         });
 
         // TODO comptime assertions
-        gpio.setFunction(config.tx_pin, .uart);
-        gpio.setFunction(config.rx_pin, .uart);
+        if (config.tx_pin) |tx_pin| gpio.setFunction(tx_pin, .uart);
+        if (config.rx_pin) |rx_pin| gpio.setFunction(rx_pin, .uart);
 
         return uart;
     }
