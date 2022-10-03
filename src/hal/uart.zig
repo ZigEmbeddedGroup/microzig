@@ -75,9 +75,15 @@ pub const UART = enum {
     uart1,
 
     const WriteError = error{};
+    const ReadError = error{};
     pub const Writer = std.io.Writer(UART, WriteError, write);
+    pub const Reader = std.io.Reader(UART, ReadError, read);
 
     pub fn writer(uart: UART) Writer {
+        return .{ .context = uart };
+    }
+
+    pub fn reader(uart: UART) Reader {
         return .{ .context = uart };
     }
 
@@ -140,6 +146,15 @@ pub const UART = enum {
         }
 
         return payload.len;
+    }
+
+    pub fn read(uart: UART, buffer: []u8) ReadError!usize {
+        const uart_regs = uart.getRegs();
+        for (buffer) |*byte| {
+            while (!uart.isReadable()) {}
+            byte.* = @truncate(u8, uart_regs.dr);
+        }
+        return buffer.len;
     }
 
     pub fn readWord(uart: UART) u8 {
