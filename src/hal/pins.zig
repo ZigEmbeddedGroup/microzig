@@ -46,7 +46,7 @@ pub const Pin = enum {
         function: Function = .SIO,
         direction: ?gpio.Direction = null,
         drive_strength: ?gpio.DriveStrength = null,
-        pull: ?enum { up, down } = null,
+        pull: ?gpio.PullUpDown = null,
         slew_rate: ?gpio.SlewRate = null,
         // input/output enable
         // schmitt trigger
@@ -516,15 +516,12 @@ pub const GlobalConfiguration = struct {
         if (input_gpios != 0) {
             inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
                 if (@field(config, field.name)) |pin_config| {
+                    const gpio_num = @enumToInt(@field(Pin, field.name));
                     const pull = pin_config.pull orelse continue;
                     if (comptime pin_config.getDirection() != .in)
                         @compileError("Only input pins can have pull up/down enabled");
 
-                    const gpio_regs = @field(regs.PADS_BANK0, field.name);
-                    gpio_regs.modify(comptime .{
-                        .PUE = @boolToInt(pull == .up),
-                        .PDE = @boolToInt(pull == .down),
-                    });
+                    gpio.setPullUpDown(gpio_num, pull);
                 };
         }
 

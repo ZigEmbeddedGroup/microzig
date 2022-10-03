@@ -75,6 +75,23 @@ pub inline fn deinit(comptime gpio: u32) void {
     setFunction(gpio, .@"null");
 }
 
+pub const PullUpDown = enum {
+    up,
+    down,
+};
+
+pub inline fn setPullUpDown(comptime gpio: u32, mode: ?PullUpDown) void {
+    const gpio_name = comptime std.fmt.comptimePrint("GPIO{d}", .{gpio});
+    const gpio_regs = @field(regs.PADS_BANK0, gpio_name);
+
+    if (mode == null) {
+        gpio_regs.modify(.{ .PUE = 0, .PDE = 0 });
+    } else switch (mode.?) {
+        .up => gpio_regs.modify(.{ .PUE = 1, .PDE = 0 }),
+        .down => gpio_regs.modify(.{ .PUE = 0, .PDE = 1 }),
+    }
+}
+
 pub inline fn setDir(comptime gpio: u32, direction: Direction) void {
     const mask = 1 << gpio;
     switch (direction) {
