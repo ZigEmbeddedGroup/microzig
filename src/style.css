@@ -207,3 +207,7 @@ h2 svg {
     max-width: 1.1em;
     margin-right: 0.25em;
 }
+
+#intro-nav a {
+    text-decoration: none;
+}
