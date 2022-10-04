@@ -1,6 +1,10 @@
 name: Render Website
 
-on: [push]
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
 
 jobs:
   build:
@@ -9,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          submodules: "recursive"
+          submodules: 'recursive'
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v1
