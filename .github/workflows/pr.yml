@@ -19,8 +19,19 @@ jobs:
       - name: Deploy preview with SCP
         uses: noobly314/deploy-with-scp@v1
         with:
-          src: render
-          dest: 'zeg-pr/${{ github.event.number }}'
+          src: render/*
+          dest: 'zeg-pr/${{ github.event.number }}/'
           username: generic-ci
           server-ip: random-projects.net
           ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
+  write_comment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mshick/add-pr-comment@v1
+        with:
+          message: |
+            Heya!
+            You can check out a preview of your PR at [staging.microzig.tech/pulls/${{ github.event.number }}](https://staging.microzig.tech/pulls/${{ github.event.number }}/)!
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: 'github-actions[bot]' # The user.login for temporary GitHub tokens
+          allow-repeats: false # This is the default
