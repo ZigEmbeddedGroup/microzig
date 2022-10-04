@@ -191,3 +191,11 @@ img.inline {
     max-width: 1.2em;
     vertical-align: middle;
 }
+
+h2 svg {
+    display: inline;
+    max-height: 1.1em;
+    vertical-align: middle;
+    max-width: 1.1em;
+    margin-right: 0.25em;
+}
