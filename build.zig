@@ -5,15 +5,15 @@ const pkgs = struct {
         .name = "koino",
         .source = .{ .path = "./deps/koino/src/koino.zig" },
         .dependencies = &[_]std.build.Pkg{
-            std.build.Pkg{ .name = "libpcre", .source = .{ .path = "deps/koino/vendor/libpcre.zig/src/main.zig" } },
-            std.build.Pkg{ .name = "htmlentities", .source = .{ .path = "deps/koino/vendor/htmlentities.zig/src/main.zig" } },
+            std.build.Pkg{ .name = "libpcre", .source = .{ .path = "deps/koino/vendor/libpcre/src/main.zig" } },
+            std.build.Pkg{ .name = "htmlentities", .source = .{ .path = "deps/koino/vendor/htmlentities/src/main.zig" } },
             std.build.Pkg{ .name = "clap", .source = .{ .path = "deps/koino/vendor/zig-clap/clap.zig" } },
             std.build.Pkg{ .name = "zunicode", .source = .{ .path = "deps/koino/vendor/zunicode/src/zunicode.zig" } },
         },
     };
 };
 
-const linkPcre = @import("deps/koino/vendor/libpcre.zig/build.zig").linkPcre;
+const linkPcre = @import("deps/koino/vendor/libpcre/build.zig").linkPcre;
 
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
@@ -24,6 +24,7 @@ pub fn build(b: *std.build.Builder) !void {
     render_website.setBuildMode(mode);
     try linkPcre(render_website);
     render_website.addPackage(pkgs.koino);
+    render_website.install();
 
     const gen_cmd = render_website.run();
 

@@ -80,7 +80,7 @@ pub fn main() anyerror!void {
 
         // img articles
         {
-            var dir = try root_dir.openDir("img", .{ .iterate = true });
+            var dir = try root_dir.openIterableDir("img", .{});
             defer dir.close();
 
             var iter = dir.iterate();
@@ -103,7 +103,7 @@ pub fn main() anyerror!void {
 
         // gather articles
         {
-            var dir = try root_dir.openDir("articles", .{ .iterate = true });
+            var dir = try root_dir.openIterableDir("articles", .{});
             defer dir.close();
 
             var iter = dir.iterate();
@@ -143,9 +143,24 @@ pub fn main() anyerror!void {
         var root_dir = try std.fs.cwd().makeOpenPath("render", .{});
         defer root_dir.close();
 
-        try root_dir.writeFile("style.css", @embedFile("style.css"));
+        try std.fs.Dir.copyFile(
+            std.fs.cwd(),
+            "src/style.css",
+            root_dir,
+            "style.css",
+            .{},
+        );
+
+        try std.fs.Dir.copyFile(
+            std.fs.cwd(),
+            "website/favicon.ico",
+            root_dir,
+            "favicon.ico",
+            .{},
+        );
 
         try website.renderHtmlFile("website/index.htm", root_dir, "index.htm");
+        try website.renderHtmlFile("website/getting-started.htm", root_dir, "getting-started.htm");
 
         try website.renderArticleIndex(root_dir, "articles.htm");
 
