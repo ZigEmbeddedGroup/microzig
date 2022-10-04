@@ -184,3 +184,10 @@ a[href^="https://"]::after {
     background-size: contain;
     display: inline-block;
 }
+
+img.inline {
+    display: inline;
+    max-height: 1.2em;
+    max-width: 1.2em;
+    vertical-align: middle;
+}
