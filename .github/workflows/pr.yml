@@ -17,13 +17,14 @@ jobs:
         run: |
           zig build gen
       - name: Deploy preview with SCP
-        uses: noobly314/deploy-with-scp@v1
+        uses: horochx/deploy-via-scp@1.1.0
         with:
-          src: render/*
-          dest: 'zeg-pr/${{ github.event.number }}/'
-          username: generic-ci
-          server-ip: random-projects.net
-          ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
+          local: render/*
+          remote: 'zeg-pr/${{ github.event.number }}/'
+          ensureRemote: true
+          user: generic-ci
+          host: random-projects.net
+          key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
   write_comment:
     runs-on: ubuntu-latest
     steps:
