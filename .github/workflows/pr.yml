@@ -5,26 +5,22 @@ on: [pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: test
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+      - name: Render website
         run: |
-          jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH"
-      # - uses: actions/checkout@v2
-      #   with:
-      #     submodules: "recursive"
-      # - name: Setup Zig
-      #   uses: goto-bus-stop/setup-zig@v1
-      #   with:
-      #     version: master
-      #- name: Render website
-      #  run: |
-      #    zig build gen
-      # - name: Deploy preview with SCP
-      #   uses: noobly314/deploy-with-scp@v1
-      #   with:
-      #     src: render/*
-      #     dest: zeg/
-      #     username: generic-ci
-      #     server-ip: random-projects.net
-      #     ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
+          zig build gen
+      - name: Deploy preview with SCP
+        uses: noobly314/deploy-with-scp@v1
+        with:
+          src: render
+          dest: 'zeg-pr/${{ github.event.number }}'
+          username: generic-ci
+          server-ip: random-projects.net
+          ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
