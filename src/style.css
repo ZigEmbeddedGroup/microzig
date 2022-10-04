@@ -131,12 +131,20 @@ strong a {
 }
 
 @media only screen and (max-width: 1200px) {
+    #intro {
+        padding: 50px;
+    }
+
     #intro-grid {
         grid-template-columns: 1fr 1fr
     }
 }
 
 @media only screen and (max-width: 700px) {
+    #intro {
+        padding: 20px;
+    }
+
     #intro-grid {
         display: block
     }
