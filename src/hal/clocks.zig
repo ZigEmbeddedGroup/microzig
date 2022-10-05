@@ -82,7 +82,7 @@ pub const Generator = enum(u32) {
     }
 
     const generators = @intToPtr(
-        *volatile [10]GeneratorRegs,
+        *volatile [@typeInfo(Generator).Enum.fields.len]GeneratorRegs,
         regs.CLOCKS.base_address,
     );
 

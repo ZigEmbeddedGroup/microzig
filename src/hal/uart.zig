@@ -226,6 +226,7 @@ var uart_logger: ?UART.Writer = null;
 
 pub fn initLogger(uart: UART) void {
     uart_logger = uart.writer();
+    uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
 
 pub fn log(
@@ -247,4 +248,17 @@ pub fn log(
 
         uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
+}
+
+pub fn panic(
+    message: []const u8,
+    _: ?*std.builtin.StackTrace,
+    _: ?usize,
+) noreturn {
+    if (uart_logger) |writer| {
+        writer.print("PANIC: {s}\r\n", .{message}) catch {};
+    }
+
+    @breakpoint();
+    while (true) {}
 }
