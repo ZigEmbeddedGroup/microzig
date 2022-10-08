@@ -200,3 +200,36 @@ export fn microzig_main() noreturn {
     // main returned, just hang around here a bit
     hang();
 }
+
+/// Contains references to the microzig .data and .bss sections, also
+/// contains the initial load address for .data if it is in flash.
+pub const sections = struct {
+    extern var microzig_data_start: anyopaque;
+    extern var microzig_data_end: anyopaque;
+    extern var microzig_bss_start: anyopaque;
+    extern var microzig_bss_end: anyopaque;
+    extern const microzig_data_load_start: anyopaque;
+};
+
+pub fn initializeSystemMemories() void {
+    @setCold(true);
+
+    // fill .bss with zeroes
+    {
+        const bss_start = @ptrCast([*]u8, &sections.microzig_bss_start);
+        const bss_end = @ptrCast([*]u8, &sections.microzig_bss_end);
+        const bss_len = @ptrToInt(bss_end) - @ptrToInt(bss_start);
+
+        std.mem.set(u8, bss_start[0..bss_len], 0);
+    }
+
+    // load .data from flash
+    {
+        const data_start = @ptrCast([*]u8, &sections.microzig_data_start);
+        const data_end = @ptrCast([*]u8, &sections.microzig_data_end);
+        const data_len = @ptrToInt(data_end) - @ptrToInt(data_start);
+        const data_src = @ptrCast([*]const u8, &sections.microzig_data_load_start);
+
+        std.mem.copy(u8, data_start[0..data_len], data_src[0..data_len]);
+    }
+}
