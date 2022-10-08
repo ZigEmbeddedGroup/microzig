@@ -1,6 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+pub const registers = @import("registers.zig").registers;
+
 pub const startup_logic = struct {
     comptime {
         // See this:
@@ -14,8 +16,6 @@ pub const startup_logic = struct {
         // access). The bootloader then jumps to address 0x42000008, i.e. to the
         // instruction at offset 8 in flash, immediately after the magic numbers.
 
-        asm (std.fmt.comptimePrint(".equ MICROZIG_INITIAL_STACK, {}", .{microzig.config.end_of_stack}));
-
         asm (
             \\.extern _start
             \\.section microzig_flash_start
@@ -27,14 +27,14 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    export fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
-        asm volatile (
-            \\li sp, MICROZIG_INITIAL_STACK
-            \\lui  a0, %%hi(_rv32_trap)
-            \\addi a0, a0, %%lo(_rv32_trap)
-            \\sw t0, 0x305(zero)
+    export fn _start() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+        microzig.cpu.cli();
+        asm volatile ("mv sp, %[eos]"
+            :
+            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
-
+        asm volatile ("la gp, __global_pointer$");
+        microzig.cpu.setStatusBit(.mtvec, microzig.config.end_of_stack);
         microzig.initializeSystemMemories();
         microzig_main();
     }
@@ -42,4 +42,28 @@ pub const startup_logic = struct {
     export fn _rv32_trap() callconv(.C) noreturn {
         while (true) {}
     }
+
+    const vector_table = [_]fn () callconv(.C) noreturn{
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+        _rv32_trap,
+    };
 };

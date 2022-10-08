@@ -34,7 +34,7 @@ pub fn build(b: *std.build.Builder) void {
         "esp-bringup",
         "src/example/blinky.zig",
         .{ .chip = esp32_c3 },
-        .{},
+        .{ .hal_package_path = .{ .path = "src/hal/root.zig" } },
     );
     exe.setBuildMode(mode);
     exe.install();

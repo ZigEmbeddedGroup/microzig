@@ -1,29 +1,52 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+const dogfood: u32 = 0x50D83AA1;
+const super_dogfood: u32 = 0x8F1D312A;
+
 pub fn main() !void {
-    // const led_r_mux = @ptrToInt(*volatile u32, IO_MUX_BASE + IO_MUX_GPIOn_REG(LED_R_PIN));
-    // const led_g_mux = @ptrToInt(*volatile u32, IO_MUX_BASE + IO_MUX_GPIOn_REG(LED_G_PIN));
-    // const led_b_mux = @ptrToInt(*volatile u32, IO_MUX_BASE + IO_MUX_GPIOn_REG(LED_B_PIN));
+    microzig.chip.registers.TIMG0.WDTWPROTECT.raw = dogfood;
+    microzig.chip.registers.TIMG0.WDTCONFIG0.raw = 0;
+    microzig.chip.registers.TIMG0.WDTWPROTECT.raw = 0;
 
-    // led_r_mux.* = 0x80;
+    microzig.chip.registers.RTC_CNTL.WDTWPROTECT.raw = dogfood;
+    microzig.chip.registers.RTC_CNTL.WDTCONFIG0.raw = 0;
+    microzig.chip.registers.RTC_CNTL.WDTWPROTECT.raw = 0;
 
-    const gpio_out = @intToPtr(*volatile u32, GPIO_BASE + GPIO_OUT_REG);
-    const gpio_ena = @intToPtr(*volatile u32, GPIO_BASE + GPIO_ENABLE_REG);
-    gpio_ena.* = (1 << LED_R_PIN) | (1 << LED_G_PIN) | (1 << LED_B_PIN);
-    gpio_out.* = (1 << LED_R_PIN) | (1 << LED_G_PIN) | (1 << LED_B_PIN);
+    microzig.chip.registers.RTC_CNTL.SWD_WPROTECT.raw = super_dogfood;
+    microzig.chip.registers.RTC_CNTL.SWD_CONF.modify(.{ .SWD_DISABLE = 1 });
+    microzig.chip.registers.RTC_CNTL.SWD_WPROTECT.raw = 0;
+
+    microzig.chip.registers.INTERRUPT_CORE0.CPU_INT_ENABLE.* = 0;
+
+    microzig.hal.gpio.init(LED_R_PIN, .{
+        .direction = .output,
+        .direct_io = true,
+    });
+    microzig.hal.gpio.init(LED_G_PIN, .{
+        .direction = .output,
+        .direct_io = true,
+    });
+    microzig.hal.gpio.init(LED_B_PIN, .{
+        .direction = .output,
+        .direct_io = true,
+    });
+
+    microzig.hal.uart.write(0, "Hello from Zig!\r\n");
+
+    while (true) {
+        microzig.chip.registers.GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_R_PIN) });
+        microzig.hal.uart.write(0, "R");
+        microzig.debug.busySleep(1_000_000);
+        microzig.chip.registers.GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_G_PIN) });
+        microzig.hal.uart.write(0, "G");
+        microzig.debug.busySleep(1_000_000);
+        microzig.chip.registers.GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_B_PIN) });
+        microzig.hal.uart.write(0, "B");
+        microzig.debug.busySleep(1_000_000);
+    }
 }
 
-const GPIO_BASE = 0x6000_4000;
-const IO_MUX_BASE = 0x6000_9000;
-
-const GPIO_OUT_REG = 0x0004;
-const GPIO_ENABLE_REG = 0x0020;
-
-fn GPIO_FUNCn_OUT_SEL_CFG_REG(comptime n: comptime_int) comptime_int {
-    return 0x0554 + 4 * n;
-}
-
-const LED_R_PIN = 3;
-const LED_G_PIN = 4;
-const LED_B_PIN = 5;
+const LED_R_PIN = 3; // GPIO
+const LED_G_PIN = 16; // GPIO
+const LED_B_PIN = 17; // GPIO
