@@ -17,6 +17,10 @@ pub const clock = struct {
     };
 };
 
+pub const clock_frequencies = .{
+    .cpu = 16_000_000,
+};
+
 pub fn parsePin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
@@ -106,7 +110,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             const pclk = micro.clock.get().cpu;
             const divider = ((pclk + (8 * baud_rate)) / (16 * baud_rate)) - 1;
 
-            return std.math.cast(u12, divider) catch return error.UnsupportedBaudRate;
+            return std.math.cast(u12, divider) orelse return error.UnsupportedBaudRate;
         }
 
         fn computeBaudRate(divider: u12) u32 {
