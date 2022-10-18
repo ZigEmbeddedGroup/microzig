@@ -4,6 +4,7 @@ const micro = @import("microzig");
 const led_pin = if (micro.config.has_board)
     switch (micro.config.board_name) {
         .@"Arduino Nano" => micro.Pin("D13"),
+        .@"Arduino Uno" => micro.Pin("D13"),
         .@"mbed LPC1768" => micro.Pin("LED-1"),
         .@"STM32F3DISCOVERY" => micro.Pin("LD3"),
         .@"STM32F4DISCOVERY" => micro.Pin("LD5"),

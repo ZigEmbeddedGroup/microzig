@@ -14,6 +14,12 @@ pub const arduino_nano = Board{
     .chip = chips.atmega328p,
 };
 
+pub const arduino_uno = Board{
+    .name = "Arduino Uno",
+    .path = root_path ++ "boards/arduino-uno/arduino-uno.zig",
+    .chip = chips.atmega328p,
+};
+
 pub const mbed_lpc1768 = Board{
     .name = "mbed LPC1768",
     .path = root_path ++ "boards/mbed-lpc1768/mbed-lpc1768.zig",

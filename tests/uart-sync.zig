@@ -23,6 +23,11 @@ const cfg = if (micro.config.has_board)
             .uart_idx = 1,
             .pins = .{ .tx = null, .rx = null },
         },
+        .@"Arduino Uno" => .{
+            .led_pin = micro.Pin("D13"),
+            .uart_idx = 0,
+            .pins = .{},
+        },
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
