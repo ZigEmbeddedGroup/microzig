@@ -5,7 +5,7 @@ pub const clock_frequencies = .{
 };
 
 pub const pin_map = .{
-    // Port A
+    // Port D
     .D0 = "PD0",
     .D1 = "PD1",
     .D2 = "PD2",
@@ -20,6 +20,7 @@ pub const pin_map = .{
     .D10 = "PB2",
     .D11 = "PB3",
     .D12 = "PB4",
+    // LED_BUILTIN
     .D13 = "PB5",
     // Port C (Analog)
     .A0 = "PC0",
