@@ -106,7 +106,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             const pclk = micro.clock.get().cpu;
             const divider = ((pclk + (8 * baud_rate)) / (16 * baud_rate)) - 1;
 
-            return std.math.cast(u12, divider) catch return error.UnsupportedBaudRate;
+            return std.math.cast(u12, divider) orelse return error.UnsupportedBaudRate;
         }
 
         fn computeBaudRate(divider: u12) u32 {
