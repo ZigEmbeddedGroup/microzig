@@ -50,7 +50,7 @@ pub fn build(b: *std.build.Builder) !void {
         // .chip = microzig.chips.atmega328p,
     };
 
-    const exe = try microzig.addEmbeddedExecutable(
+    var exe = microzig.addEmbeddedExecutable(
         b,
         "my-executable",
         "src/main.zig",
