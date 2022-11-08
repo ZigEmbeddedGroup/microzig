@@ -528,8 +528,11 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
     const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
     const tools_node = xml.findNode(root_element, "avr-tools-device-file") orelse return error.NoToolsNode;
 
-    var peripheral_instances = std.StringHashMap(void).init(allocator);
-    defer peripheral_instances.deinit();
+    var register_groups = std.StringHashMap(struct {
+        reg_range: IndexRange(RegisterIndex),
+        description: ?[]const u8,
+    }).init(allocator);
+    defer register_groups.deinit();
 
     var db = Database{
         .gpa = allocator,
@@ -538,6 +541,121 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
         .device = null,
     };
     errdefer db.deinit();
+
+    if (xml.findNode(tools_node.children orelse return error.NoChildren, "modules")) |modules_node| {
+        std.log.debug("looking at modules", .{});
+        var module_it: ?*xml.Node = xml.findNode(modules_node.children.?, "module");
+        while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
+            const module_nodes: *xml.Node = module_it.?.children orelse continue;
+
+            // value groups are enums
+            var value_groups = std.StringHashMap(IndexRange(u32)).init(allocator);
+            defer value_groups.deinit();
+
+            var value_group_it: ?*xml.Node = xml.findNode(module_nodes, "value-group");
+            while (value_group_it != null) : (value_group_it = xml.findNode(value_group_it.?.next, "value-group")) {
+                const value_group_nodes: *xml.Node = value_group_it.?.children orelse continue;
+                const value_group_name = if (xml.getAttribute(value_group_it, "name")) |name|
+                    try db.arena.allocator().dupe(u8, name)
+                else
+                    continue;
+
+                const first_enum_idx = @intCast(EnumIndex, db.enumerations.items.len);
+                var value_it: ?*xml.Node = xml.findNode(value_group_nodes, "value");
+                while (value_it != null) : (value_it = xml.findNode(value_it.?.next, "value")) {
+                    try db.enumerations.append(db.gpa, .{
+                        .value = if (xml.getAttribute(value_it, "value")) |value_str|
+                            try std.fmt.parseInt(usize, value_str, 0)
+                        else
+                            continue,
+                        .description = if (xml.getAttribute(value_it, "caption")) |caption|
+                            try db.arena.allocator().dupe(u8, caption)
+                        else
+                            null,
+                    });
+                }
+
+                std.sort.sort(Enumeration, db.enumerations.items[first_enum_idx..], {}, Enumeration.lessThan);
+                try value_groups.put(value_group_name, .{
+                    .begin = first_enum_idx,
+                    .end = @intCast(EnumIndex, db.enumerations.items.len),
+                });
+            }
+
+            // register groups in this part of the ATDF are templates for
+            // peripherals. In `devices` peripherals are instantiated using a
+            // register group.
+            //
+            // TODO: determine if peripheral instantiation can contain multiple
+            // register groups
+            var register_group_it: ?*xml.Node = xml.findNode(module_nodes, "register-group");
+            while (register_group_it != null) : (register_group_it = xml.findNode(register_group_it.?.next, "register-group")) {
+                const register_group_nodes: *xml.Node = register_group_it.?.children orelse continue;
+                const group_name = xml.getAttribute(register_group_it, "name") orelse continue;
+                if (register_groups.contains(group_name)) {
+                    std.log.warn("register name collision: {s}", .{group_name});
+                    continue;
+                }
+
+                const reg_begin_idx = @intCast(RegisterIndex, db.registers.items.len);
+                var register_it: ?*xml.Node = xml.findNode(register_group_nodes, "register");
+                while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
+                    const register = try atdf.parseRegister(&db.arena, register_it.?, null, register_it.?.children != null);
+
+                    const register_idx = @intCast(RegisterIndex, db.registers.items.len);
+                    try db.registers.append(db.gpa, register);
+
+                    if (register.size) |size|
+                        try db.register_properties.register.size.put(db.gpa, register_idx, size);
+
+                    const register_nodes: *xml.Node = register_it.?.children orelse continue;
+                    const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
+                    var bitfield_it: ?*xml.Node = xml.findNode(register_nodes, "bitfield");
+                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
+                        try db.fields.append(db.gpa, atdf.parseField(&db.arena, bitfield_it.?) catch |err| switch (err) {
+                            error.InvalidMask => continue,
+                            else => return err,
+                        });
+                    }
+
+                    // we expect fields to be sorted by offset
+                    std.sort.sort(Field, db.fields.items[field_begin_idx..], {}, Field.lessThan);
+
+                    // go back through bitfields and get the enumerations
+                    bitfield_it = xml.findNode(register_nodes, "bitfield");
+                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
+                        if (xml.getAttribute(bitfield_it, "values")) |value_group_name| {
+                            const field_name = xml.getAttribute(bitfield_it, "name") orelse continue;
+                            const field_idx = for (db.fields.items[field_begin_idx..]) |field, offset| {
+                                if (std.mem.eql(u8, field_name, field.name))
+                                    break field_begin_idx + @intCast(FieldIndex, offset);
+                            } else continue;
+
+                            if (value_groups.get(value_group_name)) |enum_range|
+                                try db.enumerations_in_fields.put(db.gpa, field_idx, enum_range);
+                        }
+                    }
+
+                    try db.fields_in_registers.put(db.gpa, register_idx, .{
+                        .begin = field_begin_idx,
+                        .end = @intCast(FieldIndex, db.fields.items.len),
+                    });
+                }
+
+                std.log.debug("found register group: {s}", .{group_name});
+                try register_groups.put(try db.arena.allocator().dupe(u8, group_name), .{
+                    .description = if (xml.getAttribute(register_group_it, "caption")) |caption|
+                        try db.arena.allocator().dupe(u8, caption)
+                    else
+                        null,
+                    .reg_range = .{
+                        .begin = reg_begin_idx,
+                        .end = @intCast(RegisterIndex, db.registers.items.len),
+                    },
+                });
+            }
+        }
+    }
 
     if (xml.findNode(tools_node.children orelse return error.NoChildren, "devices")) |devices_node| {
         var device_it: ?*xml.Node = xml.findNode(devices_node.children, "device");
@@ -591,22 +709,34 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                         const instance_nodes = instance_it.?.children orelse continue;
                         const instance_name = xml.getAttribute(instance_it, "name") orelse return error.NoInstanceName;
                         if (xml.findNode(instance_nodes, "register-group")) |register_group| {
-                            const group_name = xml.getAttribute(register_group, "name") orelse return error.NoRegisterGroupName;
                             const name_in_module = xml.getAttribute(register_group, "name-in-module") orelse return error.NoNameInModule;
-
-                            if (!std.mem.eql(u8, instance_name, group_name) or !std.mem.eql(u8, group_name, name_in_module)) {
-                                std.log.warn("mismatching names for name-in-module: {s}, ignoring, if you see this please cut a ticket: https://github.com/ZigEmbeddedGroup/regz", .{
+                            const template_group = register_groups.get(name_in_module) orelse {
+                                std.log.warn("failed to find register group '{s}' in for peripheral '{s}'", .{
                                     name_in_module,
+                                    instance_name,
                                 });
                                 continue;
-                            }
+                            };
 
-                            try peripheral_instances.put(try db.arena.allocator().dupe(u8, name_in_module), {});
+                            std.log.debug("creating peripheral instance: {s}", .{instance_name});
+                            const peripheral_idx = @intCast(PeripheralIndex, db.peripherals.items.len);
+                            try db.peripherals.append(db.gpa, .{
+                                .name = try db.arena.allocator().dupe(u8, instance_name),
+                                .version = null,
+                                .description = template_group.description,
+                                .base_addr = if (xml.getAttribute(register_group, "offset")) |reg_offset_str|
+                                    try std.fmt.parseInt(usize, reg_offset_str, 0)
+                                else
+                                    return error.NoOffset,
+                            });
+
+                            try db.registers_in_peripherals.put(db.gpa, peripheral_idx, template_group.reg_range);
                         }
                     }
                 }
             }
 
+            // TODO: `module-instance` is used to relate an interrupt to a peripheral
             if (xml.findNode(device_nodes, "interrupts")) |interrupts_node| {
                 var interrupt_it: ?*xml.Node = xml.findNode(interrupts_node.children.?, "interrupt");
                 while (interrupt_it != null) : (interrupt_it = xml.findNode(interrupt_it.?.next, "interrupt")) {
@@ -618,7 +748,7 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                         .description = if (xml.getAttribute(interrupt_it, "caption")) |caption|
                             try db.arena.allocator().dupe(u8, caption)
                         else
-                            return error.NoCaption,
+                            null,
                         .value = if (xml.getAttribute(interrupt_it, "index")) |index_str|
                             try std.fmt.parseInt(usize, index_str, 0)
                         else
@@ -631,109 +761,6 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                         std.sort.sort(svd.Interrupt, db.interrupts.items, {}, svd.Interrupt.lessThan);
                     }
                 }
-            }
-        }
-    }
-
-    if (xml.findNode(tools_node.children orelse return error.NoChildren, "modules")) |modules_node| {
-        var module_it: ?*xml.Node = xml.findNode(modules_node.children.?, "module");
-        while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
-            const module_nodes: *xml.Node = module_it.?.children orelse continue;
-
-            var value_groups = std.StringHashMap(IndexRange(u32)).init(allocator);
-            defer value_groups.deinit();
-
-            var value_group_it: ?*xml.Node = xml.findNode(module_nodes, "value-group");
-            while (value_group_it != null) : (value_group_it = xml.findNode(value_group_it.?.next, "value-group")) {
-                const value_group_nodes: *xml.Node = value_group_it.?.children orelse continue;
-                const value_group_name = if (xml.getAttribute(value_group_it, "name")) |name|
-                    try db.arena.allocator().dupe(u8, name)
-                else
-                    continue;
-
-                const first_enum_idx = @intCast(EnumIndex, db.enumerations.items.len);
-                var value_it: ?*xml.Node = xml.findNode(value_group_nodes, "value");
-                while (value_it != null) : (value_it = xml.findNode(value_it.?.next, "value")) {
-                    try db.enumerations.append(db.gpa, .{
-                        .value = if (xml.getAttribute(value_it, "value")) |value_str|
-                            try std.fmt.parseInt(usize, value_str, 0)
-                        else
-                            continue,
-                        .description = if (xml.getAttribute(value_it, "caption")) |caption|
-                            try db.arena.allocator().dupe(u8, caption)
-                        else
-                            null,
-                    });
-                }
-
-                std.sort.sort(Enumeration, db.enumerations.items[first_enum_idx..], {}, Enumeration.lessThan);
-                try value_groups.put(value_group_name, .{
-                    .begin = first_enum_idx,
-                    .end = @intCast(EnumIndex, db.enumerations.items.len),
-                });
-            }
-
-            var register_group_it: ?*xml.Node = xml.findNode(module_nodes, "register-group");
-            while (register_group_it != null) : (register_group_it = xml.findNode(register_group_it.?.next, "register-group")) {
-                const register_group_nodes: *xml.Node = register_group_it.?.children orelse continue;
-                const group_name = xml.getAttribute(register_group_it, "name") orelse continue;
-                if (!peripheral_instances.contains(group_name))
-                    continue;
-
-                const register_group_offset = try xml.parseIntForKey(usize, db.gpa, register_group_nodes, "offset");
-
-                const peripheral_idx = @intCast(PeripheralIndex, db.peripherals.items.len);
-                try db.peripherals.append(db.gpa, try atdf.parsePeripheral(&db.arena, register_group_it.?));
-
-                const reg_begin_idx = @intCast(RegisterIndex, db.registers.items.len);
-                var register_it: ?*xml.Node = xml.findNode(register_group_nodes, "register");
-                while (register_it != null) : (register_it = xml.findNode(register_it.?.next, "register")) {
-                    const register = try atdf.parseRegister(&db.arena, register_it.?, register_group_offset, register_it.?.children != null);
-
-                    const register_idx = @intCast(RegisterIndex, db.registers.items.len);
-                    try db.registers.append(db.gpa, register);
-
-                    if (register.size) |size|
-                        try db.register_properties.register.size.put(db.gpa, register_idx, size);
-
-                    const register_nodes: *xml.Node = register_it.?.children orelse continue;
-                    const field_begin_idx = @intCast(FieldIndex, db.fields.items.len);
-                    var bitfield_it: ?*xml.Node = xml.findNode(register_nodes, "bitfield");
-                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
-                        try db.fields.append(db.gpa, atdf.parseField(&db.arena, bitfield_it.?) catch |err| switch (err) {
-                            error.InvalidMask => continue,
-                            else => return err,
-                        });
-                    }
-
-                    // we expect fields to be sorted by offset
-                    std.sort.sort(Field, db.fields.items[field_begin_idx..], {}, Field.lessThan);
-
-                    // go back through bitfields and get the enumerations
-                    bitfield_it = xml.findNode(register_nodes, "bitfield");
-                    while (bitfield_it != null) : (bitfield_it = xml.findNode(bitfield_it.?.next, "bitfield")) {
-                        if (xml.getAttribute(bitfield_it, "values")) |value_group_name| {
-                            const field_name = xml.getAttribute(bitfield_it, "name") orelse continue;
-                            const field_idx = for (db.fields.items[field_begin_idx..]) |field, offset| {
-                                if (std.mem.eql(u8, field_name, field.name))
-                                    break field_begin_idx + @intCast(FieldIndex, offset);
-                            } else continue;
-
-                            if (value_groups.get(value_group_name)) |enum_range|
-                                try db.enumerations_in_fields.put(db.gpa, field_idx, enum_range);
-                        }
-                    }
-
-                    try db.fields_in_registers.put(db.gpa, register_idx, .{
-                        .begin = field_begin_idx,
-                        .end = @intCast(FieldIndex, db.fields.items.len),
-                    });
-                }
-
-                try db.registers_in_peripherals.put(db.gpa, peripheral_idx, .{
-                    .begin = reg_begin_idx,
-                    .end = @intCast(RegisterIndex, db.registers.items.len),
-                });
             }
         }
     }
@@ -1223,14 +1250,6 @@ fn genZigFields(
 
         if (std.mem.indexOf(u8, field.name, "%s") != null)
             return error.MissingDimension;
-
-        if (expected_bit > field.offset) {
-            std.log.err("found overlapping fields in register:", .{});
-            for (fields) |f| {
-                std.log.err("  {s}: {}+{}", .{ f.name, f.offset, f.width });
-            }
-            return error.Explained;
-        }
 
         while (expected_bit < field.offset) : ({
             expected_bit += 1;

@@ -8,8 +8,6 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-pub const log_level: std.log.Level = .info;
-
 const svd_schema = @embedFile("cmsis-svd.xsd");
 
 const params = clap.parseParamsComptime(

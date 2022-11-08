@@ -14,10 +14,10 @@ steps:
           - "aarch64-linux-gnu"
           - "aarch64-linux-musl"
           - "aarch64-macos"
-          - "i386-linux-gnu"
-          - "i386-linux-musl"
+          - "x86-linux-gnu"
+          - "x86-linux-musl"
             # TODO: when _tls_index is fixed
-            #- "i386-windows"
+            #- "x86-windows"
           - "x86_64-linux-gnu"
           - "x86_64-linux-musl"
           - "x86_64-macos"

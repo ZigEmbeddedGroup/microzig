@@ -108,6 +108,19 @@ pub fn build(b: *std.build.Builder) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+    const ndjson = b.addExecutable("ndjson", "src/ndjson.zig");
+    ndjson.addPackagePath("xml", "src/xml.zig");
+    regz.xml.link(ndjson);
+
+    const ndjson_run = ndjson.run();
+    ndjson_run.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        ndjson_run.addArgs(args);
+    }
+
+    const ndjson_step = b.step("ndjson", "Run ndjson program");
+    ndjson_step.dependOn(&ndjson_run.step);
+
     const test_chip_file = regz.addGeneratedChipFile("tests/svd/cmsis-example.svd");
 
     const tests = b.addTest("tests/main.zig");

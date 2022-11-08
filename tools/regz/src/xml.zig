@@ -10,6 +10,7 @@ const Allocator = std.mem.Allocator;
 
 pub const Node = c.xmlNode;
 pub const Doc = c.xmlDoc;
+pub const Attr = c.xmlAttr;
 pub const readFile = c.xmlReadFile;
 pub const readIo = c.xmlReadIO;
 pub const cleanupParser = c.xmlCleanupParser;
