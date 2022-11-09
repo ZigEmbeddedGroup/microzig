@@ -3,7 +3,7 @@ const std = @import("std");
 const json = std.json;
 const assert = std.debug.assert;
 
-const xml = @import("xml");
+const xml = @import("xml.zig");
 
 const ContextMap = std.StringHashMap(std.StringHashMapUnmanaged([]const u8));
 
@@ -32,6 +32,8 @@ pub fn main() !void {
         return error.NoComponents;
 
     const doc = xml.readFile(path.ptr, null, 0) orelse return error.ReadXmlFile;
+    defer xml.freeDoc(doc);
+
     const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
     if (!std.mem.eql(u8, components.items[0], std.mem.span(root_element.name)))
         return;

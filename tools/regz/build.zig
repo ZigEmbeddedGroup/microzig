@@ -108,18 +108,23 @@ pub fn build(b: *std.build.Builder) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const ndjson = b.addExecutable("ndjson", "src/ndjson.zig");
-    ndjson.addPackagePath("xml", "src/xml.zig");
-    regz.xml.link(ndjson);
+    const contextualize_fields = b.addExecutable("contextualize-fields", "src/contextualize-fields.zig");
+    regz.xml.link(contextualize_fields);
 
-    const ndjson_run = ndjson.run();
-    ndjson_run.step.dependOn(b.getInstallStep());
+    const contextualize_fields_run = contextualize_fields.run();
     if (b.args) |args| {
-        ndjson_run.addArgs(args);
+        contextualize_fields_run.addArgs(args);
     }
 
-    const ndjson_step = b.step("ndjson", "Run ndjson program");
-    ndjson_step.dependOn(&ndjson_run.step);
+    const contextualize_fields_step = b.step("contextualize-fields", "Create ndjson of all the fields with the context of parent fields");
+    contextualize_fields_step.dependOn(&contextualize_fields_run.step);
+
+    const characterize = b.addExecutable("characterize", "src/characterize.zig");
+    regz.xml.link(characterize);
+
+    const characterize_run = characterize.run();
+    const characterize_step = b.step("characterize", "Characterize a number of xml files whose paths are piped into stdin, results are ndjson");
+    characterize_step.dependOn(&characterize_run.step);
 
     const test_chip_file = regz.addGeneratedChipFile("tests/svd/cmsis-example.svd");
 

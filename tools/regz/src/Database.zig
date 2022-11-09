@@ -543,7 +543,6 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
     errdefer db.deinit();
 
     if (xml.findNode(tools_node.children orelse return error.NoChildren, "modules")) |modules_node| {
-        std.log.debug("looking at modules", .{});
         var module_it: ?*xml.Node = xml.findNode(modules_node.children.?, "module");
         while (module_it != null) : (module_it = xml.findNode(module_it.?.next, "module")) {
             const module_nodes: *xml.Node = module_it.?.children orelse continue;
@@ -642,7 +641,6 @@ pub fn initFromAtdf(allocator: Allocator, doc: *xml.Doc) !Database {
                     });
                 }
 
-                std.log.debug("found register group: {s}", .{group_name});
                 try register_groups.put(try db.arena.allocator().dupe(u8, group_name), .{
                     .description = if (xml.getAttribute(register_group_it, "caption")) |caption|
                         try db.arena.allocator().dupe(u8, caption)
