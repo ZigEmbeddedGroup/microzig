@@ -48,6 +48,12 @@ pub const debug = @import("debug.zig");
 
 pub const mmio = @import("mmio.zig");
 
+// Allow app to override the os API layer
+pub const os = if (@hasDecl(app, "os"))
+    app.os
+else
+    struct {};
+
 // Allow app to override the panic handler
 pub const panic = if (@hasDecl(app, "panic"))
     app.panic
