@@ -211,6 +211,93 @@ pub const VectorTable = extern struct {
 };
 
 pub const registers = struct {
+    /// System Control Space
+    pub const SCS = struct {
+        pub const base_address = 0xe000e000;
+
+        /// System Tick Timer
+        pub const SysTick = struct {
+            /// address: 0xe000e010
+            /// SysTick Control and Status Register
+            pub const CTRL = @intToPtr(*volatile Mmio(32, packed struct {
+                ENABLE: u1,
+                TICKINT: u1,
+                CLKSOURCE: u1,
+                reserved0: u1,
+                reserved1: u1,
+                reserved2: u1,
+                reserved3: u1,
+                reserved4: u1,
+                reserved5: u1,
+                reserved6: u1,
+                reserved7: u1,
+                reserved8: u1,
+                reserved9: u1,
+                reserved10: u1,
+                reserved11: u1,
+                reserved12: u1,
+                COUNTFLAG: u1,
+                padding0: u1,
+                padding1: u1,
+                padding2: u1,
+                padding3: u1,
+                padding4: u1,
+                padding5: u1,
+                padding6: u1,
+                padding7: u1,
+                padding8: u1,
+                padding9: u1,
+                padding10: u1,
+                padding11: u1,
+                padding12: u1,
+                padding13: u1,
+                padding14: u1,
+            }), base_address + 0x10);
+
+            /// address: 0xe000e014
+            /// SysTick Reload Value Register
+            pub const LOAD = @intToPtr(*volatile Mmio(32, packed struct {
+                RELOAD: u24,
+                padding0: u1,
+                padding1: u1,
+                padding2: u1,
+                padding3: u1,
+                padding4: u1,
+                padding5: u1,
+                padding6: u1,
+                padding7: u1,
+            }), base_address + 0x14);
+
+            /// address: 0xe000e018
+            /// SysTick Current Value Register
+            pub const VAL = @intToPtr(*volatile Mmio(32, packed struct {
+                CURRENT: u24,
+                padding0: u1,
+                padding1: u1,
+                padding2: u1,
+                padding3: u1,
+                padding4: u1,
+                padding5: u1,
+                padding6: u1,
+                padding7: u1,
+            }), base_address + 0x18);
+
+            /// address: 0xe000e01c
+            /// SysTick Calibration Register
+            pub const CALIB = @intToPtr(*volatile Mmio(32, packed struct {
+                TENMS: u24,
+                reserved0: u1,
+                reserved1: u1,
+                reserved2: u1,
+                reserved3: u1,
+                reserved4: u1,
+                reserved5: u1,
+                SKEW: u1,
+                NOREF: u1,
+            }), base_address + 0x1c);
+        };
+    };
+
     /// Random number generator
     pub const RNG = struct {
         pub const base_address = 0x50060800;
