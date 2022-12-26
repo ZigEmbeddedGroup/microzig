@@ -14,6 +14,12 @@ pub const arduino_nano = Board{
     .chip = chips.atmega328p,
 };
 
+pub const arduino_uno = Board{
+    .name = "Arduino Uno",
+    .path = root_path ++ "boards/arduino-uno/arduino-uno.zig",
+    .chip = chips.atmega328p,
+};
+
 pub const mbed_lpc1768 = Board{
     .name = "mbed LPC1768",
     .path = root_path ++ "boards/mbed-lpc1768/mbed-lpc1768.zig",
@@ -32,8 +38,20 @@ pub const stm32f4discovery = Board{
     .chip = chips.stm32f407vg,
 };
 
+pub const stm3240geval = Board{
+    .name = "STM3240GEVAL",
+    .path = root_path ++ "boards/stm3240geval/stm3240geval.zig",
+    .chip = chips.stm32f407vg,
+};
+
 pub const stm32f429idiscovery = Board{
     .name = "STM32F429IDISCOVERY",
     .path = root_path ++ "boards/stm32f429idiscovery/stm32f429idiscovery.zig",
     .chip = chips.stm32f429zit6u,
+};
+
+pub const longan_nano = Board{
+    .name = "Longan Nano",
+    .path = root_path ++ "boards/longan-nano/longan-nano.zig",
+    .chip = chips.gd32vf103xb,
 };

@@ -48,6 +48,12 @@ pub const debug = @import("debug.zig");
 
 pub const mmio = @import("mmio.zig");
 
+// Allow app to override the os API layer
+pub const os = if (@hasDecl(app, "os"))
+    app.os
+else
+    struct {};
+
 // Allow app to override the panic handler
 pub const panic = if (@hasDecl(app, "panic"))
     app.panic
@@ -86,26 +92,26 @@ else
     };
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
-pub fn microzig_panic(message: []const u8, maybe_stack_trace: ?*std.builtin.StackTrace) noreturn {
+pub fn microzig_panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
 
     // utilize logging functions
     std.log.err("microzig PANIC: {s}", .{message});
 
     if (builtin.cpu.arch != .avr) {
-        var writer = debug.writer();
-        writer.print("microzig PANIC: {s}\r\n", .{message}) catch unreachable;
-
-        if (maybe_stack_trace) |stack_trace| {
-            var frame_index: usize = 0;
-            var frames_left: usize = std.math.min(stack_trace.index, stack_trace.instruction_addresses.len);
-            while (frames_left != 0) : ({
-                frames_left -= 1;
-                frame_index = (frame_index + 1) % stack_trace.instruction_addresses.len;
-            }) {
-                const return_address = stack_trace.instruction_addresses[frame_index];
-                writer.print("0x{X:0>8}\r\n", .{return_address}) catch unreachable;
+        var index: usize = 0;
+        var iter = std.debug.StackIterator.init(@returnAddress(), null);
+        while (iter.next()) |address| : (index += 1) {
+            if (index == 0) {
+                std.log.err("stack trace:", .{});
             }
+            std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
         }
+    }
+    if (@import("builtin").mode == .Debug) {
+        // attach a breakpoint, this might trigger another
+        // panic internally, so only do that in debug mode.
+        std.log.info("triggering breakpoint...", .{});
+        @breakpoint();
     }
     hang();
 }
@@ -165,7 +171,7 @@ export fn microzig_main() noreturn {
         @compileError("The root source file must provide a public function main!");
 
     const main = @field(app, "main");
-    const info: std.builtin.TypeInfo = @typeInfo(@TypeOf(main));
+    const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
     if (info != .Fn or info.Fn.args.len > 0)
@@ -199,4 +205,37 @@ export fn microzig_main() noreturn {
 
     // main returned, just hang around here a bit
     hang();
+}
+
+/// Contains references to the microzig .data and .bss sections, also
+/// contains the initial load address for .data if it is in flash.
+pub const sections = struct {
+    extern var microzig_data_start: anyopaque;
+    extern var microzig_data_end: anyopaque;
+    extern var microzig_bss_start: anyopaque;
+    extern var microzig_bss_end: anyopaque;
+    extern const microzig_data_load_start: anyopaque;
+};
+
+pub fn initializeSystemMemories() void {
+    @setCold(true);
+
+    // fill .bss with zeroes
+    {
+        const bss_start = @ptrCast([*]u8, &sections.microzig_bss_start);
+        const bss_end = @ptrCast([*]u8, &sections.microzig_bss_end);
+        const bss_len = @ptrToInt(bss_end) - @ptrToInt(bss_start);
+
+        std.mem.set(u8, bss_start[0..bss_len], 0);
+    }
+
+    // load .data from flash
+    {
+        const data_start = @ptrCast([*]u8, &sections.microzig_data_start);
+        const data_end = @ptrCast([*]u8, &sections.microzig_data_end);
+        const data_len = @ptrToInt(data_end) - @ptrToInt(data_start);
+        const data_src = @ptrCast([*]const u8, &sections.microzig_data_load_start);
+
+        std.mem.copy(u8, data_start[0..data_len], data_src[0..data_len]);
+    }
 }

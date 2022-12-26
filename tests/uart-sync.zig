@@ -18,10 +18,21 @@ const cfg = if (micro.config.has_board)
             .uart_idx = 2,
             .pins = .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
         },
+        .@"Longan Nano" => .{
+            .led_pin = micro.Pin("PA2"),
+            .uart_idx = 1,
+            .pins = .{ .tx = null, .rx = null },
+        },
+        .@"Arduino Uno" => .{
+            .led_pin = micro.Pin("D13"),
+            .uart_idx = 0,
+            .pins = .{},
+        },
         else => @compileError("unknown board"),
     }
 else switch (micro.config.chip_name) {
     .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
+    .@"GD32VF103x8" => .{ .led_pin = micro.Pin("PA2"), .uart_idx = 1, .pins = .{} },
     else => @compileError("unknown chip"),
 };
 

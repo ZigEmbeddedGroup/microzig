@@ -1,11 +1,11 @@
 name: Build
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   schedule:
-    - cron: "0 7 * * *"
+    - cron: "0 0 * * *"
 
 jobs:
   build:
@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         os: [
-          ubuntu-latest,
           windows-latest,
           macos-latest,
         ]
@@ -23,8 +22,7 @@ jobs:
       with:
         submodules: recursive
         fetch-depth: 0
-  
-    # only using master until 0.9.0 is released
+
     - name: Setup Zig
       uses: goto-bus-stop/setup-zig@v1.3.0
       with:
