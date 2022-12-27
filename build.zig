@@ -16,10 +16,10 @@ pub fn build(b: *std.build.Builder) !void {
 
     const BuildConfig = struct { name: []const u8, backing: Backing, supports_uart_test: bool = true };
     const all_backings = [_]BuildConfig{
-        BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = boards.arduino_nano } },
-        BuildConfig{ .name = "boards.arduino_uno", .backing = Backing{ .board = boards.arduino_uno } },
+        //BuildConfig{ .name = "boards.arduino_nano", .backing = Backing{ .board = boards.arduino_nano } },
+        //BuildConfig{ .name = "boards.arduino_uno", .backing = Backing{ .board = boards.arduino_uno } },
         BuildConfig{ .name = "boards.mbed_lpc1768", .backing = Backing{ .board = boards.mbed_lpc1768 } },
-        BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = chips.atmega328p } },
+        //BuildConfig{ .name = "chips.atmega328p", .backing = Backing{ .chip = chips.atmega328p } },
         BuildConfig{ .name = "chips.lpc1768", .backing = Backing{ .chip = chips.lpc1768 } },
         //BuildConfig{ .name = "chips.stm32f103x8", .backing = Backing{ .chip = chips.stm32f103x8 } },
         BuildConfig{ .name = "boards.stm32f3discovery", .backing = Backing{ .board = boards.stm32f3discovery } },

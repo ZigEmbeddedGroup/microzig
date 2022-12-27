@@ -30,7 +30,7 @@ pub const Direction = enum(u1) {
     output = 1,
 };
 
-pub fn Gpio(comptime pin: type, config: anytype) type {
+pub fn Gpio(comptime pin: type, comptime config: anytype) type {
     const mode = @as(Mode, config.mode);
     const Generic = struct {
         // all pins:
