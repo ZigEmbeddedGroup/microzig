@@ -69,16 +69,14 @@ else
     struct {};
 
 // Conditionally export log() if the app has it defined.
-usingnamespace if (@hasDecl(app, "log"))
-    struct {
-        pub const log = app.log;
-    }
+pub const log = if (@hasDecl(app, "log"))
+    app.log
 else
+    // log is a no-op by default. Parts of microzig use the stdlib logging
+    // facility and compilations will now fail on freestanding systems that
+    // use it but do not explicitly set `root.log`
     struct {
-        // log is a no-op by default. Parts of microzig use the stdlib logging
-        // facility and compilations will now fail on freestanding systems that
-        // use it but do not explicitly set `root.log`
-        pub fn log(
+        fn log(
             comptime message_level: std.log.Level,
             comptime scope: @Type(.EnumLiteral),
             comptime format: []const u8,
@@ -89,7 +87,7 @@ else
             _ = format;
             _ = args;
         }
-    };
+    }.log;
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn microzig_panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -174,7 +172,7 @@ export fn microzig_main() noreturn {
     const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
-    if (info != .Fn or info.Fn.args.len > 0)
+    if (info != .Fn or info.Fn.params.len > 0)
         @compileError(invalid_main_msg);
 
     const return_type = info.Fn.return_type orelse @compileError(invalid_main_msg);
