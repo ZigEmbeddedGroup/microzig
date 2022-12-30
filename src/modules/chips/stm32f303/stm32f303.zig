@@ -255,7 +255,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     };
 }
 
-const enable_stm32f303_debug = true;
+const enable_stm32f303_debug = false;
 
 fn debugPrint(comptime format: []const u8, args: anytype) void {
     if (enable_stm32f303_debug) {
@@ -281,7 +281,6 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             regs.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
             regs.RCC.AHBENR.modify(.{ .IOPBEN = 1 });
             debugPrint("I2C1 configuration step 1 complete\r\n", .{});
-
             // 2. Configure the I2C PINs for ALternate Functions
             // 	a) Select Alternate Function in MODER Register
             regs.GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
@@ -495,11 +494,11 @@ pub fn Spi(comptime index: usize) type {
             regs.GPIOA.AFRL.modify(.{ .AFRL5 = 5, .AFRL6 = 5, .AFRL7 = 5 });
 
             // TODO: Make the use of PE3 configured via the STM32F3DISCOVERY board
+            // configure the CS (chip select) pin for output
             regs.RCC.AHBENR.modify(.{ .IOPEEN = 1 });
             regs.GPIOE.MODER.modify(.{ .MODER3 = 0b01 });
             regs.GPIOE.OTYPER.modify(.{ .OT3 = 1 });
             regs.GPIOE.OSPEEDR.modify(.{ .OSPEEDR3 = 0b11 });
-            regs.GPIOE.PUPDR.modify(.{ .PUPDR3 = 0b10 }); // pull down, to enable SPI
 
             // Enable the SPI1 CLOCK
             regs.RCC.APB2ENR.modify(.{ .SPI1EN = 1 });
@@ -522,6 +521,55 @@ pub fn Spi(comptime index: usize) type {
             });
 
             return Self{};
+        }
+
+        pub fn beginTransfer(_: Self) void {
+            regs.GPIOE.BRR.modify(.{ .BR3 = 1 }); // output 0 on PE3 to enable SPI
+            debugPrint("enabled SPI1\r\n", .{});
+        }
+
+        pub fn transceiveByte(_: Self, w: ?u8, r: ?*u8) !void {
+            const dr_byte_size = @sizeOf(@TypeOf(regs.SPI1.DR.raw));
+
+            while (regs.SPI1.SR.read().TXE == 0) {
+                debugPrint("SPI1 TXE == 0\r\n", .{});
+            }
+            debugPrint("SPI1 TXE == 1\r\n", .{});
+            const www = if (w) |ww| ww else 0xAA; // dummy value
+            @bitCast([dr_byte_size]u8, regs.SPI1.DR.*)[0] = www;
+            debugPrint("Sent: {X:2}.\r\n", .{www});
+            while (regs.SPI1.SR.read().RXNE == 0) {
+                debugPrint("SPI1 RXNE == 0\r\n", .{});
+            }
+            debugPrint("SPI1 RXNE == 1\r\n", .{});
+            var data_read = regs.SPI1.DR.raw;
+            const dr_lsb = @bitCast([dr_byte_size]u8, data_read)[0];
+            debugPrint("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
+            _ = regs.SPI1.SR.read(); // clear overrun flag
+
+            if (r) |p| p.* = dr_lsb;
+        }
+
+        pub fn writeAll(self: Self, bytes: []const u8) !void {
+            for (bytes) |b| {
+                try self.transceiveByte(b, null);
+            }
+        }
+
+        pub fn readInto(self: Self, buffer: []u8) !void {
+            for (buffer) |_, i| {
+                try self.transceiveByte(null, &buffer[i]);
+            }
+        }
+
+        pub fn endTransfer(_: Self) void {
+            debugPrint("(disabling SPI1)\r\n", .{});
+            regs.GPIOE.BSRR.modify(.{ .BS3 = 1 }); // output 1 to disable SPI
+            // HACK: wait long enough to make any device end an ongoing transfer
+            var i: u8 = 255; // with the default clock, this seems to delay ~185 microseconds
+            while (i > 0) : (i -= 1) {
+                asm volatile ("nop");
+            }
         }
     };
 }
