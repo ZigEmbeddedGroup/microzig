@@ -82,11 +82,16 @@ fn isValidField(field_name: []const u8) bool {
         !std.mem.eql(u8, field_name, "reset");
 }
 
-const VectorTable = microzig.chip.VectorTable;
+const VectorTable = if (@hasDecl(microzig.app, "VectorTable"))
+    microzig.app.VectorTable
+else if (@hasDecl(microzig.hal, "VectorTable"))
+    microzig.hal.VectorTable
+else
+    microzig.chip.VectorTable;
 
 // will be imported by microzig.zig to allow system startup.
 pub var vector_table: VectorTable = blk: {
-    var tmp: microzig.chip.VectorTable = .{
+    var tmp: VectorTable = .{
         .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
@@ -95,8 +100,7 @@ pub var vector_table: VectorTable = blk: {
             @compileLog("root.interrupts must be a struct");
 
         inline for (@typeInfo(app.interrupts).Struct.decls) |decl| {
-            const calling_convention = @typeInfo(@TypeOf(@field(app.interrupts, decl.name))).Fn.calling_convention;
-            const handler = @field(app.interrupts, decl.name);
+            const function = @field(app.interrupts, decl.name);
 
             if (!@hasField(VectorTable, decl.name)) {
                 var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
@@ -112,22 +116,43 @@ pub var vector_table: VectorTable = blk: {
             if (!isValidField(decl.name))
                 @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
 
-            @field(tmp, decl.name) = switch (calling_convention) {
-                .C => .{ .C = handler },
-                .Naked => .{ .Naked = handler },
-                // for unspecified calling convention we are going to generate small wrapper
-                .Unspecified => .{
-                    .C = struct {
-                        fn wrapper() callconv(.C) void {
-                            if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
-                                @call(.{ .modifier = .always_inline }, handler, .{});
-                        }
-                    }.wrapper,
-                },
-
-                else => @compileError("unsupported calling convention for function " ++ decl.name),
-            };
+            @field(tmp, decl.name) = createInterruptVector(function);
         }
     }
     break :blk tmp;
 };
+
+const InterruptVector = if (@hasDecl(microzig.app, "InterruptVector"))
+    microzig.app.InterruptVector
+else if (@hasDecl(microzig.hal, "InterruptVector"))
+    microzig.hal.InterruptVector
+else
+    microzig.chip.InterruptVector;
+
+fn createInterruptVector(
+    comptime function: anytype,
+) InterruptVector {
+    const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
+    return switch (calling_convention) {
+        .C => .{ .C = function },
+        .Naked => .{ .Naked = function },
+        // for unspecified calling convention we are going to generate small wrapper
+        .Unspecified => .{
+            .C = struct {
+                fn wrapper() callconv(.C) void {
+                    if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
+                        @call(.{ .modifier = .always_inline }, function, .{});
+                }
+            }.wrapper,
+        },
+
+        else => |val| {
+            const conv_name = inline for (std.meta.fields(std.builtin.CallingConvention)) |field| {
+                if (val == @field(std.builtin.CallingConvention, field.name))
+                    break field.name;
+            } else unreachable;
+
+            @compileError("unsupported calling convention for interrupt vector: " ++ conv_name);
+        },
+    };
+}

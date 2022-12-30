@@ -5,6 +5,16 @@ const regs = chip.registers;
 
 pub usingnamespace chip;
 
+pub const clock = struct {
+    pub const Domain = enum {
+        cpu,
+    };
+};
+
+pub const clock_frequencies = .{
+    .cpu = 100_000_000, // 100 Mhz
+};
+
 pub const PinTarget = enum(u2) {
     func00 = 0b00,
     func01 = 0b01,
@@ -105,7 +115,10 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize) type {
+pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+    if (pins.tx != null or pins.rx != null)
+        @compileError("TODO: custom pins are not currently supported");
+
     return struct {
         const UARTn = switch (index) {
             0 => regs.UART0,
@@ -129,11 +142,11 @@ pub fn Uart(comptime index: usize) type {
                 },
                 2 => {
                     regs.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
+                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
                 },
                 3 => {
                     regs.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
+                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
                 },
                 else => unreachable,
             }
@@ -154,14 +167,14 @@ pub fn Uart(comptime index: usize) type {
             //UARTn.FCR.modify(.{ .FIFOEN = .UARTN_FIFOS_ARE_DISA });
 
             micro.debug.writer().print("clock: {} baud: {} ", .{
-                micro.clock.get(),
+                micro.clock.get().cpu,
                 config.baud_rate,
             }) catch {};
 
-            const pclk = micro.clock.get() / 4;
+            const pclk = micro.clock.get().cpu / 4;
             const divider = (pclk / (16 * config.baud_rate));
 
-            const regval = std.math.cast(u16, divider) catch return error.UnsupportedBaudRate;
+            const regval = std.math.cast(u16, divider) orelse return error.UnsupportedBaudRate;
 
             UARTn.DLL.modify(.{ .DLLSB = @truncate(u8, regval >> 0x00) });
             UARTn.DLM.modify(.{ .DLMSB = @truncate(u8, regval >> 0x08) });

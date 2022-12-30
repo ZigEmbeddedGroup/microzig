@@ -18,6 +18,28 @@ pub const avr5 = Cpu{
     },
 };
 
+pub const cortex_m0 = Cpu{
+    .name = "ARM Cortex-M0",
+    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
+
+pub const cortex_m0plus = Cpu{
+    .name = "ARM Cortex-M0+",
+    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
+
 pub const cortex_m3 = Cpu{
     .name = "ARM Cortex-M3",
     .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
@@ -35,6 +57,17 @@ pub const cortex_m4 = Cpu{
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    },
+};
+
+pub const riscv32_imac = Cpu{
+    .name = "RISC-V 32-bit",
+    .path = root_path ++ "cpus/rv32-imac/riscv32.zig",
+    .target = std.zig.CrossTarget{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
         .os_tag = .freestanding,
         .abi = .none,
     },

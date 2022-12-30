@@ -1,5 +1,6 @@
 const std = @import("std");
 const micro = @import("microzig.zig");
+const chip = @import("chip");
 
 /// An enumeration of clock sources.
 pub const Source = enum {
@@ -9,6 +10,9 @@ pub const Source = enum {
     chip,
     cpu,
 };
+
+/// A struct containing the frequency in hertz for each clock domain
+pub const Clocks = std.enums.EnumFieldStruct(chip.clock.Domain, u32, null);
 
 /// Is `true` when microzig has a clock frequency available.
 /// Clock can be provided by several clock sources
@@ -30,16 +34,16 @@ pub const source: Source = switch (clock_source_type) {
 /// Ensures that microzig has a clock available. This will @compileError when no clock is available, otherwise, it will be a no-op.
 pub fn ensure() void {
     if (!has_clock)
-        @compileError("microzig requires the clock frequency to perform this operation. Please export a const or var cpu_frequency from your root file that contains the cpu frequency in hertz!");
+        @compileError("microzig requires the clock frequency to perform this operation. Please export a const or var clock_frequencies from your root file that contains the clock frequency for all chip clock domains in hertz!");
 }
 
-/// Returns the current cpu frequency in hertz.
-pub inline fn get() u32 {
+/// Returns the Clocks struct, with all clock domains frequencies in hertz.
+pub inline fn get() Clocks {
     ensure();
     return @field(clock_source_type, freq_decl_name);
 }
 
-const freq_decl_name = "cpu_frequency";
+const freq_decl_name = "clock_frequencies";
 
 const no_clock_source_type = opaque {};
 const clock_source_type = if (@hasDecl(micro.app, freq_decl_name))
