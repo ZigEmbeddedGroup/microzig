@@ -15,7 +15,8 @@ pub fn main() !void {
     _ = args.next();
 
     const query = args.next() orelse return error.NoQuery;
-    const path = args.next() orelse return error.NoXmlPath;
+    const path = try gpa.allocator().dupeZ(u8, args.next() orelse return error.NoXmlPath);
+    defer gpa.allocator().free(path);
     if (args.next() != null)
         return error.TooManyArgs;
 
@@ -31,30 +32,29 @@ pub fn main() !void {
     if (components.items.len == 0)
         return error.NoComponents;
 
-    const doc = xml.readFile(path.ptr, null, 0) orelse return error.ReadXmlFile;
-    defer xml.freeDoc(doc);
+    var doc = try xml.Doc.fromFile(path);
+    defer doc.deinit();
 
-    const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
-    if (!std.mem.eql(u8, components.items[0], std.mem.span(root_element.name)))
+    const root = try doc.getRootElement();
+    if (!std.mem.eql(u8, components.items[0], std.mem.span(root.impl.name)))
         return;
 
+    var base = std.StringHashMapUnmanaged([]const u8){};
+    defer base.deinit(gpa.allocator());
+
+    try base.put(gpa.allocator(), "path", path);
     var context = std.StringHashMap(std.StringHashMapUnmanaged([]const u8)).init(gpa.allocator());
     defer context.deinit();
 
+    try context.put("file", base);
     const stdout = std.io.getStdOut().writer();
     try recursiveSearchAndPrint(
         gpa.allocator(),
         components.items,
         context,
-        root_element,
+        root,
         stdout,
     );
-
-    var children: ?*xml.Node = root_element.children;
-    while (children != null) : (children = children.?.next) {
-        if (1 != children.?.type)
-            continue;
-    }
 }
 
 fn RecursiveSearchAndPrintError(comptime Writer: type) type {
@@ -65,20 +65,18 @@ fn recursiveSearchAndPrint(
     allocator: std.mem.Allocator,
     components: []const []const u8,
     context: ContextMap,
-    node: *xml.Node,
+    node: xml.Node,
     writer: anytype,
-) RecursiveSearchAndPrintError(@TypeOf(writer))!void {
+) !void {
     assert(components.len != 0);
 
     var attr_map = std.StringHashMapUnmanaged([]const u8){};
     defer attr_map.deinit(allocator);
 
     {
-        var attr_it: ?*xml.Attr = node.properties;
-        while (attr_it != null) : (attr_it = attr_it.?.next)
-            if (attr_it.?.name) |name|
-                if (@ptrCast(*xml.Node, attr_it.?.children).content) |content|
-                    try attr_map.put(allocator, std.mem.span(name), std.mem.span(content));
+        var it = node.iterateAttrs();
+        while (it.next()) |attr|
+            try attr_map.put(allocator, attr.key, attr.value);
     }
 
     var current_context = ContextMap.init(allocator);
@@ -126,19 +124,15 @@ fn recursiveSearchAndPrint(
         try writer.writeByte('\n');
     } else {
         // pass it down to the children
-        var child_it: ?*xml.Node = node.children;
-        while (child_it != null) : (child_it = child_it.?.next) {
-            if (1 != child_it.?.type)
-                continue;
-
-            if (std.mem.eql(u8, components[1], std.mem.span(child_it.?.name)))
-                try recursiveSearchAndPrint(
-                    allocator,
-                    components[1..],
-                    current_context,
-                    child_it.?,
-                    writer,
-                );
+        var child_it = node.iterate(&.{}, components[1]);
+        while (child_it.next()) |child| {
+            try recursiveSearchAndPrint(
+                allocator,
+                components[1..],
+                current_context,
+                child,
+                writer,
+            );
         }
     }
 }

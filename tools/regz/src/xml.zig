@@ -8,96 +8,161 @@ pub const c = @cImport({
 
 const Allocator = std.mem.Allocator;
 
-pub const Node = c.xmlNode;
-pub const Doc = c.xmlDoc;
 pub const Attr = c.xmlAttr;
-pub const readFile = c.xmlReadFile;
 pub const readIo = c.xmlReadIO;
 pub const cleanupParser = c.xmlCleanupParser;
-pub const freeDoc = c.xmlFreeDoc;
-pub const docGetRootElement = c.xmlDocGetRootElement;
 
-pub fn readFromMemory(text: []const u8) !*Doc {
-    return c.xmlReadMemory(text.ptr, @intCast(c_int, text.len), null, null, 0) orelse error.XmlReadMemory;
-}
+pub const Node = struct {
+    impl: *c.xmlNode,
 
-pub fn getAttribute(node: ?*Node, key: [:0]const u8) ?[]const u8 {
-    if (c.xmlHasProp(node, key.ptr)) |prop| {
-        if (@ptrCast(*c.xmlAttr, prop).children) |value_node| {
-            if (@ptrCast(*Node, value_node).content) |content| {
-                return std.mem.span(content);
+    pub const Iterator = struct {
+        node: ?Node,
+        filter: []const u8,
+
+        pub fn next(it: *Iterator) ?Node {
+            // TODO: what if current node doesn't fit the bill?
+            return while (it.node != null) : (it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null) {
+                if (it.node.?.impl.type != 1)
+                    continue;
+
+                if (it.node.?.impl.name) |name|
+                    if (std.mem.eql(u8, it.filter, std.mem.span(name))) {
+                        const ret = it.node;
+                        it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null;
+                        break ret;
+                    };
+            } else return null;
+        }
+    };
+
+    pub const AttrIterator = struct {
+        attr: ?*Attr,
+
+        pub const Entry = struct {
+            key: []const u8,
+            value: []const u8,
+        };
+
+        pub fn next(it: *AttrIterator) ?Entry {
+            return if (it.attr) |attr| ret: {
+                if (attr.name) |name|
+                    if (@ptrCast(*c.xmlNode, attr.children).content) |content| {
+                        defer it.attr = attr.next;
+                        break :ret Entry{
+                            .key = std.mem.span(name),
+                            .value = std.mem.span(content),
+                        };
+                    };
+            } else null;
+        }
+    };
+
+    pub fn getAttribute(node: Node, key: [:0]const u8) ?[]const u8 {
+        if (c.xmlHasProp(node.impl, key.ptr)) |prop| {
+            if (@ptrCast(*c.xmlAttr, prop).children) |value_node| {
+                if (@ptrCast(*c.xmlNode, value_node).content) |content| {
+                    return std.mem.span(content);
+                }
             }
         }
+
+        return null;
     }
 
-    return null;
-}
-
-pub fn findNode(node: ?*Node, key: []const u8) ?*Node {
-    return if (node) |n| blk: {
-        var it: ?*Node = n;
-        break :blk while (it != null) : (it = it.?.next) {
+    pub fn findChild(node: Node, key: []const u8) ?Node {
+        var it = @ptrCast(?*c.xmlNode, node.impl.children);
+        return while (it != null) : (it = it.?.next) {
             if (it.?.type != 1)
                 continue;
 
             const name = std.mem.span(it.?.name orelse continue);
             if (std.mem.eql(u8, key, name))
-                break it;
+                break Node{ .impl = it.? };
         } else null;
-    } else null;
-}
+    }
 
-pub fn findValueForKey(node: ?*Node, key: []const u8) ?[]const u8 {
-    return if (findNode(node, key)) |n|
-        if (@ptrCast(?*Node, n.children)) |child|
-            if (@ptrCast(?[*:0]const u8, child.content)) |content|
-                std.mem.span(content)
+    // `skip` will only delve into a specific path of elements
+    // `name` will iterate the child elements with that name
+    pub fn iterate(node: Node, skip: []const []const u8, filter: []const u8) Iterator {
+        var current: Node = node;
+        for (skip) |elem|
+            current = current.findChild(elem) orelse return Iterator{
+                .node = null,
+                .filter = filter,
+            };
+
+        return Iterator{
+            .node = current.findChild(filter),
+            .filter = filter,
+        };
+    }
+
+    pub fn iterateAttrs(node: Node) AttrIterator {
+        return AttrIterator{
+            .attr = node.impl.properties,
+        };
+    }
+
+    /// up to you to copy
+    pub fn getValue(node: Node, key: []const u8) ?[:0]const u8 {
+        return if (node.findChild(key)) |child|
+            if (child.impl.children) |value_node|
+                if (@ptrCast(*c.xmlNode, value_node).content) |content|
+                    std.mem.span(content)
+                else
+                    null
             else
                 null
         else
-            null
-    else
-        null;
-}
+            null;
+    }
+};
 
-pub fn parseDescription(allocator: Allocator, node: ?*Node, key: []const u8) !?[]const u8 {
-    return if (findValueForKey(node, key)) |value|
-        try allocator.dupe(u8, value)
-    else
-        null;
-}
+pub const Doc = struct {
+    impl: *c.xmlDoc,
 
-pub fn parseIntForKey(comptime T: type, allocator: std.mem.Allocator, node: ?*Node, key: []const u8) !?T {
-    return if (findValueForKey(node, key)) |str| blk: {
-        const lower = try std.ascii.allocLowerString(allocator, str);
-        defer allocator.free(lower);
+    pub fn fromFile(path: [:0]const u8) !Doc {
+        return Doc{
+            .impl = c.xmlReadFile(
+                path.ptr,
+                null,
+                0,
+            ) orelse return error.ReadXmlFile,
+        };
+    }
 
-        break :blk if (std.mem.startsWith(u8, lower, "#")) weird_base2: {
-            for (lower[1..]) |*character| {
-                if (character.* == 'x') {
-                    character.* = '0';
-                }
-            }
+    pub fn fromMemory(text: []const u8) !Doc {
+        return Doc{
+            .impl = c.xmlReadMemory(
+                text.ptr,
+                @intCast(c_int, text.len),
+                null,
+                null,
+                0,
+            ) orelse return error.XmlReadMemory,
+        };
+    }
 
-            break :weird_base2 try std.fmt.parseInt(T, lower[1..], 2);
-        } else try std.fmt.parseInt(T, lower, 0);
-    } else null;
-}
+    pub fn fromIo(read_fn: c.xmlInputReadCallback, ctx: ?*anyopaque) !Doc {
+        return Doc{
+            .impl = c.xmlReadIO(
+                read_fn,
+                null,
+                ctx,
+                null,
+                null,
+                0,
+            ) orelse return error.ReadXmlFd,
+        };
+    }
 
-pub fn parseBoolean(allocator: Allocator, node: ?*Node, key: []const u8) !?bool {
-    return if (findValueForKey(node, key)) |str| blk: {
-        const lower = try std.ascii.allocLowerString(allocator, str);
-        defer allocator.free(lower);
+    pub fn deinit(doc: *Doc) void {
+        c.xmlFreeDoc(doc.impl);
+    }
 
-        break :blk if (std.mem.eql(u8, "0", lower))
-            false
-        else if (std.mem.eql(u8, "1", lower))
-            true
-        else if (std.mem.eql(u8, "false", lower))
-            false
-        else if (std.mem.eql(u8, "true", lower))
-            true
-        else
-            return error.InvalidBoolean;
-    } else null;
-}
+    pub fn getRootElement(doc: Doc) !Node {
+        return Node{
+            .impl = c.xmlDocGetRootElement(doc.impl) orelse return error.NoRoot,
+        };
+    }
+};

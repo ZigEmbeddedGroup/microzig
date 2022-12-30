@@ -36,12 +36,26 @@ pub const Names = struct {
             return .{ .kind = .short, .name = casted };
         }
 
-        return .{ .kind = .positinal, .name = "" };
+        return .{ .kind = .positional, .name = "" };
     }
 
     pub const Longest = struct {
-        kind: enum { long, short, positinal },
+        kind: Kind,
         name: []const u8,
+    };
+
+    pub const Kind = enum {
+        long,
+        short,
+        positional,
+
+        pub fn prefix(kind: Kind) []const u8 {
+            return switch (kind) {
+                .long => "--",
+                .short => "-",
+                .positional => "",
+            };
+        }
     };
 };
 
@@ -95,7 +109,7 @@ pub fn parseParamsEx(allocator: mem.Allocator, str: []const u8, end: *usize) ![]
     errdefer list.deinit();
 
     try parseParamsIntoArrayListEx(&list, str, end);
-    return list.toOwnedSlice();
+    return try list.toOwnedSlice();
 }
 
 /// Takes a string and parses it into many Param(Help) at comptime. Returned is an array of
@@ -514,7 +528,7 @@ test "parseParams" {
         },
         .{
             .id = .{
-                .desc = 
+                .desc =
                 \\    This is
                 \\    help spanning multiple
                 \\    lines
@@ -550,29 +564,22 @@ pub const Diagnostic = struct {
     /// Default diagnostics reporter when all you want is English with no colors.
     /// Use this as a reference for implementing your own if needed.
     pub fn report(diag: Diagnostic, stream: anytype, err: anyerror) !void {
-        const Arg = struct {
-            prefix: []const u8,
-            name: []const u8,
-        };
-        const a = if (diag.name.short) |*c|
-            Arg{ .prefix = "-", .name = @as(*const [1]u8, c)[0..] }
-        else if (diag.name.long) |l|
-            Arg{ .prefix = "--", .name = l }
-        else
-            Arg{ .prefix = "", .name = diag.arg };
+        var longest = diag.name.longest();
+        if (longest.kind == .positional)
+            longest.name = diag.arg;
 
         switch (err) {
             streaming.Error.DoesntTakeValue => try stream.print(
                 "The argument '{s}{s}' does not take a value\n",
-                .{ a.prefix, a.name },
+                .{ longest.kind.prefix(), longest.name },
             ),
             streaming.Error.MissingValue => try stream.print(
                 "The argument '{s}{s}' requires a value but none was supplied\n",
-                .{ a.prefix, a.name },
+                .{ longest.kind.prefix(), longest.name },
             ),
             streaming.Error.InvalidArgument => try stream.print(
                 "Invalid argument '{s}{s}'\n",
-                .{ a.prefix, a.name },
+                .{ longest.kind.prefix(), longest.name },
             ),
             else => try stream.print("Error while parsing arguments: {s}\n", .{@errorName(err)}),
         }
@@ -762,10 +769,10 @@ pub fn parseEx(
     // fields to slices and return that.
     var result_args = Arguments(Id, params, value_parsers, .slice){};
     inline for (meta.fields(@TypeOf(arguments))) |field| {
-        if (@typeInfo(field.field_type) == .Struct and
-            @hasDecl(field.field_type, "toOwnedSlice"))
+        if (@typeInfo(field.type) == .Struct and
+            @hasDecl(field.type, "toOwnedSlice"))
         {
-            const slice = @field(arguments, field.name).toOwnedSlice(allocator);
+            const slice = try @field(arguments, field.name).toOwnedSlice(allocator);
             @field(result_args, field.name) = slice;
         } else {
             @field(result_args, field.name) = @field(arguments, field.name);
@@ -774,7 +781,7 @@ pub fn parseEx(
 
     return ResultEx(Id, params, value_parsers){
         .args = result_args,
-        .positionals = positionals.toOwnedSlice(),
+        .positionals = try positionals.toOwnedSlice(),
         .allocator = allocator,
     };
 }
@@ -803,7 +810,7 @@ fn parseArg(
                 try @field(arguments, longest.name).append(allocator, value);
             },
         },
-        .positinal => try positionals.append(try parser(arg.value.?)),
+        .positional => try positionals.append(try parser(arg.value.?)),
     }
 }
 
@@ -837,7 +844,7 @@ fn FindPositionalType(
 fn findPositional(comptime Id: type, params: []const Param(Id)) ?Param(Id) {
     for (params) |param| {
         const longest = param.names.longest();
-        if (longest.kind == .positinal)
+        if (longest.kind == .positional)
             return param;
     }
 
@@ -868,7 +875,7 @@ fn deinitArgs(
 ) void {
     inline for (params) |param| {
         const longest = comptime param.names.longest();
-        if (longest.kind == .positinal)
+        if (longest.kind == .positional)
             continue;
         if (param.takes_value != .many)
             continue;
@@ -900,7 +907,7 @@ fn Arguments(
     var i: usize = 0;
     for (params) |param| {
         const longest = param.names.longest();
-        if (longest.kind == .positinal)
+        if (longest.kind == .positional)
             continue;
 
         const T = ParamType(Id, param, value_parsers);
@@ -915,7 +922,7 @@ fn Arguments(
 
         fields[i] = .{
             .name = longest.name,
-            .field_type = @TypeOf(default_value),
+            .type = @TypeOf(default_value),
             .default_value = @ptrCast(*const anyopaque, &default_value),
             .is_comptime = false,
             .alignment = @alignOf(@TypeOf(default_value)),
@@ -975,7 +982,9 @@ test "everything" {
 
 test "empty" {
     var iter = args.SliceIterator{ .args = &.{} };
-    var res = try parseEx(u8, &.{}, parsers.default, &iter, .{ .allocator = testing.allocator });
+    var res = try parseEx(u8, &[_]Param(u8){}, parsers.default, &iter, .{
+        .allocator = testing.allocator,
+    });
     defer res.deinit();
 }
 
@@ -1117,7 +1126,7 @@ pub fn help(
 
     var first_paramter: bool = true;
     for (params) |param| {
-        if (param.names.longest().kind == .positinal)
+        if (param.names.longest().kind == .positional)
             continue;
         if (!first_paramter)
             try writer.writeByteNTimes('\n', opt.spacing_between_parameters);
@@ -1690,7 +1699,7 @@ test "clap.help" {
 /// [-abc] [--longa] [-d <T>] [--longb <T>] <T>
 ///
 /// First all none value taking parameters, which have a short name are printed, then non
-/// positional parameters and finally the positinal.
+/// positional parameters and finally the positional.
 pub fn usage(stream: anytype, comptime Id: type, params: []const Param(Id)) !void {
     var cos = io.countingWriter(stream);
     const cs = cos.writer();

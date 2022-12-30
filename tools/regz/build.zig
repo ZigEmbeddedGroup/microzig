@@ -127,16 +127,18 @@ pub fn build(b: *std.build.Builder) !void {
     characterize_step.dependOn(&characterize_run.step);
 
     const test_chip_file = regz.addGeneratedChipFile("tests/svd/cmsis-example.svd");
+    _ = test_chip_file;
 
-    const tests = b.addTest("tests/main.zig");
+    const tests = b.addTest("src/Database.zig");
     tests.setTarget(target);
     tests.setBuildMode(mode);
     tests.addOptions("build_options", regz.build_options);
     tests.addPackagePath("xml", "src/xml.zig");
     tests.addPackagePath("Database", "src/Database.zig");
+    pkgs.addAllTo(tests);
     regz.xml.link(tests);
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&tests.step);
-    test_step.dependOn(test_chip_file.step);
+    //test_step.dependOn(test_chip_file.step);
 }

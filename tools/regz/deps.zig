@@ -3,14 +3,14 @@ const Pkg = std.build.Pkg;
 const FileSource = std.build.FileSource;
 
 pub const build_pkgs = struct {
-    pub const libxml2 = @import(".gyro/zig-libxml2-mitchellh-github.com-47fc435b/pkg/libxml2.zig");
+    pub const libxml2 = @import(".gyro/zig-libxml2-mitchellh-github.com-366b26b0/pkg/libxml2.zig");
 };
 
 pub const pkgs = struct {
     pub const clap = Pkg{
         .name = "clap",
         .source = FileSource{
-            .path = ".gyro/zig-clap-Hejsil-github.com-4f4196fc/pkg/clap.zig",
+            .path = ".gyro/zig-clap-Hejsil-github.com-88edafd0/pkg/clap.zig",
         },
     };
 

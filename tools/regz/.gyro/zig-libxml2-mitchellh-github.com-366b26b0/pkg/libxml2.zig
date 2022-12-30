@@ -164,7 +164,7 @@ pub fn create(
     // Enable our `./configure` options. For bool-type fields we translate
     // it to the `LIBXML_{field}_ENABLED` C define where field is uppercased.
     inline for (std.meta.fields(@TypeOf(opts))) |field| {
-        if (field.field_type == bool and @field(opts, field.name)) {
+        if (field.type == bool and @field(opts, field.name)) {
             var nameBuf: [32]u8 = undefined;
             const name = std.ascii.upperString(&nameBuf, field.name);
             const define = try std.fmt.allocPrint(b.allocator, "-DLIBXML_{s}_ENABLED=1", .{name});
