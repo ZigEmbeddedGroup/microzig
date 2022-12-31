@@ -469,12 +469,14 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
     };
 }
 
-pub fn Spi(comptime index: usize) type {
+/// An STM32F303 SPI bus
+pub fn SpiBus(comptime index: usize) type {
     if (!(index == 1)) @compileError("TODO: only SPI1 is currently supported");
 
     return struct {
         const Self = @This();
 
+        /// Initialize and enable the bus.
         pub fn init(config: micro.spi.BusConfig) !Self {
             _ = config; // unused for now
 
@@ -497,16 +499,13 @@ pub fn Spi(comptime index: usize) type {
             regs.RCC.APB2ENR.modify(.{ .SPI1EN = 1 });
 
             regs.SPI1.CR1.modify(.{
-                .CPOL = 1, // TODO: make configurable
-                .CPHA = 1, // TODO: make configurable
                 .MSTR = 1,
-                .BR = 0b111, // 1/256 the of PCLK TODO: make configurable
-                .LSBFIRST = 0, // MSB first TODO: make configurable
                 .SSM = 1,
                 .SSI = 1,
                 .RXONLY = 0,
                 .SPE = 1,
             });
+            // the following configuration is assumed in `transceiveByte()`
             regs.SPI1.CR2.raw = 0;
             regs.SPI1.CR2.modify(.{
                 .DS = 0b0111, // 8-bit data frames, seems default via '0b0000 is interpreted as 0b0111'
@@ -516,47 +515,77 @@ pub fn Spi(comptime index: usize) type {
             return Self{};
         }
 
-        pub fn beginTransfer(_: Self, comptime cs_pin: type) void {
-            gpio.setOutput(cs_pin); // TODO: Move to new 'device initialization' code?
+        /// Switch this SPI bus to the given device.
+        pub fn switchToDevice(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
+
+            regs.SPI1.CR1.modify(.{
+                .CPOL = 1, // TODO: make configurable
+                .CPHA = 1, // TODO: make configurable
+                .BR = 0b111, // 1/256 the of PCLK TODO: make configurable
+                .LSBFIRST = 0, // MSB first TODO: make configurable
+            });
+            gpio.setOutput(cs_pin);
+        }
+
+        /// Begin a transfer to the given device.  (Assumes `switchToDevice()` was called.)
+        pub fn beginTransfer(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
             gpio.write(cs_pin, .low); // select the given device, TODO: support inverse CS devices
             debugPrint("enabled SPI1\r\n", .{});
         }
 
-        pub fn transceiveByte(_: Self, w: ?u8, r: ?*u8) !void {
+        /// The basic operation in the current simplistic implementation:
+        /// send+receive a single byte.
+        /// Writing `null` writes an arbitrary byte (`undefined`), and
+        /// reading into `null` ignores the value received.
+        fn transceiveByte(_: Self, optional_write_byte: ?u8, optional_read_pointer: ?*u8) !void {
+
+            // SPIx_DR's least significant byte is `@bitCast([dr_byte_size]u8, ...)[0]`
             const dr_byte_size = @sizeOf(@TypeOf(regs.SPI1.DR.raw));
 
+            // wait unril ready for write
             while (regs.SPI1.SR.read().TXE == 0) {
                 debugPrint("SPI1 TXE == 0\r\n", .{});
             }
             debugPrint("SPI1 TXE == 1\r\n", .{});
-            const www = if (w) |ww| ww else undefined; // dummy value
-            @bitCast([dr_byte_size]u8, regs.SPI1.DR.*)[0] = www;
-            debugPrint("Sent: {X:2}.\r\n", .{www});
+
+            // write
+            const write_byte = if (optional_write_byte) |b| b else undefined; // dummy value
+            @bitCast([dr_byte_size]u8, regs.SPI1.DR.*)[0] = write_byte;
+            debugPrint("Sent: {X:2}.\r\n", .{write_byte});
+
+            // wait until read processed
             while (regs.SPI1.SR.read().RXNE == 0) {
                 debugPrint("SPI1 RXNE == 0\r\n", .{});
             }
             debugPrint("SPI1 RXNE == 1\r\n", .{});
+
+            // read
             var data_read = regs.SPI1.DR.raw;
+            _ = regs.SPI1.SR.read(); // clear overrun flag
             const dr_lsb = @bitCast([dr_byte_size]u8, data_read)[0];
             debugPrint("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
-            _ = regs.SPI1.SR.read(); // clear overrun flag
-
-            if (r) |p| p.* = dr_lsb;
+            if (optional_read_pointer) |read_pointer| read_pointer.* = dr_lsb;
         }
 
+        /// Write all given bytes on the bus, not reading anything back.
         pub fn writeAll(self: Self, bytes: []const u8) !void {
             for (bytes) |b| {
                 try self.transceiveByte(b, null);
             }
         }
 
+        /// Read bytes to fill the given buffer exactly, writing arbitrary bytes (`undefined`).
         pub fn readInto(self: Self, buffer: []u8) !void {
             for (buffer) |_, i| {
                 try self.transceiveByte(null, &buffer[i]);
             }
         }
 
-        pub fn endTransfer(_: Self, comptime cs_pin: type) void {
+        pub fn endTransfer(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
+            // no delay should be needed here, since we know SPIx_SR's TXE is 1
             debugPrint("(disabling SPI1)\r\n", .{});
             gpio.write(cs_pin, .high); // deselect the given device, TODO: support inverse CS devices
             // HACK: wait long enough to make any device end an ongoing transfer

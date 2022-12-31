@@ -2,17 +2,22 @@ const std = @import("std");
 const micro = @import("microzig.zig");
 const chip = @import("chip");
 
-/// An SPI bus
-pub fn Spi(comptime index: usize) type {
-    const SystemSpi = chip.Spi(index);
+/// The SPI bus with the given environment-specific number.
+/// Only 'master' mode is supported currently.
+pub fn SpiBus(comptime index: usize) type {
+    const SystemSpi = chip.SpiBus(index);
 
     return struct {
-        pub fn SpiDevice(comptime cs_pin: type) type {
+        /// A SPI 'slave' device, selected via the given CS pin.
+        /// (Default is CS=low to select.)
+        pub fn SpiDevice(comptime cs_pin: type, config: DeviceConfig) type {
             return struct {
                 const SelfSpiDevice = @This();
 
                 internal: SystemSpi,
 
+                /// A 'transfer' is defined as a sequence of reads/writes that require
+                /// the SPI device to be continuously enabled via its 'chip select' (CS) line.
                 const Transfer = struct {
                     const SelfTransfer = @This();
 
@@ -20,6 +25,7 @@ pub fn Spi(comptime index: usize) type {
 
                     pub const Writer = std.io.Writer(*SelfTransfer, WriteError, writeSome);
 
+                    /// Return a standard Writer (which ignores the bytes read).
                     pub fn writer(self: *SelfTransfer) Writer {
                         return Writer{ .context = self };
                     }
@@ -31,6 +37,7 @@ pub fn Spi(comptime index: usize) type {
 
                     pub const Reader = std.io.Reader(*SelfTransfer, ReadError, readSome);
 
+                    /// Return a standard Reader (which writes arbitrary bytes).
                     pub fn reader(self: *SelfTransfer) Reader {
                         return Reader{ .context = self };
                     }
@@ -40,13 +47,16 @@ pub fn Spi(comptime index: usize) type {
                         return buffer.len;
                     }
 
+                    /// end the current transfer, releasing via the CS pin
                     pub fn end(self: *SelfTransfer) void {
-                        self.device.internal.endTransfer(cs_pin);
+                        self.device.internal.endTransfer(cs_pin, config);
                     }
                 };
 
+                /// start a new transfer, selecting using the CS pin
                 pub fn beginTransfer(dev: SelfSpiDevice) !Transfer {
-                    dev.internal.beginTransfer(cs_pin);
+                    dev.internal.switchToDevice(cs_pin, config);
+                    dev.internal.beginTransfer(cs_pin, config);
                     return Transfer{ .device = dev };
                 }
 
@@ -82,33 +92,35 @@ pub fn Spi(comptime index: usize) type {
             };
         }
 
-        const SelfSpi = @This();
+        const SelfSpiBus = @This();
 
         internal: SystemSpi,
 
-        /// Initializes the SPI bus with the given config and returns a handle to it.
-        pub fn init(config: BusConfig) InitError!SelfSpi {
+        /// Initialize this SPI bus and return a handle to it.
+        pub fn init(config: BusConfig) InitError!SelfSpiBus {
             micro.clock.ensure(); // TODO: Wat?
-            return SelfSpi{
+            return SelfSpiBus{
                 .internal = try SystemSpi.init(config),
             };
         }
 
-        pub fn device(self: SelfSpi, comptime cs_pin: type, config: DeviceConfig) SpiDevice(cs_pin) {
-            _ = config; //TODO
-            return SpiDevice(cs_pin){ .internal = self.internal };
+        /// Create (a descriptor for) a device on this SPI bus.
+        pub fn device(self: SelfSpiBus, comptime cs_pin: type, config: DeviceConfig) SpiDevice(cs_pin, config) {
+            return SpiDevice(cs_pin, config){ .internal = self.internal };
         }
     };
 }
 
 /// A SPI bus configuration.
+/// (There are no bus configuration options yet.)
 pub const BusConfig = struct {
     // Later: add common options
 };
 
 /// A SPI device configuration (excluding the CS pin).
+/// (There are no device configuration options yet.)
 pub const DeviceConfig = struct {
-    // TODO: add common options
+    // TODO: add common options, like clock polarity and phase, and CS polarity
 };
 
 pub const InitError = error{
