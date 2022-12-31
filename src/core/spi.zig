@@ -49,6 +49,36 @@ pub fn Spi(comptime index: usize) type {
                     dev.internal.beginTransfer(cs_pin);
                     return Transfer{ .device = dev };
                 }
+
+                /// Shorthand for 'register-based' devices
+                pub fn writeRegister(self: SelfSpiDevice, register_address: u8, byte: u8) ReadError!void {
+                    try self.writeRegisters(register_address, &.{byte});
+                }
+
+                /// Shorthand for 'register-based' devices
+                pub fn writeRegisters(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
+                    var transfer = try self.beginTransfer();
+                    defer transfer.end();
+                    // write auto-increment, starting at given register
+                    try transfer.writer().writeByte(0b01_000000 | register_address);
+                    try transfer.writer().writeAll(buffer);
+                }
+
+                /// Shorthand for 'register-based' devices
+                pub fn readRegister(self: SelfSpiDevice, register_address: u8) ReadError!u8 {
+                    var buffer: [1]u8 = undefined;
+                    try self.readRegisters(register_address, &buffer);
+                    return buffer[0];
+                }
+
+                /// Shorthand for 'register-based' devices
+                pub fn readRegisters(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
+                    var transfer = try self.beginTransfer();
+                    defer transfer.end();
+                    // read auto-increment, starting at given register
+                    try transfer.writer().writeByte(0b11_000000 | register_address);
+                    try transfer.reader().readNoEof(buffer);
+                }
             };
         }
 
@@ -86,4 +116,6 @@ pub const InitError = error{
 };
 
 pub const WriteError = error{};
-pub const ReadError = error{};
+pub const ReadError = error{
+    EndOfStream,
+};
