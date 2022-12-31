@@ -459,11 +459,11 @@ fn loadRegister(
         .size = if (node.getAttribute("size")) |size_str|
             @as(u64, 8) * try std.fmt.parseInt(u64, size_str, 0)
         else
-            null,
+            return error.MissingRegisterSize,
         .offset = if (node.getAttribute("offset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
         else
-            null,
+            return error.MissingRegisterOffset,
     });
     errdefer db.destroyEntity(id);
 

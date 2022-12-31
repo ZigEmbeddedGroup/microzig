@@ -9,7 +9,7 @@ attrs: struct {
     description: HashMap(EntityId, []const u8) = .{},
     offset: HashMap(EntityId, u64) = .{},
     access: HashMap(EntityId, Access) = .{},
-    repeated: HashMap(EntityId, u64) = .{},
+    count: HashMap(EntityId, u64) = .{},
     size: HashMap(EntityId, u64) = .{},
     reset_value: HashMap(EntityId, u64) = .{},
     reset_mask: HashMap(EntityId, u64) = .{},
@@ -119,7 +119,7 @@ pub fn deinit(db: *Database) void {
     db.attrs.description.deinit(db.gpa);
     db.attrs.offset.deinit(db.gpa);
     db.attrs.access.deinit(db.gpa);
-    db.attrs.repeated.deinit(db.gpa);
+    db.attrs.count.deinit(db.gpa);
     db.attrs.size.deinit(db.gpa);
     db.attrs.reset_value.deinit(db.gpa);
     db.attrs.reset_mask.deinit(db.gpa);
@@ -209,8 +209,36 @@ pub fn createEntity(db: *Database) EntityId {
 }
 
 pub fn destroyEntity(db: *Database, id: EntityId) void {
-    _ = db;
-    _ = id;
+    switch (db.getEntityType(id) orelse return) {
+        .register => {
+            log.debug("{}: destroying register", .{id});
+            if (db.attrs.parent.get(id)) |parent_id| {
+                if (db.children.registers.getEntry(parent_id)) |entry| {
+                    _ = entry.value_ptr.swapRemove(id);
+                }
+            }
+
+            // if has a parent, remove it from the set
+            // remove all attributes
+
+            // TODO: remove fields
+            _ = db.types.registers.swapRemove(id);
+        },
+        else => {},
+    }
+
+    db.removeAttrs(id);
+}
+
+fn removeAttrs(db: *Database, id: EntityId) void {
+    inline for (@typeInfo(TypeOfField(Database, "attrs")).Struct.fields) |field| {
+        if (@hasDecl(field.type, "swapRemove"))
+            _ = @field(db.attrs, field.name).swapRemove(id)
+        else if (@hasDecl(field.type, "remove"))
+            _ = @field(db.attrs, field.name).remove(id)
+        else
+            unreachable;
+    }
 }
 
 pub fn createDevice(
@@ -239,6 +267,8 @@ pub fn createPeripheralInstance(
         name: []const u8,
         // required for now
         offset: u64,
+        // count for an array
+        count: ?u64 = null,
     },
 ) !EntityId {
     assert(db.entityIs("instance.device", device_id));
@@ -253,6 +283,9 @@ pub fn createPeripheralInstance(
     try db.addName(id, opts.name);
     try db.addOffset(id, opts.offset);
 
+    if (opts.count) |c|
+        try db.addCount(id, c);
+
     try db.addChild("instance.peripheral", device_id, id);
     return id;
 }
@@ -260,7 +293,8 @@ pub fn createPeripheralInstance(
 pub fn createPeripheral(
     db: *Database,
     opts: struct {
-        name: ?[]const u8 = null,
+        name: []const u8,
+        size: ?u64 = null,
     },
 ) !EntityId {
     const id = db.createEntity();
@@ -269,8 +303,10 @@ pub fn createPeripheral(
     log.debug("{}: creating peripheral", .{id});
 
     try db.types.peripherals.put(db.gpa, id, {});
-    if (opts.name) |n|
-        try db.addName(id, n);
+    try db.addName(id, opts.name);
+
+    if (opts.size) |s|
+        try db.addSize(id, s);
 
     return id;
 }
@@ -303,9 +339,14 @@ pub fn createRegister(
         name: []const u8,
         description: ?[]const u8 = null,
         /// offset is in bytes
-        offset: ?u64 = null,
+        offset: u64,
         /// size is in bits
-        size: ?u64 = null,
+        size: u64,
+        /// count if there is an array
+        count: ?u64 = null,
+        access: ?Access = null,
+        reset_mask: ?u64 = null,
+        reset_value: ?u64 = null,
     },
 ) !EntityId {
     assert(db.entityIs("type.peripheral", parent_id) or
@@ -321,11 +362,20 @@ pub fn createRegister(
     if (opts.description) |d|
         try db.addDescription(id, d);
 
-    if (opts.offset) |o|
-        try db.addOffset(id, o);
+    try db.addOffset(id, opts.offset);
+    try db.addSize(id, opts.size);
 
-    if (opts.size) |s|
-        try db.addSize(id, s);
+    if (opts.count) |c|
+        try db.addCount(id, c);
+
+    if (opts.access) |a|
+        try db.addAccess(id, a);
+
+    if (opts.reset_mask) |rm|
+        try db.addResetMask(id, rm);
+
+    if (opts.reset_value) |rv|
+        try db.addResetValue(id, rv);
 
     try db.addChild("type.register", parent_id, id);
 
@@ -385,7 +435,6 @@ pub fn createEnum(
         size: ?u64 = null,
     },
 ) !EntityId {
-    // TODO: other parent types
     assert(db.entityIs("type.peripheral", parent_id) or
         db.entityIs("type.field", parent_id));
 
@@ -476,7 +525,7 @@ pub fn addSize(db: *Database, id: EntityId, size: u64) !void {
 }
 
 pub fn addOffset(db: *Database, id: EntityId, offset: u64) !void {
-    log.debug("{}: adding offset: {}", .{ id, offset });
+    log.debug("{}: adding offset: 0x{x}", .{ id, offset });
     try db.attrs.offset.putNoClobber(db.gpa, id, offset);
 }
 
@@ -486,13 +535,18 @@ pub fn addResetValue(db: *Database, id: EntityId, reset_value: u64) !void {
 }
 
 pub fn addResetMask(db: *Database, id: EntityId, reset_mask: u64) !void {
-    log.debug("{}: adding register mask: 0x{}", .{ id, reset_mask });
+    log.debug("{}: adding register mask: 0x{x}", .{ id, reset_mask });
     try db.attrs.reset_mask.putNoClobber(db.gpa, id, reset_mask);
 }
 
 pub fn addAccess(db: *Database, id: EntityId, access: Access) !void {
     log.debug("{}: adding access: {}", .{ id, access });
     try db.attrs.access.putNoClobber(db.gpa, id, access);
+}
+
+pub fn addCount(db: *Database, id: EntityId, count: u64) !void {
+    log.debug("{}: adding count: {}", .{ id, count });
+    try db.attrs.count.putNoClobber(db.gpa, id, count);
 }
 
 pub fn addChild(
@@ -562,10 +616,12 @@ pub fn getEntityIdByName(
     comptime var group = (tok_it.next() orelse unreachable) ++ "s";
     comptime var table = (tok_it.next() orelse unreachable) ++ "s";
 
+    log.debug("group: {s}, table: {s}", .{ group, table });
     var it = @field(@field(db, group), table).iterator();
     return while (it.next()) |entry| {
         const entry_id = entry.key_ptr.*;
         const entry_name = db.attrs.name.get(entry_id) orelse continue;
+        log.debug("looking at name: {s}", .{entry_name});
         if (std.mem.eql(u8, name, entry_name)) {
             assert(db.entityIs(entity_location, entry_id));
             return entry_id;
@@ -589,7 +645,7 @@ pub const EntityType = enum {
 pub fn getEntityType(
     db: Database,
     id: EntityId,
-) EntityType {
+) ?EntityType {
     inline for (@typeInfo(TypeOfField(Database, "types")).Struct.fields) |field| {
         if (@field(db.types, field.name).contains(id))
             return @field(EntityType, field.name[0 .. field.name.len - 1]);
@@ -603,7 +659,7 @@ pub fn getEntityType(
                 @field(EntityType, field.name[0 .. field.name.len - 1]);
     }
 
-    @panic("unhandled entity type");
+    return null;
 }
 
 // assert that the database is in valid state

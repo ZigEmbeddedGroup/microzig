@@ -209,8 +209,15 @@ fn writePeripheralInstance(db: Database, instance_id: EntityId, offset: u64, out
     else if (db.attrs.description.get(type_id)) |description|
         try writeComment(db.arena.allocator(), description, writer);
 
-    try writer.print("pub const {s} = @ptrCast(*volatile {s}, 0x{x});\n", .{
+    var array_prefix_buf: [80]u8 = undefined;
+    const array_prefix = if (db.attrs.count.get(instance_id)) |count|
+        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+    else
+        "";
+
+    try writer.print("pub const {s} = @ptrCast(*volatile {s}{s}, 0x{x});\n", .{
         std.zig.fmtId(name),
+        array_prefix,
         type_ref,
         offset,
     });
@@ -282,27 +289,11 @@ fn isPeripheralZeroSized(db: Database, peripheral_id: EntityId) bool {
     } else true;
 }
 
-// have to fill this in manually when new errors are introduced. This is because writePeripheral is recursive via writePeripheralBase
-const ErrorWritePeripheralBase = error{
-    OutOfMemory,
-    InvalidCharacter,
-    Overflow,
-    NameNotFound,
-    MissingEnumSize,
-    MissingEnumFields,
-    MissingEnumFieldName,
-    MissingEnumFieldValue,
-};
-
-fn WritePeripheralError(comptime Writer: type) type {
-    return ErrorWritePeripheralBase || Writer.Error;
-}
-
 fn writePeripheral(
     db: Database,
     peripheral_id: EntityId,
     out_writer: anytype,
-) WritePeripheralError(@TypeOf(out_writer))!void {
+) !void {
     assert(db.entityIs("type.peripheral", peripheral_id) or
         db.entityIs("type.register_group", peripheral_id));
 
@@ -339,7 +330,7 @@ fn writePeripheral(
         \\
     , .{
         std.zig.fmtId(name),
-        if (zero_sized) "" else "packed",
+        if (zero_sized) "" else "extern",
         if (has_modes) "union" else "struct",
     });
 
@@ -561,7 +552,7 @@ fn writeRegistersWithModes(
             } else try moded_registers.append(register);
         }
 
-        try writer.print("{s}: packed struct {{\n", .{
+        try writer.print("{s}: extern struct {{\n", .{
             std.zig.fmtId(mode_name),
         });
 
@@ -578,8 +569,6 @@ fn writeRegistersBase(
     registers: []const EntityWithOffset,
     out_writer: anytype,
 ) !void {
-    _ = parent_id;
-
     // registers _should_ be sorted when then make their way here
     assert(std.sort.isSorted(EntityWithOffset, registers, {}, EntityWithOffset.lessThan));
     var buffer = std.ArrayList(u8).init(db.arena.allocator());
@@ -589,45 +578,61 @@ fn writeRegistersBase(
 
     // don't have to care about modes
     // prioritize smaller fields that come earlier
-    {
-        var offset: u64 = 0;
-        var i: u32 = 0;
+    var offset: u64 = 0;
+    var i: u32 = 0;
 
-        while (i < registers.len) {
-            if (offset < registers[i].offset) {
-                try writer.print("reserved{}: [{}]u8,\n", .{ registers[i].offset, registers[i].offset - offset });
-                offset = registers[i].offset;
-            } else if (offset > registers[i].offset) {
-                if (db.attrs.name.get(registers[i].id)) |name|
-                    log.warn("skipping register: {s}", .{name});
+    while (i < registers.len) {
+        if (offset < registers[i].offset) {
+            try writer.print("reserved{}: [{}]u8,\n", .{ registers[i].offset, registers[i].offset - offset });
+            offset = registers[i].offset;
+        } else if (offset > registers[i].offset) {
+            if (db.attrs.name.get(registers[i].id)) |name|
+                log.warn("skipping register: {s}", .{name});
 
-                i += 1;
-                continue;
+            i += 1;
+            continue;
+        }
+
+        var end = i;
+        while (end < registers.len and registers[end].offset == offset) : (end += 1) {}
+        const next = blk: {
+            var ret: ?EntityWithOffsetAndSize = null;
+            for (registers[i..end]) |register| {
+                const size = if (db.attrs.size.get(register.id)) |size|
+                    if (db.attrs.count.get(register.id)) |count|
+                        size * count
+                    else
+                        size
+                else
+                    unreachable;
+
+                if (ret == null or (size < ret.?.size))
+                    ret = .{
+                        .id = register.id,
+                        .offset = register.offset,
+                        .size = size,
+                    };
             }
 
-            var end = i;
-            while (end < registers.len and registers[end].offset == offset) : (end += 1) {}
-            const next = blk: {
-                var ret: ?EntityWithOffsetAndSize = null;
-                for (registers[i..end]) |register| {
-                    const size = db.attrs.size.get(register.id) orelse unreachable;
-                    if (ret == null or (size < ret.?.size))
-                        ret = .{
-                            .id = register.id,
-                            .offset = register.offset,
-                            .size = size,
-                        };
-                }
+            break :blk ret orelse unreachable;
+        };
 
-                break :blk ret orelse unreachable;
-            };
+        try writeRegister(db, next.id, writer);
+        // TODO: round up to next power of two
+        assert(next.size % 8 == 0);
+        offset += next.size / 8;
+        i = end;
+    }
 
-            try writeRegister(db, next.id, writer);
-            // TODO: round up to next power of two
-            assert(next.size % 8 == 0);
-            offset += next.size / 8;
-            i = end;
-        }
+    // TODO: name collision
+    if (db.attrs.size.get(parent_id)) |size| {
+        if (offset > size)
+            @panic("peripheral size too small, parsing should have caught this");
+
+        if (offset != size)
+            try writer.print("padding: [{}]u8,\n", .{
+                size - offset,
+            });
     }
 
     try out_writer.writeAll(buffer.items);
@@ -648,6 +653,12 @@ fn writeRegister(
     if (db.attrs.description.get(register_id)) |description|
         try writeComment(db.arena.allocator(), description, writer);
 
+    var array_prefix_buf: [80]u8 = undefined;
+    const array_prefix = if (db.attrs.count.get(register_id)) |count|
+        try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
+    else
+        "";
+
     if (db.children.fields.get(register_id)) |field_set| {
         var fields = std.ArrayList(EntityWithOffset).init(db.gpa);
         defer fields.deinit();
@@ -662,14 +673,19 @@ fn writeRegister(
         }
 
         std.sort.sort(EntityWithOffset, fields.items, {}, EntityWithOffset.lessThan);
-        try writer.print("{s}: mmio.Mmio({}, packed struct{{\n", .{
+        try writer.print("{s}: mmio.Mmio({}, {s}packed struct{{\n", .{
             std.zig.fmtId(name),
             size,
+            array_prefix,
         });
 
         try writeFields(db, fields.items, size, writer);
         try writer.writeAll("}),\n");
-    } else try writer.print("{s}: u{},\n", .{ std.zig.fmtId(name), size });
+    } else try writer.print("{s}: {s}u{},\n", .{
+        std.zig.fmtId(name),
+        array_prefix,
+        size,
+    });
 
     try out_writer.writeAll(buffer.items);
 }
@@ -819,7 +835,7 @@ test "gen.peripheral type with register and field" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
         \\            TEST_FIELD: u1,
         \\            padding: u31 = 0,
@@ -873,7 +889,7 @@ test "gen.peripheral instantiation" {
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
         \\            TEST_FIELD: u1,
         \\            padding: u31 = 0,
@@ -926,7 +942,7 @@ test "gen.peripherals with a shared type" {
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
         \\            TEST_FIELD: u1,
         \\            padding: u31 = 0,
@@ -994,7 +1010,7 @@ test "gen.peripheral with modes" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed union {
+        \\    pub const TEST_PERIPHERAL = extern union {
         \\        pub const Mode = enum {
         \\            TEST_MODE1,
         \\            TEST_MODE2,
@@ -1019,14 +1035,14 @@ test "gen.peripheral with modes" {
         \\            unreachable;
         \\        }
         \\
-        \\        TEST_MODE1: packed struct {
+        \\        TEST_MODE1: extern struct {
         \\            TEST_REGISTER1: u32,
         \\            COMMON_REGISTER: mmio.Mmio(32, packed struct {
         \\                TEST_FIELD: u1,
         \\                padding: u31 = 0,
         \\            }),
         \\        },
-        \\        TEST_MODE2: packed struct {
+        \\        TEST_MODE2: extern struct {
         \\            TEST_REGISTER2: u32,
         \\            COMMON_REGISTER: mmio.Mmio(32, packed struct {
         \\                TEST_FIELD: u1,
@@ -1069,7 +1085,7 @@ test "gen.peripheral with enum" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        pub const TEST_ENUM = enum(u4) {
         \\            TEST_ENUM_FIELD1 = 0x0,
         \\            TEST_ENUM_FIELD2 = 0x1,
@@ -1113,7 +1129,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        pub const TEST_ENUM = enum(u1) {
         \\            TEST_ENUM_FIELD1 = 0x0,
         \\            TEST_ENUM_FIELD2 = 0x1,
@@ -1163,7 +1179,7 @@ test "gen.field with named enum" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        pub const TEST_ENUM = enum(u4) {
         \\            TEST_ENUM_FIELD1 = 0x0,
         \\            TEST_ENUM_FIELD2 = 0x1,
@@ -1219,7 +1235,7 @@ test "gen.field with anonymous enum" {
         \\const mmio = @import("mmio");
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = packed struct {
+        \\    pub const TEST_PERIPHERAL = extern struct {
         \\        TEST_REGISTER: mmio.Mmio(8, packed struct {
         \\            TEST_FIELD: packed union {
         \\                raw: u4,
@@ -1281,13 +1297,13 @@ test "gen.namespaced register groups" {
         \\
         \\pub const types = struct {
         \\    pub const PORT = struct {
-        \\        pub const PORTB = packed struct {
+        \\        pub const PORTB = extern struct {
         \\            PORTB: u8,
         \\            DDRB: u8,
         \\            PINB: u8,
         \\        };
         \\
-        \\        pub const PORTC = packed struct {
+        \\        pub const PORTC = extern struct {
         \\            PORTC: u8,
         \\            DDRC: u8,
         \\            PINC: u8,
@@ -1332,7 +1348,7 @@ test "gen.peripheral with reserved register" {
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = packed struct {
+        \\    pub const PORTB = extern struct {
         \\        PORTB: u32,
         \\        reserved8: [4]u8,
         \\        PINB: u32,
@@ -1342,19 +1358,136 @@ test "gen.peripheral with reserved register" {
     , buffer.items);
 }
 
-// TODO:
-// - write some tests regarding register scoped modes, and what fields look like
-//   when they have a peripheral/register_group scoped mode
-// - default values should be reset value, otherwise 0
-//
+test "gen.peripheral with count" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
 
-// more test ideas:
-// - interrupts
-// - anonymous peripherals
-// - multiple register groups
-// - access
-// - modes
-// - repeated
-// - ordered address printing
-// - modes with discontiguous bits
-//
+    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+        .size = 3,
+    });
+
+    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
+        .name = "PORTB",
+        .offset = 0x23,
+        .count = 4,
+    });
+
+    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 2 });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const mmio = @import("mmio");
+        \\
+        \\pub const devices = struct {
+        \\    pub const ATmega328P = struct {
+        \\        pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\    };
+        \\};
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: u8,
+        \\        DDRB: u8,
+        \\        PINB: u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.peripheral with count, padding required" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+        .size = 4,
+    });
+
+    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
+        .name = "PORTB",
+        .offset = 0x23,
+        .count = 4,
+    });
+
+    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 2 });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const mmio = @import("mmio");
+        \\
+        \\pub const devices = struct {
+        \\    pub const ATmega328P = struct {
+        \\        pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\    };
+        \\};
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: u8,
+        \\        DDRB: u8,
+        \\        PINB: u8,
+        \\        padding: [1]u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.register with count" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+    });
+
+    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
+        .name = "PORTB",
+        .offset = 0x23,
+    });
+
+    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0, .count = 4 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 4 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 5 });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const mmio = @import("mmio");
+        \\
+        \\pub const devices = struct {
+        \\    pub const ATmega328P = struct {
+        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\    };
+        \\};
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: [4]u8,
+        \\        DDRB: u8,
+        \\        PINB: u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}

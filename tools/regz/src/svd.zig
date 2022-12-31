@@ -27,46 +27,19 @@ const Context = struct {
         log.debug("{}: derived from '{s}'", .{ id, derived_from });
     }
 
-    fn getRegisterPropsDerivedFromParent(
+    fn deriveRegisterPropertiesFrom(
         ctx: *Context,
-        id: EntityId,
         node: xml.Node,
+        from: EntityId,
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
-        try ctx.addRegisterPropertiesDerivedFromParent(id, register_props);
-
-        return ctx.register_props.get(id).?;
-    }
-
-    fn addRegisterPropertiesDerivedFrom(
-        ctx: *Context,
-        id: EntityId,
-        from: EntityId,
-        register_props: RegisterProperties,
-    ) !void {
-        const db = ctx.db;
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
-
         inline for (@typeInfo(RegisterProperties).Struct.fields) |field| {
             if (@field(register_props, field.name)) |value|
                 @field(base_register_props, field.name) = value;
         }
 
-        log.debug("deriving register props: {}", .{base_register_props});
-        try ctx.register_props.put(db.gpa, id, base_register_props);
-    }
-
-    fn addRegisterPropertiesDerivedFromParent(
-        ctx: *Context,
-        id: EntityId,
-        register_props: RegisterProperties,
-    ) !void {
-        const db = ctx.db;
-
-        if (db.attrs.parent.get(id)) |parent_id|
-            try ctx.addRegisterPropertiesDerivedFrom(id, parent_id, register_props)
-        else
-            try ctx.register_props.put(db.gpa, id, register_props);
+        return base_register_props;
     }
 };
 
@@ -154,7 +127,6 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
     defer ctx.deinit();
 
     const register_props = try RegisterProperties.parse(root);
-    log.debug("parsed register props: {}", .{register_props});
     try ctx.register_props.put(db.gpa, device_id, register_props);
 
     var peripheral_it = root.iterate(&.{"peripherals"}, "peripheral");
@@ -176,43 +148,45 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
 pub fn deriveEntity(db: Database, id: EntityId, derived_name: []const u8) !void {
     log.debug("{}: derived from {s}", .{ id, derived_name });
     const entity_type = db.getEntityType(id);
-    log.warn("TODO: implement derivation for {}", .{entity_type});
+    log.warn("TODO: implement derivation for {?}", .{entity_type});
 }
 
 pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void {
     const db = ctx.db;
-    const name = node.getValue("name") orelse return error.PeripheralMissingName;
-    const base_address = node.getValue("baseAddress") orelse return error.PeripheralMissingBaseAddress;
-    const offset = try std.fmt.parseInt(u64, base_address, 0);
 
-    // dim elements before creation as it might require creating multiple instances
-    const dim_elements = try DimElements.parse(node);
-    if (dim_elements != null)
-        return error.TodoDimElements;
-
-    const type_id = try db.createPeripheral(.{
-        .name = name,
-    });
+    const type_id = try loadPeripheralType(ctx, node);
     errdefer db.destroyEntity(type_id);
 
     const instance_id = try db.createPeripheralInstance(device_id, type_id, .{
-        .name = name,
-        .offset = offset,
+        .name = node.getValue("name") orelse return error.PeripheralMissingName,
+        .offset = if (node.getValue("baseAddress")) |base_address|
+            try std.fmt.parseInt(u64, base_address, 0)
+        else
+            return error.PeripheralMissingBaseAddress,
     });
     errdefer db.destroyEntity(instance_id);
+
+    const dim_elements = try DimElements.parse(node);
+    if (dim_elements) |elements| {
+        // peripherals can't have dimIndex set according to the spec
+        if (elements.dim_index != null)
+            return error.Malformed;
+
+        if (elements.dim_name != null)
+            return error.TodoDimElementsExtended;
+
+        // count is applied to the specific instance
+        try db.addCount(instance_id, elements.dim);
+
+        // size is applied to the type
+        try db.addSize(type_id, elements.dim_increment);
+    }
 
     if (node.findChild("interrupt")) |interrupt_node|
         try loadInterrupt(db, interrupt_node, device_id);
 
-    // TODO: skip if:
-    //  - any dimElementGroup values are set
-
-    log.debug("{}: created peripheral instance", .{instance_id});
-
-    if (node.getValue("description")) |description| {
-        try db.addDescription(type_id, description);
+    if (node.getValue("description")) |description|
         try db.addDescription(instance_id, description);
-    }
 
     if (node.getValue("version")) |version|
         try db.addVersion(instance_id, version);
@@ -220,9 +194,8 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
     if (node.getAttribute("derivedFrom")) |derived_from|
         try ctx.addDerivedEntity(instance_id, derived_from);
 
-    const register_props = try RegisterProperties.parse(node);
-    log.debug("parsed register props: {}", .{register_props});
-    try ctx.addRegisterPropertiesDerivedFrom(type_id, device_id, register_props);
+    const register_props = try ctx.deriveRegisterPropertiesFrom(node, device_id);
+    try ctx.register_props.put(db.gpa, type_id, register_props);
 
     var register_it = node.iterate(&.{"registers"}, "register");
     while (register_it.next()) |register_node|
@@ -235,7 +208,6 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
         loadCluster(ctx, cluster_node, type_id) catch |err|
             log.warn("failed to load cluster: {}", .{err});
 
-    // dimElementGroup
     // alternatePeripheral
     // groupName
     // prependToName
@@ -243,6 +215,20 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
     // headerStructName
     // disableCondition
     // addressBlock
+}
+
+fn loadPeripheralType(ctx: *Context, node: xml.Node) !EntityId {
+    const db = ctx.db;
+
+    const id = try db.createPeripheral(.{
+        .name = node.getValue("name") orelse return error.PeripheralMissingName,
+    });
+    errdefer db.destroyEntity(id);
+
+    if (node.getValue("description")) |description|
+        try db.addDescription(id, description);
+
+    return id;
 }
 
 fn loadInterrupt(db: *Database, node: xml.Node, device_id: EntityId) !void {
@@ -292,33 +278,33 @@ fn loadRegister(
     parent_id: EntityId,
 ) !void {
     const db = ctx.db;
+
+    const register_props = try ctx.deriveRegisterPropertiesFrom(node, parent_id);
+    const size = register_props.size orelse return error.MissingRegisterSize;
+    const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
+        if (elements.dim_index != null or elements.dim_name != null)
+            return error.TodoDimElementsExtended;
+
+        if ((elements.dim_increment * 8) != size)
+            return error.DimIncrementSizeMismatch;
+
+        break :count elements.dim;
+    } else null;
+
     const id = try db.createRegister(parent_id, .{
         .name = node.getValue("name") orelse return error.MissingRegisterName,
         .description = node.getValue("description"),
         .offset = if (node.getValue("addressOffset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
         else
-            null,
+            return error.MissingRegisterOffset,
+        .size = size,
+        .count = count,
+        .access = register_props.access,
+        .reset_mask = register_props.reset_mask,
+        .reset_value = register_props.reset_value,
     });
     errdefer db.destroyEntity(id);
-
-    const dim_elements = try DimElements.parse(node);
-    if (dim_elements != null)
-        return error.TodoDimElements;
-
-    const register_props = try ctx.getRegisterPropsDerivedFromParent(id, node);
-    if (register_props.size) |size|
-        try db.addSize(id, size);
-
-    // TODO: protection
-    if (register_props.access) |access|
-        try db.addAccess(id, access);
-
-    if (register_props.reset_mask) |reset_mask|
-        try db.addResetMask(id, reset_mask);
-
-    if (register_props.reset_value) |reset_value|
-        try db.addResetValue(id, reset_value);
 
     var field_it = node.iterate(&.{"fields"}, "field");
     while (field_it.next()) |field_node|
@@ -381,7 +367,7 @@ fn loadEnumeratedValues(ctx: *Context, node: xml.Node, field_id: EntityId) !void
         .name = node.getValue("name"),
         .size = db.attrs.size.get(field_id),
     });
-    defer db.destroyEntity(id);
+    errdefer db.destroyEntity(id);
 
     try db.attrs.@"enum".putNoClobber(db.gpa, field_id, id);
 
@@ -402,7 +388,7 @@ fn loadEnumeratedValue(ctx: *Context, node: xml.Node, enum_id: EntityId) !void {
         else
             return error.EnumFieldMissingValue,
     });
-    defer db.destroyEntity(id);
+    errdefer db.destroyEntity(id);
 }
 
 pub const Revision = struct {
@@ -910,7 +896,7 @@ fn parseAccess(str: []const u8) !Access {
         error.UnknownAccessType;
 }
 
-test "device register properties" {
+test "svd.device register properties" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -925,6 +911,7 @@ test "device register properties" {
         \\      <registers>
         \\        <register>
         \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
         \\        </register>
         \\      </registers>
         \\    </peripheral>
@@ -948,7 +935,7 @@ test "device register properties" {
     try expectAttr(db, "reset_mask", 0xffffffff, register_id);
 }
 
-test "peripheral register properties" {
+test "svd.peripheral register properties" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -967,6 +954,7 @@ test "peripheral register properties" {
         \\      <registers>
         \\        <register>
         \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
         \\        </register>
         \\      </registers>
         \\    </peripheral>
@@ -989,7 +977,7 @@ test "peripheral register properties" {
     try expectAttr(db, "reset_mask", 0xffff, register_id);
 }
 
-test "register register properties" {
+test "svd.register register properties" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1008,6 +996,7 @@ test "register register properties" {
         \\      <registers>
         \\        <register>
         \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
         \\          <size>8</size>
         \\          <access>read-write</access>
         \\          <resetValue>0x0002</resetValue>
@@ -1034,7 +1023,7 @@ test "register register properties" {
     try expectAttr(db, "reset_mask", 0xff, register_id);
 }
 
-test "register with fields" {
+test "svd.register with fields" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1049,6 +1038,7 @@ test "register with fields" {
         \\      <registers>
         \\        <register>
         \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
         \\          <fields>
         \\            <field>
         \\              <name>TEST_FIELD</name>
@@ -1073,7 +1063,7 @@ test "register with fields" {
     try expectAttr(db, "access", .read_write, field_id);
 }
 
-test "field with enum value" {
+test "svd.field with enum value" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1088,6 +1078,7 @@ test "field with enum value" {
         \\      <registers>
         \\        <register>
         \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
         \\          <fields>
         \\            <field>
         \\              <name>TEST_FIELD</name>
@@ -1138,4 +1129,154 @@ test "field with enum value" {
     try expectEqual(@as(u32, 1), db.types.enum_fields.get(enum_field2_id).?);
     try expectAttr(db, "parent", enum_id, enum_field2_id);
     try expectAttr(db, "description", "test enum field 2", enum_field2_id);
+}
+
+test "svd.peripheral with dimElementGroup" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <dim>4</dim>
+        \\      <dimIncrement>4</dimIncrement>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    const peripheral_id = try db.getEntityIdByName("type.peripheral", "TEST_PERIPHERAL");
+    try expectAttr(db, "size", 4, peripheral_id);
+
+    const instance_id = try db.getEntityIdByName("instance.peripheral", "TEST_PERIPHERAL");
+    try expectAttr(db, "count", 4, instance_id);
+}
+
+test "svd.peripheral with dimElementgroup, dimIndex set" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <dim>4</dim>
+        \\      <dimIncrement>4</dimIncrement>
+        \\      <dimIndex>foo</dimIndex>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    _ = try db.getEntityIdByName("instance.device", "TEST_DEVICE");
+
+    // should not exist since dimIndex is not allowed to be defined for peripherals
+    try expectError(error.NameNotFound, db.getEntityIdByName("type.peripheral", "TEST_PERIPHERAL"));
+    try expectError(error.NameNotFound, db.getEntityIdByName("instance.peripheral", "TEST_PERIPHERAL"));
+}
+
+test "svd.register with dimElementGroup" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    const register_id = try db.getEntityIdByName("type.register", "TEST_REGISTER");
+    try expectAttr(db, "count", 4, register_id);
+}
+
+test "svd.register with dimElementGroup, dimIncrement != size" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>8</dimIncrement>
+        \\          <fields>
+        \\            <field>
+        \\              <name>TEST_FIELD</name>
+        \\              <access>read-write</access>
+        \\              <bitRange>[7:0]</bitRange>
+        \\            </field>
+        \\          </fields>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    _ = try db.getEntityIdByName("instance.device", "TEST_DEVICE");
+    _ = try db.getEntityIdByName("instance.peripheral", "TEST_PERIPHERAL");
+    _ = try db.getEntityIdByName("type.peripheral", "TEST_PERIPHERAL");
+
+    // dimIncrement is different than the size of the register, so it should never be made
+    try expectError(error.NameNotFound, db.getEntityIdByName("type.register", "TEST_REGISTER"));
 }
