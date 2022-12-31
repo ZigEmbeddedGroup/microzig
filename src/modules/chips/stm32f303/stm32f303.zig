@@ -539,7 +539,7 @@ pub fn SpiBus(comptime index: usize) type {
         /// send+receive a single byte.
         /// Writing `null` writes an arbitrary byte (`undefined`), and
         /// reading into `null` ignores the value received.
-        fn transceiveByte(_: Self, optional_write_byte: ?u8, optional_read_pointer: ?*u8) !void {
+        pub fn transceiveByte(_: Self, optional_write_byte: ?u8, optional_read_pointer: ?*u8) !void {
 
             // SPIx_DR's least significant byte is `@bitCast([dr_byte_size]u8, ...)[0]`
             const dr_byte_size = @sizeOf(@TypeOf(regs.SPI1.DR.raw));

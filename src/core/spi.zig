@@ -23,6 +23,10 @@ pub fn SpiBus(comptime index: usize) type {
 
                     device: SelfSpiDevice,
 
+                    fn transceiveByte(self: *SelfTransfer, write_byte: u8, read_pointer: *u8) !void {
+                        try self.device.internal.transceiveByte(write_byte, read_pointer);
+                    }
+
                     pub const Writer = std.io.Writer(*SelfTransfer, WriteError, writeSome);
 
                     /// Return a standard Writer (which ignores the bytes read).
@@ -54,10 +58,19 @@ pub fn SpiBus(comptime index: usize) type {
                 };
 
                 /// start a new transfer, selecting using the CS pin
-                pub fn beginTransfer(dev: SelfSpiDevice) !Transfer {
-                    dev.internal.switchToDevice(cs_pin, config);
-                    dev.internal.beginTransfer(cs_pin, config);
-                    return Transfer{ .device = dev };
+                pub fn beginTransfer(self: SelfSpiDevice) !Transfer {
+                    self.internal.switchToDevice(cs_pin, config);
+                    self.internal.beginTransfer(cs_pin, config);
+                    return Transfer{ .device = self };
+                }
+
+                pub fn transceive(self: SelfSpiDevice, write_buffer: []const u8, read_buffer: []u8) !void {
+                    std.debug.assert(write_buffer.len == read_buffer.len);
+                    var transfer = try self.beginTransfer();
+                    defer transfer.end();
+                    for (write_buffer) |_, i| {
+                        try transfer.transceiveByte(write_buffer[i], &read_buffer[i]);
+                    }
                 }
 
                 /// Shorthand for 'register-based' devices
