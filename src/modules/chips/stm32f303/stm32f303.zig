@@ -493,13 +493,6 @@ pub fn Spi(comptime index: usize) type {
             // 	- Configure the Alternate Function in AFR Register
             regs.GPIOA.AFRL.modify(.{ .AFRL5 = 5, .AFRL6 = 5, .AFRL7 = 5 });
 
-            // TODO: Make the use of PE3 configured via the STM32F3DISCOVERY board
-            // configure the CS (chip select) pin for output
-            regs.RCC.AHBENR.modify(.{ .IOPEEN = 1 });
-            regs.GPIOE.MODER.modify(.{ .MODER3 = 0b01 });
-            regs.GPIOE.OTYPER.modify(.{ .OT3 = 1 });
-            regs.GPIOE.OSPEEDR.modify(.{ .OSPEEDR3 = 0b11 });
-
             // Enable the SPI1 CLOCK
             regs.RCC.APB2ENR.modify(.{ .SPI1EN = 1 });
 
@@ -524,6 +517,7 @@ pub fn Spi(comptime index: usize) type {
         }
 
         pub fn beginTransfer(_: Self, comptime cs_pin: type) void {
+            gpio.setOutput(cs_pin); // TODO: Move to new 'device initialization' code?
             gpio.write(cs_pin, .low); // select the given device, TODO: support inverse CS devices
             debugPrint("enabled SPI1\r\n", .{});
         }
