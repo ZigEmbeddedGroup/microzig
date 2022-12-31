@@ -201,30 +201,19 @@ fn writePeripheralInstance(db: Database, instance_id: EntityId, offset: u64, out
     const writer = buffer.writer();
     const name = db.attrs.name.get(instance_id) orelse return error.MissingPeripheralInstanceName;
     const type_id = db.instances.peripherals.get(instance_id).?;
-    if (db.attrs.name.contains(type_id)) {
-        const type_ref = try typesReference(db, type_id);
+    assert(db.attrs.name.contains(type_id));
+    const type_ref = try typesReference(db, type_id);
 
-        if (db.attrs.description.get(instance_id)) |description|
-            try writeComment(db.arena.allocator(), description, writer)
-        else if (db.attrs.description.get(type_id)) |description|
-            try writeComment(db.arena.allocator(), description, writer);
+    if (db.attrs.description.get(instance_id)) |description|
+        try writeComment(db.arena.allocator(), description, writer)
+    else if (db.attrs.description.get(type_id)) |description|
+        try writeComment(db.arena.allocator(), description, writer);
 
-        try writer.print("pub const {s} = @ptrCast(*volatile {s}, 0x{x});\n", .{
-            std.zig.fmtId(name),
-            type_ref,
-            offset,
-        });
-    } else {
-        try writer.print("pub const {s} = @ptrCast(*volatile ", .{
-            std.zig.fmtId(name),
-        });
-
-        try writePeripheralBody(db, type_id, writer);
-
-        try writer.print(", 0x{x});\n", .{
-            offset,
-        });
-    }
+    try writer.print("pub const {s} = @ptrCast(*volatile {s}, 0x{x});\n", .{
+        std.zig.fmtId(name),
+        type_ref,
+        offset,
+    });
 
     try out_writer.writeAll(buffer.items);
 }
@@ -317,8 +306,8 @@ fn writePeripheral(
     assert(db.entityIs("type.peripheral", peripheral_id) or
         db.entityIs("type.register_group", peripheral_id));
 
-    // unnamed peripherals are anonymously defined
-    const name = db.attrs.name.get(peripheral_id) orelse return;
+    // peripheral types should always have a name (responsibility of parsing to get this done)
+    const name = db.attrs.name.get(peripheral_id) orelse unreachable;
 
     // for now only serialize flat peripherals with no register groups
     // TODO: expand this
@@ -343,24 +332,13 @@ fn writePeripheral(
     if (db.attrs.description.get(peripheral_id)) |description|
         try writeComment(db.arena.allocator(), description, writer);
 
-    try writer.print("pub const {s} = ", .{std.zig.fmtId(name)});
-    try writePeripheralBody(db, peripheral_id, writer);
-    try writer.writeAll(";\n");
-
-    try out_writer.writeAll(buffer.items);
-}
-
-fn writePeripheralBody(
-    db: Database,
-    peripheral_id: EntityId,
-    writer: anytype,
-) WritePeripheralError(@TypeOf(writer))!void {
     const zero_sized = isPeripheralZeroSized(db, peripheral_id);
     const has_modes = db.children.modes.contains(peripheral_id);
     try writer.print(
-        \\{s} {s} {{
+        \\pub const {s} = {s} {s} {{
         \\
     , .{
+        std.zig.fmtId(name),
         if (zero_sized) "" else "packed",
         if (has_modes) "union" else "struct",
     });
@@ -393,6 +371,9 @@ fn writePeripheralBody(
     try writeRegisters(db, peripheral_id, writer);
 
     try writer.writeAll("\n}");
+    try writer.writeAll(";\n");
+
+    try out_writer.writeAll(buffer.items);
 }
 
 fn writeNewlineIfWritten(writer: anytype, written: *bool) !void {
@@ -1317,49 +1298,14 @@ test "gen.namespaced register groups" {
     , buffer.items);
 }
 
-test "gen.peripheral without name" {
-    var db = try Database.init(std.testing.allocator);
-    defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{});
-    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 2 });
-
-    const device_id = try db.createDevice(.{
-        .name = "ATmega328P",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-    });
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.toZig(buffer.writer());
-    try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile packed struct {
-        \\            PORTB: u8,
-        \\            DDRB: u8,
-        \\            PINB: u8,
-        \\        }, 0x23);
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
 test "gen.peripheral with reserved register" {
     var db = try Database.init(std.testing.allocator);
     defer db.deinit();
 
-    const peripheral_id = try db.createPeripheral(.{});
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+    });
+
     _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 32, .offset = 0 });
     _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 32, .offset = 8 });
 
@@ -1381,11 +1327,15 @@ test "gen.peripheral with reserved register" {
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile packed struct {
-        \\            PORTB: u32,
-        \\            reserved8: [4]u8,
-        \\            PINB: u32,
-        \\        }, 0x23);
+        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\    };
+        \\};
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = packed struct {
+        \\        PORTB: u32,
+        \\        reserved8: [4]u8,
+        \\        PINB: u32,
         \\    };
         \\};
         \\

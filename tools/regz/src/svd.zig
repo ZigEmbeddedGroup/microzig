@@ -185,7 +185,14 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
     const base_address = node.getValue("baseAddress") orelse return error.PeripheralMissingBaseAddress;
     const offset = try std.fmt.parseInt(u64, base_address, 0);
 
-    const type_id = try db.createPeripheral(.{});
+    // dim elements before creation as it might require creating multiple instances
+    const dim_elements = try DimElements.parse(node);
+    if (dim_elements != null)
+        return error.TodoDimElements;
+
+    const type_id = try db.createPeripheral(.{
+        .name = name,
+    });
     errdefer db.destroyEntity(type_id);
 
     const instance_id = try db.createPeripheralInstance(device_id, type_id, .{
@@ -194,10 +201,6 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
     });
     errdefer db.destroyEntity(instance_id);
 
-    const dim_elements = try DimElements.parse(node);
-    if (dim_elements != null)
-        return error.TodoDimElements;
-
     if (node.findChild("interrupt")) |interrupt_node|
         try loadInterrupt(db, interrupt_node, device_id);
 
@@ -205,10 +208,11 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
     //  - any dimElementGroup values are set
 
     log.debug("{}: created peripheral instance", .{instance_id});
-    // TODO: what to do with a half baked instance?
 
-    if (node.getValue("description")) |description|
+    if (node.getValue("description")) |description| {
+        try db.addDescription(type_id, description);
         try db.addDescription(instance_id, description);
+    }
 
     if (node.getValue("version")) |version|
         try db.addVersion(instance_id, version);
@@ -935,6 +939,7 @@ test "device register properties" {
     // these only have names attached, so if these functions fail the test will fail.
     _ = try db.getEntityIdByName("instance.device", "TEST_DEVICE");
     _ = try db.getEntityIdByName("instance.peripheral", "TEST_PERIPHERAL");
+    _ = try db.getEntityIdByName("type.peripheral", "TEST_PERIPHERAL");
 
     const register_id = try db.getEntityIdByName("type.register", "TEST_REGISTER");
     try expectAttr(db, "size", 32, register_id);
