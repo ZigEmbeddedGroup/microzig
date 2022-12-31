@@ -255,7 +255,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     };
 }
 
-const enable_stm32f303_debug = true;
+const enable_stm32f303_debug = false;
 
 fn debugPrint(comptime format: []const u8, args: anytype) void {
     if (enable_stm32f303_debug) {
