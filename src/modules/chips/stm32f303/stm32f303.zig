@@ -255,7 +255,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
     };
 }
 
-const enable_stm32f303_debug = false;
+const enable_stm32f303_debug = true;
 
 fn debugPrint(comptime format: []const u8, args: anytype) void {
     if (enable_stm32f303_debug) {
@@ -523,8 +523,8 @@ pub fn Spi(comptime index: usize) type {
             return Self{};
         }
 
-        pub fn beginTransfer(_: Self) void {
-            regs.GPIOE.BRR.modify(.{ .BR3 = 1 }); // output 0 on PE3 to enable SPI
+        pub fn beginTransfer(_: Self, comptime cs_pin: type) void {
+            gpio.write(cs_pin, .low); // select the given device, TODO: support inverse CS devices
             debugPrint("enabled SPI1\r\n", .{});
         }
 
@@ -535,7 +535,7 @@ pub fn Spi(comptime index: usize) type {
                 debugPrint("SPI1 TXE == 0\r\n", .{});
             }
             debugPrint("SPI1 TXE == 1\r\n", .{});
-            const www = if (w) |ww| ww else 0xAA; // dummy value
+            const www = if (w) |ww| ww else undefined; // dummy value
             @bitCast([dr_byte_size]u8, regs.SPI1.DR.*)[0] = www;
             debugPrint("Sent: {X:2}.\r\n", .{www});
             while (regs.SPI1.SR.read().RXNE == 0) {
@@ -562,9 +562,9 @@ pub fn Spi(comptime index: usize) type {
             }
         }
 
-        pub fn endTransfer(_: Self) void {
+        pub fn endTransfer(_: Self, comptime cs_pin: type) void {
             debugPrint("(disabling SPI1)\r\n", .{});
-            regs.GPIOE.BSRR.modify(.{ .BS3 = 1 }); // output 1 to disable SPI
+            gpio.write(cs_pin, .high); // deselect the given device, TODO: support inverse CS devices
             // HACK: wait long enough to make any device end an ongoing transfer
             var i: u8 = 255; // with the default clock, this seems to delay ~185 microseconds
             while (i > 0) : (i -= 1) {

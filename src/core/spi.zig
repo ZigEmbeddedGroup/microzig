@@ -6,66 +6,67 @@ const chip = @import("chip");
 pub fn Spi(comptime index: usize) type {
     const SystemSpi = chip.Spi(index);
 
-    const SpiDevice = struct {
-        const Device = @This();
-
-        internal: SystemSpi,
-
-        const Transfer = struct {
-            const Self = @This();
-
-            device: Device,
-
-            pub const Writer = std.io.Writer(*Self, WriteError, writeSome);
-
-            pub fn writer(self: *Self) Writer {
-                return Writer{ .context = self };
-            }
-
-            fn writeSome(self: *Self, buffer: []const u8) WriteError!usize {
-                try self.device.internal.writeAll(buffer);
-                return buffer.len;
-            }
-
-            pub const Reader = std.io.Reader(*Self, ReadError, readSome);
-
-            pub fn reader(self: *Self) Reader {
-                return Reader{ .context = self };
-            }
-
-            fn readSome(self: *Self, buffer: []u8) ReadError!usize {
-                try self.device.internal.readInto(buffer);
-                return buffer.len;
-            }
-
-            pub fn end(self: *Self) void {
-                self.device.internal.endTransfer();
-            }
-        };
-
-        pub fn beginTransfer(device: Device) !Transfer {
-            device.internal.beginTransfer();
-            return Transfer{ .device = device };
-        }
-    };
-
     return struct {
-        const Self = @This();
+        pub fn SpiDevice(comptime cs_pin: type) type {
+            return struct {
+                const SelfSpiDevice = @This();
+
+                internal: SystemSpi,
+
+                const Transfer = struct {
+                    const SelfTransfer = @This();
+
+                    device: SelfSpiDevice,
+
+                    pub const Writer = std.io.Writer(*SelfTransfer, WriteError, writeSome);
+
+                    pub fn writer(self: *SelfTransfer) Writer {
+                        return Writer{ .context = self };
+                    }
+
+                    fn writeSome(self: *SelfTransfer, buffer: []const u8) WriteError!usize {
+                        try self.device.internal.writeAll(buffer);
+                        return buffer.len;
+                    }
+
+                    pub const Reader = std.io.Reader(*SelfTransfer, ReadError, readSome);
+
+                    pub fn reader(self: *SelfTransfer) Reader {
+                        return Reader{ .context = self };
+                    }
+
+                    fn readSome(self: *SelfTransfer, buffer: []u8) ReadError!usize {
+                        try self.device.internal.readInto(buffer);
+                        return buffer.len;
+                    }
+
+                    pub fn end(self: *SelfTransfer) void {
+                        self.device.internal.endTransfer(cs_pin);
+                    }
+                };
+
+                pub fn beginTransfer(dev: SelfSpiDevice) !Transfer {
+                    dev.internal.beginTransfer(cs_pin);
+                    return Transfer{ .device = dev };
+                }
+            };
+        }
+
+        const SelfSpi = @This();
 
         internal: SystemSpi,
 
-        /// Initializes the SPI bus with the given config and returns a handle to the uart.
-        pub fn init(config: BusConfig) InitError!Self {
+        /// Initializes the SPI bus with the given config and returns a handle to it.
+        pub fn init(config: BusConfig) InitError!SelfSpi {
             micro.clock.ensure(); // TODO: Wat?
-            return Self{
+            return SelfSpi{
                 .internal = try SystemSpi.init(config),
             };
         }
 
-        pub fn device(self: Self, comptime cs_pin: type, config: DeviceConfig) SpiDevice {
-            _ = cs_pin; // TODO
+        pub fn device(self: SelfSpi, comptime cs_pin: type, config: DeviceConfig) SpiDevice(cs_pin) {
             _ = config; //TODO
-            return SpiDevice{ .internal = self.internal };
+            return SpiDevice(cs_pin){ .internal = self.internal };
         }
     };
 }
@@ -75,7 +76,7 @@ pub const BusConfig = struct {
     // Later: add common options
 };
 
-/// A SPI device configuration (excluding the pin).
+/// A SPI device configuration (excluding the CS pin).
 pub const DeviceConfig = struct {
     // TODO: add common options
 };
