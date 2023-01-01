@@ -55,18 +55,18 @@ pub const fifo = struct {
 var core1_stack: [128]u32 = undefined;
 
 /// Runs `entrypoint` on the second core.
-pub fn launchCore1(entrypoint: fn () void) void {
+pub fn launchCore1(entrypoint: *const fn () void) void {
     launchCore1WithStack(entrypoint, &core1_stack);
 }
 
-pub fn launchCore1WithStack(entrypoint: fn () void, stack: []u32) void {
+pub fn launchCore1WithStack(entrypoint: *const fn () void, stack: []u32) void {
     // TODO: disable SIO interrupts
 
-    const wrapper = struct {
+    const wrapper = &struct {
         fn wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.C) void {
             // TODO: protect stack using MPU
             _ = stack_base;
-            @intToPtr(fn () void, entry)();
+            @intToPtr(*const fn () void, entry)();
         }
     }.wrapper;
 

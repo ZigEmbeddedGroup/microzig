@@ -347,19 +347,19 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
 
                     // initialized below:
                     .name = undefined,
-                    .field_type = undefined,
+                    .type = undefined,
                     .alignment = undefined,
                 };
 
                 if (pin_config.function == .SIO) {
                     pin_field.name = pin_config.name orelse field.name;
-                    pin_field.field_type = GPIO(@enumToInt(@field(Pin, field.name)), pin_config.direction orelse .in);
+                    pin_field.type = GPIO(@enumToInt(@field(Pin, field.name)), pin_config.direction orelse .in);
                 } else if (pin_config.function.isPwm()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
-                    pin_field.field_type = pwm.PWM(pin_config.function.pwmSlice(), pin_config.function.pwmChannel());
+                    pin_field.type = pwm.PWM(pin_config.function.pwmSlice(), pin_config.function.pwmChannel());
                 } else if (pin_config.function.isAdc()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
-                    pin_field.field_type = adc.Input;
+                    pin_field.type = adc.Input;
                     pin_field.default_value = @ptrCast(?*const anyopaque, switch (pin_config.function) {
                         .ADC0 => &adc.Input.ain0,
                         .ADC1 => &adc.Input.ain1,
@@ -382,7 +382,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
                 //     }
                 // }
 
-                pin_field.alignment = @alignOf(field.field_type);
+                pin_field.alignment = @alignOf(field.type);
 
                 fields = fields ++ &[_]StructField{pin_field};
             }
@@ -498,11 +498,11 @@ pub const GlobalConfiguration = struct {
                 } else if (comptime func.isPwm()) {
                     gpio.setFunction(gpio_num, .pwm);
                 } else if (comptime func.isAdc()) {
-                    gpio.setFunction(gpio_num, .@"null");
+                    gpio.setFunction(gpio_num, .null);
                 } else if (comptime func.isUartTx() or func.isUartRx()) {
                     gpio.setFunction(gpio_num, .uart);
                 } else {
-                    @compileError(comptime std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
+                    @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
                         gpio_num,
                     }));
