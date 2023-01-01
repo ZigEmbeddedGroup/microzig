@@ -435,8 +435,7 @@ pub fn createEnum(
         size: ?u64 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("type.peripheral", parent_id) or
-        db.entityIs("type.field", parent_id));
+    assert(db.entityIs("type.peripheral", parent_id));
 
     const id = db.createEntity();
     errdefer db.destroyEntity(id);
