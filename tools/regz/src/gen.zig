@@ -673,10 +673,10 @@ fn writeRegister(
         }
 
         std.sort.sort(EntityWithOffset, fields.items, {}, EntityWithOffset.lessThan);
-        try writer.print("{s}: mmio.Mmio({}, {s}packed struct{{\n", .{
+        try writer.print("{s}: {s}mmio.Mmio({}, packed struct{{\n", .{
             std.zig.fmtId(name),
-            size,
             array_prefix,
+            size,
         });
 
         try writeFields(db, fields.items, size, writer);
@@ -1484,6 +1484,64 @@ test "gen.register with count" {
         \\pub const types = struct {
         \\    pub const PORTB = extern struct {
         \\        PORTB: [4]u8,
+        \\        DDRB: u8,
+        \\        PINB: u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.register with count and fields" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+    });
+
+    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
+        .name = "PORTB",
+        .offset = 0x23,
+    });
+
+    const portb_id = try db.createRegister(peripheral_id, .{
+        .name = "PORTB",
+        .size = 8,
+        .offset = 0,
+        .count = 4,
+    });
+
+    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 4 });
+    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 5 });
+
+    _ = try db.createField(portb_id, .{
+        .name = "TEST_FIELD",
+        .size = 4,
+        .offset = 0,
+    });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const mmio = @import("mmio");
+        \\
+        \\pub const devices = struct {
+        \\    pub const ATmega328P = struct {
+        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\    };
+        \\};
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: [4]mmio.Mmio(8, packed struct {
+        \\            TEST_FIELD: u4,
+        \\            padding: u4 = 0,
+        \\        }),
         \\        DDRB: u8,
         \\        PINB: u8,
         \\    };
