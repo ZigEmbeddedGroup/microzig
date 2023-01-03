@@ -182,6 +182,9 @@ fn populateDevice(
             entry.value_ptr.*,
         );
 
+    const arch = db.instances.devices.get(id).?.arch;
+    try device.put("arch", .{ .String = arch.toString() });
+
     if (properties.count() > 0)
         try device.put("properties", .{ .Object = properties });
 

@@ -47,7 +47,9 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
     const root = try doc.getRootElement();
 
     const device_id = db.createEntity();
-    try db.instances.devices.put(db.gpa, device_id, .{});
+    try db.instances.devices.put(db.gpa, device_id, .{
+        .arch = .unknown,
+    });
 
     const name = root.getValue("name") orelse return error.MissingDeviceName;
     try db.addName(device_id, name);
@@ -77,8 +79,10 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
         const nvic_prio_bits = cpu.getValue("nvicPrioBits") orelse return error.MissingNvicPrioBits;
         const vendor_systick_config = cpu.getValue("vendorSystickConfig") orelse return error.MissingVendorSystickConfig;
 
+        db.instances.devices.getEntry(device_id).?.value_ptr.arch = archFromStr(cpu_name);
+
         // cpu name => arch
-        try db.addDeviceProperty(device_id, "arch", cpu_name);
+        try db.addDeviceProperty(device_id, "cpu.name", cpu_name);
         try db.addDeviceProperty(device_id, "cpu.revision", cpu_revision);
         try db.addDeviceProperty(device_id, "cpu.nvic_prio_bits", nvic_prio_bits);
         try db.addDeviceProperty(device_id, "cpu.vendor_systick_config", vendor_systick_config);
@@ -143,6 +147,61 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
     }
 
     db.assertValid();
+}
+
+fn archFromStr(str: []const u8) Database.Arch {
+    return if (std.mem.eql(u8, "CM0", str))
+        .cortex_m0
+    else if (std.mem.eql(u8, "CM0PLUS", str))
+        .cortex_m0plus
+    else if (std.mem.eql(u8, "CM0+", str))
+        .cortex_m0plus
+    else if (std.mem.eql(u8, "CM1", str))
+        .cortex_m1
+    else if (std.mem.eql(u8, "SC000", str))
+        .sc000
+    else if (std.mem.eql(u8, "CM23", str))
+        .cortex_m23
+    else if (std.mem.eql(u8, "CM3", str))
+        .cortex_m3
+    else if (std.mem.eql(u8, "CM33", str))
+        .cortex_m33
+    else if (std.mem.eql(u8, "CM35P", str))
+        .cortex_m35p
+    else if (std.mem.eql(u8, "CM55", str))
+        .cortex_m55
+    else if (std.mem.eql(u8, "SC300", str))
+        .sc300
+    else if (std.mem.eql(u8, "CM4", str))
+        .cortex_m4
+    else if (std.mem.eql(u8, "CM7", str))
+        .cortex_m7
+    else if (std.mem.eql(u8, "ARMV8MML", str))
+        .arm_v81_mml
+    else if (std.mem.eql(u8, "ARMV8MBL", str))
+        .arm_v8_mbl
+    else if (std.mem.eql(u8, "ARMV81MML", str))
+        .arm_v8_mml
+    else if (std.mem.eql(u8, "CA5", str))
+        .cortex_a5
+    else if (std.mem.eql(u8, "CA7", str))
+        .cortex_a7
+    else if (std.mem.eql(u8, "CA8", str))
+        .cortex_a8
+    else if (std.mem.eql(u8, "CA9", str))
+        .cortex_a9
+    else if (std.mem.eql(u8, "CA15", str))
+        .cortex_a15
+    else if (std.mem.eql(u8, "CA17", str))
+        .cortex_a17
+    else if (std.mem.eql(u8, "CA53", str))
+        .cortex_a53
+    else if (std.mem.eql(u8, "CA57", str))
+        .cortex_a57
+    else if (std.mem.eql(u8, "CA72", str))
+        .cortex_a72
+    else
+        .unknown;
 }
 
 pub fn deriveEntity(db: Database, id: EntityId, derived_name: []const u8) !void {
@@ -220,6 +279,7 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
 fn loadPeripheralType(ctx: *Context, node: xml.Node) !EntityId {
     const db = ctx.db;
 
+    // TODO: get version
     const id = try db.createPeripheral(.{
         .name = node.getValue("name") orelse return error.PeripheralMissingName,
     });
@@ -390,7 +450,13 @@ fn loadEnumeratedValue(ctx: *Context, node: xml.Node, enum_id: EntityId) !void {
 
     assert(db.entityIs("type.enum", enum_id));
     const id = try db.createEnumField(enum_id, .{
-        .name = node.getValue("name") orelse return error.EnumFieldMissingName,
+        .name = if (node.getValue("name")) |name|
+            if (std.mem.eql(u8, "_", name))
+                return error.InvalidEnumFieldName
+            else
+                name
+        else
+            return error.EnumFieldMissingName,
         .description = node.getValue("description"),
         .value = if (node.getValue("value")) |value_str|
             try std.fmt.parseInt(u32, value_str, 0)
@@ -416,7 +482,12 @@ pub const Revision = struct {
     }
 };
 
-pub const Endian = enum { little, big, selectable, other };
+pub const Endian = enum {
+    little,
+    big,
+    selectable,
+    other,
+};
 
 pub const DataType = enum {
     uint8_t,
@@ -474,149 +545,6 @@ test "svd.Revision.parse" {
     try expectError(error.InvalidCharacter, Revision.parse("rp2"));
 }
 
-//
-//pub const CpuName = enum {
-//    cortex_m0,
-//    cortex_m0plus,
-//    cortex_m1,
-//    sc000, // kindof like an m3
-//    cortex_m23,
-//    cortex_m3,
-//    cortex_m33,
-//    cortex_m35p,
-//    cortex_m55,
-//    sc300,
-//    cortex_m4,
-//    cortex_m7,
-//    arm_v8_mml,
-//    arm_v8_mbl,
-//    arm_v81_mml,
-//    cortex_a5,
-//    cortex_a7,
-//    cortex_a8,
-//    cortex_a9,
-//    cortex_a15,
-//    cortex_a17,
-//    cortex_a53,
-//    cortex_a57,
-//    cortex_a72,
-//
-//    // avr
-//    avr,
-//    other,
-//
-//    // TODO: finish
-//    pub fn parse(str: []const u8) ?CpuName {
-//        return if (std.mem.eql(u8, "CM0", str))
-//            CpuName.cortex_m0
-//        else if (std.mem.eql(u8, "CM0PLUS", str))
-//            CpuName.cortex_m0plus
-//        else if (std.mem.eql(u8, "CM0+", str))
-//            CpuName.cortex_m0plus
-//        else if (std.mem.eql(u8, "CM1", str))
-//            CpuName.cortex_m1
-//        else if (std.mem.eql(u8, "SC000", str))
-//            CpuName.sc000
-//        else if (std.mem.eql(u8, "CM23", str))
-//            CpuName.cortex_m23
-//        else if (std.mem.eql(u8, "CM3", str))
-//            CpuName.cortex_m3
-//        else if (std.mem.eql(u8, "CM33", str))
-//            CpuName.cortex_m33
-//        else if (std.mem.eql(u8, "CM35P", str))
-//            CpuName.cortex_m35p
-//        else if (std.mem.eql(u8, "CM55", str))
-//            CpuName.cortex_m55
-//        else if (std.mem.eql(u8, "SC300", str))
-//            CpuName.sc300
-//        else if (std.mem.eql(u8, "CM4", str))
-//            CpuName.cortex_m4
-//        else if (std.mem.eql(u8, "CM7", str))
-//            CpuName.cortex_m7
-//        else if (std.mem.eql(u8, "AVR8", str))
-//            CpuName.avr
-//        else
-//            null;
-//    }
-//};
-//
-//pub const Endian = enum {
-//    little,
-//    big,
-//    selectable,
-//    other,
-//
-//    pub fn parse(str: []const u8) !Endian {
-//        return if (std.meta.stringToEnum(Endian, str)) |val|
-//            val
-//        else
-//            error.UnknownEndianType;
-//    }
-//};
-//
-//pub const Cpu = struct {
-//    //name: ?CpuName,
-//    name: ?[]const u8,
-//    revision: []const u8,
-//    endian: Endian,
-//    mpu_present: bool,
-//    //fpu_present: bool,
-//    //fpu_dp: bool,
-//    //dsp_present: bool,
-//    //icache_present: bool,
-//    //dcache_present: bool,
-//    //itcm_present: bool,
-//    //dtcm_present: bool,
-//    vtor_present: bool,
-//    nvic_prio_bits: u8,
-//    vendor_systick_config: bool,
-//    device_num_interrupts: ?usize,
-//    //sau_num_regions: usize,
-//
-//    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !Cpu {
-//        return Cpu{
-//            .name = if (xml.findValueForKey(nodes, "name")) |name| try arena.allocator().dupe(u8, name) else null,
-//            .revision = xml.findValueForKey(nodes, "revision") orelse unreachable,
-//            .endian = try Endian.parse(xml.findValueForKey(nodes, "endian") orelse unreachable),
-//            .nvic_prio_bits = if (xml.findValueForKey(nodes, "nvicPrioBits")) |nvic_prio_bits|
-//                try std.fmt.parseInt(u8, nvic_prio_bits, 0)
-//            else
-//                0,
-//            // TODO: booleans
-//            .vendor_systick_config = (try xml.parseBoolean(arena.child_allocator, nodes, "vendorSystickConfig")) orelse false,
-//            .device_num_interrupts = if (xml.findValueForKey(nodes, "deviceNumInterrupts")) |size_str|
-//                try std.fmt.parseInt(usize, size_str, 0)
-//            else
-//                null,
-//            .vtor_present = (try xml.parseBoolean(arena.child_allocator, nodes, "vtorPresent")) orelse false,
-//            .mpu_present = (try xml.parseBoolean(arena.child_allocator, nodes, "mpuPresent")) orelse false,
-//        };
-//    }
-//};
-//
-//pub const Access = enum {
-//    read_only,
-//    write_only,
-//    read_write,
-//    writeonce,
-//    read_writeonce,
-//
-//    pub fn parse(str: []const u8) !Access {
-//        return if (std.mem.eql(u8, "read-only", str))
-//            Access.read_only
-//        else if (std.mem.eql(u8, "write-only", str))
-//            Access.write_only
-//        else if (std.mem.eql(u8, "read-write", str))
-//            Access.read_write
-//        else if (std.mem.eql(u8, "writeOnce", str))
-//            Access.writeonce
-//        else if (std.mem.eql(u8, "read-writeOnce", str))
-//            Access.read_writeonce
-//        else
-//            error.UnknownAccessType;
-//    }
-//};
-//
 //pub fn parsePeripheral(arena: *ArenaAllocator, nodes: *xml.Node) !Peripheral {
 //    const allocator = arena.allocator();
 //    return Peripheral{
@@ -743,64 +671,6 @@ const DimElements = struct {
         };
     }
 };
-
-//pub const Dimension = struct {
-//    dim: usize,
-//    increment: usize,
-//    /// a range of 0-index, only index is recorded
-//    index: ?Index,
-//    name: ?[]const u8,
-//    //array_index: ,
-//
-//    const Index = union(enum) {
-//        num: usize,
-//        list: std.ArrayList([]const u8),
-//    };
-//
-//    pub fn parse(arena: *ArenaAllocator, nodes: *xml.Node) !?Dimension {
-//        const allocator = arena.allocator();
-//        return Dimension{
-//            .dim = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "dim")) orelse return null,
-//            .increment = (try xml.parseIntForKey(usize, arena.child_allocator, nodes, "dimIncrement")) orelse return null,
-//            .index = if (xml.findValueForKey(nodes, "dimIndex")) |index_str|
-//                if (std.mem.indexOf(u8, index_str, ",") != null) blk: {
-//                    var list = std.ArrayList([]const u8).init(allocator);
-//                    var it = std.mem.tokenize(u8, index_str, ",");
-//                    var expected: usize = 0;
-//                    while (it.next()) |token| : (expected += 1)
-//                        try list.append(try allocator.dupe(u8, token));
-//
-//                    break :blk Index{
-//                        .list = list,
-//                    };
-//                } else blk: {
-//                    var it = std.mem.tokenize(u8, index_str, "-");
-//                    const begin = try std.fmt.parseInt(usize, it.next() orelse return error.InvalidDimIndex, 10);
-//                    const end = try std.fmt.parseInt(usize, it.next() orelse return error.InvalidDimIndex, 10);
-//
-//                    if (begin == 0)
-//                        break :blk Index{
-//                            .num = end + 1,
-//                        };
-//
-//                    var list = std.ArrayList([]const u8).init(allocator);
-//                    var i = begin;
-//                    while (i <= end) : (i += 1)
-//                        try list.append(try std.fmt.allocPrint(allocator, "{}", .{i}));
-//
-//                    break :blk Index{
-//                        .list = list,
-//                    };
-//                }
-//            else
-//                null,
-//            .name = if (xml.findValueForKey(nodes, "dimName")) |name_str|
-//                try allocator.dupe(u8, name_str)
-//            else
-//                null,
-//        };
-//    }
-//};
 
 const BitRange = struct {
     offset: u64,

@@ -7,6 +7,9 @@ const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
 const EntitySet = Database.EntitySet;
 
+const arm = @import("gen/arm.zig");
+const avr = @import("gen/avr.zig");
+
 const log = std.log.scoped(.gen);
 
 const EntityWithOffsetAndSize = struct {
@@ -29,7 +32,11 @@ pub fn toZig(db: Database, out_writer: anytype) !void {
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    try writer.writeAll("const mmio = @import(\"mmio\");\n");
+    try writer.writeAll(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+    );
     try writeDevices(db, writer);
     try writeTypes(db, writer);
     try writer.writeByte(0);
@@ -67,7 +74,7 @@ fn writeDevices(db: Database, writer: anytype) !void {
     try writer.writeAll("};\n");
 }
 
-fn writeComment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn writeComment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
     var tokenized = std.ArrayList(u8).init(allocator);
     defer tokenized.deinit();
 
@@ -120,7 +127,8 @@ fn writeDevice(db: Database, device_id: EntityId, out_writer: anytype) !void {
 
     // TODO: alphabetic order
     const properties = db.instances.devices.get(device_id).?.properties;
-    {
+    if (properties.count() > 0) {
+        try writer.writeAll("pub const properties = struct {\n");
         var it = properties.iterator();
         while (it.next()) |entry| {
             try writer.print("pub const {s} = ", .{
@@ -131,10 +139,11 @@ fn writeDevice(db: Database, device_id: EntityId, out_writer: anytype) !void {
             try writer.writeAll(";\n");
         }
 
-        try writer.writeByte('\n');
+        try writer.writeAll("};\n\n");
     }
 
-    // TODO: interrupts
+    writeVectorTable(db, device_id, writer) catch |err|
+        log.warn("failed to write vector table: {}", .{err});
 
     if (db.children.peripherals.get(device_id)) |peripheral_set| {
         var list = std.ArrayList(EntityWithOffset).init(db.gpa);
@@ -148,10 +157,14 @@ fn writeDevice(db: Database, device_id: EntityId, out_writer: anytype) !void {
         }
 
         std.sort.sort(EntityWithOffset, list.items, {}, EntityWithOffset.lessThan);
+
+        try writer.writeAll("pub const peripherals = struct {\n");
         for (list.items) |periph|
             writePeripheralInstance(db, periph.id, periph.offset, writer) catch |err| {
                 log.warn("failed to serialize peripheral instance: {}", .{err});
             };
+
+        try writer.writeAll("};\n");
     }
 
     try writer.writeAll("};\n");
@@ -191,6 +204,30 @@ fn typesReference(db: Database, type_id: EntityId) ![]const u8 {
         });
 
     return full_name.toOwnedSlice();
+}
+
+fn writeVectorTable(
+    db: Database,
+    device_id: EntityId,
+    out_writer: anytype,
+) !void {
+    assert(db.entityIs("instance.device", device_id));
+
+    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    defer buffer.deinit();
+
+    const writer = buffer.writer();
+    const arch = db.instances.devices.get(device_id).?.arch;
+    if (arch.isArm())
+        try arm.writeInterruptVector(db, device_id, writer)
+    else if (arch.isAvr())
+        try avr.writeInterruptVector(db, device_id, writer)
+    else if (arch == .unknown)
+        return
+    else
+        unreachable;
+
+    try out_writer.writeAll(buffer.items);
 }
 
 fn writePeripheralInstance(db: Database, instance_id: EntityId, offset: u64, out_writer: anytype) !void {
@@ -832,7 +869,8 @@ test "gen.peripheral type with register and field" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
@@ -880,11 +918,14 @@ test "gen.peripheral instantiation" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
-        \\        pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\        pub const peripherals = struct {
+        \\            pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\        };
         \\    };
         \\};
         \\
@@ -932,12 +973,15 @@ test "gen.peripherals with a shared type" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
-        \\        pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
-        \\        pub const TEST1 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x2000);
+        \\        pub const peripherals = struct {
+        \\            pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\            pub const TEST1 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x2000);
+        \\        };
         \\    };
         \\};
         \\
@@ -1007,7 +1051,8 @@ test "gen.peripheral with modes" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern union {
@@ -1082,7 +1127,8 @@ test "gen.peripheral with enum" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
@@ -1126,7 +1172,8 @@ test "gen.peripheral with enum, enum is exhausted of values" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
@@ -1176,7 +1223,8 @@ test "gen.field with named enum" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
@@ -1232,7 +1280,8 @@ test "gen.field with anonymous enum" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
@@ -1286,12 +1335,15 @@ test "gen.namespaced register groups" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile types.PORT.PORTB, 0x23);
-        \\        pub const PORTC = @ptrCast(*volatile types.PORT.PORTC, 0x26);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile types.PORT.PORTB, 0x23);
+        \\            pub const PORTC = @ptrCast(*volatile types.PORT.PORTC, 0x26);
+        \\        };
         \\    };
         \\};
         \\
@@ -1339,11 +1391,14 @@ test "gen.peripheral with reserved register" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        };
         \\    };
         \\};
         \\
@@ -1384,11 +1439,14 @@ test "gen.peripheral with count" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\        };
         \\    };
         \\};
         \\
@@ -1429,11 +1487,14 @@ test "gen.peripheral with count, padding required" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\        };
         \\    };
         \\};
         \\
@@ -1473,11 +1534,14 @@ test "gen.register with count" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        };
         \\    };
         \\};
         \\
@@ -1528,11 +1592,14 @@ test "gen.register with count and fields" {
 
     try db.toZig(buffer.writer());
     try std.testing.expectEqualStrings(
-        \\const mmio = @import("mmio");
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        pub const peripherals = struct {
+        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\        };
         \\    };
         \\};
         \\
@@ -1544,6 +1611,50 @@ test "gen.register with count and fields" {
         \\        }),
         \\        DDRB: u8,
         \\        PINB: u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.interrupts.avr" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const device_id = try db.createDevice(.{
+        .name = "ATmega328P",
+        .arch = .avr8,
+    });
+
+    _ = try db.createInterrupt(device_id, .{
+        .name = "TEST_VECTOR1",
+        .index = 1,
+    });
+
+    _ = try db.createInterrupt(device_id, .{
+        .name = "TEST_VECTOR2",
+        .index = 3,
+    });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const devices = struct {
+        \\    pub const ATmega328P = struct {
+        \\        pub const VectorTable = extern struct {
+        \\            const Handler = micro.interrupt.Handler;
+        \\            const unhandled = micro.interrupt.unhandled;
+        \\
+        \\            RESET: Handler = unhandled,
+        \\            TEST_VECTOR1: Handler = unhandled,
+        \\            reserved2: [1]u16 = undefined,
+        \\            TEST_VECTOR2: Handler = unhandled,
+        \\        };
         \\    };
         \\};
         \\

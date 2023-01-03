@@ -54,9 +54,6 @@ instances: struct {
     peripherals: ArrayHashMap(EntityId, EntityId) = .{},
 } = .{},
 
-// to speed up lookups
-indexes: struct {} = .{},
-
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
@@ -71,16 +68,109 @@ const dslite = @import("dslite.zig");
 const gen = @import("gen.zig");
 const regzon = @import("regzon.zig");
 
+const TypeOfField = @import("testing.zig").TypeOfField;
+
 const Database = @This();
 const log = std.log.scoped(.database);
-
-const TypeOfField = @import("testing.zig").TypeOfField;
 
 pub const EntityId = u32;
 pub const EntitySet = ArrayHashMap(EntityId, void);
 
-// not sure how to communicate the *_once values in generated code besides
-// adding it to documentation comments
+// concrete arch's that we support in codegen, for stuff like interrupt
+// table generation
+pub const Arch = enum {
+    unknown,
+
+    // arm
+    arm_v81_mml,
+    arm_v8_mbl,
+    arm_v8_mml,
+    cortex_a15,
+    cortex_a17,
+    cortex_a5,
+    cortex_a53,
+    cortex_a57,
+    cortex_a7,
+    cortex_a72,
+    cortex_a8,
+    cortex_a9,
+    cortex_m0,
+    cortex_m0plus,
+    cortex_m1,
+    cortex_m23,
+    cortex_m3,
+    cortex_m33,
+    cortex_m35p,
+    cortex_m4,
+    cortex_m55,
+    cortex_m7,
+    sc000, // kindof like an m3
+    sc300,
+    // old
+    arm926ej_s,
+
+    // avr
+    avr8,
+    avr8l,
+    avr8x,
+    avr8xmega,
+
+    // mips
+    mips,
+
+    pub fn toString(arch: Arch) []const u8 {
+        return inline for (@typeInfo(Arch).Enum.fields) |field| {
+            if (@field(Arch, field.name) == arch)
+                break field.name;
+        } else unreachable;
+    }
+
+    pub fn isArm(arch: Arch) bool {
+        return switch (arch) {
+            .cortex_m0,
+            .cortex_m0plus,
+            .cortex_m1,
+            .sc000, // kindof like an m3
+            .cortex_m23,
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m35p,
+            .cortex_m55,
+            .sc300,
+            .cortex_m4,
+            .cortex_m7,
+            .arm_v8_mml,
+            .arm_v8_mbl,
+            .arm_v81_mml,
+            .cortex_a5,
+            .cortex_a7,
+            .cortex_a8,
+            .cortex_a9,
+            .cortex_a15,
+            .cortex_a17,
+            .cortex_a53,
+            .cortex_a57,
+            .cortex_a72,
+            .arm926ej_s,
+            => true,
+            else => false,
+        };
+    }
+
+    pub fn isAvr(arch: Arch) bool {
+        return switch (arch) {
+            .avr8,
+            .avr8l,
+            .avr8x,
+            .avr8xmega,
+            => true,
+            else => false,
+        };
+    }
+};
+
+// not sure how to communicate the *_once values in generated code
+// besides adding it to documentation comments
 pub const Access = enum {
     read_write,
     read_only,
@@ -90,6 +180,7 @@ pub const Access = enum {
 };
 
 pub const Device = struct {
+    arch: Arch,
     properties: std.StringHashMapUnmanaged([]const u8) = .{},
 
     pub fn deinit(self: *Device, gpa: Allocator) void {
@@ -151,10 +242,6 @@ pub fn deinit(db: *Database) void {
     deinitMapAndValues(db.gpa, &db.instances.devices);
     db.instances.interrupts.deinit(db.gpa);
     db.instances.peripherals.deinit(db.gpa);
-    //db.instances.register_groups.deinit(db.gpa);
-    //db.instances.registers.deinit(db.gpa);
-
-    // indexes
 
     db.arena.deinit();
     db.gpa.destroy(db.arena);
@@ -246,13 +333,17 @@ pub fn createDevice(
     opts: struct {
         // required for now
         name: []const u8,
+        arch: Arch = .unknown,
     },
 ) !EntityId {
     const id = db.createEntity();
     errdefer db.destroyEntity(id);
 
     log.debug("{}: creating device", .{id});
-    try db.instances.devices.put(db.gpa, id, .{});
+    try db.instances.devices.put(db.gpa, id, .{
+        .arch = opts.arch,
+    });
+
     try db.addName(id, opts.name);
 
     return id;
@@ -478,6 +569,27 @@ pub fn createEnumField(
     return id;
 }
 
+pub fn createInterrupt(db: *Database, device_id: EntityId, opts: struct {
+    name: []const u8,
+    index: i32,
+    description: ?[]const u8 = null,
+}) !EntityId {
+    assert(db.entityIs("instance.device", device_id));
+
+    const id = db.createEntity();
+    errdefer db.destroyEntity(id);
+
+    log.debug("{}: creating interrupt", .{id});
+    try db.instances.interrupts.put(db.gpa, id, opts.index);
+    try db.addName(id, opts.name);
+
+    if (opts.description) |d|
+        try db.addDescription(id, d);
+
+    try db.addChild("instance.interrupt", device_id, id);
+    return id;
+}
+
 pub fn addName(db: *Database, id: EntityId, name: []const u8) !void {
     if (name.len == 0)
         return;
@@ -620,7 +732,6 @@ pub fn getEntityIdByName(
     return while (it.next()) |entry| {
         const entry_id = entry.key_ptr.*;
         const entry_name = db.attrs.name.get(entry_id) orelse continue;
-        log.debug("looking at name: {s}", .{entry_name});
         if (std.mem.eql(u8, name, entry_name)) {
             assert(db.entityIs(entity_location, entry_id));
             return entry_id;
@@ -712,8 +823,9 @@ pub fn toZig(db: Database, out_writer: anytype) !void {
 
 test "all" {
     @setEvalBranchQuota(2000);
-    std.testing.refAllDeclsRecursive(svd);
     std.testing.refAllDeclsRecursive(atdf);
     std.testing.refAllDeclsRecursive(dslite);
     std.testing.refAllDeclsRecursive(gen);
+    std.testing.refAllDeclsRecursive(regzon);
+    std.testing.refAllDeclsRecursive(svd);
 }
