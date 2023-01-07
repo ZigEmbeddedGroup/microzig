@@ -332,6 +332,16 @@ fn loadCluster(
         return error.TodoDimElements;
 }
 
+fn getNameWithoutArraySuffix(node: xml.Node) ![]const u8 {
+    return if (node.getValue("name")) |name|
+        if (std.mem.endsWith(u8, name, "[%s]"))
+            name[0 .. name.len - 4]
+        else
+            name
+    else
+        error.MissingRegisterName;
+}
+
 fn loadRegister(
     ctx: *Context,
     node: xml.Node,
@@ -352,7 +362,7 @@ fn loadRegister(
     } else null;
 
     const id = try db.createRegister(parent_id, .{
-        .name = node.getValue("name") orelse return error.MissingRegisterName,
+        .name = try getNameWithoutArraySuffix(node),
         .description = node.getValue("description"),
         .offset = if (node.getValue("addressOffset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
@@ -1166,4 +1176,38 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
 
     // dimIncrement is different than the size of the register, so it should never be made
     try expectError(error.NameNotFound, db.getEntityIdByName("type.register", "TEST_REGISTER"));
+}
+
+test "svd.register with dimElementGroup, suffixed with [%s]" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER[%s]</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    // [%s] is dropped from name, it is redundant
+    const register_id = try db.getEntityIdByName("type.register", "TEST_REGISTER");
+    try expectAttr(db, "count", 4, register_id);
 }
