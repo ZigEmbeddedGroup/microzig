@@ -710,7 +710,7 @@ fn writeRegister(
         }
 
         std.sort.sort(EntityWithOffset, fields.items, {}, EntityWithOffset.lessThan);
-        try writer.print("{s}: {s}mmio.Mmio({}, packed struct{{\n", .{
+        try writer.print("{s}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
             std.zig.fmtId(name),
             array_prefix,
             size,
@@ -744,7 +744,7 @@ fn writeFields(
     var i: u32 = 0;
     while (i < fields.len and offset < register_size) {
         if (offset < fields[i].offset) {
-            try writer.print("reserved{}: u{} = 0,\n", .{ fields[i].offset, fields[i].offset - offset });
+            try writer.print("reserved{}: u{},\n", .{ fields[i].offset, fields[i].offset - offset });
             offset = fields[i].offset;
         } else if (offset > fields[i].offset) {
             if (db.attrs.name.get(fields[i].id)) |name|
@@ -818,7 +818,7 @@ fn writeFields(
 
     assert(offset <= register_size);
     if (offset < register_size)
-        try writer.print("padding: u{} = 0,\n", .{register_size - offset});
+        try writer.print("padding: u{},\n", .{register_size - offset});
 
     try out_writer.writeAll(buffer.items);
 }
@@ -874,9 +874,9 @@ test "gen.peripheral type with register and field" {
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
+        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\            TEST_FIELD: u1,
-        \\            padding: u31 = 0,
+        \\            padding: u31,
         \\        }),
         \\    };
         \\};
@@ -931,9 +931,9 @@ test "gen.peripheral instantiation" {
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
+        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\            TEST_FIELD: u1,
-        \\            padding: u31 = 0,
+        \\            padding: u31,
         \\        }),
         \\    };
         \\};
@@ -987,9 +987,9 @@ test "gen.peripherals with a shared type" {
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(32, packed struct {
+        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\            TEST_FIELD: u1,
-        \\            padding: u31 = 0,
+        \\            padding: u31,
         \\        }),
         \\    };
         \\};
@@ -1082,16 +1082,16 @@ test "gen.peripheral with modes" {
         \\
         \\        TEST_MODE1: extern struct {
         \\            TEST_REGISTER1: u32,
-        \\            COMMON_REGISTER: mmio.Mmio(32, packed struct {
+        \\            COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
+        \\                padding: u31,
         \\            }),
         \\        },
         \\        TEST_MODE2: extern struct {
         \\            TEST_REGISTER2: u32,
-        \\            COMMON_REGISTER: mmio.Mmio(32, packed struct {
+        \\            COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
+        \\                padding: u31,
         \\            }),
         \\        },
         \\    };
@@ -1234,12 +1234,12 @@ test "gen.field with named enum" {
         \\            _,
         \\        };
         \\
-        \\        TEST_REGISTER: mmio.Mmio(8, packed struct {
+        \\        TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\            TEST_FIELD: packed union {
         \\                raw: u4,
         \\                value: TEST_ENUM,
         \\            },
-        \\            padding: u4 = 0,
+        \\            padding: u4,
         \\        }),
         \\    };
         \\};
@@ -1285,7 +1285,7 @@ test "gen.field with anonymous enum" {
         \\
         \\pub const types = struct {
         \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(8, packed struct {
+        \\        TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\            TEST_FIELD: packed union {
         \\                raw: u4,
         \\                value: enum(u4) {
@@ -1294,7 +1294,7 @@ test "gen.field with anonymous enum" {
         \\                    _,
         \\                },
         \\            },
-        \\            padding: u4 = 0,
+        \\            padding: u4,
         \\        }),
         \\    };
         \\};
@@ -1605,9 +1605,9 @@ test "gen.register with count and fields" {
         \\
         \\pub const types = struct {
         \\    pub const PORTB = extern struct {
-        \\        PORTB: [4]mmio.Mmio(8, packed struct {
+        \\        PORTB: [4]mmio.Mmio(packed struct(u8) {
         \\            TEST_FIELD: u4,
-        \\            padding: u4 = 0,
+        \\            padding: u4,
         \\        }),
         \\        DDRB: u8,
         \\        PINB: u8,
