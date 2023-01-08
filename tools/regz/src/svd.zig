@@ -332,14 +332,14 @@ fn loadCluster(
         return error.TodoDimElements;
 }
 
-fn getNameWithoutArraySuffix(node: xml.Node) ![]const u8 {
+fn getNameWithoutSuffix(node: xml.Node, suffix: []const u8) ![]const u8 {
     return if (node.getValue("name")) |name|
-        if (std.mem.endsWith(u8, name, "[%s]"))
-            name[0 .. name.len - 4]
+        if (std.mem.endsWith(u8, name, suffix))
+            name[0 .. name.len - suffix.len]
         else
             name
     else
-        error.MissingRegisterName;
+        error.MissingName;
 }
 
 fn loadRegister(
@@ -348,7 +348,6 @@ fn loadRegister(
     parent_id: EntityId,
 ) !void {
     const db = ctx.db;
-
     const register_props = try ctx.deriveRegisterPropertiesFrom(node, parent_id);
     const size = register_props.size orelse return error.MissingRegisterSize;
     const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
@@ -362,7 +361,7 @@ fn loadRegister(
     } else null;
 
     const id = try db.createRegister(parent_id, .{
-        .name = try getNameWithoutArraySuffix(node),
+        .name = try getNameWithoutSuffix(node, "[%s]"),
         .description = node.getValue("description"),
         .offset = if (node.getValue("addressOffset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
@@ -399,17 +398,24 @@ fn loadField(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
     const db = ctx.db;
 
     const bit_range = try BitRange.parse(node);
+    const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
+        if (elements.dim_index != null or elements.dim_name != null)
+            return error.TodoDimElementsExtended;
+
+        if (elements.dim_increment != bit_range.width)
+            return error.DimIncrementSizeMismatch;
+
+        break :count elements.dim;
+    } else null;
+
     const id = try db.createField(register_id, .{
-        .name = node.getValue("name") orelse return error.MissingFieldName,
+        .name = try getNameWithoutSuffix(node, "%s"),
         .description = node.getValue("description"),
         .size = bit_range.width,
         .offset = bit_range.offset,
+        .count = count,
     });
     errdefer db.destroyEntity(id);
-
-    const dim_elements = try DimElements.parse(node);
-    if (dim_elements != null)
-        return error.TodoDimElements;
 
     if (node.getValue("access")) |access_str|
         try db.addAccess(id, try parseAccess(access_str));
@@ -421,12 +427,9 @@ fn loadField(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
         try ctx.addDerivedEntity(id, derived_from);
 
     // TODO:
-    // dimElementGroup
     // modifiedWriteValues
     // writeConstraint
     // readAction
-    // enumeratedValues
-
 }
 
 fn loadEnumeratedValues(ctx: *Context, node: xml.Node, field_id: EntityId) !void {
@@ -1210,4 +1213,45 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
     // [%s] is dropped from name, it is redundant
     const register_id = try db.getEntityIdByName("type.register", "TEST_REGISTER");
     try expectAttr(db, "count", 4, register_id);
+}
+
+test "svd.field with dimElementGroup, suffixed with %s" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <fields>
+        \\            <field>
+        \\              <name>TEST_FIELD%s</name>
+        \\              <access>read-write</access>
+        \\              <bitRange>[0:0]</bitRange>
+        \\              <dim>2</dim>
+        \\              <dimIncrement>1</dimIncrement>
+        \\            </field>
+        \\          </fields>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.fromMemory(text);
+    var db = try Database.initFromSvd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    // %s is dropped from name, it is redundant
+    const register_id = try db.getEntityIdByName("type.field", "TEST_FIELD");
+    try expectAttr(db, "count", 2, register_id);
 }

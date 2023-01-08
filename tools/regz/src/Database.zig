@@ -485,6 +485,7 @@ pub fn createField(
         /// size is in bits
         size: ?u64 = null,
         enum_id: ?EntityId = null,
+        count: ?u64 = null,
     },
 ) !EntityId {
     assert(db.entityIs("type.register", parent_id));
@@ -503,6 +504,9 @@ pub fn createField(
 
     if (opts.size) |s|
         try db.addSize(id, s);
+
+    if (opts.count) |c|
+        try db.addCount(id, c);
 
     if (opts.enum_id) |enum_id| {
         assert(db.entityIs("type.enum", enum_id));

@@ -762,12 +762,19 @@ fn writeFields(
         while (end < fields.len and fields[end].offset == offset) : (end += 1) {}
         const next = blk: {
             var ret: ?EntityWithOffsetAndSize = null;
-            for (fields[i..end]) |register| {
-                const size = db.attrs.size.get(register.id) orelse unreachable;
+            for (fields[i..end]) |field| {
+                const size = if (db.attrs.size.get(field.id)) |size|
+                    if (db.attrs.count.get(field.id)) |count|
+                        size * count
+                    else
+                        size
+                else
+                    unreachable;
+
                 if (ret == null or (size < ret.?.size))
                     ret = .{
-                        .id = register.id,
-                        .offset = register.offset,
+                        .id = field.id,
+                        .offset = field.offset,
                         .size = size,
                     };
             }
@@ -789,7 +796,25 @@ fn writeFields(
         if (db.attrs.description.get(next.id)) |description|
             try writeComment(db.arena.allocator(), description, writer);
 
-        if (db.attrs.@"enum".get(fields[i].id)) |enum_id| {
+        if (db.attrs.count.get(fields[i].id)) |count| {
+            if (db.attrs.@"enum".contains(fields[i].id))
+                log.warn("TODO: field array with enums", .{});
+
+            try writer.print("{s}: packed struct(u{}) {{ ", .{
+                std.zig.fmtId(name),
+                next.size,
+            });
+
+            var j: u32 = 0;
+            while (j < count) : (j += 1) {
+                if (j > 0)
+                    try writer.writeAll(", ");
+
+                try writer.print("u{}", .{next.size / count});
+            }
+
+            try writer.writeAll(" },\n");
+        } else if (db.attrs.@"enum".get(fields[i].id)) |enum_id| {
             if (db.attrs.name.get(enum_id)) |enum_name| {
                 try writer.print(
                     \\{s}: packed union {{
@@ -797,14 +822,22 @@ fn writeFields(
                     \\    value: {s},
                     \\}},
                     \\
-                , .{ name, next.size, std.zig.fmtId(enum_name) });
+                , .{
+                    std.zig.fmtId(name),
+                    next.size,
+                    std.zig.fmtId(enum_name),
+                });
             } else {
                 try writer.print(
                     \\{s}: packed union {{
                     \\    raw: u{},
                     \\    value: enum(u{}) {{
                     \\
-                , .{ name, next.size, next.size });
+                , .{
+                    std.zig.fmtId(name),
+                    next.size,
+                    next.size,
+                });
                 try writeEnumFields(db, enum_id, writer);
                 try writer.writeAll("},\n},\n");
             }
@@ -1611,6 +1644,90 @@ test "gen.register with count and fields" {
         \\        }),
         \\        DDRB: u8,
         \\        PINB: u8,
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.field with count, width of one, offset, and padding" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+    });
+
+    const portb_id = try db.createRegister(peripheral_id, .{
+        .name = "PORTB",
+        .size = 8,
+        .offset = 0,
+    });
+
+    _ = try db.createField(portb_id, .{
+        .name = "TEST_FIELD",
+        .size = 1,
+        .offset = 2,
+        .count = 5,
+    });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: mmio.Mmio(packed struct(u8) {
+        \\            reserved2: u2,
+        \\            TEST_FIELD: packed struct(u5) { u1, u1, u1, u1, u1 },
+        \\            padding: u1,
+        \\        }),
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.field with count, multi-bit width, offset, and padding" {
+    var db = try Database.init(std.testing.allocator);
+    defer db.deinit();
+
+    const peripheral_id = try db.createPeripheral(.{
+        .name = "PORTB",
+    });
+
+    const portb_id = try db.createRegister(peripheral_id, .{
+        .name = "PORTB",
+        .size = 8,
+        .offset = 0,
+    });
+
+    _ = try db.createField(portb_id, .{
+        .name = "TEST_FIELD",
+        .size = 2,
+        .offset = 2,
+        .count = 2,
+    });
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.toZig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const PORTB = extern struct {
+        \\        PORTB: mmio.Mmio(packed struct(u8) {
+        \\            reserved2: u2,
+        \\            TEST_FIELD: packed struct(u4) { u2, u2 },
+        \\            padding: u2,
+        \\        }),
         \\    };
         \\};
         \\
