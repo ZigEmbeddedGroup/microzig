@@ -877,25 +877,11 @@ fn getOrderedRegisterList(
     return registers;
 }
 
+const tests = @import("output_tests.zig");
+
 test "gen.peripheral type with register and field" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralTypeWithRegisterAndField(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const register_id = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 32,
-        .offset = 0,
-    });
-
-    _ = try db.createField(register_id, .{
-        .name = "TEST_FIELD",
-        .size = 1,
-        .offset = 0,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -918,33 +904,8 @@ test "gen.peripheral type with register and field" {
 }
 
 test "gen.peripheral instantiation" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralInstantiation(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const register_id = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 32,
-        .offset = 0,
-    });
-
-    _ = try db.createField(register_id, .{
-        .name = "TEST_FIELD",
-        .size = 1,
-        .offset = 0,
-    });
-
-    const device_id = try db.createDevice(.{
-        .name = "TEST_DEVICE",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "TEST0",
-        .offset = 0x1000,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -975,31 +936,8 @@ test "gen.peripheral instantiation" {
 }
 
 test "gen.peripherals with a shared type" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralsWithSharedType(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const register_id = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 32,
-        .offset = 0,
-    });
-
-    _ = try db.createField(register_id, .{
-        .name = "TEST_FIELD",
-        .size = 1,
-        .offset = 0,
-    });
-
-    const device_id = try db.createDevice(.{
-        .name = "TEST_DEVICE",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{ .name = "TEST0", .offset = 0x1000 });
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{ .name = "TEST1", .offset = 0x2000 });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1031,53 +969,8 @@ test "gen.peripherals with a shared type" {
 }
 
 test "gen.peripheral with modes" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithModes(std.testing.allocator);
     defer db.deinit();
-
-    const mode1_id = db.createEntity();
-    try db.addName(mode1_id, "TEST_MODE1");
-    try db.types.modes.put(db.gpa, mode1_id, .{
-        .value = "0x00",
-        .qualifier = "TEST_PERIPHERAL.TEST_MODE1.COMMON_REGISTER.TEST_FIELD",
-    });
-
-    const mode2_id = db.createEntity();
-    try db.addName(mode2_id, "TEST_MODE2");
-    try db.types.modes.put(db.gpa, mode2_id, .{
-        .value = "0x01",
-        .qualifier = "TEST_PERIPHERAL.TEST_MODE2.COMMON_REGISTER.TEST_FIELD",
-    });
-
-    var register1_modeset = EntitySet{};
-    try register1_modeset.put(db.gpa, mode1_id, {});
-
-    var register2_modeset = EntitySet{};
-    try register2_modeset.put(db.gpa, mode2_id, {});
-
-    const peripheral_id = try db.createPeripheral(.{ .name = "TEST_PERIPHERAL" });
-    try db.addChild("type.mode", peripheral_id, mode1_id);
-    try db.addChild("type.mode", peripheral_id, mode2_id);
-
-    const register1_id = try db.createRegister(peripheral_id, .{ .name = "TEST_REGISTER1", .size = 32, .offset = 0 });
-    const register2_id = try db.createRegister(peripheral_id, .{ .name = "TEST_REGISTER2", .size = 32, .offset = 0 });
-    const common_reg_id = try db.createRegister(peripheral_id, .{ .name = "COMMON_REGISTER", .size = 32, .offset = 4 });
-
-    try db.attrs.modes.put(db.gpa, register1_id, register1_modeset);
-    try db.attrs.modes.put(db.gpa, register2_id, register2_modeset);
-
-    _ = try db.createField(common_reg_id, .{
-        .name = "TEST_FIELD",
-        .size = 1,
-        .offset = 0,
-    });
-
-    // TODO: study the types of qualifiers that come up. it's possible that
-    // we'll have to read different registers or read registers without fields.
-    //
-    // might also have registers with enum values
-    // naive implementation goes through each mode and follows the qualifier,
-    // next level will determine if they're reading the same address even if
-    // different modes will use different union members
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1134,26 +1027,8 @@ test "gen.peripheral with modes" {
 }
 
 test "gen.peripheral with enum" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithEnum(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const enum_id = try db.createEnum(peripheral_id, .{
-        .name = "TEST_ENUM",
-        .size = 4,
-    });
-
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
-
-    _ = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 8,
-        .offset = 0,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1179,26 +1054,8 @@ test "gen.peripheral with enum" {
 }
 
 test "gen.peripheral with enum, enum is exhausted of values" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithEnumEnumIsExhaustedOfValues(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const enum_id = try db.createEnum(peripheral_id, .{
-        .name = "TEST_ENUM",
-        .size = 1,
-    });
-
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
-
-    _ = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 8,
-        .offset = 0,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1223,33 +1080,8 @@ test "gen.peripheral with enum, enum is exhausted of values" {
 }
 
 test "gen.field with named enum" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.fieldWithNamedEnum(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const enum_id = try db.createEnum(peripheral_id, .{
-        .name = "TEST_ENUM",
-        .size = 4,
-    });
-
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
-
-    const register_id = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 8,
-        .offset = 0,
-    });
-
-    _ = try db.createField(register_id, .{
-        .name = "TEST_FIELD",
-        .size = 4,
-        .offset = 0,
-        .enum_id = enum_id,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1281,32 +1113,8 @@ test "gen.field with named enum" {
 }
 
 test "gen.field with anonymous enum" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.fieldWithAnonymousEnum(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "TEST_PERIPHERAL",
-    });
-
-    const enum_id = try db.createEnum(peripheral_id, .{
-        .size = 4,
-    });
-
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
-    _ = try db.createEnumField(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
-
-    const register_id = try db.createRegister(peripheral_id, .{
-        .name = "TEST_REGISTER",
-        .size = 8,
-        .offset = 0,
-    });
-
-    _ = try db.createField(register_id, .{
-        .name = "TEST_FIELD",
-        .size = 4,
-        .offset = 0,
-        .enum_id = enum_id,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1336,32 +1144,8 @@ test "gen.field with anonymous enum" {
 }
 
 test "gen.namespaced register groups" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.namespacedRegisterGroups(std.testing.allocator);
     defer db.deinit();
-
-    // peripheral
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORT",
-    });
-
-    // register_groups
-    const portb_group_id = try db.createRegisterGroup(peripheral_id, .{ .name = "PORTB" });
-    const portc_group_id = try db.createRegisterGroup(peripheral_id, .{ .name = "PORTC" });
-
-    // registers
-    _ = try db.createRegister(portb_group_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
-    _ = try db.createRegister(portb_group_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
-    _ = try db.createRegister(portb_group_id, .{ .name = "PINB", .size = 8, .offset = 2 });
-    _ = try db.createRegister(portc_group_id, .{ .name = "PORTC", .size = 8, .offset = 0 });
-    _ = try db.createRegister(portc_group_id, .{ .name = "DDRC", .size = 8, .offset = 1 });
-    _ = try db.createRegister(portc_group_id, .{ .name = "PINC", .size = 8, .offset = 2 });
-
-    // device
-    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
-
-    // instances
-    _ = try db.createPeripheralInstance(device_id, portb_group_id, .{ .name = "PORTB", .offset = 0x23 });
-    _ = try db.createPeripheralInstance(device_id, portc_group_id, .{ .name = "PORTC", .offset = 0x26 });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1400,24 +1184,8 @@ test "gen.namespaced register groups" {
 }
 
 test "gen.peripheral with reserved register" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithReservedRegister(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-    });
-
-    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 32, .offset = 0 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 32, .offset = 8 });
-
-    const device_id = try db.createDevice(.{
-        .name = "ATmega328P",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1447,25 +1215,8 @@ test "gen.peripheral with reserved register" {
 }
 
 test "gen.peripheral with count" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithCount(std.testing.allocator);
     defer db.deinit();
-
-    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-        .size = 3,
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-        .count = 4,
-    });
-
-    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 2 });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1495,25 +1246,8 @@ test "gen.peripheral with count" {
 }
 
 test "gen.peripheral with count, padding required" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.peripheralWithCountPaddingRequired(std.testing.allocator);
     defer db.deinit();
-
-    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-        .size = 4,
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-        .count = 4,
-    });
-
-    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 1 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 2 });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1544,23 +1278,8 @@ test "gen.peripheral with count, padding required" {
 }
 
 test "gen.register with count" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.registerWithCount(std.testing.allocator);
     defer db.deinit();
-
-    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-    });
-
-    _ = try db.createRegister(peripheral_id, .{ .name = "PORTB", .size = 8, .offset = 0, .count = 4 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 4 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 5 });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1590,35 +1309,8 @@ test "gen.register with count" {
 }
 
 test "gen.register with count and fields" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.registerWithCountAndFields(std.testing.allocator);
     defer db.deinit();
-
-    const device_id = try db.createDevice(.{ .name = "ATmega328P" });
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-    });
-
-    _ = try db.createPeripheralInstance(device_id, peripheral_id, .{
-        .name = "PORTB",
-        .offset = 0x23,
-    });
-
-    const portb_id = try db.createRegister(peripheral_id, .{
-        .name = "PORTB",
-        .size = 8,
-        .offset = 0,
-        .count = 4,
-    });
-
-    _ = try db.createRegister(peripheral_id, .{ .name = "DDRB", .size = 8, .offset = 4 });
-    _ = try db.createRegister(peripheral_id, .{ .name = "PINB", .size = 8, .offset = 5 });
-
-    _ = try db.createField(portb_id, .{
-        .name = "TEST_FIELD",
-        .size = 4,
-        .offset = 0,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1651,25 +1343,8 @@ test "gen.register with count and fields" {
 }
 
 test "gen.field with count, width of one, offset, and padding" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.fieldWithCountWidthOfOneOffsetAndPadding(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-    });
-
-    const portb_id = try db.createRegister(peripheral_id, .{
-        .name = "PORTB",
-        .size = 8,
-        .offset = 0,
-    });
-
-    _ = try db.createField(portb_id, .{
-        .name = "TEST_FIELD",
-        .size = 1,
-        .offset = 2,
-        .count = 5,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1693,25 +1368,8 @@ test "gen.field with count, width of one, offset, and padding" {
 }
 
 test "gen.field with count, multi-bit width, offset, and padding" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.fieldWithCountMultiBitWidthOffsetAndPadding(std.testing.allocator);
     defer db.deinit();
-
-    const peripheral_id = try db.createPeripheral(.{
-        .name = "PORTB",
-    });
-
-    const portb_id = try db.createRegister(peripheral_id, .{
-        .name = "PORTB",
-        .size = 8,
-        .offset = 0,
-    });
-
-    _ = try db.createField(portb_id, .{
-        .name = "TEST_FIELD",
-        .size = 2,
-        .offset = 2,
-        .count = 2,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1735,23 +1393,8 @@ test "gen.field with count, multi-bit width, offset, and padding" {
 }
 
 test "gen.interrupts.avr" {
-    var db = try Database.init(std.testing.allocator);
+    var db = try tests.interruptsAvr(std.testing.allocator);
     defer db.deinit();
-
-    const device_id = try db.createDevice(.{
-        .name = "ATmega328P",
-        .arch = .avr8,
-    });
-
-    _ = try db.createInterrupt(device_id, .{
-        .name = "TEST_VECTOR1",
-        .index = 1,
-    });
-
-    _ = try db.createInterrupt(device_id, .{
-        .name = "TEST_VECTOR2",
-        .index = 3,
-    });
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();

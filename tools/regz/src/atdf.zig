@@ -468,23 +468,14 @@ fn loadMode(ctx: *Context, node: xml.Node, parent_id: EntityId) !void {
         "caption",
     });
 
-    const id = db.createEntity();
+    const id = try db.createMode(parent_id, .{
+        .name = node.getAttribute("name") orelse return error.MissingModeName,
+        .description = node.getAttribute("caption"),
+        .value = node.getAttribute("value") orelse return error.MissingModeValue,
+        .qualifier = node.getAttribute("qualifier") orelse return error.MissingModeQualifier,
+    });
     errdefer db.destroyEntity(id);
 
-    const value_str = node.getAttribute("value") orelse return error.MissingModeValue;
-    const qualifier = node.getAttribute("qualifier") orelse return error.MissingModeQualifier;
-    log.debug("{}: creating mode, value={s}, qualifier={s}", .{ id, value_str, qualifier });
-    try db.types.modes.put(db.gpa, id, .{
-        .value = try db.arena.allocator().dupe(u8, value_str),
-        .qualifier = try db.arena.allocator().dupe(u8, qualifier),
-    });
-
-    const name = node.getAttribute("name") orelse return error.MissingModeName;
-    try db.addName(id, name);
-    if (node.getAttribute("caption")) |caption|
-        try db.addDescription(id, caption);
-
-    try db.addChild("type.mode", parent_id, id);
     // TODO: "mask": "optional",
 }
 

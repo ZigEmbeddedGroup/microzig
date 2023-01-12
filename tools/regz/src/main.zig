@@ -61,12 +61,9 @@ fn mainImpl() anyerror!void {
 
     var schema: ?Schema = if (res.args.schema) |schema_str|
         if (std.meta.stringToEnum(Schema, schema_str)) |s| s else {
-            std.log.err(
-                "Unknown schema type: {s}, must be one of: svd, atdf, json",
-                .{
-                    schema_str,
-                },
-            );
+            std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{
+                schema_str,
+            });
             return error.Explained;
         }
     else
@@ -77,10 +74,6 @@ fn mainImpl() anyerror!void {
             if (schema == null) {
                 std.log.err("schema must be chosen when reading from stdin", .{});
                 return error.Explained;
-            }
-
-            if (schema.? == .json) {
-                return error.Todo;
             }
 
             var stdin = std.io.getStdIn().reader();
@@ -101,13 +94,18 @@ fn mainImpl() anyerror!void {
                 }
             }
 
-            // schema is guaranteed to be non-null from this point on
+            const path = try arena.allocator().dupeZ(u8, res.positionals[0]);
             if (schema.? == .json) {
-                return error.Todo;
+                const file = try std.fs.cwd().openFile(path, .{});
+                defer file.close();
+
+                const text = try file.reader().readAllAlloc(allocator, std.math.maxInt(usize));
+                defer allocator.free(text);
+
+                break :blk try Database.initFromJson(allocator, text);
             }
 
             // all other schema types are xml based
-            const path = try arena.allocator().dupeZ(u8, res.positionals[0]);
             var doc = try xml.Doc.fromFile(path);
             defer doc.deinit();
 

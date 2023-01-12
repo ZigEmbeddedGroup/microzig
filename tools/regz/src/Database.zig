@@ -26,6 +26,7 @@ attrs: struct {
 } = .{},
 
 children: struct {
+    modes: ArrayHashMap(EntityId, EntitySet) = .{},
     interrupts: ArrayHashMap(EntityId, EntitySet) = .{},
     peripherals: ArrayHashMap(EntityId, EntitySet) = .{},
     register_groups: ArrayHashMap(EntityId, EntitySet) = .{},
@@ -33,19 +34,18 @@ children: struct {
     fields: ArrayHashMap(EntityId, EntitySet) = .{},
     enums: ArrayHashMap(EntityId, EntitySet) = .{},
     enum_fields: ArrayHashMap(EntityId, EntitySet) = .{},
-    modes: ArrayHashMap(EntityId, EntitySet) = .{},
 } = .{},
 
 types: struct {
+    // atdf has modes which make registers into unions
+    modes: ArrayHashMap(EntityId, Mode) = .{},
+
     peripherals: ArrayHashMap(EntityId, void) = .{},
     register_groups: ArrayHashMap(EntityId, void) = .{},
     registers: ArrayHashMap(EntityId, void) = .{},
     fields: ArrayHashMap(EntityId, void) = .{},
     enums: ArrayHashMap(EntityId, void) = .{},
     enum_fields: ArrayHashMap(EntityId, u32) = .{},
-
-    // atdf has modes which make registers into unions
-    modes: ArrayHashMap(EntityId, Mode) = .{},
 } = .{},
 
 instances: struct {
@@ -282,11 +282,11 @@ pub fn initFromDslite(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-pub fn initFromJson(allocator: Allocator, reader: anytype) !Database {
+pub fn initFromJson(allocator: Allocator, text: []const u8) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
-    try regzon.loadIntoDb(&db, reader);
+    try regzon.loadIntoDb(&db, text);
     return db;
 }
 
@@ -333,6 +333,7 @@ pub fn createDevice(
     opts: struct {
         // required for now
         name: []const u8,
+        description: ?[]const u8 = null,
         arch: Arch = .unknown,
     },
 ) !EntityId {
@@ -345,6 +346,8 @@ pub fn createDevice(
     });
 
     try db.addName(id, opts.name);
+    if (opts.description) |d|
+        try db.addDescription(id, d);
 
     return id;
 }
@@ -356,6 +359,7 @@ pub fn createPeripheralInstance(
     opts: struct {
         // required for now
         name: []const u8,
+        description: ?[]const u8 = null,
         // required for now
         offset: u64,
         // count for an array
@@ -374,6 +378,9 @@ pub fn createPeripheralInstance(
     try db.addName(id, opts.name);
     try db.addOffset(id, opts.offset);
 
+    if (opts.description) |d|
+        try db.addDescription(id, d);
+
     if (opts.count) |c|
         try db.addCount(id, c);
 
@@ -385,6 +392,7 @@ pub fn createPeripheral(
     db: *Database,
     opts: struct {
         name: []const u8,
+        description: ?[]const u8 = null,
         size: ?u64 = null,
     },
 ) !EntityId {
@@ -395,6 +403,9 @@ pub fn createPeripheral(
 
     try db.types.peripherals.put(db.gpa, id, {});
     try db.addName(id, opts.name);
+
+    if (opts.description) |d|
+        try db.addDescription(id, d);
 
     if (opts.size) |s|
         try db.addSize(id, s);
@@ -407,6 +418,7 @@ pub fn createRegisterGroup(
     parent_id: EntityId,
     opts: struct {
         name: []const u8,
+        description: ?[]const u8 = null,
     },
 ) !EntityId {
     assert(db.entityIs("type.peripheral", parent_id));
@@ -417,6 +429,9 @@ pub fn createRegisterGroup(
     log.debug("{}: creating register group", .{id});
     try db.types.register_groups.put(db.gpa, id, {});
     try db.addName(id, opts.name);
+
+    if (opts.description) |d|
+        try db.addDescription(id, d);
 
     try db.addChild("type.register_group", parent_id, id);
     return id;
@@ -527,6 +542,7 @@ pub fn createEnum(
     parent_id: EntityId,
     opts: struct {
         name: ?[]const u8 = null,
+        description: ?[]const u8 = null,
         size: ?u64 = null,
     },
 ) !EntityId {
@@ -540,6 +556,9 @@ pub fn createEnum(
 
     if (opts.name) |n|
         try db.addName(id, n);
+
+    if (opts.description) |d|
+        try db.addDescription(id, d);
 
     if (opts.size) |s|
         try db.addSize(id, s);
@@ -570,6 +589,30 @@ pub fn createEnumField(
         try db.addDescription(id, d);
 
     try db.addChild("type.enum_field", parent_id, id);
+    return id;
+}
+
+pub fn createMode(db: *Database, parent_id: EntityId, opts: struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    value: []const u8,
+    qualifier: []const u8,
+}) !EntityId {
+    // TODO: what types of parents can it have?
+    const id = db.createEntity();
+    errdefer db.destroyEntity(id);
+
+    log.debug("{}: creating mode", .{id});
+    try db.types.modes.put(db.gpa, id, .{
+        .value = try db.arena.allocator().dupe(u8, opts.value),
+        .qualifier = try db.arena.allocator().dupe(u8, opts.qualifier),
+    });
+    try db.addName(id, opts.name);
+
+    if (opts.description) |d|
+        try db.addDescription(id, d);
+
+    try db.addChild("type.mode", parent_id, id);
     return id;
 }
 
@@ -701,7 +744,7 @@ pub fn addDeviceProperty(
     if (db.instances.devices.getEntry(id)) |entry|
         try entry.value_ptr.properties.put(
             db.gpa,
-            key,
+            try db.arena.allocator().dupe(u8, key),
             try db.arena.allocator().dupe(u8, value),
         )
     else
@@ -754,6 +797,17 @@ pub const EntityType = enum {
     device,
     interrupt,
     peripheral_instance,
+
+    pub fn isInstance(entity_type: EntityType) bool {
+        return switch (entity_type) {
+            .device, .interrupt, .peripheral_instance => true,
+            else => false,
+        };
+    }
+
+    pub fn isType(entity_type: EntityType) bool {
+        return !entity_type.isType();
+    }
 };
 
 pub fn getEntityType(
