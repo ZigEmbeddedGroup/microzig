@@ -7,8 +7,8 @@ const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
 const EntitySet = Database.EntitySet;
 
-const arm = @import("gen/arm.zig");
-const avr = @import("gen/avr.zig");
+const arm = @import("arch/arm.zig");
+const avr = @import("arch/avr.zig");
 
 const log = std.log.scoped(.gen);
 

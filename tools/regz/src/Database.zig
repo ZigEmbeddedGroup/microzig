@@ -167,6 +167,13 @@ pub const Arch = enum {
             else => false,
         };
     }
+
+    pub fn isMips(arch: Arch) bool {
+        return switch (arch) {
+            .mips => true,
+            else => false,
+        };
+    }
 };
 
 // not sure how to communicate the *_once values in generated code

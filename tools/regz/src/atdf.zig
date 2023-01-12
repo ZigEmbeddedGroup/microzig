@@ -7,6 +7,7 @@ const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
 
 const xml = @import("xml.zig");
+const arm = @import("arch/arm.zig");
 
 const log = std.log.scoped(.atdf);
 
@@ -58,17 +59,18 @@ fn loadDevice(ctx: *Context, node: xml.Node) !void {
     });
 
     const name = node.getAttribute("name") orelse return error.NoDeviceName;
-    const arch = node.getAttribute("architecture") orelse return error.NoDeviceArch;
+    const arch_str = node.getAttribute("architecture") orelse return error.NoDeviceArch;
+    const arch = archFromStr(arch_str);
     const family = node.getAttribute("family") orelse return error.NoDeviceFamily;
 
     const db = ctx.db;
     const id = try db.createDevice(.{
         .name = name,
-        .arch = archFromStr(arch),
+        .arch = arch,
     });
     errdefer db.destroyEntity(id);
 
-    try db.addDeviceProperty(id, "arch", arch);
+    try db.addDeviceProperty(id, "arch", arch_str);
     try db.addDeviceProperty(id, "family", family);
     if (node.getAttribute("series")) |series|
         try db.addDeviceProperty(id, "series", series);
@@ -84,6 +86,12 @@ fn loadDevice(ctx: *Context, node: xml.Node) !void {
 
     try inferPeripheralOffsets(ctx);
     try inferEnumSizes(ctx);
+
+    // system interrupts
+    if (arch.isArm())
+        try arm.loadSystemInterrupts(db, id);
+
+    // TODO: maybe others?
 
     // TODO:
     // address-space.memory-segment

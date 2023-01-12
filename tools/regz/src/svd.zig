@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const xml = @import("xml.zig");
+const arm = @import("arch/arm.zig");
 
 const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
@@ -43,6 +44,13 @@ const Context = struct {
     }
 };
 
+const svd_boolean = std.ComptimeStringMap(bool, .{
+    .{ "true", true },
+    .{ "1", true },
+    .{ "false", false },
+    .{ "0", false },
+});
+
 pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
     const root = try doc.getRootElement();
 
@@ -79,7 +87,20 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
         const nvic_prio_bits = cpu.getValue("nvicPrioBits") orelse return error.MissingNvicPrioBits;
         const vendor_systick_config = cpu.getValue("vendorSystickConfig") orelse return error.MissingVendorSystickConfig;
 
-        db.instances.devices.getEntry(device_id).?.value_ptr.arch = archFromStr(cpu_name);
+        const arch = archFromStr(cpu_name);
+        db.instances.devices.getEntry(device_id).?.value_ptr.arch = arch;
+        if (arch.isArm())
+            try arm.loadSystemInterrupts(db, device_id);
+
+        // TODO: is this the right logic?
+        if (svd_boolean.get(vendor_systick_config)) |systick| {
+            if (!systick)
+                try arm.loadSysTickInterrupt(db, device_id);
+        } else {
+            try arm.loadSysTickInterrupt(db, device_id);
+        }
+
+        // TODO:
 
         // cpu name => arch
         try db.addDeviceProperty(device_id, "cpu.name", cpu_name);
