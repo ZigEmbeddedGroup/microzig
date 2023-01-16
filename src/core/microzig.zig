@@ -48,6 +48,32 @@ pub const debug = @import("debug.zig");
 
 pub const mmio = @import("mmio.zig");
 
+const options_override = if (@hasDecl(app, "std_options")) app.std_options else struct {};
+pub const std_options = struct {
+    pub usingnamespace options_override;
+
+    // Conditionally provide a default no-op logFn if app does not have one
+    // defined. Parts of microzig use the stdlib logging facility and
+    // compilations will now fail on freestanding systems that use it but do
+    // not explicitly set `root.std_options.logFn`
+    pub usingnamespace if (!@hasDecl(options_override, "logFn"))
+        struct {
+            pub fn logFn(
+                comptime message_level: std.log.Level,
+                comptime scope: @Type(.EnumLiteral),
+                comptime format: []const u8,
+                args: anytype,
+            ) void {
+                _ = message_level;
+                _ = scope;
+                _ = format;
+                _ = args;
+            }
+        }
+    else
+        struct {};
+};
+
 // Allow app to override the os API layer
 pub const os = if (@hasDecl(app, "os"))
     app.os
@@ -59,35 +85,6 @@ pub const panic = if (@hasDecl(app, "panic"))
     app.panic
 else
     microzig_panic;
-
-// Conditionally export log_level if the app has it defined.
-usingnamespace if (@hasDecl(app, "log_level"))
-    struct {
-        pub const log_level = app.log_level;
-    }
-else
-    struct {};
-
-// Conditionally export log() if the app has it defined.
-pub const log = if (@hasDecl(app, "log"))
-    app.log
-else
-    // log is a no-op by default. Parts of microzig use the stdlib logging
-    // facility and compilations will now fail on freestanding systems that
-    // use it but do not explicitly set `root.log`
-    struct {
-        fn log(
-            comptime message_level: std.log.Level,
-            comptime scope: @Type(.EnumLiteral),
-            comptime format: []const u8,
-            args: anytype,
-        ) void {
-            _ = message_level;
-            _ = scope;
-            _ = format;
-            _ = args;
-        }
-    }.log;
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn microzig_panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
