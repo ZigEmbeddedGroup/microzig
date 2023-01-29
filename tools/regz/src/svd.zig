@@ -262,7 +262,8 @@ pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void 
         try db.addSize(type_id, elements.dim_increment);
     }
 
-    if (node.findChild("interrupt")) |interrupt_node|
+    var interrupt_it = node.iterate(&.{}, "interrupt");
+    while (interrupt_it.next()) |interrupt_node|
         try loadInterrupt(db, interrupt_node, device_id);
 
     if (node.getValue("description")) |description|
