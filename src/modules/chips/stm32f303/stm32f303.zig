@@ -281,7 +281,6 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             regs.RCC.APB1ENR.modify(.{ .I2C1EN = 1 });
             regs.RCC.AHBENR.modify(.{ .IOPBEN = 1 });
             debugPrint("I2C1 configuration step 1 complete\r\n", .{});
-
             // 2. Configure the I2C PINs for ALternate Functions
             // 	a) Select Alternate Function in MODER Register
             regs.GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
@@ -467,5 +466,133 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
                 return WriteState{ .address = self.address };
             }
         };
+    };
+}
+
+/// An STM32F303 SPI bus
+pub fn SpiBus(comptime index: usize) type {
+    if (!(index == 1)) @compileError("TODO: only SPI1 is currently supported");
+
+    return struct {
+        const Self = @This();
+
+        /// Initialize and enable the bus.
+        pub fn init(config: micro.spi.BusConfig) !Self {
+            _ = config; // unused for now
+
+            // CONFIGURE SPI1
+            // connected to APB2, MCU pins PA5 + PA7 + PA6 = SPC + SDI + SDO,
+            // if GPIO port A is configured for alternate function 5 for these PA pins.
+
+            // Enable the GPIO CLOCK
+            regs.RCC.AHBENR.modify(.{ .IOPAEN = 1 });
+
+            // Configure the I2C PINs for ALternate Functions
+            // 	- Select Alternate Function in MODER Register
+            regs.GPIOA.MODER.modify(.{ .MODER5 = 0b10, .MODER6 = 0b10, .MODER7 = 0b10 });
+            // 	- Select High SPEED for the PINs
+            regs.GPIOA.OSPEEDR.modify(.{ .OSPEEDR5 = 0b11, .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
+            // 	- Configure the Alternate Function in AFR Register
+            regs.GPIOA.AFRL.modify(.{ .AFRL5 = 5, .AFRL6 = 5, .AFRL7 = 5 });
+
+            // Enable the SPI1 CLOCK
+            regs.RCC.APB2ENR.modify(.{ .SPI1EN = 1 });
+
+            regs.SPI1.CR1.modify(.{
+                .MSTR = 1,
+                .SSM = 1,
+                .SSI = 1,
+                .RXONLY = 0,
+                .SPE = 1,
+            });
+            // the following configuration is assumed in `transceiveByte()`
+            regs.SPI1.CR2.raw = 0;
+            regs.SPI1.CR2.modify(.{
+                .DS = 0b0111, // 8-bit data frames, seems default via '0b0000 is interpreted as 0b0111'
+                .FRXTH = 1, // RXNE event after 1 byte received
+            });
+
+            return Self{};
+        }
+
+        /// Switch this SPI bus to the given device.
+        pub fn switchToDevice(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
+
+            regs.SPI1.CR1.modify(.{
+                .CPOL = 1, // TODO: make configurable
+                .CPHA = 1, // TODO: make configurable
+                .BR = 0b111, // 1/256 the of PCLK TODO: make configurable
+                .LSBFIRST = 0, // MSB first TODO: make configurable
+            });
+            gpio.setOutput(cs_pin);
+        }
+
+        /// Begin a transfer to the given device.  (Assumes `switchToDevice()` was called.)
+        pub fn beginTransfer(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
+            gpio.write(cs_pin, .low); // select the given device, TODO: support inverse CS devices
+            debugPrint("enabled SPI1\r\n", .{});
+        }
+
+        /// The basic operation in the current simplistic implementation:
+        /// send+receive a single byte.
+        /// Writing `null` writes an arbitrary byte (`undefined`), and
+        /// reading into `null` ignores the value received.
+        pub fn transceiveByte(_: Self, optional_write_byte: ?u8, optional_read_pointer: ?*u8) !void {
+
+            // SPIx_DR's least significant byte is `@bitCast([dr_byte_size]u8, ...)[0]`
+            const dr_byte_size = @sizeOf(@TypeOf(regs.SPI1.DR.raw));
+
+            // wait unril ready for write
+            while (regs.SPI1.SR.read().TXE == 0) {
+                debugPrint("SPI1 TXE == 0\r\n", .{});
+            }
+            debugPrint("SPI1 TXE == 1\r\n", .{});
+
+            // write
+            const write_byte = if (optional_write_byte) |b| b else undefined; // dummy value
+            @bitCast([dr_byte_size]u8, regs.SPI1.DR.*)[0] = write_byte;
+            debugPrint("Sent: {X:2}.\r\n", .{write_byte});
+
+            // wait until read processed
+            while (regs.SPI1.SR.read().RXNE == 0) {
+                debugPrint("SPI1 RXNE == 0\r\n", .{});
+            }
+            debugPrint("SPI1 RXNE == 1\r\n", .{});
+
+            // read
+            var data_read = regs.SPI1.DR.raw;
+            _ = regs.SPI1.SR.read(); // clear overrun flag
+            const dr_lsb = @bitCast([dr_byte_size]u8, data_read)[0];
+            debugPrint("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
+            if (optional_read_pointer) |read_pointer| read_pointer.* = dr_lsb;
+        }
+
+        /// Write all given bytes on the bus, not reading anything back.
+        pub fn writeAll(self: Self, bytes: []const u8) !void {
+            for (bytes) |b| {
+                try self.transceiveByte(b, null);
+            }
+        }
+
+        /// Read bytes to fill the given buffer exactly, writing arbitrary bytes (`undefined`).
+        pub fn readInto(self: Self, buffer: []u8) !void {
+            for (buffer) |_, i| {
+                try self.transceiveByte(null, &buffer[i]);
+            }
+        }
+
+        pub fn endTransfer(_: Self, comptime cs_pin: type, config: micro.spi.DeviceConfig) void {
+            _ = config; // for future use
+            // no delay should be needed here, since we know SPIx_SR's TXE is 1
+            debugPrint("(disabling SPI1)\r\n", .{});
+            gpio.write(cs_pin, .high); // deselect the given device, TODO: support inverse CS devices
+            // HACK: wait long enough to make any device end an ongoing transfer
+            var i: u8 = 255; // with the default clock, this seems to delay ~185 microseconds
+            while (i > 0) : (i -= 1) {
+                asm volatile ("nop");
+            }
+        }
     };
 }
