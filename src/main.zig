@@ -57,7 +57,7 @@ pub const EmbeddedExecutable = struct {
     }
 
     pub fn setBuildMode(exe: *EmbeddedExecutable, mode: std.builtin.Mode) void {
-        exe.inner.setBuildMode(mode);
+        exe.inner.optimize = mode;
     }
 
     pub fn install(exe: *EmbeddedExecutable) void {
@@ -177,7 +177,7 @@ pub fn addEmbeddedExecutable(
     };
 
     var exe = EmbeddedExecutable{
-        .inner = builder.addExecutable(name, root_path ++ "core/microzig.zig"),
+        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" } }),
         .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
@@ -186,7 +186,7 @@ pub fn addEmbeddedExecutable(
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.inner.single_threaded = true;
-    exe.inner.setTarget(chip.cpu.target);
+    exe.inner.target = chip.cpu.target;
 
     const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
     exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
