@@ -164,7 +164,13 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
         const id = derived_entry.key_ptr.*;
         const derived_name = derived_entry.value_ptr.*;
 
-        try deriveEntity(ctx.db.*, id, derived_name);
+        deriveEntity(ctx, id, derived_name) catch |err| {
+            log.warn("failed to derive entity {} from {s}: {}", .{
+                id,
+                derived_name,
+                err,
+            });
+        };
     }
 
     db.assertValid();
@@ -225,10 +231,43 @@ fn archFromStr(str: []const u8) Database.Arch {
         .unknown;
 }
 
-pub fn deriveEntity(db: Database, id: EntityId, derived_name: []const u8) !void {
+pub fn deriveEntity(ctx: Context, id: EntityId, derived_name: []const u8) !void {
+    const db = ctx.db;
     log.debug("{}: derived from {s}", .{ id, derived_name });
     const entity_type = db.getEntityType(id);
-    log.warn("TODO: implement derivation for {?}", .{entity_type});
+    assert(entity_type != null);
+    switch (entity_type.?) {
+        .peripheral => {
+            // TODO: what do we do when we have other fields set? maybe make
+            // some assertions and then skip if we're not sure
+            const name = db.attrs.name.get(id);
+            const base_instance_id = try db.getEntityIdByName("instance.peripheral", derived_name);
+            const base_id = db.instances.peripherals.get(base_instance_id) orelse return error.PeripheralNotFound;
+
+            if (ctx.derived_entities.contains(base_id)) {
+                log.warn("TODO: chained peripheral derivation: {?s}", .{name});
+                return error.TodoChainedDerivation;
+            }
+
+            if (try db.instances.peripherals.fetchPut(db.gpa, id, base_id)) |entry| {
+                const maybe_remove_peripheral_id = entry.value;
+                var it = db.instances.peripherals.iterator();
+                while (it.next()) |instance_entry| {
+                    const used_peripheral_id = instance_entry.value_ptr.*;
+
+                    // if there is a match don't delete the entity
+                    if (used_peripheral_id == maybe_remove_peripheral_id)
+                        break;
+                } else {
+                    // no instance is using this peripheral so we can remove it
+                    db.destroyEntity(maybe_remove_peripheral_id);
+                }
+            }
+        },
+        else => {
+            log.warn("TODO: implement derivation for {?}", .{entity_type});
+        },
+    }
 }
 
 pub fn loadPeripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void {

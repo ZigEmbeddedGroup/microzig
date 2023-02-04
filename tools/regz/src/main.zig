@@ -137,7 +137,10 @@ fn mainImpl() anyerror!void {
 
     var buffered = std.io.bufferedWriter(raw_writer);
     if (res.args.json)
-        try db.jsonStringify(.{}, buffered.writer())
+        try db.jsonStringify(
+            .{ .whitespace = .{ .indent = .{ .Space = 2 } } },
+            buffered.writer(),
+        )
     else
         try db.toZig(buffered.writer());
 

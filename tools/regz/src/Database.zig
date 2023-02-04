@@ -303,6 +303,8 @@ pub fn createEntity(db: *Database) EntityId {
 }
 
 pub fn destroyEntity(db: *Database, id: EntityId) void {
+    // note that if something can be a child, you must remove it from the child
+    // set of its parent
     switch (db.getEntityType(id) orelse return) {
         .register => {
             log.debug("{}: destroying register", .{id});
@@ -318,9 +320,15 @@ pub fn destroyEntity(db: *Database, id: EntityId) void {
             // TODO: remove fields
             _ = db.types.registers.swapRemove(id);
         },
+        .peripheral => {
+            log.debug("{}: destroying peripheral", .{id});
+            // TODO: remove children
+            _ = db.types.peripherals.swapRemove(id);
+        },
         else => {},
     }
 
+    db.removeChildren(id);
     db.removeAttrs(id);
 }
 
@@ -332,6 +340,22 @@ fn removeAttrs(db: *Database, id: EntityId) void {
             _ = @field(db.attrs, field.name).remove(id)
         else
             unreachable;
+    }
+}
+
+fn removeChildren(db: *Database, id: EntityId) void {
+    inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
+        if (@field(db.children, field.name).fetchSwapRemove(id)) |children_entry| {
+            var children_set = children_entry.value;
+            defer children_set.deinit(db.gpa);
+
+            var it = children_set.iterator();
+            while (it.next()) |child_entry| {
+                const child_id = child_entry.key_ptr.*;
+                // this will get rid of the parent attr
+                db.destroyEntity(child_id);
+            }
+        }
     }
 }
 
@@ -781,7 +805,6 @@ pub fn getEntityIdByName(
     comptime var group = (tok_it.next() orelse unreachable) ++ "s";
     comptime var table = (tok_it.next() orelse unreachable) ++ "s";
 
-    log.debug("group: {s}, table: {s}", .{ group, table });
     var it = @field(@field(db, group), table).iterator();
     return while (it.next()) |entry| {
         const entry_id = entry.key_ptr.*;

@@ -252,7 +252,7 @@ fn writePeripheralInstance(db: Database, instance_id: EntityId, offset: u64, out
     else
         "";
 
-    try writer.print("pub const {s} = @ptrCast(*volatile {s}{s}, 0x{x});\n", .{
+    try writer.print("pub const {s} = @intToPtr(*volatile {s}{s}, 0x{x});\n", .{
         std.zig.fmtId(name),
         array_prefix,
         type_ref,
@@ -918,7 +918,7 @@ test "gen.peripheral instantiation" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\            pub const TEST0 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x1000);
         \\        };
         \\    };
         \\};
@@ -950,8 +950,8 @@ test "gen.peripherals with a shared type" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x1000);
-        \\            pub const TEST1 = @ptrCast(*volatile types.TEST_PERIPHERAL, 0x2000);
+        \\            pub const TEST0 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\            pub const TEST1 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x2000);
         \\        };
         \\    };
         \\};
@@ -1158,8 +1158,8 @@ test "gen.namespaced register groups" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile types.PORT.PORTB, 0x23);
-        \\            pub const PORTC = @ptrCast(*volatile types.PORT.PORTC, 0x26);
+        \\            pub const PORTB = @intToPtr(*volatile types.PORT.PORTB, 0x23);
+        \\            pub const PORTC = @intToPtr(*volatile types.PORT.PORTC, 0x26);
         \\        };
         \\    };
         \\};
@@ -1198,7 +1198,7 @@ test "gen.peripheral with reserved register" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
         \\        };
         \\    };
         \\};
@@ -1229,7 +1229,7 @@ test "gen.peripheral with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile [4]types.PORTB, 0x23);
         \\        };
         \\    };
         \\};
@@ -1260,7 +1260,7 @@ test "gen.peripheral with count, padding required" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile [4]types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile [4]types.PORTB, 0x23);
         \\        };
         \\    };
         \\};
@@ -1292,7 +1292,7 @@ test "gen.register with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
         \\        };
         \\    };
         \\};
@@ -1323,7 +1323,7 @@ test "gen.register with count and fields" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @ptrCast(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
         \\        };
         \\    };
         \\};
