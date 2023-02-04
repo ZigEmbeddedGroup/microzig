@@ -10,7 +10,7 @@ const chips = microzig.chips;
 const Backing = microzig.Backing;
 
 pub fn build(b: *std.build.Builder) !void {
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
     const test_step = b.step("test", "Builds and runs the library test suite");
 
@@ -56,7 +56,7 @@ pub fn build(b: *std.build.Builder) !void {
             );
 
             if (filter == null or exe.inner.target.cpu_arch.? == filter.?) {
-                exe.inner.setBuildMode(mode);
+                exe.inner.optimize = optimize;
                 exe.inner.install();
 
                 test_step.dependOn(&exe.inner.step);
