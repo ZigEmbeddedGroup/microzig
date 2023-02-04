@@ -42,7 +42,7 @@ pub fn toZig(db: Database, out_writer: anytype) !void {
     try writer.writeByte(0);
 
     // format the generated code
-    var ast = try std.zig.parse(db.gpa, @ptrCast([:0]const u8, buffer.items[0 .. buffer.items.len - 1]));
+    var ast = try std.zig.Ast.parse(db.gpa, @ptrCast([:0]const u8, buffer.items[0 .. buffer.items.len - 1]), .zig);
     defer ast.deinit(db.gpa);
 
     // TODO: ast check?

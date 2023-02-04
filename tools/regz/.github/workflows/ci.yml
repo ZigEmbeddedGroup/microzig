@@ -16,12 +16,6 @@ jobs:
           windows-latest,
           macos-latest,
         ]
-        mode: [
-          debug,
-          release-safe,
-          release-fast,
-          release-small,
-        ]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -34,13 +28,8 @@ jobs:
       with:
         version: master
 
-    - name: Build and Test Debug
-      if: ${{ matrix.mode == 'debug' }}
+    - name: Build and Test
       run: zig build test
-
-    - name: Build and Test Release
-      if: ${{ matrix.mode != 'debug' }}
-      run: zig build test -D${{ matrix.mode }}
 
   crosscompile-from-windows:
     runs-on: windows-latest

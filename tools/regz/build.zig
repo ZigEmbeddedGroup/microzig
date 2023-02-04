@@ -20,14 +20,14 @@ pub const Regz = struct {
 
     pub const Options = struct {
         target: ?std.zig.CrossTarget = null,
-        mode: ?std.builtin.Mode = null,
+        optimize: ?std.builtin.OptimizeMode = null,
     };
 
     pub fn create(builder: *Builder, opts: Options) *Regz {
         const target = opts.target orelse std.zig.CrossTarget{};
-        const mode = opts.mode orelse .Debug;
+        const optimize = opts.optimize orelse .Debug;
 
-        const xml = libxml2.create(builder, target, mode, .{
+        const xml = libxml2.create(builder, target, optimize, .{
             .iconv = false,
             .lzma = false,
             .zlib = false,
@@ -43,9 +43,12 @@ pub const Regz = struct {
         const build_options = builder.addOptions();
         build_options.addOption([]const u8, "commit", commit_result.stdout);
 
-        const exe = builder.addExecutable("regz", comptime root() ++ "src/main.zig");
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
+        const exe = builder.addExecutable(.{
+            .name = "regz",
+            .root_source_file = .{ .path = comptime root() ++ "src/main.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
         exe.addOptions("build_options", build_options);
         exe.addPackagePath("clap", comptime root() ++ pkgs.clap.source.path);
         xml.link(exe);
@@ -91,11 +94,13 @@ pub const Regz = struct {
 
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{
+        .preferred_optimize_mode = .ReleaseSafe,
+    });
 
     const regz = Regz.create(b, .{
         .target = target,
-        .mode = mode,
+        .optimize = optimize,
     });
     regz.exe.install();
 
@@ -108,7 +113,12 @@ pub fn build(b: *std.build.Builder) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const contextualize_fields = b.addExecutable("contextualize-fields", "src/contextualize-fields.zig");
+    const contextualize_fields = b.addExecutable(.{
+        .name = "contextualize-fields",
+        .root_source_file = .{
+            .path = "src/contextualize-fields.zig",
+        },
+    });
     regz.xml.link(contextualize_fields);
 
     const contextualize_fields_run = contextualize_fields.run();
@@ -119,7 +129,12 @@ pub fn build(b: *std.build.Builder) !void {
     const contextualize_fields_step = b.step("contextualize-fields", "Create ndjson of all the fields with the context of parent fields");
     contextualize_fields_step.dependOn(&contextualize_fields_run.step);
 
-    const characterize = b.addExecutable("characterize", "src/characterize.zig");
+    const characterize = b.addExecutable(.{
+        .name = "characterize",
+        .root_source_file = .{
+            .path = "src/characterize.zig",
+        },
+    });
     regz.xml.link(characterize);
 
     const characterize_run = characterize.run();
@@ -129,9 +144,14 @@ pub fn build(b: *std.build.Builder) !void {
     const test_chip_file = regz.addGeneratedChipFile("tests/svd/cmsis-example.svd");
     _ = test_chip_file;
 
-    const tests = b.addTest("src/Database.zig");
-    tests.setTarget(target);
-    tests.setBuildMode(mode);
+    const tests = b.addTest(.{
+        .root_source_file = .{
+            .path = "src/Database.zig",
+        },
+        .target = target,
+        .optimize = optimize,
+    });
+
     tests.addOptions("build_options", regz.build_options);
     tests.addPackagePath("xml", "src/xml.zig");
     tests.addPackagePath("Database", "src/Database.zig");
@@ -140,5 +160,4 @@ pub fn build(b: *std.build.Builder) !void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&tests.step);
-    //test_step.dependOn(test_chip_file.step);
 }

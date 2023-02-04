@@ -79,7 +79,7 @@ pub const Values = enum {
 ///         * "-abc=value"
 ///         * "-abcvalue"
 ///   * Long ("--long-param"): Should be used for less common parameters, or when no single
-///                            character can describe the paramter.
+///                            character can describe the parameter.
 ///     * They can take a value two different ways.
 ///       * "--long-param value"
 ///       * "--long-param=value"
@@ -722,7 +722,7 @@ pub fn Result(
 /// `T` can be any type and `Error` can be any error. You can pass `clap.parsers.default` if you
 /// just wonna get something up and running.
 ///
-/// Caller ownes the result and should free it by calling `result.deinit()`
+/// Caller owns the result and should free it by calling `result.deinit()`
 pub fn parseEx(
     comptime Id: type,
     comptime params: []const Param(Id),
@@ -744,7 +744,7 @@ pub fn parseEx(
     };
     while (try stream.next()) |arg| {
         // TODO: We cannot use `try` inside the inline for because of a compiler bug that
-        //       generates an infinit loop. For now, use a variable to store the error
+        //       generates an infinite loop. For now, use a variable to store the error
         //       and use `try` outside. The downside of this is that we have to use
         //       `anyerror` :(
         var res: anyerror!void = {};
@@ -895,7 +895,7 @@ const MultiArgKind = enum { slice, list };
 
 /// Turn a list of parameters into a struct with one field for each none positional parameter.
 /// The type of each parameter field is determined by `ParamType`. Positional arguments will not
-/// havea field in this struct.
+/// have a field in this struct.
 fn Arguments(
     comptime Id: type,
     comptime params: []const Param(Id),
@@ -1045,11 +1045,11 @@ pub const Help = struct {
 
 pub const HelpOptions = struct {
     /// Render the description of a parameter in a simular way to how markdown would render
-    /// such a string. This means that single newlines wont be respected unless followed by
+    /// such a string. This means that single newlines won't be respected unless followed by
     /// bullet points or other markdown elements.
     markdown_lite: bool = true,
 
-    /// Wether `help` should print the description of a parameter on a new line instead of after
+    /// Whether `help` should print the description of a parameter on a new line instead of after
     /// the parameter names. This options works together with `description_indent` to change
     /// where descriptions are printed.
     ///
@@ -1071,7 +1071,7 @@ pub const HelpOptions = struct {
     /// changes the output.
     description_indent: usize = 8,
 
-    /// How much to indent each paramter.
+    /// How much to indent each parameter.
     ///
     /// indent=0, description_on_new_line=false, description_indent=4
     ///
@@ -1088,7 +1088,7 @@ pub const HelpOptions = struct {
     indent: usize = 4,
 
     /// The maximum width of the help message. `help` will try to break the description of
-    /// paramters into multiple lines if they exeed this maximum. Setting this to the width
+    /// parameters into multiple lines if they exceed this maximum. Setting this to the width
     /// of the terminal is a nice way of using this option.
     max_width: usize = std.math.maxInt(usize),
 
@@ -1722,7 +1722,7 @@ pub fn usage(stream: anytype, comptime Id: type, params: []const Param(Id)) !voi
 
         const prefix = if (param.names.short) |_| "-" else "--";
         const name = if (param.names.short) |*s|
-            // Seems the zig compiler is being a little wierd. I doesn't allow me to write
+            // Seems the zig compiler is being a little weird. I doesn't allow me to write
             // @as(*const [1]u8, s)
             @ptrCast([*]const u8, s)[0..1]
         else

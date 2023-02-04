@@ -24,10 +24,12 @@ pub const Library = struct {
     }
 };
 
-pub fn create(b: *std.build.Builder, target: std.zig.CrossTarget, mode: std.builtin.Mode) Library {
-    var ret = b.addStaticLibrary("z", null);
-    ret.setTarget(target);
-    ret.setBuildMode(mode);
+pub fn create(b: *std.build.Builder, target: std.zig.CrossTarget, optimize: std.builtin.OptimizeMode) Library {
+    const ret = b.addStaticLibrary(.{
+        .name = "z",
+        .target = target,
+        .optimize = optimize,
+    });
     ret.linkLibC();
     ret.addCSourceFiles(srcs, &.{"-std=c89"});
 

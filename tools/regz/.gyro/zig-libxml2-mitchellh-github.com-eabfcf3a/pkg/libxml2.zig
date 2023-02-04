@@ -92,12 +92,14 @@ pub const Options = struct {
 pub fn create(
     b: *std.build.Builder,
     target: std.zig.CrossTarget,
-    mode: std.builtin.Mode,
+    optimize: std.builtin.OptimizeMode,
     opts: Options,
 ) !Library {
-    const ret = b.addStaticLibrary("xml2", null);
-    ret.setTarget(target);
-    ret.setBuildMode(mode);
+    const ret = b.addStaticLibrary(.{
+        .name = "xml2",
+        .target = target,
+        .optimize = optimize,
+    });
 
     var flags = std.ArrayList([]const u8).init(b.allocator);
     defer flags.deinit();

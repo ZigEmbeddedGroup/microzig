@@ -15,7 +15,7 @@ pub fn main() !void {
         \\
     );
 
-    // Initalize our diagnostics, which can be used for reporting useful errors.
+    // Initialize our diagnostics, which can be used for reporting useful errors.
     // This is optional. You can also pass `.{}` to `clap.parse` if you don't
     // care about the extra information `Diagnostics` provides.
     var diag = clap.Diagnostic{};
