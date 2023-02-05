@@ -32,6 +32,7 @@ pub const BuildOptions = struct {
     // a hal package is a package with ergonomic wrappers for registers for a
     // given mcu, it's only dependency can be microzig
     hal_package_path: ?std.build.FileSource = null,
+    optimize: std.builtin.OptimizeMode = std.builtin.OptimizeMode.Debug,
 };
 
 pub const EmbeddedExecutable = struct {
