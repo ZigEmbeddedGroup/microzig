@@ -178,7 +178,7 @@ pub fn addEmbeddedExecutable(
     };
 
     var exe = EmbeddedExecutable{
-        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" } }),
+        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target }),
         .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
@@ -187,7 +187,6 @@ pub fn addEmbeddedExecutable(
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.inner.single_threaded = true;
-    exe.inner.target = chip.cpu.target;
 
     const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
     exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
