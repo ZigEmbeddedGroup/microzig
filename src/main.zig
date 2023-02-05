@@ -178,7 +178,7 @@ pub fn addEmbeddedExecutable(
     };
 
     var exe = EmbeddedExecutable{
-        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target }),
+        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target, .optimize = options.optimize }),
         .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
