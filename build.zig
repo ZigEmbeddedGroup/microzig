@@ -10,7 +10,10 @@ const chips = microzig.chips;
 const Backing = microzig.Backing;
 
 pub fn build(b: *std.build.Builder) !void {
-    const mode = b.standardReleaseOptions();
+    // Standard optimization options allow the person running `zig build -Doptimize=...` to select
+    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
+    // set a preferred release mode, allowing the user to decide how to optimize.
+    const optimize = b.standardOptimizeOption(.{});
 
     const test_step = b.step("test", "Builds and runs the library test suite");
 
@@ -52,11 +55,10 @@ pub fn build(b: *std.build.Builder) !void {
                 b.fmt("test-{s}-{s}.elf", .{ tst.name, cfg.name }),
                 tst.source,
                 cfg.backing,
-                .{},
+                .{.optimize = optimize },
             );
 
             if (filter == null or exe.inner.target.cpu_arch.? == filter.?) {
-                exe.inner.setBuildMode(mode);
                 exe.inner.install();
 
                 test_step.dependOn(&exe.inner.step);

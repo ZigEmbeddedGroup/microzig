@@ -32,6 +32,7 @@ pub const BuildOptions = struct {
     // a hal package is a package with ergonomic wrappers for registers for a
     // given mcu, it's only dependency can be microzig
     hal_package_path: ?std.build.FileSource = null,
+    optimize: std.builtin.OptimizeMode = std.builtin.OptimizeMode.Debug,
 };
 
 pub const EmbeddedExecutable = struct {
@@ -54,10 +55,6 @@ pub const EmbeddedExecutable = struct {
             .name = exe.inner.builder.allocator.dupe(u8, name) catch unreachable,
             .source = .{ .path = exe.inner.builder.allocator.dupe(u8, pkg_index_path) catch unreachable },
         });
-    }
-
-    pub fn setBuildMode(exe: *EmbeddedExecutable, mode: std.builtin.Mode) void {
-        exe.inner.setBuildMode(mode);
     }
 
     pub fn install(exe: *EmbeddedExecutable) void {
@@ -177,7 +174,7 @@ pub fn addEmbeddedExecutable(
     };
 
     var exe = EmbeddedExecutable{
-        .inner = builder.addExecutable(name, root_path ++ "core/microzig.zig"),
+        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target, .optimize = options.optimize }),
         .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
@@ -186,7 +183,6 @@ pub fn addEmbeddedExecutable(
     // might not be true for all machines (Pi Pico), but
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.inner.single_threaded = true;
-    exe.inner.setTarget(chip.cpu.target);
 
     const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
     exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
