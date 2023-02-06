@@ -57,10 +57,6 @@ pub const EmbeddedExecutable = struct {
         });
     }
 
-    pub fn setBuildMode(exe: *EmbeddedExecutable, mode: std.builtin.Mode) void {
-        exe.inner.optimize = mode;
-    }
-
     pub fn install(exe: *EmbeddedExecutable) void {
         exe.inner.install();
     }
