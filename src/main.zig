@@ -22,39 +22,46 @@ pub const Backing = union(enum) {
     }
 };
 
-const Pkg = std.build.Pkg;
+const Module = std.build.Module;
 const root_path = root() ++ "/";
 fn root() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
 }
 
 pub const BuildOptions = struct {
-    // a hal package is a package with ergonomic wrappers for registers for a
+    // a hal module is a module with ergonomic wrappers for registers for a
     // given mcu, it's only dependency can be microzig
-    hal_package_path: ?std.build.FileSource = null,
+    hal_module_path: ?std.build.FileSource = null,
     optimize: std.builtin.OptimizeMode = std.builtin.OptimizeMode.Debug,
 };
 
 pub const EmbeddedExecutable = struct {
     inner: *LibExeObjStep,
-    app_packages: std.ArrayList(Pkg),
 
-    pub fn addPackage(exe: *EmbeddedExecutable, pkg: Pkg) void {
-        exe.app_packages.append(pkg) catch @panic("failed to append");
-
-        for (exe.inner.packages.items) |*entry| {
-            if (std.mem.eql(u8, "app", entry.name)) {
-                entry.dependencies = exe.app_packages.items;
-                break;
-            }
-        } else @panic("app package not found");
+    pub fn addModule(exe: *EmbeddedExecutable, name: []const u8, module: *Module) void {
+        exe.inner.addModule(name, module);
     }
 
-    pub fn addPackagePath(exe: *EmbeddedExecutable, name: []const u8, pkg_index_path: []const u8) void {
-        exe.addPackage(Pkg{
-            .name = exe.inner.builder.allocator.dupe(u8, name) catch unreachable,
-            .source = .{ .path = exe.inner.builder.allocator.dupe(u8, pkg_index_path) catch unreachable },
+    pub fn addDriver(exe: *EmbeddedExecutable, driver: Driver) void {
+        var dependencies = std.ArrayList(std.Build.ModuleDependency).init(exe.inner.builder.allocator);
+
+        for (driver.dependencies) |dep| {
+            dependencies.append(.{
+                .name = dep,
+                .module = exe.inner.builder.modules.get(dep).?,
+            }) catch @panic("OOM");
+        }
+
+        // TODO: this is not perfect but should work for now
+        exe.inner.addAnonymousModule(driver.name, .{
+            .source_file = driver.source_file,
+            .dependencies = dependencies.toOwnedSlice() catch @panic("OOM"),
         });
+
+        const app_module = exe.inner.modules.get("app").?;
+        const driver_module = exe.inner.modules.get(driver.name).?;
+
+        app_module.dependencies.put(driver.name, driver_module) catch @panic("OOM");
     }
 
     pub fn install(exe: *EmbeddedExecutable) void {
@@ -77,9 +84,8 @@ pub const EmbeddedExecutable = struct {
         exe.inner.addCSourceFile(file, flags);
     }
 
-    pub fn addOptions(exe: *EmbeddedExecutable, package_name: []const u8, options: *std.build.OptionsStep) void {
-        exe.inner.addOptions(package_name, options);
-        exe.addPackage(.{ .name = package_name, .source = options.getSource() });
+    pub fn addOptions(exe: *EmbeddedExecutable, module_name: []const u8, options: *std.build.OptionsStep) void {
+        exe.inner.addOptions(module_name, options);
     }
 
     pub fn addObjectFile(exe: *EmbeddedExecutable, source_file: []const u8) void {
@@ -156,26 +162,32 @@ pub fn addEmbeddedExecutable(
         writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length}) catch unreachable;
     }
 
-    const config_pkg = Pkg{
-        .name = "microzig-config",
-        .source = .{ .path = config_file_name },
-    };
+    builder.addModule(.{
+        .name = "microzig",
+        .source_file = .{ .path = root_path ++ "core/import-module.zig" },
+    });
+    const microzig = builder.modules.get("microzig").?;
 
-    const chip_pkg = Pkg{
-        .name = "chip",
-        .source = .{ .path = chip.path },
-        .dependencies = &.{pkgs.microzig},
-    };
+    const config_module = builder.createModule(.{
+        .source_file = .{ .path = config_file_name },
+    });
 
-    const cpu_pkg = Pkg{
-        .name = "cpu",
-        .source = .{ .path = chip.cpu.path },
-        .dependencies = &.{pkgs.microzig},
-    };
+    const chip_module = builder.createModule(.{
+        .source_file = .{ .path = chip.path },
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    });
+
+    const cpu_module = builder.createModule(.{
+        .source_file = .{ .path = chip.cpu.path },
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    });
 
     var exe = EmbeddedExecutable{
         .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target, .optimize = options.optimize }),
-        .app_packages = std.ArrayList(Pkg).init(builder.allocator),
     };
 
     exe.inner.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
@@ -188,67 +200,64 @@ pub fn addEmbeddedExecutable(
     exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
 
     // TODO:
-    // - Generate the linker scripts from the "chip" or "board" package instead of using hardcoded ones.
+    // - Generate the linker scripts from the "chip" or "board" module instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
     exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
 
-    // these packages will be re-exported from core/microzig.zig
-    exe.inner.addPackage(config_pkg);
-    exe.inner.addPackage(chip_pkg);
-    exe.inner.addPackage(cpu_pkg);
+    // these modules will be re-exported from core/microzig.zig
+    exe.inner.addModule("microzig-config", config_module);
+    exe.inner.addModule("chip", chip_module);
+    exe.inner.addModule("cpu", cpu_module);
 
-    exe.inner.addPackage(.{
-        .name = "hal",
-        .source = if (options.hal_package_path) |hal_package_path|
-            hal_package_path
+    exe.inner.addModule("hal", builder.createModule(.{
+        .source_file = if (options.hal_module_path) |hal_module_path|
+            hal_module_path
         else .{ .path = root_path ++ "core/empty.zig" },
-        .dependencies = &.{pkgs.microzig},
-    });
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    }));
 
     switch (backing) {
         .board => |board| {
-            exe.inner.addPackage(std.build.Pkg{
-                .name = "board",
-                .source = .{ .path = board.path },
-                .dependencies = &.{pkgs.microzig},
-            });
+            exe.inner.addModule("board", builder.createModule(.{
+                .source_file = .{ .path = board.path },
+                .dependencies = &.{
+                    .{ .name = "microzig", .module = microzig },
+                },
+            }));
         },
         else => {},
     }
 
-    exe.inner.addPackage(.{
-        .name = "app",
-        .source = .{ .path = source },
-    });
-    exe.addPackage(pkgs.microzig);
+    exe.inner.addModule("app", builder.createModule(.{
+        .source_file = .{ .path = source },
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    }));
 
     return exe;
 }
 
-pub const pkgs = struct {
-    const mmio = std.build.Pkg{
-        .name = "microzig-mmio",
-        .source = .{ .path = root_path ++ "core/mmio.zig" },
-    };
-
-    pub const microzig = std.build.Pkg{
-        .name = "microzig",
-        .source = .{ .path = root_path ++ "core/import-package.zig" },
-    };
+pub const Driver = struct {
+    name: []const u8,
+    source_file: std.build.FileSource,
+    dependencies: []const []const u8,
 };
 
-/// Generic purpose drivers shipped with microzig
+// Generic purpose drivers shipped with microzig
 pub const drivers = struct {
-    pub const quadrature = std.build.Pkg{
+    pub const quadrature = Driver{
         .name = "microzig.quadrature",
-        .source = .{ .path = root_path ++ "drivers/quadrature.zig" },
-        .dependencies = &.{pkgs.microzig},
+        .source_file = .{ .path = root_path ++ "drivers/quadrature.zig" },
+        .dependencies = &.{"microzig"},
     };
 
-    pub const button = std.build.Pkg{
+    pub const button = Driver{
         .name = "microzig.button",
-        .source = .{ .path = root_path ++ "drivers/button.zig" },
-        .dependencies = &.{pkgs.microzig},
+        .source_file = .{ .path = root_path ++ "drivers/button.zig" },
+        .dependencies = &.{"microzig"},
     };
 };
