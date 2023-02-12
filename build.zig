@@ -3,11 +3,14 @@
 //! This means we need to use addExecutable() instead of using
 
 const std = @import("std");
-const microzig = @import("src/main.zig");
 
-const boards = microzig.boards;
-const chips = microzig.chips;
-const Backing = microzig.Backing;
+pub const microzig = @import("src/main.zig");
+
+// alias for packages
+pub const addEmbeddedExecutable = microzig.addEmbeddedExecutable;
+pub const boards = microzig.boards;
+pub const chips = microzig.chips;
+pub const Backing = microzig.Backing;
 
 pub fn build(b: *std.build.Builder) !void {
     // Standard optimization options allow the person running `zig build -Doptimize=...` to select
@@ -50,13 +53,14 @@ pub fn build(b: *std.build.Builder) !void {
             if ((cfg.backing.getTarget().cpu_arch.?) == .avr and tst.on_avr == false) continue;
             if (!tst.on_riscv32) continue;
 
-            const exe = microzig.addEmbeddedExecutable(
+            var exe = microzig.addEmbeddedExecutable(
                 b,
                 b.fmt("test-{s}-{s}.elf", .{ tst.name, cfg.name }),
                 tst.source,
                 cfg.backing,
-                .{.optimize = optimize },
+                .{ .optimize = optimize },
             );
+            exe.addDriver(microzig.drivers.button);
 
             if (filter == null or exe.inner.target.cpu_arch.? == filter.?) {
                 exe.inner.install();
