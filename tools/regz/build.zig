@@ -1,12 +1,10 @@
 const std = @import("std");
-const deps = @import("deps.zig");
-
-const pkgs = deps.pkgs;
-const libxml2 = deps.build_pkgs.libxml2;
 const Builder = std.build.Builder;
 const LibExeObjStep = std.build.LibExeObjStep;
 const Step = std.build.Step;
 const GeneratedFile = std.build.GeneratedFile;
+
+const libxml2 = @import("deps/zig-libxml2/libxml2.zig");
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse unreachable) ++ "/";
@@ -43,6 +41,12 @@ pub const Regz = struct {
         const build_options = builder.addOptions();
         build_options.addOption([]const u8, "commit", commit_result.stdout);
 
+        const clap = builder.createModule(.{
+            .source_file = .{
+                .path = comptime root() ++ "deps/zig-clap/clap.zig",
+            },
+        });
+
         const exe = builder.addExecutable(.{
             .name = "regz",
             .root_source_file = .{ .path = comptime root() ++ "src/main.zig" },
@@ -50,7 +54,7 @@ pub const Regz = struct {
             .optimize = optimize,
         });
         exe.addOptions("build_options", build_options);
-        exe.addPackagePath("clap", comptime root() ++ pkgs.clap.source.path);
+        exe.addModule("clap", clap);
         xml.link(exe);
 
         var regz = builder.allocator.create(Regz) catch unreachable;
@@ -153,9 +157,8 @@ pub fn build(b: *std.build.Builder) !void {
     });
 
     tests.addOptions("build_options", regz.build_options);
-    tests.addPackagePath("xml", "src/xml.zig");
-    tests.addPackagePath("Database", "src/Database.zig");
-    pkgs.addAllTo(tests);
+    //tests.addPackagePath("xml", "src/xml.zig");
+    //tests.addPackagePath("Database", "src/Database.zig");
     regz.xml.link(tests);
 
     const test_step = b.step("test", "Run unit tests");
