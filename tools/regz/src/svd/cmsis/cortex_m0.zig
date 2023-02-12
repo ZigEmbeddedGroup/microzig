@@ -1,267 +1,199 @@
 const std = @import("std");
-const Database = @import("../Database.zig");
-const Register = @import("../Register.zig");
-const Field = @import("../Field.zig");
+const Database = @import("../../Database.zig");
+const EntityId = Database.EntityId;
 
-pub fn addCoreRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
-    try addNvicCluster(db, scs);
-    try addScbCluster(db, scs);
+const parseInt = std.fmt.parseInt;
+
+pub fn addCoreRegisters(db: *Database, device_id: EntityId, scs_id: EntityId) !void {
+    try addNvicCluster(db, device_id, scs_id);
+    try addScbCluster(db, device_id, scs_id);
 }
 
-pub fn addNvicCluster(db: *Database, scs: Database.PeripheralIndex) !void {
-    const nvic = try db.addClusterToPeripheral(scs, .{
+pub fn addNvicCluster(db: *Database, device_id: EntityId, scs_id: EntityId) !void {
+    const nvic = try db.createRegisterGroup(scs_id, .{
         .name = "NVIC",
         .description = "Nested Vectored Interrupt Controller",
-        .addr_offset = 0x100,
+    });
+    _ = try db.createPeripheralInstance(device_id, scs_id, .{
+        .name = "NVIC",
+        .offset = 0xe000e100,
     });
 
-    var register_fields = std.ArrayList([]Field).init(db.gpa);
-    defer register_fields.deinit();
-
-    var registers = std.ArrayList(Register).init(db.gpa);
-    defer registers.deinit();
-
-    try registers.appendSlice(&.{
-        .{
-            .name = "ISER",
-            .description = "Interrupt Set Enable Register",
-            .addr_offset = 0x000,
-        },
-        .{
-            .name = "ICER",
-            .description = "Interrupt Clear Enable Register",
-            .addr_offset = 0x80,
-        },
-        .{
-            .name = "ISPR",
-            .description = "Interrupt Set Pending Register",
-            .addr_offset = 0x100,
-        },
-        .{
-            .name = "ICPR",
-            .description = "Interrupt Clear Pending Register",
-            .addr_offset = 0x180,
-        },
+    _ = try db.createRegister(nvic, .{
+        .name = "ISER",
+        .description = "Interrupt Set Enable Register",
+        .offset = 0x000,
+        .size = 32,
     });
-
-    var interrupt_bitfield = std.ArrayList(Field).init(db.gpa);
-    defer interrupt_bitfield.deinit();
-
-    for (db.interrupts.items) |interrupt|
-        try interrupt_bitfield.append(.{
-            .name = interrupt.name,
-            .offset = @intCast(u8, interrupt.value),
-            .width = 1,
-        });
-
-    for (registers.items) |_|
-        try register_fields.append(interrupt_bitfield.items);
+    _ = try db.createRegister(nvic, .{
+        .name = "ICER",
+        .description = "Interrupt Clear Enable Register",
+        .offset = 0x080,
+        .size = 32,
+    });
+    _ = try db.createRegister(nvic, .{
+        .name = "ISPR",
+        .description = "Interrupt Set Pending Register",
+        .offset = 0x100,
+        .size = 32,
+    });
+    _ = try db.createRegister(nvic, .{
+        .name = "ICPR",
+        .description = "Interrupt Clear Pending Register",
+        .offset = 0x180,
+        .size = 32,
+    });
 
     // interrupt priority registers
-    if (db.cpu) |cpu| if (cpu.nvic_prio_bits > 0) {
-        const ip_addr_offset = 0x300;
-        const nvic_prio_bits = db.cpu.?.nvic_prio_bits;
+    if (db.instances.devices.get(device_id)) |cpu|
+        if (cpu.properties.get("cpu.nvic_prio_bits")) |bits| if (try parseInt(u32, bits, 10) > 0) {
+            const ip_addr_offset = 0x300;
 
-        var i: u32 = 0;
-        while (i < 8) : (i += 1) {
-            // TODO: assert no duplicates in the interrupt table
-            var fields = std.ArrayListUnmanaged(Field){};
-            errdefer fields.deinit(db.arena.allocator());
+            var i: u32 = 0;
+            while (i < 8) : (i += 1) {
+                const addr_offset = ip_addr_offset + (i * 4);
+                const reg_name = try std.fmt.allocPrint(db.arena.allocator(), "IPR{}", .{i});
 
-            for (db.interrupts.items) |interrupt| {
-                if (i == interrupt.value / 4) {
-                    try fields.append(db.arena.allocator(), .{
-                        .name = interrupt.name,
-                        .offset = (8 * (@intCast(u8, interrupt.value) % 4)) + (8 - nvic_prio_bits),
-                        .width = nvic_prio_bits,
-                    });
-                }
-            }
-
-            const addr_offset = ip_addr_offset + (i * 4);
-            const reg_name = try std.fmt.allocPrint(db.arena.allocator(), "IP{}", .{
-                i,
-            });
-
-            try registers.append(.{
-                .name = reg_name,
-                .description = "Interrupt Priority Register",
-                .addr_offset = addr_offset,
-            });
-
-            if (fields.items.len > 0)
-                try register_fields.append(fields.toOwnedSlice(db.arena.allocator()));
-        }
-    };
-
-    const regs = try db.addRegistersToCluster(nvic, registers.items);
-    for (register_fields.items) |fields, i|
-        try db.addFieldsToRegister(regs.begin + @intCast(u32, i), fields);
-
-    try db.addSystemRegisterAddresses(scs, nvic, regs);
-}
-
-fn addInterruptPriorityRegisters(
-    db: *Database,
-    scs: Database.PeripheralIndex,
-    nvic: Database.ClusterIndex,
-) !void {
-    const ip_addr_offset = 0x300;
-    const nvic_prio_bits = db.cpu.?.nvic_prio_bits;
-    const peripheral = db.peripherals.items[scs];
-    const cluster = db.clusters.items[nvic];
-    const base_addr = if (peripheral.base_addr) |periph_base_addr|
-        periph_base_addr + cluster.addr_offset
-    else
-        cluster.addr_offset;
-
-    var register_fields = std.ArrayList([]Field).init(db.gpa);
-    defer register_fields.deinit();
-
-    var registers = std.ArrayList(Register).init(db.gpa);
-    defer registers.deinit();
-
-    {
-        var i: u32 = 0;
-        while (i < 8) : (i += 1) {
-            // TODO: assert no duplicates in the interrupt table
-            var fields = std.ArrayListUnmanaged(Field){};
-            errdefer fields.deinit(db.arena.allocator());
-
-            for (db.interrupts.items) |interrupt| {
-                if (i == interrupt.value / 4) {
-                    try fields.append(db.arena.allocator(), .{
-                        .name = interrupt.name,
-                        .offset = (8 * (@intCast(u8, interrupt.value) % 4)) + (8 - nvic_prio_bits),
-                        .width = nvic_prio_bits,
-                    });
-                }
-            }
-
-            const addr_offset = ip_addr_offset + (i * 4);
-            if (fields.items.len > 0) {
-                const reg_name = try std.fmt.allocPrint(db.arena.allocator(), "IP{}", .{
-                    i,
-                });
-
-                try registers.append(.{
+                _ = try db.createRegister(nvic, .{
                     .name = reg_name,
                     .description = "Interrupt Priority Register",
-                    .addr_offset = addr_offset,
+                    .offset = addr_offset,
+                    .size = 32,
                 });
-
-                try register_fields.append(fields.toOwnedSlice(db.arena.allocator()));
             }
-
-            try db.system_reg_addrs.put(db.gpa, base_addr + addr_offset, {});
-        }
-    }
-
-    const regs = try db.addRegistersToCluster(nvic, registers.items);
-    for (register_fields.items) |fields, i|
-        try db.addFieldsToRegister(regs.begin + @intCast(u32, i), fields);
+        };
 }
 
-pub fn addScbCluster(db: *Database, scs: Database.PeripheralIndex) !void {
-    const scb = try db.addClusterToPeripheral(scs, .{
+pub fn addNvicFields(db: *Database, device_id: EntityId) !void {
+    const interrupt_registers: [4]EntityId = .{
+        try db.getEntityIdByName("type.register", "ISER"),
+        try db.getEntityIdByName("type.register", "ICER"),
+        try db.getEntityIdByName("type.register", "ISPR"),
+        try db.getEntityIdByName("type.register", "ICPR"),
+    };
+
+    var interrupt_iter = db.instances.interrupts.iterator();
+    while (interrupt_iter.next()) |interrupt_kv| {
+        if (interrupt_kv.value_ptr.* < 0) continue;
+
+        const interrupt_name = db.attrs.name.get(interrupt_kv.key_ptr.*).?;
+        const interrupt_index = @bitCast(u32, interrupt_kv.value_ptr.*);
+        for (interrupt_registers) |register| {
+            _ = try db.createField(register, .{
+                .name = interrupt_name,
+                .offset = interrupt_index,
+                .size = 1,
+            });
+        }
+
+        const nvic_prio_bits = try parseInt(
+            u32,
+            db.instances.devices.get(device_id).?.properties.get("cpu.nvic_prio_bits") orelse return error.MissingNvicPrioBits,
+            10,
+        );
+        if (nvic_prio_bits == 0) continue;
+
+        const reg_name = try std.fmt.allocPrint(db.arena.allocator(), "IPR{}", .{interrupt_index >> 2});
+        const reg_id = try db.getEntityIdByName("type.register", reg_name);
+
+        _ = try db.createField(reg_id, .{
+            .name = interrupt_name,
+            .offset = (8 * (@intCast(u8, interrupt_index) % 4)) + (8 - nvic_prio_bits),
+            .size = nvic_prio_bits,
+        });
+    }
+}
+
+pub fn addScbCluster(db: *Database, device_id: EntityId, scs_id: EntityId) !void {
+    const scb = try db.createRegisterGroup(scs_id, .{
         .name = "SCB",
         .description = "System Control Block",
-        .addr_offset = 0xd00,
+    });
+    _ = try db.createPeripheralInstance(device_id, scs_id, .{
+        .name = "SCB",
+        .offset = 0xe000ed00,
     });
 
-    var scb_regs = std.ArrayList(Register).init(db.gpa);
-    defer scb_regs.deinit();
-
-    try scb_regs.appendSlice(&.{
-        .{
-            .name = "CPUID",
-            .addr_offset = 0x000,
-            .access = .read_only,
-        },
-        .{
-            .name = "ICSR",
-            .description = "Interrupt Control and State Register",
-            .addr_offset = 0x004,
-        },
-        .{
-            .name = "AIRCR",
-            .description = "Application Interrupt and Reset Control Register",
-            .addr_offset = 0x00c,
-        },
-        .{
-            .name = "SCR",
-            .description = "System Control Register",
-            .addr_offset = 0x010,
-        },
-        .{
-            .name = "CCR",
-            .description = "Configuration Control Register",
-            .addr_offset = 0x014,
-        },
-        .{
-            .name = "SHP",
-            .description = "System Handlers Priority Registers. [0] is RESERVED",
-            .addr_offset = 0x01c,
-            //.dimension = .{
-            //    .dim = 2,
-            //},
-        },
-        .{
-            .name = "SHCSR",
-            .description = "System Handler Control and State Register",
-            .addr_offset = 0x024,
-        },
+    const cpuid = try db.createRegister(scb, .{
+        .name = "CPUID",
+        .offset = 0x000,
+        .access = .read_only,
+        .size = 32,
+    });
+    const icsr = try db.createRegister(scb, .{
+        .name = "ICSR",
+        .description = "Interrupt Control and State Register",
+        .offset = 0x004,
+        .size = 32,
+    });
+    const aircr = try db.createRegister(scb, .{
+        .name = "AIRCR",
+        .description = "Application Interrupt and Reset Control Register",
+        .offset = 0x00c,
+        .size = 32,
+    });
+    const scr = try db.createRegister(scb, .{
+        .name = "SCR",
+        .description = "System Control Register",
+        .offset = 0x010,
+        .size = 32,
+    });
+    const ccr = try db.createRegister(scb, .{
+        .name = "CCR",
+        .description = "Configuration Control Register",
+        .offset = 0x014,
+        .size = 32,
+    });
+    const shp = try db.createRegister(scb, .{
+        .name = "SHP",
+        .description = "System Handlers Priority Registers. [0] is RESERVED",
+        .offset = 0x01c,
+        .size = 32,
+        //.dimension = .{
+        //    .dim = 2,
+        //},
+    });
+    _ = shp;
+    const shcsr = try db.createRegister(scb, .{
+        .name = "SHCSR",
+        .description = "System Handler Control and State Register",
+        .offset = 0x024,
+        .size = 32,
     });
 
-    var regs = try db.addRegistersToCluster(scb, scb_regs.items);
+    // CPUID fields
+    _ = try db.createField(cpuid, .{ .name = "REVISION", .offset = 0, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "PARTNO", .offset = 4, .size = 12 });
+    _ = try db.createField(cpuid, .{ .name = "ARCHITECTURE", .offset = 16, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "VARIANT", .offset = 20, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "IMPLEMENTER", .offset = 24, .size = 8 });
 
-    const cpuid = regs.begin;
-    try db.addFieldsToRegister(cpuid, &.{
-        .{ .name = "REVISION", .offset = 0, .width = 4 },
-        .{ .name = "PARTNO", .offset = 4, .width = 12 },
-        .{ .name = "ARCHITECTURE", .offset = 16, .width = 4 },
-        .{ .name = "VARIANT", .offset = 20, .width = 4 },
-        .{ .name = "IMPLEMENTER", .offset = 24, .width = 8 },
-    });
+    // ICSR fields
+    _ = try db.createField(icsr, .{ .name = "VECTACTIVE", .offset = 0, .size = 9 });
+    _ = try db.createField(icsr, .{ .name = "VECTPENDING", .offset = 12, .size = 9 });
+    _ = try db.createField(icsr, .{ .name = "ISRPENDING", .offset = 22, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "ISRPREEMPT", .offset = 23, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSTCLR", .offset = 25, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSTSET", .offset = 26, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSVCLR", .offset = 27, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSVSET", .offset = 28, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "NMIPENDSET", .offset = 31, .size = 1 });
 
-    const icsr = regs.begin + 1;
-    try db.addFieldsToRegister(icsr, &.{
-        .{ .name = "VECTACTIVE", .offset = 0, .width = 9 },
-        .{ .name = "VECTPENDING", .offset = 12, .width = 9 },
-        .{ .name = "ISRPENDING", .offset = 22, .width = 1 },
-        .{ .name = "ISRPREEMPT", .offset = 23, .width = 1 },
-        .{ .name = "PENDSTCLR", .offset = 25, .width = 1 },
-        .{ .name = "PENDSTSET", .offset = 26, .width = 1 },
-        .{ .name = "PENDSVCLR", .offset = 27, .width = 1 },
-        .{ .name = "PENDSVSET", .offset = 28, .width = 1 },
-        .{ .name = "NMIPENDSET", .offset = 31, .width = 1 },
-    });
+    // AIRCR fields
+    _ = try db.createField(aircr, .{ .name = "VECTCLRACTIVE", .offset = 1, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "SYSRESETREQ", .offset = 2, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "ENDIANESS", .offset = 15, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "VECTKEY", .offset = 16, .size = 16 });
 
-    const aircr = regs.begin + 2;
-    try db.addFieldsToRegister(aircr, &.{
-        .{ .name = "VECTCLRACTIVE", .offset = 1, .width = 1 },
-        .{ .name = "SYSRESETREQ", .offset = 2, .width = 1 },
-        .{ .name = "ENDIANESS", .offset = 15, .width = 1 },
-        .{ .name = "VECTKEY", .offset = 16, .width = 16 },
-    });
+    // SCR fields
+    _ = try db.createField(scr, .{ .name = "SLEEPONEXIT", .offset = 1, .size = 1 });
+    _ = try db.createField(scr, .{ .name = "SLEEPDEEP", .offset = 2, .size = 1 });
+    _ = try db.createField(scr, .{ .name = "SEVONPEND", .offset = 4, .size = 1 });
 
-    const scr = regs.begin + 3;
-    try db.addFieldsToRegister(scr, &.{
-        .{ .name = "SLEEPONEXIT", .offset = 1, .width = 1 },
-        .{ .name = "SLEEPDEEP", .offset = 2, .width = 1 },
-        .{ .name = "SEVONPEND", .offset = 4, .width = 1 },
-    });
+    // CCR fields
+    _ = try db.createField(ccr, .{ .name = "UNALIGN_TRP", .offset = 3, .size = 1 });
+    _ = try db.createField(ccr, .{ .name = "STKALIGN", .offset = 9, .size = 1 });
 
-    const ccr = regs.begin + 4;
-    try db.addFieldsToRegister(ccr, &.{
-        .{ .name = "UNALIGN_TRP", .offset = 3, .width = 1 },
-        .{ .name = "STKALIGN", .offset = 9, .width = 1 },
-    });
-
-    const shcsr = regs.begin + 6;
-    try db.addFieldsToRegister(shcsr, &.{
-        .{ .name = "SVCALLPENDED", .offset = 15, .width = 1 },
-    });
-
-    try db.addSystemRegisterAddresses(scs, scb, regs);
+    // SHCSR fields
+    _ = try db.createField(shcsr, .{ .name = "SVCALLPENDED", .offset = 15, .size = 1 });
 }

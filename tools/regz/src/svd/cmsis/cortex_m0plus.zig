@@ -1,209 +1,187 @@
 const std = @import("std");
-const Database = @import("../Database.zig");
-const Register = @import("../Register.zig");
-const Field = @import("../Field.zig");
+const Database = @import("../../Database.zig");
+const EntityId = Database.EntityId;
 const cortex_m0 = @import("cortex_m0.zig");
 
-pub fn addCoreRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
-    try cortex_m0.addNvicCluster(db, scs);
+pub const addNvicFields = cortex_m0.addNvicFields;
 
-    const scb = try db.addClusterToPeripheral(scs, .{
+pub fn addCoreRegisters(db: *Database, device_id: EntityId, scs: EntityId) !void {
+    const scb = try db.createRegisterGroup(scs, .{
         .name = "SCB",
         .description = "System Control Block",
-        .addr_offset = 0xd00,
+    });
+    _ = try db.createPeripheralInstance(device_id, scs, .{
+        .name = "SCB",
+        .offset = 0xe000ed00,
     });
 
-    var scb_regs = std.ArrayList(Register).init(db.gpa);
-    defer scb_regs.deinit();
-
-    try scb_regs.appendSlice(&.{
-        .{
-            .name = "CPUID",
-            .addr_offset = 0x000,
-            .access = .read_only,
-        },
-        .{
-            .name = "ICSR",
-            .description = "Interrupt Control and State Register",
-            .addr_offset = 0x004,
-        },
-        .{
-            .name = "AIRCR",
-            .description = "Application Interrupt and Reset Control Register",
-            .addr_offset = 0x00c,
-        },
-        .{
-            .name = "SCR",
-            .description = "System Control Register",
-            .addr_offset = 0x010,
-        },
-        .{
-            .name = "CCR",
-            .description = "Configuration Control Register",
-            .addr_offset = 0x014,
-        },
-        .{
-            .name = "SHP",
-            .description = "System Handlers Priority Registers. [0] is RESERVED",
-            .addr_offset = 0x01c,
-            //.dimension = .{
-            //    .dim = 2,
-            //},
-        },
-        .{
-            .name = "SHCSR",
-            .description = "System Handler Control and State Register",
-            .addr_offset = 0x024,
-        },
+    const cpuid = try db.createRegister(scb, .{
+        .name = "CPUID",
+        .offset = 0x000,
+        .access = .read_only,
+        .size = 32,
+    });
+    const icsr = try db.createRegister(scb, .{
+        .name = "ICSR",
+        .description = "Interrupt Control and State Register",
+        .offset = 0x004,
+        .size = 32,
+    });
+    const aircr = try db.createRegister(scb, .{
+        .name = "AIRCR",
+        .description = "Application Interrupt and Reset Control Register",
+        .offset = 0x00c,
+        .size = 32,
+    });
+    const scr = try db.createRegister(scb, .{
+        .name = "SCR",
+        .description = "System Control Register",
+        .offset = 0x010,
+        .size = 32,
+    });
+    const ccr = try db.createRegister(scb, .{
+        .name = "CCR",
+        .description = "Configuration Control Register",
+        .offset = 0x014,
+        .size = 32,
+    });
+    const shp = try db.createRegister(scb, .{
+        .name = "SHP",
+        .description = "System Handlers Priority Registers. [0] is RESERVED",
+        .offset = 0x01c,
+        .size = 32,
+        //.dimension = .{
+        //    .dim = 2,
+        //},
+    });
+    _ = shp;
+    const shcsr = try db.createRegister(scb, .{
+        .name = "SHCSR",
+        .description = "System Handler Control and State Register",
+        .offset = 0x024,
+        .size = 32,
     });
 
-    if (db.cpu) |cpu| if (cpu.vtor_present) {
-        try scb_regs.append(.{
+    if (db.instances.devices.get(device_id)) |cpu| if (cpu.properties.get("cpu.vtor") != null) {
+        const vtor = try db.createRegister(scb, .{
             .name = "VTOR",
             .description = "Vector Table Offset Register",
-            .addr_offset = 0x08,
+            .offset = 0x08,
+            .size = 32,
+        });
+
+        _ = try db.createField(vtor, .{
+            .name = "TBLOFF",
+            .offset = 8,
+            .size = 24,
         });
     };
 
-    var regs = try db.addRegistersToCluster(scb, scb_regs.items);
+    // CPUID fields
+    _ = try db.createField(cpuid, .{ .name = "REVISION", .offset = 0, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "PARTNO", .offset = 4, .size = 12 });
+    _ = try db.createField(cpuid, .{ .name = "ARCHITECTURE", .offset = 16, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "VARIANT", .offset = 20, .size = 4 });
+    _ = try db.createField(cpuid, .{ .name = "IMPLEMENTER", .offset = 24, .size = 8 });
 
-    const cpuid = regs.begin;
-    try db.addFieldsToRegister(cpuid, &.{
-        .{ .name = "REVISION", .offset = 0, .width = 4 },
-        .{ .name = "PARTNO", .offset = 4, .width = 12 },
-        .{ .name = "ARCHITECTURE", .offset = 16, .width = 4 },
-        .{ .name = "VARIANT", .offset = 20, .width = 4 },
-        .{ .name = "IMPLEMENTER", .offset = 24, .width = 8 },
-    });
+    // ICSR fields
+    _ = try db.createField(icsr, .{ .name = "VECTACTIVE", .offset = 0, .size = 9 });
+    _ = try db.createField(icsr, .{ .name = "VECTPENDING", .offset = 12, .size = 9 });
+    _ = try db.createField(icsr, .{ .name = "ISRPENDING", .offset = 22, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "ISRPREEMPT", .offset = 23, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSTCLR", .offset = 25, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSTSET", .offset = 26, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSVCLR", .offset = 27, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "PENDSVSET", .offset = 28, .size = 1 });
+    _ = try db.createField(icsr, .{ .name = "NMIPENDSET", .offset = 31, .size = 1 });
 
-    const icsr = regs.begin + 1;
-    try db.addFieldsToRegister(icsr, &.{
-        .{ .name = "VECTACTIVE", .offset = 0, .width = 9 },
-        .{ .name = "VECTPENDING", .offset = 12, .width = 9 },
-        .{ .name = "ISRPENDING", .offset = 22, .width = 1 },
-        .{ .name = "ISRPREEMPT", .offset = 23, .width = 1 },
-        .{ .name = "PENDSTCLR", .offset = 25, .width = 1 },
-        .{ .name = "PENDSTSET", .offset = 26, .width = 1 },
-        .{ .name = "PENDSVCLR", .offset = 27, .width = 1 },
-        .{ .name = "PENDSVSET", .offset = 28, .width = 1 },
-        .{ .name = "NMIPENDSET", .offset = 31, .width = 1 },
-    });
+    // AIRCR fields
+    _ = try db.createField(aircr, .{ .name = "VECTCLRACTIVE", .offset = 1, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "SYSRESETREQ", .offset = 2, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "ENDIANESS", .offset = 15, .size = 1 });
+    _ = try db.createField(aircr, .{ .name = "VECTKEY", .offset = 16, .size = 16 });
 
-    const aircr = regs.begin + 2;
-    try db.addFieldsToRegister(aircr, &.{
-        .{ .name = "VECTCLRACTIVE", .offset = 1, .width = 1 },
-        .{ .name = "SYSRESETREQ", .offset = 2, .width = 1 },
-        .{ .name = "ENDIANESS", .offset = 15, .width = 1 },
-        .{ .name = "VECTKEY", .offset = 16, .width = 16 },
-    });
+    // SCR fields
+    _ = try db.createField(scr, .{ .name = "SLEEPONEXIT", .offset = 1, .size = 1 });
+    _ = try db.createField(scr, .{ .name = "SLEEPDEEP", .offset = 2, .size = 1 });
+    _ = try db.createField(scr, .{ .name = "SEVONPEND", .offset = 4, .size = 1 });
 
-    const scr = regs.begin + 3;
-    try db.addFieldsToRegister(scr, &.{
-        .{ .name = "SLEEPONEXIT", .offset = 1, .width = 1 },
-        .{ .name = "SLEEPDEEP", .offset = 2, .width = 1 },
-        .{ .name = "SEVONPEND", .offset = 4, .width = 1 },
-    });
+    // CCR fields
+    _ = try db.createField(ccr, .{ .name = "UNALIGN_TRP", .offset = 3, .size = 1 });
+    _ = try db.createField(ccr, .{ .name = "STKALIGN", .offset = 9, .size = 1 });
 
-    const ccr = regs.begin + 4;
-    try db.addFieldsToRegister(ccr, &.{
-        .{ .name = "UNALIGN_TRP", .offset = 3, .width = 1 },
-        .{ .name = "STKALIGN", .offset = 9, .width = 1 },
-    });
+    // SHCSR fields
+    _ = try db.createField(shcsr, .{ .name = "SVCALLPENDED", .offset = 15, .size = 1 });
 
-    const shcsr = regs.begin + 6;
-    try db.addFieldsToRegister(shcsr, &.{
-        .{ .name = "SVCALLPENDED", .offset = 15, .width = 1 },
-    });
+    try cortex_m0.addNvicCluster(db, device_id, scs);
 
-    if (db.cpu) |cpu| if (cpu.vtor_present) {
-        const vtor = regs.begin + 7;
-        try db.addFieldsToRegister(vtor, &.{.{
-            .name = "TBLOFF",
-            .offset = 8,
-            .width = 24,
-        }});
-    };
-
-    if (db.cpu) |cpu| if (cpu.mpu_present)
-        try addMpuRegisters(db, scs);
-
-    try db.addSystemRegisterAddresses(scs, scb, regs);
+    if (db.instances.devices.get(device_id)) |cpu| if (cpu.properties.get("cpu.mpu") != null)
+        try addMpuRegisters(db, device_id, scs);
 }
 
-fn addMpuRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
-    const mpu = try db.addClusterToPeripheral(scs, .{
+fn addMpuRegisters(db: *Database, device_id: EntityId, scs: EntityId) !void {
+    const mpu = try db.createRegisterGroup(scs, .{
         .name = "MPU",
         .description = "Memory Protection Unit",
-        .addr_offset = 0xd90,
+    });
+    _ = try db.createPeripheralInstance(device_id, scs, .{
+        .name = "MPU",
+        .offset = 0xd90,
     });
 
-    const regs = try db.addRegistersToCluster(mpu, &.{
-        .{
-            .name = "TYPE",
-            .description = "MPU Type Register",
-            .addr_offset = 0x00,
-            .access = .read_only,
-        },
-        .{
-            .name = "CTRL",
-            .description = "MPU Control Register",
-            .addr_offset = 0x04,
-        },
-        .{
-            .name = "RNR",
-            .description = "MPU Region RNRber Register",
-            .addr_offset = 0x08,
-        },
-        .{
-            .name = "RBAR",
-            .description = "MPU Region Base Address Register",
-            .addr_offset = 0x0c,
-        },
-        .{
-            .name = "RASR",
-            .description = "MPU Region Attribute and Size Register",
-            .addr_offset = 0x10,
-        },
+    const type_reg = try db.createRegister(mpu, .{
+        .name = "TYPE",
+        .description = "MPU Type Register",
+        .offset = 0x00,
+        .access = .read_only,
+        .size = 32,
+    });
+    const ctrl = try db.createRegister(mpu, .{
+        .name = "CTRL",
+        .description = "MPU Control Register",
+        .offset = 0x04,
+        .size = 32,
+    });
+    const rnr = try db.createRegister(mpu, .{
+        .name = "RNR",
+        .description = "MPU Region RNRber Register",
+        .offset = 0x08,
+        .size = 32,
+    });
+    const rbar = try db.createRegister(mpu, .{
+        .name = "RBAR",
+        .description = "MPU Region Base Address Register",
+        .offset = 0x0c,
+        .size = 32,
+    });
+    const rasr = try db.createRegister(mpu, .{
+        .name = "RASR",
+        .description = "MPU Region Attribute and Size Register",
+        .offset = 0x10,
+        .size = 32,
     });
 
-    const type_reg = regs.begin;
-    try db.addFieldsToRegister(type_reg, &.{
-        .{ .name = "SEPARATE", .offset = 0, .width = 1 },
-        .{ .name = "DREGION", .offset = 8, .width = 8 },
-        .{ .name = "IREGION", .offset = 16, .width = 8 },
-    });
+    _ = try db.createField(type_reg, .{ .name = "SEPARATE", .offset = 0, .size = 1 });
+    _ = try db.createField(type_reg, .{ .name = "DREGION", .offset = 8, .size = 8 });
+    _ = try db.createField(type_reg, .{ .name = "IREGION", .offset = 16, .size = 8 });
 
-    const ctrl = regs.begin + 1;
-    try db.addFieldsToRegister(ctrl, &.{
-        .{ .name = "ENABLE", .offset = 0, .width = 1 },
-        .{ .name = "HFNMIENA", .offset = 1, .width = 1 },
-        .{ .name = "PRIVDEFENA", .offset = 2, .width = 1 },
-    });
+    _ = try db.createField(ctrl, .{ .name = "ENABLE", .offset = 0, .size = 1 });
+    _ = try db.createField(ctrl, .{ .name = "HFNMIENA", .offset = 1, .size = 1 });
+    _ = try db.createField(ctrl, .{ .name = "PRIVDEFENA", .offset = 2, .size = 1 });
 
-    const rnr = regs.begin + 2;
-    try db.addFieldsToRegister(rnr, &.{
-        .{ .name = "REGION", .offset = 0, .width = 8 },
-    });
+    _ = try db.createField(rnr, .{ .name = "REGION", .offset = 0, .size = 8 });
 
-    const rbar = regs.begin + 3;
-    try db.addFieldsToRegister(rbar, &.{
-        .{ .name = "REGION", .offset = 0, .width = 4 },
-        .{ .name = "VALID", .offset = 4, .width = 1 },
-        .{ .name = "ADDR", .offset = 8, .width = 24 },
-    });
+    _ = try db.createField(rbar, .{ .name = "REGION", .offset = 0, .size = 4 });
+    _ = try db.createField(rbar, .{ .name = "VALID", .offset = 4, .size = 1 });
+    _ = try db.createField(rbar, .{ .name = "ADDR", .offset = 8, .size = 24 });
 
-    const rasr = regs.begin + 4;
-    try db.addFieldsToRegister(rasr, &.{
-        .{ .name = "ENABLE", .offset = 0, .width = 1 },
-        .{ .name = "SIZE", .offset = 1, .width = 5 },
-        .{ .name = "SRD", .offset = 8, .width = 8 },
-        .{ .name = "B", .offset = 16, .width = 1 },
-        .{ .name = "C", .offset = 17, .width = 1 },
-        .{ .name = "S", .offset = 18, .width = 1 },
-        .{ .name = "TEX", .offset = 19, .width = 3 },
-        .{ .name = "AP", .offset = 24, .width = 3 },
-        .{ .name = "XN", .offset = 28, .width = 1 },
-    });
-
-    try db.addSystemRegisterAddresses(scs, mpu, regs);
+    _ = try db.createField(rasr, .{ .name = "ENABLE", .offset = 0, .size = 1 });
+    _ = try db.createField(rasr, .{ .name = "SIZE", .offset = 1, .size = 5 });
+    _ = try db.createField(rasr, .{ .name = "SRD", .offset = 8, .size = 8 });
+    _ = try db.createField(rasr, .{ .name = "B", .offset = 16, .size = 1 });
+    _ = try db.createField(rasr, .{ .name = "C", .offset = 17, .size = 1 });
+    _ = try db.createField(rasr, .{ .name = "S", .offset = 18, .size = 1 });
+    _ = try db.createField(rasr, .{ .name = "TEX", .offset = 19, .size = 3 });
+    _ = try db.createField(rasr, .{ .name = "AP", .offset = 24, .size = 3 });
+    _ = try db.createField(rasr, .{ .name = "XN", .offset = 28, .size = 1 });
 }

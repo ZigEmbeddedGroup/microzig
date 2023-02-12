@@ -5,6 +5,7 @@ const assert = std.debug.assert;
 
 const xml = @import("xml.zig");
 const arm = @import("arch/arm.zig");
+const cmsis = @import("svd/cmsis.zig");
 
 const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
@@ -146,6 +147,11 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
     if (cpu_it.next() != null)
         log.warn("there are multiple CPUs", .{});
 
+    if (db.instances.devices.getEntry(device_id)) |device| {
+        const arch = device.value_ptr.arch;
+        if (arch.isArm()) try cmsis.addCoreRegisters(db, arch, device_id);
+    }
+
     var ctx = Context{
         .db = db,
     };
@@ -171,6 +177,11 @@ pub fn loadIntoDb(db: *Database, doc: xml.Doc) !void {
                 err,
             });
         };
+    }
+
+    if (db.instances.devices.getEntry(device_id)) |device| {
+        const arch = device.value_ptr.arch;
+        if (arch.isArm()) try cmsis.addNvicFields(db, arch, device_id);
     }
 
     db.assertValid();

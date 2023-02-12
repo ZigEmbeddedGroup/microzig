@@ -1,30 +1,30 @@
 const std = @import("std");
-const Database = @import("../Database.zig");
-const Register = @import("../Register.zig");
-const Field = @import("../Field.zig");
+const Database = @import("../../Database.zig");
+const EntityId = Database.EntityId;
 const cortex_m0 = @import("cortex_m0.zig");
 
-pub fn addCoreRegisters(db: *Database, scs: Database.PeripheralIndex) !void {
-    try cortex_m0.addNvicCluster(db, scs);
-    try cortex_m0.addScbCluster(db, scs);
+pub const addNvicFields = cortex_m0.addNvicFields;
 
-    const scbnscn = try db.addClusterToPeripheral(scs, .{
-        .name = "SCBnSCN",
+pub fn addCoreRegisters(db: *Database, device_id: EntityId, scs_id: EntityId) !void {
+    try cortex_m0.addNvicCluster(db, device_id, scs_id);
+    try cortex_m0.addScbCluster(db, device_id, scs_id);
+
+    const scnscb = try db.createRegisterGroup(scs_id, .{
+        .name = "SCnSCN",
         .description = "System Control and ID Register not in the SCB",
-        .addr_offset = 0x0,
+    });
+    _ = try db.createPeripheralInstance(device_id, scnscb, .{
+        .name = "SCnSCB",
+        .offset = 0x0,
     });
 
-    const regs = try db.addRegistersToCluster(scbnscn, &.{
-        .{
-            .name = "ACTLR",
-            .addr_offset = 0x8,
-            .description = "Auxilary Control Register",
-        },
+    const actlr = try db.createRegister(scnscb, .{
+        .name = "ACTLR",
+        .description = "Auxilary Control Register",
+        .offset = 0x8,
+        .size = 32,
     });
 
-    const actlr = regs.begin;
-    try db.addFieldsToRegister(actlr, &.{
-        .{ .name = "ITCMLAEN", .offset = 3, .width = 1 },
-        .{ .name = "ITCMUAEN", .offset = 4, .width = 1 },
-    });
+    _ = try db.createField(actlr, .{ .name = "ITCMLAEN", .offset = 3, .size = 1 });
+    _ = try db.createField(actlr, .{ .name = "ITCMUAEN", .offset = 4, .size = 1 });
 }
