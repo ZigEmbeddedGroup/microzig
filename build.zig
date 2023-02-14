@@ -10,13 +10,15 @@ const board_path = comptimePrint("{s}/src/raspberry_pi_pico.zig", .{root()});
 const hal_path = comptimePrint("{s}/src/hal.zig", .{root()});
 const linkerscript_path = comptimePrint("{s}/rp2040.ld", .{root()});
 
-pub const BuildOptions = struct {};
+pub const BuildOptions = struct {
+    optimize: std.builtin.OptimizeMode,
+};
 
 pub fn addPiPicoExecutable(
     builder: *Builder,
     name: []const u8,
     source: []const u8,
-    _: BuildOptions,
+    options: BuildOptions,
 ) microzig.EmbeddedExecutable {
     const rp2040 = microzig.Chip{
         .name = "RP2040",
@@ -41,7 +43,8 @@ pub fn addPiPicoExecutable(
         source,
         .{ .board = raspberry_pi_pico },
         .{
-            .hal_package_path = .{ .path = hal_path },
+            .optimize = options.optimize,
+            .hal_module_path = .{ .path = hal_path },
         },
     );
     ret.inner.setLinkerScriptPath(.{ .path = linkerscript_path });
@@ -53,8 +56,8 @@ pub fn addPiPicoExecutable(
 // package. In an attempt to modularize -- designing for a case where a
 // project requires multiple HALs, it accepts microzig as a param
 pub fn build(b: *Builder) !void {
-    const mode = b.standardReleaseOptions();
-    var examples = Examples.init(b, mode);
+    const optimize = b.standardOptimizeOption(.{});
+    var examples = Examples.init(b, optimize);
     examples.install();
 }
 
@@ -71,16 +74,15 @@ pub const Examples = struct {
     uart: microzig.EmbeddedExecutable,
     //uart_pins: microzig.EmbeddedExecutable,
 
-    pub fn init(b: *Builder, mode: std.builtin.Mode) Examples {
+    pub fn init(b: *Builder, optimize: std.builtin.OptimizeMode) Examples {
         var ret: Examples = undefined;
         inline for (@typeInfo(Examples).Struct.fields) |field| {
             @field(ret, field.name) = addPiPicoExecutable(
                 b,
                 field.name,
                 comptime root() ++ "/examples/" ++ field.name ++ ".zig",
-                .{},
+                .{ .optimize = optimize },
             );
-            @field(ret, field.name).setBuildMode(mode);
         }
 
         return ret;
