@@ -16,7 +16,11 @@ pub const app = @import("app");
 pub const config = @import("microzig-config");
 
 /// Provides access to the low level features of the current microchip.
-pub const chip = @import("chip");
+pub const chip = struct {
+    const inner = @import("chip");
+    pub const types = inner.types;
+    pub usingnamespace @field(inner.devices, config.chip_name);
+};
 
 /// Provides access to board features or is `void` when no board is present.
 pub const board = if (config.has_board) @import("board") else void;
@@ -27,7 +31,7 @@ pub const cpu = @import("cpu");
 pub const hal = @import("hal");
 
 /// Module that helps with interrupt handling.
-pub const interrupts = @import("interrupts.zig");
+pub const interrupt = @import("interrupts.zig");
 
 /// Module that provides clock related functions
 pub const clock = @import("clock.zig");
@@ -117,7 +121,7 @@ pub fn microzig_panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usiz
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
     while (true) {
-        interrupts.cli();
+        interrupt.cli();
 
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: "memory");

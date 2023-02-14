@@ -1,10 +1,7 @@
 const std = @import("std");
 
-pub fn mmio(addr: usize, comptime size: u8, comptime PackedT: type) *volatile MMIO(size, PackedT) {
-    return @intToPtr(*volatile MMIO(size, PackedT), addr);
-}
-
-pub fn MMIO(comptime size: u8, comptime PackedT: type) type {
+pub fn Mmio(comptime PackedT: type) type {
+    const size = @bitSizeOf(PackedT);
     if ((size % 8) != 0)
         @compileError("size must be divisible by 8!");
 

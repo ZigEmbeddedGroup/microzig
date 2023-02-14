@@ -19,6 +19,17 @@ pub const atmega328p = Chip{
     },
 };
 
+pub const LPC176x5x = Chip{
+    .name = "LPC176x5x",
+    .path = root_path ++ "chips/LPC176x5x/LPC176x5x.zig",
+    .cpu = cpus.cortex_m3,
+    .memory_regions = &.{
+        MemoryRegion{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
+        MemoryRegion{ .offset = 0x10000000, .length = 32 * 1024, .kind = .ram },
+        MemoryRegion{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
+    },
+};
+
 pub const lpc1768 = Chip{
     .name = "NXP LPC1768",
     .path = root_path ++ "chips/lpc1768/lpc1768.zig",

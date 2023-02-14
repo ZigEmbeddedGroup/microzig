@@ -59,3 +59,18 @@ const CriticalSection = struct {
         }
     }
 };
+
+// TODO: update with arch specifics
+pub const Handler = extern union {
+    C: *const fn () callconv(.C) void,
+    Naked: *const fn () callconv(.Naked) void,
+    // Interrupt is not supported on arm
+};
+
+pub const unhandled = Handler{
+    .C = struct {
+        fn tmp() callconv(.C) noreturn {
+            @panic("unhandled interrupt");
+        }
+    }.tmp,
+};

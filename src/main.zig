@@ -32,7 +32,7 @@ pub const BuildOptions = struct {
     // a hal module is a module with ergonomic wrappers for registers for a
     // given mcu, it's only dependency can be microzig
     hal_module_path: ?std.build.FileSource = null,
-    optimize: std.builtin.OptimizeMode = std.builtin.OptimizeMode.Debug,
+    optimize: std.builtin.OptimizeMode = .Debug,
 };
 
 pub const EmbeddedExecutable = struct {
@@ -155,10 +155,10 @@ pub fn addEmbeddedExecutable(
         var writer = config_file.writer();
         writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
         if (has_board)
-            writer.print("pub const board_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
+            writer.print("pub const board_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
 
-        writer.print("pub const chip_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
-        writer.print("pub const cpu_name = .@\"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
+        writer.print("pub const chip_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
+        writer.print("pub const cpu_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
         writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length}) catch unreachable;
     }
 
@@ -187,7 +187,12 @@ pub fn addEmbeddedExecutable(
     });
 
     var exe = EmbeddedExecutable{
-        .inner = builder.addExecutable(.{ .name = name, .root_source_file = .{ .path = root_path ++ "core/microzig.zig" }, .target = chip.cpu.target, .optimize = options.optimize }),
+        .inner = builder.addExecutable(.{
+            .name = name,
+            .root_source_file = .{ .path = root_path ++ "core/microzig.zig" },
+            .target = chip.cpu.target,
+            .optimize = options.optimize,
+        }),
     };
 
     exe.inner.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
@@ -213,7 +218,8 @@ pub fn addEmbeddedExecutable(
     exe.inner.addModule("hal", builder.createModule(.{
         .source_file = if (options.hal_module_path) |hal_module_path|
             hal_module_path
-        else .{ .path = root_path ++ "core/empty.zig" },
+        else
+            .{ .path = root_path ++ "core/empty.zig" },
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig },
         },
