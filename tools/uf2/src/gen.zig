@@ -30,5 +30,5 @@ pub fn main() !void {
             \\
         , .{ entry.short_name, entry.id });
 
-    try writer.writeAll("};\n");
+    try writer.writeAll("    _,\n};\n");
 }

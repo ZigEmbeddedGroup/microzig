@@ -551,5 +551,8 @@ pub const FamilyId = enum(u32) {
     RP2040 = 0xe48bff56,
     STM32L4 = 0x00ff6919,
     GD32VF103 = 0x9af03e33,
+    CSK4 = 0x4f6ace52,
+    CSK6 = 0x6e7348a8,
+    M0SENSE = 0x11de784a,
     _,
 };
