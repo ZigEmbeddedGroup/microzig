@@ -1,7 +1,7 @@
 const std = @import("std");
 const micro = @import("microzig");
 
-pub fn busySleep(comptime limit: comptime_int) void {
+pub fn busy_sleep(comptime limit: comptime_int) void {
     if (limit <= 0) @compileError("limit must be non-negative!");
 
     comptime var bits = 0;
@@ -18,13 +18,13 @@ pub fn busySleep(comptime limit: comptime_int) void {
 }
 
 const DebugErr = error{};
-fn writerWrite(ctx: void, string: []const u8) DebugErr!usize {
+fn writer_write(ctx: void, string: []const u8) DebugErr!usize {
     _ = ctx;
     write(string);
     return string.len;
 }
 
-const DebugWriter = std.io.Writer(void, DebugErr, writerWrite);
+const DebugWriter = std.io.Writer(void, DebugErr, writer_write);
 
 pub fn write(string: []const u8) void {
     if (!micro.config.has_board)

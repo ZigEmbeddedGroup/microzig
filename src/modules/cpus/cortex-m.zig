@@ -76,7 +76,7 @@ pub const startup_logic = struct {
     }
 };
 
-fn isValidField(field_name: []const u8) bool {
+fn is_valid_field(field_name: []const u8) bool {
     return !std.mem.startsWith(u8, field_name, "reserved") and
         !std.mem.eql(u8, field_name, "initial_stack_pointer") and
         !std.mem.eql(u8, field_name, "reset");
@@ -129,7 +129,7 @@ else if (@hasDecl(microzig.hal, "InterruptVector"))
 else
     microzig.chip.InterruptVector;
 
-fn createInterruptVector(
+fn create_interrupt_vector(
     comptime function: anytype,
 ) InterruptVector {
     const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;

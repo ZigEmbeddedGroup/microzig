@@ -29,10 +29,10 @@ pub fn Mmio(comptime PackedT: type) type {
             comptime {
                 assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
             }
-            addr.writeRaw(@bitCast(IntT, val));
+            addr.write_raw(@bitCast(IntT, val));
         }
 
-        pub fn writeRaw(addr: *volatile Self, val: IntT) void {
+        pub fn write_raw(addr: *volatile Self, val: IntT) void {
             addr.raw = val;
         }
 

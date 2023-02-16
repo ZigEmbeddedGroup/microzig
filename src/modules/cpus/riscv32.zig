@@ -21,7 +21,7 @@ pub fn wfe() void {
     asm volatile ("csrs 0x810, 0x1");
 }
 
-pub fn pmpOpenAllSpace() void {
+pub fn pmp_open_all_space() void {
     // Config entry0 addr to all 1s to make the range cover all space
     asm volatile ("li x6, 0xffffffff" ::: "x6");
     asm volatile ("csrw pmpaddr0, x6");
@@ -30,7 +30,7 @@ pub fn pmpOpenAllSpace() void {
     asm volatile ("csrw pmpcfg0, x6");
 }
 
-pub fn switchM2uMode() void {
+pub fn switch_m2u_mode() void {
     asm volatile ("la x6, 1f    " ::: "x6");
     asm volatile ("csrw mepc, x6");
     asm volatile ("mret");

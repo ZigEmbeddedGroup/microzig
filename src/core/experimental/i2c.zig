@@ -19,7 +19,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
 
                     state: SystemI2CController.ReadState,
 
-                    pub const Reader = std.io.Reader(*Self, ReadError, readSome);
+                    pub const Reader = std.io.Reader(*Self, ReadError, read_some);
 
                     /// NOTE that some platforms, notably most (all?) STM32 microcontrollers,
                     /// allow only a single read call per transfer.
@@ -27,7 +27,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                         return Reader{ .context = self };
                     }
 
-                    fn readSome(self: *Self, buffer: []u8) ReadError!usize {
+                    fn read_some(self: *Self, buffer: []u8) ReadError!usize {
                         try self.state.readNoEof(buffer);
                         return buffer.len;
                     }
@@ -40,7 +40,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     /// RESTART to a new transfer, invalidating this object.
                     /// Note that some platforms set the repeated START condition
                     /// on the first read or write call.
-                    pub fn restartTransfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
+                    pub fn restart_transfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
                         return Transfer(direction){ .state = try self.state.restartTransfer(new_direction) };
                     }
                 },
@@ -49,7 +49,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
 
                     state: SystemI2CController.WriteState,
 
-                    pub const Writer = std.io.Writer(*Self, WriteError, writeSome);
+                    pub const Writer = std.io.Writer(*Self, WriteError, write_some);
 
                     /// NOTE that some platforms, notably most (all?) STM32 microcontrollers,
                     /// will not immediately write all bytes, but postpone that
@@ -58,7 +58,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                         return Writer{ .context = self };
                     }
 
-                    fn writeSome(self: *Self, buffer: []const u8) WriteError!usize {
+                    fn write_some(self: *Self, buffer: []const u8) WriteError!usize {
                         try self.state.writeAll(buffer);
                         return buffer.len;
                     }
@@ -71,7 +71,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     /// RESTART to a new transfer, invalidating this object.
                     /// Note that some platforms set the repeated START condition
                     /// on the first read or write call.
-                    pub fn restartTransfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
+                    pub fn restart_transfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
                         return switch (new_direction) {
                             .read => Transfer(new_direction){ .state = try self.state.restartRead() },
                             .write => Transfer(new_direction){ .state = try self.state.restartWrite() },
@@ -84,7 +84,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         /// START a new transfer.
         /// Note that some platforms set the START condition
         /// on the first read or write call.
-        pub fn startTransfer(self: Device, comptime direction: Direction) !Transfer(direction) {
+        pub fn start_transfer(self: Device, comptime direction: Direction) !Transfer(direction) {
             return switch (direction) {
                 .read => Transfer(direction){ .state = try SystemI2CController.ReadState.start(self.address) },
                 .write => Transfer(direction){ .state = try SystemI2CController.WriteState.start(self.address) },
@@ -92,12 +92,12 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         }
 
         /// Shorthand for 'register-based' devices
-        pub fn writeRegister(self: Device, register_address: u8, byte: u8) ReadError!void {
+        pub fn write_register(self: Device, register_address: u8, byte: u8) ReadError!void {
             try self.writeRegisters(register_address, &.{byte});
         }
 
         /// Shorthand for 'register-based' devices
-        pub fn writeRegisters(self: Device, register_address: u8, buffer: []u8) ReadError!void {
+        pub fn write_registers(self: Device, register_address: u8, buffer: []u8) ReadError!void {
             var wt = try self.startTransfer(.write);
             defer wt.stop() catch {};
             try wt.writer().writeByte(register_address);
@@ -105,14 +105,14 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         }
 
         /// Shorthand for 'register-based' devices
-        pub fn readRegister(self: Device, register_address: u8) ReadError!u8 {
+        pub fn read_register(self: Device, register_address: u8) ReadError!u8 {
             var buffer: [1]u8 = undefined;
             try self.readRegisters(register_address, &buffer);
             return buffer[0];
         }
 
         /// Shorthand for 'register-based' devices
-        pub fn readRegisters(self: Device, register_address: u8, buffer: []u8) ReadError!void {
+        pub fn read_registers(self: Device, register_address: u8, buffer: []u8) ReadError!void {
             var rt = write_and_restart: {
                 var wt = try self.startTransfer(.write);
                 errdefer wt.stop() catch {};

@@ -23,30 +23,30 @@ pub fn SpiBus(comptime index: usize) type {
 
                     device: SelfSpiDevice,
 
-                    fn transceiveByte(self: *SelfTransfer, write_byte: u8, read_pointer: *u8) !void {
+                    fn transceive_byte(self: *SelfTransfer, write_byte: u8, read_pointer: *u8) !void {
                         try self.device.internal.transceiveByte(write_byte, read_pointer);
                     }
 
-                    pub const Writer = std.io.Writer(*SelfTransfer, WriteError, writeSome);
+                    pub const Writer = std.io.Writer(*SelfTransfer, WriteError, write_some);
 
                     /// Return a standard Writer (which ignores the bytes read).
                     pub fn writer(self: *SelfTransfer) Writer {
                         return Writer{ .context = self };
                     }
 
-                    fn writeSome(self: *SelfTransfer, buffer: []const u8) WriteError!usize {
+                    fn write_some(self: *SelfTransfer, buffer: []const u8) WriteError!usize {
                         try self.device.internal.writeAll(buffer);
                         return buffer.len;
                     }
 
-                    pub const Reader = std.io.Reader(*SelfTransfer, ReadError, readSome);
+                    pub const Reader = std.io.Reader(*SelfTransfer, ReadError, read_some);
 
                     /// Return a standard Reader (which writes arbitrary bytes).
                     pub fn reader(self: *SelfTransfer) Reader {
                         return Reader{ .context = self };
                     }
 
-                    fn readSome(self: *SelfTransfer, buffer: []u8) ReadError!usize {
+                    fn read_some(self: *SelfTransfer, buffer: []u8) ReadError!usize {
                         try self.device.internal.readInto(buffer);
                         return buffer.len;
                     }
@@ -58,7 +58,7 @@ pub fn SpiBus(comptime index: usize) type {
                 };
 
                 /// start a new transfer, selecting using the CS pin
-                pub fn beginTransfer(self: SelfSpiDevice) !Transfer {
+                pub fn begin_transfer(self: SelfSpiDevice) !Transfer {
                     self.internal.switchToDevice(cs_pin, config);
                     self.internal.beginTransfer(cs_pin, config);
                     return Transfer{ .device = self };
@@ -74,12 +74,12 @@ pub fn SpiBus(comptime index: usize) type {
                 }
 
                 /// Shorthand for 'register-based' devices
-                pub fn writeRegister(self: SelfSpiDevice, register_address: u8, byte: u8) ReadError!void {
+                pub fn write_register(self: SelfSpiDevice, register_address: u8, byte: u8) ReadError!void {
                     try self.writeRegisters(register_address, &.{byte});
                 }
 
                 /// Shorthand for 'register-based' devices
-                pub fn writeRegisters(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
+                pub fn write_registers(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
                     var transfer = try self.beginTransfer();
                     defer transfer.end();
                     // write auto-increment, starting at given register
@@ -88,14 +88,14 @@ pub fn SpiBus(comptime index: usize) type {
                 }
 
                 /// Shorthand for 'register-based' devices
-                pub fn readRegister(self: SelfSpiDevice, register_address: u8) ReadError!u8 {
+                pub fn read_register(self: SelfSpiDevice, register_address: u8) ReadError!u8 {
                     var buffer: [1]u8 = undefined;
                     try self.readRegisters(register_address, &buffer);
                     return buffer[0];
                 }
 
                 /// Shorthand for 'register-based' devices
-                pub fn readRegisters(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
+                pub fn read_registers(self: SelfSpiDevice, register_address: u8, buffer: []u8) ReadError!void {
                     var transfer = try self.beginTransfer();
                     defer transfer.end();
                     // read auto-increment, starting at given register

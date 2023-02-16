@@ -37,12 +37,12 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         fn init() void {
             switch (mode) {
                 .input, .generic, .input_output => {
-                    setDirection(.input, undefined);
+                    set_direction(.input, undefined);
                 },
                 .output => {
                     if (comptime !@hasField(@TypeOf(config), "initial_state"))
                         @compileError("An output pin requires initial_state to be either .high or .low");
-                    setDirection(.output, switch (config.initial_state) {
+                    set_direction(.output, switch (config.initial_state) {
                         .low => State.low,
                         .high => State.high,
                         else => @compileError("An output pin requires initial_state to be either .high or .low"),
@@ -51,8 +51,8 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
                 .open_drain => {
                     if (comptime !@hasField(@TypeOf(config), "initial_state"))
                         @compileError("An open_drain pin requires initial_state to be either .floating or .driven");
-                    setDirection(.input, undefined);
-                    setDrive(switch (config.initial_state) {
+                    set_direction(.input, undefined);
+                    set_drive(switch (config.initial_state) {
                         .floating => Drive.disabled,
                         .driven => Drive.enabled,
                         else => @compileError("An open_drain pin requires initial_state to be either .floating or .driven"),
@@ -61,7 +61,7 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
                 .alternate_function => {
                     if (comptime @hasDecl(chip.gpio, "AlternateFunction")) {
                         const alternate_function = @as(chip.gpio.AlternateFunction, config.alternate_function);
-                        setAlternateFunction(alternate_function);
+                        set_alternate_function(alternate_function);
                     } else {
                         @compileError("Alternate Function not supported yet");
                     }
@@ -78,10 +78,10 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
             chip.gpio.write(pin.source_pin, state);
         }
 
-        fn setToHigh() void {
+        fn set_to_high() void {
             write(.high);
         }
-        fn setToLow() void {
+        fn set_to_low() void {
             write(.low);
         }
         fn toggle() void {
@@ -96,7 +96,7 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         }
 
         // bi-di:
-        fn setDirection(dir: Direction, output_state: State) void {
+        fn set_direction(dir: Direction, output_state: State) void {
             switch (dir) {
                 .output => {
                     chip.gpio.setOutput(pin.source_pin);
@@ -105,7 +105,7 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
                 .input => chip.gpio.setInput(pin.source_pin),
             }
         }
-        fn getDirection() Direction {
+        fn get_direction() Direction {
             if (chip.gpio.isOutput(pin.source_pin)) {
                 return .output;
             } else {
@@ -114,16 +114,16 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         }
 
         // open drain
-        fn setDrive(drive: Drive) void {
+        fn set_drive(drive: Drive) void {
             _ = drive;
             @compileError("open drain not implemented yet!");
         }
-        fn getDrive() Drive {
+        fn get_drive() Drive {
             @compileError("open drain not implemented yet!");
         }
 
         // alternate function
-        fn setAlternateFunction(af: chip.gpio.AlternateFunction) void {
+        fn set_alternate_function(af: chip.gpio.AlternateFunction) void {
             chip.gpio.setAlternateFunction(pin.source_pin, af);
         }
     };

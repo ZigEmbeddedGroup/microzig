@@ -19,7 +19,7 @@ pub fn Uart(comptime index: usize, comptime pins: Pins) type {
 
         /// If the UART is already initialized, try to return a handle to it,
         /// else initialize with the given config.
-        pub fn getOrInit(config: Config) InitError!Self {
+        pub fn get_or_init(config: Config) InitError!Self {
             if (!@hasDecl(SystemUart, "getOrInit")) {
                 // fallback to reinitializing the UART
                 return init(config);
@@ -29,11 +29,11 @@ pub fn Uart(comptime index: usize, comptime pins: Pins) type {
             };
         }
 
-        pub fn canRead(self: Self) bool {
+        pub fn can_read(self: Self) bool {
             return self.internal.canRead();
         }
 
-        pub fn canWrite(self: Self) bool {
+        pub fn can_write(self: Self) bool {
             return self.internal.canWrite();
         }
 
@@ -45,16 +45,16 @@ pub fn Uart(comptime index: usize, comptime pins: Pins) type {
             return Writer{ .context = self };
         }
 
-        pub const Reader = std.io.Reader(Self, ReadError, readSome);
-        pub const Writer = std.io.Writer(Self, WriteError, writeSome);
+        pub const Reader = std.io.Reader(Self, ReadError, read_some);
+        pub const Writer = std.io.Writer(Self, WriteError, write_some);
 
-        fn readSome(self: Self, buffer: []u8) ReadError!usize {
+        fn read_some(self: Self, buffer: []u8) ReadError!usize {
             for (buffer) |*c| {
                 c.* = self.internal.rx();
             }
             return buffer.len;
         }
-        fn writeSome(self: Self, buffer: []const u8) WriteError!usize {
+        fn write_some(self: Self, buffer: []const u8) WriteError!usize {
             for (buffer) |c| {
                 self.internal.tx(c);
             }

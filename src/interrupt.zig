@@ -15,7 +15,7 @@ pub fn disable(comptime interrupt: anytype) void {
 }
 
 /// Returns true when the given interrupt is unmasked.
-pub fn isEnabled(comptime interrupt: anytype) bool {
+pub fn is_enabled(comptime interrupt: anytype) bool {
     _ = interrupt;
     @compileError("not implemented yet!");
 }
@@ -33,15 +33,15 @@ pub fn cli() void {
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
-pub fn areGloballyEnabled() bool {
+pub fn are_globally_enabled() bool {
     @compileError("not implemented yet!");
 }
 
 /// Enters a critical section and disables interrupts globally.
 /// Call `.leave()` on the return value to restore the previous state.
-pub fn enterCriticalSection() CriticalSection {
+pub fn enter_critical_section() CriticalSection {
     var section = CriticalSection{
-        .enable_on_leave = areGloballyEnabled(),
+        .enable_on_leave = are_globally_enabled(),
     };
     cli();
     return section;

@@ -19,7 +19,7 @@ pub fn Button(
     comptime gpio: type,
     /// The active state for the button. Use `.high` for active-high, `.low` for active-low.
     comptime active_state: micro.gpio.State,
-    /// Optional filter depth for debouncing. If `null` is passed, 16 samples are used to debounce the button, 
+    /// Optional filter depth for debouncing. If `null` is passed, 16 samples are used to debounce the button,
     /// otherwise the given number of samples is used.
     comptime filter_depth: ?comptime_int,
 ) type {
@@ -60,7 +60,7 @@ pub fn Button(
 
         /// Returns `true` when the button is pressed.
         /// Will only be updated when `poll` is regularly called.
-        pub fn isPressed(self: *Self) bool {
+        pub fn is_pressed(self: *Self) bool {
             return (self.debounce != 0);
         }
     };

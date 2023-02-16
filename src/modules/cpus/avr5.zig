@@ -73,7 +73,7 @@ pub const vector_table = blk: {
     break :blk T._start;
 };
 
-fn makeIsrHandler(comptime name: []const u8, comptime func: anytype) type {
+fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
     const calling_convention = switch (@typeInfo(@TypeOf(func))) {
         .Fn => |info| info.calling_convention,
         else => @compileError("Declarations in 'interrupts' namespace must all be functions. '" ++ name ++ "' is not a function"),
