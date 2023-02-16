@@ -523,7 +523,7 @@ fn writeModeEnumAndFn(
     try writer.writeAll(
         \\};
         \\
-        \\pub fn getMode(self: *volatile @This()) Mode {
+        \\pub fn get_mode(self: *volatile @This()) Mode {
         \\
     );
 
@@ -1014,7 +1014,7 @@ test "gen.peripheral with modes" {
         \\                TEST_MODE2,
         \\            };
         \\
-        \\            pub fn getMode(self: *volatile @This()) Mode {
+        \\            pub fn get_mode(self: *volatile @This()) Mode {
         \\                {
         \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
         \\                    switch (value) {
