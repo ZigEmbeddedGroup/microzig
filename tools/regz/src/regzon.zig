@@ -602,7 +602,10 @@ fn loadPeripheralInstance(
 }
 
 pub fn toJson(db: Database) !json.ValueTree {
-    var arena = ArenaAllocator.init(db.gpa);
+    const arena = try db.gpa.create(ArenaAllocator);
+    errdefer db.gpa.destroy(arena);
+
+    arena.* = ArenaAllocator.init(db.gpa);
     errdefer arena.deinit();
 
     const allocator = arena.allocator();
@@ -614,13 +617,13 @@ pub fn toJson(db: Database) !json.ValueTree {
     while (device_it.next()) |entry|
         try populateDevice(
             db,
-            &arena,
+            arena,
             &devices,
             entry.key_ptr.*,
         );
 
     try root.put("version", .{ .String = schema_version });
-    try populateTypes(db, &arena, &types);
+    try populateTypes(db, arena, &types);
     if (types.count() > 0)
         try root.put("types", .{ .Object = types });
 

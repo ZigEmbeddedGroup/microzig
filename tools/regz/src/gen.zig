@@ -180,7 +180,11 @@ fn typesReference(db: Database, type_id: EntityId) ![]const u8 {
     defer full_name_components.deinit();
 
     var id = type_id;
-    while (true) {
+
+    // hard limit for walking up the tree, if we hit it there's a bug
+    const count_max: u32 = 8;
+    var count: u32 = 0;
+    while (count < count_max) : (count += 1) {
         if (db.attrs.name.get(id)) |next_name|
             try full_name_components.insert(0, next_name)
         else
@@ -190,7 +194,7 @@ fn typesReference(db: Database, type_id: EntityId) ![]const u8 {
             id = parent_id
         else
             break;
-    }
+    } else @panic("hit limit for reference length");
 
     if (full_name_components.items.len == 0)
         return error.CantReference;
@@ -198,6 +202,16 @@ fn typesReference(db: Database, type_id: EntityId) ![]const u8 {
     var full_name = std.ArrayList(u8).init(db.arena.allocator());
     const writer = full_name.writer();
     try writer.writeAll("types");
+
+    // determine the namespace under 'types' the reference is under
+    const root_parent_entity_type = db.getEntityType(id).?;
+    inline for (@typeInfo(Database.EntityType).Enum.fields) |field| {
+        if (root_parent_entity_type == @field(Database.EntityType, field.name)) {
+            try writer.print(".{s}s", .{field.name});
+            break;
+        }
+    }
+
     for (full_name_components.items) |component|
         try writer.print(".{s}", .{
             std.zig.fmtId(component),
@@ -290,16 +304,22 @@ fn writeTypes(db: Database, writer: anytype) !void {
         \\
     );
 
-    // TODO: order the peripherals alphabetically?
-    var it = db.types.peripherals.iterator();
-    while (it.next()) |entry| {
-        const peripheral_id = entry.key_ptr.*;
-        writePeripheral(db, peripheral_id, writer) catch |err| {
-            log.warn("failed to generate peripheral '{s}': {}", .{
-                db.attrs.name.get(peripheral_id) orelse "<unknown>",
-                err,
-            });
-        };
+    if (db.types.peripherals.count() > 0) {
+        try writer.writeAll("pub const peripherals = struct {\n");
+
+        // TODO: order the peripherals alphabetically?
+        var it = db.types.peripherals.iterator();
+        while (it.next()) |entry| {
+            const peripheral_id = entry.key_ptr.*;
+            writePeripheral(db, peripheral_id, writer) catch |err| {
+                log.warn("failed to generate peripheral '{s}': {}", .{
+                    db.attrs.name.get(peripheral_id) orelse "<unknown>",
+                    err,
+                });
+            };
+        }
+
+        try writer.writeAll("};\n");
     }
 
     try writer.writeAll("};\n");
@@ -892,11 +912,13 @@ test "gen.peripheral type with register and field" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\            TEST_FIELD: u1,
-        \\            padding: u31,
-        \\        }),
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -918,17 +940,19 @@ test "gen.peripheral instantiation" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x1000);
+        \\            pub const TEST0 = @intToPtr(*volatile types.peripherals.TEST_PERIPHERAL, 0x1000);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\            TEST_FIELD: u1,
-        \\            padding: u31,
-        \\        }),
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -950,18 +974,20 @@ test "gen.peripherals with a shared type" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x1000);
-        \\            pub const TEST1 = @intToPtr(*volatile types.TEST_PERIPHERAL, 0x2000);
+        \\            pub const TEST0 = @intToPtr(*volatile types.peripherals.TEST_PERIPHERAL, 0x1000);
+        \\            pub const TEST1 = @intToPtr(*volatile types.peripherals.TEST_PERIPHERAL, 0x2000);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\            TEST_FIELD: u1,
-        \\            padding: u31,
-        \\        }),
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -981,45 +1007,47 @@ test "gen.peripheral with modes" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern union {
-        \\        pub const Mode = enum {
-        \\            TEST_MODE1,
-        \\            TEST_MODE2,
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern union {
+        \\            pub const Mode = enum {
+        \\                TEST_MODE1,
+        \\                TEST_MODE2,
+        \\            };
+        \\
+        \\            pub fn getMode(self: *volatile @This()) Mode {
+        \\                {
+        \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
+        \\                    switch (value) {
+        \\                        0 => return .TEST_MODE1,
+        \\                        else => {},
+        \\                    }
+        \\                }
+        \\                {
+        \\                    const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
+        \\                    switch (value) {
+        \\                        1 => return .TEST_MODE2,
+        \\                        else => {},
+        \\                    }
+        \\                }
+        \\
+        \\                unreachable;
+        \\            }
+        \\
+        \\            TEST_MODE1: extern struct {
+        \\                TEST_REGISTER1: u32,
+        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                    TEST_FIELD: u1,
+        \\                    padding: u31,
+        \\                }),
+        \\            },
+        \\            TEST_MODE2: extern struct {
+        \\                TEST_REGISTER2: u32,
+        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                    TEST_FIELD: u1,
+        \\                    padding: u31,
+        \\                }),
+        \\            },
         \\        };
-        \\
-        \\        pub fn getMode(self: *volatile @This()) Mode {
-        \\            {
-        \\                const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
-        \\                switch (value) {
-        \\                    0 => return .TEST_MODE1,
-        \\                    else => {},
-        \\                }
-        \\            }
-        \\            {
-        \\                const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
-        \\                switch (value) {
-        \\                    1 => return .TEST_MODE2,
-        \\                    else => {},
-        \\                }
-        \\            }
-        \\
-        \\            unreachable;
-        \\        }
-        \\
-        \\        TEST_MODE1: extern struct {
-        \\            TEST_REGISTER1: u32,
-        \\            COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                TEST_FIELD: u1,
-        \\                padding: u31,
-        \\            }),
-        \\        },
-        \\        TEST_MODE2: extern struct {
-        \\            TEST_REGISTER2: u32,
-        \\            COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                TEST_FIELD: u1,
-        \\                padding: u31,
-        \\            }),
-        \\        },
         \\    };
         \\};
         \\
@@ -1039,14 +1067,16 @@ test "gen.peripheral with enum" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        pub const TEST_ENUM = enum(u4) {
-        \\            TEST_ENUM_FIELD1 = 0x0,
-        \\            TEST_ENUM_FIELD2 = 0x1,
-        \\            _,
-        \\        };
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            pub const TEST_ENUM = enum(u4) {
+        \\                TEST_ENUM_FIELD1 = 0x0,
+        \\                TEST_ENUM_FIELD2 = 0x1,
+        \\                _,
+        \\            };
         \\
-        \\        TEST_REGISTER: u8,
+        \\            TEST_REGISTER: u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1066,13 +1096,15 @@ test "gen.peripheral with enum, enum is exhausted of values" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        pub const TEST_ENUM = enum(u1) {
-        \\            TEST_ENUM_FIELD1 = 0x0,
-        \\            TEST_ENUM_FIELD2 = 0x1,
-        \\        };
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            pub const TEST_ENUM = enum(u1) {
+        \\                TEST_ENUM_FIELD1 = 0x0,
+        \\                TEST_ENUM_FIELD2 = 0x1,
+        \\            };
         \\
-        \\        TEST_REGISTER: u8,
+        \\            TEST_REGISTER: u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1092,20 +1124,22 @@ test "gen.field with named enum" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        pub const TEST_ENUM = enum(u4) {
-        \\            TEST_ENUM_FIELD1 = 0x0,
-        \\            TEST_ENUM_FIELD2 = 0x1,
-        \\            _,
-        \\        };
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            pub const TEST_ENUM = enum(u4) {
+        \\                TEST_ENUM_FIELD1 = 0x0,
+        \\                TEST_ENUM_FIELD2 = 0x1,
+        \\                _,
+        \\            };
         \\
-        \\        TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\            TEST_FIELD: packed union {
-        \\                raw: u4,
-        \\                value: TEST_ENUM,
-        \\            },
-        \\            padding: u4,
-        \\        }),
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: TEST_ENUM,
+        \\                },
+        \\                padding: u4,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -1125,18 +1159,20 @@ test "gen.field with anonymous enum" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const TEST_PERIPHERAL = extern struct {
-        \\        TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\            TEST_FIELD: packed union {
-        \\                raw: u4,
-        \\                value: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    TEST_ENUM_FIELD2 = 0x1,
-        \\                    _,
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        TEST_ENUM_FIELD2 = 0x1,
+        \\                        _,
+        \\                    },
         \\                },
-        \\            },
-        \\            padding: u4,
-        \\        }),
+        \\                padding: u4,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -1158,24 +1194,26 @@ test "gen.namespaced register groups" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile types.PORT.PORTB, 0x23);
-        \\            pub const PORTC = @intToPtr(*volatile types.PORT.PORTC, 0x26);
+        \\            pub const PORTB = @intToPtr(*volatile types.peripherals.PORT.PORTB, 0x23);
+        \\            pub const PORTC = @intToPtr(*volatile types.peripherals.PORT.PORTC, 0x26);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORT = struct {
-        \\        pub const PORTB = extern struct {
-        \\            PORTB: u8,
-        \\            DDRB: u8,
-        \\            PINB: u8,
-        \\        };
+        \\    pub const peripherals = struct {
+        \\        pub const PORT = struct {
+        \\            pub const PORTB = extern struct {
+        \\                PORTB: u8,
+        \\                DDRB: u8,
+        \\                PINB: u8,
+        \\            };
         \\
-        \\        pub const PORTC = extern struct {
-        \\            PORTC: u8,
-        \\            DDRC: u8,
-        \\            PINC: u8,
+        \\            pub const PORTC = extern struct {
+        \\                PORTC: u8,
+        \\                DDRC: u8,
+        \\                PINC: u8,
+        \\            };
         \\        };
         \\    };
         \\};
@@ -1198,16 +1236,18 @@ test "gen.peripheral with reserved register" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.peripherals.PORTB, 0x23);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: u32,
-        \\        reserved8: [4]u8,
-        \\        PINB: u32,
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: u32,
+        \\            reserved8: [4]u8,
+        \\            PINB: u32,
+        \\        };
         \\    };
         \\};
         \\
@@ -1229,16 +1269,18 @@ test "gen.peripheral with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile [4]types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile [4]types.peripherals.PORTB, 0x23);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: u8,
-        \\        DDRB: u8,
-        \\        PINB: u8,
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: u8,
+        \\            DDRB: u8,
+        \\            PINB: u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1260,17 +1302,19 @@ test "gen.peripheral with count, padding required" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile [4]types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile [4]types.peripherals.PORTB, 0x23);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: u8,
-        \\        DDRB: u8,
-        \\        PINB: u8,
-        \\        padding: [1]u8,
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: u8,
+        \\            DDRB: u8,
+        \\            PINB: u8,
+        \\            padding: [1]u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1292,16 +1336,18 @@ test "gen.register with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.peripherals.PORTB, 0x23);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: [4]u8,
-        \\        DDRB: u8,
-        \\        PINB: u8,
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: [4]u8,
+        \\            DDRB: u8,
+        \\            PINB: u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1323,19 +1369,21 @@ test "gen.register with count and fields" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @intToPtr(*volatile types.PORTB, 0x23);
+        \\            pub const PORTB = @intToPtr(*volatile types.peripherals.PORTB, 0x23);
         \\        };
         \\    };
         \\};
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: [4]mmio.Mmio(packed struct(u8) {
-        \\            TEST_FIELD: u4,
-        \\            padding: u4,
-        \\        }),
-        \\        DDRB: u8,
-        \\        PINB: u8,
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: u4,
+        \\                padding: u4,
+        \\            }),
+        \\            DDRB: u8,
+        \\            PINB: u8,
+        \\        };
         \\    };
         \\};
         \\
@@ -1355,12 +1403,14 @@ test "gen.field with count, width of one, offset, and padding" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: mmio.Mmio(packed struct(u8) {
-        \\            reserved2: u2,
-        \\            TEST_FIELD: packed struct(u5) { u1, u1, u1, u1, u1 },
-        \\            padding: u1,
-        \\        }),
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: mmio.Mmio(packed struct(u8) {
+        \\                reserved2: u2,
+        \\                TEST_FIELD: packed struct(u5) { u1, u1, u1, u1, u1 },
+        \\                padding: u1,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\
@@ -1380,12 +1430,14 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\const mmio = micro.mmio;
         \\
         \\pub const types = struct {
-        \\    pub const PORTB = extern struct {
-        \\        PORTB: mmio.Mmio(packed struct(u8) {
-        \\            reserved2: u2,
-        \\            TEST_FIELD: packed struct(u4) { u2, u2 },
-        \\            padding: u2,
-        \\        }),
+        \\    pub const peripherals = struct {
+        \\        pub const PORTB = extern struct {
+        \\            PORTB: mmio.Mmio(packed struct(u8) {
+        \\                reserved2: u2,
+        \\                TEST_FIELD: packed struct(u4) { u2, u2 },
+        \\                padding: u2,
+        \\            }),
+        \\        };
         \\    };
         \\};
         \\

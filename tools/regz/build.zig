@@ -73,8 +73,7 @@ pub const Regz = struct {
         // TODO: improve collision resistance
         const basename = std.fs.path.basename(schema_path);
         const extension = std.fs.path.extension(basename);
-        const destination_path = std.fs.path.join(regz.builder.allocator, &.{
-            regz.builder.cache_root,
+        const destination_path = regz.builder.cache_root.join(regz.builder.allocator, &.{
             "regz",
             std.mem.join(regz.builder.allocator, "", &.{
                 basename[0 .. basename.len - extension.len],
