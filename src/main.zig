@@ -29,9 +29,6 @@ fn root() []const u8 {
 }
 
 pub const BuildOptions = struct {
-    // a hal module is a module with ergonomic wrappers for registers for a
-    // given mcu, it's only dependency can be microzig
-    hal_module_path: ?std.build.FileSource = null,
     optimize: std.builtin.OptimizeMode = .Debug,
 };
 
@@ -40,28 +37,6 @@ pub const EmbeddedExecutable = struct {
 
     pub fn addModule(exe: *EmbeddedExecutable, name: []const u8, module: *Module) void {
         exe.inner.addModule(name, module);
-    }
-
-    pub fn addDriver(exe: *EmbeddedExecutable, driver: Driver) void {
-        var dependencies = std.ArrayList(std.Build.ModuleDependency).init(exe.inner.builder.allocator);
-
-        for (driver.dependencies) |dep| {
-            dependencies.append(.{
-                .name = dep,
-                .module = exe.inner.builder.modules.get(dep).?,
-            }) catch @panic("OOM");
-        }
-
-        // TODO: this is not perfect but should work for now
-        exe.inner.addAnonymousModule(driver.name, .{
-            .source_file = driver.source_file,
-            .dependencies = dependencies.toOwnedSlice() catch @panic("OOM"),
-        });
-
-        const app_module = exe.inner.modules.get("app").?;
-        const driver_module = exe.inner.modules.get(driver.name).?;
-
-        app_module.dependencies.put(driver.name, driver_module) catch @panic("OOM");
     }
 
     pub fn install(exe: *EmbeddedExecutable) void {
@@ -189,7 +164,7 @@ pub fn addEmbeddedExecutable(
     var exe = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
             .name = name,
-            .root_source_file = .{ .path = root_path ++ "core/microzig.zig" },
+            .root_source_file = .{ .path = root_path ++ "microzig.zig" },
             .target = chip.cpu.target,
             .optimize = options.optimize,
         }),
@@ -211,12 +186,12 @@ pub fn addEmbeddedExecutable(
     exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
 
     // these modules will be re-exported from core/microzig.zig
-    exe.inner.addModule("microzig-config", config_module);
+    exe.inner.addModule("config", config_module);
     exe.inner.addModule("chip", chip_module);
     exe.inner.addModule("cpu", cpu_module);
 
     exe.inner.addModule("hal", builder.createModule(.{
-        .source_file = if (options.hal_module_path) |hal_module_path|
+        .source_file = if (chip.hal) |hal_module_path|
             hal_module_path
         else
             .{ .path = root_path ++ "core/empty.zig" },
@@ -246,24 +221,3 @@ pub fn addEmbeddedExecutable(
 
     return exe;
 }
-
-pub const Driver = struct {
-    name: []const u8,
-    source_file: std.build.FileSource,
-    dependencies: []const []const u8,
-};
-
-// Generic purpose drivers shipped with microzig
-pub const drivers = struct {
-    pub const quadrature = Driver{
-        .name = "microzig.quadrature",
-        .source_file = .{ .path = root_path ++ "drivers/quadrature.zig" },
-        .dependencies = &.{"microzig"},
-    };
-
-    pub const button = Driver{
-        .name = "microzig.button",
-        .source_file = .{ .path = root_path ++ "drivers/button.zig" },
-        .dependencies = &.{"microzig"},
-    };
-};

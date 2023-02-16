@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub fn Mmio(comptime PackedT: type) type {
     const size = @bitSizeOf(PackedT);
@@ -25,10 +26,10 @@ pub fn Mmio(comptime PackedT: type) type {
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
-            // This is a workaround for a compiler bug related to miscompilation
-            // If the tmp var is not used, result location will fuck things up
-            var tmp = @bitCast(IntT, val);
-            addr.writeRaw(tmp);
+            comptime {
+                assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
+            }
+            addr.writeRaw(@bitCast(IntT, val));
         }
 
         pub fn writeRaw(addr: *volatile Self, val: IntT) void {

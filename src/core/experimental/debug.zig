@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("microzig.zig");
+const micro = @import("microzig");
 
 pub fn busySleep(comptime limit: comptime_int) void {
     if (limit <= 0) @compileError("limit must be non-negative!");

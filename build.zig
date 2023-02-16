@@ -61,11 +61,8 @@ pub fn build(b: *std.build.Builder) !void {
                 cfg.backing,
                 .{
                     .optimize = optimize,
-                    .hal_module_path = cfg.hal,
                 },
             );
-            exe.addDriver(microzig.drivers.button);
-
             exe.inner.install();
 
             test_step.dependOn(&exe.inner.step);

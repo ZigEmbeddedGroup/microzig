@@ -13,7 +13,7 @@ pub const app = @import("app");
 /// Contains build-time generated configuration options for microzig.
 /// Contains a CPU target description, chip, board and cpu information
 /// and so on.
-pub const config = @import("microzig-config");
+pub const config = @import("config");
 
 /// Provides access to the low level features of the current microchip.
 pub const chip = struct {
@@ -27,33 +27,13 @@ pub const board = if (config.has_board) @import("board") else void;
 
 /// Provides access to the low level features of the CPU.
 pub const cpu = @import("cpu");
+pub const mmio = @import("mmio.zig");
+pub const interrupt = @import("interrupt.zig");
 
 pub const hal = @import("hal");
 
-/// Module that helps with interrupt handling.
-pub const interrupt = @import("interrupts.zig");
-
-/// Module that provides clock related functions
-pub const clock = @import("clock.zig");
-
-pub const gpio = @import("gpio.zig");
-pub const Gpio = gpio.Gpio;
-
-pub const pin = @import("pin.zig");
-pub const Pin = pin.Pin;
-
-pub const uart = @import("uart.zig");
-pub const Uart = uart.Uart;
-
-pub const spi = @import("spi.zig");
-pub const SpiBus = spi.SpiBus;
-
-pub const i2c = @import("i2c.zig");
-pub const I2CController = i2c.I2CController;
-
-pub const debug = @import("debug.zig");
-
-pub const mmio = @import("mmio.zig");
+pub const core = @import("core.zig");
+pub const drivers = @import("drivers.zig");
 
 const options_override = if (@hasDecl(app, "std_options")) app.std_options else struct {};
 pub const std_options = struct {

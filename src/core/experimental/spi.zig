@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("microzig.zig");
+const micro = @import("microzig");
 const chip = @import("chip");
 
 /// The SPI bus with the given environment-specific number.

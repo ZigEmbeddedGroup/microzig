@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("microzig.zig");
+const micro = @import("microzig");
 const chip = @import("chip");
 
 pub fn Uart(comptime index: usize, comptime pins: Pins) type {
