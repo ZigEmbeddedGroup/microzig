@@ -84,13 +84,16 @@ pub fn addEmbeddedExecutable(
             var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
 
             hasher.update(chip.name);
-            hasher.update(chip.path);
+            // TODO: this will likely crash for generated sources, need to
+            // properly hook this up to the build cache api
+            hasher.update(chip.source.getPath(builder));
             hasher.update(chip.cpu.name);
-            hasher.update(chip.cpu.path);
+            hasher.update(chip.cpu.source.getPath(builder));
 
             if (backing == .board) {
                 hasher.update(backing.board.name);
-                hasher.update(backing.board.path);
+                // TODO: see above
+                hasher.update(backing.board.source.getPath(builder));
             }
 
             var mac: [16]u8 = undefined;
@@ -146,14 +149,14 @@ pub fn addEmbeddedExecutable(
     });
 
     const chip_module = builder.createModule(.{
-        .source_file = .{ .path = chip.path },
+        .source_file = chip.source,
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig },
         },
     });
 
     const cpu_module = builder.createModule(.{
-        .source_file = .{ .path = chip.cpu.path },
+        .source_file = chip.cpu.source,
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig },
         },
@@ -201,7 +204,7 @@ pub fn addEmbeddedExecutable(
     switch (backing) {
         .board => |board| {
             exe.inner.addModule("board", builder.createModule(.{
-                .source_file = .{ .path = board.path },
+                .source_file = board.source,
                 .dependencies = &.{
                     .{ .name = "microzig", .module = microzig },
                 },
