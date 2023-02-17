@@ -199,7 +199,7 @@ pub const sections = struct {
     extern const microzig_data_load_start: anyopaque;
 };
 
-pub fn initializeSystemMemories() void {
+pub fn initialize_system_memories() void {
     @setCold(true);
 
     // fill .bss with zeroes

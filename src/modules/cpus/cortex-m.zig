@@ -105,7 +105,7 @@ pub var vector_table: VectorTable = blk: {
             if (!@hasField(VectorTable, decl.name)) {
                 var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
                 inline for (std.meta.fields(VectorTable)) |field| {
-                    if (isValidField(field.name)) {
+                    if (is_valid_field(field.name)) {
                         msg = msg ++ "    " ++ field.name ++ "\n";
                     }
                 }
@@ -113,10 +113,10 @@ pub var vector_table: VectorTable = blk: {
                 @compileError(msg);
             }
 
-            if (!isValidField(decl.name))
+            if (!is_valid_field(decl.name))
                 @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
 
-            @field(tmp, decl.name) = createInterruptVector(function);
+            @field(tmp, decl.name) = create_interrupt_vector(function);
         }
     }
     break :blk tmp;

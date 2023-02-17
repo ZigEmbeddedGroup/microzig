@@ -9,7 +9,7 @@ const root_path = root() ++ "/";
 
 pub const avr5 = Cpu{
     .name = "AVR5",
-    .path = root_path ++ "cpus/avr/avr5.zig",
+    .path = root_path ++ "cpus/avr5.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .avr,
         .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -20,7 +20,7 @@ pub const avr5 = Cpu{
 
 pub const cortex_m0 = Cpu{
     .name = "ARM Cortex-M0",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .path = root_path ++ "cpus/cortex-m.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
@@ -31,7 +31,7 @@ pub const cortex_m0 = Cpu{
 
 pub const cortex_m0plus = Cpu{
     .name = "ARM Cortex-M0+",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .path = root_path ++ "cpus/cortex-m.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
@@ -42,7 +42,7 @@ pub const cortex_m0plus = Cpu{
 
 pub const cortex_m3 = Cpu{
     .name = "ARM Cortex-M3",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .path = root_path ++ "cpus/cortex-m.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
@@ -53,7 +53,7 @@ pub const cortex_m3 = Cpu{
 
 pub const cortex_m4 = Cpu{
     .name = "ARM Cortex-M4",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .path = root_path ++ "cpus/cortex-m.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
@@ -64,7 +64,7 @@ pub const cortex_m4 = Cpu{
 
 pub const riscv32_imac = Cpu{
     .name = "RISC-V 32-bit",
-    .path = root_path ++ "cpus/rv32-imac/riscv32.zig",
+    .path = root_path ++ "cpus/riscv32.zig",
     .target = std.zig.CrossTarget{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },

@@ -32,7 +32,7 @@ pub fn write(string: []const u8) void {
     if (!@hasDecl(micro.board, "debugWrite"))
         return;
 
-    micro.board.debugWrite(string);
+    micro.board.debug_write(string);
 }
 
 pub fn writer() DebugWriter {

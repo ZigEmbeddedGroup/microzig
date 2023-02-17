@@ -1,8 +1,6 @@
 const std = @import("std");
 
 pub const LinkerScriptStep = @import("modules/LinkerScriptStep.zig");
-pub const boards = @import("modules/boards.zig");
-pub const chips = @import("modules/chips.zig");
 pub const cpus = @import("modules/cpus.zig");
 pub const Board = @import("modules/Board.zig");
 pub const Chip = @import("modules/Chip.zig");
@@ -14,7 +12,7 @@ pub const Backing = union(enum) {
     board: Board,
     chip: Chip,
 
-    pub fn getTarget(self: @This()) std.zig.CrossTarget {
+    pub fn get_target(self: @This()) std.zig.CrossTarget {
         return switch (self) {
             .board => |brd| brd.chip.cpu.target,
             .chip => |chip| chip.cpu.target,
