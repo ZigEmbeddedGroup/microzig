@@ -33,7 +33,7 @@ pub fn cli() void {
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
-pub fn are_globally_enabled() bool {
+pub fn globally_enabled() bool {
     @compileError("not implemented yet!");
 }
 
@@ -41,7 +41,7 @@ pub fn are_globally_enabled() bool {
 /// Call `.leave()` on the return value to restore the previous state.
 pub fn enter_critical_section() CriticalSection {
     var section = CriticalSection{
-        .enable_on_leave = are_globally_enabled(),
+        .enable_on_leave = globally_enabled(),
     };
     cli();
     return section;
