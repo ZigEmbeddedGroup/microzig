@@ -5,6 +5,7 @@ pub const cpus = @import("modules/cpus.zig");
 pub const Board = @import("modules/Board.zig");
 pub const Chip = @import("modules/Chip.zig");
 pub const Cpu = @import("modules/Cpu.zig");
+pub const MemoryRegion = @import("modules/MemoryRegion.zig");
 
 const LibExeObjStep = std.build.LibExeObjStep;
 
@@ -72,7 +73,7 @@ pub fn addEmbeddedExecutable(
     source: []const u8,
     backing: Backing,
     options: BuildOptions,
-) EmbeddedExecutable {
+) *EmbeddedExecutable {
     const has_board = (backing == .board);
     const chip = switch (backing) {
         .chip => |c| c,
@@ -162,7 +163,9 @@ pub fn addEmbeddedExecutable(
         },
     });
 
-    var exe = EmbeddedExecutable{
+    const exe = builder.allocator.create(EmbeddedExecutable) catch unreachable;
+
+    exe.* = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
             .name = name,
             .root_source_file = .{ .path = root_path ++ "microzig.zig" },
