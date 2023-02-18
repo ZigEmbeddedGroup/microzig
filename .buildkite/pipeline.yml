@@ -1,0 +1,6 @@
+steps:
+  - group: Build and Test
+    steps:
+    - command: zig build
+    - label: 🔨 Test
+      command: renode-test test/stm32f103.robot

@@ -1,6 +1,6 @@
 = stm32
 
-HAL for stm32 (STMicro) devices
+HALs and register definitions for stm32 (STMicro) devices
 
 == stm32 boards that renode supports:
 
