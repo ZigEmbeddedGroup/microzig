@@ -1,15 +1,15 @@
 const std = @import("std");
 const Cpu = @import("Cpu.zig");
 
-fn root() []const u8 {
-    return std.fs.path.dirname(@src().file) orelse unreachable;
+fn root_dir() []const u8 {
+    return std.fs.path.dirname(@src().file) orelse ".";
 }
-
-const root_path = root() ++ "/";
 
 pub const avr5 = Cpu{
     .name = "AVR5",
-    .path = root_path ++ "cpus/avr/avr5.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/avr5.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .avr,
         .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -20,7 +20,9 @@ pub const avr5 = Cpu{
 
 pub const cortex_m0 = Cpu{
     .name = "ARM Cortex-M0",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/cortex-m.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
@@ -31,7 +33,9 @@ pub const cortex_m0 = Cpu{
 
 pub const cortex_m0plus = Cpu{
     .name = "ARM Cortex-M0+",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/cortex-m.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
@@ -42,7 +46,9 @@ pub const cortex_m0plus = Cpu{
 
 pub const cortex_m3 = Cpu{
     .name = "ARM Cortex-M3",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/cortex-m.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
@@ -53,7 +59,9 @@ pub const cortex_m3 = Cpu{
 
 pub const cortex_m4 = Cpu{
     .name = "ARM Cortex-M4",
-    .path = root_path ++ "cpus/cortex-m/cortex-m.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/cortex-m.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .thumb,
         .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
@@ -64,7 +72,9 @@ pub const cortex_m4 = Cpu{
 
 pub const riscv32_imac = Cpu{
     .name = "RISC-V 32-bit",
-    .path = root_path ++ "cpus/rv32-imac/riscv32.zig",
+    .source = .{
+        .path = std.fmt.comptimePrint("{s}/cpus/riscv32.zig", .{root_dir()}),
+    },
     .target = std.zig.CrossTarget{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },

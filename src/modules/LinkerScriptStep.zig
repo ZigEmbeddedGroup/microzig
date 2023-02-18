@@ -16,9 +16,9 @@ pub fn create(builder: *Builder, chip: Chip) !*LinkerscriptStep {
     var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
 
     hasher.update(chip.name);
-    hasher.update(chip.path);
+    hasher.update(chip.source.getPath(builder));
     hasher.update(chip.cpu.name);
-    hasher.update(chip.cpu.path);
+    hasher.update(chip.cpu.source.getPath(builder));
 
     var mac: [16]u8 = undefined;
     hasher.final(&mac);
