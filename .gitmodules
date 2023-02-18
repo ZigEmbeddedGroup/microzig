@@ -1,0 +1,3 @@
+[submodule "deps/microzig"]
+	path = deps/microzig
+	url = https://github.com/ZigEmbeddedGroup/microzig.git
