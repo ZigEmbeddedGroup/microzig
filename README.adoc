@@ -1,6 +1,18 @@
-= Hardware Support Package Template
+= Microchip ATmega Hardware Support Package
 
-1. Update LICENSE file
-2. Update `microzig` submodule under `deps/`
-3. Add chips/boards/hals
-4. Set up buildkite pipeline
+Note: for testing, renode supports arduino nano 33 BLE
+
+Currently LLVM is having trouble lowering AVR when this is built in debug mode:
+
+[source]
+----
+LLVM Emit Object... Don't know how to custom lower this!
+UNREACHABLE executed at /Users/mattnite/code/llvm-project-15/llvm/lib/Target/AVR/AVRISelLowering.cpp:842!
+----
+
+for now always build in release small:
+
+[source]
+----
+zig build -Doptimize=ReleaseSmall
+----
