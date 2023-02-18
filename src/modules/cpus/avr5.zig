@@ -53,7 +53,7 @@ pub const vector_table = blk: {
             if (@hasDecl(microzig.app.interrupts, field.name)) {
                 const handler = @field(microzig.app.interrupts, field.name);
 
-                const isr = makeIsrHandler(field.name, handler);
+                const isr = make_isr_handler(field.name, handler);
 
                 break :overload "jmp " ++ isr.exported_name;
             } else {
