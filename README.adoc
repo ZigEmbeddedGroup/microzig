@@ -1,0 +1,6 @@
+= Hardware Support Package Template
+
+1. Update LICENSE file
+2. Update `microzig` submodule under `deps/`
+3. Add chips/boards/hals
+4. Set up buildkite pipeline
