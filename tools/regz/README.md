@@ -38,7 +38,7 @@ For ATDF you need to unzip the appropriate atpack from the
 regz targets zig master.
 
 ```
-git clone https://github.com/ZigEmbeddedGroup/regz.git
+git clone --recursive https://github.com/ZigEmbeddedGroup/regz.git
 cd regz
 zig build
 ```
