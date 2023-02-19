@@ -24,7 +24,7 @@ pub const log = rp2040.uart.log;
 pub fn main() !void {
     gpio.reset();
     gpio.init(led);
-    gpio.setDir(led, .out);
+    gpio.set_direction(led, .out);
     gpio.put(led, 1);
 
     const uart = rp2040.uart.UART.init(uart_id, .{
@@ -34,15 +34,15 @@ pub fn main() !void {
         .clock_config = rp2040.clock_config,
     });
 
-    rp2040.uart.initLogger(uart);
+    rp2040.uart.init_logger(uart);
 
     var i: u32 = 0;
     while (true) : (i += 1) {
         gpio.put(led, 1);
         std.log.info("what {}", .{i});
-        time.sleepMs(500);
+        time.sleep_ms(500);
 
         gpio.put(led, 0);
-        time.sleepMs(500);
+        time.sleep_ms(500);
     }
 }

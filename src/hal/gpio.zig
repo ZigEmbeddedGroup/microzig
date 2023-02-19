@@ -1,8 +1,13 @@
 const std = @import("std");
-const microzig = @import("microzig");
-const resets = @import("resets.zig");
-const regs = microzig.chip.registers;
 const assert = std.debug.assert;
+
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
+const SIO = peripherals.SIO;
+const PADS_BANK0 = peripherals.PADS_BANK0;
+const IO_BANK0 = peripherals.IO_BANK0;
+
+const resets = @import("resets.zig");
 
 const log = std.log.scoped(.gpio);
 
@@ -17,7 +22,7 @@ pub const Function = enum(u5) {
     pio1,
     gpck,
     usb,
-    @"null" = 0x1f,
+    null = 0x1f,
 };
 
 pub const Direction = enum(u1) {
@@ -65,14 +70,14 @@ pub inline fn reset() void {
 /// Initialize a GPIO, set func to SIO
 pub inline fn init(comptime gpio: u32) void {
     const mask = 1 << gpio;
-    regs.SIO.GPIO_OE_CLR.raw = mask;
-    regs.SIO.GPIO_OUT_CLR.raw = mask;
-    setFunction(gpio, .sio);
+    SIO.GPIO_OE_CLR.raw = mask;
+    SIO.GPIO_OUT_CLR.raw = mask;
+    set_function(gpio, .sio);
 }
 
 /// Reset GPIO back to null function (disables it)
 pub inline fn deinit(comptime gpio: u32) void {
-    setFunction(gpio, .@"null");
+    set_function(gpio, .null);
 }
 
 pub const PullUpDown = enum {
@@ -80,9 +85,9 @@ pub const PullUpDown = enum {
     down,
 };
 
-pub inline fn setPullUpDown(comptime gpio: u32, mode: ?PullUpDown) void {
+pub inline fn set_pull(comptime gpio: u32, mode: ?PullUpDown) void {
     const gpio_name = comptime std.fmt.comptimePrint("GPIO{d}", .{gpio});
-    const gpio_regs = @field(regs.PADS_BANK0, gpio_name);
+    const gpio_regs = @field(PADS_BANK0, gpio_name);
 
     if (mode == null) {
         gpio_regs.modify(.{ .PUE = 0, .PDE = 0 });
@@ -92,11 +97,11 @@ pub inline fn setPullUpDown(comptime gpio: u32, mode: ?PullUpDown) void {
     }
 }
 
-pub inline fn setDir(comptime gpio: u32, direction: Direction) void {
+pub inline fn set_direction(comptime gpio: u32, direction: Direction) void {
     const mask = 1 << gpio;
     switch (direction) {
-        .in => regs.SIO.GPIO_OE_CLR.raw = mask,
-        .out => regs.SIO.GPIO_OE_SET.raw = mask,
+        .in => SIO.GPIO_OE_CLR.raw = mask,
+        .out => SIO.GPIO_OE_SET.raw = mask,
     }
 }
 
@@ -105,37 +110,43 @@ pub inline fn put(comptime gpio: u32, value: u1) void {
     std.log.debug("GPIO{} put: {}", .{ gpio, value });
     const mask = 1 << gpio;
     switch (value) {
-        0 => regs.SIO.GPIO_OUT_CLR.raw = mask,
-        1 => regs.SIO.GPIO_OUT_SET.raw = mask,
+        0 => SIO.GPIO_OUT_CLR.raw = mask,
+        1 => SIO.GPIO_OUT_SET.raw = mask,
     }
 }
 
 pub inline fn toggle(comptime gpio: u32) void {
-    regs.SIO.GPIO_OUT_XOR.raw = (1 << gpio);
+    SIO.GPIO_OUT_XOR.raw = (1 << gpio);
 }
 
 pub inline fn read(comptime gpio: u32) u1 {
     const mask = 1 << gpio;
-    return if ((regs.SIO.GPIO_IN.raw & mask) != 0)
+    return if ((SIO.GPIO_IN.raw & mask) != 0)
         1
     else
         0;
 }
 
-pub inline fn setFunction(comptime gpio: u32, function: Function) void {
+pub inline fn set_function(comptime gpio: u32, function: Function) void {
     const pad_bank_reg = comptime std.fmt.comptimePrint("GPIO{}", .{gpio});
-    @field(regs.PADS_BANK0, pad_bank_reg).modify(.{
+    @field(PADS_BANK0, pad_bank_reg).modify(.{
         .IE = 1,
         .OD = 0,
     });
 
     const io_bank_reg = comptime std.fmt.comptimePrint("GPIO{}_CTRL", .{gpio});
-    @field(regs.IO_BANK0, io_bank_reg).write(.{
-        .FUNCSEL = @enumToInt(function),
-        .OUTOVER = 0,
-        .INOVER = 0,
-        .IRQOVER = 0,
-        .OEOVER = 0,
+    @field(IO_BANK0, io_bank_reg).write(.{
+        .FUNCSEL = .{ .raw = @enumToInt(function) },
+        .OUTOVER = .{ .value = .NORMAL },
+        .INOVER = .{ .value = .NORMAL },
+        .IRQOVER = .{ .value = .NORMAL },
+        .OEOVER = .{ .value = .NORMAL },
+
+        .reserved8 = 0,
+        .reserved12 = 0,
+        .reserved16 = 0,
+        .reserved28 = 0,
+        .padding = 0,
     });
 }
 

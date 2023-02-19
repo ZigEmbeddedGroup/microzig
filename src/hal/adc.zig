@@ -4,28 +4,28 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const ADC = microzig.chip.registers.ADC;
+const ADC = microzig.chip.peripherals.ADC;
 const rp2040 = microzig.hal;
 const gpio = rp2040.gpio;
 const resets = rp2040.resets;
 
 pub const temperature_sensor = struct {
     pub inline fn init() void {
-        setTempSensorEnabled(true);
+        set_temp_sensor_enabled(true);
     }
 
     pub inline fn deinit() void {
-        setTempSensorEnabled(false);
+        set_temp_sensor_enabled(false);
     }
 
-    pub inline fn readRaw() u16 {
+    pub inline fn read_raw() u16 {
         return Input.read(.temperature_sensor);
     }
 
     // One-shot conversion returning the temperature in Celcius
     pub inline fn read(comptime T: type, comptime Vref: T) T {
         // TODO: consider fixed-point
-        const raw = @intToFloat(T, readRaw());
+        const raw = @intToFloat(T, read_raw());
         const voltage: T = Vref * raw / 0x0fff;
         return (27.0 - ((voltage - 0.706) / 0.001721));
     }
@@ -41,11 +41,11 @@ pub const Input = enum(u3) {
     /// Setup the GPIO pin as an ADC input
     pub fn init(comptime input: Input) void {
         switch (input) {
-            .temperature_sensor => setTempSensorEnabled(true),
+            .temperature_sensor => set_temp_sensor_enabled(true),
             else => {
                 const gpio_num = @as(u32, @enumToInt(input)) + 26;
 
-                gpio.setFunction(gpio_num, .@"null");
+                gpio.set_function(gpio_num, .null);
                 // TODO: implement these, otherwise adc isn't going to work.
                 //gpio.disablePulls(gpio_num);
                 //gpio.setInputEnabled(gpio_num, false);
@@ -57,7 +57,7 @@ pub const Input = enum(u3) {
     /// one of the others.
     pub inline fn deinit(input: Input) void {
         switch (input) {
-            .temperature_sensor => setTempSensorEnabled(true),
+            .temperature_sensor => set_temp_sensor_enabled(true),
             else => {},
         }
     }
@@ -74,7 +74,7 @@ pub const Input = enum(u3) {
         // wait for the
         while (ADC.CS.read().READY == 0) {}
 
-        return ADC.RESULT.read();
+        return ADC.RESULT.read().RESULT;
     }
 };
 
@@ -116,42 +116,47 @@ pub fn init() void {
         .ERR_STICKY = 0,
         .AINSEL = 0,
         .RROBIN = 0,
+
+        .reserved8 = 0,
+        .reserved12 = 0,
+        .reserved16 = 0,
+        .padding = 0,
     });
     while (ADC.CS.read().READY == 0) {}
 }
 
 /// Enable/disable ADC interrupt
-pub inline fn irqSetEnabled(enable: bool) void {
+pub inline fn irq_set_enabled(enable: bool) void {
     // TODO: check if this works
     ADC.INTE.write(.{ .FIFO = if (enable) @as(u1, 1) else @as(u1, 0) });
 }
 
 /// Select analog input for next conversion.
-pub inline fn selectInput(input: Input) void {
+pub inline fn select_input(input: Input) void {
     ADC.CS.modify(.{ .AINSEL = @enumToInt(input) });
 }
 
 /// Get the currently selected analog input. 0..3 are GPIO 26..29 respectively,
 /// 4 is the temperature sensor.
-pub inline fn getSelectedInput() Input {
+pub inline fn get_selected_input() Input {
     // TODO: ensure that the field shouldn't have other values
     return @intToEnum(Input, ADC.CS.read().AINSEL);
 }
 
 /// Set to true to power on the temperature sensor.
-pub inline fn setTempSensorEnabled(enable: bool) void {
+pub inline fn set_temp_sensor_enabled(enable: bool) void {
     ADC.CS.modify(.{ .TS_EN = if (enable) @as(u1, 1) else @as(u1, 0) });
 }
 
 /// Sets which of the inputs are to be run in round-robin mode. Setting all to
 /// 0 will disable round-robin mode but `disableRoundRobin()` is provided so
 /// the user may be explicit.
-pub inline fn setRoundRobin(comptime enabled_inputs: InputMask) void {
+pub inline fn set_round_robin(comptime enabled_inputs: InputMask) void {
     ADC.CS.modify(.{ .RROBIN = @bitCast(u5, enabled_inputs) });
 }
 
 /// Disable round-robin sample mode.
-pub inline fn disableRoundRobin() void {
+pub inline fn disable_round_robin() void {
     ADC.CS.modify(.{ .RROBIN = 0 });
 }
 
@@ -160,7 +165,7 @@ pub inline fn run(enable: bool) void {
     ADC.CS.modify(.{ .START_MANY = if (enable) @as(u1, 1) else @as(u1, 0) });
 }
 
-pub inline fn setClkDiv() void {
+pub inline fn set_clk_div() void {
     @compileError("todo");
 }
 
@@ -173,12 +178,12 @@ pub const fifo = struct {
     }
 
     /// Return true if FIFO is empty.
-    pub inline fn isEmpty() bool {
+    pub inline fn is_empty() bool {
         @compileError("todo");
     }
 
     /// Read how many samples are in the FIFO.
-    pub inline fn getLevel() u8 {
+    pub inline fn get_level() u8 {
         @compileError("todo");
     }
 
@@ -188,7 +193,7 @@ pub const fifo = struct {
     }
 
     /// Block until result is available in FIFO, then pop it.
-    pub inline fn getBlocking() u16 {
+    pub inline fn get_blocking() u16 {
         @compileError("todo");
     }
 

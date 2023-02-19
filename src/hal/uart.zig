@@ -1,12 +1,17 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
+const UART0 = peripherals.UART0;
+const UART1 = peripherals.UART1;
+
 const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
 
 const assert = std.debug.assert;
-const regs = microzig.chip.registers;
+
+const UartRegs = microzig.chip.types.peripherals.UART0;
 
 pub const WordBits = enum {
     five,
@@ -36,40 +41,6 @@ pub const Config = struct {
     parity: Parity = .none,
 };
 
-pub const UartRegs = extern struct {
-    dr: u32,
-    rsr: u32,
-    reserved0: [4]u32,
-    fr: @typeInfo(@TypeOf(regs.UART0.UARTFR)).Pointer.child,
-    reserved1: [1]u32,
-    ilpr: u32,
-    ibrd: u32,
-    fbrd: u32,
-    lcr_h: @typeInfo(@TypeOf(regs.UART0.UARTLCR_H)).Pointer.child,
-    cr: @typeInfo(@TypeOf(regs.UART0.UARTCR)).Pointer.child,
-    ifls: u32,
-    imsc: u32,
-    ris: u32,
-    mis: u32,
-    icr: u32,
-    dmacr: @typeInfo(@TypeOf(regs.UART0.UARTDMACR)).Pointer.child,
-    periphid0: u32,
-    periphid1: u32,
-    periphid2: u32,
-    periphid3: u32,
-    cellid0: u32,
-    cellid1: u32,
-    cellid2: u32,
-    cellid3: u32,
-
-    padding: [4069]u32,
-};
-
-const uarts = @intToPtr(*volatile [2]UartRegs, regs.UART0.base_address);
-comptime {
-    assert(@sizeOf(UartRegs) == (regs.UART1.base_address - regs.UART0.base_address));
-}
-
 pub const UART = enum {
     uart0,
     uart1,
@@ -87,8 +58,11 @@ pub const UART = enum {
         return .{ .context = uart };
     }
 
-    fn getRegs(uart: UART) *volatile UartRegs {
-        return &uarts[@enumToInt(uart)];
+    fn get_regs(uart: UART) *volatile UartRegs {
+        return switch (uart) {
+            .uart0 => UART0,
+            .uart1 => UART1,
+        };
     }
 
     pub fn init(comptime id: u32, comptime config: Config) UART {
@@ -102,66 +76,69 @@ pub const UART = enum {
 
         uart.reset();
 
-        const uart_regs = uart.getRegs();
+        const uart_regs = uart.get_regs();
         const peri_freq = config.clock_config.peri.?.output_freq;
-        uart.setBaudRate(config.baud_rate, peri_freq);
-        uart.setFormat(config.word_bits, config.stop_bits, config.parity);
+        uart.set_baudrate(config.baud_rate, peri_freq);
+        uart.set_format(config.word_bits, config.stop_bits, config.parity);
 
-        uart_regs.cr.modify(.{
+        uart_regs.UARTCR.modify(.{
             .UARTEN = 1,
             .TXE = 1,
             .RXE = 1,
         });
 
-        uart_regs.lcr_h.modify(.{ .FEN = 1 });
+        uart_regs.UARTLCR_H.modify(.{ .FEN = 1 });
 
         // - always enable DREQ signals -- no harm if dma isn't listening
-        uart_regs.dmacr.modify(.{
+        uart_regs.UARTDMACR.modify(.{
             .TXDMAE = 1,
             .RXDMAE = 1,
         });
 
         // TODO comptime assertions
-        if (config.tx_pin) |tx_pin| gpio.setFunction(tx_pin, .uart);
-        if (config.rx_pin) |rx_pin| gpio.setFunction(rx_pin, .uart);
+        if (config.tx_pin) |tx_pin| gpio.set_function(tx_pin, .uart);
+        if (config.rx_pin) |rx_pin| gpio.set_function(rx_pin, .uart);
 
         return uart;
     }
 
-    pub fn isReadable(uart: UART) bool {
-        return (0 == uart.getRegs().fr.read().RXFE);
+    pub fn is_readable(uart: UART) bool {
+        return (0 == uart.get_regs().UARTFR.read().RXFE);
     }
 
-    pub fn isWritable(uart: UART) bool {
-        return (0 == uart.getRegs().fr.read().TXFF);
+    pub fn is_writeable(uart: UART) bool {
+        return (0 == uart.get_regs().UARTFR.read().TXFF);
     }
 
     // TODO: implement tx fifo
     pub fn write(uart: UART, payload: []const u8) WriteError!usize {
-        const uart_regs = uart.getRegs();
+        const uart_regs = uart.get_regs();
         for (payload) |byte| {
-            while (!uart.isWritable()) {}
+            while (!uart.is_writeable()) {}
 
-            uart_regs.dr = byte;
+            uart_regs.UARTDR.raw = byte;
         }
 
         return payload.len;
     }
 
     pub fn read(uart: UART, buffer: []u8) ReadError!usize {
-        const uart_regs = uart.getRegs();
+        const uart_regs = uart.get_regs();
         for (buffer) |*byte| {
-            while (!uart.isReadable()) {}
-            byte.* = @truncate(u8, uart_regs.dr);
+            while (!uart.is_readable()) {}
+
+            // TODO: error checking
+            byte.* = uart_regs.UARTDR.read().DATA;
         }
         return buffer.len;
     }
 
-    pub fn readWord(uart: UART) u8 {
-        const uart_regs = uart.getRegs();
-        while (!uart.isReadable()) {}
+    pub fn read_word(uart: UART) u8 {
+        const uart_regs = uart.get_regs();
+        while (!uart.is_readable()) {}
 
-        return @truncate(u8, uart_regs.dr);
+        // TODO: error checking
+        return uart_regs.UARTDR.read().DATA;
     }
 
     pub fn reset(uart: UART) void {
@@ -171,14 +148,14 @@ pub const UART = enum {
         }
     }
 
-    pub fn setFormat(
+    pub fn set_format(
         uart: UART,
         word_bits: WordBits,
         stop_bits: StopBits,
         parity: Parity,
     ) void {
-        const uart_regs = uart.getRegs();
-        uart_regs.lcr_h.modify(.{
+        const uart_regs = uart.get_regs();
+        uart_regs.UARTLCR_H.modify(.{
             .WLEN = switch (word_bits) {
                 .eight => @as(u2, 0b11),
                 .seven => @as(u2, 0b10),
@@ -200,31 +177,31 @@ pub const UART = enum {
         });
     }
 
-    fn setBaudRate(uart: UART, baud_rate: u32, peri_freq: u32) void {
+    fn set_baudrate(uart: UART, baud_rate: u32, peri_freq: u32) void {
         assert(baud_rate > 0);
-        const uart_regs = uart.getRegs();
+        const uart_regs = uart.get_regs();
         const baud_rate_div = (8 * peri_freq / baud_rate);
-        var baud_ibrd = baud_rate_div >> 7;
+        var baud_ibrd = @intCast(u16, baud_rate_div >> 7);
 
-        const baud_fbrd = if (baud_ibrd == 0) baud_fbrd: {
+        const baud_fbrd: u6 = if (baud_ibrd == 0) baud_fbrd: {
             baud_ibrd = 1;
             break :baud_fbrd 0;
         } else if (baud_ibrd >= 65535) baud_fbrd: {
             baud_ibrd = 65535;
             break :baud_fbrd 0;
-        } else ((baud_rate_div & 0x7f) + 1) / 2;
+        } else @intCast(u6, ((@truncate(u7, baud_rate_div)) + 1) / 2);
 
-        uart_regs.ibrd = baud_ibrd;
-        uart_regs.fbrd = baud_fbrd;
+        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd, .padding = 0 });
+        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd, .padding = 0 });
 
         // just want a write, don't want to change these values
-        uart_regs.lcr_h.modify(.{});
+        uart_regs.UARTLCR_H.modify(.{});
     }
 };
 
 var uart_logger: ?UART.Writer = null;
 
-pub fn initLogger(uart: UART) void {
+pub fn init_logger(uart: UART) void {
     uart_logger = uart.writer();
     uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
 }
@@ -242,7 +219,7 @@ pub fn log(
     };
 
     if (uart_logger) |uart| {
-        const current_time = time.getTimeSinceBoot();
+        const current_time = time.get_time_since_boot();
         const seconds = current_time.us_since_boot / std.time.us_per_s;
         const microseconds = current_time.us_since_boot % std.time.us_per_s;
 

@@ -27,11 +27,11 @@ pub fn init() void {
         .clock_config = rp2040.clock_config,
     });
 
-    rp2040.uart.initLogger(uart);
+    rp2040.uart.init_logger(uart);
 }
 
 pub fn main() void {
-    while (true) : (time.sleepMs(1000)) {
+    while (true) : (time.sleep_ms(1000)) {
         const sample = temp_sensor.read();
         std.log.info("temp value: {}", .{sample});
     }

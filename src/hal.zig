@@ -28,6 +28,6 @@ pub fn init() void {
     clock_config.apply();
 }
 
-pub fn getCpuId() u32 {
+pub fn get_cpu_id() u32 {
     return regs.SIO.CPUID.*;
 }

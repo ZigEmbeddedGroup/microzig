@@ -1,12 +1,12 @@
 const std = @import("std");
-const microzig = @import("microzig");
 const assert = std.debug.assert;
 
-// TODO: remove
-const gpio = @import("gpio.zig");
-
-const regs = microzig.chip.registers;
+const microzig = @import("microzig");
 const xosc_freq = microzig.board.xosc_freq;
+const peripherals = microzig.chip.peripherals;
+const RESETS = peripherals.RESETS;
+
+const PllRegs = microzig.chip.types.peripherals.PLL_SYS;
 
 pub const Configuration = struct {
     refdiv: u6,
@@ -23,28 +23,31 @@ pub const PLL = enum {
     sys,
     usb,
 
-    fn getRegs(pll: PLL) *volatile PllRegs {
-        return &plls[@enumToInt(pll)];
+    fn get_regs(pll: PLL) *volatile PllRegs {
+        return switch (pll) {
+            .sys => peripherals.PLL_SYS,
+            .usb => peripherals.PLL_USB,
+        };
     }
 
     pub fn reset(pll: PLL) void {
         switch (pll) {
             .sys => {
-                regs.RESETS.RESET.modify(.{ .pll_sys = 1 });
-                regs.RESETS.RESET.modify(.{ .pll_sys = 0 });
-                while (regs.RESETS.RESET_DONE.read().pll_sys != 1) {}
+                RESETS.RESET.modify(.{ .pll_sys = 1 });
+                RESETS.RESET.modify(.{ .pll_sys = 0 });
+                while (RESETS.RESET_DONE.read().pll_sys != 1) {}
             },
             .usb => {
-                regs.RESETS.RESET.modify(.{ .pll_usb = 1 });
-                regs.RESETS.RESET.modify(.{ .pll_usb = 0 });
-                while (regs.RESETS.RESET_DONE.read().pll_usb != 1) {}
+                RESETS.RESET.modify(.{ .pll_usb = 1 });
+                RESETS.RESET.modify(.{ .pll_usb = 0 });
+                while (RESETS.RESET_DONE.read().pll_usb != 1) {}
             },
         }
     }
 
-    pub fn isLocked(pll: PLL) bool {
-        const pll_regs = pll.getRegs();
-        return pll_regs.cs.read().LOCK == 1;
+    pub fn is_locked(pll: PLL) bool {
+        const pll_regs = pll.get_regs();
+        return pll_regs.CS.read().LOCK == 1;
     }
 
     pub fn apply(pll: PLL, comptime config: Configuration) void {
@@ -53,7 +56,7 @@ pub const PLL = enum {
         assert(config.postdiv2 >= 1 and config.postdiv2 <= 7);
         assert(config.postdiv2 <= config.postdiv1);
 
-        const pll_regs = pll.getRegs();
+        const pll_regs = pll.get_regs();
         const ref_freq = xosc_freq / @as(u32, config.refdiv);
         const vco_freq = ref_freq * config.fbdiv;
         assert(ref_freq <= vco_freq / 16);
@@ -65,11 +68,11 @@ pub const PLL = enum {
         // 5. set up post dividers and turn them on
 
         // do not bother a PLL which is already configured
-        if (pll.isLocked() and
-            config.refdiv == pll_regs.cs.read().REFDIV and
-            config.fbdiv == pll_regs.fbdiv_int.read() and
-            config.postdiv1 == pll_regs.prim.read().POSTDIV1 and
-            config.postdiv2 == pll_regs.prim.read().POSTDIV2)
+        if (pll.is_locked() and
+            config.refdiv == pll_regs.CS.read().REFDIV and
+            config.fbdiv == pll_regs.FBDIV_INT.read().FBDIV_INT and
+            config.postdiv1 == pll_regs.PRIM.read().POSTDIV1 and
+            config.postdiv2 == pll_regs.PRIM.read().POSTDIV2)
         {
             return;
         }
@@ -77,39 +80,20 @@ pub const PLL = enum {
         pll.reset();
 
         // load vco related dividers
-        pll_regs.cs.modify(.{ .REFDIV = config.refdiv });
-        pll_regs.fbdiv_int.modify(config.fbdiv);
+        pll_regs.CS.modify(.{ .REFDIV = config.refdiv });
+        pll_regs.FBDIV_INT.modify(.{ .FBDIV_INT = config.fbdiv });
 
         // turn on PLL
-        pll_regs.pwr.modify(.{ .PD = 0, .VCOPD = 0 });
+        pll_regs.PWR.modify(.{ .PD = 0, .VCOPD = 0 });
 
         // wait for PLL to lock
-        while (!pll.isLocked()) {}
+        while (!pll.is_locked()) {}
 
-        pll_regs.prim.modify(.{
+        pll_regs.PRIM.modify(.{
             .POSTDIV1 = config.postdiv1,
             .POSTDIV2 = config.postdiv2,
         });
 
-        pll_regs.pwr.modify(.{ .POSTDIVPD = 0 });
+        pll_regs.PWR.modify(.{ .POSTDIVPD = 0 });
     }
-};
-
-const plls = @intToPtr(*volatile [2]PllRegs, regs.PLL_SYS.base_address);
-comptime {
-    assert(@sizeOf(PllRegs) == (regs.PLL_USB.base_address - regs.PLL_SYS.base_address));
-}
-
-const CsReg = @typeInfo(@TypeOf(regs.PLL_SYS.CS)).Pointer.child;
-const PwrReg = @typeInfo(@TypeOf(regs.PLL_SYS.PWR)).Pointer.child;
-const FbdivIntReg = @typeInfo(@TypeOf(regs.PLL_SYS.FBDIV_INT)).Pointer.child;
-const PrimReg = @typeInfo(@TypeOf(regs.PLL_SYS.PRIM)).Pointer.child;
-
-pub const PllRegs = extern struct {
-    cs: CsReg,
-    pwr: PwrReg,
-    fbdiv_int: FbdivIntReg,
-    prim: PrimReg,
-
-    padding: [4092]u32,
 };

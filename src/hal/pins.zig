@@ -1,13 +1,15 @@
 const std = @import("std");
+const assert = std.debug.assert;
+const comptimePrint = std.fmt.comptimePrint;
+const StructField = std.builtin.Type.StructField;
+
+const microzig = @import("microzig");
+const SIO = microzig.chip.peripherals.SIO;
+
 const gpio = @import("gpio.zig");
 const pwm = @import("pwm.zig");
 const adc = @import("adc.zig");
 const resets = @import("resets.zig");
-const regs = @import("microzig").chip.registers;
-
-const assert = std.debug.assert;
-const comptimePrint = std.fmt.comptimePrint;
-const StructField = std.builtin.Type.StructField;
 
 pub const Pin = enum {
     GPIO0,
@@ -52,16 +54,16 @@ pub const Pin = enum {
         // schmitt trigger
         // hysteresis
 
-        pub fn getDirection(comptime config: Configuration) gpio.Direction {
+        pub fn get_direction(comptime config: Configuration) gpio.Direction {
             return if (config.direction) |direction|
                 direction
-            else if (comptime config.function.isPwm())
+            else if (comptime config.function.is_pwm())
                 .out
-            else if (comptime config.function.isUartTx())
+            else if (comptime config.function.is_uart_tx())
                 .out
-            else if (comptime config.function.isUartRx())
+            else if (comptime config.function.is_uart_rx())
                 .in
-            else if (comptime config.function.isAdc())
+            else if (comptime config.function.is_adc())
                 .in
             else
                 @panic("TODO");
@@ -142,7 +144,7 @@ pub const Function = enum {
     ADC2,
     ADC3,
 
-    pub fn isPwm(function: Function) bool {
+    pub fn is_pwm(function: Function) bool {
         return switch (function) {
             .PWM0_A,
             .PWM0_B,
@@ -165,7 +167,7 @@ pub const Function = enum {
         };
     }
 
-    pub fn isUartTx(function: Function) bool {
+    pub fn is_uart_tx(function: Function) bool {
         return switch (function) {
             .UART0_TX,
             .UART1_TX,
@@ -174,7 +176,7 @@ pub const Function = enum {
         };
     }
 
-    pub fn isUartRx(function: Function) bool {
+    pub fn is_uart_rx(function: Function) bool {
         return switch (function) {
             .UART0_RX,
             .UART1_RX,
@@ -183,7 +185,7 @@ pub const Function = enum {
         };
     }
 
-    pub fn pwmSlice(comptime function: Function) u32 {
+    pub fn pwm_slice(comptime function: Function) u32 {
         return switch (function) {
             .PWM0_A, .PWM0_B => 0,
             .PWM1_A, .PWM1_B => 1,
@@ -197,7 +199,7 @@ pub const Function = enum {
         };
     }
 
-    pub fn isAdc(function: Function) bool {
+    pub fn is_adc(function: Function) bool {
         return switch (function) {
             .ADC0,
             .ADC1,
@@ -208,7 +210,7 @@ pub const Function = enum {
         };
     }
 
-    pub fn pwmChannel(comptime function: Function) pwm.Channel {
+    pub fn pwm_channel(comptime function: Function) pwm.Channel {
         return switch (function) {
             .PWM0_A,
             .PWM1_A,
@@ -354,10 +356,10 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
                 if (pin_config.function == .SIO) {
                     pin_field.name = pin_config.name orelse field.name;
                     pin_field.type = GPIO(@enumToInt(@field(Pin, field.name)), pin_config.direction orelse .in);
-                } else if (pin_config.function.isPwm()) {
+                } else if (pin_config.function.is_pwm()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
-                    pin_field.type = pwm.PWM(pin_config.function.pwmSlice(), pin_config.function.pwmChannel());
-                } else if (pin_config.function.isAdc()) {
+                    pin_field.type = pwm.Pwm(pin_config.function.pwm_slice(), pin_config.function.pwm_channel());
+                } else if (pin_config.function.is_adc()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
                     pin_field.type = adc.Input;
                     pin_field.default_value = @ptrCast(?*const anyopaque, switch (pin_config.function) {
@@ -453,16 +455,16 @@ pub const GlobalConfiguration = struct {
                         @compileError(comptimePrint("{s} cannot be configured for {}", .{ field.name, pin_config.function }));
 
                     if (pin_config.function == .SIO) {
-                        switch (pin_config.getDirection()) {
+                        switch (pin_config.get_direction()) {
                             .in => input_gpios |= 1 << gpio_num,
                             .out => output_gpios |= 1 << gpio_num,
                         }
                     }
 
-                    if (pin_config.function.isAdc()) {
+                    if (pin_config.function.is_adc()) {
                         has_adc = true;
                     }
-                    if (pin_config.function.isPwm()) {
+                    if (pin_config.function.is_pwm()) {
                         has_pwm = true;
                     }
                 };
@@ -474,8 +476,8 @@ pub const GlobalConfiguration = struct {
         gpio.reset();
 
         if (used_gpios != 0) {
-            regs.SIO.GPIO_OE_CLR.raw = used_gpios;
-            regs.SIO.GPIO_OUT_CLR.raw = used_gpios;
+            SIO.GPIO_OE_CLR.raw = used_gpios;
+            SIO.GPIO_OUT_CLR.raw = used_gpios;
         }
 
         inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
@@ -494,13 +496,13 @@ pub const GlobalConfiguration = struct {
                 // @"null" = 0x1f,
 
                 if (func == .SIO) {
-                    gpio.setFunction(gpio_num, .sio);
-                } else if (comptime func.isPwm()) {
-                    gpio.setFunction(gpio_num, .pwm);
-                } else if (comptime func.isAdc()) {
-                    gpio.setFunction(gpio_num, .null);
+                    gpio.set_function(gpio_num, .sio);
+                } else if (comptime func.is_pwm()) {
+                    gpio.set_function(gpio_num, .pwm);
+                } else if (comptime func.is_adc()) {
+                    gpio.set_function(gpio_num, .null);
                 } else if (comptime func.isUartTx() or func.isUartRx()) {
-                    gpio.setFunction(gpio_num, .uart);
+                    gpio.set_function(gpio_num, .uart);
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
@@ -511,7 +513,7 @@ pub const GlobalConfiguration = struct {
         }
 
         if (output_gpios != 0)
-            regs.SIO.GPIO_OE_SET.raw = output_gpios;
+            SIO.GPIO_OE_SET.raw = output_gpios;
 
         if (input_gpios != 0) {
             inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
@@ -521,7 +523,7 @@ pub const GlobalConfiguration = struct {
                     if (comptime pin_config.getDirection() != .in)
                         @compileError("Only input pins can have pull up/down enabled");
 
-                    gpio.setPullUpDown(gpio_num, pull);
+                    gpio.set_pull(gpio_num, pull);
                 };
         }
 

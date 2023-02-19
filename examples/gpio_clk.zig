@@ -16,6 +16,6 @@ pub fn init() void {
 }
 
 pub fn main() !void {
-    gpio.setFunction(gpout0_pin, .gpck);
+    gpio.set_function(gpout0_pin, .gpck);
     while (true) {}
 }

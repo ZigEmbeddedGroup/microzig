@@ -1,9 +1,9 @@
 const std = @import("std");
-const microzig = @import("microzig");
-
-const regs = microzig.chip.registers;
 const EnumField = std.builtin.Type.EnumField;
-const Mask = @typeInfo(@TypeOf(regs.RESETS.RESET)).Pointer.child.underlying_type;
+
+const microzig = @import("microzig");
+const RESETS = microzig.chip.peripherals.RESETS;
+const Mask = @TypeOf(RESETS.RESET).underlying_type;
 
 pub const Module = enum {
     adc,
@@ -41,8 +41,8 @@ pub inline fn reset(comptime modules: []const Module) void {
 
     const raw_mask = @bitCast(u32, mask);
 
-    regs.RESETS.RESET.raw = raw_mask;
-    regs.RESETS.RESET.raw = 0;
+    RESETS.RESET.raw = raw_mask;
+    RESETS.RESET.raw = 0;
 
-    while ((regs.RESETS.RESET_DONE.raw & raw_mask) != raw_mask) {}
+    while ((RESETS.RESET_DONE.raw & raw_mask) != raw_mask) {}
 }

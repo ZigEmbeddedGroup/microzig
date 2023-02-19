@@ -11,17 +11,17 @@ const led = 25;
 fn core1() void {
     while (true) {
         gpio.put(led, 1);
-        time.sleepMs(250);
+        time.sleep_ms(250);
         gpio.put(led, 0);
-        time.sleepMs(250);
+        time.sleep_ms(250);
     }
 }
 
 pub fn main() !void {
     gpio.init(led);
-    gpio.setDir(led, .out);
+    gpio.set_direction(led, .out);
 
-    multicore.launchCore1(core1);
+    multicore.launch_core1(core1);
 
     while (true) {
         microzig.cpu.wfi();
