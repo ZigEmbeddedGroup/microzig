@@ -25,8 +25,6 @@ jobs:
       run: |
         cd deps/microzig
         git pull origin main
-        git cd ../..
-        git commit -m "update microzig"
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v4.2.3
