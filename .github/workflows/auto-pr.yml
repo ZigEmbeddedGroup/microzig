@@ -1,5 +1,6 @@
 name: Downstream Updates
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -30,6 +31,7 @@ jobs:
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v4.2.3
       with:
+        token: ${{ secrets.PR_TOKEN }}
         branch: update-microzig
         commit-message: update microzig
         delete-branch: true
