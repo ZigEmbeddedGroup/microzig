@@ -17,7 +17,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        repository: https://github.com/ZigEmbeddedGroup/${{ matrix.repo }}.git
+        repository: ZigEmbeddedGroup/${{ matrix.repo }}
         submodules: recursive
         fetch-depth: 0
 
