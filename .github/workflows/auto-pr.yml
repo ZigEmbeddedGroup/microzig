@@ -11,7 +11,13 @@ jobs:
     strategy:
       matrix:
         repo: [
+          espressif-esp,
+          gigadevice-gd32,
+          microchip-atmega,
+          nordic-nrf5x,
+          nxp-lpc,
           raspberrypi-rp2040,
+          stmicro-stm32,
         ]
     steps:
     - name: Checkout
@@ -29,20 +35,11 @@ jobs:
         echo "DESCRIPTION=$(git log -1 --pretty=%B | head -n 1)" >> $GITHUB_OUTPUT
 
     - name: Create Pull Request
-      id: cpr
       uses: peter-evans/create-pull-request@v4.2.3
       with:
         token: ${{ secrets.PR_TOKEN }}
-        branch: update-microzig
+        branch: downstream/update-microzig
         commit-message: update microzig
         delete-branch: true
         title: Update microzig
         body: ${{ steps.update.outputs.DESCRIPTION }}
-
-    - name: Enable Pull Request Automerge
-      if: steps.cpr.outputs.pull-request-operation == 'created'
-      uses: peter-evans/enable-pull-request-automerge@v2
-      with:
-        token: ${{ secrets.PR_TOKEN }}
-        pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
-        merge-method: squash
