@@ -1,5 +1,4 @@
 name: Downstream Updates
-jobs:
 on:
   push:
     branches:
