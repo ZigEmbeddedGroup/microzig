@@ -307,7 +307,7 @@ pub const Archive = struct {
     }
 
     pub fn writeTo(self: *Self, writer: anytype) !void {
-        for (self.blocks.items) |*block, i| {
+        for (self.blocks.items, 0..) |*block, i| {
             block.block_number = @intCast(u32, i);
             block.total_blocks = @intCast(u32, self.blocks.items.len);
             try block.writeTo(writer);
@@ -381,7 +381,7 @@ pub const Archive = struct {
     }
 };
 
-pub const Flags = packed struct {
+pub const Flags = packed struct(u32) {
     not_main_flash: bool,
     reserved: u11 = 0,
     file_container: bool,
