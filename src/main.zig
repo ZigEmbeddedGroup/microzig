@@ -22,8 +22,8 @@ pub const Backing = union(enum) {
 };
 
 const Module = std.build.Module;
-const root_path = root() ++ "/";
-fn root() []const u8 {
+
+fn root_dir() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
 }
 
@@ -139,36 +139,62 @@ pub fn addEmbeddedExecutable(
         writer.print("pub const end_of_stack = 0x{X:0>8};\n\n", .{first_ram.offset + first_ram.length}) catch unreachable;
     }
 
-    builder.addModule(.{
-        .name = "microzig",
-        .source_file = .{ .path = root_path ++ "core/import-module.zig" },
+    const microzig = builder.createModule(.{
+        .source_file = .{ .path = comptime root_dir() ++ "/microzig.zig" },
     });
-    const microzig = builder.modules.get("microzig").?;
 
-    const config_module = builder.createModule(.{
+    microzig.dependencies.put("config", builder.createModule(.{
         .source_file = .{ .path = config_file_name },
-    });
+    })) catch unreachable;
 
-    const chip_module = builder.createModule(.{
+    microzig.dependencies.put("chip", builder.createModule(.{
         .source_file = chip.source,
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig },
         },
-    });
+    })) catch unreachable;
 
-    const cpu_module = builder.createModule(.{
+    microzig.dependencies.put("cpu", builder.createModule(.{
         .source_file = chip.cpu.source,
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig },
         },
-    });
+    })) catch unreachable;
+
+    microzig.dependencies.put("hal", builder.createModule(.{
+        .source_file = if (chip.hal) |hal_module_path|
+            hal_module_path
+        else
+            .{ .path = comptime root_dir() ++ "/core/empty.zig" },
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    })) catch unreachable;
+
+    switch (backing) {
+        .board => |board| {
+            microzig.dependencies.put("board", builder.createModule(.{
+                .source_file = board.source,
+                .dependencies = &.{
+                    .{ .name = "microzig", .module = microzig },
+                },
+            })) catch unreachable;
+        },
+        else => {},
+    }
+
+    microzig.dependencies.put("app", builder.createModule(.{
+        .source_file = .{ .path = source },
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig },
+        },
+    })) catch unreachable;
 
     const exe = builder.allocator.create(EmbeddedExecutable) catch unreachable;
-
     exe.* = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
             .name = name,
-            .root_source_file = .{ .path = root_path ++ "microzig.zig" },
+            .root_source_file = .{ .path = comptime root_dir() ++ "/start.zig" },
             .target = chip.cpu.target,
             .optimize = options.optimize,
         }),
@@ -188,40 +214,7 @@ pub fn addEmbeddedExecutable(
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
     exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
-
-    // these modules will be re-exported from core/microzig.zig
-    exe.inner.addModule("config", config_module);
-    exe.inner.addModule("chip", chip_module);
-    exe.inner.addModule("cpu", cpu_module);
-
-    exe.inner.addModule("hal", builder.createModule(.{
-        .source_file = if (chip.hal) |hal_module_path|
-            hal_module_path
-        else
-            .{ .path = root_path ++ "core/empty.zig" },
-        .dependencies = &.{
-            .{ .name = "microzig", .module = microzig },
-        },
-    }));
-
-    switch (backing) {
-        .board => |board| {
-            exe.inner.addModule("board", builder.createModule(.{
-                .source_file = board.source,
-                .dependencies = &.{
-                    .{ .name = "microzig", .module = microzig },
-                },
-            }));
-        },
-        else => {},
-    }
-
-    exe.inner.addModule("app", builder.createModule(.{
-        .source_file = .{ .path = source },
-        .dependencies = &.{
-            .{ .name = "microzig", .module = microzig },
-        },
-    }));
+    exe.addModule("microzig", microzig);
 
     return exe;
 }
