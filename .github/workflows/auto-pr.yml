@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         repo: [
+          hardware-support-template,
           espressif-esp,
           gigadevice-gd32,
           microchip-atmega,
