@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("../deps/microzig/src/main.zig");
+const microzig = @import("../deps/microzig/build.zig");
 const chips = @import("chips.zig");
 
 fn root_dir() []const u8 {

@@ -3,7 +3,7 @@ const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
 
-pub const microzig = @import("deps/microzig/src/main.zig");
+pub const microzig = @import("deps/microzig/build.zig");
 
 const chips = @import("src/chips.zig");
 const boards = @import("src/boards.zig");

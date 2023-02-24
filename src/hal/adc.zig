@@ -83,8 +83,8 @@ pub const InputMask = InputMask: {
     var fields: [enum_fields.len]std.builtin.Type.StructField = undefined;
 
     const default_value: u1 = 0;
-    for (enum_fields) |enum_field, i|
-        fields[i] = std.builtin.Type.StructField{
+    for (enum_fields, &fields) |enum_field, *field|
+        field = std.builtin.Type.StructField{
             .name = enum_field.name,
             .field_type = u1,
             .default_value = &default_value,

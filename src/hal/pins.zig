@@ -237,7 +237,7 @@ pub const Function = enum {
 
 fn all() [30]u1 {
     var ret: [30]u1 = undefined;
-    for (ret) |*elem|
+    for (&ret) |*elem|
         elem.* = 1;
 
     return ret;
