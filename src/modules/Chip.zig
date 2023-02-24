@@ -29,7 +29,7 @@ pub fn from_standard_paths(comptime root_dir: []const u8, args: struct {
             }),
         },
         .hal = .{
-            .path = std.fmt.comptimePrint("{s}/chips/{s}.zig", .{
+            .path = std.fmt.comptimePrint("{s}/hals/{s}.zig", .{
                 root_dir,
                 args.name,
             }),

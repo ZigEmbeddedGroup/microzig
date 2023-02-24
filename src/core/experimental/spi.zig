@@ -68,7 +68,7 @@ pub fn SpiBus(comptime index: usize) type {
                     std.debug.assert(write_buffer.len == read_buffer.len);
                     var transfer = try self.beginTransfer();
                     defer transfer.end();
-                    for (write_buffer) |_, i| {
+                    for (write_buffer, 0..) |_, i| {
                         try transfer.transceiveByte(write_buffer[i], &read_buffer[i]);
                     }
                 }
