@@ -592,7 +592,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
                 // Read SR2 to clear address condition
                 _ = i2c_base.SR2.read();
 
-                for (buffer) |_, i| {
+                for (buffer, 0..) |_, i| {
                     if (i == buffer.len - 1) {
                         // Disable ACK
                         i2c_base.CR1.modify(.{ .ACK = 0 });

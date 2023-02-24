@@ -441,7 +441,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
 
                 if (runtime_safety) self.read_allowed = false;
 
-                for (buffer) |_, i| {
+                for (buffer, 0..) |_, i| {
                     // Wait for data to be received
                     while (I2C1.ISR.read().RXNE == 0) {
                         debug_print("I2C1 waiting for data (RXNE=0)\r\n", .{});
@@ -582,7 +582,7 @@ pub fn SpiBus(comptime index: usize) type {
 
         /// Read bytes to fill the given buffer exactly, writing arbitrary bytes (`undefined`).
         pub fn read_into(self: Self, buffer: []u8) !void {
-            for (buffer) |_, i| {
+            for (buffer, 0..) |_, i| {
                 try self.transceive_byte(null, &buffer[i]);
             }
         }
