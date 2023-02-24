@@ -57,7 +57,7 @@ pub const Node = struct {
         }
     };
 
-    pub fn getAttribute(node: Node, key: [:0]const u8) ?[]const u8 {
+    pub fn get_attribute(node: Node, key: [:0]const u8) ?[]const u8 {
         if (c.xmlHasProp(node.impl, key.ptr)) |prop| {
             if (@ptrCast(*c.xmlAttr, prop).children) |value_node| {
                 if (@ptrCast(*c.xmlNode, value_node).content) |content| {
@@ -69,7 +69,7 @@ pub const Node = struct {
         return null;
     }
 
-    pub fn findChild(node: Node, key: []const u8) ?Node {
+    pub fn find_child(node: Node, key: []const u8) ?Node {
         var it = @ptrCast(?*c.xmlNode, node.impl.children);
         return while (it != null) : (it = it.?.next) {
             if (it.?.type != 1)
@@ -86,26 +86,26 @@ pub const Node = struct {
     pub fn iterate(node: Node, skip: []const []const u8, filter: []const u8) Iterator {
         var current: Node = node;
         for (skip) |elem|
-            current = current.findChild(elem) orelse return Iterator{
+            current = current.find_child(elem) orelse return Iterator{
                 .node = null,
                 .filter = filter,
             };
 
         return Iterator{
-            .node = current.findChild(filter),
+            .node = current.find_child(filter),
             .filter = filter,
         };
     }
 
-    pub fn iterateAttrs(node: Node) AttrIterator {
+    pub fn iterate_attrs(node: Node) AttrIterator {
         return AttrIterator{
             .attr = node.impl.properties,
         };
     }
 
     /// up to you to copy
-    pub fn getValue(node: Node, key: []const u8) ?[:0]const u8 {
-        return if (node.findChild(key)) |child|
+    pub fn get_value(node: Node, key: []const u8) ?[:0]const u8 {
+        return if (node.find_child(key)) |child|
             if (child.impl.children) |value_node|
                 if (@ptrCast(*c.xmlNode, value_node).content) |content|
                     std.mem.span(content)
@@ -121,7 +121,7 @@ pub const Node = struct {
 pub const Doc = struct {
     impl: *c.xmlDoc,
 
-    pub fn fromFile(path: [:0]const u8) !Doc {
+    pub fn from_file(path: [:0]const u8) !Doc {
         return Doc{
             .impl = c.xmlReadFile(
                 path.ptr,
@@ -131,7 +131,7 @@ pub const Doc = struct {
         };
     }
 
-    pub fn fromMemory(text: []const u8) !Doc {
+    pub fn from_memory(text: []const u8) !Doc {
         return Doc{
             .impl = c.xmlReadMemory(
                 text.ptr,
@@ -143,7 +143,7 @@ pub const Doc = struct {
         };
     }
 
-    pub fn fromIo(read_fn: c.xmlInputReadCallback, ctx: ?*anyopaque) !Doc {
+    pub fn from_io(read_fn: c.xmlInputReadCallback, ctx: ?*anyopaque) !Doc {
         return Doc{
             .impl = c.xmlReadIO(
                 read_fn,
@@ -160,7 +160,7 @@ pub const Doc = struct {
         c.xmlFreeDoc(doc.impl);
     }
 
-    pub fn getRootElement(doc: Doc) !Node {
+    pub fn get_root_element(doc: Doc) !Node {
         return Node{
             .impl = c.xmlDocGetRootElement(doc.impl) orelse return error.NoRoot,
         };

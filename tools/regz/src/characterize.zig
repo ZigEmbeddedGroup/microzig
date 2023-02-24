@@ -20,7 +20,7 @@ const PrintedResult = struct {
     repeated: bool,
     attrs: std.StringHashMapUnmanaged(AttrUsage),
 
-    fn lessThan(_: void, lhs: PrintedResult, rhs: PrintedResult) bool {
+    fn less_than(_: void, lhs: PrintedResult, rhs: PrintedResult) bool {
         return std.ascii.lessThanIgnoreCase(lhs.key, rhs.key);
     }
 };
@@ -52,14 +52,14 @@ pub fn main() !void {
         const text = try file.readToEndAlloc(gpa.allocator(), std.math.maxInt(usize));
         defer gpa.allocator().free(text);
 
-        const doc = try xml.readFromMemory(text);
-        defer xml.freeDoc(doc);
+        var doc = try xml.Doc.from_memory(text);
+        defer doc.deinit();
 
         var found = std.StringHashMap(void).init(gpa.allocator());
         defer found.deinit();
 
-        const root_element: *xml.Node = xml.docGetRootElement(doc) orelse return error.NoRoot;
-        try recursiveCharacterize(&arena, root_element, &.{}, &found, &results);
+        const root_element: *xml.Node = try doc.get_root_element();
+        try recursive_characterize(&arena, root_element, &.{}, &found, &results);
     }
 
     var ordered = std.ArrayList(PrintedResult).init(gpa.allocator());
@@ -117,7 +117,7 @@ pub fn main() !void {
 }
 
 const CharacterizeError = error{OutOfMemory};
-fn recursiveCharacterize(
+fn recursive_characterize(
     arena: *std.heap.ArenaAllocator,
     node: *xml.Node,
     parent_location: []const []const u8,
@@ -173,6 +173,6 @@ fn recursiveCharacterize(
         if (child_it.?.type != 1)
             continue;
 
-        try recursiveCharacterize(arena, child_it.?, location.items, &found, results);
+        try recursive_characterize(arena, child_it.?, location.items, &found, results);
     }
 }

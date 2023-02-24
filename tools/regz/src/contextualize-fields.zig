@@ -32,10 +32,10 @@ pub fn main() !void {
     if (components.items.len == 0)
         return error.NoComponents;
 
-    var doc = try xml.Doc.fromFile(path);
+    var doc = try xml.Doc.from_file(path);
     defer doc.deinit();
 
-    const root = try doc.getRootElement();
+    const root = try doc.get_root_element();
     if (!std.mem.eql(u8, components.items[0], std.mem.span(root.impl.name)))
         return;
 
@@ -48,7 +48,7 @@ pub fn main() !void {
 
     try context.put("file", base);
     const stdout = std.io.getStdOut().writer();
-    try recursiveSearchAndPrint(
+    try recursive_search_and_print(
         gpa.allocator(),
         components.items,
         context,
@@ -57,11 +57,11 @@ pub fn main() !void {
     );
 }
 
-fn RecursiveSearchAndPrintError(comptime Writer: type) type {
+fn recursive_search_and_print_error(comptime Writer: type) type {
     return Writer.Error || error{OutOfMemory};
 }
 
-fn recursiveSearchAndPrint(
+fn recursive_search_and_print(
     allocator: std.mem.Allocator,
     components: []const []const u8,
     context: ContextMap,
@@ -74,7 +74,7 @@ fn recursiveSearchAndPrint(
     defer attr_map.deinit(allocator);
 
     {
-        var it = node.iterateAttrs();
+        var it = node.iterate_attrs();
         while (it.next()) |attr|
             try attr_map.put(allocator, attr.key, attr.value);
     }
@@ -92,9 +92,11 @@ fn recursiveSearchAndPrint(
         try current_context.put(components[0], attr_map);
 
     if (components.len == 1) {
+        const arena = try allocator.create(std.heap.ArenaAllocator);
+        arena.* = std.heap.ArenaAllocator.init(allocator);
         // we're done, convert into json tree and write to writer.
         var tree = json.ValueTree{
-            .arena = std.heap.ArenaAllocator.init(allocator),
+            .arena = arena,
             .root = json.Value{ .Object = json.ObjectMap.init(allocator) },
         };
         defer {
@@ -126,7 +128,7 @@ fn recursiveSearchAndPrint(
         // pass it down to the children
         var child_it = node.iterate(&.{}, components[1]);
         while (child_it.next()) |child| {
-            try recursiveSearchAndPrint(
+            try recursive_search_and_print(
                 allocator,
                 components[1..],
                 current_context,

@@ -32,23 +32,23 @@ pub const system_interrupts = struct {
     pub const cortex_m4 = cortex_m3;
 };
 
-pub fn loadSysTickInterrupt(db: *Database, device_id: EntityId) !void {
-    _ = try db.createInterrupt(device_id, .{
+pub fn load_systick_interrupt(db: *Database, device_id: EntityId) !void {
+    _ = try db.create_interrupt(device_id, .{
         .name = "SysTick",
         .index = -1,
         // TODO: description
     });
 }
 
-pub fn loadSystemInterrupts(db: *Database, device_id: EntityId) !void {
+pub fn load_system_interrupts(db: *Database, device_id: EntityId) !void {
     const arch = db.instances.devices.get(device_id).?.arch;
-    assert(arch.isArm());
+    assert(arch.is_arm());
 
     inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
         if (arch == @field(Database.Arch, field.name)) {
             if (@hasDecl(system_interrupts, field.name)) {
                 for (@field(system_interrupts, field.name)) |interrupt| {
-                    _ = try db.createInterrupt(device_id, .{
+                    _ = try db.create_interrupt(device_id, .{
                         .name = interrupt.name,
                         .index = interrupt.index,
                         .description = interrupt.description,
@@ -63,14 +63,14 @@ pub fn loadSystemInterrupts(db: *Database, device_id: EntityId) !void {
     }
 }
 
-pub fn writeInterruptVector(
+pub fn write_interrupt_vector(
     db: Database,
     device_id: EntityId,
     writer: anytype,
 ) !void {
-    assert(db.entityIs("instance.device", device_id));
+    assert(db.entity_is("instance.device", device_id));
     const arch = db.instances.devices.get(device_id).?.arch;
-    assert(arch.isArm());
+    assert(arch.is_arm());
 
     switch (arch) {
         // the basic vector table below should be fine for cortex-m
@@ -126,7 +126,7 @@ pub fn writeInterruptVector(
             InterruptWithIndexAndName,
             interrupts.items,
             {},
-            InterruptWithIndexAndName.lessThan,
+            InterruptWithIndexAndName.less_than,
         );
 
         var index: i32 = -14;
@@ -146,7 +146,7 @@ pub fn writeInterruptVector(
             }
 
             if (db.attrs.description.get(interrupt.id)) |description|
-                try gen.writeComment(db.gpa, description, writer);
+                try gen.write_comment(db.gpa, description, writer);
 
             try writer.print("{s}: Handler = unhandled,\n", .{
                 std.zig.fmtId(interrupt.name),

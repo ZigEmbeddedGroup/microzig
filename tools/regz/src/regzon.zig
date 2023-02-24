@@ -27,14 +27,14 @@ const LoadContext = struct {
     }
 };
 
-fn getObject(val: json.Value) !json.ObjectMap {
+fn get_object(val: json.Value) !json.ObjectMap {
     return switch (val) {
         .Object => |obj| obj,
         else => return error.NotJsonObject,
     };
 }
 
-fn getArray(val: json.Value) !json.Array {
+fn get_array(val: json.Value) !json.Array {
     return switch (val) {
         .Array => |arr| arr,
         else => return error.NotJsonArray,
@@ -42,21 +42,21 @@ fn getArray(val: json.Value) !json.Array {
 }
 
 // TODO: handle edge cases
-fn getIntegerFromObject(obj: json.ObjectMap, comptime T: type, key: []const u8) !?T {
+fn get_integer_from_object(obj: json.ObjectMap, comptime T: type, key: []const u8) !?T {
     return switch (obj.get(key) orelse return null) {
         .Integer => |num| @intCast(T, num),
         else => return error.NotJsonInteger,
     };
 }
 
-fn getStringFromObject(obj: json.ObjectMap, key: []const u8) !?[]const u8 {
+fn get_string_from_object(obj: json.ObjectMap, key: []const u8) !?[]const u8 {
     return switch (obj.get(key) orelse return null) {
         .String => |str| str,
         else => return error.NotJsonString,
     };
 }
 
-fn entityTypeToString(entity_type: Database.EntityType) []const u8 {
+fn entity_type_to_string(entity_type: Database.EntityType) []const u8 {
     return switch (entity_type) {
         .peripheral => "peripherals",
         .register_group => "register_groups",
@@ -71,7 +71,7 @@ fn entityTypeToString(entity_type: Database.EntityType) []const u8 {
     };
 }
 
-const string_to_entity_type = std.ComptimeStringMap(Database.EntityType, .{
+const string_to_entity_type_map = std.ComptimeStringMap(Database.EntityType, .{
     .{ "peripherals", .peripheral },
     .{ "register_groups", .register_group },
     .{ "registers", .register },
@@ -82,15 +82,15 @@ const string_to_entity_type = std.ComptimeStringMap(Database.EntityType, .{
     .{ "interrupts", .interrupt },
 });
 
-fn stringToEntityType(str: []const u8) !Database.EntityType {
-    return if (string_to_entity_type.get(str)) |entity_type|
+fn string_to_entity_type(str: []const u8) !Database.EntityType {
+    return if (string_to_entity_type_map.get(str)) |entity_type|
         entity_type
     else
         error.InvalidEntityType;
 }
 
 // gets stuffed in the arena allocator
-fn idToRef(
+fn id_to_ref(
     allocator: std.mem.Allocator,
     db: Database,
     entity_id: EntityId,
@@ -108,23 +108,23 @@ fn idToRef(
     defer ref.deinit();
 
     const writer = ref.writer();
-    const root_type = db.getEntityType(ids.items[0]).?;
+    const root_type = db.get_entity_type(ids.items[0]).?;
 
-    if (root_type.isInstance())
+    if (root_type.is_instance())
         //try writer.writeAll("instances")
         @panic("TODO")
     else
         try writer.writeAll("types");
 
     try writer.print(".{s}.{s}", .{
-        entityTypeToString(root_type),
+        entity_type_to_string(root_type),
         std.zig.fmtId(db.attrs.name.get(ids.items[0]) orelse return error.MissingName),
     });
 
     for (ids.items[1..]) |id| {
-        const entity_type = db.getEntityType(id).?;
+        const entity_type = db.get_entity_type(id).?;
         try writer.print(".children.{s}.{s}", .{
-            entityTypeToString(entity_type),
+            entity_type_to_string(entity_type),
             std.zig.fmtId(db.attrs.name.get(id) orelse return error.MissingName),
         });
     }
@@ -132,7 +132,7 @@ fn idToRef(
     return ref.toOwnedSlice();
 }
 
-pub fn loadIntoDb(db: *Database, text: []const u8) !void {
+pub fn load_into_db(db: *Database, text: []const u8) !void {
     var parser = json.Parser.init(db.gpa, false);
     defer parser.deinit();
 
@@ -149,27 +149,27 @@ pub fn loadIntoDb(db: *Database, text: []const u8) !void {
     defer ctx.deinit();
 
     if (tree.root.Object.get("types")) |types|
-        try loadTypes(&ctx, try getObject(types));
+        try load_types(&ctx, try get_object(types));
 
     if (tree.root.Object.get("devices")) |devices|
-        try loadDevices(&ctx, try getObject(devices));
+        try load_devices(&ctx, try get_object(devices));
 
-    try resolveEnums(&ctx);
+    try resolve_enums(&ctx);
 }
 
-fn resolveEnums(ctx: *LoadContext) !void {
+fn resolve_enums(ctx: *LoadContext) !void {
     const db = ctx.db;
     var it = ctx.enum_refs.iterator();
     while (it.next()) |entry| {
         const id = entry.key_ptr.*;
         const ref = entry.value_ptr.*;
-        const enum_id = try refToId(db.*, ref);
+        const enum_id = try ref_to_id(db.*, ref);
         //assert(db.entityIs("type.enum", enum_id));
         try ctx.db.attrs.@"enum".put(db.gpa, id, enum_id);
     }
 }
 
-fn refToId(db: Database, ref: []const u8) !EntityId {
+fn ref_to_id(db: Database, ref: []const u8) !EntityId {
     // TODO: do proper tokenization since we'll need to handle @"" fields. okay to leave for now.
     var it = std.mem.tokenize(u8, ref, ".");
     const first = it.next() orelse return error.Malformed;
@@ -178,7 +178,7 @@ fn refToId(db: Database, ref: []const u8) !EntityId {
         break :blk while (true) {
             const entity_type = entity_type: {
                 const str = it.next() orelse return error.Malformed;
-                break :entity_type try stringToEntityType(str);
+                break :entity_type try string_to_entity_type(str);
             };
 
             const name = it.next() orelse return error.Malformed;
@@ -192,7 +192,7 @@ fn refToId(db: Database, ref: []const u8) !EntityId {
 
             if (tmp_id == null) {
                 tmp_id = tmp_id: inline for (@typeInfo(TypeOfField(Database, "types")).Struct.fields) |field| {
-                    const other_type = try stringToEntityType(field.name);
+                    const other_type = try string_to_entity_type(field.name);
                     if (entity_type == other_type) {
                         var entity_it = @field(db.types, field.name).iterator();
                         while (entity_it.next()) |entry| {
@@ -209,7 +209,7 @@ fn refToId(db: Database, ref: []const u8) !EntityId {
                 } else return error.RefNotFound;
             } else {
                 tmp_id = tmp_id: inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
-                    const other_type = try stringToEntityType(field.name);
+                    const other_type = try string_to_entity_type(field.name);
                     if (entity_type == other_type) {
                         if (@field(db.children, field.name).get(tmp_id.?)) |children| {
                             var child_it = children.iterator();
@@ -234,30 +234,30 @@ fn refToId(db: Database, ref: []const u8) !EntityId {
         error.Malformed;
 }
 
-fn loadTypes(ctx: *LoadContext, types: json.ObjectMap) !void {
+fn load_types(ctx: *LoadContext, types: json.ObjectMap) !void {
     if (types.get("peripherals")) |peripherals|
-        try loadPeripherals(ctx, try getObject(peripherals));
+        try load_peripherals(ctx, try get_object(peripherals));
 }
 
-fn loadPeripherals(ctx: *LoadContext, peripherals: json.ObjectMap) !void {
+fn load_peripherals(ctx: *LoadContext, peripherals: json.ObjectMap) !void {
     var it = peripherals.iterator();
     while (it.next()) |entry| {
         const name = entry.key_ptr.*;
         const peripheral = entry.value_ptr.*;
-        try loadPeripheral(ctx, name, try getObject(peripheral));
+        try load_peripheral(ctx, name, try get_object(peripheral));
     }
 }
 
-fn loadPeripheral(
+fn load_peripheral(
     ctx: *LoadContext,
     name: []const u8,
     peripheral: json.ObjectMap,
 ) !void {
     log.debug("loading peripheral: {s}", .{name});
     const db = ctx.db;
-    const id = try db.createPeripheral(.{
+    const id = try db.create_peripheral(.{
         .name = name,
-        .description = try getStringFromObject(peripheral, "description"),
+        .description = try get_string_from_object(peripheral, "description"),
         .size = if (peripheral.get("size")) |size_val|
             switch (size_val) {
                 .Integer => |num| @intCast(u64, num),
@@ -266,10 +266,10 @@ fn loadPeripheral(
         else
             null,
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (peripheral.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
 const LoadError = error{
@@ -297,7 +297,7 @@ const LoadError = error{
 
 const LoadFn = fn (*LoadContext, EntityId, []const u8, json.ObjectMap) LoadError!void;
 const LoadMultipleFn = fn (*LoadContext, EntityId, json.ObjectMap) LoadError!void;
-fn loadEntities(comptime load_fn: LoadFn) LoadMultipleFn {
+fn load_entities(comptime load_fn: LoadFn) LoadMultipleFn {
     return struct {
         fn tmp(
             ctx: *LoadContext,
@@ -308,7 +308,7 @@ fn loadEntities(comptime load_fn: LoadFn) LoadMultipleFn {
             while (it.next()) |entry| {
                 const name = entry.key_ptr.*;
                 const entity = entry.value_ptr.*;
-                try load_fn(ctx, parent_id, name, try getObject(entity));
+                try load_fn(ctx, parent_id, name, try get_object(entity));
             }
         }
     }.tmp;
@@ -316,19 +316,19 @@ fn loadEntities(comptime load_fn: LoadFn) LoadMultipleFn {
 
 const load_fns = struct {
     // types
-    const register_groups = loadEntities(loadRegisterGroup);
-    const registers = loadEntities(loadRegister);
-    const fields = loadEntities(loadField);
-    const enums = loadEntities(loadEnum);
-    const enum_fields = loadEntities(loadEnumField);
-    const modes = loadEntities(loadMode);
+    const register_groups = load_entities(load_register_group);
+    const registers = load_entities(load_register);
+    const fields = load_entities(load_field);
+    const enums = load_entities(load_enum);
+    const enum_fields = load_entities(load_enum_field);
+    const modes = load_entities(load_mode);
 
     // instances
-    const interrupts = loadEntities(loadInterrupt);
-    const peripheral_instances = loadEntities(loadPeripheralInstance);
+    const interrupts = load_entities(load_interrupt);
+    const peripheral_instances = load_entities(load_peripheral_instance);
 };
 
-fn loadChildren(
+fn load_children(
     ctx: *LoadContext,
     parent_id: EntityId,
     children: json.ObjectMap,
@@ -341,12 +341,12 @@ fn loadChildren(
         inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
             if (std.mem.eql(u8, child_type, field.name)) {
                 if (@hasDecl(load_fns, field.name))
-                    try @field(load_fns, field.name)(ctx, parent_id, try getObject(child_map));
+                    try @field(load_fns, field.name)(ctx, parent_id, try get_object(child_map));
 
                 break;
             }
         } else if (std.mem.eql(u8, "peripheral_instances", child_type)) {
-            try load_fns.peripheral_instances(ctx, parent_id, try getObject(child_map));
+            try load_fns.peripheral_instances(ctx, parent_id, try get_object(child_map));
         } else {
             log.err("{s} is not a valid child type", .{child_type});
             return error.InvalidChildType;
@@ -354,21 +354,21 @@ fn loadChildren(
     }
 }
 
-fn loadMode(
+fn load_mode(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
     mode: json.ObjectMap,
 ) LoadError!void {
-    _ = try ctx.db.createMode(parent_id, .{
+    _ = try ctx.db.create_mode(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(mode, "description"),
-        .value = (try getStringFromObject(mode, "value")) orelse return error.MissingModeValue,
-        .qualifier = (try getStringFromObject(mode, "qualifier")) orelse return error.MissingModeQualifier,
+        .description = try get_string_from_object(mode, "description"),
+        .value = (try get_string_from_object(mode, "value")) orelse return error.MissingModeValue,
+        .qualifier = (try get_string_from_object(mode, "qualifier")) orelse return error.MissingModeQualifier,
     });
 }
 
-fn loadRegisterGroup(
+fn load_register_group(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
@@ -377,46 +377,46 @@ fn loadRegisterGroup(
     log.debug("load register group", .{});
     const db = ctx.db;
     // TODO: probably more
-    const id = try db.createRegisterGroup(parent_id, .{
+    const id = try db.create_register_group(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(register_group, "description"),
+        .description = try get_string_from_object(register_group, "description"),
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (register_group.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
-fn loadRegister(
+fn load_register(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
     register: json.ObjectMap,
 ) LoadError!void {
     const db = ctx.db;
-    const id = try db.createRegister(parent_id, .{
+    const id = try db.create_register(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(register, "description"),
-        .offset = (try getIntegerFromObject(register, u64, "offset")) orelse return error.MissingRegisterOffset,
-        .size = (try getIntegerFromObject(register, u64, "size")) orelse return error.MissingRegisterSize,
-        .count = try getIntegerFromObject(register, u64, "count"),
-        .access = if (try getStringFromObject(register, "access")) |access_str|
+        .description = try get_string_from_object(register, "description"),
+        .offset = (try get_integer_from_object(register, u64, "offset")) orelse return error.MissingRegisterOffset,
+        .size = (try get_integer_from_object(register, u64, "size")) orelse return error.MissingRegisterSize,
+        .count = try get_integer_from_object(register, u64, "count"),
+        .access = if (try get_string_from_object(register, "access")) |access_str|
             std.meta.stringToEnum(Database.Access, access_str)
         else
             null,
-        .reset_mask = try getIntegerFromObject(register, u64, "reset_mask"),
-        .reset_value = try getIntegerFromObject(register, u64, "reset_value"),
+        .reset_mask = try get_integer_from_object(register, u64, "reset_mask"),
+        .reset_value = try get_integer_from_object(register, u64, "reset_value"),
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (register.get("modes")) |modes|
-        try loadModes(ctx, id, try getArray(modes));
+        try load_modes(ctx, id, try get_array(modes));
 
     if (register.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
-fn loadModes(
+fn load_modes(
     ctx: *LoadContext,
     parent_id: EntityId,
     modes: json.Array,
@@ -428,7 +428,7 @@ fn loadModes(
             else => return error.InvalidJsonType,
         };
 
-        const mode_id = try refToId(db.*, mode_ref);
+        const mode_id = try ref_to_id(db.*, mode_ref);
         //assert(db.entityIs("type.mode", mode_id));
         const result = try db.attrs.modes.getOrPut(db.gpa, parent_id);
         if (!result.found_existing)
@@ -438,21 +438,21 @@ fn loadModes(
     }
 }
 
-fn loadField(
+fn load_field(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
     field: json.ObjectMap,
 ) LoadError!void {
     const db = ctx.db;
-    const id = try db.createField(parent_id, .{
+    const id = try db.create_field(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(field, "description"),
-        .offset = (try getIntegerFromObject(field, u64, "offset")) orelse return error.MissingRegisterOffset,
-        .size = (try getIntegerFromObject(field, u64, "size")) orelse return error.MissingRegisterSize,
-        .count = try getIntegerFromObject(field, u64, "count"),
+        .description = try get_string_from_object(field, "description"),
+        .offset = (try get_integer_from_object(field, u64, "offset")) orelse return error.MissingRegisterOffset,
+        .size = (try get_integer_from_object(field, u64, "size")) orelse return error.MissingRegisterSize,
+        .count = try get_integer_from_object(field, u64, "count"),
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (field.get("enum")) |enum_val|
         switch (enum_val) {
@@ -463,51 +463,51 @@ fn loadField(
                 const peripheral_id = peripheral_id: {
                     var tmp_id = id;
                     break :peripheral_id while (db.attrs.parent.get(tmp_id)) |next_id| : (tmp_id = next_id) {
-                        if (.peripheral == db.getEntityType(next_id).?)
+                        if (.peripheral == db.get_entity_type(next_id).?)
                             break next_id;
                     } else return error.NoPeripheralFound;
                 };
 
-                const enum_id = try loadEnumBase(ctx, peripheral_id, null, enum_obj);
+                const enum_id = try load_enum_base(ctx, peripheral_id, null, enum_obj);
                 try db.attrs.@"enum".put(db.gpa, id, enum_id);
             },
             else => return error.InvalidJsonType,
         };
 
     if (field.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
-fn loadEnum(
+fn load_enum(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
     enumeration: json.ObjectMap,
 ) LoadError!void {
-    _ = try loadEnumBase(ctx, parent_id, name, enumeration);
+    _ = try load_enum_base(ctx, parent_id, name, enumeration);
 }
 
-fn loadEnumBase(
+fn load_enum_base(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: ?[]const u8,
     enumeration: json.ObjectMap,
 ) LoadError!EntityId {
     const db = ctx.db;
-    const id = try db.createEnum(parent_id, .{
+    const id = try db.create_enum(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(enumeration, "description"),
-        .size = (try getIntegerFromObject(enumeration, u64, "size")) orelse return error.MissingEnumSize,
+        .description = try get_string_from_object(enumeration, "description"),
+        .size = (try get_integer_from_object(enumeration, u64, "size")) orelse return error.MissingEnumSize,
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (enumeration.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 
     return id;
 }
 
-fn loadEnumField(
+fn load_enum_field(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
@@ -515,31 +515,31 @@ fn loadEnumField(
 ) LoadError!void {
     const db = ctx.db;
 
-    const id = try db.createEnumField(parent_id, .{
+    const id = try db.create_enum_field(parent_id, .{
         .name = name,
-        .description = try getStringFromObject(enum_field, "description"),
-        .value = (try getIntegerFromObject(enum_field, u32, "value")) orelse return error.MissingEnumFieldValue,
+        .description = try get_string_from_object(enum_field, "description"),
+        .value = (try get_integer_from_object(enum_field, u32, "value")) orelse return error.MissingEnumFieldValue,
     });
 
     if (enum_field.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
-fn loadDevices(ctx: *LoadContext, devices: json.ObjectMap) !void {
+fn load_devices(ctx: *LoadContext, devices: json.ObjectMap) !void {
     var it = devices.iterator();
     while (it.next()) |entry| {
         const name = entry.key_ptr.*;
         const device = entry.value_ptr.*;
-        try loadDevice(ctx, name, try getObject(device));
+        try load_device(ctx, name, try get_object(device));
     }
 }
 
-fn loadDevice(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !void {
+fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !void {
     log.debug("loading device: {s}", .{name});
     const db = ctx.db;
-    const id = try db.createDevice(.{
+    const id = try db.create_device(.{
         .name = name,
-        .description = try getStringFromObject(device, "description"),
+        .description = try get_string_from_object(device, "description"),
         .arch = if (device.get("arch")) |arch_val|
             switch (arch_val) {
                 .String => |arch_str| std.meta.stringToEnum(Database.Arch, arch_str) orelse return error.InvalidArch,
@@ -548,16 +548,16 @@ fn loadDevice(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !void
         else
             .unknown,
     });
-    errdefer db.destroyEntity(id);
+    errdefer db.destroy_entity(id);
 
     if (device.get("properties")) |properties|
-        try loadProperties(ctx, id, try getObject(properties));
+        try load_properties(ctx, id, try get_object(properties));
 
     if (device.get("children")) |children|
-        try loadChildren(ctx, id, try getObject(children));
+        try load_children(ctx, id, try get_object(children));
 }
 
-fn loadProperties(ctx: *LoadContext, device_id: EntityId, properties: json.ObjectMap) !void {
+fn load_properties(ctx: *LoadContext, device_id: EntityId, properties: json.ObjectMap) !void {
     const db = ctx.db;
     var it = properties.iterator();
     while (it.next()) |entry| {
@@ -567,41 +567,41 @@ fn loadProperties(ctx: *LoadContext, device_id: EntityId, properties: json.Objec
             else => return error.InvalidJsonType,
         };
 
-        try db.addDeviceProperty(device_id, key, value);
+        try db.add_device_property(device_id, key, value);
     }
 }
 
-fn loadInterrupt(
+fn load_interrupt(
     ctx: *LoadContext,
     device_id: EntityId,
     name: []const u8,
     interrupt: json.ObjectMap,
 ) LoadError!void {
-    _ = try ctx.db.createInterrupt(device_id, .{
+    _ = try ctx.db.create_interrupt(device_id, .{
         .name = name,
-        .description = try getStringFromObject(interrupt, "description"),
-        .index = (try getIntegerFromObject(interrupt, i32, "index")) orelse return error.MissingInterruptIndex,
+        .description = try get_string_from_object(interrupt, "description"),
+        .index = (try get_integer_from_object(interrupt, i32, "index")) orelse return error.MissingInterruptIndex,
     });
 }
 
-fn loadPeripheralInstance(
+fn load_peripheral_instance(
     ctx: *LoadContext,
     device_id: EntityId,
     name: []const u8,
     peripheral: json.ObjectMap,
 ) !void {
     const db = ctx.db;
-    const type_ref = (try getStringFromObject(peripheral, "type")) orelse return error.MissingInstanceType;
-    const type_id = try refToId(db.*, type_ref);
-    _ = try ctx.db.createPeripheralInstance(device_id, type_id, .{
+    const type_ref = (try get_string_from_object(peripheral, "type")) orelse return error.MissingInstanceType;
+    const type_id = try ref_to_id(db.*, type_ref);
+    _ = try ctx.db.create_peripheral_instance(device_id, type_id, .{
         .name = name,
-        .description = try getStringFromObject(peripheral, "description"),
-        .offset = (try getIntegerFromObject(peripheral, u64, "offset")) orelse return error.MissingInstanceOffset,
-        .count = try getIntegerFromObject(peripheral, u64, "count"),
+        .description = try get_string_from_object(peripheral, "description"),
+        .offset = (try get_integer_from_object(peripheral, u64, "offset")) orelse return error.MissingInstanceOffset,
+        .count = try get_integer_from_object(peripheral, u64, "count"),
     });
 }
 
-pub fn toJson(db: Database) !json.ValueTree {
+pub fn to_json(db: Database) !json.ValueTree {
     const arena = try db.gpa.create(ArenaAllocator);
     errdefer db.gpa.destroy(arena);
 
@@ -615,7 +615,7 @@ pub fn toJson(db: Database) !json.ValueTree {
 
     var device_it = db.instances.devices.iterator();
     while (device_it.next()) |entry|
-        try populateDevice(
+        try populate_device(
             db,
             arena,
             &devices,
@@ -623,7 +623,7 @@ pub fn toJson(db: Database) !json.ValueTree {
         );
 
     try root.put("version", .{ .String = schema_version });
-    try populateTypes(db, arena, &types);
+    try populate_types(db, arena, &types);
     if (types.count() > 0)
         try root.put("types", .{ .Object = types });
 
@@ -636,7 +636,7 @@ pub fn toJson(db: Database) !json.ValueTree {
     };
 }
 
-fn populateTypes(
+fn populate_types(
     db: Database,
     arena: *ArenaAllocator,
     types: *json.ObjectMap,
@@ -648,7 +648,7 @@ fn populateTypes(
         const periph_id = entry.key_ptr.*;
         const name = db.attrs.name.get(periph_id) orelse continue;
         var typ = json.ObjectMap.init(allocator);
-        try populateType(db, arena, periph_id, &typ);
+        try populate_type(db, arena, periph_id, &typ);
         try peripherals.put(name, .{ .Object = typ });
     }
 
@@ -656,7 +656,7 @@ fn populateTypes(
         try types.put("peripherals", .{ .Object = peripherals });
 }
 
-fn populateType(
+fn populate_type(
     db: Database,
     arena: *ArenaAllocator,
     id: EntityId,
@@ -695,11 +695,11 @@ fn populateType(
 
     if (db.attrs.@"enum".get(id)) |enum_id| {
         if (db.attrs.name.contains(enum_id)) {
-            const ref = try idToRef(arena.allocator(), db, enum_id);
+            const ref = try id_to_ref(arena.allocator(), db, enum_id);
             try typ.put("enum", .{ .String = ref });
         } else {
             var anon_enum = json.ObjectMap.init(allocator);
-            try populateType(db, arena, enum_id, &anon_enum);
+            try populate_type(db, arena, enum_id, &anon_enum);
             try typ.put("enum", .{ .Object = anon_enum });
         }
     }
@@ -711,7 +711,7 @@ fn populateType(
         while (it.next()) |entry| {
             const mode_id = entry.key_ptr.*;
             if (db.attrs.name.contains(mode_id)) {
-                const ref = try idToRef(
+                const ref = try id_to_ref(
                     arena.allocator(),
                     db,
                     mode_id,
@@ -742,7 +742,7 @@ fn populateType(
                 const child_id = entry.key_ptr.*;
                 const name = db.attrs.name.get(child_id) orelse continue;
                 var child_type = json.ObjectMap.init(allocator);
-                try populateType(db, arena, child_id, &child_type);
+                try populate_type(db, arena, child_id, &child_type);
                 try obj.put(name, .{ .Object = child_type });
             }
         }
@@ -755,7 +755,7 @@ fn populateType(
         try typ.put("children", .{ .Object = children });
 }
 
-fn populateDevice(
+fn populate_device(
     db: Database,
     arena: *ArenaAllocator,
     devices: *json.ObjectMap,
@@ -775,14 +775,14 @@ fn populateDevice(
         var interrupt_it = (db.children.interrupts.get(id) orelse
             break :populate_interrupts).iterator();
         while (interrupt_it.next()) |entry|
-            try populateInterrupt(db, arena, &interrupts, entry.key_ptr.*);
+            try populate_interrupt(db, arena, &interrupts, entry.key_ptr.*);
     }
 
     // TODO: link peripherals to device
     var peripherals = json.ObjectMap.init(allocator);
     var periph_it = db.instances.peripherals.iterator();
     while (periph_it.next()) |entry|
-        try populatePeripheral(
+        try populate_peripheral(
             db,
             arena,
             &peripherals,
@@ -791,7 +791,7 @@ fn populateDevice(
         );
 
     const arch = db.instances.devices.get(id).?.arch;
-    try device.put("arch", .{ .String = arch.toString() });
+    try device.put("arch", .{ .String = arch.to_string() });
     if (db.attrs.description.get(id)) |description|
         try device.put("description", .{ .String = description });
 
@@ -811,7 +811,7 @@ fn populateDevice(
     try devices.put(name, .{ .Object = device });
 }
 
-fn populateInterrupt(
+fn populate_interrupt(
     db: Database,
     arena: *ArenaAllocator,
     interrupts: *json.ObjectMap,
@@ -829,7 +829,7 @@ fn populateInterrupt(
     try interrupts.put(name, .{ .Object = interrupt });
 }
 
-fn populatePeripheral(
+fn populate_peripheral(
     db: Database,
     arena: *ArenaAllocator,
     peripherals: *json.ObjectMap,
@@ -852,7 +852,7 @@ fn populatePeripheral(
         try peripheral.put("count", .{ .Integer = @intCast(i64, count) });
 
     // TODO: handle collisions -- will need to inline the type
-    const type_ref = try idToRef(
+    const type_ref = try id_to_ref(
         arena.allocator(),
         db,
         type_id,
@@ -871,11 +871,11 @@ const DbInitFn = fn (allocator: std.mem.Allocator) anyerror!Database;
 const tests = @import("output_tests.zig");
 
 test "refToId" {
-    var db = try tests.peripheralWithModes(std.testing.allocator);
+    var db = try tests.peripheral_with_modes(std.testing.allocator);
     defer db.deinit();
 
-    const mode_id = try db.getEntityIdByName("type.mode", "TEST_MODE1");
-    const mode_ref = try idToRef(std.testing.allocator, db, mode_id);
+    const mode_id = try db.get_entity_id_by_name("type.mode", "TEST_MODE1");
+    const mode_ref = try id_to_ref(std.testing.allocator, db, mode_id);
     defer std.testing.allocator.free(mode_ref);
 
     try expectEqualStrings(
@@ -885,11 +885,11 @@ test "refToId" {
 }
 
 test "idToRef" {
-    var db = try tests.peripheralWithModes(std.testing.allocator);
+    var db = try tests.peripheral_with_modes(std.testing.allocator);
     defer db.deinit();
 
-    const expected_mode_id = try db.getEntityIdByName("type.mode", "TEST_MODE1");
-    const actual_mode_id = try refToId(
+    const expected_mode_id = try db.get_entity_id_by_name("type.mode", "TEST_MODE1");
+    const actual_mode_id = try ref_to_id(
         db,
         "types.peripherals.TEST_PERIPHERAL.children.modes.TEST_MODE1",
     );
@@ -900,12 +900,12 @@ test "idToRef" {
 // =============================================================================
 // loadIntoDb Tests
 // =============================================================================
-fn loadTest(comptime init: DbInitFn, input: []const u8) !void {
+fn load_test(comptime init: DbInitFn, input: []const u8) !void {
     var expected = try init(std.testing.allocator);
     defer expected.deinit();
 
     const copy = try std.testing.allocator.dupe(u8, input);
-    var actual = Database.initFromJson(std.testing.allocator, copy) catch |err| {
+    var actual = Database.init_from_json(std.testing.allocator, copy) catch |err| {
         std.testing.allocator.free(copy);
         return err;
     };
@@ -913,100 +913,100 @@ fn loadTest(comptime init: DbInitFn, input: []const u8) !void {
 
     // freeing explicitly here to invalidate the memory for input
     std.testing.allocator.free(copy);
-    try testing.expectEqualDatabases(expected, actual);
+    try testing.expect_equal_databases(expected, actual);
 }
 
 test "regzon.load.empty" {
-    try loadTest(emptyDb, json_data.empty);
+    try load_test(empty_db, json_data.empty);
 }
 
 test "regzon.load.peripheral type with register and field" {
-    try loadTest(
-        tests.peripheralTypeWithRegisterAndField,
+    try load_test(
+        tests.peripheral_type_with_register_and_field,
         json_data.peripheral_type_with_register_and_field,
     );
 }
 
 test "regzon.load.peripheral instantiation" {
-    try loadTest(
-        tests.peripheralInstantiation,
+    try load_test(
+        tests.peripheral_instantiation,
         json_data.peripheral_instantiation,
     );
 }
 
 test "regzon.load.peripherals with a shared type" {
-    try loadTest(
-        tests.peripheralsWithSharedType,
+    try load_test(
+        tests.peripherals_with_shared_type,
         json_data.peripherals_with_shared_type,
     );
 }
 
 test "regzon.load.peripheral with modes" {
-    try loadTest(
-        tests.peripheralWithModes,
+    try load_test(
+        tests.peripheral_with_modes,
         json_data.peripherals_with_modes,
     );
 }
 
 test "regzon.load.field with named enum" {
-    try loadTest(
-        tests.fieldWithNamedEnum,
+    try load_test(
+        tests.field_with_named_enum,
         json_data.field_with_named_enum,
     );
 }
 
 test "regzon.load.field with anonymous enum" {
-    try loadTest(
-        tests.fieldWithAnonymousEnum,
+    try load_test(
+        tests.field_with_anonymous_enum,
         json_data.field_with_anonymous_enum,
     );
 }
 
 test "regzon.load.namespaced register groups" {
-    try loadTest(
-        tests.namespacedRegisterGroups,
+    try load_test(
+        tests.namespaced_register_groups,
         json_data.namespaced_register_groups,
     );
 }
 
 test "regzon.load.peripheral with count" {
-    try loadTest(
-        tests.peripheralWithCount,
+    try load_test(
+        tests.peripheral_with_count,
         json_data.peripheral_with_count,
     );
 }
 
 test "regzon.load.register with count" {
-    try loadTest(
-        tests.registerWithCount,
+    try load_test(
+        tests.register_with_count,
         json_data.register_with_count,
     );
 }
 
 test "regzon.load.register with count and fields" {
-    try loadTest(
-        tests.registerWithCountAndFields,
+    try load_test(
+        tests.register_with_count_and_fields,
         json_data.register_with_count_and_fields,
     );
 }
 
 test "regzon.load.field with count, width of one, offset, and padding" {
-    try loadTest(
-        tests.fieldWithCountWidthOfOneOffsetAndPadding,
+    try load_test(
+        tests.field_with_count_width_of_one_offset_and_padding,
         json_data.field_with_count_width_of_one_offset_and_padding,
     );
 }
 
 test "regzon.load.field_with_count_multibit_width_offset_and_padding" {
-    try loadTest(
-        tests.fieldWithCountMultiBitWidthOffsetAndPadding,
+    try load_test(
+        tests.field_with_count_multi_bit_width_offset_and_padding,
         json_data.field_with_count_multibit_width_offset_and_padding,
     );
 }
 
 test "regzon.load.interruptsAvr" {
-    try loadTest(
-        tests.interruptsAvr,
+    try load_test(
+        tests.interrupts_avr,
         json_data.interrupts_avr,
     );
 }
@@ -1014,7 +1014,7 @@ test "regzon.load.interruptsAvr" {
 // =============================================================================
 // jsonStringify Tests
 // =============================================================================
-fn stringifyTest(comptime init: DbInitFn, expected: []const u8) !void {
+fn stringify_test(comptime init: DbInitFn, expected: []const u8) !void {
     var db = try init(std.testing.allocator);
     defer db.deinit();
 
@@ -1028,105 +1028,105 @@ fn stringifyTest(comptime init: DbInitFn, expected: []const u8) !void {
         },
     };
 
-    try db.jsonStringify(test_stringify_opts, buffer.writer());
+    try db.json_stringify(test_stringify_opts, buffer.writer());
     try expectEqualStrings(expected, buffer.items);
 }
 
-fn emptyDb(allocator: Allocator) !Database {
+fn empty_db(allocator: Allocator) !Database {
     return Database.init(allocator);
 }
 
 test "regzon.jsonStringify.empty" {
-    try stringifyTest(emptyDb, json_data.empty);
+    try stringify_test(empty_db, json_data.empty);
 }
 
 test "regzon.jsonStringify.peripheral type with register and field" {
-    try stringifyTest(
-        tests.peripheralTypeWithRegisterAndField,
+    try stringify_test(
+        tests.peripheral_type_with_register_and_field,
         json_data.peripheral_type_with_register_and_field,
     );
 }
 
 test "regzon.jsonStringify.peripheral instantiation" {
-    try stringifyTest(
-        tests.peripheralInstantiation,
+    try stringify_test(
+        tests.peripheral_instantiation,
         json_data.peripheral_instantiation,
     );
 }
 
 test "regzon.jsonStringify.peripherals with a shared type" {
-    try stringifyTest(
-        tests.peripheralsWithSharedType,
+    try stringify_test(
+        tests.peripherals_with_shared_type,
         json_data.peripherals_with_shared_type,
     );
 }
 
 test "regzon.jsonStringify.peripheral with modes" {
-    try stringifyTest(
-        tests.peripheralWithModes,
+    try stringify_test(
+        tests.peripheral_with_modes,
         json_data.peripherals_with_modes,
     );
 }
 
 test "regzon.jsonStringify.field with named enum" {
-    try stringifyTest(
-        tests.fieldWithNamedEnum,
+    try stringify_test(
+        tests.field_with_named_enum,
         json_data.field_with_named_enum,
     );
 }
 
 test "regzon.jsonStringify.field with anonymous enum" {
-    try stringifyTest(
-        tests.fieldWithAnonymousEnum,
+    try stringify_test(
+        tests.field_with_anonymous_enum,
         json_data.field_with_anonymous_enum,
     );
 }
 
 test "regzon.jsonStringify.namespaced register groups" {
-    try stringifyTest(
-        tests.namespacedRegisterGroups,
+    try stringify_test(
+        tests.namespaced_register_groups,
         json_data.namespaced_register_groups,
     );
 }
 
 test "regzon.jsonStringify.peripheral with count" {
-    try stringifyTest(
-        tests.peripheralWithCount,
+    try stringify_test(
+        tests.peripheral_with_count,
         json_data.peripheral_with_count,
     );
 }
 
 test "regzon.jsonStringify.register with count" {
-    try stringifyTest(
-        tests.registerWithCount,
+    try stringify_test(
+        tests.register_with_count,
         json_data.register_with_count,
     );
 }
 
 test "regzon.jsonStringify.register with count and fields" {
-    try stringifyTest(
-        tests.registerWithCountAndFields,
+    try stringify_test(
+        tests.register_with_count_and_fields,
         json_data.register_with_count_and_fields,
     );
 }
 
 test "regzon.jsonStringify.field with count, width of one, offset, and padding" {
-    try stringifyTest(
-        tests.fieldWithCountWidthOfOneOffsetAndPadding,
+    try stringify_test(
+        tests.field_with_count_width_of_one_offset_and_padding,
         json_data.field_with_count_width_of_one_offset_and_padding,
     );
 }
 
 test "regzon.jsonStringify.field_with_count_multibit_width_offset_and_padding" {
-    try stringifyTest(
-        tests.fieldWithCountMultiBitWidthOffsetAndPadding,
+    try stringify_test(
+        tests.field_with_count_multi_bit_width_offset_and_padding,
         json_data.field_with_count_multibit_width_offset_and_padding,
     );
 }
 
 test "regzon.jsonStringify.interruptsAvr" {
-    try stringifyTest(
-        tests.interruptsAvr,
+    try stringify_test(
+        tests.interrupts_avr,
         json_data.interrupts_avr,
     );
 }

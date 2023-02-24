@@ -118,14 +118,14 @@ pub const Arch = enum {
     // mips
     mips,
 
-    pub fn toString(arch: Arch) []const u8 {
+    pub fn to_string(arch: Arch) []const u8 {
         return inline for (@typeInfo(Arch).Enum.fields) |field| {
             if (@field(Arch, field.name) == arch)
                 break field.name;
         } else unreachable;
     }
 
-    pub fn isArm(arch: Arch) bool {
+    pub fn is_arm(arch: Arch) bool {
         return switch (arch) {
             .cortex_m0,
             .cortex_m0plus,
@@ -157,7 +157,7 @@ pub const Arch = enum {
         };
     }
 
-    pub fn isAvr(arch: Arch) bool {
+    pub fn is_avr(arch: Arch) bool {
         return switch (arch) {
             .avr8,
             .avr8l,
@@ -168,7 +168,7 @@ pub const Arch = enum {
         };
     }
 
-    pub fn isMips(arch: Arch) bool {
+    pub fn is_mips(arch: Arch) bool {
         return switch (arch) {
             .mips => true,
             else => false,
@@ -203,7 +203,7 @@ pub const Mode = struct {
 /// a collection of modes that applies to a register or bitfield
 pub const Modes = EntitySet;
 
-fn deinitMapAndValues(allocator: std.mem.Allocator, map: anytype) void {
+fn deinit_map_and_values(allocator: std.mem.Allocator, map: anytype) void {
     var it = map.iterator();
     while (it.next()) |entry|
         entry.value_ptr.deinit(allocator);
@@ -224,17 +224,17 @@ pub fn deinit(db: *Database) void {
     db.attrs.version.deinit(db.gpa);
     db.attrs.@"enum".deinit(db.gpa);
     db.attrs.parent.deinit(db.gpa);
-    deinitMapAndValues(db.gpa, &db.attrs.modes);
+    deinit_map_and_values(db.gpa, &db.attrs.modes);
 
     // children
-    deinitMapAndValues(db.gpa, &db.children.interrupts);
-    deinitMapAndValues(db.gpa, &db.children.peripherals);
-    deinitMapAndValues(db.gpa, &db.children.register_groups);
-    deinitMapAndValues(db.gpa, &db.children.registers);
-    deinitMapAndValues(db.gpa, &db.children.fields);
-    deinitMapAndValues(db.gpa, &db.children.enums);
-    deinitMapAndValues(db.gpa, &db.children.enum_fields);
-    deinitMapAndValues(db.gpa, &db.children.modes);
+    deinit_map_and_values(db.gpa, &db.children.interrupts);
+    deinit_map_and_values(db.gpa, &db.children.peripherals);
+    deinit_map_and_values(db.gpa, &db.children.register_groups);
+    deinit_map_and_values(db.gpa, &db.children.registers);
+    deinit_map_and_values(db.gpa, &db.children.fields);
+    deinit_map_and_values(db.gpa, &db.children.enums);
+    deinit_map_and_values(db.gpa, &db.children.enum_fields);
+    deinit_map_and_values(db.gpa, &db.children.modes);
 
     // types
     db.types.peripherals.deinit(db.gpa);
@@ -246,7 +246,7 @@ pub fn deinit(db: *Database) void {
     db.types.modes.deinit(db.gpa);
 
     // instances
-    deinitMapAndValues(db.gpa, &db.instances.devices);
+    deinit_map_and_values(db.gpa, &db.instances.devices);
     db.instances.interrupts.deinit(db.gpa);
     db.instances.peripherals.deinit(db.gpa);
 
@@ -265,47 +265,47 @@ pub fn init(allocator: std.mem.Allocator) !Database {
 }
 
 // TODO: figure out how to do completions: bash, zsh, fish, powershell, cmd
-pub fn initFromAtdf(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_atdf(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
-    try atdf.loadIntoDb(&db, doc);
+    try atdf.load_into_db(&db, doc);
     return db;
 }
 
-pub fn initFromSvd(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_svd(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
-    try svd.loadIntoDb(&db, doc);
+    try svd.load_into_db(&db, doc);
     return db;
 }
 
-pub fn initFromDslite(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_dslite(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
-    try dslite.loadIntoDb(&db, doc);
+    try dslite.load_into_db(&db, doc);
     return db;
 }
 
-pub fn initFromJson(allocator: Allocator, text: []const u8) !Database {
+pub fn init_from_json(allocator: Allocator, text: []const u8) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
-    try regzon.loadIntoDb(&db, text);
+    try regzon.load_into_db(&db, text);
     return db;
 }
 
-pub fn createEntity(db: *Database) EntityId {
+pub fn create_entity(db: *Database) EntityId {
     defer db.next_entity_id += 1;
     return db.next_entity_id;
 }
 
-pub fn destroyEntity(db: *Database, id: EntityId) void {
+pub fn destroy_entity(db: *Database, id: EntityId) void {
     // note that if something can be a child, you must remove it from the child
     // set of its parent
-    switch (db.getEntityType(id) orelse return) {
+    switch (db.get_entity_type(id) orelse return) {
         .register => {
             log.debug("{}: destroying register", .{id});
             if (db.attrs.parent.get(id)) |parent_id| {
@@ -328,11 +328,11 @@ pub fn destroyEntity(db: *Database, id: EntityId) void {
         else => {},
     }
 
-    db.removeChildren(id);
-    db.removeAttrs(id);
+    db.remove_children(id);
+    db.remove_attrs(id);
 }
 
-fn removeAttrs(db: *Database, id: EntityId) void {
+fn remove_attrs(db: *Database, id: EntityId) void {
     inline for (@typeInfo(TypeOfField(Database, "attrs")).Struct.fields) |field| {
         if (@hasDecl(field.type, "swapRemove"))
             _ = @field(db.attrs, field.name).swapRemove(id)
@@ -343,7 +343,7 @@ fn removeAttrs(db: *Database, id: EntityId) void {
     }
 }
 
-fn removeChildren(db: *Database, id: EntityId) void {
+fn remove_children(db: *Database, id: EntityId) void {
     inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
         if (@field(db.children, field.name).fetchSwapRemove(id)) |children_entry| {
             var children_set = children_entry.value;
@@ -353,13 +353,13 @@ fn removeChildren(db: *Database, id: EntityId) void {
             while (it.next()) |child_entry| {
                 const child_id = child_entry.key_ptr.*;
                 // this will get rid of the parent attr
-                db.destroyEntity(child_id);
+                db.destroy_entity(child_id);
             }
         }
     }
 }
 
-pub fn createDevice(
+pub fn create_device(
     db: *Database,
     opts: struct {
         // required for now
@@ -368,22 +368,22 @@ pub fn createDevice(
         arch: Arch = .unknown,
     },
 ) !EntityId {
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating device", .{id});
     try db.instances.devices.put(db.gpa, id, .{
         .arch = opts.arch,
     });
 
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
     return id;
 }
 
-pub fn createPeripheralInstance(
+pub fn create_peripheral_instance(
     db: *Database,
     device_id: EntityId,
     type_id: EntityId,
@@ -397,29 +397,29 @@ pub fn createPeripheralInstance(
         count: ?u64 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("instance.device", device_id));
-    assert(db.entityIs("type.peripheral", type_id) or
-        db.entityIs("type.register_group", type_id));
+    assert(db.entity_is("instance.device", device_id));
+    assert(db.entity_is("type.peripheral", type_id) or
+        db.entity_is("type.register_group", type_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating peripheral instance", .{id});
     try db.instances.peripherals.put(db.gpa, id, type_id);
-    try db.addName(id, opts.name);
-    try db.addOffset(id, opts.offset);
+    try db.add_name(id, opts.name);
+    try db.add_offset(id, opts.offset);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
     if (opts.count) |c|
-        try db.addCount(id, c);
+        try db.add_count(id, c);
 
-    try db.addChild("instance.peripheral", device_id, id);
+    try db.add_child("instance.peripheral", device_id, id);
     return id;
 }
 
-pub fn createPeripheral(
+pub fn create_peripheral(
     db: *Database,
     opts: struct {
         name: []const u8,
@@ -427,24 +427,24 @@ pub fn createPeripheral(
         size: ?u64 = null,
     },
 ) !EntityId {
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating peripheral", .{id});
 
     try db.types.peripherals.put(db.gpa, id, {});
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
     if (opts.size) |s|
-        try db.addSize(id, s);
+        try db.add_size(id, s);
 
     return id;
 }
 
-pub fn createRegisterGroup(
+pub fn create_register_group(
     db: *Database,
     parent_id: EntityId,
     opts: struct {
@@ -452,23 +452,23 @@ pub fn createRegisterGroup(
         description: ?[]const u8 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("type.peripheral", parent_id));
+    assert(db.entity_is("type.peripheral", parent_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating register group", .{id});
     try db.types.register_groups.put(db.gpa, id, {});
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
-    try db.addChild("type.register_group", parent_id, id);
+    try db.add_child("type.register_group", parent_id, id);
     return id;
 }
 
-pub fn createRegister(
+pub fn create_register(
     db: *Database,
     parent_id: EntityId,
     opts: struct {
@@ -486,40 +486,40 @@ pub fn createRegister(
         reset_value: ?u64 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("type.peripheral", parent_id) or
-        db.entityIs("type.register_group", parent_id));
+    assert(db.entity_is("type.peripheral", parent_id) or
+        db.entity_is("type.register_group", parent_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating register", .{id});
 
     try db.types.registers.put(db.gpa, id, {});
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
-    try db.addOffset(id, opts.offset);
-    try db.addSize(id, opts.size);
+    try db.add_offset(id, opts.offset);
+    try db.add_size(id, opts.size);
 
     if (opts.count) |c|
-        try db.addCount(id, c);
+        try db.add_count(id, c);
 
     if (opts.access) |a|
-        try db.addAccess(id, a);
+        try db.add_access(id, a);
 
     if (opts.reset_mask) |rm|
-        try db.addResetMask(id, rm);
+        try db.add_reset_mask(id, rm);
 
     if (opts.reset_value) |rv|
-        try db.addResetValue(id, rv);
+        try db.add_reset_value(id, rv);
 
-    try db.addChild("type.register", parent_id, id);
+    try db.add_child("type.register", parent_id, id);
 
     return id;
 }
 
-pub fn createField(
+pub fn create_field(
     db: *Database,
     parent_id: EntityId,
     opts: struct {
@@ -534,28 +534,28 @@ pub fn createField(
         count: ?u64 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("type.register", parent_id));
+    assert(db.entity_is("type.register", parent_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating field", .{id});
     try db.types.fields.put(db.gpa, id, {});
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
     if (opts.offset) |o|
-        try db.addOffset(id, o);
+        try db.add_offset(id, o);
 
     if (opts.size) |s|
-        try db.addSize(id, s);
+        try db.add_size(id, s);
 
     if (opts.count) |c|
-        try db.addCount(id, c);
+        try db.add_count(id, c);
 
     if (opts.enum_id) |enum_id| {
-        assert(db.entityIs("type.enum", enum_id));
+        assert(db.entity_is("type.enum", enum_id));
         if (db.attrs.size.get(enum_id)) |enum_size|
             if (opts.size) |size|
                 assert(size == enum_size);
@@ -563,12 +563,12 @@ pub fn createField(
         try db.attrs.@"enum".put(db.gpa, id, enum_id);
     }
 
-    try db.addChild("type.field", parent_id, id);
+    try db.add_child("type.field", parent_id, id);
 
     return id;
 }
 
-pub fn createEnum(
+pub fn create_enum(
     db: *Database,
     parent_id: EntityId,
     opts: struct {
@@ -577,28 +577,28 @@ pub fn createEnum(
         size: ?u64 = null,
     },
 ) !EntityId {
-    assert(db.entityIs("type.peripheral", parent_id));
+    assert(db.entity_is("type.peripheral", parent_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating enum", .{id});
     try db.types.enums.put(db.gpa, id, {});
 
     if (opts.name) |n|
-        try db.addName(id, n);
+        try db.add_name(id, n);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
     if (opts.size) |s|
-        try db.addSize(id, s);
+        try db.add_size(id, s);
 
-    try db.addChild("type.enum", parent_id, id);
+    try db.add_child("type.enum", parent_id, id);
     return id;
 }
 
-pub fn createEnumField(
+pub fn create_enum_field(
     db: *Database,
     parent_id: EntityId,
     opts: struct {
@@ -607,68 +607,68 @@ pub fn createEnumField(
         value: u32,
     },
 ) !EntityId {
-    assert(db.entityIs("type.enum", parent_id));
+    assert(db.entity_is("type.enum", parent_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating enum field", .{id});
     try db.types.enum_fields.put(db.gpa, id, opts.value);
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
-    try db.addChild("type.enum_field", parent_id, id);
+    try db.add_child("type.enum_field", parent_id, id);
     return id;
 }
 
-pub fn createMode(db: *Database, parent_id: EntityId, opts: struct {
+pub fn create_mode(db: *Database, parent_id: EntityId, opts: struct {
     name: []const u8,
     description: ?[]const u8 = null,
     value: []const u8,
     qualifier: []const u8,
 }) !EntityId {
     // TODO: what types of parents can it have?
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating mode", .{id});
     try db.types.modes.put(db.gpa, id, .{
         .value = try db.arena.allocator().dupe(u8, opts.value),
         .qualifier = try db.arena.allocator().dupe(u8, opts.qualifier),
     });
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
-    try db.addChild("type.mode", parent_id, id);
+    try db.add_child("type.mode", parent_id, id);
     return id;
 }
 
-pub fn createInterrupt(db: *Database, device_id: EntityId, opts: struct {
+pub fn create_interrupt(db: *Database, device_id: EntityId, opts: struct {
     name: []const u8,
     index: i32,
     description: ?[]const u8 = null,
 }) !EntityId {
-    assert(db.entityIs("instance.device", device_id));
+    assert(db.entity_is("instance.device", device_id));
 
-    const id = db.createEntity();
-    errdefer db.destroyEntity(id);
+    const id = db.create_entity();
+    errdefer db.destroy_entity(id);
 
     log.debug("{}: creating interrupt", .{id});
     try db.instances.interrupts.put(db.gpa, id, opts.index);
-    try db.addName(id, opts.name);
+    try db.add_name(id, opts.name);
 
     if (opts.description) |d|
-        try db.addDescription(id, d);
+        try db.add_description(id, d);
 
-    try db.addChild("instance.interrupt", device_id, id);
+    try db.add_child("instance.interrupt", device_id, id);
     return id;
 }
 
-pub fn addName(db: *Database, id: EntityId, name: []const u8) !void {
+pub fn add_name(db: *Database, id: EntityId, name: []const u8) !void {
     if (name.len == 0)
         return;
 
@@ -680,7 +680,7 @@ pub fn addName(db: *Database, id: EntityId, name: []const u8) !void {
     );
 }
 
-pub fn addDescription(
+pub fn add_description(
     db: *Database,
     id: EntityId,
     description: []const u8,
@@ -696,7 +696,7 @@ pub fn addDescription(
     );
 }
 
-pub fn addVersion(db: *Database, id: EntityId, version: []const u8) !void {
+pub fn add_version(db: *Database, id: EntityId, version: []const u8) !void {
     if (version.len == 0)
         return;
 
@@ -708,37 +708,37 @@ pub fn addVersion(db: *Database, id: EntityId, version: []const u8) !void {
     );
 }
 
-pub fn addSize(db: *Database, id: EntityId, size: u64) !void {
+pub fn add_size(db: *Database, id: EntityId, size: u64) !void {
     log.debug("{}: adding size: {}", .{ id, size });
     try db.attrs.size.putNoClobber(db.gpa, id, size);
 }
 
-pub fn addOffset(db: *Database, id: EntityId, offset: u64) !void {
+pub fn add_offset(db: *Database, id: EntityId, offset: u64) !void {
     log.debug("{}: adding offset: 0x{x}", .{ id, offset });
     try db.attrs.offset.putNoClobber(db.gpa, id, offset);
 }
 
-pub fn addResetValue(db: *Database, id: EntityId, reset_value: u64) !void {
+pub fn add_reset_value(db: *Database, id: EntityId, reset_value: u64) !void {
     log.debug("{}: adding reset value: {}", .{ id, reset_value });
     try db.attrs.reset_value.putNoClobber(db.gpa, id, reset_value);
 }
 
-pub fn addResetMask(db: *Database, id: EntityId, reset_mask: u64) !void {
+pub fn add_reset_mask(db: *Database, id: EntityId, reset_mask: u64) !void {
     log.debug("{}: adding register mask: 0x{x}", .{ id, reset_mask });
     try db.attrs.reset_mask.putNoClobber(db.gpa, id, reset_mask);
 }
 
-pub fn addAccess(db: *Database, id: EntityId, access: Access) !void {
+pub fn add_access(db: *Database, id: EntityId, access: Access) !void {
     log.debug("{}: adding access: {}", .{ id, access });
     try db.attrs.access.putNoClobber(db.gpa, id, access);
 }
 
-pub fn addCount(db: *Database, id: EntityId, count: u64) !void {
+pub fn add_count(db: *Database, id: EntityId, count: u64) !void {
     log.debug("{}: adding count: {}", .{ id, count });
     try db.attrs.count.putNoClobber(db.gpa, id, count);
 }
 
-pub fn addChild(
+pub fn add_child(
     db: *Database,
     comptime entity_location: []const u8,
     parent_id: EntityId,
@@ -750,7 +750,7 @@ pub fn addChild(
         parent_id,
     });
 
-    assert(db.entityIs(entity_location, child_id));
+    assert(db.entity_is(entity_location, child_id));
     comptime var it = std.mem.tokenize(u8, entity_location, ".");
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
@@ -765,7 +765,7 @@ pub fn addChild(
     try db.attrs.parent.putNoClobber(db.gpa, child_id, parent_id);
 }
 
-pub fn addDeviceProperty(
+pub fn add_device_property(
     db: *Database,
     id: EntityId,
     key: []const u8,
@@ -783,7 +783,7 @@ pub fn addDeviceProperty(
 }
 
 // TODO: assert that entity is only found in one table
-pub fn entityIs(db: Database, comptime entity_location: []const u8, id: EntityId) bool {
+pub fn entity_is(db: Database, comptime entity_location: []const u8, id: EntityId) bool {
     comptime var it = std.mem.tokenize(u8, entity_location, ".");
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
@@ -794,7 +794,7 @@ pub fn entityIs(db: Database, comptime entity_location: []const u8, id: EntityId
     return @field(@field(db, group), table).contains(id);
 }
 
-pub fn getEntityIdByName(
+pub fn get_entity_id_by_name(
     db: Database,
     comptime entity_location: []const u8,
     name: []const u8,
@@ -810,7 +810,7 @@ pub fn getEntityIdByName(
         const entry_id = entry.key_ptr.*;
         const entry_name = db.attrs.name.get(entry_id) orelse continue;
         if (std.mem.eql(u8, name, entry_name)) {
-            assert(db.entityIs(entity_location, entry_id));
+            assert(db.entity_is(entity_location, entry_id));
             return entry_id;
         }
     } else error.NameNotFound;
@@ -828,19 +828,19 @@ pub const EntityType = enum {
     interrupt,
     peripheral_instance,
 
-    pub fn isInstance(entity_type: EntityType) bool {
+    pub fn is_instance(entity_type: EntityType) bool {
         return switch (entity_type) {
             .device, .interrupt, .peripheral_instance => true,
             else => false,
         };
     }
 
-    pub fn isType(entity_type: EntityType) bool {
-        return !entity_type.isType();
+    pub fn is_type(entity_type: EntityType) bool {
+        return !entity_type.is_type();
     }
 };
 
-pub fn getEntityType(
+pub fn get_entity_type(
     db: Database,
     id: EntityId,
 ) ?EntityType {
@@ -861,7 +861,7 @@ pub fn getEntityType(
 }
 
 // assert that the database is in valid state
-pub fn assertValid(db: Database) void {
+pub fn assert_valid(db: Database) void {
     // entity id's should only ever be the primary key in one of the type or
     // instance maps.
     var id: u32 = 0;
@@ -882,12 +882,12 @@ pub fn assertValid(db: Database) void {
 
 /// stringify entire database to JSON, you choose what formatting options you
 /// want
-pub fn jsonStringify(
+pub fn json_stringify(
     db: Database,
     opts: std.json.StringifyOptions,
     writer: anytype,
 ) !void {
-    var value_tree = try regzon.toJson(db);
+    var value_tree = try regzon.to_json(db);
     defer value_tree.deinit();
 
     try value_tree.root.jsonStringify(opts, writer);
@@ -905,8 +905,8 @@ pub fn format(
     _ = writer;
 }
 
-pub fn toZig(db: Database, out_writer: anytype) !void {
-    try gen.toZig(db, out_writer);
+pub fn to_zig(db: Database, out_writer: anytype) !void {
+    try gen.to_zig(db, out_writer);
 }
 
 test "all" {

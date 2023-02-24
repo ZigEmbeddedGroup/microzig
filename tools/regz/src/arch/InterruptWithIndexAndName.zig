@@ -5,7 +5,7 @@ index: i32,
 const InterruptWithIndexAndName = @This();
 const EntityId = @import("../Database.zig").EntityId;
 
-pub fn lessThan(
+pub fn less_than(
     _: void,
     lhs: InterruptWithIndexAndName,
     rhs: InterruptWithIndexAndName,

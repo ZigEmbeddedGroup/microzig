@@ -1,9 +1,5 @@
 const std = @import("std");
 
-pub fn mmio(addr: usize, comptime size: u8, comptime PackedT: type) *volatile Mmio(size, PackedT) {
-    return @intToPtr(*volatile Mmio(size, PackedT), addr);
-}
-
 pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
     if ((size % 8) != 0)
         @compileError("size must be divisible by 8!");
@@ -51,41 +47,3 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
         }
     };
 }
-
-pub fn MmioInt(comptime size: u8, comptime T: type) type {
-    return extern struct {
-        const Self = @This();
-
-        raw: std.meta.Int(.unsigned, size),
-
-        pub inline fn read(addr: *volatile Self) T {
-            return @truncate(T, addr.raw);
-        }
-
-        pub inline fn modify(addr: *volatile Self, val: T) void {
-            const Int = std.meta.Int(.unsigned, size);
-            const mask = ~@as(Int, (1 << @bitSizeOf(T)) - 1);
-
-            var tmp = addr.raw;
-            addr.raw = (tmp & mask) | val;
-        }
-    };
-}
-
-pub fn mmioInt(addr: usize, comptime size: usize, comptime T: type) *volatile MmioInt(size, T) {
-    return @intToPtr(*volatile MmioInt(size, T), addr);
-}
-
-pub const InterruptVector = extern union {
-    C: fn () callconv(.C) void,
-    Naked: fn () callconv(.Naked) void,
-    // Interrupt is not supported on arm
-};
-
-const unhandled = InterruptVector{
-    .C = struct {
-        fn tmp() callconv(.C) noreturn {
-            @panic("unhandled interrupt");
-        }
-    }.tmp,
-};
