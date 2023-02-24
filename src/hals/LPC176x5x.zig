@@ -1,9 +1,13 @@
 const std = @import("std");
 const micro = @import("microzig");
-const chip = @import("registers.zig");
-const regs = chip.registers;
-
-pub usingnamespace chip;
+const peripherals = micro.chip.peripherals;
+const GPIO = peripherals.GPIO;
+const PINCONNECT = peripherals.PINCONNECT;
+const UART0 = peripherals.UART0;
+const UART1 = peripherals.UART1;
+const UART2 = peripherals.UART2;
+const UART3 = peripherals.UART3;
+const SYSCON = peripherals.SYSCON;
 
 pub const clock = struct {
     pub const Domain = enum {
@@ -37,14 +41,14 @@ pub fn parse_pin(comptime spec: []const u8) type {
     const _regs = struct {
         const name_suffix = std.fmt.comptimePrint("{d}", .{_port});
 
-        const pinsel_reg = @field(regs.PINCONNECT, sel_reg_name);
+        const pinsel_reg = @field(PINCONNECT, sel_reg_name);
         const pinsel_field = std.fmt.comptimePrint("P{d}_{d}", .{ _port, _pin });
 
-        const dir = @field(regs.GPIO, "DIR" ++ name_suffix);
-        const pin = @field(regs.GPIO, "PIN" ++ name_suffix);
-        const set = @field(regs.GPIO, "SET" ++ name_suffix);
-        const clr = @field(regs.GPIO, "CLR" ++ name_suffix);
-        const mask = @field(regs.GPIO, "MASK" ++ name_suffix);
+        const dir = @field(GPIO, "DIR" ++ name_suffix);
+        const pin = @field(GPIO, "PIN" ++ name_suffix);
+        const set = @field(GPIO, "SET" ++ name_suffix);
+        const clr = @field(GPIO, "CLR" ++ name_suffix);
+        const mask = @field(GPIO, "MASK" ++ name_suffix);
     };
 
     return struct {
@@ -121,10 +125,10 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 
     return struct {
         const UARTn = switch (index) {
-            0 => regs.UART0,
-            1 => regs.UART1,
-            2 => regs.UART2,
-            3 => regs.UART3,
+            0 => UART0,
+            1 => UART1,
+            2 => UART2,
+            3 => UART3,
             else => @compileError("LPC1768 has 4 UARTs available."),
         };
         const Self = @This();
@@ -133,20 +137,20 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             micro.debug.write("0");
             switch (index) {
                 0 => {
-                    regs.SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = @enumToInt(uart.CClkDiv.four) });
+                    SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
+                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART0 = @enumToInt(uart.CClkDiv.four) });
                 },
                 1 => {
-                    regs.SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
-                    regs.SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = @enumToInt(uart.CClkDiv.four) });
+                    SYSCON.PCONP.modify(.{ .PCUART1 = 1 });
+                    SYSCON.PCLKSEL0.modify(.{ .PCLK_UART1 = @enumToInt(uart.CClkDiv.four) });
                 },
                 2 => {
-                    regs.SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
-                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
+                    SYSCON.PCONP.modify(.{ .PCUART2 = 1 });
+                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART2 = @enumToInt(uart.CClkDiv.four) });
                 },
                 3 => {
-                    regs.SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
-                    regs.SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
+                    SYSCON.PCONP.modify(.{ .PCUART3 = 1 });
+                    SYSCON.PCLKSEL1.modify(.{ .PCLK_UART3 = @enumToInt(uart.CClkDiv.four) });
                 },
                 else => unreachable,
             }
