@@ -1,8 +1,7 @@
 const std = @import("std");
 const micro = @import("microzig");
-
-pub usingnamespace @import("registers.zig");
-const regz = @import("registers.zig").registers;
+const peripherals = micro.chip.peripherals;
+const USART0 = peripherals.USART0;
 
 pub const cpu = micro.cpu;
 const Port = enum(u8) {
@@ -141,11 +140,11 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 
             const ubrr_val = try computeDivider(config.baud_rate);
 
-            regz.USART0.UCSR0A.modify(.{
+            USART0.UCSR0A.modify(.{
                 .MPCM0 = 0,
                 .U2X0 = 0,
             });
-            regz.USART0.UCSR0B.write(.{
+            USART0.UCSR0B.write(.{
                 .TXB80 = 0, // we don't care about these btw
                 .RXB80 = 0, // we don't care about these btw
                 .UCSZ02 = @truncate(u1, (ucsz & 0x04) >> 2),
@@ -155,7 +154,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
                 .TXCIE0 = 0, // no interrupts
                 .RXCIE0 = 0, // no interrupts
             });
-            regz.USART0.UCSR0C.write(.{
+            USART0.UCSR0C.write(.{
                 .UCPOL0 = 0, // async mode
                 .UCSZ0 = @truncate(u2, (ucsz & 0x03) >> 0),
                 .USBS0 = usbs,
@@ -163,29 +162,29 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
                 .UMSEL0 = umsel,
             });
 
-            regz.USART0.UBRR0.modify(ubrr_val);
+            USART0.UBRR0.modify(ubrr_val);
 
             return Self{};
         }
 
         pub fn canWrite(self: Self) bool {
             _ = self;
-            return (regz.USART0.UCSR0A.read().UDRE0 == 1);
+            return (USART0.UCSR0A.read().UDRE0 == 1);
         }
 
         pub fn tx(self: Self, ch: u8) void {
             while (!self.canWrite()) {} // Wait for Previous transmission
-            regz.USART0.UDR0.* = ch; // Load the data to be transmitted
+            USART0.UDR0.* = ch; // Load the data to be transmitted
         }
 
         pub fn canRead(self: Self) bool {
             _ = self;
-            return (regz.USART0.UCSR0A.read().RXC0 == 1);
+            return (USART0.UCSR0A.read().RXC0 == 1);
         }
 
         pub fn rx(self: Self) u8 {
             while (!self.canRead()) {} // Wait till the data is received
-            return regz.USART0.UDR0.*; // Read received data
+            return USART0.UDR0.*; // Read received data
         }
     };
 }
