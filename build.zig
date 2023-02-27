@@ -5,6 +5,7 @@
 const std = @import("std");
 const LibExeObjStep = std.build.LibExeObjStep;
 const Module = std.build.Module;
+const FileSource = std.build.FileSource;
 
 // alias for packages
 pub const LinkerScriptStep = @import("src/modules/LinkerScriptStep.zig");
@@ -24,10 +25,6 @@ pub const Backing = union(enum) {
             .chip => |chip| chip.cpu.target,
         };
     }
-};
-
-pub const BuildOptions = struct {
-    optimize: std.builtin.OptimizeMode = .Debug,
 };
 
 pub const EmbeddedExecutable = struct {
@@ -70,15 +67,20 @@ fn root_dir() []const u8 {
     return std.fs.path.dirname(@src().file) orelse unreachable;
 }
 
+pub const EmbeddedExecutableOptions = struct {
+    name: []const u8,
+    source_file: std.build.FileSource,
+    backing: Backing,
+    optimize: std.builtin.OptimizeMode = .Debug,
+    linkerscript_source_file: ?FileSource = null,
+};
+
 pub fn addEmbeddedExecutable(
     builder: *std.build.Builder,
-    name: []const u8,
-    source: []const u8,
-    backing: Backing,
-    options: BuildOptions,
+    opts: EmbeddedExecutableOptions,
 ) *EmbeddedExecutable {
-    const has_board = (backing == .board);
-    const chip = switch (backing) {
+    const has_board = (opts.backing == .board);
+    const chip = switch (opts.backing) {
         .chip => |c| c,
         .board => |b| b.chip,
     };
@@ -94,10 +96,10 @@ pub fn addEmbeddedExecutable(
             hasher.update(chip.cpu.name);
             hasher.update(chip.cpu.source.getPath(builder));
 
-            if (backing == .board) {
-                hasher.update(backing.board.name);
+            if (opts.backing == .board) {
+                hasher.update(opts.backing.board.name);
                 // TODO: see above
-                hasher.update(backing.board.source.getPath(builder));
+                hasher.update(opts.backing.board.source.getPath(builder));
             }
 
             var mac: [16]u8 = undefined;
@@ -135,7 +137,7 @@ pub fn addEmbeddedExecutable(
         var writer = config_file.writer();
         writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
         if (has_board)
-            writer.print("pub const board_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(backing.board.name)}) catch unreachable;
+            writer.print("pub const board_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(opts.backing.board.name)}) catch unreachable;
 
         writer.print("pub const chip_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.name)}) catch unreachable;
         writer.print("pub const cpu_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(chip.cpu.name)}) catch unreachable;
@@ -174,7 +176,7 @@ pub fn addEmbeddedExecutable(
         },
     })) catch unreachable;
 
-    switch (backing) {
+    switch (opts.backing) {
         .board => |board| {
             microzig_module.dependencies.put("board", builder.createModule(.{
                 .source_file = board.source,
@@ -187,7 +189,7 @@ pub fn addEmbeddedExecutable(
     }
 
     microzig_module.dependencies.put("app", builder.createModule(.{
-        .source_file = .{ .path = source },
+        .source_file = opts.source_file,
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig_module },
         },
@@ -196,10 +198,10 @@ pub fn addEmbeddedExecutable(
     const exe = builder.allocator.create(EmbeddedExecutable) catch unreachable;
     exe.* = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
-            .name = name,
+            .name = opts.name,
             .root_source_file = .{ .path = comptime std.fmt.comptimePrint("{s}/src/start.zig", .{root_dir()}) },
             .target = chip.cpu.target,
-            .optimize = options.optimize,
+            .optimize = opts.optimize,
         }),
     };
 
@@ -209,8 +211,12 @@ pub fn addEmbeddedExecutable(
     // for the HAL it's true (it doesn't know the concept of threading)
     exe.inner.single_threaded = true;
 
-    const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
-    exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
+    if (opts.linkerscript_source_file) |linkerscript_source_file| {
+        exe.inner.setLinkerScriptPath(linkerscript_source_file);
+    } else {
+        const linkerscript = LinkerScriptStep.create(builder, chip) catch unreachable;
+        exe.inner.setLinkerScriptPath(.{ .generated = &linkerscript.generated_file });
+    }
 
     // TODO:
     // - Generate the linker scripts from the "chip" or "board" module instead of using hardcoded ones.
