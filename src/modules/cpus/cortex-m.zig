@@ -1,6 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const app = microzig.app;
+const root = @import("root");
 
 pub fn sei() void {
     asm volatile ("cpsie i");
@@ -82,8 +82,8 @@ fn is_valid_field(field_name: []const u8) bool {
         !std.mem.eql(u8, field_name, "reset");
 }
 
-const VectorTable = if (@hasDecl(microzig.app, "VectorTable"))
-    microzig.app.VectorTable
+const VectorTable = if (@hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "VectorTable"))
+    root.microzig_options.VectorTable
 else if (@hasDecl(microzig.hal, "VectorTable"))
     microzig.hal.VectorTable
 else
@@ -95,12 +95,13 @@ pub var vector_table: VectorTable = blk: {
         .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
-    if (@hasDecl(app, "interrupts")) {
-        if (@typeInfo(app.interrupts) != .Struct)
+    if (@hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "interrupts")) {
+        const interrupts = root.microzig_options.interrupts;
+        if (@typeInfo(interrupts) != .Struct)
             @compileLog("root.interrupts must be a struct");
 
-        inline for (@typeInfo(app.interrupts).Struct.decls) |decl| {
-            const function = @field(app.interrupts, decl.name);
+        inline for (@typeInfo(interrupts).Struct.decls) |decl| {
+            const function = @field(interrupts, decl.name);
 
             if (!@hasField(VectorTable, decl.name)) {
                 var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
@@ -122,16 +123,9 @@ pub var vector_table: VectorTable = blk: {
     break :blk tmp;
 };
 
-const InterruptVector = if (@hasDecl(microzig.app, "InterruptVector"))
-    microzig.app.InterruptVector
-else if (@hasDecl(microzig.hal, "InterruptVector"))
-    microzig.hal.InterruptVector
-else
-    microzig.chip.InterruptVector;
-
 fn create_interrupt_vector(
     comptime function: anytype,
-) InterruptVector {
+) microzig.interrupt.Handler {
     const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
     return switch (calling_convention) {
         .C => .{ .C = function },

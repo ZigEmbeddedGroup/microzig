@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const root = @import("root");
 
 pub inline fn sei() void {
     asm volatile ("sei");
@@ -29,12 +30,13 @@ pub const vector_table = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
     var asm_str: []const u8 = "jmp microzig_start\n";
 
-    const has_interrupts = @hasDecl(microzig.app, "interrupts");
+    const has_interrupts = @hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "interrupts");
     if (has_interrupts) {
-        if (@hasDecl(microzig.app.interrupts, "RESET"))
+        const interrupts = root.microzig_options.interrupts;
+        if (@hasDecl(interrupts, "RESET"))
             @compileError("Not allowed to overload the reset vector");
 
-        inline for (std.meta.declarations(microzig.app.interrupts)) |decl| {
+        inline for (std.meta.declarations(interrupts)) |decl| {
             if (!@hasField(microzig.chip.VectorTable, decl.name)) {
                 var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. ISRs the 'interrupts' namespace must be one of:\n";
                 inline for (std.meta.fields(microzig.chip.VectorTable)) |field| {
@@ -50,8 +52,9 @@ pub const vector_table = blk: {
 
     inline for (std.meta.fields(microzig.chip.VectorTable)[1..]) |field| {
         const new_insn = if (has_interrupts) overload: {
-            if (@hasDecl(microzig.app.interrupts, field.name)) {
-                const handler = @field(microzig.app.interrupts, field.name);
+            const interrupts = root.microzig_options.interrupts;
+            if (@hasDecl(interrupts, field.name)) {
+                const handler = @field(interrupts, field.name);
 
                 const isr = make_isr_handler(field.name, handler);
 
