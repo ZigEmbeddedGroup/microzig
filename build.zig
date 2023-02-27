@@ -188,13 +188,6 @@ pub fn addEmbeddedExecutable(
         else => {},
     }
 
-    microzig_module.dependencies.put("app", builder.createModule(.{
-        .source_file = opts.source_file,
-        .dependencies = &.{
-            .{ .name = "microzig", .module = microzig_module },
-        },
-    })) catch unreachable;
-
     const exe = builder.allocator.create(EmbeddedExecutable) catch unreachable;
     exe.* = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
@@ -224,6 +217,12 @@ pub fn addEmbeddedExecutable(
     //    - src/tools/linkerscript-gen.zig is the source file for this
     exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
     exe.addModule("microzig", microzig_module);
+    exe.addModule("app", builder.createModule(.{
+        .source_file = opts.source_file,
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig_module },
+        },
+    }));
 
     return exe;
 }
