@@ -1,0 +1,20 @@
+= MicroZig Design
+:imagesdir: ../design
+:toc: macro
+
+toc::[]
+
+== CPUs
+
+== Chips
+
+=== Linkerscript Generation
+
+=== HALs
+
+=== JSON Register Schema
+
+=== Interrupts
+
+== Boards
+
