@@ -16,19 +16,58 @@ The `microzig` module has different namespaces, some are static, but the nodes y
 
 == Configurable Modules under `microzig`
 
+The configurable modules, with the exception of `config`, are able to import `microzig`. This exists so that one module may access another through `microzig`. This gives us flexibility in 
+
 === `cpu`
+
+This module models your specific CPU, and is important for initializing memory. The plan
+
+Further research is needed for SOCs with multiple, heterogenous CPUs. Likely it means patching together multiple `EmbeddedExecutable`s.
 
 === `chip`
 
+This module is intended for generated code from https://github.com/ZigEmbeddedGroup/regz[Regz]. You can handwrite this code if you like, but needs to be structured as follows:
+
+[source,zig]
+----
+pub const types = struct {
+    // type definitions for peripherals here
+};
+
+pub const devices = struct {
+    pub const my_device = struct {
+        // peripherals and interrupt table here ...
+    };
+};
+----
+
+This code generation has a `devices` namespace where your specific hardware will reside. When defining a `Chip`, which is ultimately used in the creation of an `EmbeddedExecutable`, the name must exactly match the name under the `devices` namespace. It's okay if the name has whitespace, for that we can use the `@""` notation.
+
+Let's say we had a device with the name `STM32F103`. We'd define our chip as:
+
+[source,zig]
+----
+pub const stm32f103 = microzig.Chip{
+    .name = "STM32F103",
+};
+----
+
+When making a package that defines chips for others, see xref:tricks.adoc#packaging-and-paths[Packaging and Paths].
+
 === `hal`
 
+This module
+
 === `board`
+
+This module is optional. It
 
 === `config`
 
 == Static Namespaces under `microzig`
 
-TODO:
-- linkerscript generation
-- json register schema
-- interrupts
+== Linkerscript Generation
+
+== JSON register schema
+
+== Interrupts:w
