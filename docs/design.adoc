@@ -76,16 +76,28 @@ When making a package that defines chips for others, see xref:hardware_support_p
 
 This module contains hand-written code for interracting with the chip.
 
+TODO
+
 === `board`
 
-This module is optional. It
+TODO
 
 === `config`
 
+TODO
+
 == Static Namespaces under `microzig`
+
+TODO
 
 == Linkerscript Generation
 
+TODO
+
 == JSON register schema
 
-== Interrupts:w
+TODO
+
+== Interrupts
+
+TODO

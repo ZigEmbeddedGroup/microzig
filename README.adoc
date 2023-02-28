@@ -31,36 +31,33 @@ For MicroZig internals please see the xref:docs/design.adoc[Design Document].
 
 == Does MicroZig support X hardware?
 
-MicroZig is designed to cover as wide swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific hardware, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
+MicroZig is designed to cover as wide swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
 
-TODO:
-Start with an empty Zig project by running `zig init-exe`, and add microzig as a git submodule (or your choice of package manager). Then in your `build.zig`:
+Start with an empty Zig project by running `zig init-exe`, and add the hardware support package as a submodule. We'll use `microchip-atmega` in our example:
 
 [source,zig]
 ----
 const std = @import("std");
-const microzig = @import("path/to/microzig/src/main.zig");
+const atmega = @import("deps/microchip-atmega/build.zig");
+
+// the hardware support package should have microzig as a dependency
+const microzig = @import("deps/hardware_support_package/deps/microzig/build.zig");
 
 pub fn build(b: *std.build.Builder) !void {
-    const backing = .{
-        .board = microzig.boards.arduino_nano,
-
-        // if you don't have one of the boards, but do have one of the
-        // "supported" chips:
-        // .chip = microzig.chips.atmega328p,
-    };
-
-    var exe = microzig.addEmbeddedExecutable(
-        b,
-        "my-executable",
-        "src/main.zig",
-        backing,
-        .{
-          // optional slice of packages that can be imported into your app:
-          // .packages = &my_packages,
+    const optimize = b.standardOptimizeOption(.{});
+    var exe = microzig.addEmbeddedExecutable( b, .{
+        .name = "my-executable",
+        .root_source_file = .{
+            .path = "src/main.zig",
         },
-    );
-    exe.setBuildMode(.ReleaseSmall);
+        .backing = .{
+            .board = atmega.boards.arduino_nano,
+
+            // instead of a board, you can use the raw chip as well
+            // .chip = atmega.chips.atmega328p,
+        },
+        .optimize = optimize,
+    });
     exe.install();
 }
 ----
@@ -71,12 +68,11 @@ pub fn build(b: *std.build.Builder) !void {
 ----
 const microzig = @import("microzig");
 
-// `microzig.chip.peripherals`: access to register definitions
 // `microzig.config`: comptime access to configuration
-//                  - chip_name: name of the chip
-//                  - has_board: true if board is configured
-//                  - board_name: name of the board is has_board is true
-//                  - cpu_name: name of the CPU
+// `microzig.chip`: access to register definitions, generated code
+// `microzig.board`: access to board information
+// `microzig.hal`: access to hand-written code for interacting with the hardware
+// `microzig.cpu`: access to AVR5 specific functions
 
 pub fn main() !void {
     // your program here
@@ -85,20 +81,20 @@ pub fn main() !void {
 
 == Getting MicroZig on New Hardware
 
-TODO
-
 If you have a board/chip that isn't defined in microzig, you can set it up yourself! You need to have:
 
 * SVD or ATDF file defining registers
 * flash and ram address and sizes
 
-First use https://github.com/ZigEmbeddedGroup/regz[regz] to generate the register definitions for your chip and save them to a file. Then your `build.zig` is going to be the same, but you'll define the chip yourself:
+First use https://github.com/ZigEmbeddedGroup/regz[Regz] to generate the register definitions for your chip and save them to a file. Then define the chip:
 
 [source,zig]
 ----
 const nrf52832 = Chip{
     .name = "nRF52832",
-    .path = "path/to/generated/file.zig",
+    .source = .{
+        .path = "path/to/generated/file.zig",
+    },
     .cpu = cpus.cortex_m4,
     .memory_regions = &.{
         MemoryRegion{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
@@ -111,20 +107,44 @@ const backing = .{
 };
 ----
 
-[NOTE]
-`regz` is also still in development, and while it tends to generate code well, it's possible that there will be errors in the generated code! Please create an issue if you run into anything fishy.
+It's important that the chip name actually match one of the entries under `devices` in the generated code.
 
-== Interrupts
+=== Optional: JSON Register Schema
 
-The current supported architectures for interrupt vector generation are ARM and AVR. To define the Interrupt Service Routine (ISR) for a given interrupt, you create a function with the same name in an `interrupts` namespace:
+You can also invoke `regz` to generate a JSON representation of the hardware:
+
+[source]
+----
+regz --json <path to svd/atdf>
+----
+
+This file can then be used by tooling. You can add it to a `Chip` like so:
+
 
 [source,zig]
 ----
-pub const interrupts = struct {
-    pub fn PCINT0() void {
-      // interrupt handling code
-    }
+const nrf52832 = Chip{
+    .name = "nRF52832",
+    .json_register_schema = .{
+        .path = "path/to.json",
+    },
+    // ...
 };
+----
+
+== Interrupts
+
+The current supported architectures for interrupt vector generation are ARM and AVR. To define the Interrupt Service Routine (ISR) for a given interrupt, you create a function with the same name in an `interrupts` namespace, which is nested in a `microzig_options` namespace:
+
+[source,zig]
+----
+pub const microzig_options = struct {
+  pub const interrupts = struct {
+      pub fn PCINT0() void {
+        // interrupt handling code
+      }
+  };
+}
 
 pub fn main() !void {
     // my application
