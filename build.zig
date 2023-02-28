@@ -7,8 +7,6 @@ const LibExeObjStep = std.build.LibExeObjStep;
 const Module = std.build.Module;
 const FileSource = std.build.FileSource;
 
-const test_programs = @import("test/build.zig");
-
 // alias for packages
 pub const LinkerScriptStep = @import("src/modules/LinkerScriptStep.zig");
 pub const cpus = @import("src/modules/cpus.zig");
@@ -234,7 +232,37 @@ pub fn addEmbeddedExecutable(
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.build.Builder) !void {
     const backings = @import("test/backings.zig");
-    _ = backings;
     const optimize = b.standardOptimizeOption(.{});
-    _ = optimize;
+
+    const minimal = addEmbeddedExecutable(b, .{
+        .name = "minimal",
+        .source_file = .{
+            .path = comptime root_dir() ++ "/test/programs/minimal.zig",
+        },
+        .backing = backings.minimal,
+        .optimize = optimize,
+    });
+
+    const has_hal = addEmbeddedExecutable(b, .{
+        .name = "has_hal",
+        .source_file = .{
+            .path = comptime root_dir() ++ "/test/programs/has_hal.zig",
+        },
+        .backing = backings.has_hal,
+        .optimize = optimize,
+    });
+
+    const has_board = addEmbeddedExecutable(b, .{
+        .name = "has_board",
+        .source_file = .{
+            .path = comptime root_dir() ++ "/test/programs/has_board.zig",
+        },
+        .backing = backings.has_board,
+        .optimize = optimize,
+    });
+
+    const test_step = b.step("test", "build test executables");
+    test_step.dependOn(&minimal.step);
+    test_step.dependOn(&has_hal.step);
+    test_step.dependOn(&has_board.step);
 }
