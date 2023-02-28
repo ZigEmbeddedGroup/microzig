@@ -2,7 +2,7 @@ const std = @import("std");
 const microzig = @import("zpm.zig").sdks.microzig;
 
 pub fn build(b: *std.build.Builder) void {
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
     const esp32_c3_cpu = microzig.Cpu{
         .name = "Espressif RISC-V",
@@ -21,7 +21,13 @@ pub fn build(b: *std.build.Builder) void {
 
     const esp32_c3 = microzig.Chip{
         .name = "ESP32 C3",
-        .path = "src/package/esp32-c3.zig",
+        .source = .{
+            .path = "src/package/esp32-c3.zig",
+        },
+        .hal = .{
+            .source = "src/hal/root.zig",
+        },
+
         .cpu = esp32_c3_cpu,
         .memory_regions = &.{
             .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 }, // external memory, ibus
@@ -29,13 +35,14 @@ pub fn build(b: *std.build.Builder) void {
         },
     };
 
-    var exe = microzig.addEmbeddedExecutable(
-        b,
-        "esp-bringup",
-        "src/example/blinky.zig",
-        .{ .chip = esp32_c3 },
-        .{ .hal_package_path = .{ .path = "src/hal/root.zig" } },
-    );
+    var exe = microzig.addEmbeddedExecutable(b, .{
+        .name = "esp-bringup",
+        .source_file = .{
+            .path = "src/example/blinky.zig",
+        },
+        .backing = .{ .chip = esp32_c3 },
+        .optimize = optimize,
+    });
     exe.setBuildMode(mode);
     exe.install();
 
