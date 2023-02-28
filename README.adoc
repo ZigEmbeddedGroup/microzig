@@ -118,7 +118,7 @@ You can also invoke `regz` to generate a JSON representation of the hardware:
 regz --json <path to svd/atdf>
 ----
 
-This file can then be used by tooling. You can add it to a `Chip` like so:
+This file could then be used by tooling. You can add it to a `Chip` like so:
 
 
 [source,zig]

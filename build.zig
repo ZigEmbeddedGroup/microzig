@@ -86,6 +86,7 @@ pub fn addEmbeddedExecutable(
     };
 
     const has_hal = chip.hal != null;
+    std.log.info("{s} has hal: {}", .{ opts.name, has_hal });
     const config_file_name = blk: {
         const hash = hash_blk: {
             var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
@@ -217,7 +218,7 @@ pub fn addEmbeddedExecutable(
     // - Generate the linker scripts from the "chip" or "board" module instead of using hardcoded ones.
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
-    exe.inner.bundle_compiler_rt = (exe.inner.target.cpu_arch.? != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
+    exe.inner.bundle_compiler_rt = (exe.inner.target.getCpuArch() != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
     exe.addModule("microzig", microzig_module);
     exe.addModule("app", builder.createModule(.{
         .source_file = opts.source_file,
@@ -261,8 +262,8 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
 
-    const test_step = b.step("test", "build test executables");
-    test_step.dependOn(&minimal.step);
-    test_step.dependOn(&has_hal.step);
-    test_step.dependOn(&has_board.step);
+    const test_step = b.step("test", "build test programs");
+    test_step.dependOn(&minimal.inner.step);
+    test_step.dependOn(&has_hal.inner.step);
+    test_step.dependOn(&has_board.inner.step);
 }

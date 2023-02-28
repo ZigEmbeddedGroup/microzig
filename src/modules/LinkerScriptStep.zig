@@ -54,11 +54,6 @@ fn make(step: *Step) !void {
     defer file.close();
 
     const target = linkerscript.chip.cpu.target;
-    if (target.cpu_arch == null) {
-        std.log.err("target does not have 'cpu_arch'", .{});
-        return error.NoCpuArch;
-    }
-
     const writer = file.writer();
     try writer.print(
         \\/*
@@ -122,14 +117,15 @@ fn make(step: *Step) !void {
             \\
         );
 
-        if (target.cpu_arch.? == .arm or target.cpu_arch.? == .thumb) {
-            try writer.writeAll(
+        switch (target.getCpuArch()) {
+            .arm, .thumb => try writer.writeAll(
                 \\  .ARM.exidx : {
                 \\      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
                 \\  } >flash0
                 \\
                 \\
-            );
+            ),
+            else => {},
         }
 
         try writer.writeAll(

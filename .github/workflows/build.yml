@@ -29,4 +29,4 @@ jobs:
         version: master
 
     - name: Build tests
-      run: zig build -Doptimize=ReleaseSmall
+      run: zig build test -Doptimize=ReleaseSmall

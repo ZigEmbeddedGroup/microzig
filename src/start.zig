@@ -105,7 +105,7 @@ export fn microzig_main() noreturn {
     // function.
     if (@hasDecl(app, "init"))
         app.init()
-    else if (@hasDecl(microzig.hal, "init"))
+    else if (microzig.hal != void and @hasDecl(microzig.hal, "init"))
         microzig.hal.init();
 
     if (@typeInfo(return_type) == .ErrorUnion) {
