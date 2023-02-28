@@ -27,7 +27,7 @@ This repo contains the infrastructure for getting started in an embedded Zig pro
 
 == Design
 
-If you're interested in how MicroZig works internally please see the xref:docs/design.adoc[Design Document].
+For MicroZig internals please see the xref:docs/design.adoc[Design Document].
 
 == Does MicroZig support X hardware?
 

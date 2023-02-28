@@ -1,8 +1,12 @@
 = MicroZig Design
-:imagesdir: ../design
+:imagesdir: images
 :toc: macro
 
 toc::[]
+
+== Dependency Tree
+
+image::deps.svg[]
 
 == CPUs
 
