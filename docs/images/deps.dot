@@ -15,6 +15,7 @@ digraph {
             label = "Application Dependencies";
     }
 
+    microzig -> config
     microzig -> cpu [dir="both"]
     microzig -> chip [dir="both"]
     microzig -> board [dir="both", style="dashed"]
