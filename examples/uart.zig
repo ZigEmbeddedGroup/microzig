@@ -18,8 +18,10 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     while (true) {}
 }
 
-pub const log_level = .debug;
-pub const log = rp2040.uart.log;
+pub const std_options = struct {
+    pub const log_level = .debug;
+    pub const logFn = rp2040.uart.log;
+};
 
 pub fn main() !void {
     gpio.reset();

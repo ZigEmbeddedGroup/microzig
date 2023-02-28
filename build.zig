@@ -2,11 +2,12 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
+const FileSource = std.build.FileSource;
 
 pub const microzig = @import("deps/microzig/build.zig");
 
-const chips = @import("src/chips.zig");
-const boards = @import("src/boards.zig");
+pub const chips = @import("src/chips.zig");
+pub const boards = @import("src/boards.zig");
 
 const linkerscript_path = root() ++ "rp2040.ld";
 
@@ -14,24 +15,23 @@ pub const BuildOptions = struct {
     optimize: std.builtin.OptimizeMode,
 };
 
+pub const PicoExecutableOptions = struct {
+    name: []const u8,
+    source_file: FileSource,
+    optimize: std.builtin.OptimizeMode = .Debug,
+};
+
 pub fn addPiPicoExecutable(
     builder: *Builder,
-    name: []const u8,
-    source: []const u8,
-    options: BuildOptions,
+    opts: PicoExecutableOptions,
 ) *microzig.EmbeddedExecutable {
-    const ret = microzig.addEmbeddedExecutable(
-        builder,
-        name,
-        source,
-        .{ .board = boards.raspberry_pi_pico },
-        .{
-            .optimize = options.optimize,
-        },
-    );
-    ret.inner.setLinkerScriptPath(.{ .path = linkerscript_path });
-
-    return ret;
+    return microzig.addEmbeddedExecutable(builder, .{
+        .name = opts.name,
+        .source_file = opts.source_file,
+        .backing = .{ .board = boards.raspberry_pi_pico },
+        .optimize = opts.optimize,
+        .linkerscript_source_file = .{ .path = linkerscript_path },
+    });
 }
 
 // this build script is mostly for testing and verification of this
@@ -61,12 +61,11 @@ pub const Examples = struct {
         inline for (@typeInfo(Examples).Struct.fields) |field| {
             const path = comptime root() ++ "examples/" ++ field.name ++ ".zig";
 
-            @field(ret, field.name) = addPiPicoExecutable(
-                b,
-                field.name,
-                path,
-                .{ .optimize = optimize },
-            );
+            @field(ret, field.name) = addPiPicoExecutable(b, .{
+                .name = field.name,
+                .source_file = .{ .path = path },
+                .optimize = optimize,
+            });
         }
 
         return ret;

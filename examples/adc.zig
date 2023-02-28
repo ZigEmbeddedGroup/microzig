@@ -12,7 +12,9 @@ const baud_rate = 115200;
 const uart_tx_pin = 0;
 const uart_rx_pin = 1;
 
-pub const log = rp2040.uart.log;
+pub const std_options = struct {
+    pub const logFn = rp2040.uart.log;
+};
 
 pub fn init() void {
     rp2040.clock_config.apply();
