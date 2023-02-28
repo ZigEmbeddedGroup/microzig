@@ -31,10 +31,9 @@ For MicroZig internals please see the xref:docs/design.adoc[Design Document].
 
 == Does MicroZig support X hardware?
 
-TODO
+MicroZig is designed to cover as wide swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific hardware, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
 
-MicroZig is designed to cover as wide 
-
+TODO:
 Start with an empty Zig project by running `zig init-exe`, and add microzig as a git submodule (or your choice of package manager). Then in your `build.zig`:
 
 [source,zig]
@@ -84,7 +83,7 @@ pub fn main() !void {
 }
 ----
 
-== No one has written Zig for my particular hardware, how do I get started?
+== Getting MicroZig on New Hardware
 
 TODO
 

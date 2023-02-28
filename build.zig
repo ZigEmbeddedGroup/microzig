@@ -7,6 +7,8 @@ const LibExeObjStep = std.build.LibExeObjStep;
 const Module = std.build.Module;
 const FileSource = std.build.FileSource;
 
+const test_programs = @import("test/build.zig");
+
 // alias for packages
 pub const LinkerScriptStep = @import("src/modules/LinkerScriptStep.zig");
 pub const cpus = @import("src/modules/cpus.zig");
@@ -229,10 +231,10 @@ pub fn addEmbeddedExecutable(
     return exe;
 }
 
+/// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.build.Builder) !void {
+    const backings = @import("test/backings.zig");
+    _ = backings;
     const optimize = b.standardOptimizeOption(.{});
-    const test_step = b.step("test", "Builds and runs the library test suite");
-
     _ = optimize;
-    _ = test_step;
 }

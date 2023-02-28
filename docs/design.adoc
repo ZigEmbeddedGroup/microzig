@@ -16,11 +16,11 @@ The `microzig` module has different namespaces, some are static, but the nodes y
 
 == Configurable Modules under `microzig`
 
-The configurable modules, with the exception of `config`, are able to import `microzig`. This exists so that one module may access another through `microzig`. This gives us flexibility in 
+The configurable modules, with the exception of `config`, are able to import `microzig`. This exists so that one module may access another through `microzig`. This allows us to have patterns like the `hal` grabbing the frequency of an external crystal oscillator from `board`. Information stays where it's relevant. Circular dependencies of declarations will result in a compile error.
 
 === `cpu`
 
-This module models your specific CPU, and is important for initializing memory. The plan
+This module models your specific CPU, and is important for initializing memory. Generally you shouldn't need to define this yourself, it's likely that MicroZig will have the definition for you.
 
 Further research is needed for SOCs with multiple, heterogenous CPUs. Likely it means patching together multiple `EmbeddedExecutable`s.
 
@@ -35,13 +35,13 @@ pub const types = struct {
 };
 
 pub const devices = struct {
-    pub const my_device = struct {
+    pub const chip_name = struct {
         // peripherals and interrupt table here ...
     };
 };
 ----
 
-This code generation has a `devices` namespace where your specific hardware will reside. When defining a `Chip`, which is ultimately used in the creation of an `EmbeddedExecutable`, the name must exactly match the name under the `devices` namespace. It's okay if the name has whitespace, for that we can use the `@""` notation.
+This code generation has a `devices` namespace where your specific hardware will reside. When defining a `Chip`, which is ultimately used in the creation of an `EmbeddedExecutable`, the name must exactly match the name under the `devices` namespace. It's okay if the name has whitespace, for that we can use `@""` notation.
 
 Let's say we had a device with the name `STM32F103`. We'd define our chip as:
 
@@ -49,14 +49,32 @@ Let's say we had a device with the name `STM32F103`. We'd define our chip as:
 ----
 pub const stm32f103 = microzig.Chip{
     .name = "STM32F103",
+    .cpu = microzig.cpus.cortex_m3,
+    .source = .{
+        .path = "path/to/generated.zig",
+    },
+    .json_register_schema = .{
+        .path = "path/to/generated.json",
+    },
+    .hal = .{
+        .path = "path/to/hal.zig",
+    },
+    .memory_regions = &.{
+        MemoryRegion{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
+        MemoryRegion{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+    },
 };
 ----
 
-When making a package that defines chips for others, see xref:tricks.adoc#packaging-and-paths[Packaging and Paths].
+As discussed, the `name` must match a namespace under `devices` in the `chip` source.
+
+TODO
+
+When making a package that defines chips for others, see xref:hardware_support_packages.adoc[Hardware Support Packages] and xref:tricks.adoc#packaging-and-paths[Packaging and Paths].
 
 === `hal`
 
-This module
+This module contains hand-written code for interracting with the chip.
 
 === `board`
 

@@ -1,0 +1,7 @@
+= Hardware Support Packages
+:imagesdir: images
+:toc: macro
+
+toc::[]
+
+This document goes over the _suggested_ way to structure a hardware support package. At the end of the day, MicroZig is designed for flexibility, we do not require all "supported" hardware be defined in one monorepo. Instead we make it so that you can define your hardware locally if that best suites your project.
