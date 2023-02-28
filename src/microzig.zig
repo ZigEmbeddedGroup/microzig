@@ -15,6 +15,9 @@ pub const app = @import("app");
 /// and so on.
 pub const config = @import("config");
 
+/// Provides access to the low level features of the CPU.
+pub const cpu = @import("cpu");
+
 /// Provides access to the low level features of the current microchip.
 pub const chip = struct {
     const inner = @import("chip");
@@ -22,16 +25,14 @@ pub const chip = struct {
     pub usingnamespace @field(inner.devices, config.chip_name);
 };
 
+/// Provides higher level APIs for interacting with hardware
+pub const hal = if (config.has_hal) @import("hal") else void;
+
 /// Provides access to board features or is `void` when no board is present.
 pub const board = if (config.has_board) @import("board") else void;
 
-/// Provides access to the low level features of the CPU.
-pub const cpu = @import("cpu");
 pub const mmio = @import("mmio.zig");
 pub const interrupt = @import("interrupt.zig");
-
-pub const hal = @import("hal");
-
 pub const core = @import("core.zig");
 pub const drivers = @import("drivers.zig");
 

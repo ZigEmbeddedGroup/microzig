@@ -1,0 +1,7 @@
+steps:
+  - group: Build and Test
+    steps:
+    - label: Debug
+      command: zig build test
+    - label: ReleaseSmall
+      command: zig build test -Doptimize=ReleaseSmall

@@ -1,0 +1,14 @@
+= Tips and Tricks
+
+This document has some `build.zig` tricks for other pages to reference.
+
+== Packaging and Paths
+
+TODO
+
+[source,zig]
+----
+fn root_dir() []const u8 {
+    return std.fs.path.dirname(@src().file) orelse unreachable;
+}
+----

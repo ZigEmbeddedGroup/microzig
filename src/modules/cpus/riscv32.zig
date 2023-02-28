@@ -1,7 +1,6 @@
 const std = @import("std");
 const root = @import("root");
 const microzig = @import("microzig");
-const app = microzig.app;
 
 pub fn sei() void {
     // asm volatile ("sei");

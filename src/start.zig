@@ -1,17 +1,24 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const app = microzig.app;
+const app = @import("app");
 
-const options_override = if (@hasDecl(app, "std_options")) app.std_options else struct {};
-pub const std_options = struct {
-    pub usingnamespace options_override;
+pub usingnamespace app;
 
-    // Conditionally provide a default no-op logFn if app does not have one
-    // defined. Parts of microzig use the stdlib logging facility and
-    // compilations will now fail on freestanding systems that use it but do
-    // not explicitly set `root.std_options.logFn`
-    pub usingnamespace if (!@hasDecl(options_override, "logFn"))
-        struct {
+// Use microzig panic handler if not defined by an application
+pub usingnamespace if (!@hasDecl(app, "panic"))
+    struct {
+        pub const panic = microzig.panic;
+    }
+else
+    struct {};
+
+// Conditionally provide a default no-op logFn if app does not have one
+// defined. Parts of microzig use the stdlib logging facility and
+// compilations will now fail on freestanding systems that use it but do
+// not explicitly set `root.std_options.logFn`
+pub usingnamespace if (!@hasDecl(app, "std_options"))
+    struct {
+        pub const std_options = struct {
             pub fn logFn(
                 comptime message_level: std.log.Level,
                 comptime scope: @Type(.EnumLiteral),
@@ -23,22 +30,18 @@ pub const std_options = struct {
                 _ = format;
                 _ = args;
             }
+        };
+    }
+else
+    struct {
+        comptime {
+            // Technically the compiler's errors should be good enough that we
+            // shouldn't include errors like this, but since we add default
+            // behavior we should clarify the situation for the user.
+            if (!@hasDecl(app.std_options, "logFn"))
+                @compileError("By default MicroZig provides a no-op logging function. Since you are exporting `std_options`, you must export the stdlib logging function yourself.");
         }
-    else
-        struct {};
-};
-
-// Allow app to override the os API layer
-pub const os = if (@hasDecl(app, "os"))
-    app.os
-else
-    struct {};
-
-// Allow app to override the panic handler
-pub const panic = if (@hasDecl(app, "panic"))
-    app.panic
-else
-    microzig.panic;
+    };
 
 // Startup logic:
 comptime {
@@ -102,7 +105,7 @@ export fn microzig_main() noreturn {
     // function.
     if (@hasDecl(app, "init"))
         app.init()
-    else if (@hasDecl(microzig.hal, "init"))
+    else if (microzig.hal != void and @hasDecl(microzig.hal, "init"))
         microzig.hal.init();
 
     if (@typeInfo(return_type) == .ErrorUnion) {
