@@ -84,7 +84,7 @@ fn is_valid_field(field_name: []const u8) bool {
 
 const VectorTable = if (@hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "VectorTable"))
     root.microzig_options.VectorTable
-else if (@hasDecl(microzig.hal, "VectorTable"))
+else if (microzig.hal != void and @hasDecl(microzig.hal, "VectorTable"))
     microzig.hal.VectorTable
 else
     microzig.chip.VectorTable;
