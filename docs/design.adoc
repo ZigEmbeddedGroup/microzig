@@ -6,19 +6,31 @@ toc::[]
 
 == Dependency Tree
 
+The build portion of MicroZig sets up a dependency graph like the following.
+
 image::deps.svg[]
 
-== CPUs
+Your application lives in `app`, that's where `main()` resides. `root` contains the entry point, and will set up [zero-initialized data] and [uninitialized data]. You will be able to use the official package manager to add application-level dependencies.
 
-== Chips
+Then there's `microzig`. Typically we'll try to import as `micro` as follows:
 
-=== Linkerscript Generation
+[source,zig]
+----
+const micro = @import("microzig");
+----
 
-=== HALs
+The `microzig` package has different namespaces, some are static, but the nodes you see in the diagram above are switched out according to your configured hardware.
 
-=== JSON Register Schema
+== `cpu`
 
-=== Interrupts
+== `chip`
 
-== Boards
+== `hal`
 
+== `board`
+
+
+TODO:
+- linkerscript generation
+- json register schema
+- interrupts
