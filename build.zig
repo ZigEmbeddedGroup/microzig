@@ -85,6 +85,7 @@ pub fn addEmbeddedExecutable(
         .board => |b| b.chip,
     };
 
+    const has_hal = chip.hal != null;
     const config_file_name = blk: {
         const hash = hash_blk: {
             var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");
@@ -135,6 +136,8 @@ pub fn addEmbeddedExecutable(
         defer config_file.close();
 
         var writer = config_file.writer();
+
+        writer.print("pub const has_hal = {};\n", .{has_hal}) catch unreachable;
         writer.print("pub const has_board = {};\n", .{has_board}) catch unreachable;
         if (has_board)
             writer.print("pub const board_name = \"{}\";\n", .{std.fmt.fmtSliceEscapeUpper(opts.backing.board.name)}) catch unreachable;
@@ -166,15 +169,14 @@ pub fn addEmbeddedExecutable(
         },
     })) catch unreachable;
 
-    microzig_module.dependencies.put("hal", builder.createModule(.{
-        .source_file = if (chip.hal) |hal_module_path|
-            hal_module_path
-        else
-            .{ .path = comptime std.fmt.comptimePrint("{s}/src/core/empty.zig", .{root_dir()}) },
-        .dependencies = &.{
-            .{ .name = "microzig", .module = microzig_module },
-        },
-    })) catch unreachable;
+    if (chip.hal) |hal_module_source| {
+        microzig_module.dependencies.put("hal", builder.createModule(.{
+            .source_file = hal_module_source,
+            .dependencies = &.{
+                .{ .name = "microzig", .module = microzig_module },
+            },
+        })) catch unreachable;
+    }
 
     switch (opts.backing) {
         .board => |board| {
