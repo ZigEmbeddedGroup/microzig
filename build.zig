@@ -86,7 +86,6 @@ pub fn addEmbeddedExecutable(
     };
 
     const has_hal = chip.hal != null;
-    std.log.info("{s} has hal: {}", .{ opts.name, has_hal });
     const config_file_name = blk: {
         const hash = hash_blk: {
             var hasher = std.hash.SipHash128(1, 2).init("abcdefhijklmnopq");

@@ -17,7 +17,7 @@ const cpu = microzig.Cpu{
 };
 
 const minimal_chip = microzig.Chip{
-    .name = "my_chip",
+    .name = "minimal_chip",
     .cpu = cpu,
     .source = .{
         .path = root_dir() ++ "/chip.zig",
@@ -29,7 +29,7 @@ const minimal_chip = microzig.Chip{
 };
 
 const chip_with_hal = microzig.Chip{
-    .name = "my_chip",
+    .name = "chip_with_hal",
     .cpu = cpu,
     .source = .{
         .path = root_dir() ++ "/chip.zig",
