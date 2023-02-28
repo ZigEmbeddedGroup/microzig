@@ -1,0 +1,11 @@
+digraph {
+    root -> app
+    root -> microzig
+
+    app -> microzig
+
+    microzig -> cpu
+    microzig -> chip
+    microzig -> board
+    microzig -> hal
+}
