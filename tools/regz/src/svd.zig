@@ -165,11 +165,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         load_peripheral(&ctx, peripheral_node, device_id) catch |err|
             log.warn("failed to load peripheral: {}", .{err});
 
-    var derive_it = ctx.derived_entities.iterator();
-    while (derive_it.next()) |derived_entry| {
-        const id = derived_entry.key_ptr.*;
-        const derived_name = derived_entry.value_ptr.*;
-
+    for (ctx.derived_entities.keys(), ctx.derived_entities.values()) |id, derived_name| {
         derive_entity(ctx, id, derived_name) catch |err| {
             log.warn("failed to derive entity {} from {s}: {}", .{
                 id,
@@ -262,10 +258,7 @@ pub fn derive_entity(ctx: Context, id: EntityId, derived_name: []const u8) !void
 
             if (try db.instances.peripherals.fetchPut(db.gpa, id, base_id)) |entry| {
                 const maybe_remove_peripheral_id = entry.value;
-                var it = db.instances.peripherals.iterator();
-                while (it.next()) |instance_entry| {
-                    const used_peripheral_id = instance_entry.value_ptr.*;
-
+                for (db.instances.peripherals.keys()) |used_peripheral_id| {
                     // if there is a match don't delete the entity
                     if (used_peripheral_id == maybe_remove_peripheral_id)
                         break;

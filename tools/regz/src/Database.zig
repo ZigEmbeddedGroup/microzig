@@ -349,12 +349,9 @@ fn remove_children(db: *Database, id: EntityId) void {
             var children_set = children_entry.value;
             defer children_set.deinit(db.gpa);
 
-            var it = children_set.iterator();
-            while (it.next()) |child_entry| {
-                const child_id = child_entry.key_ptr.*;
+            for (children_set.keys()) |child_id|
                 // this will get rid of the parent attr
                 db.destroy_entity(child_id);
-            }
         }
     }
 }
@@ -805,13 +802,11 @@ pub fn get_entity_id_by_name(
     comptime var group = (tok_it.next() orelse unreachable) ++ "s";
     comptime var table = (tok_it.next() orelse unreachable) ++ "s";
 
-    var it = @field(@field(db, group), table).iterator();
-    return while (it.next()) |entry| {
-        const entry_id = entry.key_ptr.*;
-        const entry_name = db.attrs.name.get(entry_id) orelse continue;
+    return for (@field(@field(db, group), table).keys()) |id| {
+        const entry_name = db.attrs.name.get(id) orelse continue;
         if (std.mem.eql(u8, name, entry_name)) {
-            assert(db.entity_is(entity_location, entry_id));
-            return entry_id;
+            assert(db.entity_is(entity_location, id));
+            return id;
         }
     } else error.NameNotFound;
 }

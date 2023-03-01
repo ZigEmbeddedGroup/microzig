@@ -174,10 +174,7 @@ fn infer_peripheral_offsets(ctx: *Context) !void {
     var type_counts = std.AutoArrayHashMap(EntityId, struct { count: usize, instance_id: EntityId }).init(db.gpa);
     defer type_counts.deinit();
 
-    var instance_it = db.instances.peripherals.iterator();
-    while (instance_it.next()) |instance_entry| {
-        const instance_id = instance_entry.key_ptr.*;
-        const type_id = instance_entry.value_ptr.*;
+    for (db.instances.peripherals.keys(), db.instances.peripherals.values()) |instance_id, type_id| {
         if (type_counts.getEntry(type_id)) |entry|
             entry.value_ptr.count += 1
         else
@@ -187,13 +184,13 @@ fn infer_peripheral_offsets(ctx: *Context) !void {
             });
     }
 
-    var type_it = type_counts.iterator();
-    while (type_it.next()) |type_entry| if (type_entry.value_ptr.count == 1) {
-        const type_id = type_entry.key_ptr.*;
-        const instance_id = type_entry.value_ptr.instance_id;
-        infer_peripheral_offset(ctx, type_id, instance_id) catch |err|
+    for (type_counts.keys(), type_counts.values()) |type_id, result| {
+        if (result.count != 1)
+            continue;
+
+        infer_peripheral_offset(ctx, type_id, result.instance_id) catch |err|
             log.warn("failed to infer peripheral instance offset: {}", .{err});
-    };
+    }
 }
 
 fn infer_peripheral_offset(ctx: *Context, type_id: EntityId, instance_id: EntityId) !void {
@@ -203,9 +200,7 @@ fn infer_peripheral_offset(ctx: *Context, type_id: EntityId, instance_id: Entity
     var min_offset: ?u64 = null;
     // first find the min offset of all the registers for this peripheral
     const register_set = db.children.registers.get(type_id) orelse return;
-    var register_it = register_set.iterator();
-    while (register_it.next()) |register_entry| {
-        const register_id = register_entry.key_ptr.*;
+    for (register_set.keys()) |register_id| {
         const offset = db.attrs.offset.get(register_id) orelse continue;
 
         if (min_offset == null)
@@ -220,9 +215,7 @@ fn infer_peripheral_offset(ctx: *Context, type_id: EntityId, instance_id: Entity
     const instance_offset: u64 = db.attrs.offset.get(instance_id) orelse 0;
     try db.attrs.offset.put(db.gpa, instance_id, instance_offset + min_offset.?);
 
-    register_it = register_set.iterator();
-    while (register_it.next()) |register_entry| {
-        const register_id = register_entry.key_ptr.*;
+    for (register_set.keys()) |register_id| {
         if (db.attrs.offset.getEntry(register_id)) |offset_entry|
             offset_entry.value_ptr.* -= min_offset.?;
     }
@@ -232,9 +225,7 @@ fn infer_peripheral_offset(ctx: *Context, type_id: EntityId, instance_id: Entity
 // it, and determine the size of the enum
 fn infer_enum_sizes(ctx: *Context) !void {
     const db = ctx.db;
-    var enum_it = db.types.enums.iterator();
-    while (enum_it.next()) |entry| {
-        const enum_id = entry.key_ptr.*;
+    for (db.types.enums.keys()) |enum_id| {
         infer_enum_size(db, enum_id) catch |err| {
             log.warn("failed to infer size of enum '{s}': {}", .{
                 db.attrs.name.get(enum_id) orelse "<unknown>",
@@ -248,9 +239,7 @@ fn infer_enum_size(db: *Database, enum_id: EntityId) !void {
     const max_value = blk: {
         const enum_fields = db.children.enum_fields.get(enum_id) orelse return error.MissingEnumFields;
         var ret: u32 = 0;
-        var it = enum_fields.iterator();
-        while (it.next()) |entry| {
-            const enum_field_id = entry.key_ptr.*;
+        for (enum_fields.keys()) |enum_field_id| {
             const value = db.types.enum_fields.get(enum_field_id).?;
             ret = std.math.max(ret, value);
         }
@@ -261,10 +250,7 @@ fn infer_enum_size(db: *Database, enum_id: EntityId) !void {
     var field_sizes = std.ArrayList(u64).init(db.gpa);
     defer field_sizes.deinit();
 
-    var it = db.attrs.@"enum".iterator();
-    while (it.next()) |entry| {
-        const field_id = entry.key_ptr.*;
-        const other_enum_id = entry.value_ptr.*;
+    for (db.attrs.@"enum".keys(), db.attrs.@"enum".values()) |field_id, other_enum_id| {
         assert(db.entity_is("type.field", field_id));
         if (other_enum_id != enum_id)
             continue;
@@ -509,9 +495,7 @@ fn assign_modes_to_entity(
 
     var tok_it = std.mem.tokenize(u8, mode_names, " ");
     while (tok_it.next()) |mode_str| {
-        var it = mode_set.iterator();
-        while (it.next()) |mode_entry| {
-            const mode_id = mode_entry.key_ptr.*;
+        for (mode_set.keys()) |mode_id| {
             if (db.attrs.name.get(mode_id)) |name|
                 if (std.mem.eql(u8, name, mode_str)) {
                     const result = try db.attrs.modes.getOrPut(db.gpa, id);
@@ -728,9 +712,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
         // values _should_ match to a known enum
         // TODO: namespace the enum to the appropriate register, register_group, or peripheral
         if (node.get_attribute("values")) |values| {
-            var it = db.types.enums.iterator();
-            while (it.next()) |entry| {
-                const enum_id = entry.key_ptr.*;
+            for (db.types.enums.keys()) |enum_id| {
                 const enum_name = db.attrs.name.get(enum_id) orelse continue;
                 if (std.mem.eql(u8, enum_name, values)) {
                     log.debug("{}: assigned enum '{s}'", .{ id, enum_name });
@@ -832,11 +814,10 @@ fn load_module_instances(
     const db = ctx.db;
     const module_name = node.get_attribute("name") orelse return error.MissingModuleName;
     const type_id = blk: {
-        var periph_it = db.types.peripherals.iterator();
-        while (periph_it.next()) |entry| {
-            if (db.attrs.name.get(entry.key_ptr.*)) |entry_name|
-                if (std.mem.eql(u8, entry_name, module_name))
-                    break :blk entry.key_ptr.*;
+        for (db.types.peripherals.keys()) |peripheral_id| {
+            if (db.attrs.name.get(peripheral_id)) |peripheral_name|
+                if (std.mem.eql(u8, peripheral_name, module_name))
+                    break :blk peripheral_id;
         } else {
             log.warn("failed to find the '{s}' peripheral type", .{
                 module_name,
@@ -939,9 +920,7 @@ fn load_module_instance_from_register_group(
     const name_in_module = register_group_node.get_attribute("name-in-module") orelse return error.MissingNameInModule;
     const register_group_id = blk: {
         const register_group_set = db.children.register_groups.get(peripheral_type_id) orelse return error.MissingRegisterGroup;
-        var it = register_group_set.iterator();
-        break :blk while (it.next()) |entry| {
-            const register_group_id = entry.key_ptr.*;
+        break :blk for (register_group_set.keys()) |register_group_id| {
             const register_group_name = db.attrs.name.get(register_group_id) orelse continue;
             if (std.mem.eql(u8, name_in_module, register_group_name))
                 break register_group_id;

@@ -63,9 +63,7 @@ fn write_devices(db: Database, writer: anytype) !void {
     );
 
     // TODO: order devices alphabetically
-    var it = db.instances.devices.iterator();
-    while (it.next()) |entry| {
-        const device_id = entry.key_ptr.*;
+    for (db.instances.devices.keys()) |device_id| {
         write_device(db, device_id, writer) catch |err| {
             log.warn("failed to write device: {}", .{err});
         };
@@ -149,9 +147,7 @@ fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
         var list = std.ArrayList(EntityWithOffset).init(db.gpa);
         defer list.deinit();
 
-        var it = peripheral_set.iterator();
-        while (it.next()) |entry| {
-            const peripheral_id = entry.key_ptr.*;
+        for (peripheral_set.keys()) |peripheral_id| {
             const offset = db.attrs.offset.get(peripheral_id) orelse return error.MissingPeripheralInstanceOffset;
             try list.append(.{ .id = peripheral_id, .offset = offset });
         }
@@ -280,9 +276,7 @@ fn write_peripheral_instance(db: Database, instance_id: EntityId, offset: u64, o
 // rendered in the `types` namespace they need a name
 fn has_top_level_named_types(db: Database) bool {
     inline for (@typeInfo(@TypeOf(db.types)).Struct.fields) |field| {
-        var it = @field(db.types, field.name).iterator();
-        while (it.next()) |entry| {
-            const id = entry.key_ptr.*;
+        for (@field(db.types, field.name).keys()) |id| {
             if (!db.attrs.parent.contains(id) and
                 db.attrs.name.contains(id))
             {
@@ -307,10 +301,7 @@ fn write_types(db: Database, writer: anytype) !void {
     if (db.types.peripherals.count() > 0) {
         try writer.writeAll("pub const peripherals = struct {\n");
 
-        // TODO: order the peripherals alphabetically?
-        var it = db.types.peripherals.iterator();
-        while (it.next()) |entry| {
-            const peripheral_id = entry.key_ptr.*;
+        for (db.types.peripherals.keys()) |peripheral_id| {
             write_peripheral(db, peripheral_id, writer) catch |err| {
                 log.warn("failed to generate peripheral '{s}': {}", .{
                     db.attrs.name.get(peripheral_id) orelse "<unknown>",
@@ -335,9 +326,7 @@ fn is_peripheral_zero_sized(db: Database, peripheral_id: EntityId) bool {
     }
 
     return if (db.children.register_groups.get(peripheral_id)) |register_group_set| blk: {
-        var it = register_group_set.iterator();
-        while (it.next()) |entry| {
-            const register_group_id = entry.key_ptr.*;
+        for (register_group_set.keys()) |register_group_id| {
             if (db.attrs.offset.contains(register_group_id))
                 break :blk false;
         }
@@ -360,9 +349,8 @@ fn write_peripheral(
     // for now only serialize flat peripherals with no register groups
     // TODO: expand this
     if (db.children.register_groups.get(peripheral_id)) |register_group_set| {
-        var it = register_group_set.iterator();
-        while (it.next()) |entry| {
-            if (db.attrs.offset.contains(entry.key_ptr.*)) {
+        for (register_group_set.keys()) |register_group_id| {
+            if (db.attrs.offset.contains(register_group_id)) {
                 log.warn("TODO: implement register groups with offset in peripheral type ({s})", .{name});
                 return;
             }
@@ -402,10 +390,7 @@ fn write_peripheral(
 
     // namespaced registers
     if (db.children.register_groups.get(peripheral_id)) |register_group_set| {
-        var it = register_group_set.iterator();
-        while (it.next()) |entry| {
-            const register_group_id = entry.key_ptr.*;
-
+        for (register_group_set.keys()) |register_group_id| {
             // a register group with an offset means that it has a location within the peripheral
             if (db.attrs.offset.contains(register_group_id))
                 continue;
@@ -432,10 +417,7 @@ fn write_newline_if_written(writer: anytype, written: *bool) !void {
 }
 
 fn write_enums(db: Database, written: *bool, enum_set: EntitySet, writer: anytype) !void {
-    var it = enum_set.iterator();
-    while (it.next()) |entry| {
-        const enum_id = entry.key_ptr.*;
-
+    for (enum_set.keys()) |enum_id| {
         try write_newline_if_written(writer, written);
         try write_enum(db, enum_id, writer);
     }
@@ -472,11 +454,8 @@ fn write_enum_fields(db: Database, enum_id: u32, out_writer: anytype) !void {
     const writer = buffer.writer();
     const size = db.attrs.size.get(enum_id) orelse return error.MissingEnumSize;
     const field_set = db.children.enum_fields.get(enum_id) orelse return error.MissingEnumFields;
-    var it = field_set.iterator();
-    while (it.next()) |entry| {
-        const enum_field_id = entry.key_ptr.*;
+    for (field_set.keys()) |enum_field_id|
         try write_enum_field(db, enum_field_id, size, writer);
-    }
 
     // if the enum doesn't completely fill the integer then make it a non-exhaustive enum
     if (field_set.count() < std.math.pow(u64, 2, size))
@@ -513,9 +492,7 @@ fn write_mode_enum_and_fn(
     const writer = buffer.writer();
     try writer.writeAll("pub const Mode = enum {\n");
 
-    var it = mode_set.iterator();
-    while (it.next()) |entry| {
-        const mode_id = entry.key_ptr.*;
+    for (mode_set.keys()) |mode_id| {
         const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
         try writer.print("{s},\n", .{std.zig.fmtId(mode_name)});
     }
@@ -527,9 +504,7 @@ fn write_mode_enum_and_fn(
         \\
     );
 
-    it = mode_set.iterator();
-    while (it.next()) |entry| {
-        const mode_id = entry.key_ptr.*;
+    for (mode_set.keys()) |mode_id| {
         const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
 
         var components = std.ArrayList([]const u8).init(db.gpa);
@@ -590,18 +565,14 @@ fn write_registers_with_modes(
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    var it = mode_set.iterator();
-    while (it.next()) |entry| {
-        const mode_id = entry.key_ptr.*;
+    for (mode_set.keys()) |mode_id| {
         const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
 
         // filter registers for this mode
         var moded_registers = std.ArrayList(EntityWithOffset).init(allocator);
         for (registers.items) |register| {
             if (db.attrs.modes.get(register.id)) |reg_mode_set| {
-                var reg_mode_it = reg_mode_set.iterator();
-                while (reg_mode_it.next()) |reg_mode_entry| {
-                    const reg_mode_id = reg_mode_entry.key_ptr.*;
+                for (reg_mode_set.keys()) |reg_mode_id| {
                     if (reg_mode_id == mode_id)
                         try moded_registers.append(register);
                 }
@@ -720,14 +691,11 @@ fn write_register(
         var fields = std.ArrayList(EntityWithOffset).init(db.gpa);
         defer fields.deinit();
 
-        var it = field_set.iterator();
-        while (it.next()) |entry| {
-            const field_id = entry.key_ptr.*;
+        for (field_set.keys()) |field_id|
             try fields.append(.{
                 .id = field_id,
                 .offset = db.attrs.offset.get(field_id) orelse continue,
             });
-        }
 
         std.sort.sort(EntityWithOffset, fields.items, {}, EntityWithOffset.less_than);
         try writer.print("{s}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
@@ -885,9 +853,7 @@ fn get_ordered_register_list(
 
     // get list of registers
     if (db.children.registers.get(parent_id)) |register_set| {
-        var it = register_set.iterator();
-        while (it.next()) |entry| {
-            const register_id = entry.key_ptr.*;
+        for (register_set.keys()) |register_id| {
             const offset = db.attrs.offset.get(register_id) orelse continue;
             try registers.append(.{ .id = register_id, .offset = offset });
         }

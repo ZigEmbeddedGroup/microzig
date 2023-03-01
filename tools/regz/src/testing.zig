@@ -90,9 +90,7 @@ pub fn expect_equal_databases(
     expected: Database,
     actual: Database,
 ) !void {
-    var it = expected.types.peripherals.iterator();
-    while (it.next()) |entry| {
-        const peripheral_id = entry.key_ptr.*;
+    for (expected.types.peripherals.keys()) |peripheral_id| {
         const name = expected.attrs.name.get(peripheral_id) orelse unreachable;
         std.log.debug("peripheral: {s}", .{name});
         const expected_id = try expected.get_entity_id_by_name("type.peripheral", name);

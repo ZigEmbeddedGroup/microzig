@@ -159,10 +159,7 @@ pub fn load_into_db(db: *Database, text: []const u8) !void {
 
 fn resolve_enums(ctx: *LoadContext) !void {
     const db = ctx.db;
-    var it = ctx.enum_refs.iterator();
-    while (it.next()) |entry| {
-        const id = entry.key_ptr.*;
-        const ref = entry.value_ptr.*;
+    for (ctx.enum_refs.keys(), ctx.enum_refs.values()) |id, ref| {
         const enum_id = try ref_to_id(db.*, ref);
         //assert(db.entityIs("type.enum", enum_id));
         try ctx.db.attrs.@"enum".put(db.gpa, id, enum_id);
@@ -194,9 +191,7 @@ fn ref_to_id(db: Database, ref: []const u8) !EntityId {
                 tmp_id = tmp_id: inline for (@typeInfo(TypeOfField(Database, "types")).Struct.fields) |field| {
                     const other_type = try string_to_entity_type(field.name);
                     if (entity_type == other_type) {
-                        var entity_it = @field(db.types, field.name).iterator();
-                        while (entity_it.next()) |entry| {
-                            const id = entry.key_ptr.*;
+                        for (@field(db.types, field.name).keys()) |id| {
                             if (db.attrs.parent.contains(id))
                                 continue;
 
@@ -212,9 +207,7 @@ fn ref_to_id(db: Database, ref: []const u8) !EntityId {
                     const other_type = try string_to_entity_type(field.name);
                     if (entity_type == other_type) {
                         if (@field(db.children, field.name).get(tmp_id.?)) |children| {
-                            var child_it = children.iterator();
-                            while (child_it.next()) |child_entry| {
-                                const child_id = child_entry.key_ptr.*;
+                            for (children.keys()) |child_id| {
                                 if (db.attrs.name.get(child_id)) |other_name| {
                                     if (std.mem.eql(u8, name, other_name))
                                         break :tmp_id child_id;
@@ -240,12 +233,8 @@ fn load_types(ctx: *LoadContext, types: json.ObjectMap) !void {
 }
 
 fn load_peripherals(ctx: *LoadContext, peripherals: json.ObjectMap) !void {
-    var it = peripherals.iterator();
-    while (it.next()) |entry| {
-        const name = entry.key_ptr.*;
-        const peripheral = entry.value_ptr.*;
+    for (peripherals.keys(), peripherals.values()) |name, peripheral|
         try load_peripheral(ctx, name, try get_object(peripheral));
-    }
 }
 
 fn load_peripheral(
@@ -304,12 +293,8 @@ fn load_entities(comptime load_fn: LoadFn) LoadMultipleFn {
             parent_id: EntityId,
             entities: json.ObjectMap,
         ) LoadError!void {
-            var it = entities.iterator();
-            while (it.next()) |entry| {
-                const name = entry.key_ptr.*;
-                const entity = entry.value_ptr.*;
+            for (entities.keys(), entities.values()) |name, entity|
                 try load_fn(ctx, parent_id, name, try get_object(entity));
-            }
         }
     }.tmp;
 }
@@ -333,11 +318,7 @@ fn load_children(
     parent_id: EntityId,
     children: json.ObjectMap,
 ) LoadError!void {
-    var it = children.iterator();
-    while (it.next()) |entry| {
-        const child_type = entry.key_ptr.*;
-        const child_map = entry.value_ptr.*;
-
+    for (children.keys(), children.values()) |child_type, child_map| {
         inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
             if (std.mem.eql(u8, child_type, field.name)) {
                 if (@hasDecl(load_fns, field.name))
@@ -526,12 +507,8 @@ fn load_enum_field(
 }
 
 fn load_devices(ctx: *LoadContext, devices: json.ObjectMap) !void {
-    var it = devices.iterator();
-    while (it.next()) |entry| {
-        const name = entry.key_ptr.*;
-        const device = entry.value_ptr.*;
+    for (devices.keys(), devices.values()) |name, device|
         try load_device(ctx, name, try get_object(device));
-    }
 }
 
 fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !void {
@@ -559,10 +536,8 @@ fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !voi
 
 fn load_properties(ctx: *LoadContext, device_id: EntityId, properties: json.ObjectMap) !void {
     const db = ctx.db;
-    var it = properties.iterator();
-    while (it.next()) |entry| {
-        const key = entry.key_ptr.*;
-        const value = switch (entry.value_ptr.*) {
+    for (properties.keys(), properties.values()) |key, json_value| {
+        const value = switch (json_value) {
             .String => |str| str,
             else => return error.InvalidJsonType,
         };
@@ -613,14 +588,8 @@ pub fn to_json(db: Database) !json.ValueTree {
     var types = json.ObjectMap.init(allocator);
     var devices = json.ObjectMap.init(allocator);
 
-    var device_it = db.instances.devices.iterator();
-    while (device_it.next()) |entry|
-        try populate_device(
-            db,
-            arena,
-            &devices,
-            entry.key_ptr.*,
-        );
+    for (db.instances.devices.keys()) |device_id|
+        try populate_device(db, arena, &devices, device_id);
 
     try root.put("version", .{ .String = schema_version });
     try populate_types(db, arena, &types);
@@ -643,12 +612,11 @@ fn populate_types(
 ) !void {
     const allocator = arena.allocator();
     var peripherals = json.ObjectMap.init(allocator);
-    var it = db.types.peripherals.iterator();
-    while (it.next()) |entry| {
-        const periph_id = entry.key_ptr.*;
-        const name = db.attrs.name.get(periph_id) orelse continue;
+
+    for (db.types.peripherals.keys()) |peripheral_id| {
+        const name = db.attrs.name.get(peripheral_id) orelse continue;
         var typ = json.ObjectMap.init(allocator);
-        try populate_type(db, arena, periph_id, &typ);
+        try populate_type(db, arena, peripheral_id, &typ);
         try peripherals.put(name, .{ .Object = typ });
     }
 
@@ -707,9 +675,7 @@ fn populate_type(
     if (db.attrs.modes.get(id)) |modeset| {
         var modearray = json.Array.init(allocator);
 
-        var it = modeset.iterator();
-        while (it.next()) |entry| {
-            const mode_id = entry.key_ptr.*;
+        for (modeset.keys()) |mode_id| {
             if (db.attrs.name.contains(mode_id)) {
                 const ref = try id_to_ref(
                     arena.allocator(),
@@ -737,9 +703,7 @@ fn populate_type(
 
         if (@field(db.children, field.name).get(id)) |set| {
             assert(set.count() > 0);
-            var it = set.iterator();
-            while (it.next()) |entry| {
-                const child_id = entry.key_ptr.*;
+            for (set.keys()) |child_id| {
                 const name = db.attrs.name.get(child_id) orelse continue;
                 var child_type = json.ObjectMap.init(allocator);
                 try populate_type(db, arena, child_id, &child_type);
@@ -780,15 +744,8 @@ fn populate_device(
 
     // TODO: link peripherals to device
     var peripherals = json.ObjectMap.init(allocator);
-    var periph_it = db.instances.peripherals.iterator();
-    while (periph_it.next()) |entry|
-        try populate_peripheral(
-            db,
-            arena,
-            &peripherals,
-            entry.key_ptr.*,
-            entry.value_ptr.*,
-        );
+    for (db.instances.peripherals.keys(), db.instances.peripherals.values()) |instance_id, type_id|
+        try populate_peripheral(db, arena, &peripherals, instance_id, type_id);
 
     const arch = db.instances.devices.get(id).?.arch;
     try device.put("arch", .{ .String = arch.to_string() });
