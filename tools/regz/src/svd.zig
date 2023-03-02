@@ -395,6 +395,7 @@ fn load_register(
 ) !void {
     const db = ctx.db;
     const register_props = try ctx.derive_register_properties_from(node, parent_id);
+    const name = node.get_value("name") orelse return error.MissingRegisterName;
     const size = register_props.size orelse return error.MissingRegisterSize;
     const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
         if (elements.dim_index != null or elements.dim_name != null)
@@ -407,7 +408,10 @@ fn load_register(
     } else null;
 
     const id = try db.create_register(parent_id, .{
-        .name = try get_name_without_suffix(node, "[%s]"),
+        .name = if (std.mem.endsWith(u8, name, "[%s]"))
+            name[0 .. name.len - 4]
+        else
+            try std.mem.replaceOwned(u8, ctx.db.arena.allocator(), name, "%s", ""),
         .description = node.get_value("description"),
         .offset = if (node.get_value("addressOffset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
@@ -1167,6 +1171,40 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
     defer db.deinit();
 
     // [%s] is dropped from name, it is redundant
+    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
+    try expectAttr(db, "count", 4, register_id);
+}
+
+test "svd.register with dimElementGroup, %s in name" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST%s_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var doc = try xml.Doc.from_memory(text);
+    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    defer db.deinit();
+
+    // %s is dropped from name, it is redundant
     const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
     try expectAttr(db, "count", 4, register_id);
 }
