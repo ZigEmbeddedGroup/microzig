@@ -10,42 +10,52 @@ const gen = @import("../gen.zig");
 const InterruptWithIndexAndName = @import("InterruptWithIndexAndName.zig");
 const Interrupt = @import("Interrupt.zig");
 
+const svd = @import("../svd.zig");
+
 const log = std.log.scoped(.@"gen.arm");
 
 // it's intended that these interrupts are added to the database in the
 // different front-ends. This way this information is serialized for
 // tooling
-pub const system_interrupts = struct {
-    pub const cortex_m0 = [_]Interrupt{
-        Interrupt{ .name = "NMI", .index = -14 },
-        Interrupt{ .name = "HardFault", .index = -13 },
-        Interrupt{ .name = "SVCall", .index = -5 },
-        Interrupt{ .name = "PendSV", .index = -2 },
-    };
+
+const system_interrupts = struct {
+    // zig fmt: off
+    const nmi           = Interrupt{ .index = -14, .name = "NMI" };
+    const hard_fault    = Interrupt{ .index = -13, .name = "HardFault" };
+    const mem_manage    = Interrupt{ .index = -12, .name = "MemManageFault" };
+    const bus_fault     = Interrupt{ .index = -11, .name = "BusFault" };
+    const usage_fault   = Interrupt{ .index = -10, .name = "UsageFault" };
+    const secure_fault  = Interrupt{ .index = -9,  .name = "SecureFault" };
+    const svcall        = Interrupt{ .index = -5,  .name = "SVCall" };
+    const debug_monitor = Interrupt{ .index = -4,  .name = "DebugMonitor" };
+    const pendsv        = Interrupt{ .index = -2,  .name = "PendSV" };
+    const systick       = Interrupt{ .index = -1,  .name = "SysTick" };
+    // zig fmt: on
+
+    pub const cortex_m0 = [_]Interrupt{ nmi, hard_fault, svcall, pendsv };
     pub const cortex_m0plus = cortex_m0;
-    pub const cortex_m3 = [_]Interrupt{
-        Interrupt{ .name = "MemManageFault", .index = -12 },
-        Interrupt{ .name = "BusFault", .index = -11 },
-        Interrupt{ .name = "UsageFault", .index = -10 },
-        Interrupt{ .name = "DebugMonitor", .index = -4 },
-    } ++ cortex_m0;
+    pub const cortex_m1 = cortex_m0;
+    pub const cortex_m23 = cortex_m0;
+
+    pub const cortex_m3 = [_]Interrupt{ nmi, hard_fault, mem_manage, bus_fault, usage_fault, svcall, pendsv };
     pub const cortex_m4 = cortex_m3;
+    pub const cortex_m7 = cortex_m3;
+
+    pub const cortex_m33 = [_]Interrupt{ nmi, hard_fault, mem_manage, bus_fault, usage_fault, secure_fault, svcall, debug_monitor, pendsv };
+    // The m35p was announced in 2018 and the technical reference manual does
+    // not list the exceptions. It has been described as an m33 with some
+    // upgrades, so I'm going give it the same exceptions
+    pub const cortex_m35p = cortex_m33;
+    // The m55 was announced in 2020 and I have about the same amount of information as the m35p
+    pub const cortex_m55 = cortex_m33;
 };
 
-pub fn load_systick_interrupt(db: *Database, device_id: EntityId) !void {
-    _ = try db.create_interrupt(device_id, .{
-        .name = "SysTick",
-        .index = -1,
-        // TODO: description
-    });
-}
-
 pub fn load_system_interrupts(db: *Database, device_id: EntityId) !void {
-    const arch = db.instances.devices.get(device_id).?.arch;
-    assert(arch.is_arm());
+    const device = db.instances.devices.get(device_id).?;
+    assert(device.arch.is_arm());
 
     inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
-        if (arch == @field(Database.Arch, field.name)) {
+        if (device.arch == @field(Database.Arch, field.name)) {
             if (@hasDecl(system_interrupts, field.name)) {
                 for (@field(system_interrupts, field.name)) |interrupt| {
                     _ = try db.create_interrupt(device_id, .{
@@ -59,7 +69,19 @@ pub fn load_system_interrupts(db: *Database, device_id: EntityId) !void {
             break;
         }
     } else {
-        log.warn("TODO: system interrupts handlers for {}", .{arch});
+        log.warn("TODO: system interrupts handlers for {}", .{device.arch});
+    }
+
+    const vendor_systick_config = if (device.properties.get("cpu.vendorSystickConfig")) |str|
+        try svd.parse_bool(str)
+    else
+        false;
+
+    if (!vendor_systick_config) {
+        _ = try db.create_interrupt(device_id, .{
+            .name = system_interrupts.systick.name,
+            .index = system_interrupts.systick.index,
+        });
     }
 }
 
@@ -71,25 +93,6 @@ pub fn write_interrupt_vector(
     assert(db.entity_is("instance.device", device_id));
     const arch = db.instances.devices.get(device_id).?.arch;
     assert(arch.is_arm());
-
-    switch (arch) {
-        // the basic vector table below should be fine for cortex-m
-        .cortex_m0,
-        .cortex_m0plus,
-        .cortex_m1,
-        .cortex_m23,
-        .cortex_m3,
-        .cortex_m33,
-        .cortex_m35p,
-        .cortex_m4,
-        .cortex_m55,
-        .cortex_m7,
-        => {},
-        else => {
-            log.warn("TODO: exception handlers for {}", .{arch});
-            return;
-        },
-    }
 
     try writer.writeAll(
         \\pub const VectorTable = extern struct {
@@ -116,10 +119,6 @@ pub fn write_interrupt_vector(
                 .name = name,
                 .index = index,
             });
-        }
-
-        switch (arch) {
-            else => log.warn("TODO: exception handlers for {}", .{arch}),
         }
 
         std.sort.sort(

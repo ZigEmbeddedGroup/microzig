@@ -5,7 +5,6 @@ const assert = std.debug.assert;
 
 const xml = @import("xml.zig");
 const arm = @import("arch/arm.zig");
-const cmsis = @import("svd/cmsis.zig");
 
 const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
@@ -52,6 +51,10 @@ const svd_boolean = std.ComptimeStringMap(bool, .{
     .{ "0", false },
 });
 
+pub fn parse_bool(str: []const u8) !bool {
+    return svd_boolean.get(str) orelse error.InvalidSvdBoolean;
+}
+
 pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     const root = try doc.get_root_element();
 
@@ -83,74 +86,49 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
     var cpu_it = root.iterate(&.{}, "cpu");
     if (cpu_it.next()) |cpu| {
-        const cpu_name = cpu.get_value("name") orelse return error.MissingCpuName;
-        const cpu_revision = cpu.get_value("revision") orelse return error.MissingCpuRevision;
-        const nvic_prio_bits = cpu.get_value("nvicPrioBits") orelse return error.MissingNvicPrioBits;
-        const vendor_systick_config = cpu.get_value("vendorSystickConfig") orelse return error.MissingVendorSystickConfig;
+        const required_properties: []const []const u8 = &.{
+            "name",
+            "revision",
+            "endian",
+            "nvicPrioBits",
+        };
 
-        const arch = arch_from_str(cpu_name);
-        db.instances.devices.getEntry(device_id).?.value_ptr.arch = arch;
-        if (arch.is_arm())
-            try arm.load_system_interrupts(db, device_id);
+        const optional_properties: []const []const u8 = &.{
+            "vendorSystickConfig",
+            "mpuPresent",
+            "fpuPresent",
+            "dspPresent",
+            "icachePresent",
+            "dcachePresent",
+            "itcmPresent",
+            "dtcmPresent",
+            "vtorPresent",
+            "deviceNumInterrupts",
+            "fpuDP",
+            "sauNumRegions",
+            "sauRegionsConfig",
+        };
 
-        // TODO: is this the right logic?
-        if (svd_boolean.get(vendor_systick_config)) |systick| {
-            if (!systick)
-                try arm.load_systick_interrupt(db, device_id);
-        } else {
-            try arm.load_systick_interrupt(db, device_id);
+        for (required_properties) |property| {
+            const value = cpu.get_value(property) orelse {
+                std.log.err("missing cpu property: {s}", .{property});
+                return error.MissingRequiredProperty;
+            };
+
+            const property_name = try std.mem.join(db.arena.allocator(), ".", &.{ "cpu", property });
+            try db.add_device_property(device_id, property_name, value);
         }
 
-        // TODO:
-
-        // cpu name => arch
-        try db.add_device_property(device_id, "cpu.name", cpu_name);
-        try db.add_device_property(device_id, "cpu.revision", cpu_revision);
-        try db.add_device_property(device_id, "cpu.nvic_prio_bits", nvic_prio_bits);
-        try db.add_device_property(device_id, "cpu.vendor_systick_config", vendor_systick_config);
-
-        if (cpu.get_value("endian")) |endian|
-            try db.add_device_property(device_id, "cpu.endian", endian);
-
-        if (cpu.get_value("mpuPresent")) |mpu|
-            try db.add_device_property(device_id, "cpu.mpu", mpu);
-
-        if (cpu.get_value("fpuPresent")) |fpu|
-            try db.add_device_property(device_id, "cpu.fpu", fpu);
-
-        if (cpu.get_value("dspPresent")) |dsp|
-            try db.add_device_property(device_id, "cpu.dsp", dsp);
-
-        if (cpu.get_value("icachePresent")) |icache|
-            try db.add_device_property(device_id, "cpu.icache", icache);
-
-        if (cpu.get_value("dcachePresent")) |dcache|
-            try db.add_device_property(device_id, "cpu.dcache", dcache);
-
-        if (cpu.get_value("itcmPresent")) |itcm|
-            try db.add_device_property(device_id, "cpu.itcm", itcm);
-
-        if (cpu.get_value("dtcmPresent")) |dtcm|
-            try db.add_device_property(device_id, "cpu.dtcm", dtcm);
-
-        if (cpu.get_value("vtorPresent")) |vtor|
-            try db.add_device_property(device_id, "cpu.vtor", vtor);
-
-        if (cpu.get_value("deviceNumInterrupts")) |num_interrupts|
-            try db.add_device_property(device_id, "cpu.num_interrupts", num_interrupts);
-
-        // fpuDP
-        // sauNumRegions
-        // sauRegionsConfig
+        for (optional_properties) |property| {
+            if (cpu.get_value(property)) |value| {
+                const property_name = try std.mem.join(db.arena.allocator(), ".", &.{ "cpu", property });
+                try db.add_device_property(device_id, property_name, value);
+            }
+        }
     }
 
     if (cpu_it.next() != null)
         log.warn("there are multiple CPUs", .{});
-
-    if (db.instances.devices.getEntry(device_id)) |device| {
-        const arch = device.value_ptr.arch;
-        if (arch.is_arm()) try cmsis.add_core_registers(db, arch, device_id);
-    }
 
     var ctx = Context{
         .db = db,
@@ -175,10 +153,13 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         };
     }
 
-    if (db.instances.devices.getEntry(device_id)) |device| {
-        const arch = device.value_ptr.arch;
-        if (arch.is_arm()) try cmsis.add_nvic_fields(db, arch, device_id);
-    }
+    const device = db.instances.devices.getEntry(device_id).?.value_ptr;
+    device.arch = if (device.properties.get("cpu.name")) |cpu_name|
+        arch_from_str(cpu_name)
+    else
+        .unknown;
+    if (device.arch.is_arm())
+        try arm.load_system_interrupts(db, device_id);
 
     db.assert_valid();
 }
