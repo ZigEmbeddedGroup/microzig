@@ -1,7 +1,41 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const root = @import("root");
 
-pub const registers = @import("registers.zig").registers;
+pub const StatusRegister = enum(u8) {
+    // machine information
+    mvendorid,
+    marchid,
+    mimpid,
+    mhartid,
+
+    // machine trap setup
+    mstatus,
+    misa,
+    mtvec,
+};
+
+pub inline fn setStatusBit(comptime reg: StatusRegister, bits: u32) void {
+    asm volatile ("csrrs zero, " ++ @tagName(reg) ++ ", %[value]"
+        :
+        : [value] "r" (bits),
+    );
+}
+
+pub inline fn clearStatusBit(comptime reg: StatusRegister, bits: u32) void {
+    asm volatile ("csrrc zero, " ++ @tagName(reg) ++ ", %[value]"
+        :
+        : [value] "r" (bits),
+    );
+}
+
+pub inline fn cli() void {
+    clearStatusBit(.mstatus, 0x08);
+}
+
+pub inline fn sei() void {
+    setStatusBit(.mstatus, 0x08);
+}
 
 pub const startup_logic = struct {
     comptime {
@@ -35,7 +69,7 @@ pub const startup_logic = struct {
         );
         asm volatile ("la gp, __global_pointer$");
         microzig.cpu.setStatusBit(.mtvec, microzig.config.end_of_stack);
-        microzig.initializeSystemMemories();
+        root.initialize_system_memories();
         microzig_main();
     }
 
