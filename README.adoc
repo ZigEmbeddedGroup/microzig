@@ -6,17 +6,17 @@ image::logo-text-auto.svg[]
 image::https://img.shields.io/discord/824493524413710336.svg?logo=discord[link=https://discord.gg/ShUWykk38X]
 
 [NOTE]
-This is in development, breaks in the API are bound to happen
+This is in development; breaks in the API are bound to happen.
 
 toc::[]
 
 == Contributing
 
-Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], its used as a place to brainstorm and organize work in ZEG. There will be issues marked as `good first issue`, or drafts for larger ideas that need scoping/breaking ground on.
+Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], it's used as a place to brainstorm and organize work in ZEG. There will be issues marked as `good first issue` or drafts for larger ideas that need scoping/breaking ground on.
 
 == Introduction
 
-This repo contains the infrastructure for getting started in an embedded Zig project, it "gets you to main()". Specifically it offers:
+This repo contains the infrastructure for getting started in an embedded Zig project; it "gets you to main()". Specifically, it offers:
 
 * a single easy-to-use builder function that:
 ** generates your linker script
@@ -31,7 +31,7 @@ For MicroZig internals please see the xref:docs/design.adoc[Design Document].
 
 == Does MicroZig support X hardware?
 
-MicroZig is designed to cover as wide swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
+MicroZig is designed to cover as wide a swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case, see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
 
 Start with an empty Zig project by running `zig init-exe`, and add the hardware support package as a submodule. We'll use `microchip-atmega` in our example:
 
@@ -86,7 +86,7 @@ If you have a board/chip that isn't defined in microzig, you can set it up yours
 * SVD or ATDF file defining registers
 * flash and ram address and sizes
 
-First use https://github.com/ZigEmbeddedGroup/regz[Regz] to generate the register definitions for your chip and save them to a file. Then define the chip:
+First, use https://github.com/ZigEmbeddedGroup/regz[Regz] to generate the register definitions for your chip and save them to a file. Then define the chip:
 
 [source,zig]
 ----
@@ -107,7 +107,7 @@ const backing = .{
 };
 ----
 
-It's important that the chip name actually match one of the entries under `devices` in the generated code.
+It's important that the chip name actually matches one of the entries under `devices` in the generated code.
 
 === Optional: JSON Register Schema
 
@@ -134,7 +134,7 @@ const nrf52832 = Chip{
 
 == Interrupts
 
-The current supported architectures for interrupt vector generation are ARM and AVR. To define the Interrupt Service Routine (ISR) for a given interrupt, you create a function with the same name in an `interrupts` namespace, which is nested in a `microzig_options` namespace:
+The currently supported architectures for interrupt vector generation are ARM and AVR. To define the Interrupt Service Routine (ISR) for a given interrupt, you create a function with the same name in an `interrupts` namespace, which is nested in a `microzig_options` namespace:
 
 [source,zig]
 ----
