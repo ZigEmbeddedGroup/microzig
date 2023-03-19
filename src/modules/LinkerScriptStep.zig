@@ -37,7 +37,12 @@ pub fn create(builder: *Builder, chip: Chip) !*LinkerscriptStep {
 
     var ret = try builder.allocator.create(LinkerscriptStep);
     ret.* = LinkerscriptStep{
-        .step = Step.init(.custom, "linkerscript", builder.allocator, make),
+        .step = Step.init(.{
+            .id = .custom,
+            .name = "linkerscript",
+            .owner = builder,
+            .makeFn = make,
+        }),
         .generated_file = .{
             .step = &ret.step,
             .path = path,
@@ -48,7 +53,8 @@ pub fn create(builder: *Builder, chip: Chip) !*LinkerscriptStep {
     return ret;
 }
 
-fn make(step: *Step) !void {
+fn make(step: *Step, progress: *std.Progress.Node) !void {
+    _ = progress;
     const linkerscript = @fieldParentPtr(LinkerscriptStep, "step", step);
     const file = try std.fs.cwd().createFile(linkerscript.generated_file.path.?, .{});
     defer file.close();
