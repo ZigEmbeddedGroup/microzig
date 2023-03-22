@@ -30,8 +30,18 @@ pub const Backing = union(enum) {
 pub const EmbeddedExecutable = struct {
     inner: *LibExeObjStep,
 
-    pub fn addModule(exe: *EmbeddedExecutable, name: []const u8, module: *Module) void {
-        exe.inner.addModule(name, module);
+    pub const AppDependencyOptions = struct {
+        depend_on_microzig: bool = false,
+    };
+
+    pub fn addAppDependency(exe: *EmbeddedExecutable, name: []const u8, module: *Module, options: AppDependencyOptions) void {
+        if (options.depend_on_microzig) {
+            const microzig_module = exe.inner.modules.get("microzig").?;
+            module.dependencies.put("microzig", microzig_module) catch @panic("OOM");
+        }
+
+        const app_module = exe.inner.modules.get("app").?;
+        app_module.dependencies.put(name, module) catch @panic("OOM");
     }
 
     pub fn install(exe: *EmbeddedExecutable) void {
@@ -190,6 +200,13 @@ pub fn addEmbeddedExecutable(
         else => {},
     }
 
+    const app_module = builder.createModule(.{
+        .source_file = opts.source_file,
+        .dependencies = &.{
+            .{ .name = "microzig", .module = microzig_module },
+        },
+    });
+
     const exe = builder.allocator.create(EmbeddedExecutable) catch unreachable;
     exe.* = EmbeddedExecutable{
         .inner = builder.addExecutable(.{
@@ -199,6 +216,8 @@ pub fn addEmbeddedExecutable(
             .optimize = opts.optimize,
         }),
     };
+    exe.inner.addModule("app", app_module);
+    exe.inner.addModule("microzig", microzig_module);
 
     exe.inner.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
 
@@ -218,13 +237,6 @@ pub fn addEmbeddedExecutable(
     //   - This requires building another tool that runs on the host that compiles those files and emits the linker script.
     //    - src/tools/linkerscript-gen.zig is the source file for this
     exe.inner.bundle_compiler_rt = (exe.inner.target.getCpuArch() != .avr); // don't bundle compiler_rt for AVR as it doesn't compile right now
-    exe.addModule("microzig", microzig_module);
-    exe.addModule("app", builder.createModule(.{
-        .source_file = opts.source_file,
-        .dependencies = &.{
-            .{ .name = "microzig", .module = microzig_module },
-        },
-    }));
 
     return exe;
 }

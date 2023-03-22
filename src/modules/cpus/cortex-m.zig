@@ -135,7 +135,7 @@ fn create_interrupt_vector(
             .C = struct {
                 fn wrapper() callconv(.C) void {
                     if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
-                        @call(.{ .modifier = .always_inline }, function, .{});
+                        @call(.always_inline, function, .{});
                 }
             }.wrapper,
         },
