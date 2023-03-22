@@ -29,8 +29,7 @@ pub fn create(owner: *Build, chip: Chip) !*LinkerscriptStep {
     return linkerscript;
 }
 
-fn make(step: *Step, node: *std.Progress.Node) anyerror!void {
-    _ = node;
+fn make(step: *Step, _: *std.Progress.Node) anyerror!void {
     const linkerscript = @fieldParentPtr(LinkerscriptStep, "step", step);
 
     const owner = linkerscript.step.owner;
@@ -164,10 +163,10 @@ fn make(step: *Step, node: *std.Progress.Node) anyerror!void {
     var dir = try owner.cache_root.handle.makeOpenPath(dir_path, .{});
     defer dir.close();
 
-    const file = try dir.openFile(filename, .{});
+    const file = try dir.createFile(filename, .{});
     defer file.close();
 
     try file.writeAll(contents.items);
-    const full_path = try owner.pathJoin(&.{ dir_path, filename });
+    const full_path = owner.pathJoin(&.{ dir_path, filename });
     linkerscript.generated_file.path = full_path;
 }
