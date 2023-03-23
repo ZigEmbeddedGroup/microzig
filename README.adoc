@@ -1,3 +1,7 @@
 = NXP LPC Hardware Support Package
 
 Please see https://github.com/ZigEmbeddedGroup/lpcboot[lpcboot] as well
+
+== What version of Zig to use
+
+Right now we are following [master](https://ziglang.org/download/), but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
