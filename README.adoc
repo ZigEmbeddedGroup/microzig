@@ -2,6 +2,12 @@
 
 Note: for testing, renode supports arduino nano 33 BLE
 
+== What version of Zig to use
+
+Right now we are following [master](https://ziglang.org/download/), but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
+
+== FYI: LLVM issues
+
 Currently LLVM is having trouble lowering AVR when this is built in debug mode:
 
 [source]
