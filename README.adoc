@@ -10,6 +10,10 @@ This is in development; breaks in the API are bound to happen.
 
 toc::[]
 
+== What version of Zig to use
+
+Right now we are following [master](https://ziglang.org/download/), but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
+
 == Contributing
 
 Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], it's used as a place to brainstorm and organize work in ZEG. There will be issues marked as `good first issue` or drafts for larger ideas that need scoping/breaking ground on.
