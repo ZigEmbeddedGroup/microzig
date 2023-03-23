@@ -12,7 +12,7 @@ toc::[]
 
 == What version of Zig to use
 
-Right now we are following [master](https://ziglang.org/download/), but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
+Right now we are following https://ziglang.org/download/[master], but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
 
 == Contributing
 
