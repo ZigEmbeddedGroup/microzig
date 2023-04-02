@@ -1,6 +1,6 @@
 const std = @import("std");
 const micro = @import("microzig");
-const chip = @import("chip");
+const hal = @import("hal");
 
 pub const Mode = enum {
     input,
@@ -59,8 +59,8 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
                     });
                 },
                 .alternate_function => {
-                    if (comptime @hasDecl(chip.gpio, "AlternateFunction")) {
-                        const alternate_function = @as(chip.gpio.AlternateFunction, config.alternate_function);
+                    if (comptime @hasDecl(hal.gpio, "AlternateFunction")) {
+                        const alternate_function = @as(hal.gpio.AlternateFunction, config.alternate_function);
                         set_alternate_function(alternate_function);
                     } else {
                         @compileError("Alternate Function not supported yet");
@@ -70,12 +70,12 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         }
 
         fn read() State {
-            return chip.gpio.read(pin.source_pin);
+            return hal.gpio.read(pin.source_pin);
         }
 
         // outputs:
         fn write(state: State) void {
-            chip.gpio.write(pin.source_pin, state);
+            hal.gpio.write(pin.source_pin, state);
         }
 
         fn set_to_high() void {
@@ -85,8 +85,8 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
             write(.low);
         }
         fn toggle() void {
-            if (comptime @hasDecl(chip.gpio, "toggle")) {
-                chip.gpio.toggle(pin.source_pin);
+            if (comptime @hasDecl(hal.gpio, "toggle")) {
+                hal.gpio.toggle(pin.source_pin);
             } else {
                 write(switch (read()) {
                     .low => State.high,
@@ -99,14 +99,14 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         fn set_direction(dir: Direction, output_state: State) void {
             switch (dir) {
                 .output => {
-                    chip.gpio.setOutput(pin.source_pin);
+                    hal.gpio.setOutput(pin.source_pin);
                     write(output_state);
                 },
-                .input => chip.gpio.setInput(pin.source_pin),
+                .input => hal.gpio.setInput(pin.source_pin),
             }
         }
         fn get_direction() Direction {
-            if (chip.gpio.isOutput(pin.source_pin)) {
+            if (hal.gpio.isOutput(pin.source_pin)) {
                 return .output;
             } else {
                 return .input;
@@ -123,8 +123,8 @@ pub fn Gpio(comptime pin: type, comptime config: anytype) type {
         }
 
         // alternate function
-        fn set_alternate_function(af: chip.gpio.AlternateFunction) void {
-            chip.gpio.setAlternateFunction(pin.source_pin, af);
+        fn set_alternate_function(af: hal.gpio.AlternateFunction) void {
+            hal.gpio.setAlternateFunction(pin.source_pin, af);
         }
     };
     // return only a subset of Generic for the requested pin.
