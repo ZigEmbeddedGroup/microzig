@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("microzig");
+const config = @import("config");
 const chip = @import("chip");
 const board = @import("board");
 const hal = @import("hal");
@@ -23,7 +23,7 @@ pub fn Pin(comptime spec: []const u8) type {
         hal.parse_pin(@field(board.pin_map, spec[board_namespace.len..]))
     else if (std.mem.startsWith(u8, spec, chip_namespace))
         hal.parse_pin(spec[chip_namespace.len..])
-    else if (micro.config.has_board and @hasField(@TypeOf(board.pin_map), spec))
+    else if (config.has_board and @hasField(@TypeOf(board.pin_map), spec))
         hal.parse_pin(@field(board.pin_map, spec))
     else
         hal.parse_pin(spec);
