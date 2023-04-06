@@ -12,6 +12,8 @@ pub const pwm = @import("hal/pwm.zig");
 pub const spi = @import("hal/spi.zig");
 pub const resets = @import("hal/resets.zig");
 pub const irq = @import("hal/irq.zig");
+pub const rom = @import("hal/rom.zig");
+pub const flash = @import("hal/flash.zig");
 
 pub const clock_config = clocks.GlobalConfiguration.init(.{
     .ref = .{ .source = .src_xosc },

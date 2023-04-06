@@ -56,6 +56,7 @@ pub const Examples = struct {
     spi_master: *microzig.EmbeddedExecutable,
     uart: *microzig.EmbeddedExecutable,
     //uart_pins: microzig.EmbeddedExecutable,
+    flash_program: *microzig.EmbeddedExecutable,
 
     pub fn init(b: *Builder, optimize: std.builtin.OptimizeMode) Examples {
         var ret: Examples = undefined;

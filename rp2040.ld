@@ -10,7 +10,7 @@ ENTRY(microzig_main);
 MEMORY
 {
   flash0 (rx!w) : ORIGIN = 0x10000000, LENGTH = 0x00200000
-  ram0   (rw!x) : ORIGIN = 0x20000000, LENGTH = 0x00040000
+  ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
 }
 
 SECTIONS
@@ -43,6 +43,7 @@ SECTIONS
   .data :
   {
      microzig_data_start = .;
+     *(.time_critical*)
      *(.data*)
      microzig_data_end = .;
   } > ram0 AT> flash0
