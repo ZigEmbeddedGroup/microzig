@@ -1,0 +1,53 @@
+//! Hello world for the PIO module: generating a square wave
+const std = @import("std");
+const microzig = @import("microzig");
+const rp2040 = microzig.hal;
+const gpio = rp2040.gpio;
+const Pio = rp2040.pio.Pio;
+const StateMachine = rp2040.pio.StateMachine;
+
+const squarewave_program = (rp2040.pio.assemble(
+    \\.program squarewave
+    \\    set pindirs, 1   ; Set pin to output
+    \\again:
+    \\    set pins, 1 [1]  ; Drive pin high and then delay for one cycle
+    \\    set pins, 0      ; Drive pin low
+    \\    jmp again        ; Set PC to label `again`
+) catch
+    @panic("failed to assemble program"))
+    .get_program_by_name("squarewave");
+
+pub fn main() void {
+    // Pick one PIO instance arbitrarily. We're also arbitrarily picking state
+    // machine 0 on this PIO instance (the state machines are numbered 0 to 3
+    // inclusive).
+    const pio: Pio = .pio0;
+    const sm: StateMachine = .sm0;
+
+    // Load the assembled program directly into the PIO's instruction memory.
+    // Each PIO instance has a 32-slot instruction memory, which all 4 state
+    // machines can see. The system has write-only access.
+    for (squarewave_program.instructions, 0..) |insn, i|
+        pio.get_instruction_memory()[i] = insn;
+
+    // Configure state machine 0 to run at sysclk/2.5. The state machines can
+    // run as fast as one instruction per clock cycle, but we can scale their
+    // speed down uniformly to meet some precise frequency target, e.g. for a
+    // UART baud rate. This register has 16 integer divisor bits and 8
+    // fractional divisor bits.
+    pio.set_clkdiv_int_frac(sm, 2, 0x80);
+
+    // There are five pin mapping groups (out, in, set, side-set, jmp pin)
+    // which are used by different instructions or in different circumstances.
+    // Here we're just using SET instructions. Configure state machine 0 SETs
+    // to affect GPIO 0 only; then configure GPIO0 to be controlled by PIO0,
+    // as opposed to e.g. the processors.
+    pio.set_out_pins(sm, 0, 1);
+    gpio.set_function(0, .pio0);
+
+    // Set the state machine running. The PIO CTRL register is global within a
+    // PIO instance, so you can start/stop multiple state machines
+    // simultaneously. We're using the register's hardware atomic set alias to
+    // make one bit high without doing a read-modify-write on the register.
+    pio.set_enabled(sm, true);
+}

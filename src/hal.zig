@@ -1,5 +1,6 @@
+const std = @import("std");
 const microzig = @import("microzig");
-const regs = microzig.chip.registers;
+const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
 pub const pins = @import("hal/pins.zig");
@@ -14,6 +15,7 @@ pub const resets = @import("hal/resets.zig");
 pub const irq = @import("hal/irq.zig");
 pub const rom = @import("hal/rom.zig");
 pub const flash = @import("hal/flash.zig");
+pub const pio = @import("hal/pio.zig");
 
 pub const clock_config = clocks.GlobalConfiguration.init(.{
     .ref = .{ .source = .src_xosc },
@@ -32,5 +34,5 @@ pub fn init() void {
 }
 
 pub fn get_cpu_id() u32 {
-    return regs.SIO.CPUID.*;
+    return SIO.CPUID.*;
 }

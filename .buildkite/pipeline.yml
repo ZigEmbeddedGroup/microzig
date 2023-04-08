@@ -1,2 +1,2 @@
 steps:
-  - command: zig build
+  - command: zig build test

@@ -1,0 +1,4 @@
+= PIO example programs for testing
+
+These were all taken from https://github.com/raspberrypi/pico-examples[the official pico examples repo].
+The headers are generated using `pioasm`.

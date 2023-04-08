@@ -87,7 +87,7 @@ pub const PullUpDown = enum {
 
 pub inline fn set_pull(comptime gpio: u32, mode: ?PullUpDown) void {
     const gpio_name = comptime std.fmt.comptimePrint("GPIO{d}", .{gpio});
-    const gpio_regs = @field(PADS_BANK0, gpio_name);
+    const gpio_regs = &@field(PADS_BANK0, gpio_name);
 
     if (mode == null) {
         gpio_regs.modify(.{ .PUE = 0, .PDE = 0 });
