@@ -8,6 +8,7 @@ const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
+const util = @import("util.zig");
 
 const SpiRegs = microzig.chip.types.peripherals.SPI0;
 
@@ -78,11 +79,11 @@ pub const SPI = enum {
         return spi;
     }
 
-    pub fn is_writable(spi: SPI) bool {
+    pub inline fn is_writable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().TNF == 1;
     }
 
-    pub fn is_readable(spi: SPI) bool {
+    pub inline fn is_readable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().RNE == 1;
     }
     pub fn transceive(spi: SPI, src: []const u8, dst: []u8) usize {
@@ -106,7 +107,7 @@ pub const SPI = enum {
 
         return src.len;
     }
-    // Write len bytes directly from src to the SPI, and discard any data received back
+    /// Write len bytes directly from src to the SPI, and discard any data received back
     pub fn write(spi: SPI, src: []const u8) usize {
         const spi_regs = spi.get_regs();
         // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
@@ -114,24 +115,48 @@ pub const SPI = enum {
         // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
         for (src) |s| {
             while (!spi.is_writable()) {
-                std.log.debug("SPI not writable!", .{});
+                util.tight_loop_contents();
             }
             spi_regs.SSPDR.write_raw(s);
         }
         // Drain RX FIFO, then wait for shifting to finish (which may be *after*
         // TX FIFO drains), then drain RX FIFO again
         while (spi.is_readable()) {
-            _ = spi_regs.SSPDR.raw;
+            _ = spi_regs.SSPDR.read();
         }
-        while (spi.get_regs().SSPSR.read().BSY == 1) {
-            std.log.debug("SPI busy!", .{});
+        while (spi_regs.SSPSR.read().BSY == 1) {
+            util.tight_loop_contents();
         }
         while (spi.is_readable()) {
-            _ = spi_regs.SSPDR.raw;
+            _ = spi_regs.SSPDR.read();
         }
         // Don't leave overrun flag set
         peripherals.SPI0.SSPICR.modify(.{ .RORIC = 1 });
         return src.len;
+    }
+
+    /// Read len bytes directly from the SPI to dst.
+    /// repeated_tx_data is output repeatedly on SO as data is read in from SI.
+    /// Generally this can be 0, but some devices require a specific value here,
+    /// e.g. SD cards expect 0xff
+    pub fn read(spi: SPI, repeated_tx_data: u8, dst: []u8) usize {
+        const spi_regs = spi.get_regs();
+        const fifo_depth = 8;
+        var rx_remaining = dst.len;
+        var tx_remaining = dst.len;
+
+        while (rx_remaining > 0 or tx_remaining > 0) {
+            if (tx_remaining > 0 and spi.is_writable() and rx_remaining < tx_remaining + fifo_depth) {
+                spi_regs.SSPDR.write_raw(repeated_tx_data);
+                tx_remaining -= 1;
+            }
+            if (rx_remaining > 0 and spi.is_readable()) {
+                const bytes = std.mem.asBytes(&spi_regs.SSPDR.read().DATA);
+                dst[dst.len - rx_remaining] = bytes[0];
+                rx_remaining -= 1;
+            }
+        }
+        return dst.len;
     }
 
     fn set_baudrate(spi: SPI, baudrate: u32, freq_in: u32) u64 {
@@ -143,9 +168,9 @@ pub const SPI = enum {
             if (freq_in < (prescale + 2) * 256 * baudrate) break;
         }
         std.debug.assert(prescale <= 254); //Freq too low
+
         // Find largest post-divide which makes output <= baudrate. Post-divide is
         // an integer in the range 1 to 256 inclusive.
-
         var postdiv: u64 = 256;
         while (postdiv > 1) : (postdiv -= 1) {
             if (freq_in / (prescale * (postdiv - 1)) > baudrate) break;

@@ -520,7 +520,7 @@ pub const GlobalConfiguration = struct {
                 if (@field(config, field.name)) |pin_config| {
                     const gpio_num = @enumToInt(@field(Pin, field.name));
                     const pull = pin_config.pull orelse continue;
-                    if (comptime pin_config.getDirection() != .in)
+                    if (comptime pin_config.get_direction() != .in)
                         @compileError("Only input pins can have pull up/down enabled");
 
                     gpio.set_pull(gpio_num, pull);
