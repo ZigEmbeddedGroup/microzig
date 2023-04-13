@@ -22,7 +22,7 @@ pub const Program = struct {
     wrap: ?u5,
 
     pub fn get_mask(program: Program) u32 {
-        return (1 << program.instructions.len) - 1;
+        return (@as(u32, 1) << @intCast(u5, program.instructions.len)) - 1;
     }
 };
 
@@ -35,7 +35,7 @@ pub const Output = struct {
         comptime name: []const u8,
     ) Program {
         return for (output.programs) |program| {
-            if (std.mem.eql(u8, program.name, program))
+            if (std.mem.eql(u8, name, program.name))
                 break program;
         } else @panic(std.fmt.comptimePrint("program '{s}' not found", .{name}));
     }

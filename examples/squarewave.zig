@@ -13,11 +13,12 @@ const squarewave_program = (rp2040.pio.assemble(
     \\    set pins, 1 [1]  ; Drive pin high and then delay for one cycle
     \\    set pins, 0      ; Drive pin low
     \\    jmp again        ; Set PC to label `again`
-) catch
+, .{}) catch
     @panic("failed to assemble program"))
     .get_program_by_name("squarewave");
 
 pub fn main() void {
+    gpio.reset();
     // Pick one PIO instance arbitrarily. We're also arbitrarily picking state
     // machine 0 on this PIO instance (the state machines are numbered 0 to 3
     // inclusive).
@@ -35,19 +36,27 @@ pub fn main() void {
     // speed down uniformly to meet some precise frequency target, e.g. for a
     // UART baud rate. This register has 16 integer divisor bits and 8
     // fractional divisor bits.
-    pio.set_clkdiv_int_frac(sm, 2, 0x80);
+    pio.sm_set_clkdiv(sm, .{
+        .int = 2,
+        .frac = 0x80,
+    });
 
     // There are five pin mapping groups (out, in, set, side-set, jmp pin)
     // which are used by different instructions or in different circumstances.
     // Here we're just using SET instructions. Configure state machine 0 SETs
     // to affect GPIO 0 only; then configure GPIO0 to be controlled by PIO0,
     // as opposed to e.g. the processors.
-    pio.set_out_pins(sm, 0, 1);
-    gpio.set_function(0, .pio0);
+    pio.gpio_init(0);
+    pio.sm_set_pin_mappings(sm, .{
+        .out = .{
+            .base = 0,
+            .count = 1,
+        },
+    });
 
     // Set the state machine running. The PIO CTRL register is global within a
     // PIO instance, so you can start/stop multiple state machines
     // simultaneously. We're using the register's hardware atomic set alias to
     // make one bit high without doing a read-modify-write on the register.
-    pio.set_enabled(sm, true);
+    pio.sm_set_enabled(sm, true);
 }

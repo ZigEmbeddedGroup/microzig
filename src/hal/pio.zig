@@ -1,5 +1,6 @@
 //! A PIO instance can load a single `Bytecode`, it has to be loaded into memory
 const std = @import("std");
+const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const PIO = microzig.chip.types.peripherals.PIO0;
@@ -8,26 +9,19 @@ const PIO1 = microzig.chip.peripherals.PIO1;
 
 const gpio = @import("gpio.zig");
 const assembler = @import("pio/assembler.zig");
-pub const Bytecode = Bytecode;
-pub const Program = assembler.Program;
-pub const assemble = assembler.assemble;
+const encoder = @import("pio/assembler/encoder.zig");
 
+// global state for keeping track of used things
 var used_instruction_space: [2]u32 = [_]u32{ 0, 0 };
 var claimed_state_machines: [2]u4 = [_]u4{ 0, 0 };
 
-pub const Join = enum {
-    none,
-    rx,
+pub const Instruction = encoder.Instruction;
+pub const Program = assembler.Program;
+pub const assemble = assembler.assemble;
+
+pub const Fifo = enum {
     tx,
-};
-
-pub const Status = enum {
-    rx_lessthan,
-    tx_lessthan,
-};
-
-pub const Configuration = struct {
-    pin: u32,
+    rx,
 };
 
 pub const StateMachine = enum(u2) {
@@ -35,6 +29,97 @@ pub const StateMachine = enum(u2) {
     sm1,
     sm2,
     sm3,
+};
+
+pub const Irq = enum {
+    irq0,
+    irq1,
+
+    pub const Regs = extern struct {
+        enable: @TypeOf(PIO0.IRQ0_INTE),
+        force: @TypeOf(PIO0.IRQ0_INTF),
+        status: @TypeOf(PIO0.IRQ0_INTS),
+    };
+
+    pub const Source = enum {
+        rx_not_empty,
+        tx_not_full,
+        // TODO: determine what this does, is it just a combination of the
+        // first two, or is it other things?
+        statemachine,
+    };
+};
+
+pub const StateMachineRegs = extern struct {
+    clkdiv: @TypeOf(PIO0.SM0_CLKDIV),
+    execctrl: @TypeOf(PIO0.SM0_EXECCTRL),
+    shiftctrl: @TypeOf(PIO0.SM0_SHIFTCTRL),
+    addr: @TypeOf(PIO0.SM0_ADDR),
+    instr: @TypeOf(PIO0.SM0_INSTR),
+    pinctrl: @TypeOf(PIO0.SM0_PINCTRL),
+};
+
+pub const ClkDivOptions = struct {
+    int: u16,
+    frac: u8,
+
+    pub fn from_float(div: f32) ClkDivOptions {
+        const fixed = @floatToInt(u24, div * 256);
+        return ClkDivOptions{
+            .int = @truncate(u16, fixed >> 8),
+            .frac = @truncate(u8, fixed),
+        };
+    }
+};
+
+pub const ExecOptions = struct {
+    wrap: u5,
+    wrap_target: u5,
+    side_pindir: bool,
+    side_set_optional: bool,
+};
+
+pub const ShiftOptions = struct {
+    autopush: bool = false,
+    autopull: bool = false,
+    in_shiftdir: Direction = .left,
+    out_shiftdir: Direction = .left,
+    push_threshold: u5 = 0,
+    pull_threshold: u5 = 0,
+    join_tx: bool = false,
+    join_rx: bool = false,
+
+    pub const Direction = enum(u1) {
+        left,
+        right,
+    };
+};
+
+pub fn PinMapping(comptime Count: type) type {
+    return struct {
+        base: u5 = 0,
+        count: Count = 0,
+    };
+}
+
+pub const PinMappingOptions = struct {
+    out: PinMapping(u6) = .{},
+    set: PinMapping(u3) = .{},
+    side_set: PinMapping(u3) = .{},
+    in_base: u5 = 0,
+};
+
+pub const StateMachineInitOptions = struct {
+    clkdiv: ClkDivOptions,
+    exec: ExecOptions,
+    shift: ShiftOptions = .{},
+    pin_mappings: PinMappingOptions = .{},
+};
+
+pub const LoadAndStartProgramOptions = struct {
+    clkdiv: ClkDivOptions,
+    shift: ShiftOptions = .{},
+    pin_mappings: PinMappingOptions = .{},
 };
 
 pub const Pio = enum(u1) {
@@ -60,11 +145,6 @@ pub const Pio = enum(u1) {
         });
     }
 
-    pub fn load(self: Pio, bytecode: Bytecode) !void {
-        _ = self;
-        _ = bytecode;
-    }
-
     fn can_add_program_at_offset(self: Pio, program: Program, offset: u5) bool {
         if (program.origin) |origin|
             if (origin != offset)
@@ -84,9 +164,10 @@ pub const Pio = enum(u1) {
                 origin
             else
                 error.NoSpace
-        else for (0..32 - program.isntruction.len) |i| {
-            if (self.can_add_program_at_offset(program, i))
-                break i;
+        else for (0..(32 - program.instructions.len)) |i| {
+            const offset = @intCast(u5, i);
+            if (self.can_add_program_at_offset(program, offset))
+                break offset;
         } else error.NoSpace;
     }
 
@@ -103,12 +184,13 @@ pub const Pio = enum(u1) {
     }
 
     /// Public functions will need to lock independently, so only exposing this function for now
-    pub fn add_program(self: Pio, program: Program) !void {
-        // TODO: const lock = hw.Lock.claim()
-        // defer lock.unlock();
+    pub fn add_program(self: Pio, program: Program) !u5 {
+        //const lock = hw.Lock.claim();
+        //defer lock.unlock();
 
-        const offset = try self.find_offset_for_program_unlocked();
-        try self.add_program_at_offset(program, offset);
+        const offset = try self.find_offset_for_program(program);
+        try self.add_program_at_offset_unlocked(program, offset);
+        return offset;
     }
 
     pub fn claim_unused_state_machine(self: Pio) !StateMachine {
@@ -125,15 +207,6 @@ pub const Pio = enum(u1) {
         } else error.NoSpace;
     }
 
-    pub const StateMachineRegs = extern struct {
-        clkdiv: @TypeOf(PIO0.SM0_CLKDIV),
-        execctrl: @TypeOf(PIO0.SM0_EXECCTRL),
-        shiftctrl: @TypeOf(PIO0.SM0_SHIFTCTRL),
-        addr: @TypeOf(PIO0.SM0_ADDR),
-        instr: @TypeOf(PIO0.SM0_INSTR),
-        pinctrl: @TypeOf(PIO0.SM0_PINCTRL),
-    };
-
     fn get_sm_regs(self: Pio, sm: StateMachine) *volatile StateMachineRegs {
         const pio_regs = self.get_regs();
         return switch (sm) {
@@ -144,71 +217,88 @@ pub const Pio = enum(u1) {
         };
     }
 
-    pub fn join_fifo(self: Pio, sm: StateMachine, join: Join) void {
-        const tx: u1 = switch (join) {
-            .tx => 1,
-            .rx => 0,
-            .none => 0,
+    fn get_irq_regs(self: Pio, irq: Irq) *volatile Irq.Regs {
+        const pio_regs = self.get_regs();
+        return switch (irq) {
+            .irq0 => @ptrCast(*volatile Irq.Regs, &pio_regs.IRQ0_INTE),
+            .irq1 => @ptrCast(*volatile Irq.Regs, &pio_regs.IRQ1_INTE),
         };
-        const rx: u1 = switch (join) {
-            .tx => 0,
-            .rx => 1,
-            .none => 0,
-        };
-
-        const sm_regs = self.get_sm_regs(sm);
-        sm_regs.shiftctrl.modify(.{
-            .FJOIN_TX = tx,
-            .FJOIN_RX = rx,
-        });
     }
 
-    pub fn set_clkdiv_int_frac(self: Pio, sm: StateMachine, div_int: u16, div_frac: u8) void {
-        if (div_int == 0 and div_frac != 0)
+    pub inline fn sm_set_clkdiv(self: Pio, sm: StateMachine, options: ClkDivOptions) void {
+        if (options.int == 0 and options.frac != 0)
             @panic("invalid params");
 
         const sm_regs = self.get_sm_regs(sm);
         sm_regs.clkdiv.write(.{
-            .INT = div_int,
-            .FRAC = div_frac,
+            .INT = options.int,
+            .FRAC = options.frac,
 
             .reserved8 = 0,
         });
     }
 
-    pub fn set_out_shift(self: Pio, sm: StateMachine, args: struct {
-        shift_right: bool,
-        autopull: bool,
-        pull_threshold: u5,
-    }) void {
+    pub inline fn sm_set_exec_options(self: Pio, sm: StateMachine, options: ExecOptions) void {
         const sm_regs = self.get_sm_regs(sm);
-        sm_regs.shiftctrl.modify(.{
-            .OUT_SHIFTDIR = @boolToInt(args.shift_right),
-            .AUTOPULL = @boolToInt(args.autopull),
-            .PULL_THRESH = args.pull_threshold,
+        sm_regs.execctrl.modify(.{
+            .WRAP_BOTTOM = options.wrap_target,
+            .WRAP_TOP = options.wrap,
+            .SIDE_PINDIR = @boolToInt(options.side_pindir),
+            .SIDE_EN = @boolToInt(options.side_set_optional),
+
+            // TODO: plug in rest of the options
+            // STATUS_N
+            // STATUS_SEL
+            // OUT_STICKY
+            // INLINE_OUT_EN
+            // OUT_EN_SEL
+            // JMP_PIN
+            // EXEC_STALLED
         });
     }
 
-    pub fn set_out_pins(self: Pio, sm: StateMachine, base: u5, count: u5) void {
+    pub inline fn sm_set_shift_options(self: Pio, sm: StateMachine, options: ShiftOptions) void {
+        const sm_regs = self.get_sm_regs(sm);
+        sm_regs.shiftctrl.write(.{
+            .AUTOPUSH = @boolToInt(options.autopush),
+            .AUTOPULL = @boolToInt(options.autopush),
+
+            .IN_SHIFTDIR = @enumToInt(options.in_shiftdir),
+            .OUT_SHIFTDIR = @enumToInt(options.out_shiftdir),
+
+            .PUSH_THRESH = options.push_threshold,
+            .PULL_THRESH = options.pull_threshold,
+
+            .FJOIN_TX = @boolToInt(options.join_tx),
+            .FJOIN_RX = @boolToInt(options.join_rx),
+
+            .reserved16 = 0,
+        });
+    }
+
+    pub inline fn sm_set_pin_mappings(self: Pio, sm: StateMachine, options: PinMappingOptions) void {
         const sm_regs = self.get_sm_regs(sm);
         sm_regs.pinctrl.modify(.{
-            .OUT_BASE = base,
-            .OUT_COUNT = count,
+            .OUT_BASE = options.out.base,
+            .OUT_COUNT = options.out.count,
+
+            .SET_BASE = options.set.base,
+            .SET_COUNT = options.set.count,
+
+            .SIDESET_BASE = options.side_set.base,
+            .SIDESET_COUNT = options.side_set.count,
+
+            .IN_BASE = options.in_base,
         });
     }
 
-    pub fn set_sideset_pins(self: Pio, sm: StateMachine, base: u5) void {
-        const sm_regs = self.get_sm_regs(sm);
-        sm_regs.pinctrl.modify(.{ .SIDESET_BASE = base });
-    }
-
-    pub fn is_tx_fifo_full(self: Pio, sm: StateMachine) bool {
+    pub inline fn sm_is_tx_fifo_full(self: Pio, sm: StateMachine) bool {
         const regs = self.get_regs();
         const txfull = regs.FSTAT.read().TXFULL;
         return (txfull & (@as(u4, 1) << @enumToInt(sm))) != 0;
     }
 
-    pub fn get_tx_fifo(self: Pio, sm: StateMachine) *volatile u32 {
+    pub inline fn sm_get_tx_fifo(self: Pio, sm: StateMachine) *volatile u32 {
         const regs = self.get_regs();
         return switch (sm) {
             .sm0 => &regs.TXF0,
@@ -218,33 +308,14 @@ pub const Pio = enum(u1) {
         };
     }
 
-    pub fn blocking_write(self: Pio, sm: StateMachine, value: u32) void {
-        while (self.is_tx_fifo_full(sm)) {}
+    pub inline fn sm_blocking_write(self: Pio, sm: StateMachine, value: u32) void {
+        while (self.sm_is_tx_fifo_full(sm)) {}
 
-        const fifo_ptr = self.get_tx_fifo(sm);
+        const fifo_ptr = self.sm_get_tx_fifo(sm);
         fifo_ptr.* = value;
     }
 
-    pub fn encode_jmp() void {}
-
-    //static inline uint _pio_encode_instr_and_args(enum pio_instr_bits instr_bits, uint arg1, uint arg2) {
-    //    valid_params_if(PIO_INSTRUCTIONS, arg1 <= 0x7);
-    //#if PARAM_ASSERTIONS_ENABLED(PIO_INSTRUCTIONS)
-    //    uint32_t major = _pio_major_instr_bits(instr_bits);
-    //    if (major == pio_instr_bits_in || major == pio_instr_bits_out) {
-    //        assert(arg2 && arg2 <= 32);
-    //    } else {
-    //        assert(arg2 <= 31);
-    //    }
-    //#endif
-    //    return instr_bits | (arg1 << 5u) | (arg2 & 0x1fu);
-    //}
-    //
-    //static inline uint pio_encode_jmp(uint addr) {
-    //    return _pio_encode_instr_and_args(pio_instr_bits_jmp, 0, addr);
-    //}
-
-    pub fn set_enabled(self: Pio, sm: StateMachine, enabled: bool) void {
+    pub inline fn sm_set_enabled(self: Pio, sm: StateMachine, enabled: bool) void {
         const regs = self.get_regs();
 
         var value = regs.CTRL.read();
@@ -256,103 +327,172 @@ pub const Pio = enum(u1) {
         regs.CTRL.write(value);
     }
 
-    pub fn sm_init(self: Pio, sm: StateMachine, initial_pc: u5, config: StateMachineRegs) void {
-        // Halt the machine, set some sensible defaults
-        self.set_enabled(sm, false);
+    inline fn sm_clear_debug(self: Pio, sm: StateMachine) void {
+        const regs = self.get_regs();
+        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
 
-        self.set_config(sm, config);
-        self.clear_fifos(sm);
-
-        // Clear FIFO debug flags
-        //const uint32_t fdebug_sm_mask =
-        //        (1u << PIO_FDEBUG_TXOVER_LSB) |
-        //        (1u << PIO_FDEBUG_RXUNDER_LSB) |
-        //        (1u << PIO_FDEBUG_TXSTALL_LSB) |
-        //        (1u << PIO_FDEBUG_RXSTALL_LSB);
-        //pio->fdebug = fdebug_sm_mask << sm;
-
-        // Finally, clear some internal SM state
-        self.restart(sm);
-        self.clkdiv_restart(sm);
-        self.exec(sm, encode_jmp(initial_pc));
+        // write 1 to clear this register
+        regs.FDEBUG.modify(.{
+            .RXSTALL = mask,
+            .RXUNDER = mask,
+            .TXOVER = mask,
+            .TXSTALL = mask,
+        });
     }
 
-    // state machine configuration helpers:
-    //
-    // - set_out_pins
-    // - set_set_pins
-    // - set_in_pins
-    // - set_sideset_pins
-    // - set_sideset
-    // - calculate_clkdiv_from_float
-    // - set_clkdiv
-    // - set_wrap
-    // - set_jmp_pin
-    // - set_in_shift
-    // - set_out_shift
-    // - set_fifo_join
-    // - set_out_special
-    // - set_mov_status
-    //
-    // PIO:
-    //
-    // - can_add_program
-    // - add_program_at_offset
-    // - add_program
-    // - remove_program
-    // - clear_instruction_memory
-    // - sm_init
-    // - sm_set_enabled
-    // - sm_mask_enabled
-    // - sm_restart
-    // - restart_sm_mask
-    // - sm_clkdiv_restart
-    // - clkdiv_restart_sm_mask
-    // - enable_sm_mask_in_sync
-    // - set_irq0_source_enabled
-    // - set_irq1_source_enabled
-    // - set_irq0_source_mask_enabled
-    // - set_irq1_source_mask_enabled
-    // - set_irqn_source_enabled
-    // - set_irqn_source_mask_enabled
-    // - interrupt_get
-    // - interrupt_clear
-    // - sm_get_pc
-    // - sm_exec
-    // - sm_is_exec_stalled
-    // - sm_exec_wait_blocking
-    // - sm_set_wrap
-    // - sm_set_out_pins
-    // - sm_set_set_pins
-    // - sm_set_in_pins
-    // - sm_set_sideset_pins
-    // - sm_put
-    // - sm_get
-    // - sm_is_rx_fifo_full
-    // - sm_is_rx_fifo_empty
-    // - sm_is_rx_fifo_level
-    // - sm_is_tx_fifo_full
-    // - sm_is_tx_fifo_empty
-    // - sm_is_tx_fifo_level
-    // - sm_put_blocking
-    // - sm_get_blocking
-    // - sm_drain_tx_fifo
-    // - sm_set_clkdiv_int_frac
-    // - sm_set_clkdiv
-    // - sm_clear_fifos
-    // - sm_set_pins
-    // - sm_set_pins_with_mask
-    // - sm_set_pindirs_with_mask
-    // - sm_set_consecutive_pindirs
-    // - sm_claim
-    // - claim_sm_mask
-    // - sm_unclaim
-    // - claim_unused_sm
-    // - sm_is_claimed
-    //
+    /// changing the state of fifos will clear them
+    pub fn sm_clear_fifos(self: Pio, sm: StateMachine) void {
+        const sm_regs = self.get_sm_regs(sm);
+        var shiftctrl = sm_regs.shiftctrl.read();
+        shiftctrl.FJOIN_TX ^= 1;
+        shiftctrl.FJOIN_RX ^= 1;
+        sm_regs.shiftctrl.write(shiftctrl);
+    }
+
+    pub fn sm_fifo_level(self: Pio, sm: StateMachine, fifo: Fifo) u4 {
+        const num = @enumToInt(sm);
+        const offset: u5 = switch (fifo) {
+            .tx => 0,
+            .rx => 4,
+        };
+
+        const regs = self.get_regs();
+        const levels = regs.FLEVEL.raw;
+
+        return @truncate(u4, levels >> (@as(u5, 4) * num) + offset);
+    }
+
+    inline fn interrupt_bit_pos(
+        sm: StateMachine,
+        source: Irq.Source,
+    ) u5 {
+        return (@as(u5, 4) * @enumToInt(source)) + @enumToInt(sm);
+    }
+
+    pub inline fn sm_clear_interrupt(
+        self: Pio,
+        sm: StateMachine,
+        irq: Irq,
+        source: Irq.Source,
+    ) void {
+        // TODO: why does the raw interrupt register no have irq1/0?
+        _ = irq;
+        const regs = self.get_regs();
+        regs.INTR.raw &= ~(@as(u32, 1) << interrupt_bit_pos(sm, source));
+    }
+
+    // TODO: be able to disable an interrupt
+    pub inline fn sm_enable_interrupt(
+        self: Pio,
+        sm: StateMachine,
+        irq: Irq,
+        source: Irq.Source,
+    ) void {
+        const irq_regs = self.get_irq_regs(irq);
+        irq_regs.enable.raw |= @as(u32, 1) << interrupt_bit_pos(sm, source);
+    }
+
+    pub inline fn sm_restart(self: Pio, sm: StateMachine) void {
+        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
+        const regs = self.get_regs();
+        regs.CTRL.modify(.{
+            .SM_RESTART = mask,
+        });
+    }
+
+    pub inline fn sm_clkdiv_restart(self: Pio, sm: StateMachine) void {
+        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
+        const regs = self.get_regs();
+        regs.CTRL.modify(.{
+            .CLKDIV_RESTART = mask,
+        });
+    }
+
+    pub fn sm_init(
+        self: Pio,
+        sm: StateMachine,
+        initial_pc: u5,
+        options: StateMachineInitOptions,
+    ) void {
+        // Halt the machine, set some sensible defaults
+        self.sm_set_enabled(sm, false);
+        self.sm_set_pin_mappings(sm, options.pin_mappings);
+        self.sm_set_clkdiv(sm, options.clkdiv);
+        self.sm_set_exec_options(sm, options.exec);
+        self.sm_set_shift_options(sm, options.shift);
+
+        //self.set_config(sm, config);
+        self.sm_clear_fifos(sm);
+        self.sm_clear_debug(sm);
+
+        // Finally, clear some internal SM state
+        self.sm_restart(sm);
+        self.sm_clkdiv_restart(sm);
+        self.sm_exec(sm, Instruction{
+            .tag = .jmp,
+
+            .delay_side_set = 0,
+            .payload = .{
+                .jmp = .{
+                    .address = initial_pc,
+                    .condition = .always,
+                },
+            },
+        });
+    }
+
+    pub fn sm_exec(self: Pio, sm: StateMachine, instruction: Instruction) void {
+        const sm_regs = self.get_sm_regs(sm);
+        sm_regs.instr.raw = @bitCast(u16, instruction);
+    }
+
+    pub fn sm_load_and_start_program(
+        self: Pio,
+        sm: StateMachine,
+        program: Program,
+        options: LoadAndStartProgramOptions,
+    ) !void {
+        const expected_side_set_pins = if (program.side_set) |side_set|
+            if (side_set.optional)
+                side_set.count - 1
+            else
+                side_set.count
+        else
+            0;
+
+        assert(expected_side_set_pins == options.pin_mappings.side_set.count);
+
+        // TODO: check program settings vs pin mapping
+        const offset = try self.add_program(program);
+        self.sm_init(sm, offset, .{
+            .clkdiv = options.clkdiv,
+            .shift = options.shift,
+            .pin_mappings = options.pin_mappings,
+            .exec = .{
+                .wrap = if (program.wrap) |wrap|
+                    wrap
+                else
+                    offset + @intCast(u5, program.instructions.len),
+
+                .wrap_target = if (program.wrap_target) |wrap_target|
+                    wrap_target
+                else
+                    offset,
+
+                .side_pindir = if (program.side_set) |side_set|
+                    side_set.pindirs
+                else
+                    false,
+
+                .side_set_optional = if (program.side_set) |side_set|
+                    side_set.optional
+                else
+                    false,
+            },
+        });
+    }
 };
 
 test "pio" {
     std.testing.refAllDecls(assembler);
-    //std.testing.refAllDecls(@import("pio/test.zig"));
 }
