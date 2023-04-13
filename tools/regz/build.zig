@@ -30,7 +30,7 @@ pub const Regz = struct {
             .lzma = false,
             .zlib = false,
         }) catch unreachable;
-        xml.step.install();
+        builder.installArtifact(xml.step);
 
         const commit_result = std.ChildProcess.exec(.{
             .allocator = builder.allocator,
@@ -81,7 +81,7 @@ pub const Regz = struct {
             }) catch unreachable,
         }) catch unreachable;
 
-        const run_step = regz.exe.run();
+        const run_step = regz.builder.addRunArtifact(regz.exe);
         run_step.addArgs(&.{
             schema_path,
             "-o",
@@ -105,9 +105,9 @@ pub fn build(b: *std.build.Builder) !void {
         .target = target,
         .optimize = optimize,
     });
-    regz.exe.install();
+    b.installArtifact(regz.exe);
 
-    const run_cmd = regz.exe.run();
+    const run_cmd = b.addRunArtifact(regz.exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
@@ -124,7 +124,7 @@ pub fn build(b: *std.build.Builder) !void {
     });
     regz.xml.link(contextualize_fields);
 
-    const contextualize_fields_run = contextualize_fields.run();
+    const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
     if (b.args) |args| {
         contextualize_fields_run.addArgs(args);
     }
@@ -140,7 +140,7 @@ pub fn build(b: *std.build.Builder) !void {
     });
     regz.xml.link(characterize);
 
-    const characterize_run = characterize.run();
+    const characterize_run = b.addRunArtifact(characterize);
     const characterize_step = b.step("characterize", "Characterize a number of xml files whose paths are piped into stdin, results are ndjson");
     characterize_step.dependOn(&characterize_run.step);
 
