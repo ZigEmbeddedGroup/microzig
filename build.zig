@@ -17,6 +17,6 @@ pub fn build(b: *std.build.Builder) void {
             .backing = .{ .chip = @field(chips, decl.name) },
             .optimize = optimize,
         });
-        exe.install();
+        exe.installArtifact(b);
     }
 }
