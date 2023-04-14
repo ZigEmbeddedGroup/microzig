@@ -40,15 +40,15 @@ pub const Uf2Step = struct {
 
     pub fn create(exe: *LibExeObjStep, opts: Options) *Uf2Step {
         assert(exe.kind == .exe);
-        var ret = exe.builder.allocator.create(Uf2Step) catch
+        var ret = exe.step.owner.allocator.create(Uf2Step) catch
             @panic("failed to allocate");
         ret.* = .{
-            .step = std.build.Step.init(
-                .custom,
-                "uf2",
-                exe.builder.allocator,
-                make,
-            ),
+            .step = std.build.Step.init(.{
+                .id = .custom,
+                .name = "uf2",
+                .owner = exe.step.owner,
+                .makeFn = make,
+            }),
             .exe = exe,
             .opts = opts,
             .output_file = .{ .step = &ret.step },
@@ -65,25 +65,26 @@ pub const Uf2Step = struct {
     }
 
     pub fn install(uf2_step: *Uf2Step) void {
-        const builder = uf2_step.exe.builder;
-        const name = std.mem.join(builder.allocator, "", &.{ uf2_step.exe.name, ".uf2" }) catch @panic("failed to join");
-        const install_step = builder.addInstallFileWithDir(.{
+        const owner = uf2_step.exe.step.owner;
+        const name = std.mem.join(owner.allocator, "", &.{ uf2_step.exe.name, ".uf2" }) catch @panic("failed to join");
+        const install_step = owner.addInstallFileWithDir(.{
             .generated = &uf2_step.output_file,
         }, .bin, name);
-        builder.getInstallStep().dependOn(&uf2_step.step);
-        builder.getInstallStep().dependOn(&install_step.step);
+        owner.getInstallStep().dependOn(&uf2_step.step);
+        owner.getInstallStep().dependOn(&install_step.step);
     }
 
-    fn make(step: *std.build.Step) !void {
+    fn make(step: *std.build.Step, node: *std.Progress.Node) anyerror!void {
+        _ = node;
         const uf2_step = @fieldParentPtr(Uf2Step, "step", step);
         const file_source = uf2_step.exe.getOutputSource();
-        const exe_path = file_source.getPath(uf2_step.exe.builder);
-        const dest_path = try std.mem.join(uf2_step.exe.builder.allocator, "", &.{
+        const exe_path = file_source.getPath(uf2_step.exe.step.owner);
+        const dest_path = try std.mem.join(uf2_step.exe.step.owner.allocator, "", &.{
             exe_path,
             ".uf2",
         });
 
-        var archive = Archive.init(uf2_step.exe.builder.allocator);
+        var archive = Archive.init(uf2_step.exe.step.owner.allocator);
         errdefer archive.deinit();
 
         try archive.addElf(exe_path, uf2_step.opts);
