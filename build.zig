@@ -6,6 +6,7 @@ const std = @import("std");
 const LibExeObjStep = std.build.LibExeObjStep;
 const Module = std.build.Module;
 const FileSource = std.build.FileSource;
+const Builder = std.Build;
 
 // alias for packages
 pub const LinkerScriptStep = @import("src/modules/LinkerScriptStep.zig");
@@ -44,12 +45,8 @@ pub const EmbeddedExecutable = struct {
         app_module.dependencies.put(name, module) catch @panic("OOM");
     }
 
-    pub fn install(exe: *EmbeddedExecutable) void {
-        exe.inner.install();
-    }
-
-    pub fn installRaw(exe: *EmbeddedExecutable, dest_filename: []const u8, options: std.build.InstallRawStep.CreateOptions) *std.build.InstallRawStep {
-        return exe.inner.installRaw(dest_filename, options);
+    pub fn installArtifact(exe: *EmbeddedExecutable, b: *Builder) void {
+        b.installArtifact(exe.inner);
     }
 
     pub fn addIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
