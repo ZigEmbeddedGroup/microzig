@@ -10,7 +10,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    lib.install();
+    b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
         .root_source_file = .{ .path = "src/main.zig" },
@@ -23,7 +23,7 @@ pub fn build(b: *std.build.Builder) void {
         .name = "gen",
         .root_source_file = .{ .path = "src/gen.zig" },
     });
-    const gen_run_step = gen.run();
+    const gen_run_step = b.addRunArtifact(gen);
     const gen_step = b.step("gen", "Generate family id enum");
     gen_step.dependOn(&gen_run_step.step);
 
@@ -31,5 +31,5 @@ pub fn build(b: *std.build.Builder) void {
         .name = "example",
         .root_source_file = .{ .path = "src/example.zig" },
     });
-    exe.install();
+    b.installArtifact(exe);
 }
