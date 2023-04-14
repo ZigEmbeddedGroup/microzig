@@ -1601,7 +1601,7 @@ test "tokenize.instr.jmp.conditions" {
     inline for (cases.kvs) |case| {
         const op = case.key;
         const cond = case.value;
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("jmp {s} my_label", .{op}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
 
         try expect_instr_jmp(.{ .cond = cond, .target = "my_label" }, tokens.get(0));
     }
@@ -1609,7 +1609,7 @@ test "tokenize.instr.jmp.conditions" {
 
 test "tokenize.instr.wait" {
     inline for (.{ "gpio", "pin", "irq" }) |source| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
         try expect_instr_wait(.{
             .polarity = 0,
             .source = @field(Token.Instruction.Wait.Source, source),
@@ -1637,7 +1637,7 @@ test "tokenize.instr.in" {
         "isr",
         "osr",
     }, 1..) |source, bit_count| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("in {s}, {}", .{
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("in {s}, {}", .{
             source,
             bit_count,
         }));
@@ -1660,7 +1660,7 @@ test "tokenize.instr.out" {
         "isr",
         "exec",
     }, 1..) |destination, bit_count| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("out {s}, {}", .{
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("out {s}, {}", .{
             destination,
             bit_count,
         }));
@@ -1736,7 +1736,7 @@ test "tokenize.instr.mov" {
         "isr",
         "osr",
     }) |source| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("mov x {s}", .{source}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("mov x {s}", .{source}));
 
         try expect_instr_mov(.{
             .source = @field(Token.Instruction.Mov.Source, source),
@@ -1753,7 +1753,7 @@ test "tokenize.instr.mov" {
         "isr",
         "osr",
     }) |dest| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("mov {s} x", .{dest}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
 
         try expect_instr_mov(.{
             .source = .x,
@@ -1772,7 +1772,7 @@ test "tokenize.instr.mov" {
         inline for (operations.kvs) |kv| {
             const str = kv.key;
             const operation = kv.value;
-            const tokens = try bounded_tokenize(std.fmt.comptimePrint("mov x {s}{s}y", .{
+            const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
                 str,
                 space,
             }));
@@ -1801,7 +1801,7 @@ test "tokenize.instr.irq" {
     });
 
     inline for (modes.kvs, 0..) |kv, num| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("irq {s} {}", .{
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("irq {s} {}", .{
             kv.key,
             num,
         }));
@@ -1831,7 +1831,7 @@ test "tokenize.instr.set" {
         "y",
         "pindirs",
     }) |dest| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("set {s}, 2", .{dest}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("set {s}, 2", .{dest}));
         try expect_instr_set(.{
             .dest = @field(Token.Instruction.Set.Destination, dest),
             .value = .{ .integer = 2 },
@@ -1862,7 +1862,7 @@ const instruction_examples = .{
 
 test "tokenize.instr.label prefixed" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("my_label: {s}", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("my_label: {s}", .{instr}));
         try expectEqual(@as(usize, 2), tokens.len);
         try expect_label(.{ .name = "my_label" }, tokens.get(0));
     }
@@ -1870,7 +1870,7 @@ test "tokenize.instr.label prefixed" {
 
 test "tokenize.instr.side_set" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} side 0", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} side 0", .{instr}));
         const token = tokens.get(0);
         try expect_value(.{
             .expression = "0",
@@ -1881,7 +1881,7 @@ test "tokenize.instr.side_set" {
 
 test "tokenize.instr.delay" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} [1]", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} [1]", .{instr}));
         const token = tokens.get(0);
         try expectEqual(@as(?Value, null), token.data.instruction.side_set);
         try expect_value(.{
@@ -1892,7 +1892,7 @@ test "tokenize.instr.delay" {
 
 test "tokenize.instr.delay.expression" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} [T-1]", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} [T-1]", .{instr}));
         const token = tokens.get(0);
         try expectEqual(@as(?Value, null), token.data.instruction.side_set);
         try expect_value(.{
@@ -1903,7 +1903,7 @@ test "tokenize.instr.delay.expression" {
 
 test "tokenize.instr.side_set.expression" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} side (N-1)", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} side (N-1)", .{instr}));
         const token = tokens.get(0);
         try expect_value(.{
             .expression = "(N-1)",
@@ -1914,7 +1914,7 @@ test "tokenize.instr.side_set.expression" {
 
 test "tokenize.instr.side_set and delay" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} side 1 [2]", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} side 1 [2]", .{instr}));
         const token = tokens.get(0);
         try expect_value(.{
             .expression = "1",
@@ -1927,7 +1927,7 @@ test "tokenize.instr.side_set and delay" {
 
 test "tokenize.instr.side_set and delay reversed" {
     inline for (instruction_examples) |instr| {
-        const tokens = try bounded_tokenize(std.fmt.comptimePrint("{s} [2] side 1", .{instr}));
+        const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("{s} [2] side 1", .{instr}));
         const token = tokens.get(0);
         try expect_value(.{
             .expression = "1",
