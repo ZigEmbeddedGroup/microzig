@@ -15,5 +15,5 @@ pub fn build(b: *std.build.Builder) void {
         .backing = .{ .chip = chips.esp32_c3 },
         .optimize = optimize,
     });
-    exe.install();
+    exe.installArtifact(b);
 }
