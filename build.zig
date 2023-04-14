@@ -18,7 +18,7 @@ pub fn build(b: *std.build.Builder) void {
             .backing = .{ .board = @field(boards, decl.name) },
             .optimize = optimize,
         });
-        exe.install();
+        exe.installArtifact(b);
     }
 
     inline for (@typeInfo(chips).Struct.decls) |decl| {
@@ -33,6 +33,6 @@ pub fn build(b: *std.build.Builder) void {
             .backing = .{ .chip = @field(chips, decl.name) },
             .optimize = optimize,
         });
-        exe.install();
+        exe.installArtifact(b);
     }
 }
