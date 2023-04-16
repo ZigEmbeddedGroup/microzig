@@ -1,6 +1,31 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const mmio = microzig.mmio;
 const root = @import("root");
+
+pub const regs = struct {
+    // Interrupt Control and State Register
+    pub const ICSR = @intToPtr(*volatile mmio.Mmio(packed struct {
+        VECTACTIVE: u9,
+        reserved0: u2,
+        RETTOBASE: u1,
+        VECTPENDING: u9,
+        reserved1: u1,
+        ISRPENDING: u1,
+        ISRPREEMPT: u1,
+        reserved2: u1,
+        PENDSTCLR: u1,
+        PENDSTSET: u1,
+        PENDSVCLR: u1,
+        PENDSVSET: u1,
+        reserved3: u2,
+        NMIPENDSET: u1,
+    }), 0xE000ED04);
+};
+
+pub fn executing_isr() bool {
+    return regs.ICSR.read().VECTACTIVE != 0;
+}
 
 pub fn sei() void {
     asm volatile ("cpsie i");
