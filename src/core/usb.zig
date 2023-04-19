@@ -8,7 +8,7 @@
 //! 2. Call `pub const device = Usb(F)`
 //! 3. Define the device configuration (UsbDeviceConfiguration)
 //! 4. Initialize the device in main by calling `usb.init_clk()` and `usb.init_device(device_conf)`
-//! 5. Call `usb.task()` to within the main loop
+//! 5. Call `usb.task()` within the main loop
 
 const std = @import("std");
 
@@ -417,6 +417,27 @@ pub fn Usb(comptime f: anytype) type {
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Data Types
 // +++++++++++++++++++++++++++++++++++++++++++++++++
+
+//            -------------------------
+//            |    DeviceDescriptor   |
+//            -------------------------
+//                        |
+//                        v
+//            -------------------------
+//            |   ConfigurationDesc   |
+//            -------------------------
+//                        |
+//                        v
+//            -------------------------
+//            | InterfaceDescriptor   |
+//            -------------------------
+//                        |    |
+//                        v    ------------------------------
+//            -------------------------                     |
+//            |  EndpointDescriptor   |                     v
+//            -------------------------            ---------------------
+//                                                 |   HID Descriptor  |
+//                                                 ---------------------
 
 /// Types of USB descriptor
 pub const UsbDescType = enum(u8) {

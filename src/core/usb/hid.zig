@@ -21,12 +21,52 @@
 //! The host usually won't ask for the HID descriptor even if the other descriptors
 //! indicate that the given device is a HID device, i. e., you should just pass the
 //! HID descriptor together with the configuration descriptor.
+//!
+//! ## Descriptors
+//!
+//! ### Report
+//!
+//! A Report descriptor describes each piece of data that the device generates
+//! and what the data is actually measuring (e.g., position or button state). The
+//! descriptor consists of one or more items and answers the following questions:
+//!
+//! 1. Where should the input be routed to (e.g., mouse or joystick API)?
+//! 2. Should the software assign a functionality to the input?
+//!
+//! ### Physical
+//!
+//! ...
+//!
+//! ### HID
+//!
+//! The HID descriptor identifies the length and type of subordinate descriptors for device.
 
 const std = @import("std");
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Common Data Types
 // +++++++++++++++++++++++++++++++++++++++++++++++++
+
+//          ...
+//           |
+//           v
+// -------------------------
+// |  InterfaceDescriptor  |
+// -------------------------
+//       |        |
+//       |        -----------------
+//       |                        |
+//       v                        v
+//     ...         --------------------------
+//                 |     HidDescriptor      |
+//                 --------------------------
+//                     |              |
+//               ------               --------
+//               |                           |
+//               v                           v
+//      -----------------------     ---------------------
+//      |   ReportDescriptor  |     |    PhysicalDesc   |
+//      -----------------------     ---------------------
 
 pub const HidDescType = enum(u8) {
     /// HID descriptor
