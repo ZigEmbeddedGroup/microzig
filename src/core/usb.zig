@@ -854,6 +854,22 @@ pub const EPBIter = struct {
     next: *const fn (self: *@This()) ?EPB,
 };
 
+/// Convert an utf8 into an utf16 (little endian) string
+pub fn utf8Toutf16Le(comptime s: []const u8) [s.len << 1]u8 {
+    const l = s.len << 1;
+    var ret: [l]u8 = .{0} ** l;
+    var i: usize = 0;
+    while (i < s.len) : (i += 1) {
+        ret[i << 1] = s[i];
+    }
+    return ret;
+}
+
 test "tests" {
     _ = hid;
+}
+
+test "utf8 to utf16" {
+    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &utf8Toutf16Le("My Vendor"));
+    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &utf8Toutf16Le("Raspberry Pi"));
 }
