@@ -6,7 +6,7 @@
 //!
 //! 1. Define the functions (`pub const F = struct { ... }`) required by `Usb()` (see below)
 //! 2. Call `pub const device = Usb(F)`
-//! 3. Define the device configuration (UsbDeviceConfiguration)
+//! 3. Define the device configuration (DeviceConfiguration)
 //! 4. Initialize the device in main by calling `usb.init_clk()` and `usb.init_device(device_conf)`
 //! 5. Call `usb.task()` within the main loop
 
@@ -23,20 +23,20 @@ pub const hid = @import("usb/hid.zig");
 /// to work correctly:
 ///
 /// * `usb_init_clk() void` - Initialize the USB clock
-/// * `usb_init_device(*UsbDeviceConfiguration) - Initialize the USB device controller (e.g. enable interrupts, etc.)
-/// * `usb_start_tx(*UsbEndpointConfiguration, []const u8)` - Transmit the given bytes over the specified endpoint
-/// * `usb_start_rx(*usb.UsbEndpointConfiguration, n: usize)` - Receive n bytes over the specified endpoint
+/// * `usb_init_device(*DeviceConfiguration) - Initialize the USB device controller (e.g. enable interrupts, etc.)
+/// * `usb_start_tx(*EndpointConfiguration, []const u8)` - Transmit the given bytes over the specified endpoint
+/// * `usb_start_rx(*usb.EndpointConfiguration, n: usize)` - Receive n bytes over the specified endpoint
 /// * `get_interrupts() InterruptStatus` - Return which interrupts haven't been handled yet
-/// * `get_setup_packet() UsbSetupPacket` - Return the USB setup packet received (called if SetupReq received). Make sure to clear the status flag yourself!
+/// * `get_setup_packet() SetupPacket` - Return the USB setup packet received (called if SetupReq received). Make sure to clear the status flag yourself!
 /// * `bus_reset() void` - Called on a bus reset interrupt
 /// * `set_address(addr: u7) void` - Set the given address
-/// * `get_EPBIter(*const UsbDeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
+/// * `get_EPBIter(*const DeviceConfiguration) EPBIter` - Return an endpoint buffer iterator. Each call to next returns an unhandeled endpoint buffer with data. How next is implemented depends on the system.
 /// The functions must be grouped under the same name space and passed to the fuction at compile time.
 /// The functions will be accessible to the user through the `callbacks` field.
 pub fn Usb(comptime f: anytype) type {
     return struct {
         /// The usb configuration set
-        var usb_config: ?*UsbDeviceConfiguration = null;
+        var usb_config: ?*DeviceConfiguration = null;
         /// The clock has been initialized [Y/n]
         var clk_init: bool = false;
 
@@ -56,7 +56,7 @@ pub fn Usb(comptime f: anytype) type {
         /// Initialize the usb device using the given configuration
         ///
         /// This function will return an error if the clock hasn't been initialized.
-        pub fn init_device(device_config: *UsbDeviceConfiguration) !void {
+        pub fn init_device(device_config: *DeviceConfiguration) !void {
             if (!clk_init) return error.UninitializedClock;
 
             f.usb_init_device(device_config);
@@ -105,10 +105,10 @@ pub fn Usb(comptime f: anytype) type {
                 // Attempt to parse the request type and request into one of our
                 // known enum values, and then inspect them. (These will return None
                 // if we get an unexpected numeric value.)
-                const reqty = UsbDir.of_endpoint_addr(setup.request_type);
-                const req = UsbSetupRequest.from_u8(setup.request);
+                const reqty = Dir.of_endpoint_addr(setup.request_type);
+                const req = SetupRequest.from_u8(setup.request);
 
-                if (reqty == UsbDir.Out and req != null and req.? == UsbSetupRequest.SetAddress) {
+                if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetAddress) {
                     // The new address is in the bottom 8 bits of the setup
                     // packet value field. Store it for use later.
                     S.new_address = @intCast(u8, setup.value & 0xff);
@@ -119,7 +119,7 @@ pub fn Usb(comptime f: anytype) type {
                         &.{}, // <- see, empty buffer
                     );
                     if (debug) std.log.info("    SetAddress: {}", .{S.new_address.?});
-                } else if (reqty == UsbDir.Out and req != null and req.? == UsbSetupRequest.SetConfiguration) {
+                } else if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetConfiguration) {
                     // We only have one configuration, and it doesn't really
                     // mean anything to us -- more of a formality. All we do in
                     // response to this is:
@@ -129,7 +129,7 @@ pub fn Usb(comptime f: anytype) type {
                         &.{}, // <- see, empty buffer
                     );
                     if (debug) std.log.info("    SetConfiguration", .{});
-                } else if (reqty == UsbDir.Out) {
+                } else if (reqty == Dir.Out) {
                     // This is sort of a hack, but: if we get any other kind of
                     // OUT, just acknowledge it with the same zero-length status
                     // phase that we use for control transfers that we _do_
@@ -142,10 +142,10 @@ pub fn Usb(comptime f: anytype) type {
                         &.{}, // <- see, empty buffer
                     );
                     if (debug) std.log.info("    Just OUT", .{});
-                } else if (reqty == UsbDir.In and req != null and req.? == UsbSetupRequest.GetDescriptor) {
+                } else if (reqty == Dir.In and req != null and req.? == SetupRequest.GetDescriptor) {
                     // Identify the requested descriptor type, which is in the
                     // _top_ 8 bits of value.
-                    const descriptor_type = UsbDescType.from_u16(setup.value >> 8);
+                    const descriptor_type = DescType.from_u16(setup.value >> 8);
                     if (debug) std.log.info("    GetDescriptor: {}", .{setup.value >> 8});
                     if (descriptor_type) |dt| {
                         switch (dt) {
@@ -291,7 +291,7 @@ pub fn Usb(comptime f: anytype) type {
                         // Maybe the unknown request type is a hid request
 
                         if (usb_config.?.hid) |hid_conf| {
-                            const _hid_desc_type = hid.HidDescType.from_u16(setup.value >> 8);
+                            const _hid_desc_type = hid.DescType.from_u16(setup.value >> 8);
 
                             if (_hid_desc_type) |hid_desc_type| {
                                 switch (hid_desc_type) {
@@ -327,7 +327,7 @@ pub fn Usb(comptime f: anytype) type {
                             }
                         }
                     }
-                } else if (reqty == UsbDir.In) {
+                } else if (reqty == Dir.In) {
                     if (debug) std.log.info("    Just IN", .{});
                     // Other IN request. Ignore.
                 } else {
@@ -400,7 +400,7 @@ pub fn Usb(comptime f: anytype) type {
             if (S.configured and !S.started) {
                 // We can skip the first two endpoints because those are EP0_OUT and EP0_IN
                 for (usb_config.?.endpoints[2..]) |ep| {
-                    if (UsbDir.of_endpoint_addr(ep.descriptor.endpoint_address) == .Out) {
+                    if (Dir.of_endpoint_addr(ep.descriptor.endpoint_address) == .Out) {
                         // Hey host! we expect data!
                         f.usb_start_rx(
                             ep,
@@ -440,7 +440,7 @@ pub fn Usb(comptime f: anytype) type {
 //                                                 ---------------------
 
 /// Types of USB descriptor
-pub const UsbDescType = enum(u8) {
+pub const DescType = enum(u8) {
     Device = 0x01,
     Config = 0x02,
     String = 0x03,
@@ -464,8 +464,8 @@ pub const UsbDescType = enum(u8) {
 };
 
 /// Types of transfer that can be indicated by the `attributes` field on
-/// `UsbEndpointDescriptor`.
-pub const UsbTransferType = enum(u2) {
+/// `EndpointDescriptor`.
+pub const TransferType = enum(u2) {
     Control = 0,
     Isochronous = 1,
     Bulk = 2,
@@ -473,7 +473,7 @@ pub const UsbTransferType = enum(u2) {
 };
 
 /// The types of USB SETUP requests that we understand.
-pub const UsbSetupRequest = enum(u8) {
+pub const SetupRequest = enum(u8) {
     /// Asks the device to send a certain descriptor back to the host. Always
     /// used on an IN request.
     GetDescriptor = 0x06,
@@ -486,9 +486,9 @@ pub const UsbSetupRequest = enum(u8) {
 
     pub fn from_u8(request: u8) ?@This() {
         return switch (request) {
-            0x06 => UsbSetupRequest.GetDescriptor,
-            0x05 => UsbSetupRequest.SetAddress,
-            0x09 => UsbSetupRequest.SetConfiguration,
+            0x06 => SetupRequest.GetDescriptor,
+            0x05 => SetupRequest.SetAddress,
+            0x09 => SetupRequest.SetConfiguration,
             else => null,
         };
     }
@@ -497,7 +497,7 @@ pub const UsbSetupRequest = enum(u8) {
 /// USB deals in two different transfer directions, called OUT (host-to-device)
 /// and IN (device-to-host). In the vast majority of cases, OUT is represented
 /// by a 0 byte, and IN by an `0x80` byte.
-pub const UsbDir = enum(u8) {
+pub const Dir = enum(u8) {
     Out = 0,
     In = 0x80,
 
@@ -511,16 +511,16 @@ pub const UsbDir = enum(u8) {
 };
 
 /// Describes an endpoint within an interface
-pub const UsbEndpointDescriptor = packed struct {
+pub const EndpointDescriptor = packed struct {
     /// Length of this struct, must be 7.
     length: u8,
     /// Type of this descriptor, must be `Endpoint`.
-    descriptor_type: UsbDescType,
+    descriptor_type: DescType,
     /// Address of this endpoint, where the bottom 4 bits give the endpoint
     /// number (0..15) and the top bit distinguishes IN (1) from OUT (0).
     endpoint_address: u8,
     /// Endpoint attributes; the most relevant part is the bottom 2 bits, which
-    /// control the transfer type using the values from `UsbTransferType`.
+    /// control the transfer type using the values from `TransferType`.
     attributes: u8,
     /// Maximum packet size this endpoint can accept/produce.
     max_packet_size: u16,
@@ -542,11 +542,11 @@ pub const UsbEndpointDescriptor = packed struct {
 };
 
 /// Description of an interface within a configuration.
-pub const UsbInterfaceDescriptor = packed struct {
+pub const InterfaceDescriptor = packed struct {
     /// Length of this structure, must be 9.
     length: u8,
     /// Type of this descriptor, must be `Interface`.
-    descriptor_type: UsbDescType,
+    descriptor_type: DescType,
     /// ID of this interface.
     interface_number: u8,
     /// Allows a single `interface_number` to have several alternate interface
@@ -580,11 +580,11 @@ pub const UsbInterfaceDescriptor = packed struct {
 };
 
 /// Description of a single available device configuration.
-pub const UsbConfigurationDescriptor = packed struct {
+pub const ConfigurationDescriptor = packed struct {
     /// Length of this structure, must be 9.
     length: u8,
     /// Type of this descriptor, must be `Config`.
-    descriptor_type: UsbDescType,
+    descriptor_type: DescType,
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
@@ -625,11 +625,11 @@ pub const UsbConfigurationDescriptor = packed struct {
 
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
-pub const UsbDeviceDescriptor = packed struct {
+pub const DeviceDescriptor = packed struct {
     /// Length of this structure, must be 18.
     length: u8,
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: UsbDescType,
+    descriptor_type: DescType,
     /// Version of the device descriptor / USB protocol, in binary-coded
     /// decimal. This is typically `0x01_10` for USB 1.1.
     bcd_usb: u16,
@@ -686,7 +686,7 @@ pub const DeviceQualifierDescriptor = packed struct {
     /// Length of this structure, must be 18.
     length: u8 = 10,
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: UsbDescType = UsbDescType.DeviceQualifier,
+    descriptor_type: DescType = DescType.DeviceQualifier,
     /// Version of the device descriptor / USB protocol, in binary-coded
     /// decimal. This is typically `0x01_10` for USB 1.1.
     bcd_usb: u16,
@@ -720,11 +720,11 @@ pub const DeviceQualifierDescriptor = packed struct {
 };
 
 /// Layout of an 8-byte USB SETUP packet.
-pub const UsbSetupPacket = packed struct {
+pub const SetupPacket = packed struct {
     /// Request type; in practice, this is always either OUT (host-to-device) or
-    /// IN (device-to-host), whose values are given in the `UsbDir` enum.
+    /// IN (device-to-host), whose values are given in the `Dir` enum.
     request_type: u8,
-    /// Request. Standard setup requests are in the `UsbSetupRequest` enum.
+    /// Request. Standard setup requests are in the `SetupRequest` enum.
     /// Devices can extend this with additional types as long as they don't
     /// conflict.
     request: u8,
@@ -742,8 +742,8 @@ pub const UsbSetupPacket = packed struct {
 // Driver support stuctures
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 
-pub const UsbEndpointConfiguration = struct {
-    descriptor: *const UsbEndpointDescriptor,
+pub const EndpointConfiguration = struct {
+    descriptor: *const EndpointDescriptor,
     /// Index of this endpoint's control register in the `ep_control` array.
     ///
     /// TODO: this can be derived from the endpoint address, perhaps it should
@@ -766,20 +766,20 @@ pub const UsbEndpointConfiguration = struct {
 
     /// Optional callback for custom OUT endpoints. This function will be called
     /// if the device receives data on the corresponding endpoint.
-    callback: ?*const fn (dc: *UsbDeviceConfiguration, data: []const u8) void = null,
+    callback: ?*const fn (dc: *DeviceConfiguration, data: []const u8) void = null,
 };
 
-pub const UsbDeviceConfiguration = struct {
-    device_descriptor: *const UsbDeviceDescriptor,
-    interface_descriptor: *const UsbInterfaceDescriptor,
-    config_descriptor: *const UsbConfigurationDescriptor,
+pub const DeviceConfiguration = struct {
+    device_descriptor: *const DeviceDescriptor,
+    interface_descriptor: *const InterfaceDescriptor,
+    config_descriptor: *const ConfigurationDescriptor,
     lang_descriptor: []const u8,
     descriptor_strings: []const []const u8,
     hid: ?struct {
         hid_descriptor: *const hid.HidDescriptor,
         report_descriptor: []const u8,
     } = null,
-    endpoints: [4]*UsbEndpointConfiguration,
+    endpoints: [4]*EndpointConfiguration,
 };
 
 /// Buffer pointers, once they're prepared and initialized.
@@ -792,7 +792,7 @@ pub const Buffers = struct {
     rest: [16][*]u8,
 
     /// Gets a buffer corresponding to a `data_buffer_index` in a
-    /// `UsbEndpointConfiguration`.
+    /// `EndpointConfiguration`.
     pub fn get(self: *@This(), i: usize) [*]u8 {
         return switch (i) {
             0 => self.ep0_buffer0,
@@ -803,11 +803,11 @@ pub const Buffers = struct {
 };
 
 // Handy constants for the endpoints we use here
-pub const EP0_IN_ADDR: u8 = UsbDir.In.endpoint(0);
-pub const EP0_OUT_ADDR: u8 = UsbDir.Out.endpoint(0);
-const EP1_OUT_ADDR: u8 = UsbDir.Out.endpoint(1);
-const EP1_IN_ADDR: u8 = UsbDir.In.endpoint(1);
-const EP2_IN_ADDR: u8 = UsbDir.In.endpoint(2);
+pub const EP0_IN_ADDR: u8 = Dir.In.endpoint(0);
+pub const EP0_OUT_ADDR: u8 = Dir.Out.endpoint(0);
+const EP1_OUT_ADDR: u8 = Dir.Out.endpoint(1);
+const EP1_IN_ADDR: u8 = Dir.In.endpoint(1);
+const EP2_IN_ADDR: u8 = Dir.In.endpoint(2);
 
 /// USB interrupt status
 ///
@@ -836,7 +836,7 @@ pub const EPBError = error{
 /// Element returned by the endpoint buffer iterator (EPBIter)
 pub const EPB = struct {
     /// The endpoint the data belongs to
-    endpoint: *UsbEndpointConfiguration,
+    endpoint: *EndpointConfiguration,
     /// Data buffer
     buffer: []u8,
 };
@@ -849,7 +849,7 @@ pub const EPBIter = struct {
     /// next call.
     last_bit: ?u32 = null,
     /// Point to the device configuration (to get access to the endpoint buffers defined by the user)
-    device_config: *const UsbDeviceConfiguration,
+    device_config: *const DeviceConfiguration,
     /// Get the next available input buffer
     next: *const fn (self: *@This()) ?EPB,
 };
