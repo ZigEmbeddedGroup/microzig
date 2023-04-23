@@ -270,8 +270,16 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
 
+    const core_tests = b.addTest(.{
+        .root_source_file = .{
+            .path = comptime root_dir() ++ "/src/core.zig",
+        },
+        .optimize = optimize,
+    });
+
     const test_step = b.step("test", "build test programs");
     test_step.dependOn(&minimal.inner.step);
     test_step.dependOn(&has_hal.inner.step);
     test_step.dependOn(&has_board.inner.step);
+    test_step.dependOn(&b.addRunArtifact(core_tests).step);
 }
