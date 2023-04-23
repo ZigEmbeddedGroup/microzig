@@ -16,6 +16,7 @@ pub const irq = @import("hal/irq.zig");
 pub const rom = @import("hal/rom.zig");
 pub const flash = @import("hal/flash.zig");
 pub const pio = @import("hal/pio.zig");
+pub const rand = @import("hal/random.zig");
 
 pub const clock_config = clocks.GlobalConfiguration.init(.{
     .ref = .{ .source = .src_xosc },

@@ -69,6 +69,7 @@ pub const Examples = struct {
     squarewave: *microzig.EmbeddedExecutable,
     //uart_pins: microzig.EmbeddedExecutable,
     flash_program: *microzig.EmbeddedExecutable,
+    random: *microzig.EmbeddedExecutable,
 
     pub fn init(b: *Builder, optimize: std.builtin.OptimizeMode) Examples {
         var ret: Examples = undefined;
