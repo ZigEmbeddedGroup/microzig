@@ -44,7 +44,7 @@ pub fn build(b: *Builder) !void {
 
     const pio_tests = b.addTest(.{
         .root_source_file = .{
-            .path = "src/hal/pio.zig",
+            .path = "src/hal.zig",
         },
         .optimize = optimize,
     });
@@ -69,6 +69,8 @@ pub const Examples = struct {
     squarewave: *microzig.EmbeddedExecutable,
     //uart_pins: microzig.EmbeddedExecutable,
     flash_program: *microzig.EmbeddedExecutable,
+    usb_device: *microzig.EmbeddedExecutable,
+    usb_hid: *microzig.EmbeddedExecutable,
     random: *microzig.EmbeddedExecutable,
 
     pub fn init(b: *Builder, optimize: std.builtin.OptimizeMode) Examples {

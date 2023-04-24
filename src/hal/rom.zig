@@ -47,9 +47,9 @@ pub const signatures = struct {
     /// Signature of memset4: Sets n bytes start at ptr to the value c and returns ptr; must be word (32-bit) aligned!
     const memset4 = fn (ptr: [*]u32, c: u8, n: u32) [*]u32;
     /// Signature of memcpy: Copies n bytes starting at src to dest and returns dest. The results are undefined if the regions overlap.
-    const memcpy = fn (dest: [*]u8, src: [*]u8, n: u32) [*]u8;
+    const memcpy = fn (dest: [*]u8, src: [*]const u8, n: u32) [*]u8;
     /// Signature of memcpy44: Copies n bytes starting at src to dest and returns dest; must be word (32-bit) aligned!
-    const memcpy44 = fn (dest: [*]u32, src: [*]u32, n: u32) [*]u8;
+    const memcpy44 = fn (dest: [*]u32, src: [*]const u32, n: u32) [*]u8;
     /// Signature of connect_internal_flash: Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads
     const connect_internal_flash = fn () void;
     /// Signature of flash_exit_xip: First set up the SSI for serial-mode operations, then issue the fixed XIP exit sequence described in
@@ -189,7 +189,7 @@ pub fn memset(dest: []u8, c: u8) []u8 {
 }
 
 /// Copies n bytes from src to dest; The number of bytes copied is the size of the smaller slice
-pub fn memcpy(dest: []u8, src: []u8) []u8 {
+pub fn memcpy(dest: []u8, src: []const u8) []u8 {
     const S = struct {
         var f: ?*signatures.memcpy = null;
     };
