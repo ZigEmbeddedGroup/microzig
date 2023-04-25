@@ -62,7 +62,7 @@ pub fn build(b: *std.build.Builder) !void {
         },
         .optimize = optimize,
     });
-    exe.install();
+    exe.installArtifact(b);
 }
 ----
 
