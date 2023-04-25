@@ -1,18 +1,21 @@
 const std = @import("std");
-const micro = @import("microzig");
-const chip = @import("chip");
+const hal = @import("hal");
+const app = struct {}; // workaround for error: no package named 'app' available within package 'root.microzig'
+const board = @import("board");
+const cpu = @import("cpu");
+const config = @import("config");
 
 /// An enumeration of clock sources.
 pub const Source = enum {
     none,
     application,
     board,
-    chip,
+    hal,
     cpu,
 };
 
 /// A struct containing the frequency in hertz for each clock domain
-pub const Clocks = std.enums.EnumFieldStruct(chip.clock.Domain, u32, null);
+pub const Clocks = std.enums.EnumFieldStruct(hal.clock.Domain, u32, null);
 
 /// Is `true` when microzig has a clock frequency available.
 /// Clock can be provided by several clock sources
@@ -23,10 +26,10 @@ pub const is_dynamic = has_clock and !@typeInfo(@TypeOf(&@field(clock_source_typ
 
 /// Contains the source which provides microzig with clock information.
 pub const source: Source = switch (clock_source_type) {
-    micro.app => .application,
-    micro.board => .board,
-    micro.chip => .chip,
-    micro.cpu => .cpu,
+    app => .application,
+    board => .board,
+    hal => .hal,
+    cpu => .cpu,
     no_clock_source_type => .none,
     else => unreachable,
 };
@@ -46,14 +49,14 @@ pub inline fn get() Clocks {
 const freq_decl_name = "clock_frequencies";
 
 const no_clock_source_type = opaque {};
-const clock_source_type = if (@hasDecl(micro.app, freq_decl_name))
-    micro.app
-else if (micro.config.has_board and @hasDecl(micro.board, freq_decl_name))
-    micro.board
-else if (@hasDecl(micro.chip, freq_decl_name))
-    micro.chip
-else if (@hasDecl(micro.cpu, freq_decl_name))
-    micro.cpu
+const clock_source_type = if (@hasDecl(app, freq_decl_name))
+    app
+else if (config.has_board and @hasDecl(board, freq_decl_name))
+    board
+else if (@hasDecl(hal, freq_decl_name))
+    hal
+else if (@hasDecl(cpu, freq_decl_name))
+    cpu
 else
     no_clock_source_type;
 

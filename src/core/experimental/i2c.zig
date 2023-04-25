@@ -1,9 +1,9 @@
 const std = @import("std");
-const micro = @import("microzig");
-const chip = @import("chip");
+const hal = @import("hal");
+const cfg = @import("config");
 
 pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
-    const SystemI2CController = chip.I2CController(index, pins);
+    const SystemI2CController = hal.I2CController(index, pins);
 
     const I2CDevice = struct {
         const Device = @This();
