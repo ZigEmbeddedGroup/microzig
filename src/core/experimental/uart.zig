@@ -1,9 +1,9 @@
 const std = @import("std");
-const micro = @import("microzig");
-const chip = @import("chip");
+const hal = @import("hal");
+const clock = @import("clock.zig");
 
 pub fn Uart(comptime index: usize, comptime pins: Pins) type {
-    const SystemUart = chip.Uart(index, pins);
+    const SystemUart = hal.Uart(index, pins);
     return struct {
         const Self = @This();
 
@@ -11,7 +11,7 @@ pub fn Uart(comptime index: usize, comptime pins: Pins) type {
 
         /// Initializes the UART with the given config and returns a handle to the uart.
         pub fn init(config: Config) InitError!Self {
-            micro.clock.ensure();
+            clock.ensure();
             return Self{
                 .internal = try SystemUart.init(config),
             };
@@ -81,9 +81,9 @@ pub const Config = struct {
 };
 
 // TODO: comptime verify that the enums are valid
-pub const DataBits = chip.uart.DataBits;
-pub const StopBits = chip.uart.StopBits;
-pub const Parity = chip.uart.Parity;
+pub const DataBits = hal.uart.DataBits;
+pub const StopBits = hal.uart.StopBits;
+pub const Parity = hal.uart.Parity;
 
 pub const InitError = error{
     UnsupportedWordSize,
