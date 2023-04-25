@@ -128,6 +128,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         const Self = @This();
 
         internal: SystemI2CController,
+        variable_so_struct_is_not_of_size_zero_and_mcu_hangs_when_returning_struct_on_avr: if (std.mem.eql(u8, cfg.chip_name, "ATmega328P")) u8 else void = undefined,
 
         pub fn init(config: Config) InitError!Self {
             return Self{
