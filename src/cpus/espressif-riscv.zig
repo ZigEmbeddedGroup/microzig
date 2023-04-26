@@ -29,11 +29,11 @@ pub inline fn clearStatusBit(comptime reg: StatusRegister, bits: u32) void {
     );
 }
 
-pub inline fn cli() void {
+pub inline fn disable_interrupts() void {
     clearStatusBit(.mstatus, 0x08);
 }
 
-pub inline fn sei() void {
+pub inline fn enable_interrupts() void {
     setStatusBit(.mstatus, 0x08);
 }
 
@@ -62,7 +62,7 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     export fn _start() linksection("microzig_flash_start") callconv(.Naked) noreturn {
-        microzig.cpu.cli();
+        microzig.cpu.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
