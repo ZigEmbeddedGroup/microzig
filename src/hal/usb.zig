@@ -130,7 +130,7 @@ pub const F = struct {
         // clock.
         //
         // PLL_USB out of reset
-        resets.reset(&.{.pll_usb});
+        resets.reset(.{ .pll_usb = true });
         // Configure it:
         //
         // RFDIV = 1
@@ -154,7 +154,7 @@ pub const F = struct {
 
     pub fn usb_init_device(device_config: *usb.DeviceConfiguration) void {
         // Bring USB out of reset
-        resets.reset(&.{.usbctrl});
+        resets.reset(.{ .usbctrl = true });
 
         // Clear the control portion of DPRAM. This may not be necessary -- the
         // datasheet is ambiguous -- but the C examples do it, and so do we.

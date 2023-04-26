@@ -8,6 +8,7 @@ const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
+const dma = @import("dma.zig");
 
 const assert = std.debug.assert;
 
@@ -33,17 +34,20 @@ pub const Parity = enum {
 
 pub const Config = struct {
     clock_config: clocks.GlobalConfiguration,
-    tx_pin: ?u32 = null,
-    rx_pin: ?u32 = null,
+    tx_pin: ?gpio.Pin = null,
+    rx_pin: ?gpio.Pin = null,
     baud_rate: u32,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,
 };
 
-pub const UART = enum {
-    uart0,
-    uart1,
+pub fn num(n: u1) UART {
+    return @intToEnum(UART, n);
+}
+
+pub const UART = enum(u1) {
+    _,
 
     const WriteError = error{};
     const ReadError = error{};
@@ -59,22 +63,14 @@ pub const UART = enum {
     }
 
     fn get_regs(uart: UART) *volatile UartRegs {
-        return switch (uart) {
-            .uart0 => UART0,
-            .uart1 => UART1,
+        return switch (@enumToInt(uart)) {
+            0 => UART0,
+            1 => UART1,
         };
     }
 
-    pub fn init(comptime id: u32, comptime config: Config) UART {
-        const uart: UART = switch (id) {
-            0 => .uart0,
-            1 => .uart1,
-            else => @compileError("there is only uart0 and uart1"),
-        };
-
+    pub fn apply(uart: UART, comptime config: Config) void {
         assert(config.baud_rate > 0);
-
-        uart.reset();
 
         const uart_regs = uart.get_regs();
         const peri_freq = config.clock_config.peri.?.output_freq;
@@ -96,10 +92,8 @@ pub const UART = enum {
         });
 
         // TODO comptime assertions
-        if (config.tx_pin) |tx_pin| gpio.set_function(tx_pin, .uart);
-        if (config.rx_pin) |rx_pin| gpio.set_function(rx_pin, .uart);
-
-        return uart;
+        if (config.tx_pin) |tx_pin| tx_pin.set_function(.uart);
+        if (config.rx_pin) |rx_pin| rx_pin.set_function(.uart);
     }
 
     pub fn is_readable(uart: UART) bool {
@@ -122,6 +116,18 @@ pub const UART = enum {
         return payload.len;
     }
 
+    pub fn tx_fifo(uart: UART) *volatile u32 {
+        const regs = uart.get_regs();
+        return @ptrCast(*volatile u32, &regs.UARTDR);
+    }
+
+    pub fn dreq_tx(uart: UART) dma.Dreq {
+        return switch (@enumToInt(uart)) {
+            0 => .uart0_tx,
+            1 => .uart1_tx,
+        };
+    }
+
     pub fn read(uart: UART, buffer: []u8) ReadError!usize {
         const uart_regs = uart.get_regs();
         for (buffer) |*byte| {
@@ -139,13 +145,6 @@ pub const UART = enum {
 
         // TODO: error checking
         return uart_regs.UARTDR.read().DATA;
-    }
-
-    pub fn reset(uart: UART) void {
-        switch (uart) {
-            .uart0 => resets.reset(&.{.uart0}),
-            .uart1 => resets.reset(&.{.uart1}),
-        }
     }
 
     pub fn set_format(

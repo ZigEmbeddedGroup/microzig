@@ -63,92 +63,147 @@ pub const Enabled = enum {
     enabled,
 };
 
-pub inline fn reset() void {
-    resets.reset(&.{ .io_bank0, .pads_bank0 });
-}
-
-/// Initialize a GPIO, set func to SIO
-pub inline fn init(comptime gpio: u32) void {
-    const mask = 1 << gpio;
-    SIO.GPIO_OE_CLR.raw = mask;
-    SIO.GPIO_OUT_CLR.raw = mask;
-    set_function(gpio, .sio);
-}
-
-/// Reset GPIO back to null function (disables it)
-pub inline fn deinit(comptime gpio: u32) void {
-    set_function(gpio, .null);
-}
-
 pub const PullUpDown = enum {
     up,
     down,
 };
 
-pub inline fn set_pull(comptime gpio: u32, mode: ?PullUpDown) void {
-    const gpio_name = comptime std.fmt.comptimePrint("GPIO{d}", .{gpio});
-    const gpio_regs = &@field(PADS_BANK0, gpio_name);
+pub fn num(n: u5) Pin {
+    if (n > 29)
+        @panic("the RP2040 only has GPIO 0-29");
 
-    if (mode == null) {
-        gpio_regs.modify(.{ .PUE = 0, .PDE = 0 });
-    } else switch (mode.?) {
-        .up => gpio_regs.modify(.{ .PUE = 1, .PDE = 0 }),
-        .down => gpio_regs.modify(.{ .PUE = 0, .PDE = 1 }),
+    return @intToEnum(Pin, n);
+}
+
+pub fn mask(m: u32) Mask {
+    _ = m;
+    @panic("TODO");
+}
+
+pub const Mask = enum(u30) {
+    _,
+};
+
+pub const Pin = enum(u5) {
+    _,
+
+    pub const Regs = struct {
+        status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+        ctrl: microzig.mmio.Mmio(packed struct(u32) {
+            FUNCSEL: packed union {
+                raw: u5,
+                value: Function,
+            },
+            reserved8: u3,
+            OUTOVER: packed union {
+                raw: u2,
+                value: Override,
+            },
+            reserved12: u2,
+            OEOVER: packed union {
+                raw: u2,
+                value: Override,
+            },
+            reserved16: u2,
+            INOVER: packed union {
+                raw: u2,
+                value: Override,
+            },
+            reserved28: u10,
+            IRQOVER: packed union {
+                raw: u2,
+                value: Override,
+            },
+            padding: u2,
+        }),
+    };
+
+    pub const PadsReg = @TypeOf(PADS_BANK0.GPIO0);
+
+    fn get_regs(gpio: Pin) *volatile Regs {
+        const regs = @ptrCast(*volatile [30]Regs, &IO_BANK0.GPIO0_STATUS);
+        return &regs[@enumToInt(gpio)];
     }
-}
 
-pub inline fn set_direction(comptime gpio: u32, direction: Direction) void {
-    const mask = 1 << gpio;
-    switch (direction) {
-        .in => SIO.GPIO_OE_CLR.raw = mask,
-        .out => SIO.GPIO_OE_SET.raw = mask,
+    fn get_pads_reg(gpio: Pin) *volatile PadsReg {
+        const regs = @ptrCast(*volatile [30]PadsReg, &PADS_BANK0.GPIO0);
+        return &regs[@enumToInt(gpio)];
     }
-}
 
-/// Drive a single GPIO high/low
-pub inline fn put(comptime gpio: u32, value: u1) void {
-    std.log.debug("GPIO{} put: {}", .{ gpio, value });
-    const mask = 1 << gpio;
-    switch (value) {
-        0 => SIO.GPIO_OUT_CLR.raw = mask,
-        1 => SIO.GPIO_OUT_SET.raw = mask,
+    pub fn mask(gpio: Pin) u32 {
+        return @as(u32, 1) << @enumToInt(gpio);
     }
-}
 
-pub inline fn toggle(comptime gpio: u32) void {
-    SIO.GPIO_OUT_XOR.raw = (1 << gpio);
-}
+    pub inline fn set_pull(gpio: Pin, mode: ?PullUpDown) void {
+        const pads_reg = gpio.get_pads_reg();
 
-pub inline fn read(comptime gpio: u32) u1 {
-    const mask = 1 << gpio;
-    return if ((SIO.GPIO_IN.raw & mask) != 0)
-        1
-    else
-        0;
-}
+        if (mode == null) {
+            pads_reg.modify(.{ .PUE = 0, .PDE = 0 });
+        } else switch (mode.?) {
+            .up => pads_reg.modify(.{ .PUE = 1, .PDE = 0 }),
+            .down => pads_reg.modify(.{ .PUE = 0, .PDE = 1 }),
+        }
+    }
 
-pub inline fn set_function(comptime gpio: u32, function: Function) void {
-    const pad_bank_reg = comptime std.fmt.comptimePrint("GPIO{}", .{gpio});
-    @field(PADS_BANK0, pad_bank_reg).modify(.{
-        .IE = 1,
-        .OD = 0,
-    });
+    pub inline fn set_direction(gpio: Pin, direction: Direction) void {
+        switch (direction) {
+            .in => SIO.GPIO_OE_CLR.raw = gpio.mask(),
+            .out => SIO.GPIO_OE_SET.raw = gpio.mask(),
+        }
+    }
 
-    const io_bank_reg = comptime std.fmt.comptimePrint("GPIO{}_CTRL", .{gpio});
-    @field(IO_BANK0, io_bank_reg).write(.{
-        .FUNCSEL = .{ .raw = @enumToInt(function) },
-        .OUTOVER = .{ .value = .NORMAL },
-        .INOVER = .{ .value = .NORMAL },
-        .IRQOVER = .{ .value = .NORMAL },
-        .OEOVER = .{ .value = .NORMAL },
+    /// Drive a single GPIO high/low
+    pub inline fn put(gpio: Pin, value: u1) void {
+        switch (value) {
+            0 => SIO.GPIO_OUT_CLR.raw = gpio.mask(),
+            1 => SIO.GPIO_OUT_SET.raw = gpio.mask(),
+        }
+    }
 
-        .reserved8 = 0,
-        .reserved12 = 0,
-        .reserved16 = 0,
-        .reserved28 = 0,
-        .padding = 0,
-    });
-}
+    pub inline fn toggle(gpio: Pin) void {
+        SIO.GPIO_OUT_XOR.raw = gpio.mask();
+    }
+
+    pub inline fn read(gpio: Pin) u1 {
+        return if ((SIO.GPIO_IN.raw & gpio.mask()) != 0)
+            1
+        else
+            0;
+    }
+
+    pub inline fn set_function(gpio: Pin, function: Function) void {
+        const pads_reg = gpio.get_pads_reg();
+        pads_reg.modify(.{
+            .IE = 1,
+            .OD = 0,
+        });
+
+        const regs = gpio.get_regs();
+        regs.ctrl.modify(.{
+            .FUNCSEL = .{ .value = function },
+            .OUTOVER = .{ .value = .normal },
+            .INOVER = .{ .value = .normal },
+            .IRQOVER = .{ .value = .normal },
+            .OEOVER = .{ .value = .normal },
+
+            .reserved8 = 0,
+            .reserved12 = 0,
+            .reserved16 = 0,
+            .reserved28 = 0,
+            .padding = 0,
+        });
+    }
+
+    //pub fn set_drive_strength(gpio: Gpio, drive: DriveStrength) void {
+    //    _ = drive;
+    //    const pads_reg = gpio.get_pads_reg();
+    //    pads_reg.modify(.{
+    //        .DRIVE = .{
+    //            .value = .@"12mA",
+    //        },
+    //    });
+    //}
+};
 
 // setting both uplls enables a "bus keep" function, a weak pull to whatever
 // is current high/low state of GPIO
@@ -165,7 +220,6 @@ pub inline fn set_function(comptime gpio: u32, function: Function) void {
 //pub fn setInputEnabled(gpio: u32, enabled: Enabled) void {}
 //pub fn setinputHysteresisEnabled(gpio: u32, enabled: Enabled) void {}
 //pub fn setSlewRate(gpio: u32, slew_rate: SlewRate) void {}
-//pub fn setDriveStrength(gpio: u32, drive: DriveStrength) void {}
+
 //pub fn setIrqEnabled(gpio: u32, events: IrqEvents) void {}
 //pub fn acknowledgeIrq(gpio: u32, events: IrqEvents) void {}
-

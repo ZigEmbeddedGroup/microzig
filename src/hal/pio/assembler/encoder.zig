@@ -27,7 +27,7 @@ pub fn encode(
 pub const SideSet = struct {
     count: u3,
     optional: bool,
-    pindirs: bool,
+    pindir: bool,
 };
 
 pub const Define = struct {
@@ -76,15 +76,20 @@ pub fn Encoder(comptime options: Options) type {
             wrap: ?u5,
 
             pub fn to_exported_program(comptime bounded: BoundedProgram) assembler.Program {
+                comptime var program_name: [bounded.name.len]u8 = undefined;
+                std.mem.copy(u8, &program_name, bounded.name);
                 return assembler.Program{
-                    .name = bounded.name,
+                    .name = &program_name,
                     .defines = blk: {
                         var tmp = std.BoundedArray(assembler.Define, options.max_defines).init(0) catch unreachable;
-                        for (bounded.defines.slice()) |define|
+                        for (bounded.defines.slice()) |define| {
+                            comptime var define_name: [define.name.len]u8 = undefined;
+                            std.mem.copy(u8, &define_name, define.name);
                             tmp.append(.{
-                                .name = define.name,
+                                .name = &define_name,
                                 .value = @intCast(i64, define.value),
                             }) catch unreachable;
+                        }
 
                         break :blk tmp.slice();
                     },
@@ -281,7 +286,7 @@ pub fn Encoder(comptime options: Options) type {
                         program.side_set = .{
                             .count = try self.evaluate(u3, program.*, side_set.count, token.index, diags),
                             .optional = side_set.opt,
-                            .pindirs = side_set.pindirs,
+                            .pindir = side_set.pindir,
                         };
                         self.consume(1);
                     },
@@ -823,7 +828,7 @@ test "encode.side_set.pindirs" {
 
     const program = output.programs.get(0);
     try expectEqual(@as(?u5, 1), program.side_set.?.count);
-    try expect(program.side_set.?.pindirs);
+    try expect(program.side_set.?.pindir);
 }
 
 test "encode.label" {

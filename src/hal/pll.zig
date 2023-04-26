@@ -19,7 +19,7 @@ pub const Configuration = struct {
     }
 };
 
-pub const PLL = enum {
+pub const PLL = enum(u1) {
     sys,
     usb,
 

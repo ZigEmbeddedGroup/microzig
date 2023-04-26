@@ -439,7 +439,7 @@ pub const Tokenizer = struct {
                 .side_set = .{
                     .count = count,
                     .opt = opt,
-                    .pindirs = pindirs,
+                    .pindir = pindirs,
                 },
             },
         };
@@ -1129,7 +1129,7 @@ pub const Token = struct {
     pub const SideSet = struct {
         count: Value,
         opt: bool = false,
-        pindirs: bool = false,
+        pindir: bool = false,
     };
 
     pub const LangOpt = struct {
@@ -1191,7 +1191,7 @@ fn expect_side_set(expected: Token.SideSet, actual: Token) !void {
     const side_set = actual.data.side_set;
     try expect_value(expected.count, side_set.count);
     try expectEqual(expected.opt, side_set.opt);
-    try expectEqual(expected.pindirs, side_set.pindirs);
+    try expectEqual(expected.pindir, side_set.pindir);
 }
 
 fn expect_wrap_target(actual: Token) !void {
@@ -1538,7 +1538,7 @@ test "tokenize.directive.side_set.opt" {
 
 test "tokenize.directive.side_set.pindirs" {
     const tokens = try bounded_tokenize(".side_set 1 pindirs");
-    try expect_side_set(.{ .count = .{ .integer = 1 }, .pindirs = true }, tokens.get(0));
+    try expect_side_set(.{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
 }
 
 test "tokenize.directive.wrap_target" {

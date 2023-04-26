@@ -315,24 +315,24 @@ const function_table = [@typeInfo(Function).Enum.fields.len][30]u1{
 pub fn GPIO(comptime num: u5, comptime direction: gpio.Direction) type {
     return switch (direction) {
         .in => struct {
-            const gpio_num = num;
+            const pin = gpio.num(num);
 
             pub inline fn read(self: @This()) u1 {
                 _ = self;
-                return gpio.read(gpio_num);
+                return pin.read();
             }
         },
         .out => struct {
-            const gpio_num = num;
+            const pin = gpio.num(num);
 
             pub inline fn put(self: @This(), value: u1) void {
                 _ = self;
-                gpio.put(gpio_num, value);
+                pin.put(value);
             }
 
             pub inline fn toggle(self: @This()) void {
                 _ = self;
-                gpio.toggle(gpio_num);
+                pin.toggle();
             }
         },
     };
@@ -473,7 +473,6 @@ pub const GlobalConfiguration = struct {
         // TODO: ensure only one instance of an input function exists
 
         const used_gpios = comptime input_gpios | output_gpios;
-        gpio.reset();
 
         if (used_gpios != 0) {
             SIO.GPIO_OE_CLR.raw = used_gpios;
@@ -482,7 +481,7 @@ pub const GlobalConfiguration = struct {
 
         inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
             if (@field(config, field.name)) |pin_config| {
-                const gpio_num = @enumToInt(@field(Pin, field.name));
+                const pin = gpio.num(@enumToInt(@field(Pin, field.name)));
                 const func = pin_config.function;
 
                 // xip = 0,
@@ -496,17 +495,17 @@ pub const GlobalConfiguration = struct {
                 // @"null" = 0x1f,
 
                 if (func == .SIO) {
-                    gpio.set_function(gpio_num, .sio);
+                    pin.set_function(.sio);
                 } else if (comptime func.is_pwm()) {
-                    gpio.set_function(gpio_num, .pwm);
+                    pin.set_function(.pwm);
                 } else if (comptime func.is_adc()) {
-                    gpio.set_function(gpio_num, .null);
+                    pin.set_function(.null);
                 } else if (comptime func.isUartTx() or func.isUartRx()) {
-                    gpio.set_function(gpio_num, .uart);
+                    pin.set_function(.uart);
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
-                        gpio_num,
+                        @enumToInt(pin),
                     }));
                 }
             }
@@ -525,10 +524,6 @@ pub const GlobalConfiguration = struct {
 
                     gpio.set_pull(gpio_num, pull);
                 };
-        }
-
-        if (has_pwm) {
-            resets.reset(&.{.pwm});
         }
 
         if (has_adc) {

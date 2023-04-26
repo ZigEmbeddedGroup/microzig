@@ -10,11 +10,11 @@ const gpio = rp2040.gpio;
 const clocks = rp2040.clocks;
 const rand = rp2040.rand;
 
-const led = 25;
-const uart_id = 0;
+const led = gpio.num(25);
+const uart = rp2040.uart.num(0);
 const baud_rate = 115200;
-const uart_tx_pin = 0;
-const uart_rx_pin = 1;
+const uart_tx_pin = gpio.num(0);
+const uart_rx_pin = gpio.num(1);
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -28,12 +28,10 @@ pub const std_options = struct {
 };
 
 pub fn main() !void {
-    gpio.reset();
-    gpio.init(led);
-    gpio.set_direction(led, .out);
-    gpio.put(led, 1);
+    led.set_direction(.out);
+    led.put(1);
 
-    const uart = rp2040.uart.UART.init(uart_id, .{
+    uart.apply(.{
         .baud_rate = baud_rate,
         .tx_pin = uart_tx_pin,
         .rx_pin = uart_rx_pin,

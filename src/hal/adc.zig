@@ -43,9 +43,9 @@ pub const Input = enum(u3) {
         switch (input) {
             .temperature_sensor => set_temp_sensor_enabled(true),
             else => {
-                const gpio_num = @as(u32, @enumToInt(input)) + 26;
+                const pin = gpio.num(@as(u5, @enumToInt(input)) + 26);
+                pin.set_function(.null);
 
-                gpio.set_function(gpio_num, .null);
                 // TODO: implement these, otherwise adc isn't going to work.
                 //gpio.disablePulls(gpio_num);
                 //gpio.setInputEnabled(gpio_num, false);
@@ -105,7 +105,6 @@ pub const InputMask = InputMask: {
 
 /// Initialize ADC hardware
 pub fn init() void {
-    resets.reset(&.{.adc});
     ADC.CS.write(.{
         .EN = 1,
         .TS_EN = 0,
