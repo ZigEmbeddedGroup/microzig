@@ -27,11 +27,11 @@ pub fn executing_isr() bool {
     return regs.ICSR.read().VECTACTIVE != 0;
 }
 
-pub fn sei() void {
+pub fn enable_interrupts() void {
     asm volatile ("cpsie i");
 }
 
-pub fn cli() void {
+pub fn disable_interrupts() void {
     asm volatile ("cpsid i");
 }
 
