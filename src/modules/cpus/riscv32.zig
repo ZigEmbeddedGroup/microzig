@@ -3,10 +3,12 @@ const root = @import("root");
 const microzig = @import("microzig");
 
 pub fn enable_interrupts() void {
+    @panic("TODO");
     // asm volatile ("sei");
 }
 
 pub fn disable_interrupts() void {
+    @panic("TODO");
     // asm volatile ("cli");
 }
 
