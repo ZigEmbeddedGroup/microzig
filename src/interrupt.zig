@@ -22,14 +22,14 @@ pub fn is_enabled(comptime interrupt: anytype) bool {
 
 /// *Set Enable Interrupt*, will enable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
-pub fn sei() void {
-    micro.cpu.sei();
+pub fn enable_interrupts() void {
+    micro.cpu.enable_interrupts();
 }
 
 /// *Clear Enable Interrupt*, will disable IRQs globally, but keep the masking done via
 /// `enable` and `disable` intact.
-pub fn cli() void {
-    micro.cpu.cli();
+pub fn disable_interrupts() void {
+    micro.cpu.disable_interrupts();
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
@@ -43,7 +43,7 @@ pub fn enter_critical_section() CriticalSection {
     var section = CriticalSection{
         .enable_on_leave = globally_enabled(),
     };
-    cli();
+    disable_interrupts();
     return section;
 }
 
@@ -55,7 +55,7 @@ const CriticalSection = struct {
     /// Leaves the critical section and restores the interrupt state.
     pub fn leave(self: @This()) void {
         if (self.enable_on_leave) {
-            sei();
+            enable_interrupts();
         }
     }
 };
