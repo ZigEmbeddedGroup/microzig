@@ -2,11 +2,13 @@ const std = @import("std");
 const root = @import("root");
 const microzig = @import("microzig");
 
-pub fn sei() void {
+pub fn enable_interrupts() void {
+    @panic("TODO");
     // asm volatile ("sei");
 }
 
-pub fn cli() void {
+pub fn disable_interrupts() void {
+    @panic("TODO");
     // asm volatile ("cli");
 }
 
