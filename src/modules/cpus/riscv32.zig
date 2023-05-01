@@ -61,7 +61,7 @@ pub const startup_logic = struct {
             const bss_end = @ptrCast([*]u8, &microzig_bss_end);
             const bss_len = @ptrToInt(bss_end) - @ptrToInt(bss_start);
 
-            std.mem.set(u8, bss_start[0..bss_len], 0);
+            @memset(bss_start[0..bss_len], 0);
         }
 
         // load .data from flash
@@ -71,7 +71,7 @@ pub const startup_logic = struct {
             const data_len = @ptrToInt(data_end) - @ptrToInt(data_start);
             const data_src = @ptrCast([*]const u8, &microzig_data_load_start);
 
-            std.mem.copy(u8, data_start[0..data_len], data_src[0..data_len]);
+            @memcpy(data_start[0..data_len], data_src[0..data_len]);
         }
 
         microzig_main();
