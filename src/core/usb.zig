@@ -157,7 +157,7 @@ pub fn Usb(comptime f: anytype) type {
                                 usb_config.?.endpoints[EP0_IN_IDX].next_pid_1 = true;
 
                                 const dc = usb_config.?.device_descriptor.serialize();
-                                std.mem.copy(u8, S.tmp[0..dc.len], &dc);
+                                @memcpy(S.tmp[0..dc.len], &dc);
 
                                 // Configure EP0 IN to send the device descriptor
                                 // when it's next asked.
@@ -178,7 +178,7 @@ pub fn Usb(comptime f: anytype) type {
                                 var used: usize = 0;
 
                                 const cd = usb_config.?.config_descriptor.serialize();
-                                std.mem.copy(u8, S.tmp[used .. used + cd.len], &cd);
+                                @memcpy(S.tmp[used .. used + cd.len], &cd);
                                 used += cd.len;
 
                                 if (setup.length > used) {
@@ -192,7 +192,7 @@ pub fn Usb(comptime f: anytype) type {
                                     // (1) the exact size of a config descriptor, or
                                     // (2) 64 bytes, and this all fits in 64 bytes.
                                     const id = usb_config.?.interface_descriptor.serialize();
-                                    std.mem.copy(u8, S.tmp[used .. used + id.len], &id);
+                                    @memcpy(S.tmp[used .. used + id.len], &id);
                                     used += id.len;
 
                                     // Seems like the host does not bother asking for the
@@ -200,7 +200,7 @@ pub fn Usb(comptime f: anytype) type {
                                     // other descriptors.
                                     if (usb_config.?.hid) |hid_conf| {
                                         const hd = hid_conf.hid_descriptor.serialize();
-                                        std.mem.copy(u8, S.tmp[used .. used + hd.len], &hd);
+                                        @memcpy(S.tmp[used .. used + hd.len], &hd);
                                         used += hd.len;
                                     }
 
@@ -209,7 +209,7 @@ pub fn Usb(comptime f: anytype) type {
                                     // into multiple packets
                                     for (usb_config.?.endpoints[2..]) |ep| {
                                         const ed = ep.descriptor.serialize();
-                                        std.mem.copy(u8, S.tmp[used .. used + ed.len], &ed);
+                                        @memcpy(S.tmp[used .. used + ed.len], &ed);
                                         used += ed.len;
                                     }
                                 }
@@ -237,7 +237,7 @@ pub fn Usb(comptime f: anytype) type {
 
                                         S.tmp[0] = @intCast(u8, len);
                                         S.tmp[1] = 0x03;
-                                        std.mem.copy(u8, S.tmp[2..len], s);
+                                        @memcpy(S.tmp[2..len], s);
 
                                         break :StringBlk S.tmp[0..len];
                                     }
@@ -279,7 +279,7 @@ pub fn Usb(comptime f: anytype) type {
                                 };
 
                                 const data = dqd.serialize();
-                                std.mem.copy(u8, S.tmp[0..data.len], &data);
+                                @memcpy(S.tmp[0..data.len], &data);
 
                                 f.usb_start_tx(
                                     usb_config.?.endpoints[EP0_IN_IDX],
@@ -299,7 +299,7 @@ pub fn Usb(comptime f: anytype) type {
                                         if (debug) std.log.info("        HID", .{});
 
                                         const hd = hid_conf.hid_descriptor.serialize();
-                                        std.mem.copy(u8, S.tmp[0..hd.len], &hd);
+                                        @memcpy(S.tmp[0..hd.len], &hd);
 
                                         f.usb_start_tx(
                                             usb_config.?.endpoints[EP0_IN_IDX],
