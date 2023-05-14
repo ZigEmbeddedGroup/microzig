@@ -63,6 +63,9 @@ pub const EmbeddedExecutable = struct {
 
     pub fn addOptions(exe: *EmbeddedExecutable, module_name: []const u8, options: *std.build.OptionsStep) void {
         exe.inner.addOptions(module_name, options);
+        const app_module = exe.inner.modules.get("app").?;
+        const opt_module = exe.inner.modules.get(module_name).?;
+        app_module.dependencies.put(module_name, opt_module) catch @panic("OOM");
     }
 
     pub fn addObjectFile(exe: *EmbeddedExecutable, source_file: []const u8) void {
