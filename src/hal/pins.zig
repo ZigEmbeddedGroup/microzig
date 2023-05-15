@@ -500,7 +500,7 @@ pub const GlobalConfiguration = struct {
                     pin.set_function(.pwm);
                 } else if (comptime func.is_adc()) {
                     pin.set_function(.null);
-                } else if (comptime func.isUartTx() or func.isUartRx()) {
+                } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
                     pin.set_function(.uart);
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
