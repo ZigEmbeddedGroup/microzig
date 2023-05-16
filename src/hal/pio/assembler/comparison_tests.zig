@@ -31,7 +31,7 @@ const c = @cImport({
 });
 
 fn pio_comparison(comptime source: []const u8) !void {
-    const output = comptime assembler.assemble(source, .{}) catch unreachable;
+    const output = comptime assembler.assemble(source, .{});
     try std.testing.expect(output.programs.len > 0);
 
     inline for (output.programs) |program| {

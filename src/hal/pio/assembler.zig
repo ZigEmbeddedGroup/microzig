@@ -136,5 +136,5 @@ test "tokenizer and encoder" {
 }
 
 test "comparison" {
-    //std.testing.refAllDecls(@import("assembler/comparison_tests.zig"));
+    std.testing.refAllDecls(@import("assembler/comparison_tests.zig"));
 }
