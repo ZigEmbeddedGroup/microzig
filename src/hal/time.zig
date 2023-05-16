@@ -1,8 +1,19 @@
 const microzig = @import("microzig");
 const TIMER = microzig.chip.peripherals.TIMER;
 
-pub const Absolute = struct {
-    us_since_boot: u64,
+/// Using an enum to make it a distinct type, the underlying number is
+/// time since boot in microseconds.
+pub const Absolute = enum(u64) {
+    _,
+
+    pub fn reached(time: Absolute) bool {
+        const now = get_time_since_boot();
+        return now.to_us() >= time.to_us();
+    }
+
+    pub fn to_us(time: Absolute) u64 {
+        return @enumToInt(time);
+    }
 };
 
 pub fn get_time_since_boot() Absolute {
@@ -12,23 +23,14 @@ pub fn get_time_since_boot() Absolute {
         var low_word = TIMER.TIMERAWL;
         const next_high_word = TIMER.TIMERAWH;
         if (next_high_word == high_word)
-            break Absolute{
-                .us_since_boot = @intCast(u64, high_word) << 32 | low_word,
-            };
+            break @intToEnum(Absolute, @intCast(u64, high_word) << 32 | low_word);
 
         high_word = next_high_word;
     } else unreachable;
 }
 
 pub fn make_timeout_us(timeout_us: u64) Absolute {
-    return Absolute{
-        .us_since_boot = get_time_since_boot().us_since_boot + timeout_us,
-    };
-}
-
-pub fn reached(time: Absolute) bool {
-    const now = get_time_since_boot();
-    return now.us_since_boot >= time.us_since_boot;
+    return @intToEnum(Absolute, get_time_since_boot().to_us() + timeout_us);
 }
 
 pub fn sleep_ms(time_ms: u32) void {
@@ -36,9 +38,6 @@ pub fn sleep_ms(time_ms: u32) void {
 }
 
 pub fn sleep_us(time_us: u64) void {
-    const end_time = Absolute{
-        .us_since_boot = time_us + get_time_since_boot().us_since_boot,
-    };
-
-    while (!reached(end_time)) {}
+    const end_time = make_timeout_us(time_us);
+    while (!end_time.reached()) {}
 }

@@ -169,7 +169,7 @@ pub fn main() !void {
     rp2040.usb.Usb.init_clk();
     // Then initialize the USB device using the configuration defined above
     rp2040.usb.Usb.init_device(&DEVICE_CONFIGURATION) catch unreachable;
-    var old: u64 = time.get_time_since_boot().us_since_boot;
+    var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
@@ -177,7 +177,7 @@ pub fn main() !void {
             true, // debug output over UART [Y/n]
         ) catch unreachable;
 
-        new = time.get_time_since_boot().us_since_boot;
+        new = time.get_time_since_boot().to_us();
         if (new - old > 500000) {
             old = new;
             led.toggle();

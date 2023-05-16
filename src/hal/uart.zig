@@ -219,8 +219,8 @@ pub fn log(
 
     if (uart_logger) |uart| {
         const current_time = time.get_time_since_boot();
-        const seconds = current_time.us_since_boot / std.time.us_per_s;
-        const microseconds = current_time.us_since_boot % std.time.us_per_s;
+        const seconds = current_time.to_us() / std.time.us_per_s;
+        const microseconds = current_time.to_us() % std.time.us_per_s;
 
         uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
