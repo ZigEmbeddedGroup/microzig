@@ -8,7 +8,7 @@ const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
-const util = @import("util.zig");
+const hw = @import("hw.zig");
 
 const SpiRegs = microzig.chip.types.peripherals.SPI0;
 
@@ -101,7 +101,7 @@ pub const SPI = enum(u1) {
         // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
         for (src) |s| {
             while (!spi.is_writable()) {
-                util.tight_loop_contents();
+                hw.tight_loop_contents();
             }
             spi_regs.SSPDR.write_raw(s);
         }
@@ -111,7 +111,7 @@ pub const SPI = enum(u1) {
             _ = spi_regs.SSPDR.read();
         }
         while (spi_regs.SSPSR.read().BSY == 1) {
-            util.tight_loop_contents();
+            hw.tight_loop_contents();
         }
         while (spi.is_readable()) {
             _ = spi_regs.SSPDR.read();

@@ -63,7 +63,7 @@ pub const Enabled = enum {
     enabled,
 };
 
-pub const PullUpDown = enum {
+pub const Pull = enum {
     up,
     down,
 };
@@ -76,12 +76,45 @@ pub fn num(n: u5) Pin {
 }
 
 pub fn mask(m: u32) Mask {
-    _ = m;
-    @panic("TODO");
+    return @intToEnum(Mask, m);
 }
 
 pub const Mask = enum(u30) {
     _,
+
+    pub fn set_function(self: Mask, function: Function) void {
+        const raw_mask = @enumToInt(self);
+        for (0..@bitSizeOf(Mask)) |i| {
+            const bit = @intCast(u5, i);
+            if (0 != raw_mask & (@as(u32, 1) << bit))
+                num(bit).set_function(function);
+        }
+    }
+
+    pub fn set_direction(self: Mask, direction: Direction) void {
+        const raw_mask = @enumToInt(self);
+        switch (direction) {
+            .out => SIO.GPIO_OE_SET.raw = raw_mask,
+            .in => SIO.GPIO_OE_CLR.raw = raw_mask,
+        }
+    }
+
+    pub fn set_pull(self: Mask, pull: ?Pull) void {
+        const raw_mask = @enumToInt(self);
+        for (0..@bitSizeOf(Mask)) |i| {
+            const bit = @intCast(u5, i);
+            if (0 != raw_mask & (@as(u32, 1) << bit))
+                num(bit).set_pull(pull);
+        }
+    }
+
+    pub fn put(self: Mask, value: u32) void {
+        SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @enumToInt(self);
+    }
+
+    pub fn read(self: Mask) u32 {
+        return SIO.GPIO_IN.raw & @enumToInt(self);
+    }
 };
 
 pub const Pin = enum(u5) {
@@ -134,12 +167,12 @@ pub const Pin = enum(u5) {
         return @as(u32, 1) << @enumToInt(gpio);
     }
 
-    pub inline fn set_pull(gpio: Pin, mode: ?PullUpDown) void {
+    pub inline fn set_pull(gpio: Pin, pull: ?Pull) void {
         const pads_reg = gpio.get_pads_reg();
 
-        if (mode == null) {
+        if (pull == null) {
             pads_reg.modify(.{ .PUE = 0, .PDE = 0 });
-        } else switch (mode.?) {
+        } else switch (pull.?) {
             .up => pads_reg.modify(.{ .PUE = 1, .PDE = 0 }),
             .down => pads_reg.modify(.{ .PUE = 0, .PDE = 1 }),
         }
@@ -171,6 +204,11 @@ pub const Pin = enum(u5) {
             0;
     }
 
+    pub inline fn set_input_enabled(pin: Pin, enabled: bool) void {
+        const pads_reg = pin.get_pads_reg();
+        pads_reg.modify(.{ .IE = @boolToInt(enabled) });
+    }
+
     pub inline fn set_function(gpio: Pin, function: Function) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
@@ -193,33 +231,4 @@ pub const Pin = enum(u5) {
             .padding = 0,
         });
     }
-
-    //pub fn set_drive_strength(gpio: Gpio, drive: DriveStrength) void {
-    //    _ = drive;
-    //    const pads_reg = gpio.get_pads_reg();
-    //    pads_reg.modify(.{
-    //        .DRIVE = .{
-    //            .value = .@"12mA",
-    //        },
-    //    });
-    //}
 };
-
-// setting both uplls enables a "bus keep" function, a weak pull to whatever
-// is current high/low state of GPIO
-//pub fn setPulls(gpio: u32, up: bool, down: bool) void {}
-//
-//pub fn pullUp(gpio: u32) void {}
-//
-//pub fn pullDown(gpio: u32) void {}
-//pub fn disablePulls(gpio: u32) void {}
-//pub fn setIrqOver(gpio: u32, value: u32) void {}
-//pub fn setOutOver(gpio: u32, value: u32) void {}
-//pub fn setInOver(gpio: u32, value: u32) void {}
-//pub fn setOeOver(gpio: u32, value: u32) void {}
-//pub fn setInputEnabled(gpio: u32, enabled: Enabled) void {}
-//pub fn setinputHysteresisEnabled(gpio: u32, enabled: Enabled) void {}
-//pub fn setSlewRate(gpio: u32, slew_rate: SlewRate) void {}
-
-//pub fn setIrqEnabled(gpio: u32, events: IrqEvents) void {}
-//pub fn acknowledgeIrq(gpio: u32, events: IrqEvents) void {}

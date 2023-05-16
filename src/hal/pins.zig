@@ -48,7 +48,7 @@ pub const Pin = enum {
         function: Function = .SIO,
         direction: ?gpio.Direction = null,
         drive_strength: ?gpio.DriveStrength = null,
-        pull: ?gpio.PullUpDown = null,
+        pull: ?gpio.Pull = null,
         slew_rate: ?gpio.SlewRate = null,
         // input/output enable
         // schmitt trigger

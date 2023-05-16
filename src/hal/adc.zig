@@ -5,9 +5,8 @@ const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const ADC = microzig.chip.peripherals.ADC;
-const rp2040 = microzig.hal;
-const gpio = rp2040.gpio;
-const resets = rp2040.resets;
+const gpio = @import("gpio.zig");
+const resets = @import("resets.zig");
 
 pub const temperature_sensor = struct {
     pub inline fn init() void {

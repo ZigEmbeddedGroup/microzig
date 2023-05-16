@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const pll = @import("pll.zig");
-const util = @import("util.zig");
 const assert = std.debug.assert;
 
 // TODO: remove
