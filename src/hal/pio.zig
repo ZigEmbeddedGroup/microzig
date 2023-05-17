@@ -226,7 +226,7 @@ pub const Pio = enum(u1) {
         } else error.NoSpace;
     }
 
-    fn get_sm_regs(self: Pio, sm: StateMachine) *volatile StateMachine.Regs {
+    pub fn get_sm_regs(self: Pio, sm: StateMachine) *volatile StateMachine.Regs {
         const pio_regs = self.get_regs();
         const sm_regs = @ptrCast(*volatile [4]StateMachine.Regs, &pio_regs.SM0_CLKDIV);
         return &sm_regs[@enumToInt(sm)];
@@ -480,7 +480,7 @@ pub const Pio = enum(u1) {
     ) !void {
         const expected_side_set_pins = if (program.side_set) |side_set|
             if (side_set.optional)
-                side_set.count - 1
+                side_set.count + 1
             else
                 side_set.count
         else
