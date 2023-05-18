@@ -18,6 +18,7 @@ fn core1() void {
 }
 
 pub fn main() !void {
+    led.set_function(.sio);
     led.set_direction(.out);
     multicore.launch_core1(core1);
 

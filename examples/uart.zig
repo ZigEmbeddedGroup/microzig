@@ -24,6 +24,7 @@ pub const std_options = struct {
 };
 
 pub fn main() !void {
+    led.set_function(.sio);
     led.set_direction(.out);
     led.put(1);
 
