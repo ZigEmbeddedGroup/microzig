@@ -138,7 +138,7 @@ fn main_impl() anyerror!void {
     var buffered = std.io.bufferedWriter(raw_writer);
     if (res.args.json)
         try db.json_stringify(
-            .{ .whitespace = .{ .indent = .{ .Space = 2 } } },
+            .{ .whitespace = .{ .indent = .{ .space = 2 } } },
             buffered.writer(),
         )
     else

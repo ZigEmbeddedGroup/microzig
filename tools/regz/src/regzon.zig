@@ -29,14 +29,14 @@ const LoadContext = struct {
 
 fn get_object(val: json.Value) !json.ObjectMap {
     return switch (val) {
-        .Object => |obj| obj,
+        .object => |obj| obj,
         else => return error.NotJsonObject,
     };
 }
 
 fn get_array(val: json.Value) !json.Array {
     return switch (val) {
-        .Array => |arr| arr,
+        .array => |arr| arr,
         else => return error.NotJsonArray,
     };
 }
@@ -44,14 +44,14 @@ fn get_array(val: json.Value) !json.Array {
 // TODO: handle edge cases
 fn get_integer_from_object(obj: json.ObjectMap, comptime T: type, key: []const u8) !?T {
     return switch (obj.get(key) orelse return null) {
-        .Integer => |num| @intCast(T, num),
+        .integer => |num| @intCast(T, num),
         else => return error.NotJsonInteger,
     };
 }
 
 fn get_string_from_object(obj: json.ObjectMap, key: []const u8) !?[]const u8 {
     return switch (obj.get(key) orelse return null) {
-        .String => |str| str,
+        .string => |str| str,
         else => return error.NotJsonString,
     };
 }
@@ -133,13 +133,13 @@ fn id_to_ref(
 }
 
 pub fn load_into_db(db: *Database, text: []const u8) !void {
-    var parser = json.Parser.init(db.gpa, false);
+    var parser = json.Parser.init(db.gpa, .alloc_if_needed);
     defer parser.deinit();
 
     var tree = try parser.parse(text);
     defer tree.deinit();
 
-    if (tree.root != .Object)
+    if (tree.root != .object)
         return error.NotJsonObject;
 
     var ctx = LoadContext{
@@ -148,10 +148,10 @@ pub fn load_into_db(db: *Database, text: []const u8) !void {
     };
     defer ctx.deinit();
 
-    if (tree.root.Object.get("types")) |types|
+    if (tree.root.object.get("types")) |types|
         try load_types(&ctx, try get_object(types));
 
-    if (tree.root.Object.get("devices")) |devices|
+    if (tree.root.object.get("devices")) |devices|
         try load_devices(&ctx, try get_object(devices));
 
     try resolve_enums(&ctx);
@@ -249,7 +249,7 @@ fn load_peripheral(
         .description = try get_string_from_object(peripheral, "description"),
         .size = if (peripheral.get("size")) |size_val|
             switch (size_val) {
-                .Integer => |num| @intCast(u64, num),
+                .integer => |num| @intCast(u64, num),
                 else => return error.SizeNotInteger,
             }
         else
@@ -405,7 +405,7 @@ fn load_modes(
     const db = ctx.db;
     for (modes.items) |mode_val| {
         const mode_ref = switch (mode_val) {
-            .String => |str| str,
+            .string => |str| str,
             else => return error.InvalidJsonType,
         };
 
@@ -437,8 +437,8 @@ fn load_field(
 
     if (field.get("enum")) |enum_val|
         switch (enum_val) {
-            .String => |ref_str| try ctx.enum_refs.put(db.gpa, id, ref_str),
-            .Object => |enum_obj| {
+            .string => |ref_str| try ctx.enum_refs.put(db.gpa, id, ref_str),
+            .object => |enum_obj| {
                 // peripheral is the parent of enums
                 // TODO: change this
                 const peripheral_id = peripheral_id: {
@@ -519,7 +519,7 @@ fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !voi
         .description = try get_string_from_object(device, "description"),
         .arch = if (device.get("arch")) |arch_val|
             switch (arch_val) {
-                .String => |arch_str| std.meta.stringToEnum(Database.Arch, arch_str) orelse return error.InvalidArch,
+                .string => |arch_str| std.meta.stringToEnum(Database.Arch, arch_str) orelse return error.InvalidArch,
                 else => return error.InvalidJsonType,
             }
         else
@@ -538,7 +538,7 @@ fn load_properties(ctx: *LoadContext, device_id: EntityId, properties: json.Obje
     const db = ctx.db;
     for (properties.keys(), properties.values()) |key, json_value| {
         const value = switch (json_value) {
-            .String => |str| str,
+            .string => |str| str,
             else => return error.InvalidJsonType,
         };
 
@@ -591,17 +591,17 @@ pub fn to_json(db: Database) !json.ValueTree {
     for (db.instances.devices.keys()) |device_id|
         try populate_device(db, arena, &devices, device_id);
 
-    try root.put("version", .{ .String = schema_version });
+    try root.put("version", .{ .string = schema_version });
     try populate_types(db, arena, &types);
     if (types.count() > 0)
-        try root.put("types", .{ .Object = types });
+        try root.put("types", .{ .object = types });
 
     if (devices.count() > 0)
-        try root.put("devices", .{ .Object = devices });
+        try root.put("devices", .{ .object = devices });
 
     return json.ValueTree{
         .arena = arena,
-        .root = .{ .Object = root },
+        .root = .{ .object = root },
     };
 }
 
@@ -617,11 +617,11 @@ fn populate_types(
         const name = db.attrs.name.get(peripheral_id) orelse continue;
         var typ = json.ObjectMap.init(allocator);
         try populate_type(db, arena, peripheral_id, &typ);
-        try peripherals.put(name, .{ .Object = typ });
+        try peripherals.put(name, .{ .object = typ });
     }
 
     if (peripherals.count() > 0)
-        try types.put("peripherals", .{ .Object = peripherals });
+        try types.put("peripherals", .{ .object = peripherals });
 }
 
 fn populate_type(
@@ -632,29 +632,29 @@ fn populate_type(
 ) !void {
     const allocator = arena.allocator();
     if (db.attrs.description.get(id)) |description|
-        try typ.put("description", .{ .String = description });
+        try typ.put("description", .{ .string = description });
 
     if (db.attrs.offset.get(id)) |offset|
-        try typ.put("offset", .{ .Integer = @intCast(i64, offset) });
+        try typ.put("offset", .{ .integer = @intCast(i64, offset) });
 
     if (db.attrs.size.get(id)) |size|
-        try typ.put("size", .{ .Integer = @intCast(i64, size) });
+        try typ.put("size", .{ .integer = @intCast(i64, size) });
 
     if (db.attrs.count.get(id)) |count|
-        try typ.put("count", .{ .Integer = @intCast(i64, count) });
+        try typ.put("count", .{ .integer = @intCast(i64, count) });
 
     if (db.attrs.reset_value.get(id)) |reset_value|
-        try typ.put("reset_value", .{ .Integer = @intCast(i64, reset_value) });
+        try typ.put("reset_value", .{ .integer = @intCast(i64, reset_value) });
 
     if (db.attrs.reset_mask.get(id)) |reset_mask|
-        try typ.put("reset_mask", .{ .Integer = @intCast(i64, reset_mask) });
+        try typ.put("reset_mask", .{ .integer = @intCast(i64, reset_mask) });
 
     if (db.attrs.version.get(id)) |version|
-        try typ.put("version", .{ .String = version });
+        try typ.put("version", .{ .string = version });
 
     if (db.attrs.access.get(id)) |access| if (access != .read_write)
         try typ.put("access", .{
-            .String = switch (access) {
+            .string = switch (access) {
                 .read_only => "read-only",
                 .write_only => "write-only",
                 else => unreachable,
@@ -664,11 +664,11 @@ fn populate_type(
     if (db.attrs.@"enum".get(id)) |enum_id| {
         if (db.attrs.name.contains(enum_id)) {
             const ref = try id_to_ref(arena.allocator(), db, enum_id);
-            try typ.put("enum", .{ .String = ref });
+            try typ.put("enum", .{ .string = ref });
         } else {
             var anon_enum = json.ObjectMap.init(allocator);
             try populate_type(db, arena, enum_id, &anon_enum);
-            try typ.put("enum", .{ .Object = anon_enum });
+            try typ.put("enum", .{ .object = anon_enum });
         }
     }
 
@@ -682,19 +682,19 @@ fn populate_type(
                     db,
                     mode_id,
                 );
-                try modearray.append(.{ .String = ref });
+                try modearray.append(.{ .string = ref });
             } else return error.MissingModeName;
         }
 
         if (modearray.items.len > 0)
-            try typ.put("modes", .{ .Array = modearray });
+            try typ.put("modes", .{ .array = modearray });
     }
 
     if (db.types.enum_fields.get(id)) |enum_field| {
-        try typ.put("value", .{ .Integer = enum_field });
+        try typ.put("value", .{ .integer = enum_field });
     } else if (db.types.modes.get(id)) |mode| {
-        try typ.put("value", .{ .String = mode.value });
-        try typ.put("qualifier", .{ .String = mode.qualifier });
+        try typ.put("value", .{ .string = mode.value });
+        try typ.put("qualifier", .{ .string = mode.qualifier });
     }
 
     var children = json.ObjectMap.init(allocator);
@@ -707,16 +707,16 @@ fn populate_type(
                 const name = db.attrs.name.get(child_id) orelse continue;
                 var child_type = json.ObjectMap.init(allocator);
                 try populate_type(db, arena, child_id, &child_type);
-                try obj.put(name, .{ .Object = child_type });
+                try obj.put(name, .{ .object = child_type });
             }
         }
 
         if (obj.count() > 0)
-            try children.put(field.name, .{ .Object = obj });
+            try children.put(field.name, .{ .object = obj });
     }
 
     if (children.count() > 0)
-        try typ.put("children", .{ .Object = children });
+        try typ.put("children", .{ .object = children });
 }
 
 fn populate_device(
@@ -732,7 +732,7 @@ fn populate_device(
     var properties = json.ObjectMap.init(allocator);
     var prop_it = db.instances.devices.get(id).?.properties.iterator();
     while (prop_it.next()) |entry|
-        try properties.put(entry.key_ptr.*, .{ .String = entry.value_ptr.* });
+        try properties.put(entry.key_ptr.*, .{ .string = entry.value_ptr.* });
 
     var interrupts = json.ObjectMap.init(allocator);
     populate_interrupts: {
@@ -748,24 +748,24 @@ fn populate_device(
         try populate_peripheral(db, arena, &peripherals, instance_id, type_id);
 
     const arch = db.instances.devices.get(id).?.arch;
-    try device.put("arch", .{ .String = arch.to_string() });
+    try device.put("arch", .{ .string = arch.to_string() });
     if (db.attrs.description.get(id)) |description|
-        try device.put("description", .{ .String = description });
+        try device.put("description", .{ .string = description });
 
     if (properties.count() > 0)
-        try device.put("properties", .{ .Object = properties });
+        try device.put("properties", .{ .object = properties });
 
     var device_children = json.ObjectMap.init(allocator);
     if (interrupts.count() > 0)
-        try device_children.put("interrupts", .{ .Object = interrupts });
+        try device_children.put("interrupts", .{ .object = interrupts });
 
     if (peripherals.count() > 0)
-        try device_children.put("peripheral_instances", .{ .Object = peripherals });
+        try device_children.put("peripheral_instances", .{ .object = peripherals });
 
     if (device_children.count() > 0)
-        try device.put("children", .{ .Object = device_children });
+        try device.put("children", .{ .object = device_children });
 
-    try devices.put(name, .{ .Object = device });
+    try devices.put(name, .{ .object = device });
 }
 
 fn populate_interrupt(
@@ -779,11 +779,11 @@ fn populate_interrupt(
 
     const name = db.attrs.name.get(id) orelse return error.MissingInterruptName;
     const index = db.instances.interrupts.get(id) orelse return error.MissingInterruptIndex;
-    try interrupt.put("index", .{ .Integer = index });
+    try interrupt.put("index", .{ .integer = index });
     if (db.attrs.description.get(id)) |description|
-        try interrupt.put("description", .{ .String = description });
+        try interrupt.put("description", .{ .string = description });
 
-    try interrupts.put(name, .{ .Object = interrupt });
+    try interrupts.put(name, .{ .object = interrupt });
 }
 
 fn populate_peripheral(
@@ -797,16 +797,16 @@ fn populate_peripheral(
     const name = db.attrs.name.get(id) orelse return error.MissingPeripheralName;
     var peripheral = json.ObjectMap.init(allocator);
     if (db.attrs.description.get(id)) |description|
-        try peripheral.put("description", .{ .String = description });
+        try peripheral.put("description", .{ .string = description });
 
     if (db.attrs.offset.get(id)) |offset|
-        try peripheral.put("offset", .{ .Integer = @intCast(i64, offset) });
+        try peripheral.put("offset", .{ .integer = @intCast(i64, offset) });
 
     if (db.attrs.version.get(id)) |version|
-        try peripheral.put("version", .{ .String = version });
+        try peripheral.put("version", .{ .string = version });
 
     if (db.attrs.count.get(id)) |count|
-        try peripheral.put("count", .{ .Integer = @intCast(i64, count) });
+        try peripheral.put("count", .{ .integer = @intCast(i64, count) });
 
     // TODO: handle collisions -- will need to inline the type
     const type_ref = try id_to_ref(
@@ -814,11 +814,11 @@ fn populate_peripheral(
         db,
         type_id,
     );
-    try peripheral.put("type", .{ .String = type_ref });
+    try peripheral.put("type", .{ .string = type_ref });
 
     // TODO: peripheral instance children
 
-    try peripherals.put(name, .{ .Object = peripheral });
+    try peripherals.put(name, .{ .object = peripheral });
 }
 
 const expect = std.testing.expect;
@@ -981,7 +981,7 @@ fn stringify_test(comptime init: DbInitFn, expected: []const u8) !void {
     const test_stringify_opts = .{
         .whitespace = .{
             .indent_level = 0,
-            .indent = .{ .Space = 2 },
+            .indent = .{ .space = 2 },
         },
     };
 
