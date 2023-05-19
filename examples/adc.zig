@@ -7,7 +7,6 @@ const gpio = rp2040.gpio;
 const adc = rp2040.adc;
 const time = rp2040.time;
 
-const temp_sensor: adc.Input = .temperature_sensor;
 const uart = rp2040.uart.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
@@ -18,6 +17,10 @@ pub const std_options = struct {
 };
 
 pub fn main() void {
+    adc.apply(.{
+        .temp_sensor_enabled = true,
+    });
+
     uart.apply(.{
         .baud_rate = baud_rate,
         .tx_pin = uart_tx_pin,
@@ -26,9 +29,12 @@ pub fn main() void {
     });
 
     rp2040.uart.init_logger(uart);
-
     while (true) : (time.sleep_ms(1000)) {
-        const sample = temp_sensor.read();
+        const sample = adc.convert_one_shot_blocking(.temp_sensor) catch {
+            std.log.err("conversion failed!", .{});
+            continue;
+        };
+
         std.log.info("temp value: {}", .{sample});
     }
 }
