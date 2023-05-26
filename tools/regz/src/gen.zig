@@ -152,7 +152,7 @@ fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
             try list.append(.{ .id = peripheral_id, .offset = offset });
         }
 
-        std.sort.sort(EntityWithOffset, list.items, {}, EntityWithOffset.less_than);
+        std.sort.insertion(EntityWithOffset, list.items, {}, EntityWithOffset.less_than);
 
         try writer.writeAll("pub const peripherals = struct {\n");
         for (list.items) |periph|
@@ -697,7 +697,7 @@ fn write_register(
                 .offset = db.attrs.offset.get(field_id) orelse continue,
             });
 
-        std.sort.sort(EntityWithOffset, fields.items, {}, EntityWithOffset.less_than);
+        std.sort.insertion(EntityWithOffset, fields.items, {}, EntityWithOffset.less_than);
         try writer.print("{s}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
             std.zig.fmtId(name),
             array_prefix,
@@ -859,7 +859,7 @@ fn get_ordered_register_list(
         }
     }
 
-    std.sort.sort(EntityWithOffset, registers.items, {}, EntityWithOffset.less_than);
+    std.sort.insertion(EntityWithOffset, registers.items, {}, EntityWithOffset.less_than);
     return registers;
 }
 

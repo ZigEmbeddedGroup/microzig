@@ -46,7 +46,7 @@ pub fn write_interrupt_vector(
             });
         }
 
-        std.sort.sort(
+        std.sort.insertion(
             InterruptWithIndexAndName,
             interrupts.items,
             {},
