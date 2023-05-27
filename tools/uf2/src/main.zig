@@ -207,7 +207,7 @@ pub const Archive = struct {
         if (segments.items.len == 0)
             return error.NoSegments;
 
-        std.sort.sort(Segment, segments.items, {}, Segment.lessThan);
+        std.sort.insertion(Segment, segments.items, {}, Segment.lessThan);
         // TODO: check for overlaps, assert no zero sized segments
 
         var blocks = std.ArrayList(Block).init(self.allocator);
