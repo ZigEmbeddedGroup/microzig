@@ -7,7 +7,8 @@ const DMA = chip.peripherals.DMA;
 
 const hw = @import("hw.zig");
 
-var claimed_channels: u12 = 0;
+const num_channels = 12;
+var claimed_channels = std.PackedIntArray(bool, num_channels).initAllTo(false);
 
 pub const Dreq = enum(u6) {
     uart0_tx = 20,
@@ -15,31 +16,38 @@ pub const Dreq = enum(u6) {
     _,
 };
 
-pub fn num(n: u4) Channel {
-    assert(n < 12);
+pub fn channel(n: u4) Channel {
+    assert(n < num_channels);
 
     return @intToEnum(Channel, n);
 }
 
-pub fn claim_unused_channel() ?Channel {}
+pub fn claim_unused_channel() ?Channel {
+    for (0..num_channels) |i| {
+        if (claimed_channels.get(i)) {
+            claimed_channels.set(i, true);
+            return channel(i);
+        }
+    }
+
+    return null;
+}
 
 pub const Channel = enum(u4) {
     _,
 
     /// panics if the channel is already claimed
-    pub fn claim(channel: Channel) void {
-        _ = channel;
-        @panic("TODO");
+    pub fn claim(chan: Channel) void {
+        if (chan.is_claimed())
+            @panic("channel is already claimed!");
     }
 
-    pub fn unclaim(channel: Channel) void {
-        _ = channel;
-        @panic("TODO");
+    pub fn unclaim(chan: Channel) void {
+        claimed_channels.set(@enumToInt(chan), false);
     }
 
-    pub fn is_claimed(channel: Channel) bool {
-        _ = channel;
-        @panic("TODO");
+    pub fn is_claimed(chan: Channel) bool {
+        return claimed_channels.get(@enumToInt(chan));
     }
 
     const Regs = extern struct {
@@ -67,9 +75,9 @@ pub const Channel = enum(u4) {
         al3_trans_count: u32,
     };
 
-    fn get_regs(channel: Channel) *volatile Regs {
+    fn get_regs(chan: Channel) *volatile Regs {
         const regs = @ptrCast(*volatile [12]Regs, &DMA.CH0_READ_ADDR);
-        return &regs[@enumToInt(channel)];
+        return &regs[@enumToInt(chan)];
     }
 
     pub const TransferConfig = struct {
@@ -86,13 +94,13 @@ pub const Channel = enum(u4) {
     };
 
     pub fn trigger_transfer(
-        channel: Channel,
+        chan: Channel,
         write_addr: u32,
         read_addr: u32,
         count: u32,
         config: TransferConfig,
     ) void {
-        const regs = channel.get_regs();
+        const regs = chan.get_regs();
         regs.read_addr = read_addr;
         regs.write_addr = write_addr;
         regs.trans_count = count;
@@ -109,23 +117,23 @@ pub const Channel = enum(u4) {
         });
     }
 
-    pub fn set_irq0_enabled(channel: Channel, enabled: bool) void {
+    pub fn set_irq0_enabled(chan: Channel, enabled: bool) void {
         if (enabled) {
             const inte0_set = hw.set_alias_raw(&DMA.INTE0);
-            inte0_set.* = @as(u32, 1) << @enumToInt(channel);
+            inte0_set.* = @as(u32, 1) << @enumToInt(chan);
         } else {
             const inte0_clear = hw.clear_alias_raw(&DMA.INTE0);
-            inte0_clear.* = @as(u32, 1) << @enumToInt(channel);
+            inte0_clear.* = @as(u32, 1) << @enumToInt(chan);
         }
     }
 
-    pub fn acknowledge_irq0(channel: Channel) void {
+    pub fn acknowledge_irq0(chan: Channel) void {
         const ints0_set = hw.set_alias_raw(&DMA.INTS0);
-        ints0_set.* = @as(u32, 1) << @enumToInt(channel);
+        ints0_set.* = @as(u32, 1) << @enumToInt(chan);
     }
 
-    pub fn is_busy(channel: Channel) bool {
-        const regs = channel.get_regs();
+    pub fn is_busy(chan: Channel) bool {
+        const regs = chan.get_regs();
         return regs.ctrl_trig.read().BUSY == 1;
     }
 };

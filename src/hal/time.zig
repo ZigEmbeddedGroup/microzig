@@ -6,13 +6,57 @@ const TIMER = microzig.chip.peripherals.TIMER;
 pub const Absolute = enum(u64) {
     _,
 
-    pub fn reached(time: Absolute) bool {
-        const now = get_time_since_boot();
-        return now.to_us() >= time.to_us();
+    pub fn from_us(us: u64) Absolute {
+        return @intToEnum(Absolute, us);
     }
 
     pub fn to_us(time: Absolute) u64 {
         return @enumToInt(time);
+    }
+
+    pub fn is_reached_by(deadline: Absolute, point: Absolute) bool {
+        return deadline.to_us() <= point.to_us();
+    }
+
+    pub fn is_reached(time: Absolute) bool {
+        const now = get_time_since_boot();
+        return time.is_reached_by(now);
+    }
+
+    pub fn diff(future: Absolute, past: Absolute) Duration {
+        return Duration.from_us(future.to_us() - past.to_us());
+    }
+
+    pub fn add_duration(time: Absolute, dur: Duration) Absolute {
+        return Absolute.from_us(time.to_us() + dur.to_us());
+    }
+};
+
+pub const Duration = enum(u64) {
+    _,
+
+    pub fn from_us(us: u64) Duration {
+        return @intToEnum(Duration, us);
+    }
+
+    pub fn from_ms(ms: u64) Duration {
+        return from_us(1000 * ms);
+    }
+
+    pub fn to_us(duration: Duration) u64 {
+        return @enumToInt(duration);
+    }
+
+    pub fn less_than(self: Duration, other: Duration) bool {
+        return self.to_us() < other.to_us();
+    }
+
+    pub fn minus(self: Duration, other: Duration) Duration {
+        return from_us(self.to_us() - other.to_us());
+    }
+
+    pub fn plus(self: Duration, other: Duration) Duration {
+        return from_us(self.to_us() + other.to_us());
     }
 };
 
@@ -39,5 +83,5 @@ pub fn sleep_ms(time_ms: u32) void {
 
 pub fn sleep_us(time_us: u64) void {
     const end_time = make_timeout_us(time_us);
-    while (!end_time.reached()) {}
+    while (!end_time.is_reached()) {}
 }
