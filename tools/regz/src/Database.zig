@@ -882,10 +882,10 @@ pub fn json_stringify(
     opts: std.json.StringifyOptions,
     writer: anytype,
 ) !void {
-    var value_tree = try regzon.to_json(db);
-    defer value_tree.deinit();
+    var obj = try regzon.to_json(db);
+    defer obj.deinit();
 
-    try value_tree.root.jsonStringify(opts, writer);
+    try obj.value.jsonStringify(opts, writer);
 }
 
 pub fn format(

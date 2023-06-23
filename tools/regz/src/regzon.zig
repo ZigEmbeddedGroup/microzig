@@ -1,9 +1,13 @@
 //! Regz JSON output
 const std = @import("std");
-const json = std.json;
 const assert = std.debug.assert;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
+const json = std.json;
+const ObjectMap = json.ObjectMap;
+const Value = json.Value;
+const Parsed = json.Parsed;
+const Array = json.Array;
 
 const Database = @import("Database.zig");
 const EntityId = Database.EntityId;
@@ -27,14 +31,14 @@ const LoadContext = struct {
     }
 };
 
-fn get_object(val: json.Value) !json.ObjectMap {
+fn get_object(val: Value) !ObjectMap {
     return switch (val) {
         .object => |obj| obj,
         else => return error.NotJsonObject,
     };
 }
 
-fn get_array(val: json.Value) !json.Array {
+fn get_array(val: Value) !Array {
     return switch (val) {
         .array => |arr| arr,
         else => return error.NotJsonArray,
@@ -42,14 +46,14 @@ fn get_array(val: json.Value) !json.Array {
 }
 
 // TODO: handle edge cases
-fn get_integer_from_object(obj: json.ObjectMap, comptime T: type, key: []const u8) !?T {
+fn get_integer_from_object(obj: ObjectMap, comptime T: type, key: []const u8) !?T {
     return switch (obj.get(key) orelse return null) {
         .integer => |num| @intCast(T, num),
         else => return error.NotJsonInteger,
     };
 }
 
-fn get_string_from_object(obj: json.ObjectMap, key: []const u8) !?[]const u8 {
+fn get_string_from_object(obj: ObjectMap, key: []const u8) !?[]const u8 {
     return switch (obj.get(key) orelse return null) {
         .string => |str| str,
         else => return error.NotJsonString,
@@ -133,14 +137,8 @@ fn id_to_ref(
 }
 
 pub fn load_into_db(db: *Database, text: []const u8) !void {
-    var parser = json.Parser.init(db.gpa, .alloc_if_needed);
-    defer parser.deinit();
-
-    var tree = try parser.parse(text);
-    defer tree.deinit();
-
-    if (tree.root != .object)
-        return error.NotJsonObject;
+    var root = try json.parseFromSlice(Value, db.gpa, text, .{});
+    defer root.deinit();
 
     var ctx = LoadContext{
         .db = db,
@@ -148,10 +146,10 @@ pub fn load_into_db(db: *Database, text: []const u8) !void {
     };
     defer ctx.deinit();
 
-    if (tree.root.object.get("types")) |types|
+    if (root.value.object.get("types")) |types|
         try load_types(&ctx, try get_object(types));
 
-    if (tree.root.object.get("devices")) |devices|
+    if (root.value.object.get("devices")) |devices|
         try load_devices(&ctx, try get_object(devices));
 
     try resolve_enums(&ctx);
@@ -227,12 +225,12 @@ fn ref_to_id(db: Database, ref: []const u8) !EntityId {
         error.Malformed;
 }
 
-fn load_types(ctx: *LoadContext, types: json.ObjectMap) !void {
+fn load_types(ctx: *LoadContext, types: ObjectMap) !void {
     if (types.get("peripherals")) |peripherals|
         try load_peripherals(ctx, try get_object(peripherals));
 }
 
-fn load_peripherals(ctx: *LoadContext, peripherals: json.ObjectMap) !void {
+fn load_peripherals(ctx: *LoadContext, peripherals: ObjectMap) !void {
     for (peripherals.keys(), peripherals.values()) |name, peripheral|
         try load_peripheral(ctx, name, try get_object(peripheral));
 }
@@ -240,7 +238,7 @@ fn load_peripherals(ctx: *LoadContext, peripherals: json.ObjectMap) !void {
 fn load_peripheral(
     ctx: *LoadContext,
     name: []const u8,
-    peripheral: json.ObjectMap,
+    peripheral: ObjectMap,
 ) !void {
     log.debug("loading peripheral: {s}", .{name});
     const db = ctx.db;
@@ -284,14 +282,14 @@ const LoadError = error{
     MissingInstanceOffset,
 };
 
-const LoadFn = fn (*LoadContext, EntityId, []const u8, json.ObjectMap) LoadError!void;
-const LoadMultipleFn = fn (*LoadContext, EntityId, json.ObjectMap) LoadError!void;
+const LoadFn = fn (*LoadContext, EntityId, []const u8, ObjectMap) LoadError!void;
+const LoadMultipleFn = fn (*LoadContext, EntityId, ObjectMap) LoadError!void;
 fn load_entities(comptime load_fn: LoadFn) LoadMultipleFn {
     return struct {
         fn tmp(
             ctx: *LoadContext,
             parent_id: EntityId,
-            entities: json.ObjectMap,
+            entities: ObjectMap,
         ) LoadError!void {
             for (entities.keys(), entities.values()) |name, entity|
                 try load_fn(ctx, parent_id, name, try get_object(entity));
@@ -316,7 +314,7 @@ const load_fns = struct {
 fn load_children(
     ctx: *LoadContext,
     parent_id: EntityId,
-    children: json.ObjectMap,
+    children: ObjectMap,
 ) LoadError!void {
     for (children.keys(), children.values()) |child_type, child_map| {
         inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
@@ -339,7 +337,7 @@ fn load_mode(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    mode: json.ObjectMap,
+    mode: ObjectMap,
 ) LoadError!void {
     _ = try ctx.db.create_mode(parent_id, .{
         .name = name,
@@ -353,7 +351,7 @@ fn load_register_group(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    register_group: json.ObjectMap,
+    register_group: ObjectMap,
 ) LoadError!void {
     log.debug("load register group", .{});
     const db = ctx.db;
@@ -372,7 +370,7 @@ fn load_register(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    register: json.ObjectMap,
+    register: ObjectMap,
 ) LoadError!void {
     const db = ctx.db;
     const id = try db.create_register(parent_id, .{
@@ -400,7 +398,7 @@ fn load_register(
 fn load_modes(
     ctx: *LoadContext,
     parent_id: EntityId,
-    modes: json.Array,
+    modes: Array,
 ) !void {
     const db = ctx.db;
     for (modes.items) |mode_val| {
@@ -423,7 +421,7 @@ fn load_field(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    field: json.ObjectMap,
+    field: ObjectMap,
 ) LoadError!void {
     const db = ctx.db;
     const id = try db.create_field(parent_id, .{
@@ -463,7 +461,7 @@ fn load_enum(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    enumeration: json.ObjectMap,
+    enumeration: ObjectMap,
 ) LoadError!void {
     _ = try load_enum_base(ctx, parent_id, name, enumeration);
 }
@@ -472,7 +470,7 @@ fn load_enum_base(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: ?[]const u8,
-    enumeration: json.ObjectMap,
+    enumeration: ObjectMap,
 ) LoadError!EntityId {
     const db = ctx.db;
     const id = try db.create_enum(parent_id, .{
@@ -492,7 +490,7 @@ fn load_enum_field(
     ctx: *LoadContext,
     parent_id: EntityId,
     name: []const u8,
-    enum_field: json.ObjectMap,
+    enum_field: ObjectMap,
 ) LoadError!void {
     const db = ctx.db;
 
@@ -506,12 +504,12 @@ fn load_enum_field(
         try load_children(ctx, id, try get_object(children));
 }
 
-fn load_devices(ctx: *LoadContext, devices: json.ObjectMap) !void {
+fn load_devices(ctx: *LoadContext, devices: ObjectMap) !void {
     for (devices.keys(), devices.values()) |name, device|
         try load_device(ctx, name, try get_object(device));
 }
 
-fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !void {
+fn load_device(ctx: *LoadContext, name: []const u8, device: ObjectMap) !void {
     log.debug("loading device: {s}", .{name});
     const db = ctx.db;
     const id = try db.create_device(.{
@@ -534,7 +532,7 @@ fn load_device(ctx: *LoadContext, name: []const u8, device: json.ObjectMap) !voi
         try load_children(ctx, id, try get_object(children));
 }
 
-fn load_properties(ctx: *LoadContext, device_id: EntityId, properties: json.ObjectMap) !void {
+fn load_properties(ctx: *LoadContext, device_id: EntityId, properties: ObjectMap) !void {
     const db = ctx.db;
     for (properties.keys(), properties.values()) |key, json_value| {
         const value = switch (json_value) {
@@ -550,7 +548,7 @@ fn load_interrupt(
     ctx: *LoadContext,
     device_id: EntityId,
     name: []const u8,
-    interrupt: json.ObjectMap,
+    interrupt: ObjectMap,
 ) LoadError!void {
     _ = try ctx.db.create_interrupt(device_id, .{
         .name = name,
@@ -563,7 +561,7 @@ fn load_peripheral_instance(
     ctx: *LoadContext,
     device_id: EntityId,
     name: []const u8,
-    peripheral: json.ObjectMap,
+    peripheral: ObjectMap,
 ) !void {
     const db = ctx.db;
     const type_ref = (try get_string_from_object(peripheral, "type")) orelse return error.MissingInstanceType;
@@ -576,7 +574,7 @@ fn load_peripheral_instance(
     });
 }
 
-pub fn to_json(db: Database) !json.ValueTree {
+pub fn to_json(db: Database) !Parsed(Value) {
     const arena = try db.gpa.create(ArenaAllocator);
     errdefer db.gpa.destroy(arena);
 
@@ -584,9 +582,9 @@ pub fn to_json(db: Database) !json.ValueTree {
     errdefer arena.deinit();
 
     const allocator = arena.allocator();
-    var root = json.ObjectMap.init(allocator);
-    var types = json.ObjectMap.init(allocator);
-    var devices = json.ObjectMap.init(allocator);
+    var root = ObjectMap.init(allocator);
+    var types = ObjectMap.init(allocator);
+    var devices = ObjectMap.init(allocator);
 
     for (db.instances.devices.keys()) |device_id|
         try populate_device(db, arena, &devices, device_id);
@@ -599,23 +597,23 @@ pub fn to_json(db: Database) !json.ValueTree {
     if (devices.count() > 0)
         try root.put("devices", .{ .object = devices });
 
-    return json.ValueTree{
+    return Parsed(Value){
         .arena = arena,
-        .root = .{ .object = root },
+        .value = .{ .object = root },
     };
 }
 
 fn populate_types(
     db: Database,
     arena: *ArenaAllocator,
-    types: *json.ObjectMap,
+    types: *ObjectMap,
 ) !void {
     const allocator = arena.allocator();
-    var peripherals = json.ObjectMap.init(allocator);
+    var peripherals = ObjectMap.init(allocator);
 
     for (db.types.peripherals.keys()) |peripheral_id| {
         const name = db.attrs.name.get(peripheral_id) orelse continue;
-        var typ = json.ObjectMap.init(allocator);
+        var typ = ObjectMap.init(allocator);
         try populate_type(db, arena, peripheral_id, &typ);
         try peripherals.put(name, .{ .object = typ });
     }
@@ -628,7 +626,7 @@ fn populate_type(
     db: Database,
     arena: *ArenaAllocator,
     id: EntityId,
-    typ: *json.ObjectMap,
+    typ: *ObjectMap,
 ) !void {
     const allocator = arena.allocator();
     if (db.attrs.description.get(id)) |description|
@@ -666,14 +664,14 @@ fn populate_type(
             const ref = try id_to_ref(arena.allocator(), db, enum_id);
             try typ.put("enum", .{ .string = ref });
         } else {
-            var anon_enum = json.ObjectMap.init(allocator);
+            var anon_enum = ObjectMap.init(allocator);
             try populate_type(db, arena, enum_id, &anon_enum);
             try typ.put("enum", .{ .object = anon_enum });
         }
     }
 
     if (db.attrs.modes.get(id)) |modeset| {
-        var modearray = json.Array.init(allocator);
+        var modearray = Array.init(allocator);
 
         for (modeset.keys()) |mode_id| {
             if (db.attrs.name.contains(mode_id)) {
@@ -697,15 +695,15 @@ fn populate_type(
         try typ.put("qualifier", .{ .string = mode.qualifier });
     }
 
-    var children = json.ObjectMap.init(allocator);
+    var children = ObjectMap.init(allocator);
     inline for (@typeInfo(@TypeOf(db.children)).Struct.fields) |field| {
-        var obj = json.ObjectMap.init(allocator);
+        var obj = ObjectMap.init(allocator);
 
         if (@field(db.children, field.name).get(id)) |set| {
             assert(set.count() > 0);
             for (set.keys()) |child_id| {
                 const name = db.attrs.name.get(child_id) orelse continue;
-                var child_type = json.ObjectMap.init(allocator);
+                var child_type = ObjectMap.init(allocator);
                 try populate_type(db, arena, child_id, &child_type);
                 try obj.put(name, .{ .object = child_type });
             }
@@ -722,19 +720,19 @@ fn populate_type(
 fn populate_device(
     db: Database,
     arena: *ArenaAllocator,
-    devices: *json.ObjectMap,
+    devices: *ObjectMap,
     id: EntityId,
 ) !void {
     const allocator = arena.allocator();
     const name = db.attrs.name.get(id) orelse return error.MissingDeviceName;
 
-    var device = json.ObjectMap.init(allocator);
-    var properties = json.ObjectMap.init(allocator);
+    var device = ObjectMap.init(allocator);
+    var properties = ObjectMap.init(allocator);
     var prop_it = db.instances.devices.get(id).?.properties.iterator();
     while (prop_it.next()) |entry|
         try properties.put(entry.key_ptr.*, .{ .string = entry.value_ptr.* });
 
-    var interrupts = json.ObjectMap.init(allocator);
+    var interrupts = ObjectMap.init(allocator);
     populate_interrupts: {
         var interrupt_it = (db.children.interrupts.get(id) orelse
             break :populate_interrupts).iterator();
@@ -743,7 +741,7 @@ fn populate_device(
     }
 
     // TODO: link peripherals to device
-    var peripherals = json.ObjectMap.init(allocator);
+    var peripherals = ObjectMap.init(allocator);
     for (db.instances.peripherals.keys(), db.instances.peripherals.values()) |instance_id, type_id|
         try populate_peripheral(db, arena, &peripherals, instance_id, type_id);
 
@@ -755,7 +753,7 @@ fn populate_device(
     if (properties.count() > 0)
         try device.put("properties", .{ .object = properties });
 
-    var device_children = json.ObjectMap.init(allocator);
+    var device_children = ObjectMap.init(allocator);
     if (interrupts.count() > 0)
         try device_children.put("interrupts", .{ .object = interrupts });
 
@@ -771,11 +769,11 @@ fn populate_device(
 fn populate_interrupt(
     db: Database,
     arena: *ArenaAllocator,
-    interrupts: *json.ObjectMap,
+    interrupts: *ObjectMap,
     id: EntityId,
 ) !void {
     const allocator = arena.allocator();
-    var interrupt = json.ObjectMap.init(allocator);
+    var interrupt = ObjectMap.init(allocator);
 
     const name = db.attrs.name.get(id) orelse return error.MissingInterruptName;
     const index = db.instances.interrupts.get(id) orelse return error.MissingInterruptIndex;
@@ -789,13 +787,13 @@ fn populate_interrupt(
 fn populate_peripheral(
     db: Database,
     arena: *ArenaAllocator,
-    peripherals: *json.ObjectMap,
+    peripherals: *ObjectMap,
     id: EntityId,
     type_id: EntityId,
 ) !void {
     const allocator = arena.allocator();
     const name = db.attrs.name.get(id) orelse return error.MissingPeripheralName;
-    var peripheral = json.ObjectMap.init(allocator);
+    var peripheral = ObjectMap.init(allocator);
     if (db.attrs.description.get(id)) |description|
         try peripheral.put("description", .{ .string = description });
 

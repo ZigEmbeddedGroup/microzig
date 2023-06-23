@@ -56,7 +56,7 @@ fn main_impl() anyerror!void {
     };
     defer res.deinit();
 
-    if (res.args.help)
+    if (res.args.help != 0)
         return clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
 
     var schema: ?Schema = if (res.args.schema) |schema_str|
@@ -136,7 +136,7 @@ fn main_impl() anyerror!void {
         std.io.getStdOut().writer();
 
     var buffered = std.io.bufferedWriter(raw_writer);
-    if (res.args.json)
+    if (res.args.json != 0)
         try db.json_stringify(
             .{ .whitespace = .{ .indent = .{ .space = 2 } } },
             buffered.writer(),

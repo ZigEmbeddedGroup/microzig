@@ -1,0 +1,10 @@
+.{
+    .name = "regz",
+    .version = "0.0.0",
+    .dependencies = .{
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/3d78af4b000758abe6c6761cbf61f5a66abe4f10.tar.gz",
+            .hash = "1220ae43eccd3940d287e9e62bf84897040d0cc9e82c970b59c5703d7fd733d0213f",
+        },
+    },
+}

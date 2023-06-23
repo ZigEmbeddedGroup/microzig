@@ -41,11 +41,7 @@ pub const Regz = struct {
         const build_options = builder.addOptions();
         build_options.addOption([]const u8, "commit", commit_result.stdout);
 
-        const clap = builder.createModule(.{
-            .source_file = .{
-                .path = comptime root() ++ "deps/zig-clap/clap.zig",
-            },
-        });
+        const clap_dep = builder.dependency("clap", .{});
 
         const exe = builder.addExecutable(.{
             .name = "regz",
@@ -54,7 +50,7 @@ pub const Regz = struct {
             .optimize = optimize,
         });
         exe.addOptions("build_options", build_options);
-        exe.addModule("clap", clap);
+        exe.addModule("clap", clap_dep.module("clap"));
         xml.link(exe);
 
         var regz = builder.allocator.create(Regz) catch unreachable;

@@ -206,7 +206,7 @@ fn infer_peripheral_offset(ctx: *Context, type_id: EntityId, instance_id: Entity
         if (min_offset == null)
             min_offset = offset
         else
-            min_offset = std.math.min(min_offset.?, offset);
+            min_offset = @min(min_offset.?, offset);
     }
 
     if (min_offset == null)
@@ -241,7 +241,7 @@ fn infer_enum_size(db: *Database, enum_id: EntityId) !void {
         var ret: u32 = 0;
         for (enum_fields.keys()) |enum_field_id| {
             const value = db.types.enum_fields.get(enum_field_id).?;
-            ret = std.math.max(ret, value);
+            ret = @max(ret, value);
         }
 
         break :blk ret;
