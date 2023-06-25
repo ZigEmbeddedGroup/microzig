@@ -167,7 +167,7 @@ pub const Archive = struct {
 
         try self.blocks.appendSlice(blocks.items);
         if (opts.bundle_source)
-            @panic("TODO");
+            @panic("TODO: bundle source in UF2 file");
     }
 
     pub fn write_to(self: *Self, writer: anytype) !void {
