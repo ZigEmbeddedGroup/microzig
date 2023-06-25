@@ -104,12 +104,12 @@ pub const HidDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
         out[0] = 9; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(u8, self.bcd_hid & 0xff);
         out[3] = @intCast(u8, (self.bcd_hid >> 8) & 0xff);
         out[4] = self.country_code;
         out[5] = self.num_descriptors;
-        out[6] = @enumToInt(self.report_type);
+        out[6] = @intFromEnum(self.report_type);
         out[7] = @intCast(u8, self.report_length & 0xff);
         out[8] = @intCast(u8, (self.report_length >> 8) & 0xff);
         return out;
@@ -313,17 +313,17 @@ pub fn hid_report_item(
 pub fn hid_collection(data: CollectionItem) [2]u8 {
     return hid_report_item(
         1,
-        @enumToInt(ReportItemTypes.Main),
-        @enumToInt(ReportItemMainGroup.Collection),
-        std.mem.toBytes(@enumToInt(data)),
+        @intFromEnum(ReportItemTypes.Main),
+        @intFromEnum(ReportItemMainGroup.Collection),
+        std.mem.toBytes(@intFromEnum(data)),
     );
 }
 
 pub fn hid_input(data: u8) [2]u8 {
     return hid_report_item(
         1,
-        @enumToInt(ReportItemTypes.Main),
-        @enumToInt(ReportItemMainGroup.Input),
+        @intFromEnum(ReportItemTypes.Main),
+        @intFromEnum(ReportItemMainGroup.Input),
         std.mem.toBytes(data),
     );
 }
@@ -331,8 +331,8 @@ pub fn hid_input(data: u8) [2]u8 {
 pub fn hid_output(data: u8) [2]u8 {
     return hid_report_item(
         1,
-        @enumToInt(ReportItemTypes.Main),
-        @enumToInt(ReportItemMainGroup.Output),
+        @intFromEnum(ReportItemTypes.Main),
+        @intFromEnum(ReportItemMainGroup.Output),
         std.mem.toBytes(data),
     );
 }
@@ -340,8 +340,8 @@ pub fn hid_output(data: u8) [2]u8 {
 pub fn hid_collection_end() [1]u8 {
     return hid_report_item(
         0,
-        @enumToInt(ReportItemTypes.Main),
-        @enumToInt(ReportItemMainGroup.CollectionEnd),
+        @intFromEnum(ReportItemTypes.Main),
+        @intFromEnum(ReportItemMainGroup.CollectionEnd),
         .{},
     );
 }
@@ -352,8 +352,8 @@ pub fn hid_collection_end() [1]u8 {
 pub fn hid_usage_page(comptime n: u2, usage: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Global),
-        @enumToInt(GlobalItem.UsagePage),
+        @intFromEnum(ReportItemTypes.Global),
+        @intFromEnum(GlobalItem.UsagePage),
         usage,
     );
 }
@@ -361,8 +361,8 @@ pub fn hid_usage_page(comptime n: u2, usage: [n]u8) [n + 1]u8 {
 pub fn hid_logical_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Global),
-        @enumToInt(GlobalItem.LogicalMin),
+        @intFromEnum(ReportItemTypes.Global),
+        @intFromEnum(GlobalItem.LogicalMin),
         data,
     );
 }
@@ -370,8 +370,8 @@ pub fn hid_logical_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
 pub fn hid_logical_max(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Global),
-        @enumToInt(GlobalItem.LogicalMax),
+        @intFromEnum(ReportItemTypes.Global),
+        @intFromEnum(GlobalItem.LogicalMax),
         data,
     );
 }
@@ -379,8 +379,8 @@ pub fn hid_logical_max(comptime n: u2, data: [n]u8) [n + 1]u8 {
 pub fn hid_report_size(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Global),
-        @enumToInt(GlobalItem.ReportSize),
+        @intFromEnum(ReportItemTypes.Global),
+        @intFromEnum(GlobalItem.ReportSize),
         data,
     );
 }
@@ -388,8 +388,8 @@ pub fn hid_report_size(comptime n: u2, data: [n]u8) [n + 1]u8 {
 pub fn hid_report_count(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Global),
-        @enumToInt(GlobalItem.ReportCount),
+        @intFromEnum(ReportItemTypes.Global),
+        @intFromEnum(GlobalItem.ReportCount),
         data,
     );
 }
@@ -400,8 +400,8 @@ pub fn hid_report_count(comptime n: u2, data: [n]u8) [n + 1]u8 {
 pub fn hid_usage(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
-        @enumToInt(ReportItemTypes.Local),
-        @enumToInt(LocalItem.Usage),
+        @intFromEnum(ReportItemTypes.Local),
+        @intFromEnum(LocalItem.Usage),
         data,
     );
 }

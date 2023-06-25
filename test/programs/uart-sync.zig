@@ -8,12 +8,12 @@ const cfg = if (micro.config.has_board)
             .uart_idx = 1,
             .pins = .{},
         },
-        .@"STM32F3DISCOVERY" => .{
+        .STM32F3DISCOVERY => .{
             .led_pin = micro.Pin("LD3"),
             .uart_idx = 1,
             .pins = .{},
         },
-        .@"STM32F4DISCOVERY" => .{
+        .STM32F4DISCOVERY => .{
             .led_pin = micro.Pin("LD5"),
             .uart_idx = 2,
             .pins = .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
@@ -32,7 +32,7 @@ const cfg = if (micro.config.has_board)
     }
 else switch (micro.config.chip_name) {
     .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
-    .@"GD32VF103x8" => .{ .led_pin = micro.Pin("PA2"), .uart_idx = 1, .pins = .{} },
+    .GD32VF103x8 => .{ .led_pin = micro.Pin("PA2"), .uart_idx = 1, .pins = .{} },
     else => @compileError("unknown chip"),
 };
 

@@ -5,7 +5,7 @@ const root = @import("root");
 
 pub const regs = struct {
     // Interrupt Control and State Register
-    pub const ICSR = @intToPtr(*volatile mmio.Mmio(packed struct {
+    pub const ICSR = @ptrFromInt(*volatile mmio.Mmio(packed struct {
         VECTACTIVE: u9,
         reserved0: u2,
         RETTOBASE: u1,
@@ -82,7 +82,7 @@ pub const startup_logic = struct {
         {
             const bss_start = @ptrCast([*]u8, &microzig_bss_start);
             const bss_end = @ptrCast([*]u8, &microzig_bss_end);
-            const bss_len = @ptrToInt(bss_end) - @ptrToInt(bss_start);
+            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
 
             @memset(bss_start[0..bss_len], 0);
         }
@@ -91,7 +91,7 @@ pub const startup_logic = struct {
         {
             const data_start = @ptrCast([*]u8, &microzig_data_start);
             const data_end = @ptrCast([*]u8, &microzig_data_end);
-            const data_len = @ptrToInt(data_end) - @ptrToInt(data_start);
+            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
             const data_src = @ptrCast([*]const u8, &microzig_data_load_start);
 
             @memcpy(data_start[0..data_len], data_src[0..data_len]);
