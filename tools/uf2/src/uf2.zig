@@ -1,21 +1,3 @@
-//! This package is for assembling uf2 files from ELF binaries. This format is
-//! used for flashing a microcontroller over a mass storage interface, such as
-//! the pi pico.
-//!
-//! See https://github.com/microsoft/uf2#file-containers for how we're going to
-//! embed file source into the format
-//!
-//! For use in a build.zig:
-//!
-//! ```zig
-//! const uf2_file = uf2.Uf2Step.create(exe, .{});
-//! const flash_op = uf2_file.addFlashOperation("/mnt/something");
-//! const flash_step = builder.addStep("flash");
-//! flash_step.dependOn(&flash_op.step);
-//! ```
-//!
-//! TODO: allow for multiple builds in one archive
-
 const std = @import("std");
 const testing = std.testing;
 const assert = std.debug.assert;
@@ -30,125 +12,6 @@ pub const Options = struct {
     // TODO: when implemented set to true by default
     bundle_source: bool = false,
     family_id: ?FamilyId = null,
-};
-
-pub const Uf2Step = struct {
-    step: std.build.Step,
-    exe: *LibExeObjStep,
-    opts: Options,
-    output_file: GeneratedFile,
-
-    pub fn create(exe: *LibExeObjStep, opts: Options) *Uf2Step {
-        assert(exe.kind == .exe);
-        var ret = exe.step.owner.allocator.create(Uf2Step) catch
-            @panic("failed to allocate");
-        ret.* = .{
-            .step = std.build.Step.init(.{
-                .id = .custom,
-                .name = "uf2",
-                .owner = exe.step.owner,
-                .makeFn = make,
-            }),
-            .exe = exe,
-            .opts = opts,
-            .output_file = .{ .step = &ret.step },
-        };
-
-        ret.step.dependOn(&exe.step);
-        return ret;
-    }
-
-    /// uf2 is typically used to flash via a mass storage device, this step
-    /// writes the file contents to the mounted directory
-    pub fn addFlashOperation(self: *Uf2Step, path: []const u8) *FlashOpStep {
-        return FlashOpStep.create(self, path);
-    }
-
-    pub fn install(uf2_step: *Uf2Step) void {
-        const owner = uf2_step.exe.step.owner;
-        const name = std.mem.join(owner.allocator, "", &.{ uf2_step.exe.name, ".uf2" }) catch @panic("failed to join");
-        const install_step = owner.addInstallFileWithDir(.{
-            .generated = &uf2_step.output_file,
-        }, .bin, name);
-        owner.getInstallStep().dependOn(&uf2_step.step);
-        owner.getInstallStep().dependOn(&install_step.step);
-    }
-
-    fn make(step: *std.build.Step, node: *std.Progress.Node) anyerror!void {
-        _ = node;
-        const uf2_step = @fieldParentPtr(Uf2Step, "step", step);
-        const file_source = uf2_step.exe.getOutputSource();
-        const exe_path = file_source.getPath(uf2_step.exe.step.owner);
-        const dest_path = try std.mem.join(uf2_step.exe.step.owner.allocator, "", &.{
-            exe_path,
-            ".uf2",
-        });
-
-        var archive = Archive.init(uf2_step.exe.step.owner.allocator);
-        errdefer archive.deinit();
-
-        try archive.addElf(exe_path, uf2_step.opts);
-
-        const dest_file = try std.fs.cwd().createFile(dest_path, .{});
-        defer dest_file.close();
-
-        try archive.writeTo(dest_file.writer());
-        uf2_step.output_file.path = dest_path;
-    }
-};
-
-/// for uf2, a flash op is just copying a file to a directory.
-pub const FlashOpStep = struct {
-    step: std.build.Step,
-    uf2_step: *Uf2Step,
-    mass_storage_path: []const u8,
-
-    pub fn create(uf2_step: *Uf2Step, mass_storage_path: []const u8) *FlashOpStep {
-        var ret = uf2_step.exe.builder.allocator.create(FlashOpStep) catch
-            @panic("failed to allocate flash operation step");
-        ret.* = .{
-            .step = std.build.Step.init(
-                .custom,
-                "flash_op",
-                uf2_step.exe.builder.allocator,
-                make,
-            ),
-            .uf2_step = uf2_step,
-            .mass_storage_path = mass_storage_path,
-        };
-
-        ret.step.dependOn(&uf2_step.step);
-        return ret;
-    }
-
-    fn openMassStorage(self: FlashOpStep) !std.fs.Dir {
-        return if (std.fs.path.isAbsolute(self.mass_storage_path))
-            try std.fs.openDirAbsolute(self.mass_storage_path, .{})
-        else
-            try std.fs.cwd().openDir(self.mass_storage_path, .{});
-    }
-
-    fn make(step: *std.build.Step) !void {
-        const self = @fieldParentPtr(FlashOpStep, "step", step);
-
-        var mass_storage = self.openMassStorage() catch |err| switch (err) {
-            error.FileNotFound => {
-                std.log.err("failed to open mass storage device: '{s}'", .{
-                    self.mass_storage_path,
-                });
-                return err;
-            },
-            else => return err,
-        };
-        defer mass_storage.close();
-
-        try std.fs.cwd().copyFile(
-            self.uf2_step.path.?,
-            mass_storage,
-            std.fs.path.basename(self.uf2_step.path.?),
-            .{},
-        );
-    }
 };
 
 pub const Archive = struct {
@@ -172,7 +35,7 @@ pub const Archive = struct {
         self.families.deinit();
     }
 
-    pub fn addElf(self: *Self, path: []const u8, opts: Options) !void {
+    pub fn add_elf(self: *Self, path: []const u8, opts: Options) !void {
         // TODO: ensures this reports an error if there is a collision
         if (opts.family_id) |family_id|
             try self.families.putNoClobber(family_id, {});
@@ -219,7 +82,7 @@ pub const Archive = struct {
         };
 
         var segment_idx: usize = 0;
-        var addr = std.mem.alignBackwardGeneric(u32, segments.items[0].addr, prog_page_size);
+        var addr = std.mem.alignBackward(u32, segments.items[0].addr, prog_page_size);
         while (addr < last_segment_end and segment_idx < segments.items.len) {
             const segment = &segments.items[segment_idx];
             const segment_end = segment.addr + segment.size;
@@ -233,7 +96,7 @@ pub const Archive = struct {
                 const block_end = block.target_addr + prog_page_size;
 
                 if (segment.addr < block_end) {
-                    const n_bytes = std.math.min(segment.size, block_end - segment.addr);
+                    const n_bytes = @min(segment.size, block_end - segment.addr);
                     try file.seekTo(segment.file_offset);
                     const block_offset = segment.addr - block.target_addr;
                     const n_read = try file.reader().readAll(block.data[block_offset .. block_offset + n_bytes]);
@@ -251,7 +114,7 @@ pub const Archive = struct {
                     }
                 } else {
                     block.payload_size = prog_page_size;
-                    addr = std.mem.alignBackwardGeneric(u32, segment.addr, prog_page_size);
+                    addr = std.mem.alignBackward(u32, segment.addr, prog_page_size);
                 }
             }
 
@@ -264,14 +127,14 @@ pub const Archive = struct {
                     .extension_tags_present = false,
                 },
                 .target_addr = addr,
-                .payload_size = std.math.min(prog_page_size, segment_end - addr),
+                .payload_size = @min(prog_page_size, segment_end - addr),
                 .block_number = undefined,
                 .total_blocks = undefined,
                 .file_size_or_family_id = .{
                     .family_id = if (opts.family_id) |family_id|
                         family_id
                     else
-                        @intToEnum(FamilyId, 0),
+                        @enumFromInt(FamilyId, 0),
                 },
                 .data = std.mem.zeroes([476]u8),
             });
@@ -307,15 +170,15 @@ pub const Archive = struct {
             @panic("TODO");
     }
 
-    pub fn writeTo(self: *Self, writer: anytype) !void {
+    pub fn write_to(self: *Self, writer: anytype) !void {
         for (self.blocks.items, 0..) |*block, i| {
             block.block_number = @intCast(u32, i);
             block.total_blocks = @intCast(u32, self.blocks.items.len);
-            try block.writeTo(writer);
+            try block.write_to(writer);
         }
     }
 
-    pub fn addFile(self: *Self, path: []const u8) !void {
+    pub fn add_file(self: *Self, path: []const u8) !void {
         const file = if (std.fs.path.isAbsolute(path))
             try std.fs.openFileAbsolute(path, .{})
         else
@@ -359,7 +222,7 @@ pub const Archive = struct {
                 block.payload_size = n_read;
                 if (n_read != @sizeOf(block.data)) {
                     std.mem.copy(u8, block.data[n_read..], path);
-                    path_pos = std.math.min(block.len - n_read, path.len);
+                    path_pos = @min(block.len - n_read, path.len);
                     if (n_read + path_pos < block.data.len) {
                         // write null terminator too and we're done
                         block.data[n_read + path_pos] = 0;
@@ -370,7 +233,7 @@ pub const Archive = struct {
                 // copying null terminated path into block, likely crossing a
                 // block boundary
                 std.mem.copy(u8, &block.data, path[path_pos..]);
-                const n_copied = std.math.min(block.data.len, path[path_pos..].len);
+                const n_copied = @min(block.data.len, path[path_pos..].len);
                 path_pos += n_copied;
                 if (n_copied < block.data.len) {
                     // write null terminator and peace out
@@ -426,7 +289,7 @@ pub const Block = extern struct {
         assert(512 == @sizeOf(Block));
     }
 
-    pub fn fromReader(reader: anytype) !Block {
+    pub fn from_reader(reader: anytype) !Block {
         var block: Block = undefined;
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
@@ -447,7 +310,7 @@ pub const Block = extern struct {
         return block;
     }
 
-    fn writeTo(self: Block, writer: anytype) !void {
+    pub fn write_to(self: Block, writer: anytype) !void {
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
                 u32 => try writer.writeIntLittle(u32, @field(self, field.name)),
@@ -504,11 +367,11 @@ test "Block loopback" {
     };
     rand.bytes(&expected.data);
 
-    try expected.writeTo(fbs.writer());
+    try expected.write_to(fbs.writer());
 
     // needs to be reset for reader
     fbs.reset();
-    const actual = try Block.fromReader(fbs.reader());
+    const actual = try Block.from_reader(fbs.reader());
 
     try expectEqualBlock(expected, actual);
 }
