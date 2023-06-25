@@ -25,6 +25,6 @@ pub fn build(b: *Build) void {
 
     // output file
     const uf2_file = elf2uf2_run.addPrefixedOutputFileArg("--output-path", "test.uf2");
-    b.addInstallFile(uf2_file, "bin/test.uf2");
+    _ = b.addInstallFile(uf2_file, "bin/test.uf2");
 }
 ```
