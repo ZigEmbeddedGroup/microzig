@@ -5,7 +5,7 @@ const FileSource = std.Build.FileSource;
 
 const uf2 = @import("src/uf2.zig");
 
-pub fn from_elf(dep: Dependency, exe: CompileStep, opts: uf2.Options) FileSource {
+pub fn from_elf(dep: *Dependency, exe: *CompileStep, opts: uf2.Options) FileSource {
     std.debug.assert(!opts.bundle_source); // TODO: bundle source in UF2 File
     const b = dep.builder;
     const elf2uf2 = dep.artifact("elf2uf2");

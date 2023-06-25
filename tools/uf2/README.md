@@ -9,6 +9,21 @@ See https://github.com/microsoft/uf2#file-containers for how we're going to embe
 For use in a build.zig:
 
 ```zig
+const uf2 = @import("uf2");
+
+pub fn build(b: *Build) void {
+    // ...
+    const uf2_dep = b.dependency("uf2", .{});
+
+    const uf2_file = uf2.from_elf(uf2_dep, exe, .{ .family_id = .RP2040 });
+    _ = b.addInstallFile(uf2_file, "bin/test.uf2");
+}
+
+```
+
+# Manually Executing elf2uf2
+
+```zig
 pub fn build(b: *Build) void {
     // ...
 
