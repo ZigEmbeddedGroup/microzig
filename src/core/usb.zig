@@ -502,11 +502,11 @@ pub const Dir = enum(u8) {
     In = 0x80,
 
     pub inline fn endpoint(self: @This(), num: u8) u8 {
-        return num | @enumToInt(self);
+        return num | @intFromEnum(self);
     }
 
     pub inline fn of_endpoint_addr(addr: u8) @This() {
-        return if (addr & @enumToInt(@This().In) != 0) @This().In else @This().Out;
+        return if (addr & @intFromEnum(@This().In) != 0) @This().In else @This().Out;
     }
 };
 
@@ -531,7 +531,7 @@ pub const EndpointDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [7]u8 {
         var out: [7]u8 = undefined;
         out[0] = 7; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = self.endpoint_address;
         out[3] = self.attributes;
         out[4] = @intCast(u8, self.max_packet_size & 0xff);
@@ -567,7 +567,7 @@ pub const InterfaceDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
         out[0] = 9; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = self.interface_number;
         out[3] = self.alternate_setting;
         out[4] = self.num_endpoints;
@@ -611,7 +611,7 @@ pub const ConfigurationDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
         out[0] = 9; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(u8, self.total_length & 0xff);
         out[3] = @intCast(u8, (self.total_length >> 8) & 0xff);
         out[4] = self.num_interfaces;
@@ -659,7 +659,7 @@ pub const DeviceDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [18]u8 {
         var out: [18]u8 = undefined;
         out[0] = 18; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(u8, self.bcd_usb & 0xff);
         out[3] = @intCast(u8, (self.bcd_usb >> 8) & 0xff);
         out[4] = self.device_class;
@@ -706,7 +706,7 @@ pub const DeviceQualifierDescriptor = packed struct {
     pub fn serialize(self: *const @This()) [10]u8 {
         var out: [10]u8 = undefined;
         out[0] = 10; // length
-        out[1] = @enumToInt(self.descriptor_type);
+        out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(u8, self.bcd_usb & 0xff);
         out[3] = @intCast(u8, (self.bcd_usb >> 8) & 0xff);
         out[4] = self.device_class;
