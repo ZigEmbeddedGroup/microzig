@@ -10,7 +10,7 @@ fn get_regs(comptime slice: u32) *volatile Regs {
     @import("std").debug.assert(slice < 8);
     const PwmType = microzig.chip.types.peripherals.PWM;
     const reg_diff = comptime @offsetOf(PwmType, "CH1_CSR") - @offsetOf(PwmType, "CH0_CSR");
-    return @intToPtr(*volatile Regs, @ptrToInt(PWM) + reg_diff * slice);
+    return @ptrFromInt(*volatile Regs, @intFromPtr(PWM) + reg_diff * slice);
 }
 
 pub fn Pwm(comptime slice_num: u32, comptime chan: Channel) type {
@@ -74,7 +74,7 @@ const Regs = extern struct {
 pub inline fn set_slice_phase_correct(comptime slice: u32, phase_correct: bool) void {
     log.debug("PWM{} set phase correct: {}", .{ slice, phase_correct });
     get_regs(slice).csr.modify(.{
-        .PH_CORRECT = @boolToInt(phase_correct),
+        .PH_CORRECT = @intFromBool(phase_correct),
     });
 }
 
@@ -89,7 +89,7 @@ pub inline fn set_slice_clk_div(comptime slice: u32, integer: u8, fraction: u4) 
 pub inline fn set_slice_clk_div_mode(comptime slice: u32, mode: ClkDivMode) void {
     log.debug("PWM{} set clk div mode: {}", .{ slice, mode });
     get_regs(slice).csr.modify(.{
-        .DIVMODE = @enumToInt(mode),
+        .DIVMODE = @intFromEnum(mode),
     });
 }
 
@@ -100,10 +100,10 @@ pub inline fn set_channel_inversion(
 ) void {
     switch (channel) {
         .a => get_regs(slice).csr.modify(.{
-            .A_INV = @boolToInt(invert),
+            .A_INV = @intFromBool(invert),
         }),
         .b => get_regs(slice).csr.modifi(.{
-            .B_INV = @boolToInt(invert),
+            .B_INV = @intFromBool(invert),
         }),
     }
 }

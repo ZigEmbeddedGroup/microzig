@@ -355,7 +355,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
 
                 if (pin_config.function == .SIO) {
                     pin_field.name = pin_config.name orelse field.name;
-                    pin_field.type = GPIO(@enumToInt(@field(Pin, field.name)), pin_config.direction orelse .in);
+                    pin_field.type = GPIO(@intFromEnum(@field(Pin, field.name)), pin_config.direction orelse .in);
                 } else if (pin_config.function.is_pwm()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
                     pin_field.type = pwm.Pwm(pin_config.function.pwm_slice(), pin_config.function.pwm_channel());
@@ -450,8 +450,8 @@ pub const GlobalConfiguration = struct {
         comptime {
             inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
                 if (@field(config, field.name)) |pin_config| {
-                    const gpio_num = @enumToInt(@field(Pin, field.name));
-                    if (0 == function_table[@enumToInt(pin_config.function)][gpio_num])
+                    const gpio_num = @intFromEnum(@field(Pin, field.name));
+                    if (0 == function_table[@intFromEnum(pin_config.function)][gpio_num])
                         @compileError(comptimePrint("{s} cannot be configured for {}", .{ field.name, pin_config.function }));
 
                     if (pin_config.function == .SIO) {
@@ -481,7 +481,7 @@ pub const GlobalConfiguration = struct {
 
         inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
             if (@field(config, field.name)) |pin_config| {
-                const pin = gpio.num(@enumToInt(@field(Pin, field.name)));
+                const pin = gpio.num(@intFromEnum(@field(Pin, field.name)));
                 const func = pin_config.function;
 
                 // xip = 0,
@@ -505,7 +505,7 @@ pub const GlobalConfiguration = struct {
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
-                        @enumToInt(pin),
+                        @intFromEnum(pin),
                     }));
                 }
             }
@@ -517,7 +517,7 @@ pub const GlobalConfiguration = struct {
         if (input_gpios != 0) {
             inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
                 if (@field(config, field.name)) |pin_config| {
-                    const gpio_num = @enumToInt(@field(Pin, field.name));
+                    const gpio_num = @intFromEnum(@field(Pin, field.name));
                     const pull = pin_config.pull orelse continue;
                     if (comptime pin_config.get_direction() != .in)
                         @compileError("Only input pins can have pull up/down enabled");

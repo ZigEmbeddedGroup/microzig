@@ -60,7 +60,7 @@ pub fn main() !void {
             var i: usize = 0;
             std.log.info("Distribution:", .{});
             while (i < 256) : (i += 1) {
-                std.log.info("{} -> {}, {d:2}%", .{ i, dist[i], @intToFloat(f32, dist[i]) / @intToFloat(f32, counter) });
+                std.log.info("{} -> {}, {d:2}%", .{ i, dist[i], @floatFromInt(f32, dist[i]) / @floatFromInt(f32, counter) });
             }
         }
         time.sleep_ms(1000);

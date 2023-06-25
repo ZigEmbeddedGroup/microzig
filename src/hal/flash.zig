@@ -23,7 +23,7 @@ pub const boot2 = struct {
     /// Copy the 2nd stage bootloader into memory
     pub fn flash_init() linksection(".time_critical") void {
         if (copyout_valid) return;
-        const bootloader = @intToPtr([*]u32, XIP_BASE);
+        const bootloader = @ptrFromInt([*]u32, XIP_BASE);
         var i: usize = 0;
         while (i < BOOT2_SIZE_BYTES) : (i += 1) {
             copyout[i] = bootloader[i];
@@ -55,7 +55,7 @@ pub fn range_erase(offset: u32, count: u32) linksection(".time_critical") void {
 
     rom.connect_internal_flash()();
     rom.flash_exit_xip()();
-    rom.flash_range_erase()(offset, count, BLOCK_SIZE, @enumToInt(Command.block_erase));
+    rom.flash_range_erase()(offset, count, BLOCK_SIZE, @intFromEnum(Command.block_erase));
     rom.flash_flush_cache()();
 
     boot2.flash_enable_xip();

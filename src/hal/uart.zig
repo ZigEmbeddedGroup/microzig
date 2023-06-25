@@ -43,7 +43,7 @@ pub const Config = struct {
 };
 
 pub fn num(n: u1) UART {
-    return @intToEnum(UART, n);
+    return @enumFromInt(UART, n);
 }
 
 pub const UART = enum(u1) {
@@ -63,7 +63,7 @@ pub const UART = enum(u1) {
     }
 
     fn get_regs(uart: UART) *volatile UartRegs {
-        return switch (@enumToInt(uart)) {
+        return switch (@intFromEnum(uart)) {
             0 => UART0,
             1 => UART1,
         };
@@ -122,7 +122,7 @@ pub const UART = enum(u1) {
     }
 
     pub fn dreq_tx(uart: UART) dma.Dreq {
-        return switch (@enumToInt(uart)) {
+        return switch (@intFromEnum(uart)) {
             0 => .uart0_tx,
             1 => .uart1_tx,
         };

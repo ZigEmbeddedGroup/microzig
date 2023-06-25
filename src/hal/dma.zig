@@ -19,7 +19,7 @@ pub const Dreq = enum(u6) {
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
 
-    return @intToEnum(Channel, n);
+    return @enumFromInt(Channel, n);
 }
 
 pub fn claim_unused_channel() ?Channel {
@@ -43,11 +43,11 @@ pub const Channel = enum(u4) {
     }
 
     pub fn unclaim(chan: Channel) void {
-        claimed_channels.set(@enumToInt(chan), false);
+        claimed_channels.set(@intFromEnum(chan), false);
     }
 
     pub fn is_claimed(chan: Channel) bool {
-        return claimed_channels.get(@enumToInt(chan));
+        return claimed_channels.get(@intFromEnum(chan));
     }
 
     const Regs = extern struct {
@@ -77,7 +77,7 @@ pub const Channel = enum(u4) {
 
     fn get_regs(chan: Channel) *volatile Regs {
         const regs = @ptrCast(*volatile [12]Regs, &DMA.CH0_READ_ADDR);
-        return &regs[@enumToInt(chan)];
+        return &regs[@intFromEnum(chan)];
     }
 
     pub const TransferConfig = struct {
@@ -105,14 +105,14 @@ pub const Channel = enum(u4) {
         regs.write_addr = write_addr;
         regs.trans_count = count;
         regs.ctrl_trig.modify(.{
-            .EN = @boolToInt(config.enable),
+            .EN = @intFromBool(config.enable),
             .DATA_SIZE = .{
                 .value = .SIZE_BYTE,
             },
-            .INCR_READ = @boolToInt(config.read_increment),
-            .INCR_WRITE = @boolToInt(config.write_increment),
+            .INCR_READ = @intFromBool(config.read_increment),
+            .INCR_WRITE = @intFromBool(config.write_increment),
             .TREQ_SEL = .{
-                .raw = @enumToInt(config.dreq),
+                .raw = @intFromEnum(config.dreq),
             },
         });
     }
@@ -120,16 +120,16 @@ pub const Channel = enum(u4) {
     pub fn set_irq0_enabled(chan: Channel, enabled: bool) void {
         if (enabled) {
             const inte0_set = hw.set_alias_raw(&DMA.INTE0);
-            inte0_set.* = @as(u32, 1) << @enumToInt(chan);
+            inte0_set.* = @as(u32, 1) << @intFromEnum(chan);
         } else {
             const inte0_clear = hw.clear_alias_raw(&DMA.INTE0);
-            inte0_clear.* = @as(u32, 1) << @enumToInt(chan);
+            inte0_clear.* = @as(u32, 1) << @intFromEnum(chan);
         }
     }
 
     pub fn acknowledge_irq0(chan: Channel) void {
         const ints0_set = hw.set_alias_raw(&DMA.INTS0);
-        ints0_set.* = @as(u32, 1) << @enumToInt(chan);
+        ints0_set.* = @as(u32, 1) << @intFromEnum(chan);
     }
 
     pub fn is_busy(chan: Channel) bool {

@@ -70,7 +70,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         fn wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.C) void {
             // TODO: protect stack using MPU
             _ = stack_base;
-            @intToPtr(*const fn () void, entry)();
+            @ptrFromInt(*const fn () void, entry)();
         }
     }.wrapper;
 
@@ -79,12 +79,12 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
     while (PSM.FRCE_OFF.read().proc1 != 1) microzig.cpu.nop();
     PSM.FRCE_OFF.modify(.{ .proc1 = 0 });
 
-    stack[stack.len - 2] = @ptrToInt(entrypoint);
-    stack[stack.len - 1] = @ptrToInt(stack.ptr);
+    stack[stack.len - 2] = @intFromPtr(entrypoint);
+    stack[stack.len - 1] = @intFromPtr(stack.ptr);
 
     // calculate top of the stack
     const stack_ptr: u32 =
-        @ptrToInt(stack.ptr) +
+        @intFromPtr(stack.ptr) +
         (stack.len - 2) * @sizeOf(u32); // pop the two elements we "pushed" above
 
     // after reseting core1 is waiting for this specific sequence
@@ -94,7 +94,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         1,
         SCB.VTOR.raw,
         stack_ptr,
-        @ptrToInt(wrapper),
+        @intFromPtr(wrapper),
     };
 
     var seq: usize = 0;

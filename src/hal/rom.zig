@@ -100,8 +100,8 @@ pub fn rom_table_code(c1: u8, c2: u8) u32 {
 ///
 /// The converted pointer
 pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
-    const ptr_to_ptr = @intToPtr(*u16, rom_addr);
-    return @intToPtr(*anyopaque, @intCast(usize, ptr_to_ptr.*));
+    const ptr_to_ptr = @ptrFromInt(*u16, rom_addr);
+    return @ptrFromInt(*anyopaque, @intCast(usize, ptr_to_ptr.*));
 }
 
 /// Lookup a bootrom function by code (inline)
@@ -115,7 +115,7 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 pub inline fn _rom_func_lookup(code: Code) *anyopaque {
     const rom_table_lookup = @ptrCast(*signatures.rom_table_lookup, rom_hword_as_ptr(0x18));
     const func_table = @ptrCast(*u16, @alignCast(2, rom_hword_as_ptr(0x14)));
-    return rom_table_lookup(func_table, @enumToInt(code));
+    return rom_table_lookup(func_table, @intFromEnum(code));
 }
 
 /// Lookup a bootrom function by code

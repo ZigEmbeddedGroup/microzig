@@ -340,14 +340,14 @@ pub fn Encoder(comptime options: Options) type {
                 },
                 .push => |push| .{
                     .push = .{
-                        .if_full = @boolToInt(push.iffull),
-                        .block = @boolToInt(push.block),
+                        .if_full = @intFromBool(push.iffull),
+                        .block = @intFromBool(push.block),
                     },
                 },
                 .pull => |pull| .{
                     .pull = .{
-                        .if_empty = @boolToInt(pull.ifempty),
-                        .block = @boolToInt(pull.block),
+                        .if_empty = @intFromBool(pull.ifempty),
+                        .block = @intFromBool(pull.block),
                     },
                 },
                 .mov => |mov| .{
@@ -361,8 +361,8 @@ pub fn Encoder(comptime options: Options) type {
                     const irq_num = try self.evaluate(u5, program.*, irq.num, token_index, diags);
                     break :blk .{
                         .irq = .{
-                            .clear = @boolToInt(irq.clear),
-                            .wait = @boolToInt(irq.wait),
+                            .clear = @intFromBool(irq.clear),
+                            .wait = @intFromBool(irq.wait),
                             .index = if (irq.rel)
                                 @as(u5, 0x10) | irq_num
                             else

@@ -7,11 +7,11 @@ pub const Absolute = enum(u64) {
     _,
 
     pub fn from_us(us: u64) Absolute {
-        return @intToEnum(Absolute, us);
+        return @enumFromInt(Absolute, us);
     }
 
     pub fn to_us(time: Absolute) u64 {
-        return @enumToInt(time);
+        return @intFromEnum(time);
     }
 
     pub fn is_reached_by(deadline: Absolute, point: Absolute) bool {
@@ -36,7 +36,7 @@ pub const Duration = enum(u64) {
     _,
 
     pub fn from_us(us: u64) Duration {
-        return @intToEnum(Duration, us);
+        return @enumFromInt(Duration, us);
     }
 
     pub fn from_ms(ms: u64) Duration {
@@ -44,7 +44,7 @@ pub const Duration = enum(u64) {
     }
 
     pub fn to_us(duration: Duration) u64 {
-        return @enumToInt(duration);
+        return @intFromEnum(duration);
     }
 
     pub fn less_than(self: Duration, other: Duration) bool {
@@ -67,14 +67,14 @@ pub fn get_time_since_boot() Absolute {
         var low_word = TIMER.TIMERAWL;
         const next_high_word = TIMER.TIMERAWH;
         if (next_high_word == high_word)
-            break @intToEnum(Absolute, @intCast(u64, high_word) << 32 | low_word);
+            break @enumFromInt(Absolute, @intCast(u64, high_word) << 32 | low_word);
 
         high_word = next_high_word;
     } else unreachable;
 }
 
 pub fn make_timeout_us(timeout_us: u64) Absolute {
-    return @intToEnum(Absolute, get_time_since_boot().to_us() + timeout_us);
+    return @enumFromInt(Absolute, get_time_since_boot().to_us() + timeout_us);
 }
 
 pub fn sleep_ms(time_ms: u32) void {

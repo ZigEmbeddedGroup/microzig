@@ -16,6 +16,7 @@ pub const rand = @import("hal/random.zig");
 pub const resets = @import("hal/resets.zig");
 pub const rom = @import("hal/rom.zig");
 pub const spi = @import("hal/spi.zig");
+pub const i2c = @import("hal/i2c.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");

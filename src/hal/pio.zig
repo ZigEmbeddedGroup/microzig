@@ -74,7 +74,7 @@ pub const ClkDivOptions = struct {
     frac: u8 = 0,
 
     pub fn from_float(div: f32) ClkDivOptions {
-        const fixed = @floatToInt(u24, div * 256);
+        const fixed = @intFromFloat(u24, div * 256);
         return ClkDivOptions{
             .int = @truncate(u16, fixed >> 8),
             .frac = @truncate(u8, fixed),
@@ -169,7 +169,7 @@ pub const Pio = enum(u1) {
             if (origin != offset)
                 return false;
 
-        const used_mask = used_instruction_space[@enumToInt(self)];
+        const used_mask = used_instruction_space[@intFromEnum(self)];
         const program_mask = program.get_mask();
 
         // We can add the program if the masks don't overlap, if there is
@@ -199,7 +199,7 @@ pub const Pio = enum(u1) {
             instruction_memory[i] = insn;
 
         const program_mask = program.get_mask();
-        used_instruction_space[@enumToInt(self)] |= program_mask << offset;
+        used_instruction_space[@intFromEnum(self)] |= program_mask << offset;
     }
 
     /// Public functions will need to lock independently, so only exposing this function for now
@@ -216,12 +216,12 @@ pub const Pio = enum(u1) {
         // TODO: const lock = hw.Lock.claim()
         // defer lock.unlock();
 
-        const claimed_mask = claimed_state_machines[@enumToInt(self)];
+        const claimed_mask = claimed_state_machines[@intFromEnum(self)];
         return for (0..4) |i| {
             const sm_mask = (@as(u4, 1) << @intCast(u2, i));
             if (0 == (claimed_mask & sm_mask)) {
-                claimed_state_machines[@enumToInt(self)] |= sm_mask;
-                break @intToEnum(StateMachine, i);
+                claimed_state_machines[@intFromEnum(self)] |= sm_mask;
+                break @enumFromInt(StateMachine, i);
             }
         } else error.NoSpace;
     }
@@ -229,13 +229,13 @@ pub const Pio = enum(u1) {
     pub fn get_sm_regs(self: Pio, sm: StateMachine) *volatile StateMachine.Regs {
         const pio_regs = self.get_regs();
         const sm_regs = @ptrCast(*volatile [4]StateMachine.Regs, &pio_regs.SM0_CLKDIV);
-        return &sm_regs[@enumToInt(sm)];
+        return &sm_regs[@intFromEnum(sm)];
     }
 
     fn get_irq_regs(self: Pio, irq: Irq) *volatile Irq.Regs {
         const pio_regs = self.get_regs();
         const irq_regs = @ptrCast(*volatile [2]Irq.Regs, &pio_regs.IRQ0_INTE);
-        return &irq_regs[@enumToInt(irq)];
+        return &irq_regs[@intFromEnum(irq)];
     }
 
     pub fn sm_set_clkdiv(self: Pio, sm: StateMachine, options: ClkDivOptions) void {
@@ -256,8 +256,8 @@ pub const Pio = enum(u1) {
         sm_regs.execctrl.modify(.{
             .WRAP_BOTTOM = options.wrap_target,
             .WRAP_TOP = options.wrap,
-            .SIDE_PINDIR = @boolToInt(options.side_pindir),
-            .SIDE_EN = @boolToInt(options.side_set_optional),
+            .SIDE_PINDIR = @intFromBool(options.side_pindir),
+            .SIDE_EN = @intFromBool(options.side_set_optional),
 
             // TODO: plug in rest of the options
             // STATUS_N
@@ -273,17 +273,17 @@ pub const Pio = enum(u1) {
     pub fn sm_set_shift_options(self: Pio, sm: StateMachine, options: ShiftOptions) void {
         const sm_regs = self.get_sm_regs(sm);
         sm_regs.shiftctrl.write(.{
-            .AUTOPUSH = @boolToInt(options.autopush),
-            .AUTOPULL = @boolToInt(options.autopull),
+            .AUTOPUSH = @intFromBool(options.autopush),
+            .AUTOPULL = @intFromBool(options.autopull),
 
-            .IN_SHIFTDIR = @enumToInt(options.in_shiftdir),
-            .OUT_SHIFTDIR = @enumToInt(options.out_shiftdir),
+            .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
+            .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
 
             .PUSH_THRESH = options.push_threshold,
             .PULL_THRESH = options.pull_threshold,
 
-            .FJOIN_TX = @boolToInt(options.join_tx),
-            .FJOIN_RX = @boolToInt(options.join_rx),
+            .FJOIN_TX = @intFromBool(options.join_tx),
+            .FJOIN_RX = @intFromBool(options.join_rx),
 
             .reserved16 = 0,
         });
@@ -308,13 +308,13 @@ pub const Pio = enum(u1) {
     pub fn sm_is_tx_fifo_full(self: Pio, sm: StateMachine) bool {
         const regs = self.get_regs();
         const txfull = regs.FSTAT.read().TXFULL;
-        return (txfull & (@as(u4, 1) << @enumToInt(sm))) != 0;
+        return (txfull & (@as(u4, 1) << @intFromEnum(sm))) != 0;
     }
 
     pub fn sm_get_tx_fifo(self: Pio, sm: StateMachine) *volatile u32 {
         const regs = self.get_regs();
         const fifos = @ptrCast(*volatile [4]u32, &regs.TXF0);
-        return &fifos[@enumToInt(sm)];
+        return &fifos[@intFromEnum(sm)];
     }
 
     /// this function writes to the TX FIFO without checking that it's
@@ -335,16 +335,16 @@ pub const Pio = enum(u1) {
 
         var value = regs.CTRL.read();
         if (enabled)
-            value.SM_ENABLE |= @as(u4, 1) << @enumToInt(sm)
+            value.SM_ENABLE |= @as(u4, 1) << @intFromEnum(sm)
         else
-            value.SM_ENABLE &= ~(@as(u4, 1) << @enumToInt(sm));
+            value.SM_ENABLE &= ~(@as(u4, 1) << @intFromEnum(sm));
 
         regs.CTRL.write(value);
     }
 
     fn sm_clear_debug(self: Pio, sm: StateMachine) void {
         const regs = self.get_regs();
-        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
+        const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
 
         // write 1 to clear this register
         regs.FDEBUG.modify(.{
@@ -377,7 +377,7 @@ pub const Pio = enum(u1) {
     }
 
     pub fn sm_fifo_level(self: Pio, sm: StateMachine, fifo: Fifo) u4 {
-        const num = @enumToInt(sm);
+        const num = @intFromEnum(sm);
         const offset: u5 = switch (fifo) {
             .tx => 0,
             .rx => 4,
@@ -393,7 +393,7 @@ pub const Pio = enum(u1) {
         sm: StateMachine,
         source: Irq.Source,
     ) u5 {
-        return (@as(u5, 4) * @enumToInt(source)) + @enumToInt(sm);
+        return (@as(u5, 4) * @intFromEnum(source)) + @intFromEnum(sm);
     }
 
     pub fn sm_clear_interrupt(
@@ -420,7 +420,7 @@ pub const Pio = enum(u1) {
     }
 
     pub fn sm_restart(self: Pio, sm: StateMachine) void {
-        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
+        const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
         const regs = self.get_regs();
         regs.CTRL.modify(.{
             .SM_RESTART = mask,
@@ -428,7 +428,7 @@ pub const Pio = enum(u1) {
     }
 
     pub fn sm_clkdiv_restart(self: Pio, sm: StateMachine) void {
-        const mask: u4 = (@as(u4, 1) << @enumToInt(sm));
+        const mask: u4 = (@as(u4, 1) << @intFromEnum(sm));
         const regs = self.get_regs();
         regs.CTRL.modify(.{
             .CLKDIV_RESTART = mask,

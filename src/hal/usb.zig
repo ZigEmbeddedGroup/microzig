@@ -45,7 +45,7 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
         .length = @intCast(u8, @sizeOf(usb.EndpointDescriptor)),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_OUT_ADDR,
-        .attributes = @enumToInt(usb.TransferType.Control),
+        .attributes = @intFromEnum(usb.TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -60,7 +60,7 @@ pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
         .length = @intCast(u8, @sizeOf(usb.EndpointDescriptor)),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_IN_ADDR,
-        .attributes = @enumToInt(usb.TransferType.Control),
+        .attributes = @intFromEnum(usb.TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -89,26 +89,26 @@ pub const buffers = struct {
 
     /// Mapping to the different data buffers in DPSRAM
     pub var B: usb.Buffers = .{
-        .ep0_buffer0 = @intToPtr([*]u8, USB_EP0_BUFFER0),
-        .ep0_buffer1 = @intToPtr([*]u8, USB_EP0_BUFFER1),
+        .ep0_buffer0 = @ptrFromInt([*]u8, USB_EP0_BUFFER0),
+        .ep0_buffer1 = @ptrFromInt([*]u8, USB_EP0_BUFFER1),
         // We will initialize this comptime in a loop
         .rest = .{
-            @intToPtr([*]u8, USB_BUFFERS + (0 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (1 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (2 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (3 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (4 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (5 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (6 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (7 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (8 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (9 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (10 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (11 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (12 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (13 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (14 * BUFFER_SIZE)),
-            @intToPtr([*]u8, USB_BUFFERS + (15 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (0 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (1 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (2 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (3 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (4 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (5 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (6 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (7 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (8 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (9 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (10 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (11 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (12 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (13 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (14 * BUFFER_SIZE)),
+            @ptrFromInt([*]u8, USB_BUFFERS + (15 * BUFFER_SIZE)),
         },
     };
 };
@@ -273,8 +273,8 @@ pub const F = struct {
             if (ep.endpoint_control_index) |epci| {
                 // We need to compute the offset from the base of USB SRAM to the
                 // buffer we're choosing, because that's how the peripheral do.
-                const buf_base = @ptrToInt(buffers.B.get(ep.data_buffer_index));
-                const dpram_base = @ptrToInt(peripherals.USBCTRL_DPRAM);
+                const buf_base = @intFromPtr(buffers.B.get(ep.data_buffer_index));
+                const dpram_base = @intFromPtr(peripherals.USBCTRL_DPRAM);
                 // The offset _should_ fit in a u16, but if we've gotten something
                 // wrong in the past few lines, a common symptom will be integer
                 // overflow producing a Very Large Number,

@@ -65,9 +65,9 @@ pub const devices = struct {
 
         pub const peripherals = struct {
             ///  System Control Space
-            pub const MPU = @intToPtr(*volatile types.peripherals.SCS, 0xd90);
+            pub const MPU = @ptrFromInt(*volatile types.peripherals.SCS, 0xd90);
             ///  QSPI flash execute-in-place block
-            pub const XIP_CTRL = @intToPtr(*volatile types.peripherals.XIP_CTRL, 0x14000000);
+            pub const XIP_CTRL = @ptrFromInt(*volatile types.peripherals.XIP_CTRL, 0x14000000);
             ///  DW_apb_ssi has the following features:
             ///  * APB interface – Allows for easy integration into a DesignWare Synthesizable Components for AMBA 2 implementation.
             ///  * APB3 and APB4 protocol support.
@@ -94,27 +94,27 @@ pub const devices = struct {
             ///  - Interrupt polarity – active high interrupt lines.
             ///  - Serial clock polarity – low serial-clock polarity directly after reset.
             ///  - Serial clock phase – capture on first edge of serial-clock directly after reset.
-            pub const XIP_SSI = @intToPtr(*volatile types.peripherals.XIP_SSI, 0x18000000);
-            pub const SYSINFO = @intToPtr(*volatile types.peripherals.SYSINFO, 0x40000000);
+            pub const XIP_SSI = @ptrFromInt(*volatile types.peripherals.XIP_SSI, 0x18000000);
+            pub const SYSINFO = @ptrFromInt(*volatile types.peripherals.SYSINFO, 0x40000000);
             ///  Register block for various chip control signals
-            pub const SYSCFG = @intToPtr(*volatile types.peripherals.SYSCFG, 0x40004000);
-            pub const CLOCKS = @intToPtr(*volatile types.peripherals.CLOCKS, 0x40008000);
-            pub const RESETS = @intToPtr(*volatile types.peripherals.RESETS, 0x4000c000);
-            pub const PSM = @intToPtr(*volatile types.peripherals.PSM, 0x40010000);
-            pub const IO_BANK0 = @intToPtr(*volatile types.peripherals.IO_BANK0, 0x40014000);
-            pub const IO_QSPI = @intToPtr(*volatile types.peripherals.IO_QSPI, 0x40018000);
-            pub const PADS_BANK0 = @intToPtr(*volatile types.peripherals.PADS_BANK0, 0x4001c000);
-            pub const PADS_QSPI = @intToPtr(*volatile types.peripherals.PADS_QSPI, 0x40020000);
+            pub const SYSCFG = @ptrFromInt(*volatile types.peripherals.SYSCFG, 0x40004000);
+            pub const CLOCKS = @ptrFromInt(*volatile types.peripherals.CLOCKS, 0x40008000);
+            pub const RESETS = @ptrFromInt(*volatile types.peripherals.RESETS, 0x4000c000);
+            pub const PSM = @ptrFromInt(*volatile types.peripherals.PSM, 0x40010000);
+            pub const IO_BANK0 = @ptrFromInt(*volatile types.peripherals.IO_BANK0, 0x40014000);
+            pub const IO_QSPI = @ptrFromInt(*volatile types.peripherals.IO_QSPI, 0x40018000);
+            pub const PADS_BANK0 = @ptrFromInt(*volatile types.peripherals.PADS_BANK0, 0x4001c000);
+            pub const PADS_QSPI = @ptrFromInt(*volatile types.peripherals.PADS_QSPI, 0x40020000);
             ///  Controls the crystal oscillator
-            pub const XOSC = @intToPtr(*volatile types.peripherals.XOSC, 0x40024000);
-            pub const PLL_SYS = @intToPtr(*volatile types.peripherals.PLL_SYS, 0x40028000);
-            pub const PLL_USB = @intToPtr(*volatile types.peripherals.PLL_SYS, 0x4002c000);
+            pub const XOSC = @ptrFromInt(*volatile types.peripherals.XOSC, 0x40024000);
+            pub const PLL_SYS = @ptrFromInt(*volatile types.peripherals.PLL_SYS, 0x40028000);
+            pub const PLL_USB = @ptrFromInt(*volatile types.peripherals.PLL_SYS, 0x4002c000);
             ///  Register block for busfabric control signals and performance counters
-            pub const BUSCTRL = @intToPtr(*volatile types.peripherals.BUSCTRL, 0x40030000);
-            pub const UART0 = @intToPtr(*volatile types.peripherals.UART0, 0x40034000);
-            pub const UART1 = @intToPtr(*volatile types.peripherals.UART0, 0x40038000);
-            pub const SPI0 = @intToPtr(*volatile types.peripherals.SPI0, 0x4003c000);
-            pub const SPI1 = @intToPtr(*volatile types.peripherals.SPI0, 0x40040000);
+            pub const BUSCTRL = @ptrFromInt(*volatile types.peripherals.BUSCTRL, 0x40030000);
+            pub const UART0 = @ptrFromInt(*volatile types.peripherals.UART0, 0x40034000);
+            pub const UART1 = @ptrFromInt(*volatile types.peripherals.UART0, 0x40038000);
+            pub const SPI0 = @ptrFromInt(*volatile types.peripherals.SPI0, 0x4003c000);
+            pub const SPI1 = @ptrFromInt(*volatile types.peripherals.SPI0, 0x40040000);
             ///  DW_apb_i2c address block
             ///  List of configuration constants for the Synopsys I2C hardware (you may see references to these in I2C register header; these are *fixed* values, set at hardware design time):
             ///  IC_ULTRA_FAST_MODE ................ 0x0
@@ -185,7 +185,7 @@ pub const devices = struct {
             ///  IC_STOP_DET_IF_MASTER_ACTIVE ...... 0x0
             ///  IC_DEFAULT_UFM_SPKLEN ............. 0x1
             ///  IC_TX_BUFFER_DEPTH ................ 16
-            pub const I2C0 = @intToPtr(*volatile types.peripherals.I2C0, 0x40044000);
+            pub const I2C0 = @ptrFromInt(*volatile types.peripherals.I2C0, 0x40044000);
             ///  DW_apb_i2c address block
             ///  List of configuration constants for the Synopsys I2C hardware (you may see references to these in I2C register header; these are *fixed* values, set at hardware design time):
             ///  IC_ULTRA_FAST_MODE ................ 0x0
@@ -256,11 +256,11 @@ pub const devices = struct {
             ///  IC_STOP_DET_IF_MASTER_ACTIVE ...... 0x0
             ///  IC_DEFAULT_UFM_SPKLEN ............. 0x1
             ///  IC_TX_BUFFER_DEPTH ................ 16
-            pub const I2C1 = @intToPtr(*volatile types.peripherals.I2C0, 0x40048000);
+            pub const I2C1 = @ptrFromInt(*volatile types.peripherals.I2C0, 0x40048000);
             ///  Control and data interface to SAR ADC
-            pub const ADC = @intToPtr(*volatile types.peripherals.ADC, 0x4004c000);
+            pub const ADC = @ptrFromInt(*volatile types.peripherals.ADC, 0x4004c000);
             ///  Simple PWM
-            pub const PWM = @intToPtr(*volatile types.peripherals.PWM, 0x40050000);
+            pub const PWM = @ptrFromInt(*volatile types.peripherals.PWM, 0x40050000);
             ///  Controls time and alarms
             ///  time is a 64 bit value indicating the time in usec since power-on
             ///  timeh is the top 32 bits of time & timel is the bottom 32 bits
@@ -271,35 +271,35 @@ pub const devices = struct {
             ///  An alarm can be cancelled before it has finished by clearing the alarm_enable
             ///  When an alarm fires, the corresponding alarm_irq is set and alarm_running is cleared
             ///  To clear the interrupt write a 1 to the corresponding alarm_irq
-            pub const TIMER = @intToPtr(*volatile types.peripherals.TIMER, 0x40054000);
-            pub const WATCHDOG = @intToPtr(*volatile types.peripherals.WATCHDOG, 0x40058000);
+            pub const TIMER = @ptrFromInt(*volatile types.peripherals.TIMER, 0x40054000);
+            pub const WATCHDOG = @ptrFromInt(*volatile types.peripherals.WATCHDOG, 0x40058000);
             ///  Register block to control RTC
-            pub const RTC = @intToPtr(*volatile types.peripherals.RTC, 0x4005c000);
-            pub const ROSC = @intToPtr(*volatile types.peripherals.ROSC, 0x40060000);
+            pub const RTC = @ptrFromInt(*volatile types.peripherals.RTC, 0x4005c000);
+            pub const ROSC = @ptrFromInt(*volatile types.peripherals.ROSC, 0x40060000);
             ///  control and status for on-chip voltage regulator and chip level reset subsystem
-            pub const VREG_AND_CHIP_RESET = @intToPtr(*volatile types.peripherals.VREG_AND_CHIP_RESET, 0x40064000);
+            pub const VREG_AND_CHIP_RESET = @ptrFromInt(*volatile types.peripherals.VREG_AND_CHIP_RESET, 0x40064000);
             ///  Testbench manager. Allows the programmer to know what platform their software is running on.
-            pub const TBMAN = @intToPtr(*volatile types.peripherals.TBMAN, 0x4006c000);
+            pub const TBMAN = @ptrFromInt(*volatile types.peripherals.TBMAN, 0x4006c000);
             ///  DMA with separate read and write masters
-            pub const DMA = @intToPtr(*volatile types.peripherals.DMA, 0x50000000);
+            pub const DMA = @ptrFromInt(*volatile types.peripherals.DMA, 0x50000000);
             ///  DPRAM layout for USB device.
-            pub const USBCTRL_DPRAM = @intToPtr(*volatile types.peripherals.USBCTRL_DPRAM, 0x50100000);
+            pub const USBCTRL_DPRAM = @ptrFromInt(*volatile types.peripherals.USBCTRL_DPRAM, 0x50100000);
             ///  USB FS/LS controller device registers
-            pub const USBCTRL_REGS = @intToPtr(*volatile types.peripherals.USBCTRL_REGS, 0x50110000);
+            pub const USBCTRL_REGS = @ptrFromInt(*volatile types.peripherals.USBCTRL_REGS, 0x50110000);
             ///  Programmable IO block
-            pub const PIO0 = @intToPtr(*volatile types.peripherals.PIO0, 0x50200000);
+            pub const PIO0 = @ptrFromInt(*volatile types.peripherals.PIO0, 0x50200000);
             ///  Programmable IO block
-            pub const PIO1 = @intToPtr(*volatile types.peripherals.PIO0, 0x50300000);
+            pub const PIO1 = @ptrFromInt(*volatile types.peripherals.PIO0, 0x50300000);
             ///  Single-cycle IO block
             ///  Provides core-local and inter-core hardware for the two processors, with single-cycle access.
-            pub const SIO = @intToPtr(*volatile types.peripherals.SIO, 0xd0000000);
-            pub const PPB = @intToPtr(*volatile types.peripherals.PPB, 0xe0000000);
+            pub const SIO = @ptrFromInt(*volatile types.peripherals.SIO, 0xd0000000);
+            pub const PPB = @ptrFromInt(*volatile types.peripherals.PPB, 0xe0000000);
             ///  System Tick Timer
-            pub const SysTick = @intToPtr(*volatile types.peripherals.SysTick, 0xe000e010);
+            pub const SysTick = @ptrFromInt(*volatile types.peripherals.SysTick, 0xe000e010);
             ///  System Control Space
-            pub const NVIC = @intToPtr(*volatile types.peripherals.NVIC, 0xe000e100);
+            pub const NVIC = @ptrFromInt(*volatile types.peripherals.NVIC, 0xe000e100);
             ///  System Control Space
-            pub const SCB = @intToPtr(*volatile types.peripherals.SCB, 0xe000ed00);
+            pub const SCB = @ptrFromInt(*volatile types.peripherals.SCB, 0xe000ed00);
         };
     };
 };

@@ -22,14 +22,14 @@ pub const Config = struct {
 };
 
 pub fn num(n: u1) SPI {
-    return @intToEnum(SPI, n);
+    return @enumFromInt(SPI, n);
 }
 
 pub const SPI = enum(u1) {
     _,
 
     fn get_regs(spi: SPI) *volatile SpiRegs {
-        return switch (@enumToInt(spi)) {
+        return switch (@intFromEnum(spi)) {
             0 => SPI0,
             1 => SPI1,
         };
