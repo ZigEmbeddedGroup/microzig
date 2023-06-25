@@ -16,7 +16,7 @@ pub const State = enum(u1) {
     high = 1,
 
     pub fn value(self: State) u1 {
-        return @enumToInt(self);
+        return @intFromEnum(self);
     }
 };
 
