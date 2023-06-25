@@ -21,7 +21,7 @@ pub fn build(b: *Build) void {
 
     // elf file
     elf2uf2_run.addArg("--elf-path");
-    elf2uf2_run.addArtifactArg(exe.inner);
+    elf2uf2_run.addArtifactArg(exe);
 
     // output file
     const uf2_file = elf2uf2_run.addPrefixedOutputFileArg("--output-path", "test.uf2");
