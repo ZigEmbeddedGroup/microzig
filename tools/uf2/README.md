@@ -9,14 +9,22 @@ See https://github.com/microsoft/uf2#file-containers for how we're going to embe
 For use in a build.zig:
 
 ```zig
-const uf2 = @import("uf2");
-
 pub fn build(b: *Build) void {
     // ...
 
-    const uf2_file = uf2.from_elf(b, exe, .{ .family_id = .RP2040 });
-    b.installFile(uf2_file_source);
+    const uf2_dep = b.dependency("uf2", .{});
 
-    // ...
+    const elf2uf2_run = b.addRunArtifact(uf2_dep.artifact("elf2uf2"));
+
+    // family id
+    elf2uf2_run.addArgs(&.{"--family-id", "RP2040"});
+
+    // elf file
+    elf2uf2_run.addArg("--elf-path");
+    elf2uf2_run.addArtifactArg(exe.inner);
+
+    // output file
+    const uf2_file = elf2uf2_run.addPrefixedOutputFileArg("--output-path", "test.uf2");
+    b.addInstallFile(uf2_file, "bin/test.uf2");
 }
 ```
