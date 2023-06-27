@@ -22,14 +22,14 @@ pub fn Mmio(comptime PackedT: type) type {
         pub const underlying_type = PackedT;
 
         pub inline fn read(addr: *volatile Self) PackedT {
-            return @bitCast(PackedT, addr.raw);
+            return @bitCast(addr.raw);
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
             comptime {
                 assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
             }
-            addr.write_raw(@bitCast(IntT, val));
+            addr.write_raw(@bitCast(val));
         }
 
         pub fn write_raw(addr: *volatile Self, val: IntT) void {

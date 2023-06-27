@@ -111,7 +111,7 @@ pub fn Usb(comptime f: anytype) type {
                 if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetAddress) {
                     // The new address is in the bottom 8 bits of the setup
                     // packet value field. Store it for use later.
-                    S.new_address = @intCast(u8, setup.value & 0xff);
+                    S.new_address = @as(u8, @intCast(setup.value & 0xff));
                     // The address will actually get set later, we have
                     // to use address 0 to send a status response.
                     f.usb_start_tx(
@@ -224,7 +224,7 @@ pub fn Usb(comptime f: anytype) type {
                                 if (debug) std.log.info("        String", .{});
                                 // String descriptor index is in bottom 8 bits of
                                 // `value`.
-                                const i = @intCast(usize, setup.value & 0xff);
+                                const i: usize = @intCast(setup.value & 0xff);
                                 const bytes = StringBlk: {
                                     if (i == 0) {
                                         // Special index 0 requests the language
@@ -235,7 +235,7 @@ pub fn Usb(comptime f: anytype) type {
                                         const s = usb_config.?.descriptor_strings[i - 1];
                                         const len = 2 + s.len;
 
-                                        S.tmp[0] = @intCast(u8, len);
+                                        S.tmp[0] = @intCast(len);
                                         S.tmp[1] = 0x03;
                                         @memcpy(S.tmp[2..len], s);
 
@@ -356,7 +356,7 @@ pub fn Usb(comptime f: anytype) type {
                             // SetAddress request, if there is one:
                             if (S.new_address) |addr| {
                                 // Change our address:
-                                f.set_address(@intCast(u7, addr));
+                                f.set_address(@intCast(addr));
                             } else {
                                 // Otherwise, we've just finished sending
                                 // something to the host. We expect an ensuing
@@ -534,8 +534,8 @@ pub const EndpointDescriptor = packed struct {
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = self.endpoint_address;
         out[3] = self.attributes;
-        out[4] = @intCast(u8, self.max_packet_size & 0xff);
-        out[5] = @intCast(u8, (self.max_packet_size >> 8) & 0xff);
+        out[4] = @intCast(self.max_packet_size & 0xff);
+        out[5] = @intCast((self.max_packet_size >> 8) & 0xff);
         out[6] = self.interval;
         return out;
     }
@@ -612,8 +612,8 @@ pub const ConfigurationDescriptor = packed struct {
         var out: [9]u8 = undefined;
         out[0] = 9; // length
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(u8, self.total_length & 0xff);
-        out[3] = @intCast(u8, (self.total_length >> 8) & 0xff);
+        out[2] = @intCast(self.total_length & 0xff);
+        out[3] = @intCast((self.total_length >> 8) & 0xff);
         out[4] = self.num_interfaces;
         out[5] = self.configuration_value;
         out[6] = self.configuration_s;
@@ -660,18 +660,18 @@ pub const DeviceDescriptor = packed struct {
         var out: [18]u8 = undefined;
         out[0] = 18; // length
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(u8, self.bcd_usb & 0xff);
-        out[3] = @intCast(u8, (self.bcd_usb >> 8) & 0xff);
+        out[2] = @intCast(self.bcd_usb & 0xff);
+        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
         out[4] = self.device_class;
         out[5] = self.device_subclass;
         out[6] = self.device_protocol;
         out[7] = self.max_packet_size0;
-        out[8] = @intCast(u8, self.vendor & 0xff);
-        out[9] = @intCast(u8, (self.vendor >> 8) & 0xff);
-        out[10] = @intCast(u8, self.product & 0xff);
-        out[11] = @intCast(u8, (self.product >> 8) & 0xff);
-        out[12] = @intCast(u8, self.bcd_device & 0xff);
-        out[13] = @intCast(u8, (self.bcd_device >> 8) & 0xff);
+        out[8] = @intCast(self.vendor & 0xff);
+        out[9] = @intCast((self.vendor >> 8) & 0xff);
+        out[10] = @intCast(self.product & 0xff);
+        out[11] = @intCast((self.product >> 8) & 0xff);
+        out[12] = @intCast(self.bcd_device & 0xff);
+        out[13] = @intCast((self.bcd_device >> 8) & 0xff);
         out[14] = self.manufacturer_s;
         out[15] = self.product_s;
         out[16] = self.serial_s;
@@ -707,8 +707,8 @@ pub const DeviceQualifierDescriptor = packed struct {
         var out: [10]u8 = undefined;
         out[0] = 10; // length
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(u8, self.bcd_usb & 0xff);
-        out[3] = @intCast(u8, (self.bcd_usb >> 8) & 0xff);
+        out[2] = @intCast(self.bcd_usb & 0xff);
+        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
         out[4] = self.device_class;
         out[5] = self.device_subclass;
         out[6] = self.device_protocol;

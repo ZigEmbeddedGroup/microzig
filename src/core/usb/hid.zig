@@ -105,13 +105,13 @@ pub const HidDescriptor = packed struct {
         var out: [9]u8 = undefined;
         out[0] = 9; // length
         out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(u8, self.bcd_hid & 0xff);
-        out[3] = @intCast(u8, (self.bcd_hid >> 8) & 0xff);
+        out[2] = @intCast(self.bcd_hid & 0xff);
+        out[3] = @intCast((self.bcd_hid >> 8) & 0xff);
         out[4] = self.country_code;
         out[5] = self.num_descriptors;
         out[6] = @intFromEnum(self.report_type);
-        out[7] = @intCast(u8, self.report_length & 0xff);
-        out[8] = @intCast(u8, (self.report_length >> 8) & 0xff);
+        out[7] = @intCast(self.report_length & 0xff);
+        out[8] = @intCast((self.report_length >> 8) & 0xff);
         return out;
     }
 };
@@ -297,7 +297,7 @@ pub fn hid_report_item(
 ) [n + 1]u8 {
     var out: [n + 1]u8 = undefined;
 
-    out[0] = (@intCast(u8, tag) << 4) | (@intCast(u8, typ) << 2) | n;
+    out[0] = (@as(u8, @intCast(tag)) << 4) | (@as(u8, @intCast(typ)) << 2) | n;
 
     var i: usize = 0;
     while (i < n) : (i += 1) {
@@ -438,19 +438,19 @@ test "create hid report item" {
         "\x22\x11".*,
     );
 
-    try std.testing.expectEqual(@intCast(usize, 3), r.len);
-    try std.testing.expectEqual(@intCast(u8, 50), r[0]);
-    try std.testing.expectEqual(@intCast(u8, 0x22), r[1]);
-    try std.testing.expectEqual(@intCast(u8, 0x11), r[2]);
+    try std.testing.expectEqual(@as(usize, @intCast(3)), r.len);
+    try std.testing.expectEqual(@as(u8, @intCast(50)), r[0]);
+    try std.testing.expectEqual(@as(u8, @intCast(0x22)), r[1]);
+    try std.testing.expectEqual(@as(u8, @intCast(0x11)), r[2]);
 }
 
 test "create hid fido usage page" {
     const f = hid_usage_page(2, UsageTable.fido);
 
-    try std.testing.expectEqual(@intCast(usize, 3), f.len);
-    try std.testing.expectEqual(@intCast(u8, 6), f[0]);
-    try std.testing.expectEqual(@intCast(u8, 0xd0), f[1]);
-    try std.testing.expectEqual(@intCast(u8, 0xf1), f[2]);
+    try std.testing.expectEqual(@as(usize, @intCast(3)), f.len);
+    try std.testing.expectEqual(@as(u8, @intCast(6)), f[0]);
+    try std.testing.expectEqual(@as(u8, @intCast(0xd0)), f[1]);
+    try std.testing.expectEqual(@as(u8, @intCast(0xf1)), f[2]);
 }
 
 test "report descriptor fido" {
