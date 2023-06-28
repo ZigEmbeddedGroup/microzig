@@ -61,9 +61,9 @@ pub const Archive = struct {
         while (try it.next()) |prog_hdr|
             if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
                 try segments.append(.{
-                    .addr = @intCast(u32, prog_hdr.p_paddr),
-                    .file_offset = @intCast(u32, prog_hdr.p_offset),
-                    .size = @intCast(u32, prog_hdr.p_memsz),
+                    .addr = @as(u32, @intCast(prog_hdr.p_paddr)),
+                    .file_offset = @as(u32, @intCast(prog_hdr.p_offset)),
+                    .size = @as(u32, @intCast(prog_hdr.p_memsz)),
                 });
             };
 
@@ -134,7 +134,7 @@ pub const Archive = struct {
                     .family_id = if (opts.family_id) |family_id|
                         family_id
                     else
-                        @enumFromInt(FamilyId, 0),
+                        @as(FamilyId, @enumFromInt(0)),
                 },
                 .data = std.mem.zeroes([476]u8),
             });
@@ -172,8 +172,8 @@ pub const Archive = struct {
 
     pub fn write_to(self: *Self, writer: anytype) !void {
         for (self.blocks.items, 0..) |*block, i| {
-            block.block_number = @intCast(u32, i);
-            block.total_blocks = @intCast(u32, self.blocks.items.len);
+            block.block_number = @as(u32, @intCast(i));
+            block.total_blocks = @as(u32, @intCast(self.blocks.items.len));
             try block.write_to(writer);
         }
     }
@@ -302,7 +302,7 @@ pub const Block = extern struct {
                 else => {
                     assert(4 == @sizeOf(field.type));
                     @field(block, field.name) =
-                        @bitCast(field.type, try reader.readIntLittle(u32));
+                        @as(field.type, @bitCast(try reader.readIntLittle(u32)));
                 },
             }
         }
@@ -319,7 +319,7 @@ pub const Block = extern struct {
                     assert(4 == @sizeOf(field.type));
                     try writer.writeIntLittle(
                         u32,
-                        @bitCast(u32, @field(self, field.name)),
+                        @as(u32, @bitCast(@field(self, field.name))),
                     );
                 },
             }
@@ -355,7 +355,7 @@ test "Block loopback" {
     var prng = std.rand.DefaultPrng.init(0xf163bfab);
     var rand = prng.random();
     var expected = Block{
-        .flags = @bitCast(Flags, rand.int(u32)),
+        .flags = @as(Flags, @bitCast(rand.int(u32))),
         .target_addr = rand.int(u32),
         .payload_size = rand.int(u32),
         .block_number = rand.int(u32),
