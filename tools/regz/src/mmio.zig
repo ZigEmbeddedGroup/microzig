@@ -20,13 +20,13 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
         pub const underlying_type = PackedT;
 
         pub inline fn read(addr: *volatile Self) PackedT {
-            return @bitCast(PackedT, addr.raw);
+            return @as(PackedT, @bitCast(addr.raw));
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
             // This is a workaround for a compiler bug related to miscompilation
             // If the tmp var is not used, result location will fuck things up
-            var tmp = @bitCast(IntT, val);
+            var tmp = @as(IntT, @bitCast(val));
             addr.raw = tmp;
         }
 

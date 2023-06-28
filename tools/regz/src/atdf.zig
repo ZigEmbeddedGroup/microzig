@@ -639,7 +639,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
         var bit_count: u32 = 0;
         var i = offset;
         while (i < 32) : (i += 1) {
-            if (0 != (@as(u64, 1) << @intCast(u5, i)) & mask) {
+            if (0 != (@as(u64, 1) << @as(u5, @intCast(i))) & mask) {
                 const field_name = try std.fmt.allocPrint(db.arena.allocator(), "{s}_bit{}", .{
                     name,
                     bit_count,

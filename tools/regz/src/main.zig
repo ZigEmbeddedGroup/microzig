@@ -152,9 +152,9 @@ fn read_fn(ctx: ?*anyopaque, buffer: ?[*]u8, len: c_int) callconv(.C) c_int {
         return -1;
 
     return if (ctx) |c| blk: {
-        const reader = @ptrCast(*std.fs.File.Reader, @alignCast(@alignOf(*std.fs.File.Reader), c));
-        const n = reader.read(buffer.?[0..@intCast(usize, len)]) catch return -1;
-        break :blk @intCast(c_int, n);
+        const reader = @as(*std.fs.File.Reader, @ptrCast(@alignCast(c)));
+        const n = reader.read(buffer.?[0..@as(usize, @intCast(len))]) catch return -1;
+        break :blk @as(c_int, @intCast(n));
     } else -1;
 }
 

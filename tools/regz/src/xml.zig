@@ -46,7 +46,7 @@ pub const Node = struct {
         pub fn next(it: *AttrIterator) ?Entry {
             return if (it.attr) |attr| ret: {
                 if (attr.name) |name|
-                    if (@ptrCast(*c.xmlNode, attr.children).content) |content| {
+                    if (@as(*c.xmlNode, @ptrCast(attr.children)).content) |content| {
                         defer it.attr = attr.next;
                         break :ret Entry{
                             .key = std.mem.span(name),
@@ -59,8 +59,8 @@ pub const Node = struct {
 
     pub fn get_attribute(node: Node, key: [:0]const u8) ?[]const u8 {
         if (c.xmlHasProp(node.impl, key.ptr)) |prop| {
-            if (@ptrCast(*c.xmlAttr, prop).children) |value_node| {
-                if (@ptrCast(*c.xmlNode, value_node).content) |content| {
+            if (@as(*c.xmlAttr, @ptrCast(prop)).children) |value_node| {
+                if (@as(*c.xmlNode, @ptrCast(value_node)).content) |content| {
                     return std.mem.span(content);
                 }
             }
@@ -70,7 +70,7 @@ pub const Node = struct {
     }
 
     pub fn find_child(node: Node, key: []const u8) ?Node {
-        var it = @ptrCast(?*c.xmlNode, node.impl.children);
+        var it = @as(?*c.xmlNode, @ptrCast(node.impl.children));
         return while (it != null) : (it = it.?.next) {
             if (it.?.type != 1)
                 continue;
@@ -107,7 +107,7 @@ pub const Node = struct {
     pub fn get_value(node: Node, key: []const u8) ?[:0]const u8 {
         return if (node.find_child(key)) |child|
             if (child.impl.children) |value_node|
-                if (@ptrCast(*c.xmlNode, value_node).content) |content|
+                if (@as(*c.xmlNode, @ptrCast(value_node)).content) |content|
                     std.mem.span(content)
                 else
                     null
@@ -135,7 +135,7 @@ pub const Doc = struct {
         return Doc{
             .impl = c.xmlReadMemory(
                 text.ptr,
-                @intCast(c_int, text.len),
+                @as(c_int, @intCast(text.len)),
                 null,
                 null,
                 0,

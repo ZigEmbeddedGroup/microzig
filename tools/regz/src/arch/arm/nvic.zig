@@ -84,7 +84,7 @@ pub fn load(db: *Database, device_id: EntityId) !void {
         for (interrupt_registers) |register| {
             _ = try db.create_field(register, .{
                 .name = interrupt_name,
-                .offset = @bitCast(u32, interrupt_index),
+                .offset = @as(u32, @bitCast(interrupt_index)),
                 .size = 1,
             });
         }
@@ -100,7 +100,7 @@ pub fn load(db: *Database, device_id: EntityId) !void {
         const reg_id = try db.get_entity_id_by_name("type.register", reg_name);
         _ = try db.create_field(reg_id, .{
             .name = interrupt_name,
-            .offset = (8 * (@intCast(u8, interrupt_index) % 4)) + (8 - nvic_prio_bits),
+            .offset = (8 * (@as(u8, @intCast(interrupt_index)) % 4)) + (8 - nvic_prio_bits),
             .size = nvic_prio_bits,
         });
     }

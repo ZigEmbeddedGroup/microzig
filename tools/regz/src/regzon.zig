@@ -48,7 +48,7 @@ fn get_array(val: Value) !Array {
 // TODO: handle edge cases
 fn get_integer_from_object(obj: ObjectMap, comptime T: type, key: []const u8) !?T {
     return switch (obj.get(key) orelse return null) {
-        .integer => |num| @intCast(T, num),
+        .integer => |num| @as(T, @intCast(num)),
         else => return error.NotJsonInteger,
     };
 }
@@ -247,7 +247,7 @@ fn load_peripheral(
         .description = try get_string_from_object(peripheral, "description"),
         .size = if (peripheral.get("size")) |size_val|
             switch (size_val) {
-                .integer => |num| @intCast(u64, num),
+                .integer => |num| @as(u64, @intCast(num)),
                 else => return error.SizeNotInteger,
             }
         else
@@ -633,19 +633,19 @@ fn populate_type(
         try typ.put("description", .{ .string = description });
 
     if (db.attrs.offset.get(id)) |offset|
-        try typ.put("offset", .{ .integer = @intCast(i64, offset) });
+        try typ.put("offset", .{ .integer = @as(i64, @intCast(offset)) });
 
     if (db.attrs.size.get(id)) |size|
-        try typ.put("size", .{ .integer = @intCast(i64, size) });
+        try typ.put("size", .{ .integer = @as(i64, @intCast(size)) });
 
     if (db.attrs.count.get(id)) |count|
-        try typ.put("count", .{ .integer = @intCast(i64, count) });
+        try typ.put("count", .{ .integer = @as(i64, @intCast(count)) });
 
     if (db.attrs.reset_value.get(id)) |reset_value|
-        try typ.put("reset_value", .{ .integer = @intCast(i64, reset_value) });
+        try typ.put("reset_value", .{ .integer = @as(i64, @intCast(reset_value)) });
 
     if (db.attrs.reset_mask.get(id)) |reset_mask|
-        try typ.put("reset_mask", .{ .integer = @intCast(i64, reset_mask) });
+        try typ.put("reset_mask", .{ .integer = @as(i64, @intCast(reset_mask)) });
 
     if (db.attrs.version.get(id)) |version|
         try typ.put("version", .{ .string = version });
@@ -798,13 +798,13 @@ fn populate_peripheral(
         try peripheral.put("description", .{ .string = description });
 
     if (db.attrs.offset.get(id)) |offset|
-        try peripheral.put("offset", .{ .integer = @intCast(i64, offset) });
+        try peripheral.put("offset", .{ .integer = @as(i64, @intCast(offset)) });
 
     if (db.attrs.version.get(id)) |version|
         try peripheral.put("version", .{ .string = version });
 
     if (db.attrs.count.get(id)) |count|
-        try peripheral.put("count", .{ .integer = @intCast(i64, count) });
+        try peripheral.put("count", .{ .integer = @as(i64, @intCast(count)) });
 
     // TODO: handle collisions -- will need to inline the type
     const type_ref = try id_to_ref(
