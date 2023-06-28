@@ -87,13 +87,13 @@ pub fn Encoder(comptime options: Options) type {
                             std.mem.copy(u8, &define_name, define.name);
                             tmp.append(.{
                                 .name = &define_name,
-                                .value = @intCast(i64, define.value),
+                                .value = @as(i64, @intCast(define.value)),
                             }) catch unreachable;
                         }
 
                         break :blk tmp.slice();
                     },
-                    .instructions = @ptrCast([]const u16, bounded.instructions.slice()),
+                    .instructions = @as([]const u16, @ptrCast(bounded.instructions.slice())),
                     .origin = bounded.origin,
                     .side_set = bounded.side_set,
                     .wrap_target = bounded.wrap_target,
@@ -152,7 +152,7 @@ pub fn Encoder(comptime options: Options) type {
             diags: *?Diagnostics,
         ) !T {
             return switch (value) {
-                .integer => |int| @intCast(T, int),
+                .integer => |int| @as(T, @intCast(int)),
                 .string => |str| outer: for (define_lists) |defines| {
                     for (defines) |define| {
                         if (std.mem.eql(u8, str, define.name)) {
@@ -166,7 +166,7 @@ pub fn Encoder(comptime options: Options) type {
                                 break :outer error.TooBig;
                             }
 
-                            break :outer @intCast(T, define.value);
+                            break :outer @as(T, @intCast(define.value));
                         }
                     }
                 } else {
@@ -189,7 +189,7 @@ pub fn Encoder(comptime options: Options) type {
                         );
                     }
 
-                    return @intCast(T, result);
+                    return @as(T, @intCast(result));
                 },
             };
         }
@@ -482,19 +482,19 @@ pub fn Encoder(comptime options: Options) type {
                 switch (token.data) {
                     .instruction => |instr| try self.encode_instruction(program, instr, token.index, diags),
                     .word => |word| try program.instructions.append(
-                        @bitCast(Instruction, try self.evaluate(u16, program.*, word, token.index, diags)),
+                        @as(Instruction, @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
                     ),
                     // already processed
                     .label, .wrap_target, .wrap => {},
                     .program => {
-                        self.index = @intCast(u32, i);
+                        self.index = @as(u32, @intCast(i));
                         break;
                     },
 
                     else => unreachable, // invalid
                 }
             } else if (self.tokens.len > 0)
-                self.index = @intCast(u32, self.tokens.len);
+                self.index = @as(u32, @intCast(self.tokens.len));
         }
 
         fn encode_program(self: *Self, diags: *?Diagnostics) !?BoundedProgram {

@@ -22,7 +22,7 @@ pub const Program = struct {
     wrap: ?u5,
 
     pub fn get_mask(program: Program) u32 {
-        return (@as(u32, 1) << @intCast(u5, program.instructions.len)) - 1;
+        return (@as(u32, 1) << @as(u5, @intCast(program.instructions.len))) - 1;
     }
 };
 

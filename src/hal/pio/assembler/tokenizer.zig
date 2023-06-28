@@ -199,7 +199,7 @@ pub const Tokenizer = struct {
 
     fn consume_peek(self: *Tokenizer, result: PeekResult) void {
         assert(self.index <= result.start);
-        self.index = result.start + @intCast(u32, result.str.len);
+        self.index = result.start + @as(u32, @intCast(result.str.len));
     }
 
     /// gets next arg without consuming the stream
@@ -616,7 +616,7 @@ pub const Tokenizer = struct {
         const bit_count = if (bit_count_tmp == 32)
             @as(u5, 0)
         else
-            @intCast(u5, bit_count_tmp);
+            @as(u5, @intCast(bit_count_tmp));
 
         return Token.Instruction.Payload{
             .in = .{
@@ -635,7 +635,7 @@ pub const Tokenizer = struct {
         const bit_count = if (bit_count_tmp == 32)
             @as(u5, 0)
         else
-            @intCast(u5, bit_count_tmp);
+            @as(u5, @intCast(bit_count_tmp));
 
         return Token.Instruction.Payload{
             .out = .{
@@ -1644,7 +1644,7 @@ test "tokenize.instr.in" {
 
         try expect_instr_in(.{
             .source = @field(Token.Instruction.In.Source, source),
-            .bit_count = @intCast(u5, bit_count),
+            .bit_count = @as(u5, @intCast(bit_count)),
         }, tokens.get(0));
     }
 }
@@ -1667,7 +1667,7 @@ test "tokenize.instr.out" {
 
         try expect_instr_out(.{
             .destination = @field(Token.Instruction.Out.Destination, destination),
-            .bit_count = @intCast(u5, bit_count),
+            .bit_count = @as(u5, @intCast(bit_count)),
         }, tokens.get(0));
     }
 }

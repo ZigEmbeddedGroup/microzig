@@ -362,13 +362,13 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
                 } else if (pin_config.function.is_adc()) {
                     pin_field.name = pin_config.name orelse @tagName(pin_config.function);
                     pin_field.type = adc.Input;
-                    pin_field.default_value = @ptrCast(?*const anyopaque, switch (pin_config.function) {
+                    pin_field.default_value = @as(?*const anyopaque, @ptrCast(switch (pin_config.function) {
                         .ADC0 => &adc.Input.ain0,
                         .ADC1 => &adc.Input.ain1,
                         .ADC2 => &adc.Input.ain2,
                         .ADC3 => &adc.Input.ain3,
                         else => unreachable,
-                    });
+                    }));
                 } else {
                     continue;
                 }
@@ -536,7 +536,7 @@ pub const GlobalConfiguration = struct {
         var ret: Pins(config) = undefined;
         inline for (@typeInfo(Pins(config)).Struct.fields) |field| {
             if (field.default_value) |default_value| {
-                @field(ret, field.name) = @ptrCast(*const field.field_type, default_value).*;
+                @field(ret, field.name) = @as(*const field.field_type, @ptrCast(default_value)).*;
             } else {
                 @field(ret, field.name) = .{};
             }

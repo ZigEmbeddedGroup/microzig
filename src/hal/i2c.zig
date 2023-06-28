@@ -20,14 +20,14 @@ pub const Config = struct {
 };
 
 pub fn num(n: u1) I2C {
-    return @enumFromInt(I2C, n);
+    return @as(I2C, @enumFromInt(n));
 }
 
 pub const Address = enum(u7) {
     _,
 
     pub fn new(addr: u7) Address {
-        var a = @enumFromInt(Address, addr);
+        var a = @as(Address, @enumFromInt(addr));
         std.debug.assert(!a.is_reserved());
         return a;
     }
@@ -167,10 +167,10 @@ pub const I2C = enum(u1) {
 
         // Always use "fast" mode (<= 400 kHz, works fine for standard mode too)
         regs.IC_CON.modify(.{ .SPEED = .{ .value = .FAST } });
-        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = @intCast(u16, hcnt), .padding = 0 });
-        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = @intCast(u16, lcnt), .padding = 0 });
-        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = if (lcnt < 16) 1 else @intCast(u8, lcnt / 16), .padding = 0 });
-        regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = @intCast(u16, sda_tx_hold_count) });
+        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = @as(u16, @intCast(hcnt)), .padding = 0 });
+        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = @as(u16, @intCast(lcnt)), .padding = 0 });
+        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = if (lcnt < 16) 1 else @as(u8, @intCast(lcnt / 16)), .padding = 0 });
+        regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = @as(u16, @intCast(sda_tx_hold_count)) });
 
         i2c.enable();
 
@@ -343,7 +343,7 @@ pub const I2C = enum(u1) {
                 }
 
                 const abort_reason = regs.IC_TX_ABRT_SOURCE.read();
-                if (@bitCast(u32, abort_reason) != 0) {
+                if (@as(u32, @bitCast(abort_reason)) != 0) {
                     // Note clearing the abort flag also clears the reason, and
                     // this instance of flag is clear-on-read! Note also the
                     // IC_CLR_TX_ABRT register always reads as 0.

@@ -43,7 +43,7 @@ pub fn main() void {
     const cycles_per_bit: comptime_int = ws2812_program.defines[0].value + //T1
         ws2812_program.defines[1].value + //T2
         ws2812_program.defines[2].value; //T3
-    const div = @floatFromInt(f32, rp2040.clock_config.sys.?.output_freq) /
+    const div = @as(f32, @floatFromInt(rp2040.clock_config.sys.?.output_freq)) /
         (800_000 * cycles_per_bit);
 
     pio.sm_load_and_start_program(sm, ws2812_program, .{

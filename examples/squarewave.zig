@@ -6,19 +6,22 @@ const gpio = rp2040.gpio;
 const Pio = rp2040.pio.Pio;
 const StateMachine = rp2040.pio.StateMachine;
 
-const squarewave_program = rp2040.pio.assemble(
-    \\;
-    \\; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
-    \\;
-    \\; SPDX-License-Identifier: BSD-3-Clause
-    \\;
-    \\.program squarewave
-    \\    set pindirs, 1   ; Set pin to output
-    \\again:
-    \\    set pins, 1 [1]  ; Drive pin high and then delay for one cycle
-    \\    set pins, 0      ; Drive pin low
-    \\    jmp again        ; Set PC to label `again`
-, .{}).get_program_by_name("squarewave");
+const squarewave_program = blk: {
+    @setEvalBranchQuota(2000);
+    break :blk rp2040.pio.assemble(
+        \\;
+        \\; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+        \\;
+        \\; SPDX-License-Identifier: BSD-3-Clause
+        \\;
+        \\.program squarewave
+        \\    set pindirs, 1   ; Set pin to output
+        \\again:
+        \\    set pins, 1 [1]  ; Drive pin high and then delay for one cycle
+        \\    set pins, 0      ; Drive pin low
+        \\    jmp again        ; Set PC to label `again`
+    , .{}).get_program_by_name("squarewave");
+};
 
 // Pick one PIO instance arbitrarily. We're also arbitrarily picking state
 // machine 0 on this PIO instance (the state machines are numbered 0 to 3

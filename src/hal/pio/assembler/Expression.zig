@@ -123,7 +123,7 @@ fn trim_outer_parenthesis(str: []const u8) TrimResult {
 
     return TrimResult{
         .str = str[start..end],
-        .index = @intCast(u32, start),
+        .index = @as(u32, @intCast(start)),
     };
 }
 
@@ -142,9 +142,9 @@ fn recursive_tokenize(
 
     var parenthesis_found = false;
     var depth: u32 = 0;
-    var i = @intCast(i32, expr_str.len - 1);
+    var i = @as(i32, @intCast(expr_str.len - 1));
     outer: while (i >= 0) : (i -= 1) {
-        const idx = @intCast(u32, i);
+        const idx = @as(u32, @intCast(i));
         // TODO: how about if the expression is fully enveloped in parenthesis?
         switch (expr_str[idx]) {
             ')' => {
@@ -176,7 +176,7 @@ fn recursive_tokenize(
                 const is_negative = (i == 0) or is_negative: {
                     var j = i - 1;
                     while (j >= 0) : (j -= 1) {
-                        const jdx = @intCast(u32, j);
+                        const jdx = @as(u32, @intCast(j));
                         switch (expr_str[jdx]) {
                             ' ', '\t' => continue,
                             '+', '-', '*', '/' => continue :outer,
@@ -229,7 +229,7 @@ fn recursive_tokenize(
     } else {
         // if we hit this path, then the full string has been scanned, and no operators
         const trimmed = std.mem.trim(u8, expr_str, " \t");
-        const value_index = expr_index + @intCast(u32, std.mem.indexOf(u8, expr_str, trimmed).?);
+        const value_index = expr_index + @as(u32, @intCast(std.mem.indexOf(u8, expr_str, trimmed).?));
         try ops.append(.{
             .op = .value,
             .index = value_index,
@@ -242,7 +242,7 @@ fn recursive_tokenize(
     }
 
     if (depth != 0) {
-        diags.* = Diagnostics.init(expr_index + @intCast(u32, i), "mismatched parenthesis", .{});
+        diags.* = Diagnostics.init(expr_index + @as(u32, @intCast(i)), "mismatched parenthesis", .{});
         return error.MismatchedParenthesis;
     }
 }
@@ -349,7 +349,7 @@ fn recursive_evaluate(
             }
 
             break :blk .{
-                .value = @bitCast(i128, @bitReverse(@bitCast(u128, values[0].num)) >> (128 - 32)),
+                .value = @as(i128, @bitCast(@bitReverse(@as(u128, @bitCast(values[0].num))) >> (128 - 32))),
                 .index = values[0].index,
                 .consumed = .{
                     .ops = 2,

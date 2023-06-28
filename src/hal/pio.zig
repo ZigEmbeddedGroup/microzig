@@ -74,10 +74,10 @@ pub const ClkDivOptions = struct {
     frac: u8 = 0,
 
     pub fn from_float(div: f32) ClkDivOptions {
-        const fixed = @intFromFloat(u24, div * 256);
+        const fixed = @as(u24, @intFromFloat(div * 256));
         return ClkDivOptions{
-            .int = @truncate(u16, fixed >> 8),
-            .frac = @truncate(u8, fixed),
+            .int = @as(u16, @truncate(fixed >> 8)),
+            .frac = @as(u8, @truncate(fixed)),
         };
     }
 };
@@ -154,7 +154,7 @@ pub const Pio = enum(u1) {
 
     pub fn get_instruction_memory(self: Pio) *volatile [32]u32 {
         const regs = self.get_regs();
-        return @ptrCast(*volatile [32]u32, &regs.INSTR_MEM0);
+        return @as(*volatile [32]u32, @ptrCast(&regs.INSTR_MEM0));
     }
 
     pub fn gpio_init(self: Pio, pin: gpio.Pin) void {
@@ -184,7 +184,7 @@ pub const Pio = enum(u1) {
             else
                 error.NoSpace
         else for (0..(32 - program.instructions.len)) |i| {
-            const offset = @intCast(u5, i);
+            const offset = @as(u5, @intCast(i));
             if (self.can_add_program_at_offset(program, offset))
                 break offset;
         } else error.NoSpace;
@@ -218,23 +218,23 @@ pub const Pio = enum(u1) {
 
         const claimed_mask = claimed_state_machines[@intFromEnum(self)];
         return for (0..4) |i| {
-            const sm_mask = (@as(u4, 1) << @intCast(u2, i));
+            const sm_mask = (@as(u4, 1) << @as(u2, @intCast(i)));
             if (0 == (claimed_mask & sm_mask)) {
                 claimed_state_machines[@intFromEnum(self)] |= sm_mask;
-                break @enumFromInt(StateMachine, i);
+                break @as(StateMachine, @enumFromInt(i));
             }
         } else error.NoSpace;
     }
 
     pub fn get_sm_regs(self: Pio, sm: StateMachine) *volatile StateMachine.Regs {
         const pio_regs = self.get_regs();
-        const sm_regs = @ptrCast(*volatile [4]StateMachine.Regs, &pio_regs.SM0_CLKDIV);
+        const sm_regs = @as(*volatile [4]StateMachine.Regs, @ptrCast(&pio_regs.SM0_CLKDIV));
         return &sm_regs[@intFromEnum(sm)];
     }
 
     fn get_irq_regs(self: Pio, irq: Irq) *volatile Irq.Regs {
         const pio_regs = self.get_regs();
-        const irq_regs = @ptrCast(*volatile [2]Irq.Regs, &pio_regs.IRQ0_INTE);
+        const irq_regs = @as(*volatile [2]Irq.Regs, @ptrCast(&pio_regs.IRQ0_INTE));
         return &irq_regs[@intFromEnum(irq)];
     }
 
@@ -313,7 +313,7 @@ pub const Pio = enum(u1) {
 
     pub fn sm_get_tx_fifo(self: Pio, sm: StateMachine) *volatile u32 {
         const regs = self.get_regs();
-        const fifos = @ptrCast(*volatile [4]u32, &regs.TXF0);
+        const fifos = @as(*volatile [4]u32, @ptrCast(&regs.TXF0));
         return &fifos[@intFromEnum(sm)];
     }
 
@@ -386,7 +386,7 @@ pub const Pio = enum(u1) {
         const regs = self.get_regs();
         const levels = regs.FLEVEL.raw;
 
-        return @truncate(u4, levels >> (@as(u5, 4) * num) + offset);
+        return @as(u4, @truncate(levels >> (@as(u5, 4) * num) + offset));
     }
 
     fn interrupt_bit_pos(
@@ -469,7 +469,7 @@ pub const Pio = enum(u1) {
 
     pub fn sm_exec(self: Pio, sm: StateMachine, instruction: Instruction) void {
         const sm_regs = self.get_sm_regs(sm);
-        sm_regs.instr.raw = @bitCast(u16, instruction);
+        sm_regs.instr.raw = @as(u16, @bitCast(instruction));
     }
 
     pub fn sm_load_and_start_program(
@@ -498,7 +498,7 @@ pub const Pio = enum(u1) {
                 .wrap = if (program.wrap) |wrap|
                     wrap
                 else
-                    offset + @intCast(u5, program.instructions.len),
+                    offset + @as(u5, @intCast(program.instructions.len)),
 
                 .wrap_target = if (program.wrap_target) |wrap_target|
                     wrap_target

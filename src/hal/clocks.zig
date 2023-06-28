@@ -83,7 +83,7 @@ pub const Generator = enum(u32) {
         assert(24 == @sizeOf([2]GeneratorRegs));
     }
 
-    const generators = @ptrCast(*volatile [@typeInfo(Generator).Enum.fields.len]GeneratorRegs, CLOCKS);
+    const generators = @as(*volatile [@typeInfo(Generator).Enum.fields.len]GeneratorRegs, @ptrCast(CLOCKS));
 
     fn get_regs(generator: Generator) *volatile GeneratorRegs {
         return &generators[@intFromEnum(generator)];
@@ -617,7 +617,7 @@ pub const Configuration = struct {
         // source frequency has to be faster because dividing will always reduce.
         assert(input.freq >= output_freq);
 
-        const div = @intCast(u32, (@intCast(u64, input.freq) << 8) / output_freq);
+        const div = @as(u32, @intCast((@as(u64, @intCast(input.freq)) << 8) / output_freq));
 
         // check divisor
         if (div > generator.get_div())

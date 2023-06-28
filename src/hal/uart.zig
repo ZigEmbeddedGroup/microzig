@@ -43,7 +43,7 @@ pub const Config = struct {
 };
 
 pub fn num(n: u1) UART {
-    return @enumFromInt(UART, n);
+    return @as(UART, @enumFromInt(n));
 }
 
 pub const UART = enum(u1) {
@@ -118,7 +118,7 @@ pub const UART = enum(u1) {
 
     pub fn tx_fifo(uart: UART) *volatile u32 {
         const regs = uart.get_regs();
-        return @ptrCast(*volatile u32, &regs.UARTDR);
+        return @as(*volatile u32, @ptrCast(&regs.UARTDR));
     }
 
     pub fn dreq_tx(uart: UART) dma.Dreq {
@@ -180,7 +180,7 @@ pub const UART = enum(u1) {
         assert(baud_rate > 0);
         const uart_regs = uart.get_regs();
         const baud_rate_div = (8 * peri_freq / baud_rate);
-        var baud_ibrd = @intCast(u16, baud_rate_div >> 7);
+        var baud_ibrd = @as(u16, @intCast(baud_rate_div >> 7));
 
         const baud_fbrd: u6 = if (baud_ibrd == 0) baud_fbrd: {
             baud_ibrd = 1;
@@ -188,7 +188,7 @@ pub const UART = enum(u1) {
         } else if (baud_ibrd >= 65535) baud_fbrd: {
             baud_ibrd = 65535;
             break :baud_fbrd 0;
-        } else @intCast(u6, ((@truncate(u7, baud_rate_div)) + 1) / 2);
+        } else @as(u6, @intCast(((@as(u7, @truncate(baud_rate_div))) + 1) / 2));
 
         uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd, .padding = 0 });
         uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd, .padding = 0 });

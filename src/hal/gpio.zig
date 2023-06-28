@@ -72,11 +72,11 @@ pub fn num(n: u5) Pin {
     if (n > 29)
         @panic("the RP2040 only has GPIO 0-29");
 
-    return @enumFromInt(Pin, n);
+    return @as(Pin, @enumFromInt(n));
 }
 
 pub fn mask(m: u32) Mask {
-    return @enumFromInt(Mask, m);
+    return @as(Mask, @enumFromInt(m));
 }
 
 pub const Mask = enum(u30) {
@@ -85,7 +85,7 @@ pub const Mask = enum(u30) {
     pub fn set_function(self: Mask, function: Function) void {
         const raw_mask = @intFromEnum(self);
         for (0..@bitSizeOf(Mask)) |i| {
-            const bit = @intCast(u5, i);
+            const bit = @as(u5, @intCast(i));
             if (0 != raw_mask & (@as(u32, 1) << bit))
                 num(bit).set_function(function);
         }
@@ -102,7 +102,7 @@ pub const Mask = enum(u30) {
     pub fn set_pull(self: Mask, pull: ?Pull) void {
         const raw_mask = @intFromEnum(self);
         for (0..@bitSizeOf(Mask)) |i| {
-            const bit = @intCast(u5, i);
+            const bit = @as(u5, @intCast(i));
             if (0 != raw_mask & (@as(u32, 1) << bit))
                 num(bit).set_pull(pull);
         }
@@ -154,12 +154,12 @@ pub const Pin = enum(u5) {
     pub const PadsReg = @TypeOf(PADS_BANK0.GPIO0);
 
     fn get_regs(gpio: Pin) *volatile Regs {
-        const regs = @ptrCast(*volatile [30]Regs, &IO_BANK0.GPIO0_STATUS);
+        const regs = @as(*volatile [30]Regs, @ptrCast(&IO_BANK0.GPIO0_STATUS));
         return &regs[@intFromEnum(gpio)];
     }
 
     fn get_pads_reg(gpio: Pin) *volatile PadsReg {
-        const regs = @ptrCast(*volatile [30]PadsReg, &PADS_BANK0.GPIO0);
+        const regs = @as(*volatile [30]PadsReg, @ptrCast(&PADS_BANK0.GPIO0));
         return &regs[@intFromEnum(gpio)];
     }
 

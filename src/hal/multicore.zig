@@ -70,7 +70,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         fn wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.C) void {
             // TODO: protect stack using MPU
             _ = stack_base;
-            @ptrFromInt(*const fn () void, entry)();
+            @as(*const fn () void, @ptrFromInt(entry))();
         }
     }.wrapper;
 

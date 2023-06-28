@@ -14,7 +14,7 @@ const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
 const flash_target_offset: u32 = 256 * 1024;
-const flash_target_contents = @ptrFromInt([*]const u8, rp2040.flash.XIP_BASE + flash_target_offset);
+const flash_target_contents = @as([*]const u8, @ptrFromInt(rp2040.flash.XIP_BASE + flash_target_offset));
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});

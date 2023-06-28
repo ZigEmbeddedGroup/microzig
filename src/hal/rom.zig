@@ -88,7 +88,7 @@ pub const signatures = struct {
 ///
 /// A 32 bit address pointing into bootrom
 pub fn rom_table_code(c1: u8, c2: u8) u32 {
-    return @intCast(u32, c1) | (@intCast(u32, c2) << 8);
+    return @as(u32, @intCast(c1)) | (@as(u32, @intCast(c2)) << 8);
 }
 
 /// Convert a 16 bit pointer stored at the given rom address into a pointer
@@ -100,8 +100,8 @@ pub fn rom_table_code(c1: u8, c2: u8) u32 {
 ///
 /// The converted pointer
 pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
-    const ptr_to_ptr = @ptrFromInt(*u16, rom_addr);
-    return @ptrFromInt(*anyopaque, @intCast(usize, ptr_to_ptr.*));
+    const ptr_to_ptr = @as(*u16, @ptrFromInt(rom_addr));
+    return @as(*anyopaque, @ptrFromInt(@as(usize, @intCast(ptr_to_ptr.*))));
 }
 
 /// Lookup a bootrom function by code (inline)
@@ -113,8 +113,8 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub inline fn _rom_func_lookup(code: Code) *anyopaque {
-    const rom_table_lookup = @ptrCast(*signatures.rom_table_lookup, rom_hword_as_ptr(0x18));
-    const func_table = @ptrCast(*u16, @alignCast(2, rom_hword_as_ptr(0x14)));
+    const rom_table_lookup = @as(*signatures.rom_table_lookup, @ptrCast(rom_hword_as_ptr(0x18)));
+    const func_table = @as(*u16, @ptrCast(@alignCast(rom_hword_as_ptr(0x14))));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
 
@@ -140,7 +140,7 @@ pub fn popcount32(value: u32) u32 {
         var f: ?*signatures.popcount32 = null;
     };
 
-    if (S.f == null) S.f = @ptrCast(*signatures.popcount32, _rom_func_lookup(Code.popcount32));
+    if (S.f == null) S.f = @as(*signatures.popcount32, @ptrCast(_rom_func_lookup(Code.popcount32)));
     return S.f.?(value);
 }
 
@@ -150,7 +150,7 @@ pub fn reverse32(value: u32) u32 {
         var f: ?*signatures.reverse32 = null;
     };
 
-    if (S.f == null) S.f = @ptrCast(*signatures.reverse32, _rom_func_lookup(Code.reverse32));
+    if (S.f == null) S.f = @as(*signatures.reverse32, @ptrCast(_rom_func_lookup(Code.reverse32)));
     return S.f.?(value);
 }
 
@@ -160,7 +160,7 @@ pub fn clz32(value: u32) u32 {
         var f: ?*signatures.clz32 = null;
     };
 
-    if (S.f == null) S.f = @ptrCast(*signatures.clz32, _rom_func_lookup(Code.clz32));
+    if (S.f == null) S.f = @as(*signatures.clz32, @ptrCast(_rom_func_lookup(Code.clz32)));
     return S.f.?(value);
 }
 
@@ -170,7 +170,7 @@ pub fn ctz32(value: u32) u32 {
         var f: ?*signatures.ctz32 = null;
     };
 
-    if (S.f == null) S.f = @ptrCast(*signatures.ctz32, _rom_func_lookup(Code.ctz32));
+    if (S.f == null) S.f = @as(*signatures.ctz32, @ptrCast(_rom_func_lookup(Code.ctz32)));
     return S.f.?(value);
 }
 
@@ -184,7 +184,7 @@ pub fn memset(dest: []u8, c: u8) []u8 {
         var f: ?*signatures.memset = null;
     };
 
-    if (S.f == null) S.f = @ptrCast(*signatures.memset, _rom_func_lookup(Code.memset));
+    if (S.f == null) S.f = @as(*signatures.memset, @ptrCast(_rom_func_lookup(Code.memset)));
     return S.f.?(dest.ptr, c, dest.len)[0..dest.len];
 }
 
@@ -196,7 +196,7 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 
     const n = if (dest.len <= src.len) dest.len else src.len;
 
-    if (S.f == null) S.f = @ptrCast(*signatures.memcpy, _rom_func_lookup(Code.memcpy));
+    if (S.f == null) S.f = @as(*signatures.memcpy, @ptrCast(_rom_func_lookup(Code.memcpy)));
     return S.f.?(dest.ptr, src.ptr, n)[0..n];
 }
 
@@ -206,9 +206,9 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 
 /// Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads
 pub inline fn connect_internal_flash() *signatures.connect_internal_flash {
-    return @ptrCast(
+    return @as(
         *signatures.connect_internal_flash,
-        _rom_func_lookup(Code.connect_internal_flash),
+        @ptrCast(_rom_func_lookup(Code.connect_internal_flash)),
     );
 }
 
@@ -218,9 +218,9 @@ pub inline fn connect_internal_flash() *signatures.connect_internal_flash {
 /// SSI to XIP mode (e.g. by a call to _flash_flush_cache). This function configures
 /// the SSI with a fixed SCK clock divisor of /6.
 pub inline fn flash_exit_xip() *signatures.flash_exit_xip {
-    return @ptrCast(
+    return @as(
         *signatures.flash_exit_xip,
-        _rom_func_lookup(Code.flash_exit_xip),
+        @ptrCast(_rom_func_lookup(Code.flash_exit_xip)),
     );
 }
 
@@ -230,9 +230,9 @@ pub inline fn flash_exit_xip() *signatures.flash_exit_xip {
 /// possible, for much higher erase speed. addr must be aligned to a 4096-byte sector,
 /// and count must be a multiple of 4096 bytes.
 pub inline fn flash_range_erase() *signatures.flash_range_erase {
-    return @ptrCast(
+    return @as(
         *signatures.flash_range_erase,
-        _rom_func_lookup(Code.flash_range_erase),
+        @ptrCast(_rom_func_lookup(Code.flash_range_erase)),
     );
 }
 
@@ -240,18 +240,18 @@ pub inline fn flash_range_erase() *signatures.flash_range_erase {
 /// start of flash) and count bytes in size. addr must be aligned to a 256-byte
 /// boundary, and the length of data must be a multiple of 256.
 pub inline fn flash_range_program() *signatures.flash_range_program {
-    return @ptrCast(
+    return @as(
         *signatures.flash_range_program,
-        _rom_func_lookup(Code.flash_range_program),
+        @ptrCast(_rom_func_lookup(Code.flash_range_program)),
     );
 }
 
 /// Flush and enable the XIP cache. Also clears the IO forcing on QSPI CSn, so that
 /// the SSI can drive the flash chip select as normal.
 pub inline fn flash_flush_cache() *signatures.flash_flush_cache {
-    return @ptrCast(
+    return @as(
         *signatures.flash_flush_cache,
-        _rom_func_lookup(Code.flash_flush_cache),
+        @ptrCast(_rom_func_lookup(Code.flash_flush_cache)),
     );
 }
 
@@ -262,8 +262,8 @@ pub inline fn flash_flush_cache() *signatures.flash_flush_cache {
 /// visible to the debug host, without having to know exactly what kind of flash
 /// device is connected.
 pub inline fn flash_enter_cmd_xip() *signatures.flash_enter_cmd_xip {
-    return @ptrCast(
+    return @as(
         *signatures.flash_enter_cmd_xip,
-        _rom_func_lookup(Code.flash_enter_cmd_xip),
+        @ptrCast(_rom_func_lookup(Code.flash_enter_cmd_xip)),
     );
 }

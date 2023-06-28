@@ -7,7 +7,7 @@ pub const Absolute = enum(u64) {
     _,
 
     pub fn from_us(us: u64) Absolute {
-        return @enumFromInt(Absolute, us);
+        return @as(Absolute, @enumFromInt(us));
     }
 
     pub fn to_us(time: Absolute) u64 {
@@ -36,7 +36,7 @@ pub const Duration = enum(u64) {
     _,
 
     pub fn from_us(us: u64) Duration {
-        return @enumFromInt(Duration, us);
+        return @as(Duration, @enumFromInt(us));
     }
 
     pub fn from_ms(ms: u64) Duration {
@@ -67,14 +67,14 @@ pub fn get_time_since_boot() Absolute {
         var low_word = TIMER.TIMERAWL;
         const next_high_word = TIMER.TIMERAWH;
         if (next_high_word == high_word)
-            break @enumFromInt(Absolute, @intCast(u64, high_word) << 32 | low_word);
+            break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
 
         high_word = next_high_word;
     } else unreachable;
 }
 
 pub fn make_timeout_us(timeout_us: u64) Absolute {
-    return @enumFromInt(Absolute, get_time_since_boot().to_us() + timeout_us);
+    return @as(Absolute, @enumFromInt(get_time_since_boot().to_us() + timeout_us));
 }
 
 pub fn sleep_ms(time_ms: u32) void {

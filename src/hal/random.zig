@@ -76,10 +76,10 @@ pub const Ascon = struct {
         var i: usize = 0;
         while (i < buffer.len) : (i += 1) {
             // We poll RANDOMBIT eight times per cycle to build a random byte
-            var r: u8 = @intCast(u8, peripherals.ROSC.RANDOMBIT.read().RANDOMBIT);
+            var r: u8 = @as(u8, @intCast(peripherals.ROSC.RANDOMBIT.read().RANDOMBIT));
             var j: usize = 0;
             while (j < 7) : (j += 1) {
-                r = (r << 1) | @intCast(u8, peripherals.ROSC.RANDOMBIT.read().RANDOMBIT);
+                r = (r << 1) | @as(u8, @intCast(peripherals.ROSC.RANDOMBIT.read().RANDOMBIT));
             }
             buffer[i] = r;
         }

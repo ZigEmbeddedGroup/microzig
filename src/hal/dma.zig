@@ -19,7 +19,7 @@ pub const Dreq = enum(u6) {
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
 
-    return @enumFromInt(Channel, n);
+    return @as(Channel, @enumFromInt(n));
 }
 
 pub fn claim_unused_channel() ?Channel {
@@ -76,7 +76,7 @@ pub const Channel = enum(u4) {
     };
 
     fn get_regs(chan: Channel) *volatile Regs {
-        const regs = @ptrCast(*volatile [12]Regs, &DMA.CH0_READ_ADDR);
+        const regs = @as(*volatile [12]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
         return &regs[@intFromEnum(chan)];
     }
 

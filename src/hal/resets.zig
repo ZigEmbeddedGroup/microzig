@@ -36,7 +36,7 @@ pub const Mask = packed struct(u32) {
 };
 
 pub fn reset(mask: Mask) void {
-    const raw_mask = @bitCast(u32, mask);
+    const raw_mask = @as(u32, @bitCast(mask));
 
     RESETS.RESET.raw = raw_mask;
     RESETS.RESET.raw = 0;
@@ -45,22 +45,22 @@ pub fn reset(mask: Mask) void {
 }
 
 pub inline fn reset_block(mask: Mask) void {
-    hw.set_alias_raw(&RESETS.RESET).* = @bitCast(u32, mask);
+    hw.set_alias_raw(&RESETS.RESET).* = @as(u32, @bitCast(mask));
 }
 
 pub inline fn unreset_block(mask: Mask) void {
-    hw.clear_alias_raw(&RESETS.RESET).* = @bitCast(u32, mask);
+    hw.clear_alias_raw(&RESETS.RESET).* = @as(u32, @bitCast(mask));
 }
 
 pub fn unreset_block_wait(mask: Mask) void {
-    const raw_mask = @bitCast(u32, mask);
+    const raw_mask = @as(u32, @bitCast(mask));
     hw.clear_alias_raw(&RESETS.RESET).* = raw_mask;
 
     // have to bitcast after a read() instead of `RESETS.RESET_DONE.raw` due to
     // some optimization bug. While loops will not be optimzed away if the
     // condition has side effects like dereferencing a volatile pointer.
     // It seems that volatile is not propagating correctly.
-    while (@bitCast(u32, RESETS.RESET_DONE.read()) & raw_mask != raw_mask) {}
+    while (@as(u32, @bitCast(RESETS.RESET_DONE.read())) & raw_mask != raw_mask) {}
 }
 
 pub const masks = struct {

@@ -17,7 +17,7 @@ pub const Error = error{
 
 /// temp_sensor is not valid because you can refer to it by name.
 pub fn input(n: u2) Input {
-    return @enumFromInt(Input, n);
+    return @as(Input, @enumFromInt(n));
 }
 
 /// Enable the ADC controller.
@@ -50,7 +50,7 @@ pub fn apply(config: Config) void {
         .ERR_STICKY = 0,
         .AINSEL = 0,
         .RROBIN = if (config.round_robin) |rr|
-            @bitCast(u5, rr)
+            @as(u5, @bitCast(rr))
         else
             0,
 
@@ -63,8 +63,8 @@ pub fn apply(config: Config) void {
     if (config.sample_frequency) |sample_frequency| {
         const cycles = (48_000_000 * 256) / @as(u64, sample_frequency);
         ADC.DIV.write(.{
-            .FRAC = @truncate(u8, cycles),
-            .INT = @intCast(u16, (cycles >> 8) - 1),
+            .FRAC = @as(u8, @truncate(cycles)),
+            .INT = @as(u16, @intCast((cycles >> 8) - 1)),
 
             .padding = 0,
         });
@@ -85,7 +85,7 @@ pub fn select_input(in: Input) void {
 /// 4 is the temperature sensor.
 pub fn get_selected_input() Input {
     const cs = ADC.SC.read();
-    return @enumFromInt(Input, cs.AINSEL);
+    return @as(Input, @enumFromInt(cs.AINSEL));
 }
 
 pub const Input = enum(u3) {
@@ -126,7 +126,7 @@ pub fn set_temp_sensor_enabled(enable: bool) void {
 /// T must be floating point.
 pub fn temp_sensor_result_to_celcius(comptime T: type, comptime vref: T, result: u12) T {
     // TODO: consider fixed-point
-    const raw = @floatFromInt(T, result);
+    const raw = @as(T, @floatFromInt(result));
     const voltage: T = vref * raw / 0x0fff;
     return (27.0 - ((voltage - 0.706) / 0.001721));
 }
@@ -144,7 +144,7 @@ pub const InputMask = packed struct(u5) {
 /// 0 will disable round-robin mode but `disableRoundRobin()` is provided so
 /// the user may be explicit.
 pub fn round_robin_set(enabled_inputs: InputMask) void {
-    ADC.CS.modify(.{ .RROBIN = @bitCast(u5, enabled_inputs) });
+    ADC.CS.modify(.{ .RROBIN = @as(u5, @bitCast(enabled_inputs)) });
 }
 
 /// Disable round-robin sample mode.

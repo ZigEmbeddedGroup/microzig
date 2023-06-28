@@ -23,7 +23,7 @@ pub const boot2 = struct {
     /// Copy the 2nd stage bootloader into memory
     pub fn flash_init() linksection(".time_critical") void {
         if (copyout_valid) return;
-        const bootloader = @ptrFromInt([*]u32, XIP_BASE);
+        const bootloader = @as([*]u32, @ptrFromInt(XIP_BASE));
         var i: usize = 0;
         while (i < BOOT2_SIZE_BYTES) : (i += 1) {
             copyout[i] = bootloader[i];

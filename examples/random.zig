@@ -52,7 +52,7 @@ pub fn main() !void {
         rng.bytes(buffer[0..]);
         counter += 8;
         for (buffer) |byte| {
-            dist[@intCast(usize, byte)] += 1;
+            dist[@as(usize, @intCast(byte))] += 1;
         }
         std.log.info("Generate random number: {any}", .{buffer});
 
@@ -60,7 +60,7 @@ pub fn main() !void {
             var i: usize = 0;
             std.log.info("Distribution:", .{});
             while (i < 256) : (i += 1) {
-                std.log.info("{} -> {}, {d:2}%", .{ i, dist[i], @floatFromInt(f32, dist[i]) / @floatFromInt(f32, counter) });
+                std.log.info("{} -> {}, {d:2}%", .{ i, dist[i], @as(f32, @floatFromInt(dist[i])) / @as(f32, @floatFromInt(counter)) });
             }
         }
         time.sleep_ms(1000);

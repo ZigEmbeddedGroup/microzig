@@ -42,7 +42,7 @@ pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @intCast(u8, @sizeOf(usb.EndpointDescriptor)),
+        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_OUT_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
@@ -57,7 +57,7 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
 
 pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @intCast(u8, @sizeOf(usb.EndpointDescriptor)),
+        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_IN_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
@@ -89,26 +89,26 @@ pub const buffers = struct {
 
     /// Mapping to the different data buffers in DPSRAM
     pub var B: usb.Buffers = .{
-        .ep0_buffer0 = @ptrFromInt([*]u8, USB_EP0_BUFFER0),
-        .ep0_buffer1 = @ptrFromInt([*]u8, USB_EP0_BUFFER1),
+        .ep0_buffer0 = @as([*]u8, @ptrFromInt(USB_EP0_BUFFER0)),
+        .ep0_buffer1 = @as([*]u8, @ptrFromInt(USB_EP0_BUFFER1)),
         // We will initialize this comptime in a loop
         .rest = .{
-            @ptrFromInt([*]u8, USB_BUFFERS + (0 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (1 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (2 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (3 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (4 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (5 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (6 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (7 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (8 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (9 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (10 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (11 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (12 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (13 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (14 * BUFFER_SIZE)),
-            @ptrFromInt([*]u8, USB_BUFFERS + (15 * BUFFER_SIZE)),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (0 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (1 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (2 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (3 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (4 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (5 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (6 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (7 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (8 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (9 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (10 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (11 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (12 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (13 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (14 * BUFFER_SIZE))),
+            @as([*]u8, @ptrFromInt(USB_BUFFERS + (15 * BUFFER_SIZE))),
         },
     };
 };
@@ -278,7 +278,7 @@ pub const F = struct {
                 // The offset _should_ fit in a u16, but if we've gotten something
                 // wrong in the past few lines, a common symptom will be integer
                 // overflow producing a Very Large Number,
-                const dpram_offset = @intCast(u16, buf_base - dpram_base);
+                const dpram_offset = @as(u16, @intCast(buf_base - dpram_base));
 
                 // Configure the endpoint!
                 modify_endpoint_control(epci, .{
@@ -287,7 +287,7 @@ pub const F = struct {
                     // buffer is done, thx.
                     .INTERRUPT_PER_BUFF = 1,
                     // Select bulk vs control (or interrupt as soon as implemented).
-                    .ENDPOINT_TYPE = .{ .raw = @intCast(u2, ep.descriptor.attributes) },
+                    .ENDPOINT_TYPE = .{ .raw = @as(u2, @intCast(ep.descriptor.attributes)) },
                     // And, designate our buffer by its offset.
                     .BUFFER_ADDRESS = dpram_offset,
                 });
@@ -331,7 +331,7 @@ pub const F = struct {
         modify_buffer_control(ep.buffer_control_index, .{
             .PID_0 = np, // DATA0/1, depending
             .FULL_0 = 1, // We have put data in
-            .LENGTH_0 = @intCast(u10, buffer.len), // There are this many bytes
+            .LENGTH_0 = @as(u10, @intCast(buffer.len)), // There are this many bytes
         });
 
         // Nop for some clock cycles
@@ -367,7 +367,7 @@ pub const F = struct {
             .PID_0 = np, // DATA0/1 depending
             .FULL_0 = 0, // Buffer is NOT full, we want the computer to fill it
             .AVAILABLE_0 = 1, // It is, however, available to be filled
-            .LENGTH_0 = @intCast(u10, len), // Up tho this many bytes
+            .LENGTH_0 = @as(u10, @intCast(len)), // Up tho this many bytes
         });
 
         // Flip the DATA0/1 PID for the next receive
@@ -588,14 +588,14 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
     var lowbit_index: u5 = 0;
     while ((self.bufbits >> lowbit_index) & 0x01 == 0) : (lowbit_index += 1) {}
     // Remove their bit from our set.
-    const lowbit = @intCast(u32, 1) << lowbit_index;
+    const lowbit = @as(u32, @intCast(1)) << lowbit_index;
     self.last_bit = lowbit;
     self.bufbits ^= lowbit;
 
     // Here we exploit knowledge of the ordering of buffer control
     // registers in the peripheral. Each endpoint has a pair of
     // registers, so we can determine the endpoint number by:
-    const epnum = @intCast(u8, lowbit_index >> 1);
+    const epnum = @as(u8, @intCast(lowbit_index >> 1));
     // Of the pair, the IN endpoint comes first, followed by OUT, so
     // we can get the direction by:
     const dir = if (lowbit_index & 1 == 0) usb.Dir.In else usb.Dir.Out;
@@ -637,7 +637,7 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
 
     // Get the actual length of the data, which may be less
     // than the buffer size.
-    const len = @intCast(usize, bc & 0x3ff);
+    const len = @as(usize, @intCast(bc & 0x3ff));
 
     // Copy the data from SRAM
     return usb.EPB{
