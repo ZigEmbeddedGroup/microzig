@@ -4,7 +4,7 @@ const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
 const FileSource = std.build.FileSource;
 
-pub const microzig = @import("deps/microzig/build.zig");
+const microzig = @import("microzig");
 
 pub const chips = @import("src/chips.zig");
 pub const boards = @import("src/boards.zig");

@@ -1,0 +1,11 @@
+.{
+    .name = "rp2040",
+    .version = "0.0.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/9392fe0f7bddde26155c181ab80b70097b49c791.tar.gz",
+            .hash = "1220326148075cd017425e04356329c33c3e794d31a54bdafa46521fcfcc55b422a3",
+        },
+    },
+}
+
