@@ -63,6 +63,7 @@ pub const Examples = struct {
     blinky: *microzig.EmbeddedExecutable,
     blinky_core1: *microzig.EmbeddedExecutable,
     gpio_clk: *microzig.EmbeddedExecutable,
+    i2c_bus_scan: *microzig.EmbeddedExecutable,
     pwm: *microzig.EmbeddedExecutable,
     spi_master: *microzig.EmbeddedExecutable,
     uart: *microzig.EmbeddedExecutable,

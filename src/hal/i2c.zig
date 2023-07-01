@@ -243,12 +243,13 @@ pub const I2C = enum(u1) {
                 _ = tc;
             }
         };
-        try i2c.read_blocking_internal(addr, dst, Timeout{});
+        return i2c.read_blocking_internal(addr, dst, Timeout{});
     }
 
     /// Determine non-blocking write space available.
     pub inline fn get_write_available(i2c: I2C) u5 {
-        return i2c.get_regs().IC_TXFLR.read().TXFLR;
+        const IC_TX_BUFFER_DEPTH = 16;
+        return IC_TX_BUFFER_DEPTH - i2c.get_regs().IC_TXFLR.read().TXFLR;
     }
 
     /// Determine number of bytes received.
@@ -378,7 +379,7 @@ pub const I2C = enum(u1) {
         for (dst, 0..) |*byte, i| {
             const first = (i == 0);
             const last = (i == dst.len - 1);
-            while (i2c.get_write_available(i2c) == 0) {
+            while (i2c.get_write_available() == 0) {
                 hw.tight_loop_contents();
             }
 
@@ -388,11 +389,11 @@ pub const I2C = enum(u1) {
                 .CMD = .{ .value = .READ },
 
                 .DAT = 0,
-                .FIRST_DATA_BYTE = .{ .value = 0 },
+                .FIRST_DATA_BYTE = .{ .raw = 0 },
                 .padding = 0,
             });
 
-            while (i2c.get_read_available() == 0) {
+            while (true) {
                 const abort_reason = regs.IC_TX_ABRT_SOURCE.read();
                 const abort = (regs.IC_CLR_TX_ABRT.read().CLR_TX_ABRT != 0);
                 if (abort) {
@@ -403,6 +404,8 @@ pub const I2C = enum(u1) {
                 }
 
                 try timeout_check.perform();
+
+                if (i2c.get_read_available() != 0) break;
             }
 
             byte.* = regs.IC_DATA_CMD.read().DAT;
