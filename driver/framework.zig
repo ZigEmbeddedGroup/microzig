@@ -1,13 +1,12 @@
 //!
 
 pub const display = struct {
-    const ssd1306_ns = @import("display/ssd1306.zig");
-
-    pub const ssd1306 = ssd1306_ns.ssd1306;
-    pub const SSD1306 = ssd1306_ns.SSD1306;
-
+    pub const ssd1306 = @import("display/ssd1306.zig");
     pub const ili9488 = @import("display/ili9488.zig");
     pub const st7735 = @import("display/st7735.zig");
+
+    // Export generic drivers:
+    pub const SSD1306 = ssd1306.SSD1306;
 };
 
 pub const input = struct {
@@ -22,3 +21,22 @@ pub const input = struct {
 pub const wireless = struct {
     pub const sx1278 = @import("wireless/sx1278.zig");
 };
+
+pub const base = struct {
+    pub const DatagramDevice = @import("base/DatagramDevice.zig");
+    pub const StreamDevice = @import("base/StreamDevice.zig");
+};
+
+test {
+    _ = display.ssd1306;
+    _ = display.ili9488;
+    _ = display.st7735;
+
+    _ = input.keyboard_matrix;
+    _ = input.touch.xpt2046;
+
+    _ = wireless.sx1278;
+
+    _ = base.DatagramDevice;
+    _ = base.StreamDevice;
+}
