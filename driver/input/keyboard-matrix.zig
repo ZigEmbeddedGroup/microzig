@@ -1,4 +1,5 @@
 const std = @import("std");
+const mdf = @import("../framework.zig");
 
 /// A single key in a 2D keyboard matrix.
 pub const Key = enum(u16) {
@@ -20,14 +21,14 @@ pub const Key = enum(u16) {
 
 /// Keyboard matrix implementation via GPIOs that scans columns and checks rows.
 ///
-/// Uses `Pin` as the pin type (currently trimmed for the RP2040 package).
 /// Will use `cols` as matrix drivers (outputs) and `rows` as matrix readers (inputs).
-pub fn KeyboardMatrix(comptime Pin: type, comptime cols: []const Pin, comptime rows: []const Pin) type {
+pub fn KeyboardMatrix(comptime cols: []const mdf.base.DigitalIO, comptime rows: []const mdf.base.DigitalIO) type {
+    return KeyboardMatrix_Generic(mdf.base.DigitalIO, cols, rows);
+}
+
+pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime cols: []const Pin, comptime rows: []const Pin) type {
     if (cols.len > 256 or rows.len > 256) @compileError("cannot encode more than 256 rows or columns!");
     return struct {
-        const LOW = 0;
-        const HIGH = 1;
-
         const Matrix = @This();
 
         /// Number of keys in this matrix.
@@ -59,34 +60,32 @@ pub fn KeyboardMatrix(comptime Pin: type, comptime cols: []const Pin, comptime r
         };
 
         /// Initializes all GPIOs of the matrix and returns a new instance.
-        pub fn init() Matrix {
+        pub fn init() !Matrix {
             var mat = Matrix{};
             for (cols) |c| {
-                c.set_function(.sio);
-                c.set_direction(.out);
+                try c.setDirection(.output);
             }
             for (rows) |r| {
-                r.set_function(.sio);
-                r.set_pull(.up);
-                r.set_direction(.in);
+                try r.setDirection(.input);
+                try r.setBias(.high);
             }
-            mat.setAllTo(HIGH);
+            try mat.setAllTo(.high);
             return mat;
         }
 
         /// Scans the matrix and returns a set of all pressed keys.
-        pub fn scan(matrix: Matrix) Set {
+        pub fn scan(matrix: Matrix) !Set {
             var result = Set{};
 
-            matrix.setAllTo(HIGH);
+            try matrix.setAllTo(.high);
 
             for (cols, 0..) |c_pin, c_index| {
-                c_pin.put(LOW);
+                try c_pin.write(.low);
                 busyloop(10);
 
                 for (rows, 0..) |r_pin, r_index| {
                     const state = r_pin.read();
-                    if (state == LOW) {
+                    if (state == .low) {
                         // someone actually pressed a key!
                         result.add(Key.new(
                             @as(u8, @truncate(r_index)),
@@ -95,19 +94,19 @@ pub fn KeyboardMatrix(comptime Pin: type, comptime cols: []const Pin, comptime r
                     }
                 }
 
-                c_pin.put(HIGH);
+                try c_pin.write(.high);
                 busyloop(100);
             }
 
-            matrix.setAllTo(HIGH);
+            try matrix.setAllTo(.high);
 
             return result;
         }
 
-        fn setAllTo(matrix: Matrix, value: u1) void {
+        fn setAllTo(matrix: Matrix, value: mdf.base.DigitalIO.State) !void {
             _ = matrix;
             for (cols) |c| {
-                c.put(value);
+                try c.write(value);
             }
         }
     };
