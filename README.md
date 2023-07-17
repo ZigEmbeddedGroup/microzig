@@ -37,12 +37,13 @@ exe.addAppDependency("drivers", mdf_dep.module("drivers"), .{ .depend_on_microzi
 
 - Input
   - [x] Keyboard Matrix
-  - [ ] Rotary Encoder
+  - [x] Rotary Encoder
+  - [x] Debounced Button
   - Touch
     - [ ] XPT2046
 - Display
   - [x] SSD1306
+  - [ ] ST7735 (WIP)
   - [ ] ILI9488
-  - [ ] ST7735
 - Wireless
-  - [ ] SX1278
+  - [ ] SX1276, SX1278
