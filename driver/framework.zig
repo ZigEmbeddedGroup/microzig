@@ -3,10 +3,18 @@
 pub const display = struct {
     pub const ssd1306 = @import("display/ssd1306.zig");
     pub const ili9488 = @import("display/ili9488.zig");
-    pub const st7735 = @import("display/st7735.zig");
+    pub const st77xx = @import("display/st77xx.zig");
 
     // Export generic drivers:
     pub const SSD1306 = ssd1306.SSD1306;
+    pub const ST7735 = st77xx.ST7735;
+    pub const ST7789 = st77xx.ST7789;
+
+    // Export color types:
+    const colors_ns = @import("display/colors.zig");
+
+    pub const RGB565 = colors_ns.RGB565;
+    pub const RGB888 = colors_ns.RGB888;
 };
 
 pub const input = struct {
@@ -35,7 +43,7 @@ pub const base = struct {
 test {
     _ = display.ssd1306;
     _ = display.ili9488;
-    _ = display.st7735;
+    _ = display.st77xx;
 
     _ = input.keyboard_matrix;
     _ = input.touch.xpt2046;

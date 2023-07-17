@@ -46,3 +46,52 @@ pub const VTable = struct {
     writeFn: *const fn (?*anyopaque, state: State) WriteError!void,
     readFn: *const fn (?*anyopaque) State,
 };
+
+pub const TestDevice = struct {
+    state: State,
+    dir: Direction,
+
+    pub fn init(initial_dir: Direction, initial_state: State) TestDevice {
+        return TestDevice{
+            .dir = initial_dir,
+            .state = initial_state,
+        };
+    }
+
+    pub fn digitalIO(dev: *TestDevice) DigitalIO {
+        return DigitalIO{
+            .object = dev,
+            .vtable = &vtable,
+        };
+    }
+
+    fn setDirectionFn(ctx: ?*anyopaque, dir: Direction) SetDirError!void {
+        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+        dev.dir = dir;
+    }
+
+    fn setBiasFn(ctx: ?*anyopaque, bias: ?State) SetBiasError!void {
+        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+        _ = dev;
+        _ = bias;
+    }
+
+    fn writeFn(ctx: ?*anyopaque, state: State) WriteError!void {
+        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+        if (dev.dir != .output)
+            return error.Unsupported;
+        dev.state = state;
+    }
+
+    fn readFn(ctx: ?*anyopaque) State {
+        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+        return dev.state;
+    }
+
+    const vtable = VTable{
+        .setDirectionFn = setDirectionFn,
+        .setBiasFn = setBiasFn,
+        .writeFn = writeFn,
+        .readFn = readFn,
+    };
+};
