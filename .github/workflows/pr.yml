@@ -12,7 +12,7 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v1
         with:
-          version: master
+          version: 0.10.1
       - name: Render website
         run: |
           zig build gen

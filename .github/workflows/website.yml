@@ -16,9 +16,9 @@ jobs:
           submodules: 'recursive'
 
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v1
+        uses: goto-bus-stop/setup-zig@v2
         with:
-          version: master
+          version: 0.10.1
 
       - name: Render website
         run: |
