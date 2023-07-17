@@ -73,11 +73,11 @@ pub const TestDevice = struct {
 
     connected: bool,
 
-    pub fn initRecevierOnly() TestDevice {
+    pub fn init_receiver_only() TestDevice {
         return init(null, true);
     }
 
-    pub fn initSenderOnly(input: []const []const u8) TestDevice {
+    pub fn init_sender_only(input: []const []const u8) TestDevice {
         return init(input, false);
     }
 
@@ -101,7 +101,7 @@ pub const TestDevice = struct {
         td.* = undefined;
     }
 
-    pub fn expectSent(td: TestDevice, expected_datagrams: []const []const u8) !void {
+    pub fn expect_sent(td: TestDevice, expected_datagrams: []const []const u8) !void {
         const actual_datagrams = td.packets.items;
 
         try std.testing.expectEqual(expected_datagrams.len, actual_datagrams.len);
@@ -110,7 +110,7 @@ pub const TestDevice = struct {
         }
     }
 
-    pub fn datagramDevice(td: *TestDevice) DatagramDevice {
+    pub fn datagram_device(td: *TestDevice) DatagramDevice {
         return DatagramDevice{
             .object = td,
             .vtable = &vtable,

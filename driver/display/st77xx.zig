@@ -461,16 +461,16 @@ test {
 }
 
 test {
-    var channel = mdf.base.DatagramDevice.TestDevice.initRecevierOnly();
+    var channel = mdf.base.DatagramDevice.TestDevice.init_receiver_only();
     defer channel.deinit();
 
     var rst_pin = mdf.base.DigitalIO.TestDevice.init(.output, .high);
     var dat_pin = mdf.base.DigitalIO.TestDevice.init(.output, .high);
 
     var dri = try ST7735.init(
-        channel.datagramDevice(),
-        rst_pin.digitalIO(),
-        dat_pin.digitalIO(),
+        channel.datagram_device(),
+        rst_pin.digital_io(),
+        dat_pin.digital_io(),
         .{ .width = 128, .height = 128 },
     );
 

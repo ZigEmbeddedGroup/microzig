@@ -51,27 +51,27 @@ pub fn read(sd: StreamDevice, bytes: []u8) ReadError!usize {
     }
 }
 
-pub const Reader = std.io.Reader(StreamDevice, ReadError, readerRead);
+pub const Reader = std.io.Reader(StreamDevice, ReadError, reader_read);
 pub fn reader(sd: StreamDevice) Reader {
     return .{ .context = sd };
 }
 
-fn readerRead(sd: StreamDevice, buf: []u8) ReadError!usize {
+fn reader_read(sd: StreamDevice, buf: []u8) ReadError!usize {
     return sd.read(buf);
 }
 
-pub const Writer = std.io.Reader(StreamDevice, WriteError, writerWrite);
+pub const Writer = std.io.Reader(StreamDevice, WriteError, writer_write);
 pub fn writer(sd: StreamDevice) Writer {
     return .{ .context = sd };
 }
 
-fn writerWrite(sd: StreamDevice, buf: []const u8) WriteError!usize {
+fn writer_write(sd: StreamDevice, buf: []const u8) WriteError!usize {
     return sd.write(buf);
 }
 
 pub const VTable = struct {
-    connectFn: ?*const fn (?*anyopaque) ConnectError!void,
-    disconnectFn: ?*const fn (?*anyopaque) void,
-    writeFn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!usize,
-    readFn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!usize,
+    connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
+    disconnect_fn: ?*const fn (?*anyopaque) void,
+    write_fn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!usize,
+    read_fn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!usize,
 };

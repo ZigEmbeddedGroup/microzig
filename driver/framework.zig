@@ -20,10 +20,13 @@ pub const display = struct {
 pub const input = struct {
     pub const rotary_encoder = @import("input/rotary-encoder.zig");
     pub const keyboard_matrix = @import("input/keyboard-matrix.zig");
+    pub const debounced_button = @import("input/debounced-button.zig");
 
     // Export generic drivers:
     pub const Key = keyboard_matrix.Key;
     pub const KeyboardMatrix = keyboard_matrix.KeyboardMatrix;
+    pub const DebouncedButton = debounced_button.DebouncedButton;
+    pub const RotaryEncoder = rotary_encoder.RotaryEncoder;
 
     pub const touch = struct {
         const xpt2046 = @import("input/touch/xpt2046.zig");
@@ -46,6 +49,9 @@ test {
     _ = display.st77xx;
 
     _ = input.keyboard_matrix;
+    _ = input.debounced_button;
+    _ = input.rotary_encoder;
+
     _ = input.touch.xpt2046;
 
     _ = wireless.sx1278;

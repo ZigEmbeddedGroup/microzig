@@ -1,3 +1,7 @@
+//!
+//! Implements a N*M keyboard matrix that will be scanned in column-major order.
+//!
+
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
@@ -22,21 +26,21 @@ pub const Key = enum(u16) {
 /// Keyboard matrix implementation via GPIOs that scans columns and checks rows.
 ///
 /// Will use `cols` as matrix drivers (outputs) and `rows` as matrix readers (inputs).
-pub fn KeyboardMatrix(comptime cols: []const mdf.base.DigitalIO, comptime rows: []const mdf.base.DigitalIO) type {
-    return KeyboardMatrix_Generic(mdf.base.DigitalIO, cols, rows);
+pub fn KeyboardMatrix(comptime col_count: usize, comptime row_count: usize) type {
+    return KeyboardMatrix_Generic(mdf.base.DigitalIO, col_count, row_count);
 }
 
-pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime cols: []const Pin, comptime rows: []const Pin) type {
-    if (cols.len > 256 or rows.len > 256) @compileError("cannot encode more than 256 rows or columns!");
+pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime col_count: usize, comptime row_count: usize) type {
+    if (col_count > 256 or row_count > 256) @compileError("cannot encode more than 256 rows or columns!");
     return struct {
         const Matrix = @This();
 
         /// Number of keys in this matrix.
-        pub const key_count = cols.len * rows.len;
+        pub const key_count = col_count * row_count;
 
         /// Returns the index for the given key. Assumes that `key` is valid.
         pub fn index(key: Key) usize {
-            return key.column() * rows.len + key.row();
+            return key.column() * row_count + key.row();
         }
 
         /// A set that can store if each key is set or not.
@@ -59,17 +63,26 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime cols: []const Pin, co
             }
         };
 
+        cols: *const [col_count]Pin,
+        rows: *const [row_count]Pin,
+
         /// Initializes all GPIOs of the matrix and returns a new instance.
-        pub fn init() !Matrix {
-            var mat = Matrix{};
+        pub fn init(
+            cols: *const [col_count]Pin,
+            rows: *const [row_count]Pin,
+        ) !Matrix {
+            var mat = Matrix{
+                .cols = cols,
+                .rows = rows,
+            };
             for (cols) |c| {
-                try c.setDirection(.output);
+                try c.set_direction(.output);
             }
             for (rows) |r| {
-                try r.setDirection(.input);
-                try r.setBias(.high);
+                try r.set_direction(.input);
+                try r.set_bias(.high);
             }
-            try mat.setAllTo(.high);
+            try mat.set_all_to(.high);
             return mat;
         }
 
@@ -77,13 +90,13 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime cols: []const Pin, co
         pub fn scan(matrix: Matrix) !Set {
             var result = Set{};
 
-            try matrix.setAllTo(.high);
+            try matrix.set_all_to(.high);
 
-            for (cols, 0..) |c_pin, c_index| {
+            for (matrix.cols, 0..) |c_pin, c_index| {
                 try c_pin.write(.low);
                 busyloop(10);
 
-                for (rows, 0..) |r_pin, r_index| {
+                for (matrix.rows, 0..) |r_pin, r_index| {
                     const state = r_pin.read();
                     if (state == .low) {
                         // someone actually pressed a key!
@@ -98,14 +111,13 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime cols: []const Pin, co
                 busyloop(100);
             }
 
-            try matrix.setAllTo(.high);
+            try matrix.set_all_to(.high);
 
             return result;
         }
 
-        fn setAllTo(matrix: Matrix, value: mdf.base.DigitalIO.State) !void {
-            _ = matrix;
-            for (cols) |c| {
+        fn set_all_to(matrix: Matrix, value: mdf.base.DigitalIO.State) !void {
+            for (matrix.cols) |c| {
                 try c.write(value);
             }
         }
@@ -118,4 +130,26 @@ inline fn busyloop(comptime N: comptime_int) void {
         // the electrons
         asm volatile ("" ::: "memory");
     }
+}
+
+test KeyboardMatrix {
+    var matrix_pins = [_]mdf.base.DigitalIO.TestDevice{
+        mdf.base.DigitalIO.TestDevice.init(.output, .high),
+        mdf.base.DigitalIO.TestDevice.init(.output, .high),
+        mdf.base.DigitalIO.TestDevice.init(.output, .high),
+        mdf.base.DigitalIO.TestDevice.init(.output, .high),
+    };
+    const rows = [_]mdf.base.DigitalIO{
+        matrix_pins[0].digital_io(),
+        matrix_pins[1].digital_io(),
+    };
+    const cols = [_]mdf.base.DigitalIO{
+        matrix_pins[2].digital_io(),
+        matrix_pins[3].digital_io(),
+    };
+
+    var matrix = try KeyboardMatrix(2, 2).init(&cols, &rows);
+
+    const set = try matrix.scan();
+    _ = set;
 }
