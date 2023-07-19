@@ -63,13 +63,13 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime col_count: usize, com
             }
         };
 
-        cols: *const [col_count]Pin,
-        rows: *const [row_count]Pin,
+        cols: [col_count]Pin,
+        rows: [row_count]Pin,
 
         /// Initializes all GPIOs of the matrix and returns a new instance.
         pub fn init(
-            cols: *const [col_count]Pin,
-            rows: *const [row_count]Pin,
+            cols: [col_count]Pin,
+            rows: [row_count]Pin,
         ) !Matrix {
             var mat = Matrix{
                 .cols = cols,

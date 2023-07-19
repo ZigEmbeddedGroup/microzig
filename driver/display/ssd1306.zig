@@ -41,13 +41,15 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.set_memory_addressing_mode(.horizontal);
             try self.set_column_address(0, 127);
             try self.set_page_address(0, 7);
-            for (0..(128 * 8)) |_| {
+            {
                 try self.dd.connect();
                 defer self.dd.disconnect();
-                if (white) {
-                    try self.dd.write(&[_]u8{ control_data, 0xFF });
-                } else {
-                    try self.dd.write(&[_]u8{ control_data, 0x00 });
+                for (0..(128 * 8)) |_| {
+                    if (white) {
+                        try self.dd.write(&[_]u8{ control_data, 0xFF });
+                    } else {
+                        try self.dd.write(&[_]u8{ control_data, 0x00 });
+                    }
                 }
             }
             try self.entire_display_on(.resumeToRam);
