@@ -6,6 +6,9 @@
             .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/9392fe0f7bddde26155c181ab80b70097b49c791.tar.gz",
             .hash = "1220326148075cd017425e04356329c33c3e794d31a54bdafa46521fcfcc55b422a3",
         },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/91d1e89fb89a4d01dec7c9aec95b0a324080ebcc.tar.gz",
+            .hash = "12203d04cafc97f952d74cdb077e74c0ab3414f9f6b5fbd159112c62bfa584a0dbed",
+        },
     },
 }
-
