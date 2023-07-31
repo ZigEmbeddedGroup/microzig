@@ -62,7 +62,7 @@ pub fn main() !void {
 
     // Note that a whole number of pages (256 bytes) must be written at a time
     std.log.info("Programming target region...", .{});
-    flash.range_program(flash_target_offset, &data);
+    flash.range_program(flash_target_offset, data[0..]);
     std.log.info("Done. Read back target region:", .{});
     std.log.info("data: {s}", .{flash_target_contents[0..flash.PAGE_SIZE]});
 

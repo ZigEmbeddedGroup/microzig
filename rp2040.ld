@@ -43,7 +43,7 @@ SECTIONS
   .data :
   {
      microzig_data_start = .;
-     *(.time_critical*)
+     KEEP(*(.time_critical*))
      *(.data*)
      microzig_data_end = .;
   } > ram0 AT> flash0
