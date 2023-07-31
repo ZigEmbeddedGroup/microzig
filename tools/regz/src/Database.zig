@@ -885,7 +885,7 @@ pub fn json_stringify(
     var obj = try regzon.to_json(db);
     defer obj.deinit();
 
-    try obj.value.jsonStringify(opts, writer);
+    try std.json.stringify(obj.value, opts, writer);
 }
 
 pub fn format(
