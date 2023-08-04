@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: goto-bus-stop/setup-zig@v1.3.0
       with:
-        version: master
+        version: 0.11.0
 
     - name: Build and Unit Test
       run: zig build test -Doptimize=ReleaseSmall
