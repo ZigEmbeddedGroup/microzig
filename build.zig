@@ -2,7 +2,7 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const Pkg = std.build.Pkg;
 const comptimePrint = std.fmt.comptimePrint;
-const FileSource = std.build.FileSource;
+const LazyPath = std.build.LazyPath;
 
 const microzig = @import("microzig");
 
@@ -17,7 +17,7 @@ pub const BuildOptions = struct {
 
 pub const PicoExecutableOptions = struct {
     name: []const u8,
-    source_file: FileSource,
+    source_file: LazyPath,
     optimize: std.builtin.OptimizeMode = .Debug,
 };
 
@@ -52,7 +52,7 @@ pub fn build(b: *Builder) !void {
         },
         .optimize = optimize,
     });
-    pio_tests.addIncludePath("src/hal/pio/assembler");
+    pio_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
 
     const test_step = b.step("test", "run unit tests");
     test_step.dependOn(&b.addRunArtifact(pio_tests).step);

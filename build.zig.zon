@@ -3,8 +3,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{
-            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/9392fe0f7bddde26155c181ab80b70097b49c791.tar.gz",
-            .hash = "1220326148075cd017425e04356329c33c3e794d31a54bdafa46521fcfcc55b422a3",
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/d4a48f65fac24dcfe789d217a9154086b6a011e5.tar.gz",
+            .hash = "1220fd3ad4f6a88f111791cb80de1fc388d0a51114ab376f2bf8351cd176747fa303",
         },
         .args = .{
             .url = "https://github.com/MasterQ32/zig-args/archive/91d1e89fb89a4d01dec7c9aec95b0a324080ebcc.tar.gz",
