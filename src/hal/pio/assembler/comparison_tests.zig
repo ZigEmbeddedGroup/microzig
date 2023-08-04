@@ -53,7 +53,7 @@ test "pio.comparison.addition" {
 }
 
 test "pio.comparison.apa102" {
-    @setEvalBranchQuota(10000);
+    @setEvalBranchQuota(11000);
     try pio_comparison(@embedFile("comparison_tests/apa102.pio"));
 }
 
@@ -153,7 +153,7 @@ test "pio.comparison.st7789_lcd" {
 }
 
 test "pio.comparison.uart_rx" {
-    @setEvalBranchQuota(10000);
+    @setEvalBranchQuota(11000);
     try pio_comparison(@embedFile("comparison_tests/uart_rx.pio"));
 }
 
@@ -163,6 +163,6 @@ test "pio.comparison.uart_tx" {
 }
 
 test "pio.comparison.ws2812" {
-    @setEvalBranchQuota(10000);
+    @setEvalBranchQuota(11000);
     try pio_comparison(@embedFile("comparison_tests/ws2812.pio"));
 }
