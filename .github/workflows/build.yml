@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [
+          linux-latest,
           windows-latest,
           macos-latest,
         ]
