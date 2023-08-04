@@ -1,5 +1,5 @@
 const std = @import("std");
-const FileSource = std.build.FileSource;
+const LazyPath = std.build.LazyPath;
 
 const MemoryRegion = @import("MemoryRegion.zig");
 const Cpu = @import("Cpu.zig");
@@ -7,10 +7,10 @@ const Cpu = @import("Cpu.zig");
 const Chip = @This();
 
 name: []const u8,
-source: FileSource,
+source: LazyPath,
 cpu: Cpu,
-hal: ?FileSource = null,
-json_register_schema: ?FileSource = null,
+hal: ?LazyPath = null,
+json_register_schema: ?LazyPath = null,
 memory_regions: []const MemoryRegion,
 
 pub fn from_standard_paths(comptime root_dir: []const u8, args: struct {
