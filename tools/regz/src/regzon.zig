@@ -977,17 +977,14 @@ fn stringify_test(comptime init: DbInitFn, expected: []const u8) !void {
     defer buffer.deinit();
 
     const test_stringify_opts = .{
-        .whitespace = .{
-            .indent_level = 0,
-            .indent = .{ .space = 2 },
-        },
+        .whitespace = .indent_2,
     };
 
     try db.json_stringify(test_stringify_opts, buffer.writer());
     try expectEqualStrings(expected, buffer.items);
 }
 
-fn empty_db(allocator: Allocator) !Database {
+fn empty_db(allocator: Allocator) error{OutOfMemory}!Database {
     return Database.init(allocator);
 }
 
