@@ -6,9 +6,7 @@ const GeneratedFile = std.build.GeneratedFile;
 
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{
-        .preferred_optimize_mode = .ReleaseSafe,
-    });
+    const optimize = b.standardOptimizeOption(.{});
 
     const libxml2_dep = b.dependency("libxml2", .{
         .target = target,
