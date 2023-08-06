@@ -203,6 +203,11 @@ pub fn build(b: *Build) !void {
     const backings = @import("test/backings.zig");
     const optimize = b.standardOptimizeOption(.{});
 
+    // This only ever intends to run on the host machine, so no target or
+    // optimize set
+    const regz_dep = b.dependency("regz", .{});
+    b.installArtifact(regz_dep.artifact("regz"));
+
     const minimal = addEmbeddedExecutable(b, .{
         .name = "minimal",
         .source_file = .{
