@@ -21,19 +21,12 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
 
-    const rev_parse = b.addSystemCommand(&.{ "git", "rev-parse", "HEAD" });
-    const commit = rev_parse.captureStdOut();
-
-    const build_options = b.addOptions();
-    build_options.addOptionPath("commit", commit);
-
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    regz.addOptions("build_options", build_options);
     regz.addModule("clap", clap_dep.module("clap"));
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     b.installArtifact(regz);
@@ -79,7 +72,6 @@ pub fn build(b: *std.build.Builder) !void {
         .target = target,
         .optimize = optimize,
     });
-    tests.addOptions("build_options", build_options);
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&tests.step);
