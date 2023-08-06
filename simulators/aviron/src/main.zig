@@ -1,8 +1,8 @@
 const std = @import("std");
 pub const isa = @import("isa.zig");
+pub const Cpu = @import("Cpu.zig");
 
 pub fn main() !void {
-    // isa.printLut();
     const allocator = std.heap.page_allocator;
 
     var thing = try std.fs.cwd().openFile("zig-out/bin/aviron-sample-math", .{});
@@ -36,14 +36,12 @@ pub fn main() !void {
     try source.seekTo(text.?[0]);
     var text_data = try allocator.alloc(u8, text.?[1]);
     try source.reader().readNoEof(text_data);
-
-    var fbs = std.io.fixedBufferStream(text_data);
-
     std.log.info("{}", .{std.fmt.fmtSliceHexLower(text_data)});
 
-    while (true) {
-        std.log.info("{any}", .{isa.decode(fbs.reader()) catch break});
-    }
+    var cpu = Cpu{};
+
+    @memcpy(cpu.memory[0..text_data.len], text_data);
+    try cpu.run();
 }
 
 // pub const DecodeError = error{InvalidInstruction};
