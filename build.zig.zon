@@ -1,0 +1,10 @@
+.{
+    .name = "microzig",
+    .version = "0.0.0",
+    .dependencies = .{
+        .regz = .{
+            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/20b744499e79658d506c19b92619f63e17d476ac.tar.gz",
+            .hash = "12201469ed6a99d87abf0ea9bb33fa98eb720ffcea96a17b4759fc1be0005d1abbf9",
+        },
+    },
+}
