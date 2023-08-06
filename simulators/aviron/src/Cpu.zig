@@ -3,32 +3,33 @@ const isa = @import("isa.zig");
 
 const Cpu = @This();
 
-pub const StatusRegisters = enum {
+pub const StatusRegisters = enum(u8) {
     const Map = std.enums.EnumSet(@This());
 
-    /// Global Interrupt Enable
-    i,
-    /// Copy Storage
-    t,
-    /// Half Carry Flag
-    h,
-    /// Sign Flag, S = N xor V
-    s,
-    /// Two's Compliment Overflow Flag
-    v,
-    /// Negative Flag
-    n,
-    /// Zero Flag
-    z,
     /// Carry Flag
     c,
+    /// Zero Flag
+    z,
+    /// Negative Flag
+    n,
+    /// Two's Compliment Overflow Flag
+    v,
+    /// Sign Flag, S = N xor V
+    s,
+    /// Half Carry Flag
+    h,
+    /// Copy Storage
+    t,
+    /// Global Interrupt Enable
+    i,
 };
 
 pc: u32 = 0,
 gp_registers: [32]u8 = [1]u8{0} ** 32,
 st_registers: StatusRegisters.Map = StatusRegisters.Map.initEmpty(),
+io_registers: [64]u8 = [1]u8{0} ** 64,
 
-memory: [1024 * 8]u8 = undefined,
+memory: [1024 * 4]u16 = undefined,
 
 pub fn getIndirectAddressRegister(cpu: *Cpu, which: enum { x, y, z }) *u16 {
     return @ptrCast(cpu.gp_registers[26 + @intFromEnum(which) * 2][0..2]);
@@ -40,9 +41,9 @@ pub fn shiftProgramCounter(cpu: *Cpu, by: i32) void {
 
 pub fn run(cpu: *Cpu) !void {
     while (true) : (cpu.pc += 1) {
-        const inst = isa.decode(@bitCast(cpu.memory[cpu.pc * 2 ..][0..2].*)) catch break;
+        const inst = isa.decode(cpu.memory[cpu.pc]) catch break;
 
-        std.log.info("{any}", .{inst});
+        std.log.info(" {any}", .{inst});
 
         switch (inst) {
             .movw,
@@ -54,9 +55,26 @@ pub fn run(cpu: *Cpu) !void {
             .fmulsu,
             => {},
             .cpc => |bits| {
-                // TODO: fix status register sets; this is bad!!
-                if (cpu.gp_registers[bits.d] == cpu.gp_registers[bits.r])
+                const rd = cpu.gp_registers[bits.d];
+                const rr = cpu.gp_registers[bits.r];
+
+                if (rr == rd)
                     cpu.st_registers.setPresent(.z, false);
+
+                const result: u8 = @intFromBool(rr == rd);
+
+                // carry & half carry
+                const sub_carry: u8 = (~rd & rr) | (rr & result) | (result & ~rd);
+                cpu.st_registers.setPresent(.h, (sub_carry >> 3) & 1 != 0);
+                cpu.st_registers.setPresent(.c, (sub_carry >> 7) & 1 != 0);
+
+                // overflow
+                cpu.st_registers.setPresent(.v, (((rd & ~rr & ~result) | (~rd & rr & result)) >> 7) & 1 != 0);
+
+                if (result == 1)
+                    cpu.st_registers.setPresent(.z, false);
+                cpu.st_registers.setPresent(.n, (result >> 7) & 1 != 0);
+                cpu.st_registers.setPresent(.s, @intFromBool(cpu.st_registers.contains(.n)) ^ @intFromBool(cpu.st_registers.contains(.v)) != 0);
             },
             .sbc,
             .add,
@@ -74,8 +92,19 @@ pub fn run(cpu: *Cpu) !void {
                 if (!(16 <= register and register <= 31))
                     return error.InvalidInstruction;
 
-                // TODO: fix status register sets; this is bad!!
-                cpu.st_registers.setPresent(.z, bits.k != cpu.gp_registers[register]);
+                const result: u8 = @intFromBool(bits.k == cpu.gp_registers[register]);
+
+                // carry & half carry
+                const sub_carry: u8 = (~register & bits.k) | (bits.k & result) | (result & ~register);
+                cpu.st_registers.setPresent(.h, (sub_carry >> 3) & 1 != 0);
+                cpu.st_registers.setPresent(.c, (sub_carry >> 7) & 1 != 0);
+
+                // overflow
+                cpu.st_registers.setPresent(.v, (((register & ~bits.k & ~result) | (~register & bits.k & result)) >> 7) & 1 != 0);
+
+                cpu.st_registers.setPresent(.z, result == 0);
+                cpu.st_registers.setPresent(.n, (result >> 7) & 1 != 0);
+                cpu.st_registers.setPresent(.s, @intFromBool(cpu.st_registers.contains(.n)) ^ @intFromBool(cpu.st_registers.contains(.v)) != 0);
             },
             .sbci,
             .subi,

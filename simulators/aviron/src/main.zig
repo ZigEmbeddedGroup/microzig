@@ -40,7 +40,7 @@ pub fn main() !void {
 
     var cpu = Cpu{};
 
-    @memcpy(cpu.memory[0..text_data.len], text_data);
+    @memcpy(@as([*]u8, @ptrCast((&cpu.memory).ptr))[0..text_data.len], text_data);
     try cpu.run();
 }
 
