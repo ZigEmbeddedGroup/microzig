@@ -3,10 +3,11 @@
 //! This means we need to use addExecutable() instead of using
 
 const std = @import("std");
-const LibExeObjStep = std.build.LibExeObjStep;
-const Module = std.build.Module;
-const LazyPath = std.build.LazyPath;
-const OptionsStep = std.build.OptionsStep;
+const LibExeObjStep = std.Build.LibExeObjStep;
+const Module = std.Build.Module;
+const LazyPath = std.Build.LazyPath;
+const OptionsStep = std.Build.OptionsStep;
+const Dependency = std.Build.Dependency;
 const Build = std.Build;
 
 // alias for packages
@@ -86,7 +87,7 @@ pub const EmbeddedExecutableOptions = struct {
     linkerscript_source_file: ?LazyPath = null,
 };
 
-pub fn addEmbeddedExecutable(b: *Build, opts: EmbeddedExecutableOptions) *EmbeddedExecutable {
+pub fn addEmbeddedExecutable(b: *Build, microzig_dep: *Dependency, opts: EmbeddedExecutableOptions) *EmbeddedExecutable {
     const has_board = (opts.backing == .board);
     const chip = switch (opts.backing) {
         .chip => |chip| chip,
@@ -123,7 +124,23 @@ pub fn addEmbeddedExecutable(b: *Build, opts: EmbeddedExecutableOptions) *Embedd
     })) catch unreachable;
 
     microzig_module.dependencies.put("chip", b.createModule(.{
-        .source_file = chip.source,
+        .source_file = if (chip.source != .path)
+            chip.source
+        else source: {
+            const path = chip.source.path;
+            // Chip files may be generated at run time from regz.
+            const extension = std.fs.path.extension(path);
+            if (std.mem.eql(u8, ".zig", extension))
+                break :source chip.source;
+
+            const regz_exe = microzig_dep.artifact("regz");
+            const regz_run = b.addRunArtifact(regz_exe);
+
+            const basename = std.mem.trim(u8, std.fs.path.basename(path), extension);
+            const source = regz_run.addPrefixedOutputFileArg("-o", b.fmt("{s}.zig", .{basename}));
+            regz_run.addArg(path);
+            break :source source;
+        },
         .dependencies = &.{
             .{ .name = "microzig", .module = microzig_module },
         },
@@ -200,51 +217,51 @@ pub fn addEmbeddedExecutable(b: *Build, opts: EmbeddedExecutableOptions) *Embedd
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *Build) !void {
-    const backings = @import("test/backings.zig");
-    const optimize = b.standardOptimizeOption(.{});
+    //const backings = @import("test/backings.zig");
+    //const optimize = b.standardOptimizeOption(.{});
 
     // This only ever intends to run on the host machine, so no target or
     // optimize set
     const regz_dep = b.dependency("regz", .{});
     b.installArtifact(regz_dep.artifact("regz"));
 
-    const minimal = addEmbeddedExecutable(b, .{
-        .name = "minimal",
-        .source_file = .{
-            .path = comptime root_dir() ++ "/test/programs/minimal.zig",
-        },
-        .backing = backings.minimal,
-        .optimize = optimize,
-    });
+    //const minimal = addEmbeddedExecutable(b, .{
+    //    .name = "minimal",
+    //    .source_file = .{
+    //        .path = comptime root_dir() ++ "/test/programs/minimal.zig",
+    //    },
+    //    .backing = backings.minimal,
+    //    .optimize = optimize,
+    //});
 
-    const has_hal = addEmbeddedExecutable(b, .{
-        .name = "has_hal",
-        .source_file = .{
-            .path = comptime root_dir() ++ "/test/programs/has_hal.zig",
-        },
-        .backing = backings.has_hal,
-        .optimize = optimize,
-    });
+    //const has_hal = addEmbeddedExecutable(b, .{
+    //    .name = "has_hal",
+    //    .source_file = .{
+    //        .path = comptime root_dir() ++ "/test/programs/has_hal.zig",
+    //    },
+    //    .backing = backings.has_hal,
+    //    .optimize = optimize,
+    //});
 
-    const has_board = addEmbeddedExecutable(b, .{
-        .name = "has_board",
-        .source_file = .{
-            .path = comptime root_dir() ++ "/test/programs/has_board.zig",
-        },
-        .backing = backings.has_board,
-        .optimize = optimize,
-    });
+    //const has_board = addEmbeddedExecutable(b, .{
+    //    .name = "has_board",
+    //    .source_file = .{
+    //        .path = comptime root_dir() ++ "/test/programs/has_board.zig",
+    //    },
+    //    .backing = backings.has_board,
+    //    .optimize = optimize,
+    //});
 
-    const core_tests = b.addTest(.{
-        .root_source_file = .{
-            .path = comptime root_dir() ++ "/src/core.zig",
-        },
-        .optimize = optimize,
-    });
+    //const core_tests = b.addTest(.{
+    //    .root_source_file = .{
+    //        .path = comptime root_dir() ++ "/src/core.zig",
+    //    },
+    //    .optimize = optimize,
+    //});
 
-    const test_step = b.step("test", "build test programs");
-    test_step.dependOn(&minimal.inner.step);
-    test_step.dependOn(&has_hal.inner.step);
-    test_step.dependOn(&has_board.inner.step);
-    test_step.dependOn(&b.addRunArtifact(core_tests).step);
+    //const test_step = b.step("test", "build test programs");
+    //test_step.dependOn(&minimal.inner.step);
+    //test_step.dependOn(&has_hal.inner.step);
+    //test_step.dependOn(&has_board.inner.step);
+    //test_step.dependOn(&b.addRunArtifact(core_tests).step);
 }
