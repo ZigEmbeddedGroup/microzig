@@ -149,9 +149,7 @@ fn addEmbeddedExecutableImpl(
             // optimize set
             const microzig_b = microzig_dep.?.builder;
             const regz_dep = microzig_b.dependency("regz", .{ .optimize = .ReleaseSafe });
-            b.installArtifact(regz_dep.artifact("regz"));
-
-            const regz_exe = microzig_dep.?.artifact("regz");
+            const regz_exe = regz_dep.artifact("regz");
             const regz_run = b.addRunArtifact(regz_exe);
 
             const basename = std.mem.trim(u8, std.fs.path.basename(path), extension);
