@@ -222,7 +222,7 @@ pub fn build(b: *Build) !void {
 
     // This only ever intends to run on the host machine, so no target or
     // optimize set
-    const regz_dep = b.dependency("regz", .{});
+    const regz_dep = b.dependency("regz", .{ .optimize = .ReleaseSafe });
     b.installArtifact(regz_dep.artifact("regz"));
 
     //const minimal = addEmbeddedExecutable(b, .{
