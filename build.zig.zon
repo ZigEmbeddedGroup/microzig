@@ -3,8 +3,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{
-            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/20b744499e79658d506c19b92619f63e17d476ac.tar.gz",
-            .hash = "12201469ed6a99d87abf0ea9bb33fa98eb720ffcea96a17b4759fc1be0005d1abbf9",
+            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/b0ded63fc284da0ed9f4776eb7d1c4ad7175622d.tar.gz",
+            .hash = "1220e9299f949d3566a1dc4dd62caf82a06bb6c8ad5a693e62117b0941da9dc55ea2",
         },
     },
 }
