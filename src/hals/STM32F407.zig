@@ -111,16 +111,16 @@ pub const gpio = struct {
         set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
         set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b10);
         if (pin.pin_number < 8) {
-            set_reg_field(@field(pin.gpio_port, "AFRL"), "AFRL" ++ pin.suffix, @enumToInt(af));
+            set_reg_field(@field(pin.gpio_port, "AFRL"), "AFRL" ++ pin.suffix, @intFromEnum(af));
         } else {
-            set_reg_field(@field(pin.gpio_port, "AFRH"), "AFRH" ++ pin.suffix, @enumToInt(af));
+            set_reg_field(@field(pin.gpio_port, "AFRH"), "AFRH" ++ pin.suffix, @intFromEnum(af));
         }
     }
 
     pub fn read(comptime pin: type) micro.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @intToEnum(micro.gpio.State, reg_value);
+        return @as(micro.gpio.State, @enumFromInt(reg_value));
     }
 
     pub fn write(comptime pin: type, state: micro.gpio.State) void {
@@ -278,11 +278,11 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 
             // set parity
             if (config.parity) |parity| {
-                @field(peripherals, usart_name).CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
+                @field(peripherals, usart_name).CR1.modify(.{ .PCE = 1, .PS = @intFromEnum(parity) });
             } // otherwise, no need to set no parity since we reset Control Registers above, and it's the default
 
             // set number of stop bits
-            @field(peripherals, usart_name).CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
+            @field(peripherals, usart_name).CR2.modify(.{ .STOP = @intFromEnum(config.stop_bits) });
 
             // set the baud rate
             // Despite the reference manual talking about fractional calculation and other buzzwords,
@@ -297,7 +297,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
                 2...5 => clocks.apb1,
                 else => unreachable,
             };
-            const usartdiv = @intCast(u16, @divTrunc(bus_frequency, config.baud_rate));
+            const usartdiv = @as(u16, @intCast(@divTrunc(bus_frequency, config.baud_rate)));
             @field(peripherals, usart_name).BRR.raw = usartdiv;
 
             // enable USART, and its transmitter and receiver
@@ -355,7 +355,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         pub fn rx(self: Self) u8 {
             while (!self.can_read()) {} // Wait till the data is received
             const data_with_parity_bit: u9 = @field(peripherals, usart_name).DR.read();
-            return @intCast(u8, data_with_parity_bit & self.parity_read_mask);
+            return @as(u8, @intCast(data_with_parity_bit & self.parity_read_mask));
         }
     };
 }
@@ -463,7 +463,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
 
             // 4. Configure I2C timing
             const bus_frequency_hz = micro.clock.get().apb1;
-            const bus_frequency_mhz: u6 = @intCast(u6, @divExact(bus_frequency_hz, 1_000_000));
+            const bus_frequency_mhz: u6 = @as(u6, @intCast(@divExact(bus_frequency_hz, 1_000_000)));
 
             if (bus_frequency_mhz < 2 or bus_frequency_mhz > 50) {
                 return error.InvalidBusFrequency;
@@ -475,7 +475,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             switch (config.target_speed) {
                 10_000...100_000 => {
                     // CCR is bus_freq / (target_speed * 2). We use floor to avoid exceeding the target speed.
-                    const ccr = @intCast(u12, @divFloor(bus_frequency_hz, config.target_speed * 2));
+                    const ccr = @as(u12, @intCast(@divFloor(bus_frequency_hz, config.target_speed * 2)));
                     i2c_base.CCR.modify(.{ .CCR = ccr });
                     // Trise is bus frequency in Mhz + 1
                     i2c_base.TRISE.modify(bus_frequency_mhz + 1);
@@ -529,7 +529,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
                 {}
 
                 // Write the address to bits 7..1, bit 0 stays at 0 to indicate write operation
-                i2c_base.DR.modify(@intCast(u8, self.address) << 1);
+                i2c_base.DR.modify(@as(u8, @intCast(self.address)) << 1);
 
                 // Wait for address confirmation
                 while (i2c_base.SR1.read().ADDR == 0) {}
@@ -584,7 +584,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
                 {}
 
                 // Write the address to bits 7..1, bit 0 set to 1 to indicate read operation
-                i2c_base.DR.modify((@intCast(u8, self.address) << 1) | 1);
+                i2c_base.DR.modify((@as(u8, @intCast(self.address)) << 1) | 1);
 
                 // Wait for address confirmation
                 while (i2c_base.SR1.read().ADDR == 0) {}

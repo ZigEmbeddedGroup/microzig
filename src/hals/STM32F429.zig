@@ -80,7 +80,7 @@ pub const gpio = struct {
     pub fn read(comptime pin: type) micro.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @intToEnum(micro.gpio.State, reg_value);
+        return @as(micro.gpio.State, @enumFromInt(reg_value));
     }
 
     pub fn write(comptime pin: type, state: micro.gpio.State) void {

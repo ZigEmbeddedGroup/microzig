@@ -121,133 +121,133 @@ pub const devices = struct {
 
         pub const peripherals = struct {
             ///  General purpose timer
-            pub const TIM2 = @ptrCast(*volatile types.TIM2, 0x40000000);
+            pub const TIM2 = @as(*volatile types.TIM2, @ptrFromInt(0x40000000));
             ///  General purpose timer
-            pub const TIM3 = @ptrCast(*volatile types.TIM2, 0x40000400);
+            pub const TIM3 = @as(*volatile types.TIM2, @ptrFromInt(0x40000400));
             ///  General purpose timer
-            pub const TIM4 = @ptrCast(*volatile types.TIM2, 0x40000800);
+            pub const TIM4 = @as(*volatile types.TIM2, @ptrFromInt(0x40000800));
             ///  Basic timers
-            pub const TIM6 = @ptrCast(*volatile types.TIM6, 0x40001000);
+            pub const TIM6 = @as(*volatile types.TIM6, @ptrFromInt(0x40001000));
             ///  Basic timers
-            pub const TIM7 = @ptrCast(*volatile types.TIM6, 0x40001400);
+            pub const TIM7 = @as(*volatile types.TIM6, @ptrFromInt(0x40001400));
             ///  Real-time clock
-            pub const RTC = @ptrCast(*volatile types.RTC, 0x40002800);
+            pub const RTC = @as(*volatile types.RTC, @ptrFromInt(0x40002800));
             ///  Window watchdog
-            pub const WWDG = @ptrCast(*volatile types.WWDG, 0x40002c00);
+            pub const WWDG = @as(*volatile types.WWDG, @ptrFromInt(0x40002c00));
             ///  Independent watchdog
-            pub const IWDG = @ptrCast(*volatile types.IWDG, 0x40003000);
+            pub const IWDG = @as(*volatile types.IWDG, @ptrFromInt(0x40003000));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const I2S2ext = @ptrCast(*volatile types.SPI1, 0x40003400);
+            pub const I2S2ext = @as(*volatile types.SPI1, @ptrFromInt(0x40003400));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const SPI2 = @ptrCast(*volatile types.SPI1, 0x40003800);
+            pub const SPI2 = @as(*volatile types.SPI1, @ptrFromInt(0x40003800));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const SPI3 = @ptrCast(*volatile types.SPI1, 0x40003c00);
+            pub const SPI3 = @as(*volatile types.SPI1, @ptrFromInt(0x40003c00));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const I2S3ext = @ptrCast(*volatile types.SPI1, 0x40004000);
+            pub const I2S3ext = @as(*volatile types.SPI1, @ptrFromInt(0x40004000));
             ///  Universal synchronous asynchronous receiver transmitter
-            pub const USART2 = @ptrCast(*volatile types.USART1, 0x40004400);
+            pub const USART2 = @as(*volatile types.USART1, @ptrFromInt(0x40004400));
             ///  Universal synchronous asynchronous receiver transmitter
-            pub const USART3 = @ptrCast(*volatile types.USART1, 0x40004800);
+            pub const USART3 = @as(*volatile types.USART1, @ptrFromInt(0x40004800));
             ///  Universal synchronous asynchronous receiver transmitter
-            pub const UART4 = @ptrCast(*volatile types.USART1, 0x40004c00);
+            pub const UART4 = @as(*volatile types.USART1, @ptrFromInt(0x40004c00));
             ///  Universal synchronous asynchronous receiver transmitter
-            pub const UART5 = @ptrCast(*volatile types.USART1, 0x40005000);
+            pub const UART5 = @as(*volatile types.USART1, @ptrFromInt(0x40005000));
             ///  Inter-integrated circuit
-            pub const I2C1 = @ptrCast(*volatile types.I2C1, 0x40005400);
+            pub const I2C1 = @as(*volatile types.I2C1, @ptrFromInt(0x40005400));
             ///  Inter-integrated circuit
-            pub const I2C2 = @ptrCast(*volatile types.I2C1, 0x40005800);
+            pub const I2C2 = @as(*volatile types.I2C1, @ptrFromInt(0x40005800));
             ///  Universal serial bus full-speed device interface
-            pub const USB_FS = @ptrCast(*volatile types.USB_FS, 0x40005c00);
+            pub const USB_FS = @as(*volatile types.USB_FS, @ptrFromInt(0x40005c00));
             ///  Controller area network
-            pub const CAN = @ptrCast(*volatile types.CAN, 0x40006400);
+            pub const CAN = @as(*volatile types.CAN, @ptrFromInt(0x40006400));
             ///  Power control
-            pub const PWR = @ptrCast(*volatile types.PWR, 0x40007000);
+            pub const PWR = @as(*volatile types.PWR, @ptrFromInt(0x40007000));
             ///  Digital-to-analog converter
-            pub const DAC = @ptrCast(*volatile types.DAC, 0x40007400);
+            pub const DAC = @as(*volatile types.DAC, @ptrFromInt(0x40007400));
             ///  Inter-integrated circuit
-            pub const I2C3 = @ptrCast(*volatile types.I2C1, 0x40007800);
+            pub const I2C3 = @as(*volatile types.I2C1, @ptrFromInt(0x40007800));
             ///  System configuration controller _Comparator and Operational amplifier
-            pub const SYSCFG_COMP_OPAMP = @ptrCast(*volatile types.SYSCFG_COMP_OPAMP, 0x40010000);
+            pub const SYSCFG_COMP_OPAMP = @as(*volatile types.SYSCFG_COMP_OPAMP, @ptrFromInt(0x40010000));
             ///  External interrupt/event controller
-            pub const EXTI = @ptrCast(*volatile types.EXTI, 0x40010400);
+            pub const EXTI = @as(*volatile types.EXTI, @ptrFromInt(0x40010400));
             ///  Advanced timer
-            pub const TIM1 = @ptrCast(*volatile types.TIM1, 0x40012c00);
+            pub const TIM1 = @as(*volatile types.TIM1, @ptrFromInt(0x40012c00));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const SPI1 = @ptrCast(*volatile types.SPI1, 0x40013000);
+            pub const SPI1 = @as(*volatile types.SPI1, @ptrFromInt(0x40013000));
             ///  Advanced-timers
-            pub const TIM8 = @ptrCast(*volatile types.TIM8, 0x40013400);
+            pub const TIM8 = @as(*volatile types.TIM8, @ptrFromInt(0x40013400));
             ///  Universal synchronous asynchronous receiver transmitter
-            pub const USART1 = @ptrCast(*volatile types.USART1, 0x40013800);
+            pub const USART1 = @as(*volatile types.USART1, @ptrFromInt(0x40013800));
             ///  Serial peripheral interface/Inter-IC sound
-            pub const SPI4 = @ptrCast(*volatile types.SPI1, 0x40013c00);
+            pub const SPI4 = @as(*volatile types.SPI1, @ptrFromInt(0x40013c00));
             ///  General purpose timers
-            pub const TIM15 = @ptrCast(*volatile types.TIM15, 0x40014000);
+            pub const TIM15 = @as(*volatile types.TIM15, @ptrFromInt(0x40014000));
             ///  General-purpose-timers
-            pub const TIM16 = @ptrCast(*volatile types.TIM16, 0x40014400);
+            pub const TIM16 = @as(*volatile types.TIM16, @ptrFromInt(0x40014400));
             ///  General purpose timer
-            pub const TIM17 = @ptrCast(*volatile types.TIM17, 0x40014800);
+            pub const TIM17 = @as(*volatile types.TIM17, @ptrFromInt(0x40014800));
             ///  Advanced timer
-            pub const TIM20 = @ptrCast(*volatile types.TIM1, 0x40015000);
+            pub const TIM20 = @as(*volatile types.TIM1, @ptrFromInt(0x40015000));
             ///  DMA controller 1
-            pub const DMA1 = @ptrCast(*volatile types.DMA1, 0x40020000);
+            pub const DMA1 = @as(*volatile types.DMA1, @ptrFromInt(0x40020000));
             ///  DMA controller 1
-            pub const DMA2 = @ptrCast(*volatile types.DMA1, 0x40020400);
+            pub const DMA2 = @as(*volatile types.DMA1, @ptrFromInt(0x40020400));
             ///  Reset and clock control
-            pub const RCC = @ptrCast(*volatile types.RCC, 0x40021000);
+            pub const RCC = @as(*volatile types.RCC, @ptrFromInt(0x40021000));
             ///  Flash
-            pub const Flash = @ptrCast(*volatile types.Flash, 0x40022000);
+            pub const Flash = @as(*volatile types.Flash, @ptrFromInt(0x40022000));
             ///  cyclic redundancy check calculation unit
-            pub const CRC = @ptrCast(*volatile types.CRC, 0x40023000);
+            pub const CRC = @as(*volatile types.CRC, @ptrFromInt(0x40023000));
             ///  Touch sensing controller
-            pub const TSC = @ptrCast(*volatile types.TSC, 0x40024000);
+            pub const TSC = @as(*volatile types.TSC, @ptrFromInt(0x40024000));
             ///  General-purpose I/Os
-            pub const GPIOA = @ptrCast(*volatile types.GPIOA, 0x48000000);
+            pub const GPIOA = @as(*volatile types.GPIOA, @ptrFromInt(0x48000000));
             ///  General-purpose I/Os
-            pub const GPIOB = @ptrCast(*volatile types.GPIOB, 0x48000400);
+            pub const GPIOB = @as(*volatile types.GPIOB, @ptrFromInt(0x48000400));
             ///  General-purpose I/Os
-            pub const GPIOC = @ptrCast(*volatile types.GPIOB, 0x48000800);
+            pub const GPIOC = @as(*volatile types.GPIOB, @ptrFromInt(0x48000800));
             ///  General-purpose I/Os
-            pub const GPIOD = @ptrCast(*volatile types.GPIOB, 0x48000c00);
+            pub const GPIOD = @as(*volatile types.GPIOB, @ptrFromInt(0x48000c00));
             ///  General-purpose I/Os
-            pub const GPIOE = @ptrCast(*volatile types.GPIOB, 0x48001000);
+            pub const GPIOE = @as(*volatile types.GPIOB, @ptrFromInt(0x48001000));
             ///  General-purpose I/Os
-            pub const GPIOF = @ptrCast(*volatile types.GPIOB, 0x48001400);
+            pub const GPIOF = @as(*volatile types.GPIOB, @ptrFromInt(0x48001400));
             ///  General-purpose I/Os
-            pub const GPIOG = @ptrCast(*volatile types.GPIOB, 0x48001800);
+            pub const GPIOG = @as(*volatile types.GPIOB, @ptrFromInt(0x48001800));
             ///  General-purpose I/Os
-            pub const GPIOH = @ptrCast(*volatile types.GPIOB, 0x48001c00);
+            pub const GPIOH = @as(*volatile types.GPIOB, @ptrFromInt(0x48001c00));
             ///  Analog-to-Digital Converter
-            pub const ADC1 = @ptrCast(*volatile types.ADC1, 0x50000000);
+            pub const ADC1 = @as(*volatile types.ADC1, @ptrFromInt(0x50000000));
             ///  Analog-to-Digital Converter
-            pub const ADC2 = @ptrCast(*volatile types.ADC1, 0x50000100);
+            pub const ADC2 = @as(*volatile types.ADC1, @ptrFromInt(0x50000100));
             ///  Analog-to-Digital Converter
-            pub const ADC1_2 = @ptrCast(*volatile types.ADC1_2, 0x50000300);
+            pub const ADC1_2 = @as(*volatile types.ADC1_2, @ptrFromInt(0x50000300));
             ///  Analog-to-Digital Converter
-            pub const ADC3 = @ptrCast(*volatile types.ADC1, 0x50000400);
+            pub const ADC3 = @as(*volatile types.ADC1, @ptrFromInt(0x50000400));
             ///  Analog-to-Digital Converter
-            pub const ADC4 = @ptrCast(*volatile types.ADC1, 0x50000500);
+            pub const ADC4 = @as(*volatile types.ADC1, @ptrFromInt(0x50000500));
             ///  Analog-to-Digital Converter
-            pub const ADC3_4 = @ptrCast(*volatile types.ADC1_2, 0x50000700);
+            pub const ADC3_4 = @as(*volatile types.ADC1_2, @ptrFromInt(0x50000700));
             ///  Flexible memory controller
-            pub const FMC = @ptrCast(*volatile types.FMC, 0xa0000400);
+            pub const FMC = @as(*volatile types.FMC, @ptrFromInt(0xa0000400));
             ///  System control block ACTLR
-            pub const SCB_ACTRL = @ptrCast(*volatile types.SCB_ACTRL, 0xe000e008);
+            pub const SCB_ACTRL = @as(*volatile types.SCB_ACTRL, @ptrFromInt(0xe000e008));
             ///  SysTick timer
-            pub const STK = @ptrCast(*volatile types.STK, 0xe000e010);
+            pub const STK = @as(*volatile types.STK, @ptrFromInt(0xe000e010));
             ///  Nested Vectored Interrupt Controller
-            pub const NVIC = @ptrCast(*volatile types.NVIC, 0xe000e100);
+            pub const NVIC = @as(*volatile types.NVIC, @ptrFromInt(0xe000e100));
             ///  System control block
-            pub const SCB = @ptrCast(*volatile types.SCB, 0xe000ed00);
+            pub const SCB = @as(*volatile types.SCB, @ptrFromInt(0xe000ed00));
             ///  Floating point unit CPACR
-            pub const FPU_CPACR = @ptrCast(*volatile types.FPU_CPACR, 0xe000ed88);
+            pub const FPU_CPACR = @as(*volatile types.FPU_CPACR, @ptrFromInt(0xe000ed88));
             ///  Memory protection unit
-            pub const MPU = @ptrCast(*volatile types.MPU, 0xe000ed90);
+            pub const MPU = @as(*volatile types.MPU, @ptrFromInt(0xe000ed90));
             ///  Nested vectored interrupt controller
-            pub const NVIC_STIR = @ptrCast(*volatile types.NVIC_STIR, 0xe000ef00);
+            pub const NVIC_STIR = @as(*volatile types.NVIC_STIR, @ptrFromInt(0xe000ef00));
             ///  Floting point unit
-            pub const FPU = @ptrCast(*volatile types.FPU, 0xe000ef34);
+            pub const FPU = @as(*volatile types.FPU, @ptrFromInt(0xe000ef34));
             ///  Debug support
-            pub const DBGMCU = @ptrCast(*volatile types.DBGMCU, 0xe0042000);
+            pub const DBGMCU = @as(*volatile types.DBGMCU, @ptrFromInt(0xe0042000));
         };
     };
 };

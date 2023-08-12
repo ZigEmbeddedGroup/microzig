@@ -103,7 +103,7 @@ pub const gpio = struct {
     pub fn read(comptime pin: type) micro.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @intToEnum(micro.gpio.State, reg_value);
+        return @as(micro.gpio.State, @enumFromInt(reg_value));
     }
 
     pub fn write(comptime pin: type, state: micro.gpio.State) void {
@@ -180,11 +180,11 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 
             // set parity
             if (config.parity) |parity| {
-                USART1.CR1.modify(.{ .PCE = 1, .PS = @enumToInt(parity) });
+                USART1.CR1.modify(.{ .PCE = 1, .PS = @intFromEnum(parity) });
             } else USART1.CR1.modify(.{ .PCE = 0 }); // no parity, probably the chip default
 
             // set number of stop bits
-            USART1.CR2.modify(.{ .STOP = @enumToInt(config.stop_bits) });
+            USART1.CR2.modify(.{ .STOP = @intFromEnum(config.stop_bits) });
 
             // set the baud rate
             // TODO: Do not use the _board_'s frequency, but the _U(S)ARTx_ frequency
@@ -193,7 +193,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             // if the board doesn't configure e.g. an HSE external crystal.
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const usartdiv = @intCast(u16, @divTrunc(micro.clock.get().apb1, config.baud_rate));
+            const usartdiv = @as(u16, @intCast(@divTrunc(micro.clock.get().apb1, config.baud_rate)));
             USART1.BRR.raw = usartdiv;
             // Above, ignore the BRR struct fields DIV_Mantissa and DIV_Fraction,
             // those seem to be for another chipset; .svd file bug?
@@ -254,7 +254,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         pub fn rx(self: Self) u8 {
             while (!self.can_read()) {} // Wait till the data is received
             const data_with_parity_bit: u9 = USART1.RDR.read().RDR;
-            return @intCast(u8, data_with_parity_bit & self.parity_read_mask);
+            return @as(u8, @intCast(data_with_parity_bit & self.parity_read_mask));
         }
     };
 }
@@ -429,7 +429,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
                     .ADD10 = 0,
                     .SADD1 = self.address,
                     .RD_WRN = 1, // read
-                    .NBYTES = @intCast(u8, buffer.len),
+                    .NBYTES = @as(u8, @intCast(buffer.len)),
                 });
                 debug_print("I2C1 prepared for read of {} byte(s) from 0b{b:0<7}\r\n", .{ buffer.len, self.address });
 
@@ -556,7 +556,7 @@ pub fn SpiBus(comptime index: usize) type {
 
             // write
             const write_byte = if (optional_write_byte) |b| b else undefined; // dummy value
-            @bitCast([dr_byte_size]u8, SPI1.DR.*)[0] = write_byte;
+            @as([dr_byte_size]u8, @bitCast(SPI1.DR.*))[0] = write_byte;
             debug_print("Sent: {X:2}.\r\n", .{write_byte});
 
             // wait until read processed
@@ -568,7 +568,7 @@ pub fn SpiBus(comptime index: usize) type {
             // read
             var data_read = SPI1.DR.raw;
             _ = SPI1.SR.read(); // clear overrun flag
-            const dr_lsb = @bitCast([dr_byte_size]u8, data_read)[0];
+            const dr_lsb = @as([dr_byte_size]u8, @bitCast(data_read))[0];
             debug_print("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
             if (optional_read_pointer) |read_pointer| read_pointer.* = dr_lsb;
         }
