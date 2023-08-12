@@ -35,7 +35,7 @@ For MicroZig internals please see the xref:docs/design.adoc[Design Document].
 
 == Does MicroZig support X hardware?
 
-MicroZig is designed to cover as wide a swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case, see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardare].
+MicroZig is designed to cover as wide a swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case, see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardware].
 
 Start with an empty Zig project by running `zig init-exe`, and add the hardware support package as a submodule. We'll use `microchip-atmega` in our example:
 
