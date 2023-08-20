@@ -51,16 +51,16 @@ pub const EmbeddedExecutable = struct {
         b.installArtifact(exe.inner);
     }
 
-    pub fn addIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
+    pub fn addIncludePath(exe: *EmbeddedExecutable, path: LazyPath) void {
         exe.inner.addIncludePath(path);
     }
 
-    pub fn addSystemIncludePath(exe: *EmbeddedExecutable, path: []const u8) void {
+    pub fn addSystemIncludePath(exe: *EmbeddedExecutable, path: LazyPath) void {
         return exe.inner.addSystemIncludePath(path);
     }
 
-    pub fn addCSourceFile(exe: *EmbeddedExecutable, file: []const u8, flags: []const []const u8) void {
-        exe.inner.addCSourceFile(file, flags);
+    pub fn addCSourceFile(exe: *EmbeddedExecutable, source: Build.Step.Compile.CSourceFile) void {
+        exe.inner.addCSourceFile(source);
     }
 
     pub fn addOptions(exe: *EmbeddedExecutable, module_name: []const u8, options: *OptionsStep) void {
@@ -70,8 +70,8 @@ pub const EmbeddedExecutable = struct {
         app_module.dependencies.put(module_name, opt_module) catch @panic("OOM");
     }
 
-    pub fn addObjectFile(exe: *EmbeddedExecutable, source_file: []const u8) void {
-        exe.inner.addObjectFile(source_file);
+    pub fn addObjectFile(exe: *EmbeddedExecutable, source: LazyPath) void {
+        exe.inner.addObjectFile(source);
     }
 };
 
