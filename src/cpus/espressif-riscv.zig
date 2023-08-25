@@ -61,7 +61,7 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    export fn _start() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+    export fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
         microzig.cpu.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :

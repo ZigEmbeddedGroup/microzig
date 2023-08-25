@@ -21,9 +21,9 @@ pub const gpio = struct {
         assertRange(pin);
         GPIO.FUNC_OUT_SEL_CFG[pin].modify(.{
             .OUT_SEL = config.function,
-            .INV_SEL = @boolToInt(config.invert_function),
-            .OEN_SEL = @boolToInt(config.direct_io),
-            .OEN_INV_SEL = @boolToInt(config.invert_direct_io),
+            .INV_SEL = @intFromBool(config.invert_function),
+            .OEN_SEL = @intFromBool(config.direct_io),
+            .OEN_INV_SEL = @intFromBool(config.invert_direct_io),
         });
         switch (config.direction) {
             .input => GPIO.ENABLE.raw &= ~(@as(u32, 1) << pin),

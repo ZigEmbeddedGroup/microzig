@@ -42,13 +42,13 @@ pub fn main() !void {
     while (true) {
         GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_R_PIN) });
         microzig.hal.uart.write(0, "R");
-        microzig.core.experimental.debug.busy_sleep(1_000_000);
+        microzig.core.experimental.debug.busy_sleep(100_000);
         GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_G_PIN) });
         microzig.hal.uart.write(0, "G");
-        microzig.core.experimental.debug.busy_sleep(1_000_000);
+        microzig.core.experimental.debug.busy_sleep(100_000);
         GPIO.OUT.modify(.{ .DATA_ORIG = (1 << LED_B_PIN) });
         microzig.hal.uart.write(0, "B");
-        microzig.core.experimental.debug.busy_sleep(1_000_000);
+        microzig.core.experimental.debug.busy_sleep(100_000);
     }
 }
 

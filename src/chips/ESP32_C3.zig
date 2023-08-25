@@ -33,77 +33,77 @@ pub const devices = struct {
 
         pub const peripherals = struct {
             ///  UART (Universal Asynchronous Receiver-Transmitter) Controller
-            pub const UART0 = @intToPtr(*volatile types.peripherals.UART0, 0x60000000);
+            pub const UART0 = @as(*volatile types.peripherals.UART0, @ptrFromInt(0x60000000));
             ///  SPI (Serial Peripheral Interface) Controller
-            pub const SPI1 = @intToPtr(*volatile types.peripherals.SPI1, 0x60002000);
+            pub const SPI1 = @as(*volatile types.peripherals.SPI1, @ptrFromInt(0x60002000));
             ///  SPI (Serial Peripheral Interface) Controller
-            pub const SPI0 = @intToPtr(*volatile types.peripherals.SPI0, 0x60003000);
+            pub const SPI0 = @as(*volatile types.peripherals.SPI0, @ptrFromInt(0x60003000));
             ///  General Purpose Input/Output
-            pub const GPIO = @intToPtr(*volatile types.peripherals.GPIO, 0x60004000);
+            pub const GPIO = @as(*volatile types.peripherals.GPIO, @ptrFromInt(0x60004000));
             ///  Sigma-Delta Modulation
-            pub const GPIOSD = @intToPtr(*volatile types.peripherals.GPIOSD, 0x60004f00);
+            pub const GPIOSD = @as(*volatile types.peripherals.GPIOSD, @ptrFromInt(0x60004f00));
             ///  Real-Time Clock Control
-            pub const RTC_CNTL = @intToPtr(*volatile types.peripherals.RTC_CNTL, 0x60008000);
+            pub const RTC_CNTL = @as(*volatile types.peripherals.RTC_CNTL, @ptrFromInt(0x60008000));
             ///  eFuse Controller
-            pub const EFUSE = @intToPtr(*volatile types.peripherals.EFUSE, 0x60008800);
+            pub const EFUSE = @as(*volatile types.peripherals.EFUSE, @ptrFromInt(0x60008800));
             ///  Input/Output Multiplexer
-            pub const IO_MUX = @intToPtr(*volatile types.peripherals.IO_MUX, 0x60009000);
+            pub const IO_MUX = @as(*volatile types.peripherals.IO_MUX, @ptrFromInt(0x60009000));
             ///  Universal Host Controller Interface
-            pub const UHCI1 = @intToPtr(*volatile types.peripherals.UHCI0, 0x6000c000);
+            pub const UHCI1 = @as(*volatile types.peripherals.UHCI0, @ptrFromInt(0x6000c000));
             ///  UART (Universal Asynchronous Receiver-Transmitter) Controller
-            pub const UART1 = @intToPtr(*volatile types.peripherals.UART0, 0x60010000);
+            pub const UART1 = @as(*volatile types.peripherals.UART0, @ptrFromInt(0x60010000));
             ///  I2C (Inter-Integrated Circuit) Controller
-            pub const I2C0 = @intToPtr(*volatile types.peripherals.I2C0, 0x60013000);
+            pub const I2C0 = @as(*volatile types.peripherals.I2C0, @ptrFromInt(0x60013000));
             ///  Universal Host Controller Interface
-            pub const UHCI0 = @intToPtr(*volatile types.peripherals.UHCI0, 0x60014000);
+            pub const UHCI0 = @as(*volatile types.peripherals.UHCI0, @ptrFromInt(0x60014000));
             ///  Remote Control Peripheral
-            pub const RMT = @intToPtr(*volatile types.peripherals.RMT, 0x60016000);
+            pub const RMT = @as(*volatile types.peripherals.RMT, @ptrFromInt(0x60016000));
             ///  LED Control PWM (Pulse Width Modulation)
-            pub const LEDC = @intToPtr(*volatile types.peripherals.LEDC, 0x60019000);
+            pub const LEDC = @as(*volatile types.peripherals.LEDC, @ptrFromInt(0x60019000));
             ///  Timer Group
-            pub const TIMG0 = @intToPtr(*volatile types.peripherals.TIMG0, 0x6001f000);
+            pub const TIMG0 = @as(*volatile types.peripherals.TIMG0, @ptrFromInt(0x6001f000));
             ///  Timer Group
-            pub const TIMG1 = @intToPtr(*volatile types.peripherals.TIMG0, 0x60020000);
+            pub const TIMG1 = @as(*volatile types.peripherals.TIMG0, @ptrFromInt(0x60020000));
             ///  System Timer
-            pub const SYSTIMER = @intToPtr(*volatile types.peripherals.SYSTIMER, 0x60023000);
+            pub const SYSTIMER = @as(*volatile types.peripherals.SYSTIMER, @ptrFromInt(0x60023000));
             ///  SPI (Serial Peripheral Interface) Controller
-            pub const SPI2 = @intToPtr(*volatile types.peripherals.SPI2, 0x60024000);
+            pub const SPI2 = @as(*volatile types.peripherals.SPI2, @ptrFromInt(0x60024000));
             ///  Advanced Peripheral Bus Controller
-            pub const APB_CTRL = @intToPtr(*volatile types.peripherals.APB_CTRL, 0x60026000);
+            pub const APB_CTRL = @as(*volatile types.peripherals.APB_CTRL, @ptrFromInt(0x60026000));
             ///  Hardware random number generator
-            pub const RNG = @intToPtr(*volatile types.peripherals.RNG, 0x60026000);
+            pub const RNG = @as(*volatile types.peripherals.RNG, @ptrFromInt(0x60026000));
             ///  Two-Wire Automotive Interface
-            pub const TWAI = @intToPtr(*volatile types.peripherals.TWAI, 0x6002b000);
+            pub const TWAI = @as(*volatile types.peripherals.TWAI, @ptrFromInt(0x6002b000));
             ///  I2S (Inter-IC Sound) Controller
-            pub const I2S = @intToPtr(*volatile types.peripherals.I2S, 0x6002d000);
+            pub const I2S = @as(*volatile types.peripherals.I2S, @ptrFromInt(0x6002d000));
             ///  AES (Advanced Encryption Standard) Accelerator
-            pub const AES = @intToPtr(*volatile types.peripherals.AES, 0x6003a000);
+            pub const AES = @as(*volatile types.peripherals.AES, @ptrFromInt(0x6003a000));
             ///  SHA (Secure Hash Algorithm) Accelerator
-            pub const SHA = @intToPtr(*volatile types.peripherals.SHA, 0x6003b000);
+            pub const SHA = @as(*volatile types.peripherals.SHA, @ptrFromInt(0x6003b000));
             ///  RSA (Rivest Shamir Adleman) Accelerator
-            pub const RSA = @intToPtr(*volatile types.peripherals.RSA, 0x6003c000);
+            pub const RSA = @as(*volatile types.peripherals.RSA, @ptrFromInt(0x6003c000));
             ///  Digital Signature
-            pub const DS = @intToPtr(*volatile types.peripherals.DS, 0x6003d000);
+            pub const DS = @as(*volatile types.peripherals.DS, @ptrFromInt(0x6003d000));
             ///  HMAC (Hash-based Message Authentication Code) Accelerator
-            pub const HMAC = @intToPtr(*volatile types.peripherals.HMAC, 0x6003e000);
+            pub const HMAC = @as(*volatile types.peripherals.HMAC, @ptrFromInt(0x6003e000));
             ///  DMA (Direct Memory Access) Controller
-            pub const DMA = @intToPtr(*volatile types.peripherals.DMA, 0x6003f000);
+            pub const DMA = @as(*volatile types.peripherals.DMA, @ptrFromInt(0x6003f000));
             ///  Successive Approximation Register Analog to Digital Converter
-            pub const APB_SARADC = @intToPtr(*volatile types.peripherals.APB_SARADC, 0x60040000);
+            pub const APB_SARADC = @as(*volatile types.peripherals.APB_SARADC, @ptrFromInt(0x60040000));
             ///  Full-speed USB Serial/JTAG Controller
-            pub const USB_DEVICE = @intToPtr(*volatile types.peripherals.USB_DEVICE, 0x60043000);
+            pub const USB_DEVICE = @as(*volatile types.peripherals.USB_DEVICE, @ptrFromInt(0x60043000));
             ///  System
-            pub const SYSTEM = @intToPtr(*volatile types.peripherals.SYSTEM, 0x600c0000);
+            pub const SYSTEM = @as(*volatile types.peripherals.SYSTEM, @ptrFromInt(0x600c0000));
             ///  Sensitive
-            pub const SENSITIVE = @intToPtr(*volatile types.peripherals.SENSITIVE, 0x600c1000);
+            pub const SENSITIVE = @as(*volatile types.peripherals.SENSITIVE, @ptrFromInt(0x600c1000));
             ///  Interrupt Core
-            pub const INTERRUPT_CORE0 = @intToPtr(*volatile types.peripherals.INTERRUPT_CORE0, 0x600c2000);
+            pub const INTERRUPT_CORE0 = @as(*volatile types.peripherals.INTERRUPT_CORE0, @ptrFromInt(0x600c2000));
             ///  External Memory
-            pub const EXTMEM = @intToPtr(*volatile types.peripherals.EXTMEM, 0x600c4000);
+            pub const EXTMEM = @as(*volatile types.peripherals.EXTMEM, @ptrFromInt(0x600c4000));
             ///  XTS-AES-128 Flash Encryption
-            pub const XTS_AES = @intToPtr(*volatile types.peripherals.XTS_AES, 0x600cc000);
+            pub const XTS_AES = @as(*volatile types.peripherals.XTS_AES, @ptrFromInt(0x600cc000));
             ///  Debug Assist
-            pub const ASSIST_DEBUG = @intToPtr(*volatile types.peripherals.ASSIST_DEBUG, 0x600ce000);
+            pub const ASSIST_DEBUG = @as(*volatile types.peripherals.ASSIST_DEBUG, @ptrFromInt(0x600ce000));
         };
     };
 };
