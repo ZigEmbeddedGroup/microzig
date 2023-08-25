@@ -1,6 +1,0 @@
-[submodule "vendor/microzig"]
-	path = vendor/microzig
-	url = https://github.com/ZigEmbeddedGroup/microzig
-[submodule "deps/microzig"]
-	path = deps/microzig
-	url = https://github.com/ZigEmbeddedGroup/microzig.git
