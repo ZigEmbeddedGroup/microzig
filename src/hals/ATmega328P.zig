@@ -34,14 +34,14 @@ pub const gpio = struct {
     fn regs(comptime desc: type) type {
         return struct {
             // io address
-            const pin_addr: u5 = 3 * @enumToInt(desc.port) + 0x00;
-            const dir_addr: u5 = 3 * @enumToInt(desc.port) + 0x01;
-            const port_addr: u5 = 3 * @enumToInt(desc.port) + 0x02;
+            const pin_addr: u5 = 3 * @intFromEnum(desc.port) + 0x00;
+            const dir_addr: u5 = 3 * @intFromEnum(desc.port) + 0x01;
+            const port_addr: u5 = 3 * @intFromEnum(desc.port) + 0x02;
 
             // ram mapping
-            const pin = @intToPtr(*volatile u8, 0x20 + @as(usize, pin_addr));
-            const dir = @intToPtr(*volatile u8, 0x20 + @as(usize, dir_addr));
-            const port = @intToPtr(*volatile u8, 0x20 + @as(usize, port_addr));
+            const pin = @as(*volatile u8, @ptrFromInt(0x20 + @as(usize, pin_addr)));
+            const dir = @as(*volatile u8, @ptrFromInt(0x20 + @as(usize, dir_addr)));
+            const port = @as(*volatile u8, @ptrFromInt(0x20 + @as(usize, port_addr)));
         };
     }
 
@@ -147,7 +147,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             USART0.UCSR0B.write(.{
                 .TXB80 = 0, // we don't care about these btw
                 .RXB80 = 0, // we don't care about these btw
-                .UCSZ02 = @truncate(u1, (ucsz & 0x04) >> 2),
+                .UCSZ02 = @as(u1, @truncate((ucsz & 0x04) >> 2)),
                 .TXEN0 = 1,
                 .RXEN0 = 1,
                 .UDRIE0 = 0, // no interrupts
@@ -156,7 +156,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             });
             USART0.UCSR0C.write(.{
                 .UCPOL0 = 0, // async mode
-                .UCSZ0 = @truncate(u2, (ucsz & 0x03) >> 0),
+                .UCSZ0 = @as(u2, @truncate((ucsz & 0x03) >> 0)),
                 .USBS0 = usbs,
                 .UPM0 = upm,
                 .UMSEL0 = umsel,

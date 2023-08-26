@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("../deps/microzig/build.zig");
+const micro = @import("microzig");
 const Chip = micro.Chip;
 const MemoryRegion = micro.MemoryRegion;
 

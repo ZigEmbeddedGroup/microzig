@@ -1,4 +1,0 @@
-steps:
-  - group: Build
-    steps:
-    - command: zig build -Doptimize=ReleaseSmall
