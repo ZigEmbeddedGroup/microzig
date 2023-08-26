@@ -112,153 +112,153 @@ pub const devices = struct {
 
         pub const peripherals = struct {
             ///  Factory information configuration registers
-            pub const FICR = @intToPtr(*volatile types.peripherals.FICR, 0x10000000);
+            pub const FICR = @as(*volatile types.peripherals.FICR, @ptrFromInt(0x10000000));
             ///  User information configuration registers
-            pub const UICR = @intToPtr(*volatile types.peripherals.UICR, 0x10001000);
+            pub const UICR = @as(*volatile types.peripherals.UICR, @ptrFromInt(0x10001000));
             ///  Clock control
-            pub const CLOCK = @intToPtr(*volatile types.peripherals.CLOCK, 0x40000000);
+            pub const CLOCK = @as(*volatile types.peripherals.CLOCK, @ptrFromInt(0x40000000));
             ///  Power control
-            pub const POWER = @intToPtr(*volatile types.peripherals.POWER, 0x40000000);
+            pub const POWER = @as(*volatile types.peripherals.POWER, @ptrFromInt(0x40000000));
             ///  2.4 GHz radio
-            pub const RADIO = @intToPtr(*volatile types.peripherals.RADIO, 0x40001000);
+            pub const RADIO = @as(*volatile types.peripherals.RADIO, @ptrFromInt(0x40001000));
             ///  Universal Asynchronous Receiver/Transmitter
-            pub const UART0 = @intToPtr(*volatile types.peripherals.UART0, 0x40002000);
+            pub const UART0 = @as(*volatile types.peripherals.UART0, @ptrFromInt(0x40002000));
             ///  UART with EasyDMA 0
-            pub const UARTE0 = @intToPtr(*volatile types.peripherals.UARTE0, 0x40002000);
+            pub const UARTE0 = @as(*volatile types.peripherals.UARTE0, @ptrFromInt(0x40002000));
             ///  Serial Peripheral Interface 0
-            pub const SPI0 = @intToPtr(*volatile types.peripherals.SPI0, 0x40003000);
+            pub const SPI0 = @as(*volatile types.peripherals.SPI0, @ptrFromInt(0x40003000));
             ///  Serial Peripheral Interface Master with EasyDMA 0
-            pub const SPIM0 = @intToPtr(*volatile types.peripherals.SPIM0, 0x40003000);
+            pub const SPIM0 = @as(*volatile types.peripherals.SPIM0, @ptrFromInt(0x40003000));
             ///  SPI Slave 0
-            pub const SPIS0 = @intToPtr(*volatile types.peripherals.SPIS0, 0x40003000);
+            pub const SPIS0 = @as(*volatile types.peripherals.SPIS0, @ptrFromInt(0x40003000));
             ///  I2C compatible Two-Wire Interface 0
-            pub const TWI0 = @intToPtr(*volatile types.peripherals.TWI0, 0x40003000);
+            pub const TWI0 = @as(*volatile types.peripherals.TWI0, @ptrFromInt(0x40003000));
             ///  I2C compatible Two-Wire Master Interface with EasyDMA 0
-            pub const TWIM0 = @intToPtr(*volatile types.peripherals.TWIM0, 0x40003000);
+            pub const TWIM0 = @as(*volatile types.peripherals.TWIM0, @ptrFromInt(0x40003000));
             ///  I2C compatible Two-Wire Slave Interface with EasyDMA 0
-            pub const TWIS0 = @intToPtr(*volatile types.peripherals.TWIS0, 0x40003000);
+            pub const TWIS0 = @as(*volatile types.peripherals.TWIS0, @ptrFromInt(0x40003000));
             ///  Serial Peripheral Interface 1
-            pub const SPI1 = @intToPtr(*volatile types.peripherals.SPI0, 0x40004000);
+            pub const SPI1 = @as(*volatile types.peripherals.SPI0, @ptrFromInt(0x40004000));
             ///  Serial Peripheral Interface Master with EasyDMA 1
-            pub const SPIM1 = @intToPtr(*volatile types.peripherals.SPIM0, 0x40004000);
+            pub const SPIM1 = @as(*volatile types.peripherals.SPIM0, @ptrFromInt(0x40004000));
             ///  SPI Slave 1
-            pub const SPIS1 = @intToPtr(*volatile types.peripherals.SPIS0, 0x40004000);
+            pub const SPIS1 = @as(*volatile types.peripherals.SPIS0, @ptrFromInt(0x40004000));
             ///  I2C compatible Two-Wire Interface 1
-            pub const TWI1 = @intToPtr(*volatile types.peripherals.TWI0, 0x40004000);
+            pub const TWI1 = @as(*volatile types.peripherals.TWI0, @ptrFromInt(0x40004000));
             ///  I2C compatible Two-Wire Master Interface with EasyDMA 1
-            pub const TWIM1 = @intToPtr(*volatile types.peripherals.TWIM0, 0x40004000);
+            pub const TWIM1 = @as(*volatile types.peripherals.TWIM0, @ptrFromInt(0x40004000));
             ///  I2C compatible Two-Wire Slave Interface with EasyDMA 1
-            pub const TWIS1 = @intToPtr(*volatile types.peripherals.TWIS0, 0x40004000);
+            pub const TWIS1 = @as(*volatile types.peripherals.TWIS0, @ptrFromInt(0x40004000));
             ///  NFC-A compatible radio
-            pub const NFCT = @intToPtr(*volatile types.peripherals.NFCT, 0x40005000);
+            pub const NFCT = @as(*volatile types.peripherals.NFCT, @ptrFromInt(0x40005000));
             ///  GPIO Tasks and Events
-            pub const GPIOTE = @intToPtr(*volatile types.peripherals.GPIOTE, 0x40006000);
+            pub const GPIOTE = @as(*volatile types.peripherals.GPIOTE, @ptrFromInt(0x40006000));
             ///  Successive approximation register (SAR) analog-to-digital converter
-            pub const SAADC = @intToPtr(*volatile types.peripherals.SAADC, 0x40007000);
+            pub const SAADC = @as(*volatile types.peripherals.SAADC, @ptrFromInt(0x40007000));
             ///  Timer/Counter 0
-            pub const TIMER0 = @intToPtr(*volatile types.peripherals.TIMER0, 0x40008000);
+            pub const TIMER0 = @as(*volatile types.peripherals.TIMER0, @ptrFromInt(0x40008000));
             ///  Timer/Counter 1
-            pub const TIMER1 = @intToPtr(*volatile types.peripherals.TIMER0, 0x40009000);
+            pub const TIMER1 = @as(*volatile types.peripherals.TIMER0, @ptrFromInt(0x40009000));
             ///  Timer/Counter 2
-            pub const TIMER2 = @intToPtr(*volatile types.peripherals.TIMER0, 0x4000a000);
+            pub const TIMER2 = @as(*volatile types.peripherals.TIMER0, @ptrFromInt(0x4000a000));
             ///  Real time counter 0
-            pub const RTC0 = @intToPtr(*volatile types.peripherals.RTC0, 0x4000b000);
+            pub const RTC0 = @as(*volatile types.peripherals.RTC0, @ptrFromInt(0x4000b000));
             ///  Temperature Sensor
-            pub const TEMP = @intToPtr(*volatile types.peripherals.TEMP, 0x4000c000);
+            pub const TEMP = @as(*volatile types.peripherals.TEMP, @ptrFromInt(0x4000c000));
             ///  Random Number Generator
-            pub const RNG = @intToPtr(*volatile types.peripherals.RNG, 0x4000d000);
+            pub const RNG = @as(*volatile types.peripherals.RNG, @ptrFromInt(0x4000d000));
             ///  AES ECB Mode Encryption
-            pub const ECB = @intToPtr(*volatile types.peripherals.ECB, 0x4000e000);
+            pub const ECB = @as(*volatile types.peripherals.ECB, @ptrFromInt(0x4000e000));
             ///  Accelerated Address Resolver
-            pub const AAR = @intToPtr(*volatile types.peripherals.AAR, 0x4000f000);
+            pub const AAR = @as(*volatile types.peripherals.AAR, @ptrFromInt(0x4000f000));
             ///  AES CCM Mode Encryption
-            pub const CCM = @intToPtr(*volatile types.peripherals.CCM, 0x4000f000);
+            pub const CCM = @as(*volatile types.peripherals.CCM, @ptrFromInt(0x4000f000));
             ///  Watchdog Timer
-            pub const WDT = @intToPtr(*volatile types.peripherals.WDT, 0x40010000);
+            pub const WDT = @as(*volatile types.peripherals.WDT, @ptrFromInt(0x40010000));
             ///  Real time counter 1
-            pub const RTC1 = @intToPtr(*volatile types.peripherals.RTC0, 0x40011000);
+            pub const RTC1 = @as(*volatile types.peripherals.RTC0, @ptrFromInt(0x40011000));
             ///  Quadrature Decoder
-            pub const QDEC = @intToPtr(*volatile types.peripherals.QDEC, 0x40012000);
+            pub const QDEC = @as(*volatile types.peripherals.QDEC, @ptrFromInt(0x40012000));
             ///  Comparator
-            pub const COMP = @intToPtr(*volatile types.peripherals.COMP, 0x40013000);
+            pub const COMP = @as(*volatile types.peripherals.COMP, @ptrFromInt(0x40013000));
             ///  Low Power Comparator
-            pub const LPCOMP = @intToPtr(*volatile types.peripherals.LPCOMP, 0x40013000);
+            pub const LPCOMP = @as(*volatile types.peripherals.LPCOMP, @ptrFromInt(0x40013000));
             ///  Event Generator Unit 0
-            pub const EGU0 = @intToPtr(*volatile types.peripherals.EGU0, 0x40014000);
+            pub const EGU0 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40014000));
             ///  Software interrupt 0
-            pub const SWI0 = @intToPtr(*volatile types.peripherals.SWI0, 0x40014000);
+            pub const SWI0 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40014000));
             ///  Event Generator Unit 1
-            pub const EGU1 = @intToPtr(*volatile types.peripherals.EGU0, 0x40015000);
+            pub const EGU1 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40015000));
             ///  Software interrupt 1
-            pub const SWI1 = @intToPtr(*volatile types.peripherals.SWI0, 0x40015000);
+            pub const SWI1 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40015000));
             ///  Event Generator Unit 2
-            pub const EGU2 = @intToPtr(*volatile types.peripherals.EGU0, 0x40016000);
+            pub const EGU2 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40016000));
             ///  Software interrupt 2
-            pub const SWI2 = @intToPtr(*volatile types.peripherals.SWI0, 0x40016000);
+            pub const SWI2 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40016000));
             ///  Event Generator Unit 3
-            pub const EGU3 = @intToPtr(*volatile types.peripherals.EGU0, 0x40017000);
+            pub const EGU3 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40017000));
             ///  Software interrupt 3
-            pub const SWI3 = @intToPtr(*volatile types.peripherals.SWI0, 0x40017000);
+            pub const SWI3 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40017000));
             ///  Event Generator Unit 4
-            pub const EGU4 = @intToPtr(*volatile types.peripherals.EGU0, 0x40018000);
+            pub const EGU4 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40018000));
             ///  Software interrupt 4
-            pub const SWI4 = @intToPtr(*volatile types.peripherals.SWI0, 0x40018000);
+            pub const SWI4 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40018000));
             ///  Event Generator Unit 5
-            pub const EGU5 = @intToPtr(*volatile types.peripherals.EGU0, 0x40019000);
+            pub const EGU5 = @as(*volatile types.peripherals.EGU0, @ptrFromInt(0x40019000));
             ///  Software interrupt 5
-            pub const SWI5 = @intToPtr(*volatile types.peripherals.SWI0, 0x40019000);
+            pub const SWI5 = @as(*volatile types.peripherals.SWI0, @ptrFromInt(0x40019000));
             ///  Timer/Counter 3
-            pub const TIMER3 = @intToPtr(*volatile types.peripherals.TIMER0, 0x4001a000);
+            pub const TIMER3 = @as(*volatile types.peripherals.TIMER0, @ptrFromInt(0x4001a000));
             ///  Timer/Counter 4
-            pub const TIMER4 = @intToPtr(*volatile types.peripherals.TIMER0, 0x4001b000);
+            pub const TIMER4 = @as(*volatile types.peripherals.TIMER0, @ptrFromInt(0x4001b000));
             ///  Pulse width modulation unit 0
-            pub const PWM0 = @intToPtr(*volatile types.peripherals.PWM0, 0x4001c000);
+            pub const PWM0 = @as(*volatile types.peripherals.PWM0, @ptrFromInt(0x4001c000));
             ///  Pulse Density Modulation (Digital Microphone) Interface
-            pub const PDM = @intToPtr(*volatile types.peripherals.PDM, 0x4001d000);
+            pub const PDM = @as(*volatile types.peripherals.PDM, @ptrFromInt(0x4001d000));
             ///  Access control lists
-            pub const ACL = @intToPtr(*volatile types.peripherals.ACL, 0x4001e000);
+            pub const ACL = @as(*volatile types.peripherals.ACL, @ptrFromInt(0x4001e000));
             ///  Non Volatile Memory Controller
-            pub const NVMC = @intToPtr(*volatile types.peripherals.NVMC, 0x4001e000);
+            pub const NVMC = @as(*volatile types.peripherals.NVMC, @ptrFromInt(0x4001e000));
             ///  Programmable Peripheral Interconnect
-            pub const PPI = @intToPtr(*volatile types.peripherals.PPI, 0x4001f000);
+            pub const PPI = @as(*volatile types.peripherals.PPI, @ptrFromInt(0x4001f000));
             ///  Memory Watch Unit
-            pub const MWU = @intToPtr(*volatile types.peripherals.MWU, 0x40020000);
+            pub const MWU = @as(*volatile types.peripherals.MWU, @ptrFromInt(0x40020000));
             ///  Pulse width modulation unit 1
-            pub const PWM1 = @intToPtr(*volatile types.peripherals.PWM0, 0x40021000);
+            pub const PWM1 = @as(*volatile types.peripherals.PWM0, @ptrFromInt(0x40021000));
             ///  Pulse width modulation unit 2
-            pub const PWM2 = @intToPtr(*volatile types.peripherals.PWM0, 0x40022000);
+            pub const PWM2 = @as(*volatile types.peripherals.PWM0, @ptrFromInt(0x40022000));
             ///  Serial Peripheral Interface 2
-            pub const SPI2 = @intToPtr(*volatile types.peripherals.SPI0, 0x40023000);
+            pub const SPI2 = @as(*volatile types.peripherals.SPI0, @ptrFromInt(0x40023000));
             ///  Serial Peripheral Interface Master with EasyDMA 2
-            pub const SPIM2 = @intToPtr(*volatile types.peripherals.SPIM0, 0x40023000);
+            pub const SPIM2 = @as(*volatile types.peripherals.SPIM0, @ptrFromInt(0x40023000));
             ///  SPI Slave 2
-            pub const SPIS2 = @intToPtr(*volatile types.peripherals.SPIS0, 0x40023000);
+            pub const SPIS2 = @as(*volatile types.peripherals.SPIS0, @ptrFromInt(0x40023000));
             ///  Real time counter 2
-            pub const RTC2 = @intToPtr(*volatile types.peripherals.RTC0, 0x40024000);
+            pub const RTC2 = @as(*volatile types.peripherals.RTC0, @ptrFromInt(0x40024000));
             ///  Inter-IC Sound
-            pub const I2S = @intToPtr(*volatile types.peripherals.I2S, 0x40025000);
+            pub const I2S = @as(*volatile types.peripherals.I2S, @ptrFromInt(0x40025000));
             ///  FPU
-            pub const FPU = @intToPtr(*volatile types.peripherals.FPU, 0x40026000);
+            pub const FPU = @as(*volatile types.peripherals.FPU, @ptrFromInt(0x40026000));
             ///  Universal serial bus device
-            pub const USBD = @intToPtr(*volatile types.peripherals.USBD, 0x40027000);
+            pub const USBD = @as(*volatile types.peripherals.USBD, @ptrFromInt(0x40027000));
             ///  UART with EasyDMA 1
-            pub const UARTE1 = @intToPtr(*volatile types.peripherals.UARTE0, 0x40028000);
+            pub const UARTE1 = @as(*volatile types.peripherals.UARTE0, @ptrFromInt(0x40028000));
             ///  External flash interface
-            pub const QSPI = @intToPtr(*volatile types.peripherals.QSPI, 0x40029000);
+            pub const QSPI = @as(*volatile types.peripherals.QSPI, @ptrFromInt(0x40029000));
             ///  Pulse width modulation unit 3
-            pub const PWM3 = @intToPtr(*volatile types.peripherals.PWM0, 0x4002d000);
+            pub const PWM3 = @as(*volatile types.peripherals.PWM0, @ptrFromInt(0x4002d000));
             ///  Serial Peripheral Interface Master with EasyDMA 3
-            pub const SPIM3 = @intToPtr(*volatile types.peripherals.SPIM0, 0x4002f000);
+            pub const SPIM3 = @as(*volatile types.peripherals.SPIM0, @ptrFromInt(0x4002f000));
             ///  GPIO Port 1
-            pub const P0 = @intToPtr(*volatile types.peripherals.P0, 0x50000000);
+            pub const P0 = @as(*volatile types.peripherals.P0, @ptrFromInt(0x50000000));
             ///  GPIO Port 2
-            pub const P1 = @intToPtr(*volatile types.peripherals.P0, 0x50000300);
+            pub const P1 = @as(*volatile types.peripherals.P0, @ptrFromInt(0x50000300));
             ///  CRYPTOCELL HOST_RGF interface
-            pub const CC_HOST_RGF = @intToPtr(*volatile types.peripherals.CC_HOST_RGF, 0x5002a000);
+            pub const CC_HOST_RGF = @as(*volatile types.peripherals.CC_HOST_RGF, @ptrFromInt(0x5002a000));
             ///  ARM TrustZone CryptoCell register interface
-            pub const CRYPTOCELL = @intToPtr(*volatile types.peripherals.CRYPTOCELL, 0x5002a000);
+            pub const CRYPTOCELL = @as(*volatile types.peripherals.CRYPTOCELL, @ptrFromInt(0x5002a000));
             ///  System Tick Timer
-            pub const SysTick = @intToPtr(*volatile types.peripherals.SCS.SysTick, 0xe000e010);
+            pub const SysTick = @as(*volatile types.peripherals.SCS.SysTick, @ptrFromInt(0xe000e010));
         };
     };
 };
