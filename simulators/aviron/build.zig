@@ -4,6 +4,13 @@ const samples = [_][]const u8{
     "math",
 };
 
+const avr_target = std.zig.CrossTarget{
+    .cpu_arch = .avr,
+    .cpu_model = .{ .explicit = &std.Target.avr.cpu.atmega328p },
+    .os_tag = .freestanding,
+    .abi = .none,
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -61,12 +68,7 @@ pub fn build(b: *std.Build) !void {
         const sample = b.addExecutable(.{
             .name = sample_name,
             .root_source_file = .{ .path = b.fmt("samples/{s}.zig", .{sample_name}) },
-            .target = std.zig.CrossTarget{
-                .cpu_arch = .avr,
-                .cpu_model = .{ .explicit = &std.Target.avr.cpu.atmega328p },
-                .os_tag = .freestanding,
-                .abi = .none,
-            },
+            .target = avr_target,
             .optimize = .ReleaseSmall,
         });
         sample.bundle_compiler_rt = false;
@@ -75,13 +77,9 @@ pub fn build(b: *std.Build) !void {
         // install to the prefix:
         const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
         b.getInstallStep().dependOn(&install_elf_sample.step);
-
-        // add to the test suite:
-        const run_sample = b.addRunArtifact(exe);
-        run_sample.addFileArg(sample.getEmittedBin());
-        run_sample.expectExitCode(0);
-        test_step.dependOn(&run_sample.step);
     }
+
+    // Test suite:
 
     const unit_tests = b.addTest(.{
         .root_source_file = .{ .path = "src/main.zig" },
@@ -91,4 +89,82 @@ pub fn build(b: *std.Build) !void {
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
     test_step.dependOn(&run_unit_tests.step);
+
+    {
+        var walkdir = try b.build_root.handle.openIterableDir("testsuite", .{});
+        defer walkdir.close();
+
+        var walker = try walkdir.walk(b.allocator);
+        defer walker.deinit();
+
+        while (try walker.next()) |entry| {
+            if (entry.kind != .file)
+                continue;
+
+            var file = try entry.dir.openFile(entry.basename, .{});
+            defer file.close();
+
+            const config = try loadTestSuiteConfig(b, file);
+
+            const test_payload = b.addExecutable(.{
+                .name = entry.basename,
+                .root_source_file = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
+                .target = avr_target,
+                .optimize = config.optimize,
+            });
+            test_payload.bundle_compiler_rt = false;
+            test_payload.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
+
+            const test_run = b.addRunArtifact(exe);
+            test_run.addFileArg(test_payload.getEmittedBin());
+
+            test_run.expectExitCode(config.exit_code);
+            test_run.expectStdOutEqual(config.stdout);
+            test_run.expectStdErrEqual(config.stderr);
+
+            test_step.dependOn(&test_run.step);
+        }
+    }
+}
+
+const TestSuiteConfig = struct {
+    exit_code: u8 = 0,
+    stdout: []const u8 = "",
+    stderr: []const u8 = "",
+
+    optimize: std.builtin.OptimizeMode = .ReleaseSmall,
+};
+
+fn loadTestSuiteConfig(b: *std.Build, file: std.fs.File) !TestSuiteConfig {
+    var code = std.ArrayList(u8).init(b.allocator);
+    defer code.deinit();
+
+    var line_buffer: [4096]u8 = undefined;
+
+    while (true) {
+        var fbs = std.io.fixedBufferStream(&line_buffer);
+        file.reader().streamUntilDelimiter(fbs.writer(), '\n', null) catch |err| switch (err) {
+            error.EndOfStream => break,
+            else => |e| return e,
+        };
+        const line = fbs.getWritten();
+
+        if (std.mem.startsWith(u8, line, "//!")) {
+            try code.appendSlice(line[3..]);
+            try code.appendSlice("\n");
+        }
+    }
+
+    const json_text = std.mem.trim(u8, code.items, "\r\n\t ");
+    if (json_text.len == 0)
+        return TestSuiteConfig{};
+
+    return try std.json.parseFromSliceLeaky(
+        TestSuiteConfig,
+        b.allocator,
+        json_text,
+        .{
+            .allocate = .alloc_always,
+        },
+    );
 }
