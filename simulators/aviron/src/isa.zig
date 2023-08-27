@@ -1,5 +1,5 @@
 const std = @import("std");
-const tables = @import("tables.zig");
+const tables = @import("autogen-tables");
 
 pub const Opcode = enum(u8) {
     movw,
@@ -148,7 +148,8 @@ pub const Instruction = blk: {
 
 /// Only decodes one instruction; make sure to decode the second word for lds, sts, jmp, call
 pub fn decode(inst_val: u16) !Instruction {
-    const opcode = tables.lookup[inst_val];
+    const lookup: []const Opcode = &tables.lookup;
+    const opcode = lookup[inst_val];
     switch (opcode) {
         inline else => |tag| {
             @setEvalBranchQuota(10_000);

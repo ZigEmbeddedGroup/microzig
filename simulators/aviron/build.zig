@@ -1,11 +1,26 @@
 const std = @import("std");
 
+const samples = [_][]const u8{
+    "math",
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) !void {
+    // Targets
+    const test_step = b.step("test", "Run test suite");
+    const run_step = b.step("run", "Run the app");
+
+    // Options
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    // Static modules
+
+    const aviron_module = b.addModule("aviron", .{
+        .source_file = .{ .path = "src/main.zig" },
+    });
 
     // Main executable
 
@@ -24,12 +39,7 @@ pub fn build(b: *std.Build) !void {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
-
-    const aviron_module = b.addModule("aviron", .{
-        .source_file = .{ .path = "src/main.zig" },
-    });
 
     // Table tool
     const generate_tables_exe = b.addExecutable(.{
@@ -38,24 +48,19 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    b.installArtifact(generate_tables_exe);
     generate_tables_exe.addModule("aviron", aviron_module);
 
     const run_generate_tables_cmd = b.addRunArtifact(generate_tables_exe);
-    run_generate_tables_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| {
-        run_generate_tables_cmd.addArgs(args);
-    }
+    const tables_zig_file = run_generate_tables_cmd.addOutputFileArg("tables.zig");
 
-    const run_generate_tables_step = b.step("generate-tables", "Run the generate-tables tool");
-    run_generate_tables_step.dependOn(&run_generate_tables_cmd.step);
+    exe.addAnonymousModule("autogen-tables", .{ .source_file = tables_zig_file });
 
     // Samples
-    inline for (&.{"math"}) |sample_name| {
+    for (samples) |sample_name| {
         const sample = b.addExecutable(.{
-            .name = "aviron-sample-" ++ sample_name,
-            .root_source_file = .{ .path = "samples/" ++ sample_name ++ ".zig" },
+            .name = sample_name,
+            .root_source_file = .{ .path = b.fmt("samples/{s}.zig", .{sample_name}) },
             .target = std.zig.CrossTarget{
                 .cpu_arch = .avr,
                 .cpu_model = .{ .explicit = &std.Target.avr.cpu.atmega328p },
@@ -66,7 +71,16 @@ pub fn build(b: *std.Build) !void {
         });
         sample.bundle_compiler_rt = false;
         sample.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
-        b.installArtifact(sample);
+
+        // install to the prefix:
+        const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
+        b.getInstallStep().dependOn(&install_elf_sample.step);
+
+        // add to the test suite:
+        const run_sample = b.addRunArtifact(exe);
+        run_sample.addFileArg(sample.getEmittedBin());
+        run_sample.expectExitCode(0);
+        test_step.dependOn(&run_sample.step);
     }
 
     const unit_tests = b.addTest(.{
@@ -76,7 +90,5 @@ pub fn build(b: *std.Build) !void {
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
-
-    const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
 }
