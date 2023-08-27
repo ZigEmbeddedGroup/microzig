@@ -38,9 +38,19 @@ pub fn main() !void {
     try source.reader().readNoEof(text_data);
     std.log.info("{}", .{std.fmt.fmtSliceHexLower(text_data)});
 
-    var cpu = Cpu{};
+    var flash_storage = Cpu.Flash.Static(32768){};
+    @memcpy(@as([*]u8, @ptrCast((&flash_storage.data).ptr))[0..text_data.len], text_data);
 
-    @memcpy(@as([*]u8, @ptrCast((&cpu.memory).ptr))[0..text_data.len], text_data);
+    var sram = Cpu.RAM.Static(2048){};
+    var eeprom = Cpu.RAM.Static(1024){};
+
+    var cpu = Cpu{
+        .flash = flash_storage.memory(),
+        .sram = sram.memory(),
+        .eeprom = eeprom.memory(),
+        .io = Cpu.IO.empty,
+    };
+
     try cpu.run();
 }
 
