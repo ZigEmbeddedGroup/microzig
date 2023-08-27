@@ -20,23 +20,36 @@ pub fn shiftProgramCounter(cpu: *Cpu, by: i12) void {
     cpu.pc = @intCast(@as(i32, @intCast(cpu.pc)) + by);
 }
 
-pub fn run(cpu: *Cpu) !void {
-    while (true) : (cpu.pc += 1) {
-        const inst = isa.decode(cpu.flash.read(cpu.pc)) catch break;
+pub fn run(cpu: *Cpu, mileage: ?u64) !void {
+    var rest_gas = mileage;
 
-        switch (inst) {
-            inline else => |value| std.log.info(" {s} {}", .{ @tagName(inst), value }),
+    while ((rest_gas orelse 1) > 0) : (cpu.pc += 1) {
+        if (rest_gas) |*rg| {
+            rg.* -= 1;
         }
 
+        const inst = isa.decode(cpu.flash.read(cpu.pc)) catch break;
+
+        // switch (inst) {
+        //     inline else => |value| std.log.info(" {s} {}", .{ @tagName(inst), value }),
+        // }
+
         switch (inst) {
-            .movw,
-            .muls,
-            .nop,
-            .mulsu,
-            .fmul,
-            .fmuls,
-            .fmulsu,
-            => {},
+
+            // ALU logic:
+
+            .@"and" => |info| cpu.gp_registers[info.d] = cpu.gp_registers[info.d] & cpu.gp_registers[info.r],
+            .eor => |info| cpu.gp_registers[info.d] = cpu.gp_registers[info.d] ^ cpu.gp_registers[info.r],
+            .@"or" => |info| cpu.gp_registers[info.d] = cpu.gp_registers[info.d] | cpu.gp_registers[info.r],
+
+            // I/O commands:
+            .out => |info| cpu.io.write(info.a, 0xFF, cpu.gp_registers[info.r]),
+            .cbi => @panic("            .cbi,"),
+            .in => @panic("            .in,"),
+            .sbi => @panic("            .sbi,"),
+
+            // rest
+
             .cpc => |bits| {
                 const rd = cpu.gp_registers[bits.d];
                 const rr = cpu.gp_registers[bits.r];
@@ -59,17 +72,6 @@ pub fn run(cpu: *Cpu) !void {
                 cpu.st_registers.setPresent(.n, (result >> 7) & 1 != 0);
                 cpu.st_registers.setPresent(.s, @intFromBool(cpu.st_registers.contains(.n)) ^ @intFromBool(cpu.st_registers.contains(.v)) != 0);
             },
-            .sbc,
-            .add,
-            .cpse,
-            .cp,
-            .sub,
-            .adc,
-            .@"and",
-            .eor,
-            .@"or",
-            .mov,
-            => {},
             .cpi => |bits| {
                 const register = @as(u6, bits.d) + 16;
                 if (!(16 <= register and register <= 31))
@@ -89,76 +91,6 @@ pub fn run(cpu: *Cpu) !void {
                 cpu.st_registers.setPresent(.n, (result >> 7) & 1 != 0);
                 cpu.st_registers.setPresent(.s, @intFromBool(cpu.st_registers.contains(.n)) ^ @intFromBool(cpu.st_registers.contains(.v)) != 0);
             },
-            .sbci,
-            .subi,
-            .ori,
-            .andi,
-            .lds,
-            .ldz_ii,
-            .ldz_iii,
-            .lpm_ii,
-            .lpm_iii,
-            .elpm_ii,
-            .elpm_iii,
-            .ldy_ii,
-            .ldy_iii,
-            .ldx_i,
-            .ldx_ii,
-            .ldx_iii,
-            .pop,
-            .sts,
-            .push,
-            .stz_ii,
-            .stz_iii,
-            .xch,
-            .las,
-            .lac,
-            .lat,
-            .sty_ii,
-            .sty_iii,
-            .stx_i,
-            .stx_ii,
-            .stx_iii,
-            .ijmp,
-            .eijmp,
-            .bset,
-            .bclr,
-            .des,
-            .ret,
-            .icall,
-            .reti,
-            .eicall,
-            .sleep,
-            .wdr,
-            .lpm_i,
-            .elpm_i,
-            .spm_i,
-            .spm_ii,
-            .com,
-            .neg,
-            .swap,
-            .inc,
-            .asr,
-            .lsr,
-            .ror,
-            .dec,
-            .jmp,
-            .call,
-            .adiw,
-            .sbiw,
-            .cbi,
-            .sbic,
-            .sbi,
-            .sbis,
-            .mul,
-            .in,
-            .out,
-            .ldz_iv,
-            .ldy_iv,
-            .stz_iv,
-            .sty_iv,
-            .rcall,
-            => {},
             .ldi => |bits| {
                 const register = @as(u6, bits.d) + 16;
                 if (!(16 <= register and register <= 31))
@@ -178,18 +110,98 @@ pub fn run(cpu: *Cpu) !void {
                     cpu.shiftProgramCounter(pc_offset);
                 }
             },
-            .bld,
-            .bst,
-            .sbrc,
-            .sbrs,
-            => {},
             .rjmp => |bits| {
                 if (@as(i12, @bitCast(bits.k)) == -1) {
-                    std.log.info("this is a while(true)... exiting now", .{});
+                    // std.log.info("this is a while(true)... exiting now", .{});
                     return;
                 }
                 cpu.shiftProgramCounter(@as(i12, @bitCast(bits.k)));
             },
+
+            .adc,
+            .add,
+            .adiw,
+            .andi,
+            .asr,
+            .bclr,
+            .bld,
+            .bset,
+            .bst,
+            .call,
+            .com,
+            .cp,
+            .cpse,
+            .dec,
+            .des,
+            .eicall,
+            .eijmp,
+            .elpm_i,
+            .elpm_ii,
+            .elpm_iii,
+            .fmul,
+            .fmuls,
+            .fmulsu,
+            .icall,
+            .ijmp,
+            .inc,
+            .jmp,
+            .lac,
+            .las,
+            .lat,
+            .lds,
+            .ldx_i,
+            .ldx_ii,
+            .ldx_iii,
+            .ldy_ii,
+            .ldy_iii,
+            .ldy_iv,
+            .ldz_ii,
+            .ldz_iii,
+            .ldz_iv,
+            .lpm_i,
+            .lpm_ii,
+            .lpm_iii,
+            .lsr,
+            .mov,
+            .movw,
+            .mul,
+            .muls,
+            .mulsu,
+            .neg,
+            .nop,
+            .ori,
+            .pop,
+            .push,
+            .rcall,
+            .ret,
+            .reti,
+            .ror,
+            .sbc,
+            .sbci,
+            .sbic,
+            .sbis,
+            .sbiw,
+            .sbrc,
+            .sbrs,
+            .sleep,
+            .spm_i,
+            .spm_ii,
+            .sts,
+            .stx_i,
+            .stx_ii,
+            .stx_iii,
+            .sty_ii,
+            .sty_iii,
+            .sty_iv,
+            .stz_ii,
+            .stz_iii,
+            .stz_iv,
+            .sub,
+            .subi,
+            .swap,
+            .wdr,
+            .xch,
+            => std.debug.panic("Instruction {s} not implemented yet!", .{@tagName(inst)}),
 
             .unknown => return error.InvalidInstruction,
         }
@@ -324,20 +336,18 @@ pub const IO = struct {
     ctx: ?*anyopaque,
     vtable: *const VTable,
 
-    pub fn read(mem: IO, addr: u5) u8 {
-        std.debug.assert(addr < mem.size);
+    pub fn read(mem: IO, addr: u6) u8 {
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    pub fn write(mem: IO, addr: u5, mask: u8, value: u8) void {
-        std.debug.assert(addr < mem.size);
+    pub fn write(mem: IO, addr: u6, mask: u8, value: u8) void {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: u5) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: u5, mask: u8, value: u8) void,
+        readFn: *const fn (ctx: ?*anyopaque, addr: u6) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void,
     };
 
     pub const empty = IO{
@@ -345,13 +355,13 @@ pub const IO = struct {
         .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: u5) u8 {
+    fn emptyRead(ctx: ?*anyopaque, addr: u6) u8 {
         _ = addr;
         _ = ctx;
         return 0;
     }
 
-    fn emptyWrite(ctx: ?*anyopaque, addr: u5, mask: u8, value: u8) void {
+    fn emptyWrite(ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void {
         _ = mask;
         _ = value;
         _ = addr;
