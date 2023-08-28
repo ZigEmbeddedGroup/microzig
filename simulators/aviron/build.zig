@@ -18,6 +18,7 @@ pub fn build(b: *std.Build) !void {
     // Targets
     const test_step = b.step("test", "Run test suite");
     const run_step = b.step("run", "Run the app");
+    const tables_step = b.step("tables", "Installs the table generator");
 
     // Options
     const target = b.standardTargetOptions(.{});
@@ -27,6 +28,10 @@ pub fn build(b: *std.Build) !void {
 
     const aviron_module = b.addModule("aviron", .{
         .source_file = .{ .path = "src/main.zig" },
+    });
+
+    const isa_module = b.createModule(.{
+        .source_file = .{ .path = "src/shared/isa.zig" },
     });
 
     // Main executable
@@ -56,12 +61,21 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     generate_tables_exe.addModule("aviron", aviron_module);
+    generate_tables_exe.addModule("isa", isa_module);
+
+    tables_step.dependOn(&b.addInstallArtifact(generate_tables_exe, .{}).step);
 
     const run_generate_tables_cmd = b.addRunArtifact(generate_tables_exe);
 
     const tables_zig_file = run_generate_tables_cmd.addOutputFileArg("tables.zig");
 
-    exe.addAnonymousModule("autogen-tables", .{ .source_file = tables_zig_file });
+    exe.addAnonymousModule("autogen-tables", .{
+        .source_file = tables_zig_file,
+        .dependencies = &.{
+            .{ .name = "isa", .module = isa_module },
+        },
+    });
+    exe.addModule("isa", isa_module);
 
     // Samples
     for (samples) |sample_name| {
