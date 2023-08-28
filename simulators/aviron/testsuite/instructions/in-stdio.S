@@ -1,7 +1,7 @@
 //! {
 //!   "exit_code": 0,
-//!   "stdout": "Hello",
-//!   "stderr": ""
+//!   "stdin": "14325",
+//!   "stdout": "14325"
 //! }
 
 #include "../regs.inc"
@@ -9,14 +9,19 @@
 .global _start
 _start:
 
-    ldi r16, 'H'
+    in r16, IO_STDIN
     out IO_STDOUT, r16
-    ldi r16, 'e'
+
+    in r16, IO_STDIN
     out IO_STDOUT, r16
-    ldi r16, 'l'
+
+    in r16, IO_STDIN
     out IO_STDOUT, r16
+
+    in r16, IO_STDIN
     out IO_STDOUT, r16
-    ldi r16, 'o'
+
+    in r16, IO_STDIN
     out IO_STDOUT, r16
 
     clr r16
