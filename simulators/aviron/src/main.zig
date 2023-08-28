@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const isa = @import("isa.zig");
+pub const isa = @import("isa");
 pub const Cpu = @import("Cpu.zig");
 
 pub fn main() !void {

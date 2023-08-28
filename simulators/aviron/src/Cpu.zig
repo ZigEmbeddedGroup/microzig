@@ -1,5 +1,5 @@
 const std = @import("std");
-const isa = @import("isa.zig");
+const isa = @import("decoder.zig");
 
 const Cpu = @This();
 
@@ -36,7 +36,15 @@ pub fn run(cpu: *Cpu, mileage: ?u64) !void {
 
         switch (std.meta.activeTag(inst)) {
             .unknown => return error.InvalidInstruction,
-            inline else => |tag| @field(instructions, @tagName(tag))(cpu, @field(inst, @tagName(tag))),
+            inline else => |tag| {
+                const info = @field(inst, @tagName(tag));
+
+                if (@TypeOf(info) == void) {
+                    @field(instructions, @tagName(tag))(cpu);
+                } else {
+                    @field(instructions, @tagName(tag))(cpu, info);
+                }
+            },
         }
     }
 }
@@ -310,15 +318,15 @@ const instructions = struct {
         @panic("rcall not implemented yet!");
     }
 
-    inline fn ret(cpu: *Cpu, info: InfoType(.ret)) void {
+    inline fn ret(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("ret {}\n", .{info});
+        std.debug.print("ret\n", .{});
         @panic("ret not implemented yet!");
     }
 
-    inline fn reti(cpu: *Cpu, info: InfoType(.reti)) void {
+    inline fn reti(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("reti {}\n", .{info});
+        std.debug.print("reti\n", .{});
         @panic("reti not implemented yet!");
     }
 
@@ -328,27 +336,27 @@ const instructions = struct {
         @panic("call not implemented yet!");
     }
 
-    inline fn icall(cpu: *Cpu, info: InfoType(.icall)) void {
+    inline fn icall(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("icall {}\n", .{info});
+        std.debug.print("icall\n", .{});
         @panic("icall not implemented yet!");
     }
 
-    inline fn ijmp(cpu: *Cpu, info: InfoType(.ijmp)) void {
+    inline fn ijmp(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("ijmp {}\n", .{info});
+        std.debug.print("ijmp\n", .{});
         @panic("ijmp not implemented yet!");
     }
 
-    inline fn eicall(cpu: *Cpu, info: InfoType(.eicall)) void {
+    inline fn eicall(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("eicall {}\n", .{info});
+        std.debug.print("eicall\n", .{});
         @panic("eicall not implemented yet!");
     }
 
-    inline fn eijmp(cpu: *Cpu, info: InfoType(.eijmp)) void {
+    inline fn eijmp(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("eijmp {}\n", .{info});
+        std.debug.print("eijmp\n", .{});
         @panic("eijmp not implemented yet!");
     }
 
@@ -491,9 +499,9 @@ const instructions = struct {
         @panic("ldz_iv not implemented yet!");
     }
 
-    inline fn lpm_i(cpu: *Cpu, info: InfoType(.lpm_i)) void {
+    inline fn lpm_i(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("lpm_i {}\n", .{info});
+        std.debug.print("lpm_i\n", .{});
         @panic("lpm_i not implemented yet!");
     }
 
@@ -509,9 +517,9 @@ const instructions = struct {
         @panic("lpm_iii not implemented yet!");
     }
 
-    inline fn elpm_i(cpu: *Cpu, info: InfoType(.elpm_i)) void {
+    inline fn elpm_i(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("elpm_i {}\n", .{info});
+        std.debug.print("elpm_i\n", .{});
         @panic("elpm_i not implemented yet!");
     }
 
@@ -589,15 +597,15 @@ const instructions = struct {
         @panic("stz_iv not implemented yet!");
     }
 
-    inline fn spm_i(cpu: *Cpu, info: InfoType(.spm_i)) void {
+    inline fn spm_i(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("spm_i {}\n", .{info});
+        std.debug.print("spm_i\n", .{});
         @panic("spm_i not implemented yet!");
     }
 
-    inline fn spm_ii(cpu: *Cpu, info: InfoType(.spm_ii)) void {
+    inline fn spm_ii(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("spm_ii {}\n", .{info});
+        std.debug.print("spm_ii\n", .{});
         @panic("spm_ii not implemented yet!");
     }
 
@@ -647,21 +655,21 @@ const instructions = struct {
         @panic("des not implemented yet!");
     }
 
-    inline fn nop(cpu: *Cpu, info: InfoType(.nop)) void {
+    inline fn nop(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("nop {}\n", .{info});
+        std.debug.print("nop\n", .{});
         @panic("nop not implemented yet!");
     }
 
-    inline fn sleep(cpu: *Cpu, info: InfoType(.sleep)) void {
+    inline fn sleep(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("sleep {}\n", .{info});
+        std.debug.print("sleep\n", .{});
         @panic("sleep not implemented yet!");
     }
 
-    inline fn wdr(cpu: *Cpu, info: InfoType(.wdr)) void {
+    inline fn wdr(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("wdr {}\n", .{info});
+        std.debug.print("wdr\n", .{});
         @panic("wdr not implemented yet!");
     }
 };
