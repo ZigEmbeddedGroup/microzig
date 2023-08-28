@@ -101,26 +101,86 @@ pub fn build(b: *std.Build) !void {
             if (entry.kind != .file)
                 continue;
 
-            var file = try entry.dir.openFile(entry.basename, .{});
-            defer file.close();
+            const FileAction = union(enum) {
+                compile,
+                load,
+                ignore,
+                unknown,
+            };
 
-            const config = try loadTestSuiteConfig(b, file);
+            const extension_to_action = .{
+                .c = .compile,
+                .cpp = .compile,
+                .S = .compile,
+                .zig = .compile,
 
-            const test_payload = b.addExecutable(.{
-                .name = entry.basename,
-                .root_source_file = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
-                .target = avr_target,
-                .optimize = config.optimize,
-            });
-            test_payload.bundle_compiler_rt = false;
-            test_payload.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
+                .bin = .load,
+
+                .inc = .ignore,
+                .h = .ignore,
+                .json = .ignore,
+            };
+
+            const ext = std.fs.path.extension(entry.basename);
+            const action: FileAction = inline for (std.meta.fields(@TypeOf(extension_to_action))) |fld| {
+                const action: FileAction = @field(extension_to_action, fld.name);
+
+                if (std.mem.eql(u8, ext, "." ++ fld.name))
+                    break action;
+            } else .unknown;
+
+            const ConfigAndExe = struct {
+                binary: std.Build.LazyPath,
+                config: TestSuiteConfig,
+            };
+
+            const cae: ConfigAndExe = switch (action) {
+                .unknown => std.debug.panic("Unknown test action on file testsuite/{s}, please fix the build script.", .{entry.path}),
+                .ignore => continue,
+
+                .compile => blk: {
+                    var file = try entry.dir.openFile(entry.basename, .{});
+                    defer file.close();
+
+                    const config = try parseTestSuiteConfig(b, file);
+
+                    const test_payload = b.addExecutable(.{
+                        .name = entry.basename,
+                        .root_source_file = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
+                        .target = avr_target,
+                        .optimize = config.optimize,
+                    });
+                    test_payload.bundle_compiler_rt = false;
+                    test_payload.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
+                    test_payload.addAnonymousModule("testsuite", .{
+                        .source_file = .{ .path = "src/libtestsuite/lib.zig" },
+                    });
+
+                    break :blk ConfigAndExe{
+                        .binary = test_payload.getEmittedBin(),
+                        .config = config,
+                    };
+                },
+                .load => blk: {
+                    const config = if (entry.dir.openFile(b.fmt("{s}.json", .{entry.basename}), .{})) |file| cfg: {
+                        defer file.close();
+                        break :cfg try loadTestSuiteConfig(b, file);
+                    } else |_| TestSuiteConfig{};
+
+                    break :blk ConfigAndExe{
+                        .binary = .{ .path = b.dupe(entry.path) },
+                        .config = config,
+                    };
+                },
+            };
 
             const test_run = b.addRunArtifact(exe);
-            test_run.addFileArg(test_payload.getEmittedBin());
+            test_run.addFileArg(cae.binary);
 
-            test_run.expectExitCode(config.exit_code);
-            test_run.expectStdOutEqual(config.stdout);
-            test_run.expectStdErrEqual(config.stderr);
+            test_run.setStdIn(.{ .bytes = cae.config.stdin });
+            test_run.expectExitCode(cae.config.exit_code);
+            test_run.expectStdOutEqual(cae.config.stdout);
+            test_run.expectStdErrEqual(cae.config.stderr);
 
             test_step.dependOn(&test_run.step);
         }
@@ -131,11 +191,27 @@ const TestSuiteConfig = struct {
     exit_code: u8 = 0,
     stdout: []const u8 = "",
     stderr: []const u8 = "",
+    stdin: []const u8 = "",
+    mileage: ?u32 = 0,
 
     optimize: std.builtin.OptimizeMode = .ReleaseSmall,
 };
 
 fn loadTestSuiteConfig(b: *std.Build, file: std.fs.File) !TestSuiteConfig {
+    var reader = std.json.reader(b.allocator, file.reader());
+    defer reader.deinit();
+
+    return try std.json.parseFromTokenSourceLeaky(
+        TestSuiteConfig,
+        b.allocator,
+        &reader,
+        .{
+            .allocate = .alloc_always,
+        },
+    );
+}
+
+fn parseTestSuiteConfig(b: *std.Build, file: std.fs.File) !TestSuiteConfig {
     var code = std.ArrayList(u8).init(b.allocator);
     defer code.deinit();
 
