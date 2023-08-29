@@ -48,7 +48,9 @@ pub fn main() !void {
         .io = io.memory(),
     };
 
-    try cpu.run(null);
+    const result = try cpu.run(null);
+
+    std.debug.print("STOP: {s}\n", .{@tagName(result)});
 }
 
 const IO = struct {

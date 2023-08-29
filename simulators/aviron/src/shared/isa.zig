@@ -97,6 +97,7 @@ pub const Opcode = enum(u8) {
     sbrc,
     sbrs,
     rjmp,
+    @"break",
 
     unknown,
 };
