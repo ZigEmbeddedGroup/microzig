@@ -6,6 +6,9 @@ pub const Opcode = isa.Opcode;
 pub const Instruction = tables.Instruction;
 pub const opinfo = isa.opinfo;
 
+pub const Register4 = isa.Register4;
+pub const Register = isa.Register;
+
 /// Only decodes one instruction; make sure to decode the second word for lds, sts, jmp, call
 pub fn decode(inst_val: u16) !Instruction {
     const lookup: []const isa.Opcode = &tables.lookup;
@@ -41,7 +44,15 @@ pub fn decode(inst_val: u16) !Instruction {
                 inline for (pos[1], 0..) |p, ii| {
                     bitsets[i].setValue(ii, bitset.isSet(p));
                 }
-                @field(result, &[1]u8{pos[0]}) = @bitReverse(bitsets[i].mask);
+                const name = &[1]u8{pos[0]};
+
+                const raw = @bitReverse(bitsets[i].mask);
+
+                const Dst = @TypeOf(@field(result, name));
+                @field(result, name) = switch (@typeInfo(Dst)) {
+                    .Enum => @enumFromInt(raw),
+                    else => raw,
+                };
             }
 
             return @unionInit(Instruction, @tagName(tag), result);

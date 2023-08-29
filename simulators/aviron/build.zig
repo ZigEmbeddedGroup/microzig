@@ -19,6 +19,14 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run test suite");
     const run_step = b.step("run", "Run the app");
     const tables_step = b.step("tables", "Installs the table generator");
+    const debug_testsuite_step = b.step("debug-testsuite", "Installs all testsuite examples");
+
+    // Deps
+    const args_dep = b.dependency("args", .{});
+
+    // Dep modules
+
+    const args_module = args_dep.module("args");
 
     // Options
     const target = b.standardTargetOptions(.{});
@@ -42,6 +50,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    exe.addModule("args", args_module);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
@@ -75,6 +84,7 @@ pub fn build(b: *std.Build) !void {
             .{ .name = "isa", .module = isa_module },
         },
     });
+    tables_zig_file.addStepDependencies(&exe.step);
     exe.addModule("isa", isa_module);
 
     // Samples
@@ -87,6 +97,7 @@ pub fn build(b: *std.Build) !void {
         });
         sample.bundle_compiler_rt = false;
         sample.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
+        sample.strip = false;
 
         // install to the prefix:
         const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
@@ -159,7 +170,7 @@ pub fn build(b: *std.Build) !void {
                     const config = try parseTestSuiteConfig(b, file);
 
                     const test_payload = b.addExecutable(.{
-                        .name = entry.basename,
+                        .name = std.fs.path.stem(entry.basename),
                         .root_source_file = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
                         .target = avr_target,
                         .optimize = config.optimize,
@@ -169,6 +180,15 @@ pub fn build(b: *std.Build) !void {
                     test_payload.addAnonymousModule("testsuite", .{
                         .source_file = .{ .path = "src/libtestsuite/lib.zig" },
                     });
+                    test_payload.strip = false;
+
+                    debug_testsuite_step.dependOn(&b.addInstallFile(
+                        test_payload.getEmittedBin(),
+                        b.fmt("testsuite/{s}/{s}.elf", .{
+                            std.fs.path.dirname(entry.path) orelse ".",
+                            std.fs.path.stem(entry.basename),
+                        }),
+                    ).step);
 
                     break :blk ConfigAndExe{
                         .binary = test_payload.getEmittedBin(),

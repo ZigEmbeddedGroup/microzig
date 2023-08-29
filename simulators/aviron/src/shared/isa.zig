@@ -1,118 +1,120 @@
 const std = @import("std");
 
 pub const Opcode = enum(u8) {
-    movw,
-    muls,
-    nop,
-    mulsu,
+    @"and",
+    @"break",
+    @"or",
+    adc,
+    add,
+    adiw,
+    andi,
+    asr,
+    bclr,
+    bld,
+    brbc,
+    brbs,
+    bset,
+    bst,
+    call,
+    cbi,
+    com,
+    cp,
+    cpc,
+    cpi,
+    cpse,
+    dec,
+    des,
+    eicall,
+    eijmp,
+    elpm_i,
+    elpm_ii,
+    elpm_iii,
+    eor,
     fmul,
     fmuls,
     fmulsu,
-    cpc,
-    sbc,
-    add,
-    cpse,
-    cp,
-    sub,
-    adc,
-    @"and",
-    eor,
-    @"or",
-    mov,
-    cpi,
-    sbci,
-    subi,
-    ori,
-    andi,
+    icall,
+    ijmp,
+    in,
+    inc,
+    jmp,
+    lac,
+    las,
+    lat,
+    ldi,
     lds,
-    ldz_ii,
-    ldz_iii,
-    lpm_ii,
-    lpm_iii,
-    elpm_ii,
-    elpm_iii,
-    ldy_ii,
-    ldy_iii,
     ldx_i,
     ldx_ii,
     ldx_iii,
+    // ldy_i is the same as ldy_iv
+    ldy_ii,
+    ldy_iii,
+    ldy_iv,
+    // ldz_i is the same as ldz_iv
+    ldz_ii,
+    ldz_iii,
+    ldz_iv,
+    lpm_i,
+    lpm_ii,
+    lpm_iii,
+    lsr,
+    mov,
+    movw,
+    mul,
+    muls,
+    mulsu,
+    neg,
+    nop,
+    ori,
+    out,
     pop,
-    sts,
     push,
-    stz_ii,
-    stz_iii,
-    xch,
-    las,
-    lac,
-    lat,
-    sty_ii,
-    sty_iii,
+    rcall,
+    ret,
+    reti,
+    rjmp,
+    ror,
+    sbc,
+    sbci,
+    sbi,
+    sbic,
+    sbis,
+    sbiw,
+    sbrc,
+    sbrs,
+    sleep,
+    spm_i,
+    spm_ii,
+    sts,
     stx_i,
     stx_ii,
     stx_iii,
-    ijmp,
-    eijmp,
-    bset,
-    bclr,
-    des,
-    ret,
-    icall,
-    reti,
-    eicall,
-    sleep,
-    wdr,
-    lpm_i,
-    elpm_i,
-    spm_i,
-    spm_ii,
-    com,
-    neg,
-    swap,
-    inc,
-    asr,
-    lsr,
-    ror,
-    dec,
-    jmp,
-    call,
-    adiw,
-    sbiw,
-    cbi,
-    sbic,
-    sbi,
-    sbis,
-    mul,
-    in,
-    out,
-    ldz_iv,
-    ldy_iv,
-    stz_iv,
+    sty_ii,
+    sty_iii,
     sty_iv,
-    rcall,
-    ldi,
-    brbs,
-    brbc,
-    bld,
-    bst,
-    sbrc,
-    sbrs,
-    rjmp,
-    @"break",
+    stz_ii,
+    stz_iii,
+    stz_iv,
+    sub,
+    subi,
+    swap,
+    wdr,
+    xch,
 
     unknown,
 };
 
 pub const opinfo = struct {
-    pub const a6d5 = struct { a: u6, d: u5 };
-    pub const a6r5 = struct { a: u6, r: u5 };
+    pub const a6d5 = struct { a: u6, d: Register };
+    pub const a6r5 = struct { a: u6, r: Register };
     pub const a5b3 = struct { a: u5, b: u3 };
-    pub const b3d5 = struct { b: u3, d: u5 };
-    pub const b3r5 = struct { b: u3, r: u5 };
-    pub const d5 = struct { d: u5 };
-    pub const d5k16 = struct { d: u5, k: u16 };
-    pub const d5q6 = struct { d: u5, q: u6 };
-    pub const d5r5 = struct { d: u5, r: u5 };
-    pub const d4k8 = struct { d: u4, k: u8 };
+    pub const b3d5 = struct { b: u3, d: Register };
+    pub const b3r5 = struct { b: u3, r: Register };
+    pub const d5 = struct { d: Register };
+    pub const d5k16 = struct { d: Register, k: u16 };
+    pub const d5q6 = struct { d: Register, q: u6 };
+    pub const d5r5 = struct { d: Register, r: Register };
+    pub const d4k8 = struct { d: Register4, k: u8 };
     pub const d4r4 = struct { d: u4, r: u4 };
     pub const d3r3 = struct { d: u3, r: u3 };
     pub const d2k6 = struct { d: u2, k: u6 };
@@ -121,7 +123,53 @@ pub const opinfo = struct {
     pub const k12 = struct { k: u12 };
     pub const k22 = struct { k: u22 };
     pub const k7s3 = struct { k: u7, s: u3 };
-    pub const q6r5 = struct { q: u6, r: u5 };
-    pub const r5 = struct { r: u5 };
+    pub const q6r5 = struct { q: u6, r: Register };
+    pub const r5 = struct { r: Register };
     pub const s3 = struct { s: u3 };
+};
+
+pub const Register4 = enum(u4) {
+    _,
+
+    pub fn format(reg4: Register4, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("r{}", .{
+            16 + @as(u32, @intFromEnum(reg4)),
+        });
+    }
+
+    /// Returns the numeric value of this value.
+    pub fn int(r4: Register4) u4 {
+        return @intFromEnum(r4);
+    }
+
+    /// Returns the register number.
+    pub fn num(r4: Register4) u5 {
+        return 16 + @as(u5, @intFromEnum(r4));
+    }
+
+    pub fn reg(r4: Register4) Register {
+        return @enumFromInt(r4.num());
+    }
+};
+
+pub const Register = enum(u5) {
+    _,
+
+    pub fn format(reg5: Register, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("r{}", .{@intFromEnum(reg5)});
+    }
+
+    /// Returns the numeric value of this value.
+    pub fn int(r5: Register) u5 {
+        return @intFromEnum(r5);
+    }
+
+    /// Returns the register number.
+    pub fn num(r5: Register) u5 {
+        return @intFromEnum(r5);
+    }
 };
