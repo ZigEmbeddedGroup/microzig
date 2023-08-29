@@ -51,7 +51,9 @@ pub fn main() !void {
                 '1' => base_number_bit_set.set(index),
                 else => {
                     var gop = try positionals.getPtr(opcode).getOrPut(allocator, r);
-                    if (!gop.found_existing) gop.value_ptr.* = try std.BoundedArray(u8, 16).init(0);
+                    if (!gop.found_existing) {
+                        gop.value_ptr.* = try std.BoundedArray(u8, 16).init(0);
+                    }
                     try gop.value_ptr.*.append(@intCast(index));
 
                     try unknown_indices.append(@intCast(index));
