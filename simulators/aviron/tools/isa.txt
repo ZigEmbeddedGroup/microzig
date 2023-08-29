@@ -30,6 +30,7 @@ elpm_ii 1001 000d dddd 0110
 elpm_iii 1001 000d dddd 0111
 ldy_ii 1001 000d dddd 1001
 ldy_iii 1001 000d dddd 1010
+ldy_iv 10q0 qq0d dddd 1qqq
 ldx_i 1001 000d dddd 1100
 ldx_ii 1001 000d dddd 1101
 ldx_iii 1001 000d dddd 1110
@@ -82,7 +83,6 @@ mul 1001 11rd dddd rrrr
 in 1011 0aad dddd aaaa
 out 1011 1aar rrrr aaaa
 ldz_iv 10q0 qq0d dddd 0qqq
-ldy_iv 10q0 qq0d dddd 1qqq
 stz_iv 10q0 qq1r rrrr 0qqq
 sty_iv 10q0 qq1r rrrr 1qqq
 rcall 1101 kkkk kkkk kkkk

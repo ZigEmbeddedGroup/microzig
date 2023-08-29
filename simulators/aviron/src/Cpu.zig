@@ -26,12 +26,10 @@ const InstructionEffect = enum {
     watchdog_reset,
 };
 
-instr_effect: InstructionEffect = .none,
+// Options:
+trace: bool = false,
 
-pc: u24 = 0,
-regs: [32]u8 = [1]u8{0} ** 32,
-sreg: SREG = @bitCast(@as(u8, 0)),
-
+// Device:
 code_model: CodeModel,
 sio: SpecialIoRegisters,
 flash: Flash,
@@ -39,8 +37,17 @@ sram: RAM,
 eeprom: EEPROM,
 io: IO,
 
-pub fn shiftProgramCounter(cpu: *Cpu, by: i12) void {
-    cpu.pc = @intCast(@as(i32, @intCast(cpu.pc)) + by);
+// State
+pc: u24 = 0,
+regs: [32]u8 = [1]u8{0} ** 32,
+sreg: SREG = @bitCast(@as(u8, 0)),
+
+instr_effect: InstructionEffect = .none,
+
+pub fn reset(cpu: *Cpu) void {
+    cpu.pc = 0;
+    cpu.regs = [1]u8{0} ** 32;
+    cpu.sreg = @bitCast(@as(u8, 0));
 }
 
 pub const RunError = error{InvalidInstruction};
@@ -72,7 +79,18 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             };
         };
 
+        const pc = cpu.pc;
         const inst = try isa.decode(cpu.fetchCode());
+
+        if (cpu.trace) {
+            std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
+                if (skip) "SKIP" else "    ",
+                cpu.sreg,
+                pc,
+                fmtInstruction(inst),
+            });
+        }
+
         if (!skip) {
             switch (std.meta.activeTag(inst)) {
                 .unknown => return error.InvalidInstruction,
@@ -88,6 +106,10 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             }
         }
     }
+}
+
+fn shiftProgramCounter(cpu: *Cpu, by: i12) void {
+    cpu.pc = @intCast(@as(i32, @intCast(cpu.pc)) + by);
 }
 
 fn fetchCode(cpu: *Cpu) u16 {
@@ -149,21 +171,33 @@ const WideReg = enum(u8) {
     }
 };
 
-fn readWideReg(cpu: *Cpu, reg: WideReg) u16 {
-    const lo = cpu.regs[reg.base() + 0];
-    const hi = cpu.regs[reg.base() + 1];
-    return (@as(u16, hi) << 8) | lo;
+fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: enum { eind, ramp, raw }) u24 {
+    return compose24(
+        switch (mode) {
+            .raw => 0,
+            .ramp => switch (reg) {
+                .x => if (cpu.sio.ramp_x) |ramp| cpu.io.read(ramp) else 0,
+                .y => if (cpu.sio.ramp_y) |ramp| cpu.io.read(ramp) else 0,
+                .z => if (cpu.sio.ramp_z) |ramp| cpu.io.read(ramp) else 0,
+            },
+            .eind => if (cpu.sio.e_ind) |e_ind| cpu.io.read(e_ind) else 0,
+        },
+        cpu.regs[reg.base() + 1],
+        cpu.regs[reg.base() + 0],
+    );
 }
 
-fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u16) void {
-    const lo: u8 = @truncate(value >> 0);
-    const hi: u8 = @truncate(value >> 8);
-    cpu.regs[reg.base() + 0] = lo;
-    cpu.regs[reg.base() + 1] = hi;
-}
-
-fn regBase16(r: u4) u5 {
-    return @as(u5, r) | 0x10;
+fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: enum { raw, ramp }) void {
+    const parts = decompose24(value);
+    cpu.regs[reg.base() + 0] = parts[0];
+    cpu.regs[reg.base() + 1] = parts[1];
+    if (mode == .ramp) {
+        switch (reg) {
+            .x => if (cpu.sio.ramp_x) |ramp| cpu.io.write(ramp, parts[2]),
+            .y => if (cpu.sio.ramp_y) |ramp| cpu.io.write(ramp, parts[2]),
+            .z => if (cpu.sio.ramp_z) |ramp| cpu.io.write(ramp, parts[2]),
+        }
+    }
 }
 
 const instructions = struct {
@@ -174,7 +208,7 @@ const instructions = struct {
     /// the destination register Rd is loaded with a copy of Rr.
     inline fn mov(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rr
-        cpu.regs[info.d] = cpu.regs[info.r];
+        cpu.regs[info.d.num()] = cpu.regs[info.r.num()];
     }
 
     /// MOVW – Copy Register Word
@@ -197,9 +231,9 @@ const instructions = struct {
         const Nibbles = packed struct(u8) { low: u4, high: u4 };
 
         // R(7:4) ← Rd(3:0), R(3:0) ← Rd(7:4)
-        const src: Nibbles = @bitCast(cpu.regs[info.d]);
+        const src: Nibbles = @bitCast(cpu.regs[info.d.num()]);
         const dst = Nibbles{ .low = src.high, .high = src.low };
-        cpu.regs[info.d] = @bitCast(dst);
+        cpu.regs[info.d.num()] = @bitCast(dst);
     }
 
     // ALU Bitwise:
@@ -225,7 +259,7 @@ const instructions = struct {
     /// destination register Rd.
     inline fn @"and"(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rd • Rr
-        return perform_logic(cpu, info.d, cpu.regs[info.r], .@"and");
+        return perform_logic(cpu, info.d.num(), cpu.regs[info.r.num()], .@"and");
     }
 
     /// EOR – Exclusive OR
@@ -233,7 +267,7 @@ const instructions = struct {
     /// destination register Rd.
     inline fn eor(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rd
-        return perform_logic(cpu, info.d, cpu.regs[info.r], .xor);
+        return perform_logic(cpu, info.d.num(), cpu.regs[info.r.num()], .xor);
     }
 
     /// OR – Logical OR
@@ -241,7 +275,7 @@ const instructions = struct {
     /// destination register Rd.
     inline fn @"or"(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rd v Rr
-        return perform_logic(cpu, info.d, cpu.regs[info.r], .@"or");
+        return perform_logic(cpu, info.d.num(), cpu.regs[info.r.num()], .@"or");
     }
 
     /// ANDI – Logical AND with Immediate
@@ -249,7 +283,7 @@ const instructions = struct {
     /// destination register Rd.
     inline fn andi(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         // Rd ← Rd • K
-        return perform_logic(cpu, info.d, info.k, .@"and");
+        return perform_logic(cpu, info.d.num(), info.k, .@"and");
     }
 
     /// ORI – Logical OR with Immediate
@@ -257,7 +291,7 @@ const instructions = struct {
     /// destination register Rd
     inline fn ori(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         // Rd ← Rd v K
-        return perform_logic(cpu, info.d, info.k, .@"or");
+        return perform_logic(cpu, info.d.num(), info.k, .@"or");
     }
 
     // ALU Arithmetic:
@@ -271,11 +305,11 @@ const instructions = struct {
     inline fn inc(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← Rd + 1
 
-        const src = cpu.regs[info.d];
+        const src = cpu.regs[info.d.num()];
 
         const res = src +% 1;
 
-        cpu.regs[info.d] = res;
+        cpu.regs[info.d.num()] = res;
 
         cpu.sreg.z = (res == 0);
         cpu.sreg.v = (src == 0x7F);
@@ -292,11 +326,11 @@ const instructions = struct {
     inline fn dec(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← Rd - 1
 
-        const src = cpu.regs[info.d];
+        const src = cpu.regs[info.d.num()];
 
         const res = src -% 1;
 
-        cpu.regs[info.d] = res;
+        cpu.regs[info.d.num()] = res;
 
         cpu.sreg.z = (res == 0);
         cpu.sreg.v = (src == 0x80);
@@ -305,9 +339,9 @@ const instructions = struct {
     }
 
     inline fn generic_add(cpu: *Cpu, info: isa.opinfo.d5r5, c: bool) void {
-        const lhs = cpu.regs[info.d];
+        const lhs = cpu.regs[info.d.num()];
         const Rd: Bits8 = @bitCast(lhs);
-        const rhs = cpu.regs[info.r];
+        const rhs = cpu.regs[info.r.num()];
         const Rr: Bits8 = @bitCast(rhs);
 
         const res: u8 = lhs +% rhs +% @intFromBool(c);
@@ -348,9 +382,9 @@ const instructions = struct {
         const cpc: SubCpConfig = .{ .zero = .clear_only, .writeback = false, .carry = true, .flip = false };
         const neg: SubCpConfig = .{ .zero = .replace, .writeback = true, .carry = false, .flip = true };
     };
-    inline fn generic_sub_cp(cpu: *Cpu, d: u5, _rhs: u8, comptime conf: SubCpConfig) void {
-        const lhs: u8 = if (conf.flip) _rhs else cpu.regs[d];
-        const rhs: u8 = if (conf.flip) cpu.regs[d] else _rhs;
+    inline fn generic_sub_cp(cpu: *Cpu, d: isa.Register, _rhs: u8, comptime conf: SubCpConfig) void {
+        const lhs: u8 = if (conf.flip) _rhs else cpu.regs[d.num()];
+        const rhs: u8 = if (conf.flip) cpu.regs[d.num()] else _rhs;
         const Rd: Bits8 = @bitCast(lhs);
         const Rr: Bits8 = @bitCast(rhs);
         const result: u8 = if (conf.carry)
@@ -360,7 +394,7 @@ const instructions = struct {
         const R: Bits8 = @bitCast(result);
 
         if (conf.writeback) {
-            cpu.regs[d] = result;
+            cpu.regs[d.num()] = result;
         }
 
         // Set if there was a borrow from bit 3; cleared otherwise.
@@ -383,7 +417,7 @@ const instructions = struct {
 
             // Previous value remains unchanged when the result is zero; cleared otherwise.
             // Z = ~R7 • ~R6 • ~R5 • ~R4 • ~R3 • ~R2 • ~R1 • ~R0 • Z
-            .clear_only => cpu.sreg.z = cpu.sreg.z and z,
+            .clear_only => cpu.sreg.z = z and cpu.sreg.z,
         }
 
         // Set if MSB of the result is set; cleared otherwise.
@@ -398,7 +432,7 @@ const instructions = struct {
     /// Subtracts two registers and places the result in the destination register Rd.
     inline fn sub(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rd - Rr
-        return generic_sub_cp(cpu, info.d, cpu.regs[info.r], SubCpConfig.sub);
+        return generic_sub_cp(cpu, info.d, cpu.regs[info.r.num()], SubCpConfig.sub);
     }
 
     /// SUBI – Subtract Immediate
@@ -406,14 +440,14 @@ const instructions = struct {
     /// working on Register R16 to R31 and is very well suited for operations on the X, Y, and Z-pointers.
     inline fn subi(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         // Rd ← Rd - K
-        return generic_sub_cp(cpu, regBase16(info.d), info.k, SubCpConfig.sub);
+        return generic_sub_cp(cpu, info.d.reg(), info.k, SubCpConfig.sub);
     }
 
     /// SBC – Subtract with Carry
     /// Subtracts two registers and subtracts with the C Flag, and places the result in the destination register Rd.
     inline fn sbc(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // Rd ← Rd - Rr - C
-        return generic_sub_cp(cpu, info.d, cpu.regs[info.r], SubCpConfig.sbc);
+        return generic_sub_cp(cpu, info.d, cpu.regs[info.r.num()], SubCpConfig.sbc);
     }
 
     /// SBCI – Subtract Immediate with Carry SBI
@@ -421,7 +455,7 @@ const instructions = struct {
     /// register Rd.
     inline fn sbci(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         // Rd ← Rd - K - C
-        return generic_sub_cp(cpu, regBase16(info.d), info.k, SubCpConfig.sbc);
+        return generic_sub_cp(cpu, info.d.reg(), info.k, SubCpConfig.sbc);
     }
 
     /// NEG – Two’s Complement
@@ -435,11 +469,11 @@ const instructions = struct {
     /// This instruction performs a One’s Complement of register Rd.
     inline fn com(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← $FF - Rd
-        const src = cpu.regs[info.d];
+        const src = cpu.regs[info.d.num()];
 
         const res: u8 = 0xFF - src;
 
-        cpu.regs[info.d] = res;
+        cpu.regs[info.d.num()] = res;
 
         cpu.sreg.z = (res == 0);
         cpu.sreg.n = (res & 0x80) != 0;
@@ -494,7 +528,8 @@ const instructions = struct {
 
     // Wide ALU Arithmetic:
 
-    /// TODO!
+    const register_pairs_4 = [4]usize{ 24, 26, 28, 30 };
+
     /// ADIW – Add Immediate to Word
     /// Adds an immediate value (0 - 63) to a register pair and places the result in the register pair. This
     /// instruction operates on the upper four register pairs, and is well suited for operations on the pointer
@@ -503,12 +538,24 @@ const instructions = struct {
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn adiw(cpu: *Cpu, info: isa.opinfo.d2k6) void {
         // Rd+1:Rd ← Rd+1:Rd + K
-        _ = cpu;
-        std.debug.print("adiw {}\n", .{info});
-        @panic("adiw not implemented yet!");
+
+        const base = register_pairs_4[info.d];
+
+        const src = compose16(cpu.regs[base + 0], cpu.regs[base + 1]);
+
+        const res = src +% info.k;
+
+        const res2 = decompose16(res);
+        cpu.regs[base + 0] = res2[0];
+        cpu.regs[base + 1] = res2[1];
+
+        cpu.sreg.z = (res == 0);
+        cpu.sreg.n = ((res & 0x8000) != 0);
+        cpu.sreg.v = ((src & 0x8000) == 0) and ((res & 0x8000) != 0);
+        cpu.sreg.c = ((src & 0x8000) != 0) and ((res & 0x8000) == 0);
+        cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
-    /// TODO!
     /// SBIW – Subtract Immediate from Word
     /// Subtracts an immediate value (0-63) from a register pair and places the result in the register pair. This
     /// instruction operates on the upper four register pairs, and is well suited for operations on the Pointer
@@ -516,9 +563,22 @@ const instructions = struct {
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn sbiw(cpu: *Cpu, info: isa.opinfo.d2k6) void {
         // Rd+1:Rd ← Rd+1:Rd - K
-        _ = cpu;
-        std.debug.print("sbiw {}\n", .{info});
-        @panic("sbiw not implemented yet!");
+
+        const base = register_pairs_4[info.d];
+
+        const src = compose16(cpu.regs[base + 0], cpu.regs[base + 1]);
+
+        const res = src -% info.k;
+
+        const res2 = decompose16(res);
+        cpu.regs[base + 0] = res2[0];
+        cpu.regs[base + 1] = res2[1];
+
+        cpu.sreg.z = (res == 0);
+        cpu.sreg.n = ((res & 0x8000) != 0);
+        cpu.sreg.c = ((src & 0x8000) == 0) and ((res & 0x8000) != 0);
+        cpu.sreg.v = cpu.sreg.c;
+        cpu.sreg.s = (cpu.sreg.n != cpu.sreg.v);
     }
 
     // ALU Shifts
@@ -527,7 +587,7 @@ const instructions = struct {
         msb: enum { sticky, carry, zero },
     };
     inline fn generic_shift(cpu: *Cpu, info: isa.opinfo.d5, comptime conf: ShiftConfig) void {
-        const src: u8 = cpu.regs[info.d];
+        const src: u8 = cpu.regs[info.d.num()];
 
         const msb: u8 = switch (conf.msb) {
             .zero => 0x00,
@@ -536,7 +596,7 @@ const instructions = struct {
         };
         const res: u8 = (src >> 7) | msb;
 
-        cpu.regs[info.d] = res;
+        cpu.regs[info.d.num()] = res;
 
         // Set if the result is $00; cleared otherwise.
         // Z = ~R7 • ~R6 • ~R5 • ~R4 • ~R3 • ~R2 • ~R1 • ~R0
@@ -589,14 +649,14 @@ const instructions = struct {
     /// Stores data from register Rr in the Register File to I/O Space (Ports, Timers, Configuration Registers, etc.).
     inline fn out(cpu: *Cpu, info: isa.opinfo.a6r5) void {
         // I/O(A) ← Rr
-        cpu.io.write(info.a, 0xFF, cpu.regs[info.r]);
+        cpu.io.write(info.a, cpu.regs[info.r.num()]);
     }
 
     /// IN - Load an I/O Location to Register
     /// Loads data from the I/O Space (Ports, Timers, Configuration Registers, etc.) into register Rd in the Register File.
     inline fn in(cpu: *Cpu, info: isa.opinfo.a6d5) void {
         // Rd ← I/O(A)
-        cpu.regs[info.d] = cpu.io.read(info.a);
+        cpu.regs[info.d.num()] = cpu.io.read(info.a);
     }
 
     /// CBI – Clear Bit in I/O Register
@@ -604,14 +664,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.write(info.a, bval(info.b), 0x00);
+        cpu.io.writeMasked(info.a, bval(info.b), 0x00);
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.write(info.a, bval(info.b), @as(u8, 1) << info.b);
+        cpu.io.writeMasked(info.a, bval(info.b), @as(u8, 1) << info.b);
     }
 
     // Branching:
@@ -667,7 +727,7 @@ const instructions = struct {
     /// This instruction tests a single bit in a register and skips the next instruction if the bit is cleared.
     inline fn sbrc(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         // If Rr(b) = 0 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.regs[info.r];
+        const val = cpu.regs[info.r.num()];
         if ((val & bval(info.b)) == 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -677,7 +737,7 @@ const instructions = struct {
     /// This instruction tests a single bit in a register and skips the next instruction if the bit is set.
     inline fn sbrs(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         // If Rr(b) = 1 then PC ← PC + 2 (or 3) else PC ← PC + 1
-        const val = cpu.regs[info.r];
+        const val = cpu.regs[info.r.num()];
         if ((val & bval(info.b)) != 0) {
             cpu.instr_effect = .skip_next;
         }
@@ -687,8 +747,8 @@ const instructions = struct {
     inline fn cpse(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // If Rd = Rr then PC ← PC + 2 (or 3) else PC ← PC + 1
 
-        const Rd = cpu.regs[info.d];
-        const Rr = cpu.regs[info.r];
+        const Rd = cpu.regs[info.d.num()];
+        const Rr = cpu.regs[info.r.num()];
         if (Rd == Rr) {
             cpu.instr_effect = .skip_next;
         }
@@ -770,7 +830,7 @@ const instructions = struct {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← 0
         cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
-        cpu.pc = cpu.readWideReg(.z);
+        cpu.pc = cpu.readWideReg(.z, .raw);
     }
 
     /// IJMP – Indirect Jump
@@ -781,7 +841,7 @@ const instructions = struct {
     inline fn ijmp(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← 0
-        cpu.pc = cpu.readWideReg(.z);
+        cpu.pc = cpu.readWideReg(.z, .raw);
     }
 
     /// EICALL – Extended Indirect Call to Subroutine
@@ -793,7 +853,7 @@ const instructions = struct {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← EIND
         cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
-        cpu.pc = cpu.getExtendedIndirect(cpu.readWideReg(.z));
+        cpu.pc = cpu.readWideReg(.z, .eind);
     }
 
     /// EIJMP – Extended Indirect Jump
@@ -804,7 +864,7 @@ const instructions = struct {
     inline fn eijmp(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← EIND
-        cpu.pc = cpu.getExtendedIndirect(cpu.readWideReg(.z));
+        cpu.pc = cpu.readWideReg(.z, .eind);
     }
 
     // Comparisons
@@ -814,7 +874,7 @@ const instructions = struct {
     /// All conditional branches can be used after this instruction.
     inline fn cp(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // (1) Rd - Rr
-        return generic_sub_cp(cpu, info.d, cpu.regs[info.r], SubCpConfig.cp);
+        return generic_sub_cp(cpu, info.d, cpu.regs[info.r.num()], SubCpConfig.cp);
     }
 
     /// This instruction performs a compare between two registers Rd and Rr and also takes into account the
@@ -823,7 +883,7 @@ const instructions = struct {
     /// All conditional branches can be used after this instruction.
     inline fn cpc(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         // (1) Rd - Rr - C
-        return generic_sub_cp(cpu, info.d, cpu.regs[info.r], SubCpConfig.cpc);
+        return generic_sub_cp(cpu, info.d, cpu.regs[info.r.num()], SubCpConfig.cpc);
     }
 
     /// This instruction performs a compare between register Rd and a constant.
@@ -831,7 +891,7 @@ const instructions = struct {
     /// All conditional branches can be used after this instruction.
     inline fn cpi(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         // (1) Rd - K
-        return generic_sub_cp(cpu, regBase16(info.d), info.k, SubCpConfig.cp);
+        return generic_sub_cp(cpu, info.d.reg(), info.k, SubCpConfig.cp);
     }
 
     // Loads
@@ -840,7 +900,7 @@ const instructions = struct {
     /// Loads an 8-bit constant directly to register 16 to 31.
     inline fn ldi(cpu: *Cpu, bits: isa.opinfo.d4k8) void {
         // Rd ← K
-        cpu.regs[regBase16(bits.d)] = bits.k;
+        cpu.regs[bits.d.num()] = bits.k;
     }
 
     /// XCH – Exchange
@@ -852,12 +912,12 @@ const instructions = struct {
     /// reading status bits stored in SRAM.
     inline fn xch(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd, Rd ← (Z)
-        const z = cpu.readWideReg(.z);
+        const z = cpu.readWideReg(.z, .ramp);
 
-        const Rd = cpu.regs[info.r];
+        const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
         cpu.sram.write(z, Rd);
-        cpu.regs[info.r] = mem;
+        cpu.regs[info.r.num()] = mem;
     }
 
     /// Load one byte indirect from data space to register and stores and clear the bits in data space specified by
@@ -871,12 +931,12 @@ const instructions = struct {
     /// (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
     inline fn lac(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z);
+        const z = cpu.readWideReg(.z, .ramp);
 
-        const Rd = cpu.regs[info.r];
+        const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
         cpu.sram.write(z, (0xFF - Rd) & mem);
-        cpu.regs[info.r] = mem;
+        cpu.regs[info.r.num()] = mem;
     }
 
     /// LAS – Load and Set
@@ -890,12 +950,12 @@ const instructions = struct {
     /// status bits stored in SRAM.
     inline fn las(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd v (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z);
+        const z = cpu.readWideReg(.z, .ramp);
 
-        const Rd = cpu.regs[info.r];
+        const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
         cpu.sram.write(z, Rd | mem);
-        cpu.regs[info.r] = mem;
+        cpu.regs[info.r.num()] = mem;
     }
 
     /// LAT – Load and Toggle
@@ -908,12 +968,12 @@ const instructions = struct {
     /// changing status bits stored in SRAM.
     inline fn lat(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd ⊕ (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z);
+        const z = cpu.readWideReg(.z, .ramp);
 
-        const Rd = cpu.regs[info.r];
+        const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
         cpu.sram.write(z, Rd ^ mem);
-        cpu.regs[info.r] = mem;
+        cpu.regs[info.r.num()] = mem;
     }
 
     /// TODO!
@@ -925,67 +985,88 @@ const instructions = struct {
         @panic("lds not implemented yet!");
     }
 
-    /// TODO!
+    const IndexOpConfig = struct {
+        op: enum { none, post_incr, pre_decr, displace },
+    };
+    inline fn compute_and_mutate_index(cpu: *Cpu, comptime wr: WideReg, q: u6, comptime config: IndexOpConfig) u24 {
+        const raw = cpu.readWideReg(wr, .ramp);
+        const address = switch (config.op) {
+            .none => raw,
+            .displace => raw +% q,
+            .pre_decr => blk: {
+                const index = raw -% 1;
+                cpu.writeWideReg(wr, index, .ramp);
+                break :blk index;
+            },
+            .post_incr => blk: {
+                cpu.writeWideReg(wr, raw +% 1, .ramp);
+                break :blk raw;
+            },
+        };
+        return address;
+    }
+
+    inline fn generic_indexed_load(cpu: *Cpu, comptime wr: WideReg, d: isa.Register, q: u6, comptime config: IndexOpConfig) void {
+        const address = compute_and_mutate_index(cpu, wr, q, config);
+        cpu.regs[d.num()] = cpu.sram.read(address);
+    }
+
+    /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_i(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldx_i {}\n", .{info});
-        @panic("ldx_i not implemented yet!");
+        // Rd ← (X)
+        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .none });
     }
 
-    /// TODO!
+    /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldx_ii {}\n", .{info});
-        @panic("ldx_ii not implemented yet!");
+        // Rd ← (X) X ← X + 1
+        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldx_iii {}\n", .{info});
-        @panic("ldx_iii not implemented yet!");
+        // X ← X - 1 Rd ← (X)
+        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .pre_decr });
     }
 
-    /// TODO!
+    // ldy_i is equivalent to ldy_iv with q=0
+
+    /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldy_ii {}\n", .{info});
-        @panic("ldy_ii not implemented yet!");
+        // Rd ← (Y), Y ← Y + 1
+        return generic_indexed_load(cpu, .y, info.d, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldy_iii {}\n", .{info});
-        @panic("ldy_iii not implemented yet!");
+        // Y ← Y - 1, Rd ← (Y)
+        return generic_indexed_load(cpu, .y, info.d, 0, .{ .op = .pre_decr });
     }
 
-    /// TODO!
+    /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
-        _ = cpu;
-        std.debug.print("ldy_iv {}\n", .{info});
-        @panic("ldy_iv not implemented yet!");
+        // Rd ← (Y+q)
+        return generic_indexed_load(cpu, .y, info.d, info.q, .{ .op = .displace });
     }
 
-    /// TODO!
+    // ldz_i is equivalent to ldz_iv with q=0
+
+    /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldz_ii {}\n", .{info});
-        @panic("ldz_ii not implemented yet!");
+        // Rd ← (Z), Z ← Z + 1
+        return generic_indexed_load(cpu, .z, info.d, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("ldz_iii {}\n", .{info});
-        @panic("ldz_iii not implemented yet!");
+        // Z ← Z - 1, Rd ← (Z)
+        return generic_indexed_load(cpu, .z, info.d, 0, .{ .op = .pre_decr });
     }
 
-    /// TODO!
+    /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
-        _ = cpu;
-        std.debug.print("ldz_iv {}\n", .{info});
-        @panic("ldz_iv not implemented yet!");
+        // Rd ← (Z+q)
+        return generic_indexed_load(cpu, .z, info.d, info.q, .{ .op = .displace });
     }
 
     /// TODO!
@@ -1030,76 +1111,78 @@ const instructions = struct {
         @panic("elpm_iii not implemented yet!");
     }
 
-    /// TODO!
+    /// POP – Pop Register from Stack
+    /// This instruction loads register Rd with a byte from the STACK. The Stack Pointer is pre-incremented by 1
+    /// before the POP.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn pop(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("pop {}\n", .{info});
-        @panic("pop not implemented yet!");
+        // Rd ← STACK
+        cpu.regs[info.d.num()] = cpu.pop();
     }
 
     // Stores:
 
-    /// TODO!
+    inline fn generic_indexed_store(cpu: *Cpu, comptime wr: WideReg, r: isa.Register, q: u6, comptime config: IndexOpConfig) void {
+        const address = compute_and_mutate_index(cpu, wr, q, config);
+        cpu.sram.write(address, cpu.regs[r.num()]);
+    }
+
+    /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_i(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("stx_i {}\n", .{info});
-        @panic("stx_i not implemented yet!");
+        // (X) ← Rr
+        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .none });
     }
 
-    /// TODO!
+    /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("stx_ii {}\n", .{info});
-        @panic("stx_ii not implemented yet!");
+        // (X) ← Rr, X ← X+1
+        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("stx_iii {}\n", .{info});
-        @panic("stx_iii not implemented yet!");
+        // (iii) X ← X - 1, (X) ← Rr
+        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .pre_decr });
     }
 
-    /// TODO!
+    // sty_i is sty_iv with q=0
+
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("sty_ii {}\n", .{info});
-        @panic("sty_ii not implemented yet!");
+        // (Y) ← Rr, Y ← Y+1
+        generic_indexed_store(cpu, .y, info.r, 0, .{ .op = .none });
     }
 
-    /// TODO!
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("sty_iii {}\n", .{info});
-        @panic("sty_iii not implemented yet!");
+        // (iii) Y ← Y - 1, (Y) ← Rr
+        generic_indexed_store(cpu, .y, info.r, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
-        _ = cpu;
-        std.debug.print("sty_iv {}\n", .{info});
-        @panic("sty_iv not implemented yet!");
+        // (iv) (Y+q) ← Rr
+        generic_indexed_store(cpu, .y, info.r, info.q, .{ .op = .displace });
     }
 
-    /// TODO!
+    // stz_i is stz_iv with q=0
+
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("stz_ii {}\n", .{info});
-        @panic("stz_ii not implemented yet!");
+        // (Z) ← Rr, Z ← Z+1
+        generic_indexed_store(cpu, .z, info.r, 0, .{ .op = .none });
     }
 
-    /// TODO!
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("stz_iii {}\n", .{info});
-        @panic("stz_iii not implemented yet!");
+        // (iii) Z ← Z - 1, (Z) ← Rr
+        generic_indexed_store(cpu, .z, info.r, 0, .{ .op = .post_incr });
     }
 
-    /// TODO!
+    /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
-        _ = cpu;
-        std.debug.print("stz_iv {}\n", .{info});
-        @panic("stz_iv not implemented yet!");
+        // (iv) (Z+q) ← Rr
+        generic_indexed_store(cpu, .z, info.r, info.q, .{ .op = .displace });
     }
 
     /// TODO!
@@ -1125,11 +1208,13 @@ const instructions = struct {
         @panic("sts not implemented yet!");
     }
 
-    /// TODO!
+    /// PUSH – Push Register on Stack
+    /// This instruction stores the contents of register Rr on the STACK. The Stack Pointer is post-decremented
+    /// by 1 after the PUSH.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn push(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("push {}\n", .{info});
-        @panic("push not implemented yet!");
+        // STACK ← Rr
+        cpu.push(cpu.regs[info.d.num()]);
     }
 
     // Status Register
@@ -1152,14 +1237,14 @@ const instructions = struct {
     /// Copies the T Flag in the SREG (Status Register) to bit b in register Rd.
     inline fn bld(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         // Rd(b) ← T
-        changeBit(&cpu.regs[info.d], info.b, cpu.sreg.t);
+        changeBit(&cpu.regs[info.d.num()], info.b, cpu.sreg.t);
     }
 
     /// BST – Bit Store from Bit in Register to T Flag in SREG
     /// Stores bit b from Rd to the T Flag in SREG (Status Register).
     inline fn bst(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         // T ← Rd(b)
-        cpu.sreg.t = (cpu.regs[info.d] & bval(info.b)) != 0;
+        cpu.sreg.t = (cpu.regs[info.d.num()] & bval(info.b)) != 0;
     }
 
     // Others:
@@ -1266,7 +1351,7 @@ pub const Flash = struct {
 
             pub const vtable = VTable{ .readFn = memRead };
 
-            fn memRead(ctx: ?*anyopaque, addr: u24) u16 {
+            fn memRead(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 return std.mem.bytesAsSlice(u16, &mem.data)[addr];
             }
@@ -1275,7 +1360,7 @@ pub const Flash = struct {
 };
 
 pub const RAM = struct {
-    pub const Address = u16;
+    pub const Address = u24;
 
     ctx: ?*anyopaque,
     vtable: *const VTable,
@@ -1333,12 +1418,12 @@ pub const RAM = struct {
                 .writeFn = memWrite,
             };
 
-            fn memRead(ctx: ?*anyopaque, addr: u16) u8 {
+            fn memRead(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 return mem.data[addr];
             }
 
-            fn memWrite(ctx: ?*anyopaque, addr: u16, value: u8) void {
+            fn memWrite(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 mem.data[addr] = value;
             }
@@ -1358,8 +1443,12 @@ pub const IO = struct {
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
+    pub fn write(mem: IO, addr: Address, value: u8) void {
+        return mem.writeMasked(addr, 0xFF, value);
+    }
+
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    pub fn write(mem: IO, addr: Address, mask: u8, value: u8) void {
+    pub fn writeMasked(mem: IO, addr: Address, mask: u8, value: u8) void {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
@@ -1373,13 +1462,13 @@ pub const IO = struct {
         .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: u6) u8 {
+    fn emptyRead(ctx: ?*anyopaque, addr: Address) u8 {
         _ = addr;
         _ = ctx;
         return 0;
     }
 
-    fn emptyWrite(ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void {
+    fn emptyWrite(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
         _ = mask;
         _ = value;
         _ = addr;
@@ -1438,6 +1527,21 @@ pub const SREG = packed struct(u8) {
         changeBit(&val, bit, value);
         sreg.* = @bitCast(val);
     }
+
+    pub fn format(sreg: SREG, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("[{c}{c}{c}{c}{c}{c}{c}{c}]", .{
+            if (sreg.c) @as(u8, 'C') else '-',
+            if (sreg.z) @as(u8, 'Z') else '-',
+            if (sreg.n) @as(u8, 'N') else '-',
+            if (sreg.v) @as(u8, 'V') else '-',
+            if (sreg.s) @as(u8, 'S') else '-',
+            if (sreg.h) @as(u8, 'H') else '-',
+            if (sreg.t) @as(u8, 'T') else '-',
+            if (sreg.i) @as(u8, 'I') else '-',
+        });
+    }
 };
 
 const Bits8 = packed struct(u8) {
@@ -1493,40 +1597,11 @@ pub const SpecialIoRegisters = struct {
     sreg: IO.Address,
 };
 
-fn getRampX(cpu: *Cpu) u24 {
-    return if (cpu.sio.ramp_x) |ramp_x|
-        @as(u24, cpu.io.read(ramp_x)) << 16
-    else
-        0;
-}
-
-fn getRampY(cpu: *Cpu) u24 {
-    return if (cpu.sio.ramp_y) |ramp_y|
-        @as(u24, cpu.io.read(ramp_y)) << 16
-    else
-        0;
-}
-
-fn getRampZ(cpu: *Cpu) u24 {
-    return if (cpu.sio.ramp_z) |ramp_z|
-        @as(u24, cpu.io.read(ramp_z)) << 16
-    else
-        0;
-}
-
 fn getRampD(cpu: *Cpu) u24 {
     return if (cpu.sio.ramp_d) |ramp_d|
         @as(u24, cpu.io.read(ramp_d)) << 16
     else
         0;
-}
-
-fn getExtendedIndirect(cpu: *Cpu, base: u16) u24 {
-    const ext: u24 = if (cpu.sio.e_ind) |e_ind|
-        @as(u24, cpu.io.read(e_ind)) << 16
-    else
-        0;
-    return ext | base;
 }
 
 fn getSP(cpu: *Cpu) u16 {
@@ -1540,6 +1615,59 @@ fn setSP(cpu: *Cpu, value: u16) void {
     const lo: u8 = @truncate(value >> 0);
     const hi: u8 = @truncate(value >> 8);
 
-    cpu.io.write(cpu.sio.sp_l, 0xFF, lo);
-    cpu.io.write(cpu.sio.sp_h, 0xFF, hi);
+    cpu.io.write(cpu.sio.sp_l, lo);
+    cpu.io.write(cpu.sio.sp_h, hi);
+}
+
+fn compose24(hi: u8, mid: u8, lo: u8) u24 {
+    return (@as(u24, hi) << 16) |
+        (@as(u24, mid) << 8) |
+        (@as(u24, lo) << 0);
+}
+
+fn decompose24(value: u24) [3]u8 {
+    return [3]u8{
+        @truncate(value >> 0),
+        @truncate(value >> 8),
+        @truncate(value >> 16),
+    };
+}
+
+fn compose16(hi: u8, lo: u8) u16 {
+    return (@as(u16, hi) << 8) | (@as(u16, lo) << 0);
+}
+
+fn decompose16(value: u16) [2]u8 {
+    return [2]u8{
+        @truncate(value >> 0),
+        @truncate(value >> 8),
+    };
+}
+
+fn fmtInstruction(inst: isa.Instruction) std.fmt.Formatter(formatInstruction) {
+    return .{ .data = inst };
+}
+
+fn formatInstruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+    _ = opt;
+    _ = fmt;
+    try writer.writeAll(@tagName(inst));
+
+    switch (inst) {
+        inline else => |args| {
+            const T = @TypeOf(args);
+            if (T != void) {
+                const info = @typeInfo(T).Struct;
+
+                try writer.writeAll("\t");
+
+                inline for (info.fields, 0..) |fld, i| {
+                    if (i > 0) {
+                        try writer.writeAll(", ");
+                    }
+                    try writer.print("{s}={}", .{ fld.name, @field(args, fld.name) });
+                }
+            }
+        },
+    }
 }

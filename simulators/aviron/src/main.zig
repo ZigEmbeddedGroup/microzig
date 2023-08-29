@@ -3,13 +3,16 @@ const builtin = @import("builtin");
 pub const isa = @import("isa");
 pub const Cpu = @import("Cpu.zig");
 
-pub fn main() !void {
+const args_parser = @import("args");
+
+pub fn main() !u8 {
     const allocator = std.heap.page_allocator;
 
-    const argv = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, argv);
+    var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
+    defer cli.deinit();
 
-    if (argv.len != 2) @panic("usage: aviron <elf>");
+    if (cli.positionals.len == 0)
+        @panic("usage: aviron [--trace] <elf>");
 
     // Emulate Atmega382p device size:
     var flash_storage = Cpu.Flash.Static(32768){};
@@ -20,8 +23,8 @@ pub fn main() !void {
         .sp = 2047,
     };
 
-    {
-        var elf_file = try std.fs.cwd().openFile(argv[1], .{});
+    for (cli.positionals) |file_path| {
+        var elf_file = try std.fs.cwd().openFile(file_path, .{});
         defer elf_file.close();
 
         var source = std.io.StreamSource{ .file = elf_file };
@@ -46,6 +49,8 @@ pub fn main() !void {
     }
 
     var cpu = Cpu{
+        .trace = cli.options.trace,
+
         .flash = flash_storage.memory(),
         .sram = sram.memory(),
         .eeprom = eeprom.memory(),
@@ -72,7 +77,15 @@ pub fn main() !void {
     const result = try cpu.run(null);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
+
+    return 0;
 }
+
+const Cli = struct {
+    help: bool = false,
+
+    trace: bool = false,
+};
 
 const IO = struct {
     scratch_regs: [16]u8 = .{0} ** 16,

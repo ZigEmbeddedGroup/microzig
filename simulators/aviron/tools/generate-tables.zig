@@ -2,6 +2,15 @@ const std = @import("std");
 const isa_def = @embedFile("isa.txt");
 const isa = @import("isa");
 
+fn stringToEnum(comptime T: type, str: []const u8) ?T {
+    inline for (@typeInfo(T).Enum.fields) |enumField| {
+        if (std.mem.eql(u8, str, enumField.name)) {
+            return @field(T, enumField.name);
+        }
+    }
+    return null;
+}
+
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
@@ -32,9 +41,10 @@ pub fn main() !void {
 
     var lit = std.mem.split(u8, isa_def, "\n");
     while (lit.next()) |line| {
-        var pit = std.mem.split(u8, line, " ");
+        var pit = std.mem.tokenize(u8, line, " ");
 
-        const opcode = std.meta.stringToEnum(isa.Opcode, pit.next().?).?;
+        const op_name = pit.next() orelse continue;
+        const opcode = stringToEnum(isa.Opcode, op_name) orelse @panic(op_name);
 
         base_number_bit_set.mask = 0;
         try unknown_indices.resize(0);
