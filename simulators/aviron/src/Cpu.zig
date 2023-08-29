@@ -60,56 +60,56 @@ fn regBase16(r: u5) u6 {
 const instructions = struct {
     // Copy:
 
-    inline fn mov(cpu: *Cpu, info: InfoType(.mov)) void {
+    inline fn mov(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("mov {}\n", .{info});
         @panic("mov not implemented yet!");
     }
 
-    inline fn movw(cpu: *Cpu, info: InfoType(.movw)) void {
+    inline fn movw(cpu: *Cpu, info: isa.opinfo.d4r4) void {
         _ = cpu;
         std.debug.print("movw {}\n", .{info});
         @panic("movw not implemented yet!");
     }
 
-    inline fn xch(cpu: *Cpu, info: InfoType(.xch)) void {
+    inline fn xch(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("xch {}\n", .{info});
         @panic("xch not implemented yet!");
     }
 
-    inline fn swap(cpu: *Cpu, info: InfoType(.swap)) void {
+    inline fn swap(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("swap {}\n", .{info});
         @panic("swap not implemented yet!");
     }
 
     // ALU Bitwise:
-    inline fn com(cpu: *Cpu, info: InfoType(.com)) void {
+    inline fn com(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("com {}\n", .{info});
         @panic("com not implemented yet!");
     }
 
-    inline fn @"and"(cpu: *Cpu, info: InfoType(.@"and")) void {
+    inline fn @"and"(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         cpu.gp_registers[info.d] = cpu.gp_registers[info.d] & cpu.gp_registers[info.r];
     }
 
-    inline fn eor(cpu: *Cpu, info: InfoType(.eor)) void {
+    inline fn eor(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         cpu.gp_registers[info.d] = cpu.gp_registers[info.d] ^ cpu.gp_registers[info.r];
     }
 
-    inline fn @"or"(cpu: *Cpu, info: InfoType(.@"or")) void {
+    inline fn @"or"(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         cpu.gp_registers[info.d] = cpu.gp_registers[info.d] | cpu.gp_registers[info.r];
     }
 
-    inline fn andi(cpu: *Cpu, info: InfoType(.andi)) void {
+    inline fn andi(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         _ = cpu;
         std.debug.print("andi {}\n", .{info});
         @panic("andi not implemented yet!");
     }
 
-    inline fn ori(cpu: *Cpu, info: InfoType(.ori)) void {
+    inline fn ori(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         _ = cpu;
         std.debug.print("ori {}\n", .{info});
         @panic("ori not implemented yet!");
@@ -117,103 +117,103 @@ const instructions = struct {
 
     // ALU Arithmetic:
 
-    inline fn inc(cpu: *Cpu, info: InfoType(.inc)) void {
+    inline fn inc(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("inc {}\n", .{info});
         @panic("inc not implemented yet!");
     }
 
-    inline fn dec(cpu: *Cpu, info: InfoType(.dec)) void {
+    inline fn dec(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("dec {}\n", .{info});
         @panic("dec not implemented yet!");
     }
 
-    inline fn adc(cpu: *Cpu, info: InfoType(.adc)) void {
+    inline fn adc(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("adc {}\n", .{info});
         @panic("adc not implemented yet!");
     }
 
-    inline fn add(cpu: *Cpu, info: InfoType(.add)) void {
+    inline fn add(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("add {}\n", .{info});
         @panic("add not implemented yet!");
     }
 
-    inline fn adiw(cpu: *Cpu, info: InfoType(.adiw)) void {
+    inline fn adiw(cpu: *Cpu, info: isa.opinfo.d2k6) void {
         _ = cpu;
         std.debug.print("adiw {}\n", .{info});
         @panic("adiw not implemented yet!");
     }
 
-    inline fn fmul(cpu: *Cpu, info: InfoType(.fmul)) void {
+    inline fn fmul(cpu: *Cpu, info: isa.opinfo.d3r3) void {
         _ = cpu;
         std.debug.print("fmul {}\n", .{info});
         @panic("fmul not implemented yet!");
     }
 
-    inline fn fmuls(cpu: *Cpu, info: InfoType(.fmuls)) void {
+    inline fn fmuls(cpu: *Cpu, info: isa.opinfo.d3r3) void {
         _ = cpu;
         std.debug.print("fmuls {}\n", .{info});
         @panic("fmuls not implemented yet!");
     }
 
-    inline fn fmulsu(cpu: *Cpu, info: InfoType(.fmulsu)) void {
+    inline fn fmulsu(cpu: *Cpu, info: isa.opinfo.d3r3) void {
         _ = cpu;
         std.debug.print("fmulsu {}\n", .{info});
         @panic("fmulsu not implemented yet!");
     }
 
-    inline fn mul(cpu: *Cpu, info: InfoType(.mul)) void {
+    inline fn mul(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("mul {}\n", .{info});
         @panic("mul not implemented yet!");
     }
 
-    inline fn muls(cpu: *Cpu, info: InfoType(.muls)) void {
+    inline fn muls(cpu: *Cpu, info: isa.opinfo.d4r4) void {
         _ = cpu;
         std.debug.print("muls {}\n", .{info});
         @panic("muls not implemented yet!");
     }
 
-    inline fn mulsu(cpu: *Cpu, info: InfoType(.mulsu)) void {
+    inline fn mulsu(cpu: *Cpu, info: isa.opinfo.d3r3) void {
         _ = cpu;
         std.debug.print("mulsu {}\n", .{info});
         @panic("mulsu not implemented yet!");
     }
 
-    inline fn neg(cpu: *Cpu, info: InfoType(.neg)) void {
+    inline fn neg(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("neg {}\n", .{info});
         @panic("neg not implemented yet!");
     }
 
-    inline fn sbc(cpu: *Cpu, info: InfoType(.sbc)) void {
+    inline fn sbc(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("sbc {}\n", .{info});
         @panic("sbc not implemented yet!");
     }
 
-    inline fn sbci(cpu: *Cpu, info: InfoType(.sbci)) void {
+    inline fn sbci(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         _ = cpu;
         std.debug.print("sbci {}\n", .{info});
         @panic("sbci not implemented yet!");
     }
 
-    inline fn sbiw(cpu: *Cpu, info: InfoType(.sbiw)) void {
+    inline fn sbiw(cpu: *Cpu, info: isa.opinfo.d2k6) void {
         _ = cpu;
         std.debug.print("sbiw {}\n", .{info});
         @panic("sbiw not implemented yet!");
     }
 
-    inline fn sub(cpu: *Cpu, info: InfoType(.sub)) void {
+    inline fn sub(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("sub {}\n", .{info});
         @panic("sub not implemented yet!");
     }
 
-    inline fn subi(cpu: *Cpu, info: InfoType(.subi)) void {
+    inline fn subi(cpu: *Cpu, info: isa.opinfo.d4k8) void {
         _ = cpu;
         std.debug.print("subi {}\n", .{info});
         @panic("subi not implemented yet!");
@@ -221,19 +221,19 @@ const instructions = struct {
 
     // ALU Shifts
 
-    inline fn asr(cpu: *Cpu, info: InfoType(.asr)) void {
+    inline fn asr(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("asr {}\n", .{info});
         @panic("asr not implemented yet!");
     }
 
-    inline fn lsr(cpu: *Cpu, info: InfoType(.lsr)) void {
+    inline fn lsr(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("lsr {}\n", .{info});
         @panic("lsr not implemented yet!");
     }
 
-    inline fn ror(cpu: *Cpu, info: InfoType(.ror)) void {
+    inline fn ror(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ror {}\n", .{info});
         @panic("ror not implemented yet!");
@@ -241,24 +241,24 @@ const instructions = struct {
 
     // I/O:
 
-    inline fn out(cpu: *Cpu, info: InfoType(.out)) void {
+    inline fn out(cpu: *Cpu, info: isa.opinfo.a6r5) void {
         cpu.io.write(info.a, 0xFF, cpu.gp_registers[info.r]);
     }
 
-    inline fn in(cpu: *Cpu, info: InfoType(.in)) void {
+    inline fn in(cpu: *Cpu, info: isa.opinfo.a6d5) void {
         cpu.gp_registers[info.d] = cpu.io.read(info.a);
     }
 
-    inline fn cbi(cpu: *Cpu, info: InfoType(.cbi)) void {
+    inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         cpu.io.write(info.a, @as(u8, 1) << info.b, 0x00);
     }
 
-    inline fn sbi(cpu: *Cpu, info: InfoType(.sbi)) void {
+    inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         cpu.io.write(info.a, @as(u8, 1) << info.b, @as(u8, 1) << info.b);
     }
 
     // Branching:
-    inline fn brbc(cpu: *Cpu, info: InfoType(.brbc)) void {
+    inline fn brbc(cpu: *Cpu, info: isa.opinfo.k7s3) void {
         const pc_offset: i7 = @bitCast(info.k);
         if (!cpu.st_registers.contains(@enumFromInt(info.s))) {
             cpu.shiftProgramCounter(pc_offset);
@@ -272,25 +272,25 @@ const instructions = struct {
         }
     }
 
-    inline fn sbic(cpu: *Cpu, info: InfoType(.sbic)) void {
+    inline fn sbic(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         _ = cpu;
         std.debug.print("sbic {}\n", .{info});
         @panic("sbic not implemented yet!");
     }
 
-    inline fn sbis(cpu: *Cpu, info: InfoType(.sbis)) void {
+    inline fn sbis(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         _ = cpu;
         std.debug.print("sbis {}\n", .{info});
         @panic("sbis not implemented yet!");
     }
 
-    inline fn sbrc(cpu: *Cpu, info: InfoType(.sbrc)) void {
+    inline fn sbrc(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         _ = cpu;
         std.debug.print("sbrc {}\n", .{info});
         @panic("sbrc not implemented yet!");
     }
 
-    inline fn sbrs(cpu: *Cpu, info: InfoType(.sbrs)) void {
+    inline fn sbrs(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         _ = cpu;
         std.debug.print("sbrs {}\n", .{info});
         @panic("sbrs not implemented yet!");
@@ -298,7 +298,7 @@ const instructions = struct {
 
     // Jumps
 
-    inline fn jmp(cpu: *Cpu, info: InfoType(.jmp)) void {
+    inline fn jmp(cpu: *Cpu, info: isa.opinfo.k6) void {
         _ = cpu;
         std.debug.print("jmp {}\n", .{info});
         @panic("jmp not implemented yet!");
@@ -312,7 +312,7 @@ const instructions = struct {
         cpu.shiftProgramCounter(@as(i12, @bitCast(bits.k)));
     }
 
-    inline fn rcall(cpu: *Cpu, info: InfoType(.rcall)) void {
+    inline fn rcall(cpu: *Cpu, info: isa.opinfo.k12) void {
         _ = cpu;
         std.debug.print("rcall {}\n", .{info});
         @panic("rcall not implemented yet!");
@@ -330,7 +330,7 @@ const instructions = struct {
         @panic("reti not implemented yet!");
     }
 
-    inline fn call(cpu: *Cpu, info: InfoType(.call)) void {
+    inline fn call(cpu: *Cpu, info: isa.opinfo.k6) void {
         _ = cpu;
         std.debug.print("call {}\n", .{info});
         @panic("call not implemented yet!");
@@ -362,13 +362,13 @@ const instructions = struct {
 
     // Comparisons
 
-    inline fn cp(cpu: *Cpu, info: InfoType(.cp)) void {
+    inline fn cp(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("cp {}\n", .{info});
         @panic("cp not implemented yet!");
     }
 
-    inline fn cpse(cpu: *Cpu, info: InfoType(.cpse)) void {
+    inline fn cpse(cpu: *Cpu, info: isa.opinfo.d5r5) void {
         _ = cpu;
         std.debug.print("cpse {}\n", .{info});
         @panic("cpse not implemented yet!");
@@ -421,79 +421,79 @@ const instructions = struct {
         cpu.gp_registers[regBase16(bits.d)] = bits.k;
     }
 
-    inline fn lac(cpu: *Cpu, info: InfoType(.lac)) void {
+    inline fn lac(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("lac {}\n", .{info});
         @panic("lac not implemented yet!");
     }
 
-    inline fn las(cpu: *Cpu, info: InfoType(.las)) void {
+    inline fn las(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("las {}\n", .{info});
         @panic("las not implemented yet!");
     }
 
-    inline fn lat(cpu: *Cpu, info: InfoType(.lat)) void {
+    inline fn lat(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("lat {}\n", .{info});
         @panic("lat not implemented yet!");
     }
 
-    inline fn lds(cpu: *Cpu, info: InfoType(.lds)) void {
+    inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("lds {}\n", .{info});
         @panic("lds not implemented yet!");
     }
 
-    inline fn ldx_i(cpu: *Cpu, info: InfoType(.ldx_i)) void {
+    inline fn ldx_i(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldx_i {}\n", .{info});
         @panic("ldx_i not implemented yet!");
     }
 
-    inline fn ldx_ii(cpu: *Cpu, info: InfoType(.ldx_ii)) void {
+    inline fn ldx_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldx_ii {}\n", .{info});
         @panic("ldx_ii not implemented yet!");
     }
 
-    inline fn ldx_iii(cpu: *Cpu, info: InfoType(.ldx_iii)) void {
+    inline fn ldx_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldx_iii {}\n", .{info});
         @panic("ldx_iii not implemented yet!");
     }
 
-    inline fn ldy_ii(cpu: *Cpu, info: InfoType(.ldy_ii)) void {
+    inline fn ldy_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldy_ii {}\n", .{info});
         @panic("ldy_ii not implemented yet!");
     }
 
-    inline fn ldy_iii(cpu: *Cpu, info: InfoType(.ldy_iii)) void {
+    inline fn ldy_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldy_iii {}\n", .{info});
         @panic("ldy_iii not implemented yet!");
     }
 
-    inline fn ldy_iv(cpu: *Cpu, info: InfoType(.ldy_iv)) void {
+    inline fn ldy_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
         _ = cpu;
         std.debug.print("ldy_iv {}\n", .{info});
         @panic("ldy_iv not implemented yet!");
     }
 
-    inline fn ldz_ii(cpu: *Cpu, info: InfoType(.ldz_ii)) void {
+    inline fn ldz_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldz_ii {}\n", .{info});
         @panic("ldz_ii not implemented yet!");
     }
 
-    inline fn ldz_iii(cpu: *Cpu, info: InfoType(.ldz_iii)) void {
+    inline fn ldz_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("ldz_iii {}\n", .{info});
         @panic("ldz_iii not implemented yet!");
     }
 
-    inline fn ldz_iv(cpu: *Cpu, info: InfoType(.ldz_iv)) void {
+    inline fn ldz_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
         _ = cpu;
         std.debug.print("ldz_iv {}\n", .{info});
         @panic("ldz_iv not implemented yet!");
@@ -505,13 +505,13 @@ const instructions = struct {
         @panic("lpm_i not implemented yet!");
     }
 
-    inline fn lpm_ii(cpu: *Cpu, info: InfoType(.lpm_ii)) void {
+    inline fn lpm_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("lpm_ii {}\n", .{info});
         @panic("lpm_ii not implemented yet!");
     }
 
-    inline fn lpm_iii(cpu: *Cpu, info: InfoType(.lpm_iii)) void {
+    inline fn lpm_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("lpm_iii {}\n", .{info});
         @panic("lpm_iii not implemented yet!");
@@ -523,19 +523,19 @@ const instructions = struct {
         @panic("elpm_i not implemented yet!");
     }
 
-    inline fn elpm_ii(cpu: *Cpu, info: InfoType(.elpm_ii)) void {
+    inline fn elpm_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("elpm_ii {}\n", .{info});
         @panic("elpm_ii not implemented yet!");
     }
 
-    inline fn elpm_iii(cpu: *Cpu, info: InfoType(.elpm_iii)) void {
+    inline fn elpm_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("elpm_iii {}\n", .{info});
         @panic("elpm_iii not implemented yet!");
     }
 
-    inline fn pop(cpu: *Cpu, info: InfoType(.pop)) void {
+    inline fn pop(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("pop {}\n", .{info});
         @panic("pop not implemented yet!");
@@ -543,55 +543,55 @@ const instructions = struct {
 
     // Stores:
 
-    inline fn stx_i(cpu: *Cpu, info: InfoType(.stx_i)) void {
+    inline fn stx_i(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("stx_i {}\n", .{info});
         @panic("stx_i not implemented yet!");
     }
 
-    inline fn stx_ii(cpu: *Cpu, info: InfoType(.stx_ii)) void {
+    inline fn stx_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("stx_ii {}\n", .{info});
         @panic("stx_ii not implemented yet!");
     }
 
-    inline fn stx_iii(cpu: *Cpu, info: InfoType(.stx_iii)) void {
+    inline fn stx_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("stx_iii {}\n", .{info});
         @panic("stx_iii not implemented yet!");
     }
 
-    inline fn sty_ii(cpu: *Cpu, info: InfoType(.sty_ii)) void {
+    inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("sty_ii {}\n", .{info});
         @panic("sty_ii not implemented yet!");
     }
 
-    inline fn sty_iii(cpu: *Cpu, info: InfoType(.sty_iii)) void {
+    inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("sty_iii {}\n", .{info});
         @panic("sty_iii not implemented yet!");
     }
 
-    inline fn sty_iv(cpu: *Cpu, info: InfoType(.sty_iv)) void {
+    inline fn sty_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
         _ = cpu;
         std.debug.print("sty_iv {}\n", .{info});
         @panic("sty_iv not implemented yet!");
     }
 
-    inline fn stz_ii(cpu: *Cpu, info: InfoType(.stz_ii)) void {
+    inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("stz_ii {}\n", .{info});
         @panic("stz_ii not implemented yet!");
     }
 
-    inline fn stz_iii(cpu: *Cpu, info: InfoType(.stz_iii)) void {
+    inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         _ = cpu;
         std.debug.print("stz_iii {}\n", .{info});
         @panic("stz_iii not implemented yet!");
     }
 
-    inline fn stz_iv(cpu: *Cpu, info: InfoType(.stz_iv)) void {
+    inline fn stz_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
         _ = cpu;
         std.debug.print("stz_iv {}\n", .{info});
         @panic("stz_iv not implemented yet!");
@@ -609,13 +609,13 @@ const instructions = struct {
         @panic("spm_ii not implemented yet!");
     }
 
-    inline fn sts(cpu: *Cpu, info: InfoType(.sts)) void {
+    inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("sts {}\n", .{info});
         @panic("sts not implemented yet!");
     }
 
-    inline fn push(cpu: *Cpu, info: InfoType(.push)) void {
+    inline fn push(cpu: *Cpu, info: isa.opinfo.d5) void {
         _ = cpu;
         std.debug.print("push {}\n", .{info});
         @panic("push not implemented yet!");
@@ -623,25 +623,25 @@ const instructions = struct {
 
     // Status Register
 
-    inline fn bclr(cpu: *Cpu, info: InfoType(.bclr)) void {
+    inline fn bclr(cpu: *Cpu, info: isa.opinfo.s3) void {
         _ = cpu;
         std.debug.print("bclr {}\n", .{info});
         @panic("bclr not implemented yet!");
     }
 
-    inline fn bld(cpu: *Cpu, info: InfoType(.bld)) void {
+    inline fn bld(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         _ = cpu;
         std.debug.print("bld {}\n", .{info});
         @panic("bld not implemented yet!");
     }
 
-    inline fn bset(cpu: *Cpu, info: InfoType(.bset)) void {
+    inline fn bset(cpu: *Cpu, info: isa.opinfo.s3) void {
         _ = cpu;
         std.debug.print("bset {}\n", .{info});
         @panic("bset not implemented yet!");
     }
 
-    inline fn bst(cpu: *Cpu, info: InfoType(.bst)) void {
+    inline fn bst(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         _ = cpu;
         std.debug.print("bst {}\n", .{info});
         @panic("bst not implemented yet!");
@@ -649,7 +649,7 @@ const instructions = struct {
 
     // Others:
 
-    inline fn des(cpu: *Cpu, info: InfoType(.des)) void {
+    inline fn des(cpu: *Cpu, info: isa.opinfo.k4) void {
         _ = cpu;
         std.debug.print("des {}\n", .{info});
         @panic("des not implemented yet!");
