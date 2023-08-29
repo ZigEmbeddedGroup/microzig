@@ -94,3 +94,4 @@ bst 1111 101d dddd 0bbb
 sbrc 1111 110r rrrr 0bbb
 sbrs 1111 111r rrrr 0bbb
 rjmp 1100 kkkk kkkk kkkk
+break 1001 0101 1001 1000
