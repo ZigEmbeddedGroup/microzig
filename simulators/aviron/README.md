@@ -2,11 +2,8 @@
 
 AVR simulator in Zig.
 
-DISCLAIMER: I don't know what I'm doing so please feel free to PR fixes for stuff that makes no sense. Thanks!
-
-NOTE: This is only tested on a little-endian system. Feel free to PR big-endian support.
-
-`avr-objdump -D zig-out/bin/aviron-sample-math`
+> DISCLAIMER: This is work in project and can currently emulate a good amount of the AVR instruction set
+>             without cycle counting.
 
 based on:
 - https://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf
