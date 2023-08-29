@@ -8,6 +8,8 @@ pub const opinfo = isa.opinfo;
 
 pub const Register4 = isa.Register4;
 pub const Register = isa.Register;
+pub const DataBit = isa.DataBit;
+pub const StatusRegisterBit = isa.StatusRegisterBit;
 
 /// Only decodes one instruction; make sure to decode the second word for lds, sts, jmp, call
 pub fn decode(inst_val: u16) !Instruction {
