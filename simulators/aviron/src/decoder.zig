@@ -4,6 +4,7 @@ const tables = @import("autogen-tables");
 
 pub const Opcode = isa.Opcode;
 pub const Instruction = tables.Instruction;
+pub const opinfo = isa.opinfo;
 
 /// Only decodes one instruction; make sure to decode the second word for lds, sts, jmp, call
 pub fn decode(inst_val: u16) !Instruction {
