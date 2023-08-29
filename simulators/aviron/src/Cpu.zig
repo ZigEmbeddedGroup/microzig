@@ -3,6 +3,14 @@ const isa = @import("decoder.zig");
 
 const Cpu = @This();
 
+pub const CodeModel = enum(u24) {
+    /// 16 bit program counter
+    code16 = 0x00_FFFF,
+
+    /// 22 bit program counter,
+    code22 = 0x3F_FFFF,
+};
+
 const InstructionEffect = enum {
     none,
 
@@ -24,14 +32,12 @@ pc: u24 = 0,
 regs: [32]u8 = [1]u8{0} ** 32,
 sreg: SREG = @bitCast(@as(u8, 0)),
 
+code_model: CodeModel,
+sio: SpecialIoRegisters,
 flash: Flash,
 sram: RAM,
 eeprom: EEPROM,
 io: IO,
-
-pub fn getIndirectAddressRegister(cpu: *Cpu, which: enum { x, y, z }) *u16 {
-    return @ptrCast(cpu.regs[26 + @intFromEnum(which) * 2][0..2]);
-}
 
 pub fn shiftProgramCounter(cpu: *Cpu, by: i12) void {
     cpu.pc = @intCast(@as(i32, @intCast(cpu.pc)) + by);
@@ -48,7 +54,7 @@ pub const RunResult = enum {
 pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
     var rest_gas = mileage;
 
-    while (true) : (cpu.pc += 1) {
+    while (true) {
         if (rest_gas) |*rg| {
             if (rg.* == 0)
                 return .out_of_gas;
@@ -66,7 +72,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             };
         };
 
-        const inst = try isa.decode(cpu.flash.read(cpu.pc));
+        const inst = try isa.decode(cpu.fetchCode());
         if (!skip) {
             switch (std.meta.activeTag(inst)) {
                 .unknown => return error.InvalidInstruction,
@@ -82,6 +88,78 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
             }
         }
     }
+}
+
+fn fetchCode(cpu: *Cpu) u16 {
+    const value = cpu.flash.read(cpu.pc);
+    cpu.pc +%= 1; // increment with wraparound
+    cpu.pc &= @intFromEnum(cpu.code_model); // then wrap to lower bit size
+    return value;
+}
+
+fn push(cpu: *Cpu, val: u8) void {
+    const sp = cpu.getSP();
+    cpu.sram.write(sp, val);
+    cpu.setSP(sp -% 1);
+}
+
+fn pop(cpu: *Cpu) u8 {
+    const sp = cpu.getSP() +% 1;
+    cpu.setSP(sp);
+    return cpu.sram.read(sp);
+}
+
+fn pushCodeLoc(cpu: *Cpu, val: u24) void {
+    const pc: u24 = val;
+    const mask: u24 = @intFromEnum(cpu.code_model);
+
+    if ((mask & 0x0000FF) != 0) {
+        cpu.push(@truncate(pc >> 0));
+    }
+    if ((mask & 0x00FF00) != 0) {
+        cpu.push(@truncate(pc >> 8));
+    }
+    if ((mask & 0xFF0000) != 0) {
+        cpu.push(@truncate(pc >> 16));
+    }
+}
+
+fn popCodeLoc(cpu: *Cpu) u24 {
+    const mask = @intFromEnum(cpu.code_model);
+
+    var pc: u24 = 0;
+    if ((mask & 0x0000FF) != 0) {
+        pc |= (@as(u24, cpu.pop()) << 0);
+    }
+    if ((mask & 0x00FF00) != 0) {
+        pc |= (@as(u24, cpu.pop()) << 8);
+    }
+    if ((mask & 0xFF0000) != 0) {
+        pc |= (@as(u24, cpu.pop()) << 16);
+    }
+    return pc;
+}
+
+const WideReg = enum(u8) {
+    x = 0,
+    y = 1,
+    z = 2,
+    fn base(wr: WideReg) usize {
+        return 26 + 2 * @intFromEnum(wr);
+    }
+};
+
+fn readWideReg(cpu: *Cpu, reg: WideReg) u16 {
+    const lo = cpu.regs[reg.base() + 0];
+    const hi = cpu.regs[reg.base() + 1];
+    return (@as(u16, hi) << 8) | lo;
+}
+
+fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u16) void {
+    const lo: u8 = @truncate(value >> 0);
+    const hi: u8 = @truncate(value >> 8);
+    cpu.regs[reg.base() + 0] = lo;
+    cpu.regs[reg.base() + 1] = hi;
 }
 
 fn regBase16(r: u4) u5 {
@@ -621,77 +699,116 @@ const instructions = struct {
     /// JMP – Jump
     /// Jump to an address within the entire 4M (words) Program memory. See also RJMP.
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
+    ///
+    /// NOTE: 32 bit instruction!
     inline fn jmp(cpu: *Cpu, info: isa.opinfo.k6) void {
         // PC ← k
-        cpu.pc = info.k;
+        const ext = cpu.fetchCode();
+        cpu.pc = (@as(u24, info.k) << 16) | ext;
     }
 
-    /// TODO!
+    /// RJMP – Relative Jump
+    /// Relative jump to an address within PC - 2K +1 and PC + 2K (words). For AVR microcontrollers with
+    /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
+    /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
         cpu.shiftProgramCounter(@as(i12, @bitCast(bits.k)));
     }
 
-    /// TODO!
+    /// RCALL – Relative Call to Subroutine
+    /// Relative call to an address within PC - 2K + 1 and PC + 2K (words). The return address (the instruction
+    /// after the RCALL) is stored onto the Stack. See also CALL. For AVR microcontrollers with Program
+    /// memory not exceeding 4K words (8KB) this instruction can address the entire memory from every
+    /// address location. The Stack Pointer uses a post-decrement scheme during RCALL.
     inline fn rcall(cpu: *Cpu, info: isa.opinfo.k12) void {
-        _ = cpu;
-        std.debug.print("rcall {}\n", .{info});
-        @panic("rcall not implemented yet!");
+        // PC ← PC + k + 1
+        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        rjmp(cpu, info);
     }
 
-    /// TODO!
+    /// RET – Return from Subroutine
+    /// Returns from subroutine. The return address is loaded from the STACK. The Stack Pointer uses a pre-
+    /// increment scheme during RET.
     inline fn ret(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("ret\n", .{});
-        @panic("ret not implemented yet!");
+        // PC(15:0) ← STACK Devices with 16-bit PC, 128KB Program memory maximum.
+        // PC(21:0) ← STACK Devices with 22-bit PC, 8MB Program memory maximum.
+        cpu.pc = cpu.popCodeLoc();
     }
 
-    /// TODO!
+    /// RETI – Return from Interrupt
+    /// Returns from interrupt. The return address is loaded from the STACK and the Global Interrupt Flag is set.
+    /// Note that the Status Register is not automatically stored when entering an interrupt routine, and it is not
+    /// restored when returning from an interrupt routine. This must be handled by the application program. The
+    /// Stack Pointer uses a pre-increment scheme during RETI.
     inline fn reti(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("reti\n", .{});
-        @panic("reti not implemented yet!");
+        // PC(15:0) ← STACK Devices with 16-bit PC, 128KB Program memory maximum.
+        // PC(21:0) ← STACK Devices with 22-bit PC, 8MB Program memory maximum.
+        cpu.pc = cpu.popCodeLoc();
+        cpu.sreg.i = true;
     }
 
-    /// TODO!
+    /// CALL – Long Call to a Subroutine
     /// Calls to a subroutine within the entire Program memory. The return address (to the instruction after the
     /// CALL) will be stored onto the Stack. (See also RCALL). The Stack Pointer uses a post-decrement
     /// scheme during CALL.
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
+    ///
+    /// NOTE: 32 bit instruction!
     inline fn call(cpu: *Cpu, info: isa.opinfo.k6) void {
-        _ = cpu;
-        std.debug.print("call {}\n", .{info});
-        @panic("call not implemented yet!");
+        const ext = cpu.fetchCode();
+        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        cpu.pc = (@as(u24, info.k) << 16) | ext;
     }
 
-    /// TODO!
+    /// ICALL – Indirect Call to Subroutine
+    /// Calls to a subroutine within the entire 4M (words) Program memory. The return address (to the instruction
+    /// after the CALL) will be stored onto the Stack. See also RCALL. The Stack Pointer uses a post-decrement
+    /// scheme during CALL.
+    ///
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn icall(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("icall\n", .{});
-        @panic("icall not implemented yet!");
+        // PC(15:0) ← Z(15:0)
+        // PC(21:16) ← 0
+        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        cpu.pc = cpu.readWideReg(.z);
     }
 
-    /// TODO!
+    /// IJMP – Indirect Jump
+    /// Indirect jump to the address pointed to by the Z (16 bits) Pointer Register in the Register File. The Z-
+    /// pointer Register is 16 bits wide and allows jump within the lowest 64K words (128KB) section of Program
+    /// memory.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn ijmp(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("ijmp\n", .{});
-        @panic("ijmp not implemented yet!");
+        // PC(15:0) ← Z(15:0)
+        // PC(21:16) ← 0
+        cpu.pc = cpu.readWideReg(.z);
     }
 
-    /// TODO!
+    /// EICALL – Extended Indirect Call to Subroutine
+    /// Indirect call of a subroutine pointed to by the Z (16 bits) Pointer Register in the Register File and the EIND
+    /// Register in the I/O space. This instruction allows for indirect calls to the entire 4M (words) Program
+    /// memory space. See also ICALL. The Stack Pointer uses a post-decrement scheme during EICALL.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn eicall(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("eicall\n", .{});
-        @panic("eicall not implemented yet!");
+        // PC(15:0) ← Z(15:0)
+        // PC(21:16) ← EIND
+        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        cpu.pc = cpu.getExtendedIndirect(cpu.readWideReg(.z));
     }
 
-    /// TODO!
+    /// EIJMP – Extended Indirect Jump
+    /// Indirect jump to the address pointed to by the Z (16 bits) Pointer Register in the Register File and the
+    /// EIND Register in the I/O space. This instruction allows for indirect jumps to the entire 4M (words)
+    /// Program memory space. See also IJMP.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn eijmp(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("eijmp\n", .{});
-        @panic("eijmp not implemented yet!");
+        // PC(15:0) ← Z(15:0)
+        // PC(21:16) ← EIND
+        cpu.pc = cpu.getExtendedIndirect(cpu.readWideReg(.z));
     }
 
     // Comparisons
+
     /// This instruction performs a compare between two registers Rd and Rr.
     /// None of the registers are changed.
     /// All conditional branches can be used after this instruction.
@@ -726,7 +843,6 @@ const instructions = struct {
         cpu.regs[regBase16(bits.d)] = bits.k;
     }
 
-    /// TODO!
     /// XCH – Exchange
     /// Exchanges one byte indirect between register and data space.
     /// The data location is pointed to by the Z (16 bits) Pointer Register in the Register File. Memory access is
@@ -735,12 +851,15 @@ const instructions = struct {
     /// The Z-pointer Register is left unchanged by the operation. This instruction is especially suited for writing/
     /// reading status bits stored in SRAM.
     inline fn xch(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("xch {}\n", .{info});
-        @panic("xch not implemented yet!");
+        // (Z) ← Rd, Rd ← (Z)
+        const z = cpu.readWideReg(.z);
+
+        const Rd = cpu.regs[info.r];
+        const mem = cpu.sram.read(z);
+        cpu.sram.write(z, Rd);
+        cpu.regs[info.r] = mem;
     }
 
-    /// TODO!
     /// Load one byte indirect from data space to register and stores and clear the bits in data space specified by
     /// the register. The instruction can only be used towards internal SRAM.
     /// The data location is pointed to by the Z (16 bits) Pointer Register in the Register File. Memory access is
@@ -751,28 +870,57 @@ const instructions = struct {
     ///
     /// (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
     inline fn lac(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("lac {}\n", .{info});
-        @panic("lac not implemented yet!");
+        // (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
+        const z = cpu.readWideReg(.z);
+
+        const Rd = cpu.regs[info.r];
+        const mem = cpu.sram.read(z);
+        cpu.sram.write(z, (0xFF - Rd) & mem);
+        cpu.regs[info.r] = mem;
     }
 
-    /// TODO!
+    /// LAS – Load and Set
+    ///
+    /// Load one byte indirect from data space to register and set bits in data space specified by the register. The
+    /// instruction can only be used towards internal SRAM.
+    /// The data location is pointed to by the Z (16 bits) Pointer Register in the Register File. Memory access is
+    /// limited to the current data segment of 64KB. To access another data segment in devices with more than
+    /// 64KB data space, the RAMPZ in register in the I/O area has to be changed.
+    /// The Z-pointer Register is left unchanged by the operation. This instruction is especially suited for setting
+    /// status bits stored in SRAM.
     inline fn las(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("las {}\n", .{info});
-        @panic("las not implemented yet!");
+        // (Z) ← Rd v (Z), Rd ← (Z)
+        const z = cpu.readWideReg(.z);
+
+        const Rd = cpu.regs[info.r];
+        const mem = cpu.sram.read(z);
+        cpu.sram.write(z, Rd | mem);
+        cpu.regs[info.r] = mem;
     }
 
-    /// TODO!
+    /// LAT – Load and Toggle
+    /// Load one byte indirect from data space to register and toggles bits in the data space specified by the
+    /// register. The instruction can only be used towards SRAM.
+    /// The data location is pointed to by the Z (16 bits) Pointer Register in the Register File. Memory access is
+    /// limited to the current data segment of 64KB. To access another data segment in devices with more than
+    /// 64KB data space, the RAMPZ in register in the I/O area has to be changed.
+    /// The Z-pointer Register is left unchanged by the operation. This instruction is especially suited for
+    /// changing status bits stored in SRAM.
     inline fn lat(cpu: *Cpu, info: isa.opinfo.r5) void {
-        _ = cpu;
-        std.debug.print("lat {}\n", .{info});
-        @panic("lat not implemented yet!");
+        // (Z) ← Rd ⊕ (Z), Rd ← (Z)
+        const z = cpu.readWideReg(.z);
+
+        const Rd = cpu.regs[info.r];
+        const mem = cpu.sram.read(z);
+        cpu.sram.write(z, Rd ^ mem);
+        cpu.regs[info.r] = mem;
     }
 
     /// TODO!
+    /// NOTE: 32 bit instruction!
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
+        const ext = cpu.fetchCode();
+        _ = ext;
         std.debug.print("lds {}\n", .{info});
         @panic("lds not implemented yet!");
     }
@@ -969,8 +1117,10 @@ const instructions = struct {
     }
 
     /// TODO!
+    /// NOTE: 32 bit instruction!
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
+        const ext = cpu.fetchCode();
+        _ = ext;
         std.debug.print("sts {}\n", .{info});
         @panic("sts not implemented yet!");
     }
@@ -1071,17 +1221,19 @@ const instructions = struct {
 };
 
 pub const Flash = struct {
+    pub const Address = u24;
+
     ctx: ?*anyopaque,
     vtable: *const VTable,
     size: usize,
 
-    pub fn read(mem: Flash, addr: u24) u16 {
+    pub fn read(mem: Flash, addr: Address) u16 {
         std.debug.assert(addr < mem.size);
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: u24) u16,
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
     };
 
     pub const empty = Flash{
@@ -1090,7 +1242,7 @@ pub const Flash = struct {
         .vtable = &VTable{ .readFn = emptyRead },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: u24) u16 {
+    fn emptyRead(ctx: ?*anyopaque, addr: Address) u16 {
         _ = addr;
         _ = ctx;
         return 0;
@@ -1123,23 +1275,25 @@ pub const Flash = struct {
 };
 
 pub const RAM = struct {
+    pub const Address = u16;
+
     ctx: ?*anyopaque,
     vtable: *const VTable,
     size: usize,
 
-    pub fn read(mem: RAM, addr: u16) u8 {
+    pub fn read(mem: RAM, addr: Address) u8 {
         std.debug.assert(addr < mem.size);
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
-    pub fn write(mem: RAM, addr: u16, value: u8) void {
+    pub fn write(mem: RAM, addr: Address, value: u8) void {
         std.debug.assert(addr < mem.size);
         return mem.vtable.writeFn(mem.ctx, addr, value);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: u16) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: u16, value: u8) void,
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
     };
 
     pub const empty = RAM{
@@ -1195,21 +1349,23 @@ pub const RAM = struct {
 pub const EEPROM = RAM; // actually the same interface *shrug*
 
 pub const IO = struct {
+    pub const Address = u6;
+
     ctx: ?*anyopaque,
     vtable: *const VTable,
 
-    pub fn read(mem: IO, addr: u6) u8 {
+    pub fn read(mem: IO, addr: Address) u8 {
         return mem.vtable.readFn(mem.ctx, addr);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    pub fn write(mem: IO, addr: u6, mask: u8, value: u8) void {
+    pub fn write(mem: IO, addr: Address, mask: u8, value: u8) void {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
     pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: u6) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: u6, mask: u8, value: u8) void,
+        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
+        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
     };
 
     pub const empty = IO{
@@ -1233,20 +1389,43 @@ pub const IO = struct {
 
 pub const SREG = packed struct(u8) {
     /// Carry Flag
+    /// This flag is set when there is a carry in an arithmetic or logic operation, and is cleared otherwise.
     c: bool,
+
     /// Zero Flag
+    /// This flag is set when there is a zero result in an arithmetic or logic operation, and is cleared otherwise.
     z: bool,
+
     /// Negative Flag
+    /// This flag is set when there is a negative result in an arithmetic or logic operation, and is cleared otherwise.
     n: bool,
-    /// Two's Compliment Overflow Flag
+
+    /// Two’s Complement Overflow Flag
+    /// This flag is set when there is an overflow in arithmetic operations that support this, and is cleared otherwise
     v: bool,
-    /// Sign Flag, S = N xor V
+
+    /// Sign Flag
+    /// This flag is always an Exclusive Or (XOR) between the Negative flag (N) and the Two’s Complement Overflow flag (V).
     s: bool,
+
     /// Half Carry Flag
+    /// This flag is set when there is a half carry in arithmetic operations that support this, and is cleared otherwise. Half
+    /// carry is useful in BCD arithmetic.
     h: bool,
-    /// Copy Storage
+
+    /// Transfer Bit
+    /// The bit copy instructions, Bit Load (BLD) and Bit Store (BST), use the T bit as source or destination for the operated
+    /// bit.
     t: bool,
+
     /// Global Interrupt Enable
+    /// Writing a ‘1’ to this bit enables interrupts on the device.
+    /// Writing a ‘0’ to this bit disables interrupts on the device, independent of the individual interrupt enable settings of the
+    /// peripherals.
+    /// This bit is not cleared by hardware while entering an Interrupt Service Routine (ISR) or set when the RETI instruction
+    /// is executed.
+    /// This bit can be set and cleared by software with the SEI and CLI instructions.
+    /// Changing the I bit through the I/O register results in a one-cycle Wait state on the access.
     i: bool,
 
     pub fn readBit(sreg: SREG, bit: u3) bool {
@@ -1282,4 +1461,85 @@ inline fn changeBit(dst: *u8, bit: u3, val: bool) void {
     } else {
         dst.* &= ~bval(bit);
     }
+}
+
+pub const SpecialIoRegisters = struct {
+    /// Register concatenated with the X-registers enabling indirect addressing of the whole data
+    /// space on MCUs with more than 64KB data space, and constant data fetch on MCUs with more than
+    /// 64KB program space.
+    ramp_x: ?IO.Address,
+
+    /// Register concatenated with the Y-registers enabling indirect addressing of the whole data
+    /// space on MCUs with more than 64KB data space, and constant data fetch on MCUs with more than
+    /// 64KB program space.
+    ramp_y: ?IO.Address,
+
+    /// Register concatenated with the Z-registers enabling indirect addressing of the whole data
+    /// space on MCUs with more than 64KB data space, and constant data fetch on MCUs with more than
+    /// 64KB program space.
+    ramp_z: ?IO.Address,
+
+    /// Register concatenated with the Z-register enabling direct addressing of the whole data space on MCUs
+    /// with more than 64KB data space.
+    ramp_d: ?IO.Address,
+
+    /// Register concatenated with the Z-register enabling indirect jump and call to the whole program space on
+    /// MCUs with more than 64K words (128KB) program space.
+    e_ind: ?IO.Address,
+
+    sp_l: IO.Address, // SP[7:0]
+    sp_h: IO.Address, // SP[15:8]
+
+    sreg: IO.Address,
+};
+
+fn getRampX(cpu: *Cpu) u24 {
+    return if (cpu.sio.ramp_x) |ramp_x|
+        @as(u24, cpu.io.read(ramp_x)) << 16
+    else
+        0;
+}
+
+fn getRampY(cpu: *Cpu) u24 {
+    return if (cpu.sio.ramp_y) |ramp_y|
+        @as(u24, cpu.io.read(ramp_y)) << 16
+    else
+        0;
+}
+
+fn getRampZ(cpu: *Cpu) u24 {
+    return if (cpu.sio.ramp_z) |ramp_z|
+        @as(u24, cpu.io.read(ramp_z)) << 16
+    else
+        0;
+}
+
+fn getRampD(cpu: *Cpu) u24 {
+    return if (cpu.sio.ramp_d) |ramp_d|
+        @as(u24, cpu.io.read(ramp_d)) << 16
+    else
+        0;
+}
+
+fn getExtendedIndirect(cpu: *Cpu, base: u16) u24 {
+    const ext: u24 = if (cpu.sio.e_ind) |e_ind|
+        @as(u24, cpu.io.read(e_ind)) << 16
+    else
+        0;
+    return ext | base;
+}
+
+fn getSP(cpu: *Cpu) u16 {
+    const lo = cpu.io.read(cpu.sio.sp_l);
+    const hi = cpu.io.read(cpu.sio.sp_h);
+
+    return (@as(u16, hi) << 8) | lo;
+}
+
+fn setSP(cpu: *Cpu, value: u16) void {
+    const lo: u8 = @truncate(value >> 0);
+    const hi: u8 = @truncate(value >> 8);
+
+    cpu.io.write(cpu.sio.sp_l, 0xFF, lo);
+    cpu.io.write(cpu.sio.sp_h, 0xFF, hi);
 }

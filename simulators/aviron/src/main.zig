@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 pub const isa = @import("isa");
 pub const Cpu = @import("Cpu.zig");
 
@@ -14,7 +15,10 @@ pub fn main() !void {
     var flash_storage = Cpu.Flash.Static(32768){};
     var sram = Cpu.RAM.Static(2048){};
     var eeprom = Cpu.RAM.Static(1024){};
-    var io = IO{};
+    var io = IO{
+        .sreg = undefined,
+        .sp = 2047,
+    };
 
     {
         var elf_file = try std.fs.cwd().openFile(argv[1], .{});
@@ -46,7 +50,24 @@ pub fn main() !void {
         .sram = sram.memory(),
         .eeprom = eeprom.memory(),
         .io = io.memory(),
+
+        .code_model = .code16,
+
+        .sio = .{
+            .ramp_x = null,
+            .ramp_y = null,
+            .ramp_z = null,
+            .ramp_d = null,
+            .e_ind = null,
+
+            .sp_l = @intFromEnum(IO.Register.sp_l),
+            .sp_h = @intFromEnum(IO.Register.sp_h),
+
+            .sreg = @intFromEnum(IO.Register.sreg),
+        },
     };
+
+    io.sreg = &cpu.sreg;
 
     const result = try cpu.run(null);
 
@@ -55,6 +76,9 @@ pub fn main() !void {
 
 const IO = struct {
     scratch_regs: [16]u8 = .{0} ** 16,
+
+    sp: u16,
+    sreg: *Cpu.SREG,
 
     pub fn memory(self: *IO) Cpu.IO {
         return Cpu.IO{
@@ -90,6 +114,11 @@ const IO = struct {
         scratch_d = 0x1d, // scratch register
         scratch_e = 0x1e, // scratch register
         scratch_f = 0x1f, // scratch register
+
+        sp_l = 0x3D, // ATmega328p
+        sp_h = 0x3E, // ATmega328p
+        sreg = 0x3F, // ATmega328p
+
         _,
     };
 
@@ -117,6 +146,11 @@ const IO = struct {
             .scratch_d => io.scratch_regs[0xd],
             .scratch_e => io.scratch_regs[0xe],
             .scratch_f => io.scratch_regs[0xf],
+
+            .sreg => @bitCast(io.sreg.*),
+
+            .sp_l => @truncate(io.sp >> 0),
+            .sp_h => @truncate(io.sp >> 8),
 
             _ => std.debug.panic("illegal i/o read from undefined register 0x{X:0>2}", .{addr}),
         };
@@ -148,8 +182,28 @@ const IO = struct {
             .scratch_e => writeMasked(&io.scratch_regs[0xe], mask, value),
             .scratch_f => writeMasked(&io.scratch_regs[0xf], mask, value),
 
+            .sp_l => writeMasked(lobyte(&io.sp), mask, value),
+            .sp_h => writeMasked(hibyte(&io.sp), mask, value),
+            .sreg => writeMasked(@ptrCast(io.sreg), mask, value),
+
             _ => std.debug.panic("illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}", .{ addr, value, mask }),
         }
+    }
+
+    fn lobyte(val: *u16) *u8 {
+        const bits: *[2]u8 = @ptrCast(val);
+        return switch (comptime builtin.cpu.arch.endian()) {
+            .Big => return &bits[1],
+            .Little => return &bits[0],
+        };
+    }
+
+    fn hibyte(val: *u16) *u8 {
+        const bits: *[2]u8 = @ptrCast(val);
+        return switch (comptime builtin.cpu.arch.endian()) {
+            .Big => return &bits[0],
+            .Little => return &bits[1],
+        };
     }
 
     fn writeMasked(dst: *u8, mask: u8, val: u8) void {
