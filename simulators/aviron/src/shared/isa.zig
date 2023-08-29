@@ -107,9 +107,9 @@ pub const Opcode = enum(u8) {
 pub const opinfo = struct {
     pub const a6d5 = struct { a: u6, d: Register };
     pub const a6r5 = struct { a: u6, r: Register };
-    pub const a5b3 = struct { a: u5, b: u3 };
-    pub const b3d5 = struct { b: u3, d: Register };
-    pub const b3r5 = struct { b: u3, r: Register };
+    pub const a5b3 = struct { a: u5, b: DataBit };
+    pub const b3d5 = struct { b: DataBit, d: Register };
+    pub const b3r5 = struct { b: DataBit, r: Register };
     pub const d5 = struct { d: Register };
     pub const d5k16 = struct { d: Register, k: u16 };
     pub const d5q6 = struct { d: Register, q: u6 };
@@ -122,10 +122,10 @@ pub const opinfo = struct {
     pub const k6 = struct { k: u6 };
     pub const k12 = struct { k: u12 };
     pub const k22 = struct { k: u22 };
-    pub const k7s3 = struct { k: u7, s: u3 };
+    pub const k7s3 = struct { k: u7, s: StatusRegisterBit };
     pub const q6r5 = struct { q: u6, r: Register };
     pub const r5 = struct { r: Register };
-    pub const s3 = struct { s: u3 };
+    pub const s3 = struct { s: StatusRegisterBit };
 };
 
 pub const Register4 = enum(u4) {
@@ -171,5 +171,52 @@ pub const Register = enum(u5) {
     /// Returns the register number.
     pub fn num(r5: Register) u5 {
         return @intFromEnum(r5);
+    }
+};
+
+pub const StatusRegisterBit = enum(u3) {
+    C = 0,
+    Z = 1,
+    N = 2,
+    V = 3,
+    S = 4,
+    H = 5,
+    T = 6,
+    I = 7,
+
+    pub fn format(bit: StatusRegisterBit, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("{s}", .{@tagName(bit)});
+    }
+
+    /// Returns the bit index.
+    pub fn num(bit: StatusRegisterBit) u3 {
+        return @intFromEnum(bit);
+    }
+
+    /// Returns the bit mask.
+    pub fn mask(bit: StatusRegisterBit) u8 {
+        return @as(u8, 1) << @intFromEnum(bit);
+    }
+};
+
+pub const DataBit = enum(u3) {
+    _,
+
+    pub fn format(bit: DataBit, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("{}", .{@intFromEnum(bit)});
+    }
+
+    /// Returns the bit index.
+    pub fn num(bit: DataBit) u3 {
+        return @intFromEnum(bit);
+    }
+
+    /// Returns the bit mask.
+    pub fn mask(bit: DataBit) u8 {
+        return @as(u8, 1) << @intFromEnum(bit);
     }
 };

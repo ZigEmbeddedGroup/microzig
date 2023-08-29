@@ -83,9 +83,25 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
         const inst = try isa.decode(cpu.fetchCode());
 
         if (cpu.trace) {
-            std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
+            // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
+            //     if (skip) "SKIP" else "    ",
+            //     cpu.sreg,
+            //     pc,
+            //     fmtInstruction(inst),
+            // });
+
+            std.debug.print("TRACE {s} {} [", .{
                 if (skip) "SKIP" else "    ",
                 cpu.sreg,
+            });
+
+            for (cpu.regs, 0..) |reg, i| {
+                if (i > 0)
+                    std.debug.print(" ", .{});
+                std.debug.print("{X:0>2}", .{reg});
+            }
+
+            std.debug.print("] 0x{X:0>6}: {}\n", .{
                 pc,
                 fmtInstruction(inst),
             });
@@ -541,7 +557,7 @@ const instructions = struct {
 
         const base = register_pairs_4[info.d];
 
-        const src = compose16(cpu.regs[base + 0], cpu.regs[base + 1]);
+        const src = compose16(cpu.regs[base + 1], cpu.regs[base + 0]);
 
         const res = src +% info.k;
 
@@ -566,7 +582,7 @@ const instructions = struct {
 
         const base = register_pairs_4[info.d];
 
-        const src = compose16(cpu.regs[base + 0], cpu.regs[base + 1]);
+        const src = compose16(cpu.regs[base + 1], cpu.regs[base + 0]);
 
         const res = src -% info.k;
 
@@ -664,14 +680,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.writeMasked(info.a, bval(info.b), 0x00);
+        cpu.io.writeMasked(info.a, info.b.mask(), 0x00);
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.writeMasked(info.a, bval(info.b), @as(u8, 1) << info.b);
+        cpu.io.writeMasked(info.a, info.b.mask(), 0xFF);
     }
 
     // Branching:
@@ -707,7 +723,7 @@ const instructions = struct {
     inline fn sbic(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 0 then PC ← PC + 2 (or 3) else PC ← PC + 1
         const val = cpu.io.read(info.a);
-        if ((val & bval(info.b)) == 0) {
+        if ((val & info.b.mask()) == 0) {
             cpu.instr_effect = .skip_next;
         }
     }
@@ -718,7 +734,7 @@ const instructions = struct {
     inline fn sbis(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // If I/O(A,b) = 1 then PC ← PC + 2 (or 3) else PC ← PC + 1
         const val = cpu.io.read(info.a);
-        if ((val & bval(info.b)) != 0) {
+        if ((val & info.b.mask()) != 0) {
             cpu.instr_effect = .skip_next;
         }
     }
@@ -728,7 +744,7 @@ const instructions = struct {
     inline fn sbrc(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         // If Rr(b) = 0 then PC ← PC + 2 (or 3) else PC ← PC + 1
         const val = cpu.regs[info.r.num()];
-        if ((val & bval(info.b)) == 0) {
+        if ((val & info.b.mask()) == 0) {
             cpu.instr_effect = .skip_next;
         }
     }
@@ -738,7 +754,7 @@ const instructions = struct {
     inline fn sbrs(cpu: *Cpu, info: isa.opinfo.b3r5) void {
         // If Rr(b) = 1 then PC ← PC + 2 (or 3) else PC ← PC + 1
         const val = cpu.regs[info.r.num()];
-        if ((val & bval(info.b)) != 0) {
+        if ((val & info.b.mask()) != 0) {
             cpu.instr_effect = .skip_next;
         }
     }
@@ -1237,14 +1253,14 @@ const instructions = struct {
     /// Copies the T Flag in the SREG (Status Register) to bit b in register Rd.
     inline fn bld(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         // Rd(b) ← T
-        changeBit(&cpu.regs[info.d.num()], info.b, cpu.sreg.t);
+        changeBit(&cpu.regs[info.d.num()], info.b.num(), cpu.sreg.t);
     }
 
     /// BST – Bit Store from Bit in Register to T Flag in SREG
     /// Stores bit b from Rd to the T Flag in SREG (Status Register).
     inline fn bst(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         // T ← Rd(b)
-        cpu.sreg.t = (cpu.regs[info.d.num()] & bval(info.b)) != 0;
+        cpu.sreg.t = (cpu.regs[info.d.num()] & info.b.mask()) != 0;
     }
 
     // Others:
@@ -1517,14 +1533,14 @@ pub const SREG = packed struct(u8) {
     /// Changing the I bit through the I/O register results in a one-cycle Wait state on the access.
     i: bool,
 
-    pub fn readBit(sreg: SREG, bit: u3) bool {
+    pub fn readBit(sreg: SREG, bit: isa.StatusRegisterBit) bool {
         const val: u8 = @bitCast(sreg);
-        return (bval(bit) & val) != 0;
+        return (bit.mask() & val) != 0;
     }
 
-    pub fn writeBit(sreg: *SREG, bit: u3, value: bool) void {
+    pub fn writeBit(sreg: *SREG, bit: isa.StatusRegisterBit, value: bool) void {
         var val: u8 = @bitCast(sreg.*);
-        changeBit(&val, bit, value);
+        changeBit(&val, bit.num(), value);
         sreg.* = @bitCast(val);
     }
 
@@ -1651,15 +1667,13 @@ fn fmtInstruction(inst: isa.Instruction) std.fmt.Formatter(formatInstruction) {
 fn formatInstruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
     _ = opt;
     _ = fmt;
-    try writer.writeAll(@tagName(inst));
+    try writer.print(" {s: <8}", .{@tagName(inst)});
 
     switch (inst) {
         inline else => |args| {
             const T = @TypeOf(args);
             if (T != void) {
                 const info = @typeInfo(T).Struct;
-
-                try writer.writeAll("\t");
 
                 inline for (info.fields, 0..) |fld, i| {
                     if (i > 0) {
