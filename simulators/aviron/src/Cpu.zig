@@ -187,7 +187,9 @@ const WideReg = enum(u8) {
     }
 };
 
-fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: enum { eind, ramp, raw }) u24 {
+const IndexRegReadMode = enum { eind, ramp, raw };
+
+fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMode) u24 {
     return compose24(
         switch (mode) {
             .raw => 0,
@@ -203,7 +205,9 @@ fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: enum { eind, ram
     );
 }
 
-fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: enum { raw, ramp }) void {
+const IndexRegWriteMode = enum { raw, ramp };
+
+fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWriteMode) void {
     const parts = decompose24(value);
     cpu.regs[reg.base() + 0] = parts[0];
     cpu.regs[reg.base() + 1] = parts[1];
@@ -992,57 +996,73 @@ const instructions = struct {
         cpu.regs[info.r.num()] = mem;
     }
 
-    /// TODO!
+    /// LDS – Load Direct from Data Space
+    ///
+    /// Loads one byte from the data space to a register. For parts with SRAM, the data space consists of the
+    /// Register File, I/O memory, and internal SRAM (and external SRAM if applicable). For parts without
+    /// SRAM, the data space consists of the register file only. The EEPROM has a separate address space.
+    /// A 16-bit address must be supplied. Memory access is limited to the current data segment of 64KB. The
+    /// LDS instruction uses the RAMPD Register to access memory above 64KB. To access another data
+    /// segment in devices with more than 64KB data space, the RAMPD in register in the I/O area has to be
+    /// changed.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
+    ///
     /// NOTE: 32 bit instruction!
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
-        const ext = cpu.fetchCode();
-        _ = ext;
-        std.debug.print("lds {}\n", .{info});
-        @panic("lds not implemented yet!");
+        // Rd ← (k)
+        const addr = cpu.extendDirectAddress(cpu.fetchCode());
+        cpu.regs[info.d.num()] = cpu.sram.read(addr);
     }
 
+    const IndexOpMode = enum { none, post_incr, pre_decr, displace };
     const IndexOpConfig = struct {
-        op: enum { none, post_incr, pre_decr, displace },
+        op: IndexOpMode,
+        wb: IndexRegWriteMode,
+        rd: IndexRegReadMode,
     };
     inline fn compute_and_mutate_index(cpu: *Cpu, comptime wr: WideReg, q: u6, comptime config: IndexOpConfig) u24 {
-        const raw = cpu.readWideReg(wr, .ramp);
+        const raw = cpu.readWideReg(wr, config.rd);
         const address = switch (config.op) {
             .none => raw,
             .displace => raw +% q,
             .pre_decr => blk: {
                 const index = raw -% 1;
-                cpu.writeWideReg(wr, index, .ramp);
+                cpu.writeWideReg(wr, index, config.wb);
                 break :blk index;
             },
             .post_incr => blk: {
-                cpu.writeWideReg(wr, raw +% 1, .ramp);
+                cpu.writeWideReg(wr, raw +% 1, config.wb);
                 break :blk raw;
             },
         };
         return address;
     }
 
-    inline fn generic_indexed_load(cpu: *Cpu, comptime wr: WideReg, d: isa.Register, q: u6, comptime config: IndexOpConfig) void {
-        const address = compute_and_mutate_index(cpu, wr, q, config);
+    inline fn generic_indexed_load(cpu: *Cpu, comptime wr: WideReg, d: isa.Register, q: u6, comptime mode: IndexOpMode) void {
+        const address = compute_and_mutate_index(cpu, wr, q, .{
+            .op = mode,
+            .rd = .ramp,
+            .wb = .ramp,
+        });
         cpu.regs[d.num()] = cpu.sram.read(address);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_i(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (X)
-        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .none });
+        return generic_indexed_load(cpu, .x, info.d, 0, .none);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (X) X ← X + 1
-        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .post_incr });
+        return generic_indexed_load(cpu, .x, info.d, 0, .post_incr);
     }
 
     /// LD – Load Indirect from Data Space to Register using Index X
     inline fn ldx_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // X ← X - 1 Rd ← (X)
-        return generic_indexed_load(cpu, .x, info.d, 0, .{ .op = .pre_decr });
+        return generic_indexed_load(cpu, .x, info.d, 0, .pre_decr);
     }
 
     // ldy_i is equivalent to ldy_iv with q=0
@@ -1050,19 +1070,19 @@ const instructions = struct {
     /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (Y), Y ← Y + 1
-        return generic_indexed_load(cpu, .y, info.d, 0, .{ .op = .post_incr });
+        return generic_indexed_load(cpu, .y, info.d, 0, .post_incr);
     }
 
     /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Y ← Y - 1, Rd ← (Y)
-        return generic_indexed_load(cpu, .y, info.d, 0, .{ .op = .pre_decr });
+        return generic_indexed_load(cpu, .y, info.d, 0, .pre_decr);
     }
 
     /// LD (LDD) – Load Indirect from Data Space to Register using Index Y
     inline fn ldy_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
         // Rd ← (Y+q)
-        return generic_indexed_load(cpu, .y, info.d, info.q, .{ .op = .displace });
+        return generic_indexed_load(cpu, .y, info.d, info.q, .displace);
     }
 
     // ldz_i is equivalent to ldz_iv with q=0
@@ -1070,61 +1090,98 @@ const instructions = struct {
     /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (Z), Z ← Z + 1
-        return generic_indexed_load(cpu, .z, info.d, 0, .{ .op = .post_incr });
+        return generic_indexed_load(cpu, .z, info.d, 0, .post_incr);
     }
 
     /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Z ← Z - 1, Rd ← (Z)
-        return generic_indexed_load(cpu, .z, info.d, 0, .{ .op = .pre_decr });
+        return generic_indexed_load(cpu, .z, info.d, 0, .pre_decr);
     }
 
     /// LD (LDD) – Load Indirect From Data Space to Register using Index Z
     inline fn ldz_iv(cpu: *Cpu, info: isa.opinfo.d5q6) void {
         // Rd ← (Z+q)
-        return generic_indexed_load(cpu, .z, info.d, info.q, .{ .op = .displace });
+        return generic_indexed_load(cpu, .z, info.d, info.q, .displace);
     }
 
-    /// TODO!
+    /// LPM – Load Program Memory
+    ///
+    /// Loads one byte pointed to by the Z-register into the destination register Rd. This instruction features a
+    /// 100% space effective constant initialization or constant data fetch. The Program memory is organized in
+    /// 16-bit words while the Z-pointer is a byte address. Thus, the least significant bit of the Z-pointer selects
+    /// either low byte (ZLSB = 0) or high byte (ZLSB = 1). This instruction can address the first 64KB (32K words)
+    /// of Program memory. The Z-pointer Register can either be left unchanged by the operation, or it can be
+    /// incremented. The incrementation does not apply to the RAMPZ Register.
+    /// Devices with Self-Programming capability can use the LPM instruction to read the Fuse and Lock bit
+    /// values. Refer to the device documentation for a detailed description.
+    /// The LPM instruction is not available in all devices. Refer to the device specific instruction set summary.
+    /// The result of these combinations is undefined:
+    /// LPM r30, Z+
+    /// LPM r31, Z+
+    ///
+    /// ELPM – Extended Load Program Memory
+    ///
+    /// Loads one byte pointed to by the Z-register and the RAMPZ Register in the I/O space, and places this
+    /// byte in the destination register Rd. This instruction features a 100% space effective constant initialization
+    /// or constant data fetch. The Program memory is organized in 16-bit words while the Z-pointer is a byte
+    /// address. Thus, the least significant bit of the Z-pointer selects either low byte (ZLSB = 0) or high byte (ZLSB
+    /// = 1). This instruction can address the entire Program memory space. The Z-pointer Register can either be
+    /// left unchanged by the operation, or it can be incremented. The incrementation applies to the entire 24-bit
+    /// concatenation of the RAMPZ and Z-pointer Registers.
+    /// Devices with Self-Programming capability can use the ELPM instruction to read the Fuse and Lock bit
+    /// value. Refer to the device documentation for a detailed description.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
+    /// The result of these combinations is undefined:
+    /// ELPM r30, Z+
+    /// ELPM r31, Z+
+    inline fn generic_lpm(cpu: *Cpu, d: isa.Register, mode: IndexOpMode, size: enum { regular, extended }) void {
+        const addr = compute_and_mutate_index(cpu, .z, 0, .{
+            .op = mode,
+            .wb = switch (size) {
+                .regular => .raw,
+                .extended => .ramp,
+            },
+            .rd = switch (size) {
+                .regular => .raw,
+                .extended => .ramp,
+            },
+        });
+        const word = cpu.flash.read(addr >> 1);
+        cpu.regs[d.num()] = if ((addr & 1) != 0)
+            @truncate(word >> 8)
+        else
+            @truncate(word >> 0);
+    }
+
     inline fn lpm_i(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("lpm_i\n", .{});
-        @panic("lpm_i not implemented yet!");
+        // R0 ← (Z)
+        return generic_lpm(cpu, .r0, .none, .regular);
     }
 
-    /// TODO!
     inline fn lpm_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("lpm_ii {}\n", .{info});
-        @panic("lpm_ii not implemented yet!");
+        // Rd ← (Z)
+        return generic_lpm(cpu, info.d, .none, .regular);
     }
 
-    /// TODO!
     inline fn lpm_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("lpm_iii {}\n", .{info});
-        @panic("lpm_iii not implemented yet!");
+        // Rd ← (Z) Z ← Z + 1
+        return generic_lpm(cpu, info.d, .post_incr, .regular);
     }
 
-    /// TODO!
     inline fn elpm_i(cpu: *Cpu) void {
-        _ = cpu;
-        std.debug.print("elpm_i\n", .{});
-        @panic("elpm_i not implemented yet!");
+        // R0 ← (RAMPZ:Z)
+        return generic_lpm(cpu, .r0, .none, .extended);
     }
 
-    /// TODO!
     inline fn elpm_ii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("elpm_ii {}\n", .{info});
-        @panic("elpm_ii not implemented yet!");
+        // Rd ← (RAMPZ:Z)
+        return generic_lpm(cpu, info.d, .none, .extended);
     }
 
-    /// TODO!
     inline fn elpm_iii(cpu: *Cpu, info: isa.opinfo.d5) void {
-        _ = cpu;
-        std.debug.print("elpm_iii {}\n", .{info});
-        @panic("elpm_iii not implemented yet!");
+        // Rd ← (RAMPZ:Z), (RAMPZ:Z) ← (RAMPZ:Z) + 1
+        return generic_lpm(cpu, info.d, .post_incr, .extended);
     }
 
     /// POP – Pop Register from Stack
@@ -1138,27 +1195,31 @@ const instructions = struct {
 
     // Stores:
 
-    inline fn generic_indexed_store(cpu: *Cpu, comptime wr: WideReg, r: isa.Register, q: u6, comptime config: IndexOpConfig) void {
-        const address = compute_and_mutate_index(cpu, wr, q, config);
+    inline fn generic_indexed_store(cpu: *Cpu, comptime wr: WideReg, r: isa.Register, q: u6, comptime mode: IndexOpMode) void {
+        const address = compute_and_mutate_index(cpu, wr, q, .{
+            .op = mode,
+            .rd = .ramp,
+            .wb = .ramp,
+        });
         cpu.sram.write(address, cpu.regs[r.num()]);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_i(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (X) ← Rr
-        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .none });
+        generic_indexed_store(cpu, .x, info.r, 0, .none);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (X) ← Rr, X ← X+1
-        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .post_incr });
+        generic_indexed_store(cpu, .x, info.r, 0, .post_incr);
     }
 
     /// ST – Store Indirect From Register to Data Space using Index X
     inline fn stx_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) X ← X - 1, (X) ← Rr
-        generic_indexed_store(cpu, .x, info.r, 0, .{ .op = .pre_decr });
+        generic_indexed_store(cpu, .x, info.r, 0, .pre_decr);
     }
 
     // sty_i is sty_iv with q=0
@@ -1166,19 +1227,19 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Y) ← Rr, Y ← Y+1
-        generic_indexed_store(cpu, .y, info.r, 0, .{ .op = .none });
+        generic_indexed_store(cpu, .y, info.r, 0, .none);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Y ← Y - 1, (Y) ← Rr
-        generic_indexed_store(cpu, .y, info.r, 0, .{ .op = .post_incr });
+        generic_indexed_store(cpu, .y, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Y
     inline fn sty_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
         // (iv) (Y+q) ← Rr
-        generic_indexed_store(cpu, .y, info.r, info.q, .{ .op = .displace });
+        generic_indexed_store(cpu, .y, info.r, info.q, .displace);
     }
 
     // stz_i is stz_iv with q=0
@@ -1186,42 +1247,76 @@ const instructions = struct {
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_ii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rr, Z ← Z+1
-        generic_indexed_store(cpu, .z, info.r, 0, .{ .op = .none });
+        generic_indexed_store(cpu, .z, info.r, 0, .none);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iii(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (iii) Z ← Z - 1, (Z) ← Rr
-        generic_indexed_store(cpu, .z, info.r, 0, .{ .op = .post_incr });
+        generic_indexed_store(cpu, .z, info.r, 0, .post_incr);
     }
 
     /// ST (STD) – Store Indirect From Register to Data Space using Index Z
     inline fn stz_iv(cpu: *Cpu, info: isa.opinfo.q6r5) void {
         // (iv) (Z+q) ← Rr
-        generic_indexed_store(cpu, .z, info.r, info.q, .{ .op = .displace });
+        generic_indexed_store(cpu, .z, info.r, info.q, .displace);
     }
 
-    /// TODO!
+    /// SPM – Store Program Memory
+    ///
+    /// SPM can be used to erase a page in the Program memory, to write a page in the Program memory (that
+    /// is already erased), and to set Boot Loader Lock bits. In some devices, the Program memory can be
+    /// written one word at a time, in other devices an entire page can be programmed simultaneously after first
+    /// filling a temporary page buffer. In all cases, the Program memory must be erased one page at a time.
+    /// When erasing the Program memory, the RAMPZ and Z-register are used as page address. When writing
+    /// the Program memory, the RAMPZ and Z-register are used as page or word address, and the R1:R0
+    /// register pair is used as data(1). When setting the Boot Loader Lock bits, the R1:R0 register pair is used as
+    /// data. Refer to the device documentation for detailed description of SPM usage. This instruction can
+    /// address the entire Program memory.
+    /// The SPM instruction is not available in all devices. Refer to the device specific instruction set summary.
+    ///
+    /// **NOTE:** 1. R1 determines the instruction high byte, and R0 determines the instruction low byte.
+    ///
+    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
     inline fn spm_i(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("spm_i\n", .{});
-        @panic("spm_i not implemented yet!");
+        @panic("spm (i) is not supported.");
     }
 
-    /// TODO!
+    /// SPM #2 – Store Program Memory
+    ///
+    /// SPM can be used to erase a page in the Program memory and to write a page in the Program memory
+    /// (that is already erased). An entire page can be programmed simultaneously after first filling a temporary
+    /// page buffer. The Program memory must be erased one page at a time. When erasing the Program
+    /// memory, the RAMPZ and Z-register are used as page address. When writing the Program memory, the
+    /// RAMPZ and Z-register are used as page or word address, and the R1:R0 register pair is used as data(1).
+    /// Refer to the device documentation for detailed description of SPM usage. This instruction can address
+    /// the entire Program memory.
+    ///
+    /// **NOTE:** 1. R1 determines the instruction high byte, and R0 determines the instruction low byte.
+    ///
+    ///! TODO! (implement much later, we don't really need it for emulating everything execpt bootloaders)
     inline fn spm_ii(cpu: *Cpu) void {
         _ = cpu;
-        std.debug.print("spm_ii\n", .{});
-        @panic("spm_ii not implemented yet!");
+        @panic("spm #2 is not supported.");
     }
 
-    /// TODO!
+    /// STS – Store Direct to Data Space
+    ///
+    /// Stores one byte from a Register to the data space. For parts with SRAM, the data space consists of the
+    /// Register File, I/O memory, and internal SRAM (and external SRAM if applicable). For parts without
+    /// SRAM, the data space consists of the Register File only. The EEPROM has a separate address space.
+    /// A 16-bit address must be supplied. Memory access is limited to the current data segment of 64KB. The
+    /// STS instruction uses the RAMPD Register to access memory above 64KB. To access another data
+    /// segment in devices with more than 64KB data space, the RAMPD in register in the I/O area has to be
+    /// changed.
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
+    ///
     /// NOTE: 32 bit instruction!
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
-        const ext = cpu.fetchCode();
-        _ = ext;
-        std.debug.print("sts {}\n", .{info});
-        @panic("sts not implemented yet!");
+        // (k) ← Rr
+        const addr = cpu.extendDirectAddress(cpu.fetchCode());
+        cpu.sram.write(addr, cpu.regs[info.d.num()]);
     }
 
     /// PUSH – Push Register on Stack
@@ -1277,7 +1372,6 @@ const instructions = struct {
         cpu.instr_effect = .breakpoint;
     }
 
-    /// TODO!
     /// DES – Data Encryption Standard
     ///
     /// Tshe module is an instruction set extension to the AVR CPU, performing DES iterations. The 64-bit data
@@ -1293,6 +1387,8 @@ const instructions = struct {
     /// Processing Standards Publication 46). Intermediate results in this implementation differ from the standard
     /// because the initial permutation and the inverse initial permutation are performed in each iteration. This
     /// does not affect the result in the final ciphertext or plaintext, but reduces the execution time.
+    ///
+    /// TODO! (Not necessarily required for implementation, very weird use case)
     inline fn des(cpu: *Cpu, info: isa.opinfo.k4) void {
         _ = cpu;
         _ = info;
@@ -1613,8 +1709,8 @@ pub const SpecialIoRegisters = struct {
     sreg: IO.Address,
 };
 
-fn getRampD(cpu: *Cpu) u24 {
-    return if (cpu.sio.ramp_d) |ramp_d|
+fn extendDirectAddress(cpu: *Cpu, value: u16) u24 {
+    return value | if (cpu.sio.ramp_d) |ramp_d|
         @as(u24, cpu.io.read(ramp_d)) << 16
     else
         0;

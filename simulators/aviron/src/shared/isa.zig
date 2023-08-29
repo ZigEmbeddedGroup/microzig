@@ -129,7 +129,22 @@ pub const opinfo = struct {
 };
 
 pub const Register4 = enum(u4) {
-    _,
+    r16 = 0,
+    r17 = 1,
+    r18 = 2,
+    r19 = 3,
+    r20 = 4,
+    r21 = 5,
+    r22 = 6,
+    r23 = 7,
+    r24 = 8,
+    r25 = 9,
+    r26 = 10,
+    r27 = 11,
+    r28 = 12,
+    r29 = 13,
+    r30 = 14,
+    r31 = 15,
 
     pub fn format(reg4: Register4, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
         _ = opt;
@@ -155,7 +170,38 @@ pub const Register4 = enum(u4) {
 };
 
 pub const Register = enum(u5) {
-    _,
+    r0 = 0,
+    r1 = 1,
+    r2 = 2,
+    r3 = 3,
+    r4 = 4,
+    r5 = 5,
+    r6 = 6,
+    r7 = 7,
+    r8 = 8,
+    r9 = 9,
+    r10 = 10,
+    r11 = 11,
+    r12 = 12,
+    r13 = 13,
+    r14 = 14,
+    r15 = 15,
+    r16 = 16,
+    r17 = 17,
+    r18 = 18,
+    r19 = 19,
+    r20 = 20,
+    r21 = 21,
+    r22 = 22,
+    r23 = 23,
+    r24 = 24,
+    r25 = 25,
+    r26 = 26,
+    r27 = 27,
+    r28 = 28,
+    r29 = 29,
+    r30 = 30,
+    r31 = 31,
 
     pub fn format(reg5: Register, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
         _ = opt;
