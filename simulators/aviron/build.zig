@@ -243,10 +243,12 @@ fn addTestSuite(
 }
 
 fn addTestSuiteUpdate(b: *std.Build, invoke_step: *std.Build.Step) !void {
-    const avr_gcc = std.build.LazyPath{
-        .cwd_relative = b.findProgram(&.{"avr-gcc"}, &.{}) catch @panic("install avr-gcc!"),
-    };
-    std.debug.assert(std.fs.path.isAbsolute(avr_gcc.cwd_relative));
+    const avr_gcc = if (b.findProgram(&.{"avr-gcc"}, &.{})) |path| std.build.LazyPath{
+        .cwd_relative = path,
+    } else |_| b.addExecutable(.{
+        .name = "no-avr-gcc",
+        .root_source_file = .{ .path = "tools/no-avr-gcc.zig" },
+    }).getEmittedBin();
 
     {
         var walkdir = try b.build_root.handle.openIterableDir("testsuite.avr-gcc", .{});
