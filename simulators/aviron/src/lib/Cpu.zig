@@ -1,5 +1,11 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
+const io = @import("io.zig");
+
+const Flash = io.Flash;
+const RAM = io.RAM;
+const EEPROM = io.EEPROM;
+const IO = io.IO;
 
 const Cpu = @This();
 
@@ -237,8 +243,8 @@ const instructions = struct {
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn movw(cpu: *Cpu, info: isa.opinfo.d4r4) void {
         // d ∈ {0,2,...,30}, r ∈ {0,2,...,30
-        const Rd = @as(u5, info.d) << 1;
-        const Rr = @as(u5, info.r) << 1;
+        const Rd = @as(u5, info.d.int()) << 1;
+        const Rr = @as(u5, info.r.int()) << 1;
 
         // Rd+1:Rd ← Rr+1:Rr
         cpu.regs[Rd + 0] = cpu.regs[Rr + 0];
@@ -525,25 +531,79 @@ const instructions = struct {
         @panic("fmulsu not implemented yet!");
     }
 
-    /// TODO!
+    const MulConfig = struct {
+        Lhs: type,
+        Rhs: type,
+        Result: type,
+    };
+    inline fn generic_mul(cpu: *Cpu, d: isa.Register, r: isa.Register, comptime config: MulConfig) void {
+        // R1:R0 ← Rd × Rr
+        const lhs_raw: u8 = cpu.regs[d.num()];
+        const rhs_raw: u8 = cpu.regs[r.num()];
+
+        const lhs: config.Lhs = @bitCast(lhs_raw);
+        const rhs: config.Rhs = @bitCast(rhs_raw);
+
+        const result: config.Result = @as(config.Result, lhs) *% @as(config.Result, rhs);
+
+        const raw_result: u16 = @bitCast(result);
+
+        const split_result = decompose16(raw_result);
+        cpu.regs[0] = split_result[0];
+        cpu.regs[1] = split_result[1];
+
+        cpu.sreg.c = ((raw_result & 0x8000) != 0);
+        cpu.sreg.z = (raw_result == 0);
+    }
+
+    /// MUL – Multiply Unsigned
+    ///
+    /// This instruction performs 8-bit × 8-bit → 16-bit unsigned multiplication.
+    ///
+    /// The multiplicand Rd and the multiplier Rr are two registers containing unsigned numbers. The 16-bit
+    /// unsigned product is placed in R1 (high byte) and R0 (low byte). Note that if the multiplicand or the
+    /// multiplier is selected from R0 or R1 the result will overwrite those after multiplication.
+    ///
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn mul(cpu: *Cpu, info: isa.opinfo.d5r5) void {
-        _ = cpu;
-        std.debug.print("mul {}\n", .{info});
-        @panic("mul not implemented yet!");
+        // R1:R0 ← Rd × Rr (unsigned ← unsigned × unsigned)
+        return generic_mul(cpu, info.d.reg(), info.r.reg(), .{
+            .Result = u16,
+            .Lhs = u8,
+            .Rhs = u8,
+        });
     }
 
-    /// TODO!
+    /// MULS – Multiply Signed
+    ///
+    /// The multiplicand Rd and the multiplier Rr are two registers containing signed numbers. The 16-bit signed
+    /// product is placed in R1 (high byte) and R0 (low byte).
+    ///
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn muls(cpu: *Cpu, info: isa.opinfo.d4r4) void {
-        _ = cpu;
-        std.debug.print("muls {}\n", .{info});
-        @panic("muls not implemented yet!");
+        // R1:R0 ← Rd × Rr (signed ← signed × signed)
+        return generic_mul(cpu, info.d.reg(), info.r.reg(), .{
+            .Result = i16,
+            .Lhs = i8,
+            .Rhs = i8,
+        });
     }
 
-    /// TODO!
+    /// MULSU – Multiply Signed with Unsigned
+    ///
+    /// This instruction performs 8-bit × 8-bit → 16-bit multiplication of a signed and an unsigned number.
+    ///
+    /// The multiplicand Rd and the multiplier Rr are two registers. The multiplicand Rd is a signed number, and
+    /// the multiplier Rr is unsigned. The 16-bit signed product is placed in R1 (high byte) and R0 (low byte).
+    ///
+    /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
     inline fn mulsu(cpu: *Cpu, info: isa.opinfo.d3r3) void {
-        _ = cpu;
-        std.debug.print("mulsu {}\n", .{info});
-        @panic("mulsu not implemented yet!");
+        // R1:R0 ← Rd × Rr (signed ← signed × unsigned)
+        return generic_mul(cpu, info.d.reg(), info.r.reg(), .{
+            .Result = i16,
+            .Lhs = i8,
+            .Rhs = u8,
+        });
     }
 
     // Wide ALU Arithmetic:
@@ -1414,177 +1474,6 @@ const instructions = struct {
     inline fn wdr(cpu: *Cpu) void {
         // WD timer restart.
         cpu.instr_effect = .watchdog_reset;
-    }
-};
-
-pub const Flash = struct {
-    pub const Address = u24;
-
-    ctx: ?*anyopaque,
-    vtable: *const VTable,
-    size: usize,
-
-    pub fn read(mem: Flash, addr: Address) u16 {
-        std.debug.assert(addr < mem.size);
-        return mem.vtable.readFn(mem.ctx, addr);
-    }
-
-    pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u16,
-    };
-
-    pub const empty = Flash{
-        .ctx = null,
-        .size = 0,
-        .vtable = &VTable{ .readFn = emptyRead },
-    };
-
-    fn emptyRead(ctx: ?*anyopaque, addr: Address) u16 {
-        _ = addr;
-        _ = ctx;
-        return 0;
-    }
-
-    pub fn Static(comptime size: comptime_int) type {
-        if ((size & 1) != 0)
-            @compileError("size must be a multiple of two!");
-        return struct {
-            const Self = @This();
-
-            data: [size]u8 align(2) = .{0} ** size,
-
-            pub fn memory(self: *Self) Flash {
-                return Flash{
-                    .ctx = self,
-                    .vtable = &vtable,
-                    .size = @divExact(size, 2),
-                };
-            }
-
-            pub const vtable = VTable{ .readFn = memRead };
-
-            fn memRead(ctx: ?*anyopaque, addr: Address) u16 {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return std.mem.bytesAsSlice(u16, &mem.data)[addr];
-            }
-        };
-    }
-};
-
-pub const RAM = struct {
-    pub const Address = u24;
-
-    ctx: ?*anyopaque,
-    vtable: *const VTable,
-    size: usize,
-
-    pub fn read(mem: RAM, addr: Address) u8 {
-        std.debug.assert(addr < mem.size);
-        return mem.vtable.readFn(mem.ctx, addr);
-    }
-
-    pub fn write(mem: RAM, addr: Address, value: u8) void {
-        std.debug.assert(addr < mem.size);
-        return mem.vtable.writeFn(mem.ctx, addr, value);
-    }
-
-    pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, value: u8) void,
-    };
-
-    pub const empty = RAM{
-        .ctx = null,
-        .size = 0,
-        .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
-    };
-
-    fn emptyRead(ctx: ?*anyopaque, addr: u16) u8 {
-        _ = addr;
-        _ = ctx;
-        return 0;
-    }
-
-    fn emptyWrite(ctx: ?*anyopaque, addr: u16, value: u8) void {
-        _ = value;
-        _ = addr;
-        _ = ctx;
-    }
-
-    pub fn Static(comptime size: comptime_int) type {
-        return struct {
-            const Self = @This();
-
-            data: [size]u8 align(2) = .{0} ** size,
-
-            pub fn memory(self: *Self) RAM {
-                return RAM{
-                    .ctx = self,
-                    .vtable = &vtable,
-                    .size = @divExact(size, 2),
-                };
-            }
-
-            pub const vtable = VTable{
-                .readFn = memRead,
-                .writeFn = memWrite,
-            };
-
-            fn memRead(ctx: ?*anyopaque, addr: Address) u8 {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                return mem.data[addr];
-            }
-
-            fn memWrite(ctx: ?*anyopaque, addr: Address, value: u8) void {
-                const mem: *Self = @ptrCast(@alignCast(ctx.?));
-                mem.data[addr] = value;
-            }
-        };
-    }
-};
-
-pub const EEPROM = RAM; // actually the same interface *shrug*
-
-pub const IO = struct {
-    pub const Address = u6;
-
-    ctx: ?*anyopaque,
-    vtable: *const VTable,
-
-    pub fn read(mem: IO, addr: Address) u8 {
-        return mem.vtable.readFn(mem.ctx, addr);
-    }
-
-    pub fn write(mem: IO, addr: Address, value: u8) void {
-        return mem.writeMasked(addr, 0xFF, value);
-    }
-
-    /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    pub fn writeMasked(mem: IO, addr: Address, mask: u8, value: u8) void {
-        return mem.vtable.writeFn(mem.ctx, addr, mask, value);
-    }
-
-    pub const VTable = struct {
-        readFn: *const fn (ctx: ?*anyopaque, addr: Address) u8,
-        writeFn: *const fn (ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void,
-    };
-
-    pub const empty = IO{
-        .ctx = null,
-        .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
-    };
-
-    fn emptyRead(ctx: ?*anyopaque, addr: Address) u8 {
-        _ = addr;
-        _ = ctx;
-        return 0;
-    }
-
-    fn emptyWrite(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
-        _ = mask;
-        _ = value;
-        _ = addr;
-        _ = ctx;
     }
 };
 

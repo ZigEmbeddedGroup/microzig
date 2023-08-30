@@ -1,8 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-pub const isa = @import("isa");
-pub const Cpu = @import("Cpu.zig");
-
+const aviron = @import("aviron");
 const args_parser = @import("args");
 
 pub fn main() !u8 {
@@ -15,9 +13,9 @@ pub fn main() !u8 {
         @panic("usage: aviron [--trace] <elf>");
 
     // Emulate Atmega382p device size:
-    var flash_storage = Cpu.Flash.Static(32768){};
-    var sram = Cpu.RAM.Static(2048){};
-    var eeprom = Cpu.RAM.Static(1024){};
+    var flash_storage = aviron.Flash.Static(32768){};
+    var sram = aviron.RAM.Static(2048){};
+    var eeprom = aviron.EEPROM.Static(1024){};
     var io = IO{
         .sreg = undefined,
         .sp = 2047,
@@ -48,7 +46,7 @@ pub fn main() !u8 {
         }
     }
 
-    var cpu = Cpu{
+    var cpu = aviron.Cpu{
         .trace = cli.options.trace,
 
         .flash = flash_storage.memory(),
@@ -91,16 +89,16 @@ const IO = struct {
     scratch_regs: [16]u8 = .{0} ** 16,
 
     sp: u16,
-    sreg: *Cpu.SREG,
+    sreg: *aviron.Cpu.SREG,
 
-    pub fn memory(self: *IO) Cpu.IO {
-        return Cpu.IO{
+    pub fn memory(self: *IO) aviron.IO {
+        return aviron.IO{
             .ctx = self,
             .vtable = &vtable,
         };
     }
 
-    pub const vtable = Cpu.IO.VTable{
+    pub const vtable = aviron.IO.VTable{
         .readFn = read,
         .writeFn = write,
     };
