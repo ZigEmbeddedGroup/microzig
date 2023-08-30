@@ -115,8 +115,8 @@ pub const opinfo = struct {
     pub const d5q6 = struct { d: Register, q: u6 };
     pub const d5r5 = struct { d: Register, r: Register };
     pub const d4k8 = struct { d: Register4, k: u8 };
-    pub const d4r4 = struct { d: u4, r: u4 };
-    pub const d3r3 = struct { d: u3, r: u3 };
+    pub const d4r4 = struct { d: Register4, r: Register4 };
+    pub const d3r3 = struct { d: Register3, r: Register3 };
     pub const d2k6 = struct { d: u2, k: u6 };
     pub const k4 = struct { k: u4 };
     pub const k6 = struct { k: u6 };
@@ -126,6 +126,39 @@ pub const opinfo = struct {
     pub const q6r5 = struct { q: u6, r: Register };
     pub const r5 = struct { r: Register };
     pub const s3 = struct { s: StatusRegisterBit };
+};
+
+pub const Register3 = enum(u3) {
+    r16 = 0,
+    r17 = 1,
+    r18 = 2,
+    r19 = 3,
+    r20 = 4,
+    r21 = 5,
+    r22 = 6,
+    r23 = 7,
+
+    pub fn format(r: Register3, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("r{}", .{
+            16 + @as(u32, @intFromEnum(r)),
+        });
+    }
+
+    /// Returns the numeric value of this value.
+    pub fn int(r: Register3) u4 {
+        return @intFromEnum(r);
+    }
+
+    /// Returns the register number.
+    pub fn num(r: Register3) u5 {
+        return 16 + @as(u5, @intFromEnum(r));
+    }
+
+    pub fn reg(r: Register3) Register {
+        return @enumFromInt(r.num());
+    }
 };
 
 pub const Register4 = enum(u4) {
@@ -217,6 +250,9 @@ pub const Register = enum(u5) {
     /// Returns the register number.
     pub fn num(r5: Register) u5 {
         return @intFromEnum(r5);
+    }
+    pub fn reg(r: Register) Register {
+        return r;
     }
 };
 
