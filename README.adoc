@@ -5,3 +5,11 @@ HAL and register definitions for the RP2040.
 == What version of Zig to use
 
 0.11.0
+
+== Supported devices ==
+
+- Raspberry Pi Pico
+- (*experimental*) Waveshare RP2040-Plus (4M Flash)
+- (*experimental*) Waveshare RP2040-Plus (16M Flash)
+- (*experimental*) Waveshare RP2040-ETH Mini
+- (*experimental*) Waveshare RP2040-Matrix
