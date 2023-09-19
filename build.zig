@@ -3,6 +3,8 @@
 //! This means we need to use addExecutable() instead of using
 
 const std = @import("std");
+const uf2 = @import("uf2");
+
 const LibExeObjStep = std.Build.LibExeObjStep;
 const Module = std.Build.Module;
 const LazyPath = std.Build.LazyPath;
@@ -242,4 +244,266 @@ pub fn build(b: *Build) !void {
     test_step.dependOn(&has_hal.inner.step);
     test_step.dependOn(&has_board.inner.step);
     test_step.dependOn(&b.addRunArtifact(core_tests).step);
+}
+
+////////////////////////////////////////
+//      MicroZig Gen 2 Interface      //
+////////////////////////////////////////
+
+pub const BinaryFormat = union(enum) {
+    /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
+    elf,
+
+    /// A flat binary, contains only the loaded portions of the firmware with an unspecified base offset.
+    bin,
+
+    /// The [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format, contains
+    /// an ASCII description of what memory to load where.
+    hex,
+
+    /// A [Device Firmware Upgrade](https://www.usb.org/sites/default/files/DFU_1.1.pdf) file.
+    dfu,
+
+    /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
+    uf2,
+
+    /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
+    esp,
+
+    /// Custom option for non-standard formats.
+    custom: *Custom,
+
+    /// Returns the standard extension for the resulting binary file.
+    pub fn getExtension(format: BinaryFormat) []const u8 {
+        return switch (format) {
+            .elf => ".elf",
+            .bin => ".bin",
+            .hex => ".hex",
+            .dfu => ".dfu",
+            .uf2 => ".uf2",
+            .esp => ".bin",
+
+            .custom => |c| c.extension,
+        };
+    }
+
+    pub const Custom = struct {
+        extension: []const u8,
+        convert: *const fn (*Custom, std.Build.LazyPath) std.Build.LazyPath,
+    };
+
+    const Enum = std.meta.Tag(BinaryFormat);
+};
+
+pub const Bootloader = union(enum) {
+    //
+};
+
+pub const CpuModel = union(enum) {
+    avr5,
+    cortex_m0,
+    cortex_m0plus,
+    cortex_m3,
+    cortex_m4,
+    riscv32_imac,
+
+    custom: *const Cpu,
+
+    pub fn getDescriptor(model: CpuModel) *const Cpu {
+        return switch (@as(std.meta.Tag(CpuModel), model)) {
+            inline else => |tag| &@field(cpus, @tagName(tag)),
+            .custom => model.custom,
+        };
+    }
+};
+
+pub const Target = struct {
+    /// The display name of the target.
+    name: []const u8,
+
+    /// The preferred binary format of this MicroZig target. If `null`, the user must
+    /// explicitly give the `.format` field during a call to `getEmittedBin()` or installation steps.
+    preferred_format: ?BinaryFormat,
+
+    /// The cpu model this target uses.
+    cpu: CpuModel,
+
+    /// (optional) Post processing step that will patch up and modify the elf file if necessary.
+    binary_post_process: ?*const fn (*std.Build, std.Build.LazyPath) std.Build.LazyPath = null,
+};
+
+pub const HardwareAbstractionLayer = struct {
+    //
+};
+
+pub const FirmwareOptions = struct {
+    name: []const u8,
+    target: Target,
+    optimize: std.builtin.OptimizeMode,
+
+    source_file: ?std.Build.LazyPath = null,
+
+    // TODO: Future extensions
+    hal: ?HardwareAbstractionLayer = null,
+    bootloader: ?Bootloader = null,
+};
+
+pub fn addFirmware(b: *std.Build, options: FirmwareOptions) *Firmware {
+    const cpu = options.target.cpu.getDescriptor();
+
+    const fw: *Firmware = b.allocator.create(Firmware) catch @panic("out of memory");
+
+    fw.* = Firmware{
+        .b = b,
+        .artifact = b.addExecutable(.{
+            .name = options.name,
+            .optimize = options.optimize,
+            .target = cpu.target,
+            .linkage = .static,
+        }),
+        .target = options.target,
+        .output_files = Firmware.OutputFileMap.init(b.allocator),
+    };
+    errdefer fw.output_files.deinit();
+
+    return fw;
+}
+
+pub const InstallFirmwareOptions = struct {
+    format: ?BinaryFormat = null,
+};
+
+pub fn installFirmware(b: *std.Build, firmware: *Firmware, options: InstallFirmwareOptions) void {
+    const install_step = addInstallFirmware(b, firmware, options);
+    b.getInstallStep().dependOn(&install_step.step);
+}
+
+pub fn addInstallFirmware(b: *std.Build, firmware: *Firmware, options: InstallFirmwareOptions) *std.Build.Step.InstallFile {
+    const format = firmware.resolveFormat(options.format);
+
+    const basename = b.fmt("{s}{s}", .{
+        firmware.artifact.name,
+        format.getExtension(),
+    });
+
+    return b.addInstallFileWithDir(firmware.getEmittedBin(format), .{ .custom = "firmware" }, basename);
+}
+
+pub const Firmware = struct {
+    const OutputFileMap = std.ArrayHashMap(BinaryFormat, std.Build.LazyPath, OutputFileMapContext, false);
+
+    b: *std.Build,
+    target: Target,
+    artifact: *std.Build.Step.Compile,
+    output_files: OutputFileMap,
+
+    emitted_elf: ?std.Build.LazyPath = null,
+
+    pub fn getEmittedElf(firmware: *Firmware) std.Build.LazyPath {
+        if (firmware.emitted_elf == null) {
+            const raw_elf = firmware.artifact.getEmittedBin();
+            firmware.emitted_elf = if (firmware.target.binary_post_process) |binary_post_process|
+                binary_post_process(firmware.b, raw_elf)
+            else
+                raw_elf;
+        }
+        return firmware.emitted_elf.?;
+    }
+
+    pub fn getEmittedBin(firmware: *Firmware, format: ?BinaryFormat) std.Build.LazyPath {
+        const actual_format = firmware.resolveFormat(format);
+
+        const gop = firmware.output_files.getOrPut(actual_format) catch @panic("out of memory");
+        if (!gop.found_existing) {
+            const elf_file = firmware.getEmittedElf();
+
+            const basename = firmware.b.fmt("{s}{s}", .{
+                firmware.artifact.name,
+                actual_format.getExtension(),
+            });
+
+            gop.value_ptr.* = switch (actual_format) {
+                .elf => elf_file,
+
+                .bin => blk: {
+                    const objcopy = firmware.b.addObjCopy(elf_file, .{
+                        .basename = basename,
+                        .format = .bin,
+                    });
+
+                    break :blk objcopy.getOutput();
+                },
+
+                .hex => blk: {
+                    const objcopy = firmware.b.addObjCopy(elf_file, .{
+                        .basename = basename,
+                        .format = .hex,
+                    });
+
+                    break :blk objcopy.getOutput();
+                },
+
+                .dfu => buildConfigError(firmware.b, "DFU is not implemented yet. See <LINK HERE> for more details!", .{}),
+                .esp => buildConfigError(firmware.b, "ESP firmware image is not implemented yet. See <LINK HERE> for more details!", .{}),
+                .uf2 => buildConfigError(firmware.b, "UF2 is not implemented yet. See <LINK HERE> for more details!", .{}),
+
+                .custom => |generator| generator.convert(generator, elf_file),
+
+                // TODO: Create output file here
+            };
+        }
+        return gop.value_ptr.*;
+    }
+
+    fn resolveFormat(firmware: *Firmware, format: ?BinaryFormat) BinaryFormat {
+        if (format) |fmt| return fmt;
+
+        if (firmware.target.preferred_format) |fmt| return fmt;
+
+        buildConfigError(firmware.b, "{s} has no preferred output format, please provide one in the `format` option.", .{
+            firmware.target.name,
+        });
+    }
+};
+
+const OutputFileMapContext = struct {
+    pub fn hash(self: @This(), fmt: BinaryFormat) u32 {
+        _ = self;
+
+        return switch (@as(BinaryFormat.Enum, fmt)) {
+            inline .elf,
+            .bin,
+            .hex,
+            .dfu,
+            .uf2,
+            .esp,
+            => |tag| comptime std.hash.CityHash32.hash(@tagName(tag)),
+
+            .custom => std.hash.CityHash32.hash(std.mem.asBytes(fmt.custom)),
+        };
+    }
+
+    pub fn eql(self: @This(), fmt_a: BinaryFormat, fmt_b: BinaryFormat, index: usize) bool {
+        _ = self;
+        _ = index;
+        if (@as(BinaryFormat.Enum, fmt_a) != @as(BinaryFormat.Enum, fmt_b))
+            return false;
+
+        return switch (fmt_a) {
+            .elf,
+            .bin,
+            .hex,
+            .dfu,
+            .uf2,
+            .esp,
+            => true,
+
+            .custom => |a| (a == fmt_b.custom),
+        };
+    }
+};
+
+fn buildConfigError(b: *std.Build, comptime fmt: []const u8, args: anytype) noreturn {
+    const msg = b.fmt(fmt, args);
+    @panic(msg);
 }

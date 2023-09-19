@@ -1,0 +1,10 @@
+.{
+    .name = "microzig",
+    .version = "0.1.0",
+    .dependencies = .{
+        .uf2 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/206c027ee4c5eaf409b7bcbce86339c97b4926a6.tar.gz",
+            .hash = "122041fef1143717c2da02786654e50fa553b0a3ae5dda24cb717f5816adf71f6092",
+        },
+    },
+}
