@@ -1,3 +1,4 @@
 zig-cache/
 dev-scripts/
 zig-out
+.envrc

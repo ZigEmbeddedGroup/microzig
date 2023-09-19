@@ -3,12 +3,12 @@
     .version = "0.1.0",
     .dependencies = .{
         .microzig = .{
-            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/f0a6aa9ce1829df91f2d7f160bbc6f5bc41a3c80.tar.gz",
-            .hash = "12203f8cb7803a82dff1310ab0917055c0055bc7385f1321bbaf0de998b26a00b44d",
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/44ab82cac86ab7fbd4e6718021d51a2bb8c4a42c.tar.gz",
+            .hash = "122039437ab5c8946e3f1f77dec17092f0c6cae9fcd830bce89f03725e75a02d101b",
         },
         .rp2040 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/2a0c0ff2814a716a163822211c2686d84801a97a.tar.gz",
-            .hash = "12208735720ddf172a28943f1b17375f7b16370140be9c458f1482076025e465c3b0",
+            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/b9c361be68215d48657ec3684c8a30ebbc74efd5.tar.gz",
+            .hash = "1220aa6da071763468a358e82af753db23513e12120cf749bdb8bb4f8ea2a8b6da7b",
         },
     },
 }
