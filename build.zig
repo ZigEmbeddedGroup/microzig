@@ -265,7 +265,7 @@ pub const BinaryFormat = union(enum) {
     dfu,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
-    uf2,
+    uf2: uf2.FamilyId,
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
     esp,

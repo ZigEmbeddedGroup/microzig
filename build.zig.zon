@@ -3,8 +3,12 @@
     .version = "0.1.0",
     .dependencies = .{
         .uf2 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/206c027ee4c5eaf409b7bcbce86339c97b4926a6.tar.gz",
-            .hash = "122041fef1143717c2da02786654e50fa553b0a3ae5dda24cb717f5816adf71f6092",
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/15c34d724508e9a53acf764cd3f56234179f63a9.tar.gz",
+            .hash = "12208530bdc194e8c1f3405ad681a409c7fabfe82735cd3972ec07c221a7786db03a",
+        },
+        .regz = .{
+            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/b0ded63fc284da0ed9f4776eb7d1c4ad7175622d.tar.gz",
+            .hash = "1220e9299f949d3566a1dc4dd62caf82a06bb6c8ad5a693e62117b0941da9dc55ea2",
         },
     },
 }
