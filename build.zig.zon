@@ -3,12 +3,16 @@
     .version = "0.1.0",
     .dependencies = .{
         .microzig = .{
-            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/44ab82cac86ab7fbd4e6718021d51a2bb8c4a42c.tar.gz",
-            .hash = "122039437ab5c8946e3f1f77dec17092f0c6cae9fcd830bce89f03725e75a02d101b",
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
         },
         .rp2040 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/b9c361be68215d48657ec3684c8a30ebbc74efd5.tar.gz",
-            .hash = "1220aa6da071763468a358e82af753db23513e12120cf749bdb8bb4f8ea2a8b6da7b",
+            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/67d36eebb0fbd89633db1a51d6d2bcb049f2066a.tar.gz",
+            .hash = "122094bf268f45b188f3916f9e5964f4257414afaafba98a455ac47d25389a456832",
+        },
+        .stm32 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/stmicro-stm32/archive/cb2893707efa6aa289fa72f02959ad5f2d9db2a1.tar.gz",
+            .hash = "12208cab5f60ef97cac4165ad694f3ba0c7b28f279538c1539b74f7c152f34fe306d",
         },
     },
 }
