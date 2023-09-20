@@ -3,7 +3,7 @@
     .version = "0.1.0",
     .dependencies = .{
         .uf2 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/15c34d724508e9a53acf764cd3f56234179f63a9.tar.gz",
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/c523a4d23469282f95658a879f5ba925757dc9d9.tar.gz",
             .hash = "12208530bdc194e8c1f3405ad681a409c7fabfe82735cd3972ec07c221a7786db03a",
         },
         .regz = .{

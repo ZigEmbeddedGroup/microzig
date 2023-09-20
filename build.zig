@@ -360,7 +360,7 @@ pub const Target = struct {
 
     /// (optional) Further configures the created firmware depending on the chip and/or board settings.
     /// This can be used to set/change additional properties on the created `*Firmware` object.
-    configure: ?*const fn (host_build: *std.Build, *Firmware) void,
+    configure: ?*const fn (host_build: *std.Build, *Firmware) void = null,
 
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
     binary_post_process: ?*const fn (host_build: *std.Build, std.Build.LazyPath) std.Build.LazyPath = null,
@@ -427,14 +427,14 @@ pub fn addFirmware(
     };
 
     // On demand, generate chip definitions via regz:
-    const chip_source = switch (chip.source) {
+    const chip_source = switch (chip.register_definition) {
         .json, .atdf, .svd => |file| blk: {
             const regz_exe = mz.dependency("regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
 
             const regz_gen = host_build.addRunArtifact(regz_exe);
 
             regz_gen.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
-            regz_gen.addArg(@tagName(chip.source));
+            regz_gen.addArg(@tagName(chip.register_definition));
 
             regz_gen.addArg("--output_path"); // Write to a file
             const zig_file = regz_gen.addOutputFileArg("chip.zig");
@@ -874,20 +874,32 @@ fn generateLinkerScript(b: *std.Build, chip: Chip) !std.Build.LazyPath {
 
     try writer.writeAll("MEMORY\n{\n");
     {
-        var counters = [2]usize{ 0, 0 };
+        var counters = [4]usize{ 0, 0, 0, 0 };
         for (chip.memory_regions) |region| {
             // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
 
             switch (region.kind) {
                 .flash => {
-                    try writer.print("  flash{d} (rx!w)", .{counters[0]});
+                    try writer.print("  flash{d}    (rx!w)", .{counters[0]});
                     counters[0] += 1;
                 },
+
                 .ram => {
-                    try writer.print("  ram{d}   (rw!x)", .{counters[1]});
+                    try writer.print("  ram{d}      (rw!x)", .{counters[1]});
                     counters[1] += 1;
                 },
-                .custom => |custom| {
+
+                .io => {
+                    try writer.print("  io{d}       (rw!x)", .{counters[2]});
+                    counters[2] += 1;
+                },
+
+                .reserved => {
+                    try writer.print("  reserved{d} (rw!x)", .{counters[3]});
+                    counters[3] += 1;
+                },
+
+                .private => |custom| {
                     try writer.print("  {s} (", .{custom.name});
                     if (custom.readable) try writer.writeAll("r");
                     if (custom.writeable) try writer.writeAll("w");
