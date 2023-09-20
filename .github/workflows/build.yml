@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, linux-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
