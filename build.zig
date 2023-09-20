@@ -19,6 +19,10 @@ const MicroZig = @This();
 b: *std.Build,
 self: *std.Build.Dependency,
 
+/// Creates a new instance of the MicroZig build support.
+///
+/// This is necessary as we need to keep track of some internal state to prevent
+/// duplicated work per firmware built.
 pub fn init(b: *std.Build, dependency_name: []const u8) *MicroZig {
     const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
     mz.* = MicroZig{
@@ -30,7 +34,23 @@ pub fn init(b: *std.Build, dependency_name: []const u8) *MicroZig {
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.Build) !void {
-    _ = b;
+    const uf2_dep = b.dependency("uf2", .{});
+
+    const build_test = b.addTest(.{
+        .root_source_file = .{ .path = "build.zig" },
+    });
+
+    build_test.addAnonymousModule("uf2", .{
+        .source_file = .{ .cwd_relative = uf2_dep.builder.pathFromRoot("build.zig") },
+    });
+
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = build_test.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
+    b.getInstallStep().dependOn(&install_docs.step);
 
     // const backings = @import("test/backings.zig");
     // const optimize = b.standardOptimizeOption(.{});
@@ -76,6 +96,9 @@ pub fn build(b: *std.Build) !void {
     // test_step.dependOn(&b.addRunArtifact(core_tests).step);
 }
 
+/// The resulting binary format for the firmware file.
+/// A lot of embedded systems don't use plain ELF files, thus we provide means
+/// to convert the resulting ELF into other common formats.
 pub const BinaryFormat = union(enum) {
     /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
     elf,
@@ -114,17 +137,63 @@ pub const BinaryFormat = union(enum) {
     }
 
     pub const Custom = struct {
+        /// The standard extension of the format.
         extension: []const u8,
-        convert: *const fn (*Custom, std.Build.LazyPath) std.Build.LazyPath,
+
+        /// A function that will convert a given `elf` file into the custom output format.
+        ///
+        /// The `*Custom` format is passed so contextual information can be obtained by using
+        /// `@fieldParentPtr` to provide access to tooling.
+        convert: *const fn (*Custom, elf: std.Build.LazyPath) std.Build.LazyPath,
     };
 
     const Enum = std.meta.Tag(BinaryFormat);
+
+    const Context = struct {
+        pub fn hash(self: @This(), fmt: BinaryFormat) u32 {
+            _ = self;
+
+            var hasher = std.hash.XxHash32.init(0x1337_42_21);
+
+            hasher.update(@tagName(fmt));
+
+            switch (fmt) {
+                .elf, .bin, .hex, .dfu, .esp => |val| {
+                    if (@TypeOf(val) != void) @compileError("Missing update: Context.hash now requires special care!");
+                },
+
+                .uf2 => |family_id| hasher.update(@tagName(family_id)),
+                .custom => |custom| hasher.update(std.mem.asBytes(custom)),
+            }
+
+            return hasher.final();
+        }
+
+        pub fn eql(self: @This(), fmt_a: BinaryFormat, fmt_b: BinaryFormat, index: usize) bool {
+            _ = self;
+            _ = index;
+            if (@as(BinaryFormat.Enum, fmt_a) != @as(BinaryFormat.Enum, fmt_b))
+                return false;
+
+            return switch (fmt_a) {
+                .elf, .bin, .hex, .dfu, .esp => |val| {
+                    if (@TypeOf(val) != void) @compileError("Missing update: Context.eql now requires special care!");
+                    return true;
+                },
+
+                .uf2 => |a| (a == fmt_b.uf2),
+                .custom => |a| (a == fmt_b.custom),
+            };
+        }
+    };
 };
 
-pub const Bootloader = union(enum) {
-    //
-};
-
+/// The CPU model a target uses.
+///
+/// The CPUs usually require special care on how to do interrupts, and getting an entry point.
+///
+/// MicroZig officially only supports the CPUs listed here, but other CPUs might be provided
+/// via the `custom` field.
 pub const CpuModel = union(enum) {
     avr5,
     cortex_m0,
@@ -143,42 +212,70 @@ pub const CpuModel = union(enum) {
     }
 };
 
+/// A cpu descriptor.
 pub const Cpu = struct {
+    /// Display name of the CPU.
     name: []const u8,
+
+    /// Source file providing startup code and memory initialization routines.
     source_file: std.build.LazyPath,
+
+    /// The compiler target we use to compile all the code.
     target: std.zig.CrossTarget,
 };
 
+/// A descriptor for memory regions in a microcontroller.
 pub const MemoryRegion = struct {
-    //! This module is meant to be used to define linking apis
-
+    /// The type of the memory region for generating a proper linker script.
     kind: Kind,
     offset: u64,
     length: u64,
 
     pub const Kind = union(enum) {
+        /// This is a (normally) immutable memory region where the code is stored.
         flash,
+
+        /// This is a mutable memory region for data storage.
         ram,
-        custom: RegionSpec,
+
+        /// This is a memory region that maps MMIO devices.
+        io,
+
+        /// This is a memory region that exists, but is reserved and must not be used.
+        reserved,
+
+        /// This is a memory region used for internal linking tasks required by the board support package.
+        private: PrivateRegion,
     };
 
-    pub const RegionSpec = struct {
+    pub const PrivateRegion = struct {
+        /// The name of the memory region. Will not have an automatic numeric counter and must be unique.
         name: []const u8,
+
+        /// Is the memory region executable?
         executable: bool,
+
+        /// Is the memory region readable?
         readable: bool,
+
+        /// Is the memory region writable?
         writeable: bool,
     };
 };
 
-pub const ChipDefinition = struct {
+/// Defines a custom microcontroller.
+pub const Chip = struct {
+    /// The display name of the controller.
     name: []const u8,
 
+    /// (optional) link to the documentation/vendor page of the controller.
     url: ?[]const u8 = null,
 
-    /// The cpu model this target uses.
+    /// The cpu model this controller uses.
     cpu: CpuModel,
 
-    source: union(enum) {
+    /// The provider for register definitions.
+    register_definition: union(enum) {
         /// Use `regz` to create a zig file from a JSON schema.
         json: std.Build.LazyPath,
 
@@ -192,31 +289,52 @@ pub const ChipDefinition = struct {
         zig: std.Build.LazyPath,
     },
 
+    /// The memory regions that are present in this chip.
     memory_regions: []const MemoryRegion,
 };
 
+/// Defines a hardware abstraction layer.
 pub const HardwareAbstractionLayer = struct {
+    /// Root source file for this HAL.
     source_file: std.Build.LazyPath,
 };
 
+/// Provides a description of a board.
+///
+/// Boards provide additional information to a chip and HAL package.
+/// For example, they can list attached peripherials, external crystal frequencies,
+/// flash sizes, ...
 pub const BoardDefinition = struct {
+    /// Display name of the board
     name: []const u8,
-    source_file: std.Build.LazyPath,
+
+    /// (optional) link to the documentation/vendor page of the board.
     url: ?[]const u8 = null,
+
+    /// Provides the root file for the board definition.
+    source_file: std.Build.LazyPath,
 };
 
+/// The linker script used to link the firmware.
 pub const LinkerScript = union(enum) {
+    /// Auto-generated linker script derived from the memory regions of the chip.
     generated,
+
+    /// Externally defined linker script.
     source_file: std.build.LazyPath,
 };
 
+/// A compilation target for MicroZig. Provides information about the chip,
+/// hal, board and so on.
+///
+/// This is used instead of `std.zig.CrossTarget` to define a MicroZig Firmware.
 pub const Target = struct {
     /// The preferred binary format of this MicroZig target. If `null`, the user must
     /// explicitly give the `.format` field during a call to `getEmittedBin()` or installation steps.
     preferred_format: ?BinaryFormat,
 
     /// The chip this target uses,
-    chip: ChipDefinition,
+    chip: Chip,
 
     /// Usually, embedded projects are single-threaded and single-core applications. Platforms that
     /// support multiple CPUs should set this to `false`.
@@ -248,28 +366,48 @@ pub const Target = struct {
     binary_post_process: ?*const fn (host_build: *std.Build, std.Build.LazyPath) std.Build.LazyPath = null,
 };
 
+/// Options to the `addFirmware` function.
 pub const FirmwareOptions = struct {
-    // Necessities:
-
+    /// The name of the firmware file.
     name: []const u8,
+
+    /// The MicroZig target that the firmware is built for. Either a board or a chip.
     target: Target,
+
+    /// The optimization level that should be used. Usually `ReleaseSmall` or `Debug` is a good choice.
+    /// Also using `std.Build.standardOptimizeOption` is a good idea.
     optimize: std.builtin.OptimizeMode,
+
+    /// The root source file for the application. This is your `src/main.zig` file.
     source_file: std.Build.LazyPath,
 
     // Overrides:
 
+    /// If set, overrides the `single_threaded` property of the target.
     single_threaded: ?bool = null,
+
+    /// If set, overrides the `bundle_compiler_rt` property of the target.
     bundle_compiler_rt: ?bool = null,
+
+    /// If set, overrides the `hal` property of the target.
     hal: ?HardwareAbstractionLayer = null,
+
+    /// If set, overrides the `board` property of the target.
     board: ?BoardDefinition = null,
+
+    /// If set, overrides the `linker_script` property of the target.
     linker_script: ?LinkerScript = null,
-
-    // TODO: Future extensions
-
-    bootloader: ?Bootloader = null,
 };
 
-pub fn addFirmware(mz: *MicroZig, host_build: *std.Build, options: FirmwareOptions) *Firmware {
+/// Declares a new MicroZig firmware file.
+pub fn addFirmware(
+    /// The MicroZig instance that should be used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that is calling this function.
+    host_build: *std.Build,
+    /// Options that define how the firmware is built.
+    options: FirmwareOptions,
+) *Firmware {
     const micro_build = mz.self.builder;
 
     const chip = &options.target.chip;
@@ -291,7 +429,7 @@ pub fn addFirmware(mz: *MicroZig, host_build: *std.Build, options: FirmwareOptio
     // On demand, generate chip definitions via regz:
     const chip_source = switch (chip.source) {
         .json, .atdf, .svd => |file| blk: {
-            const regz_exe = mz.dependency("regz").artifact("regz");
+            const regz_exe = mz.dependency("regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
 
             const regz_gen = host_build.addRunArtifact(regz_exe);
 
@@ -426,16 +564,42 @@ pub fn addFirmware(mz: *MicroZig, host_build: *std.Build, options: FirmwareOptio
     return fw;
 }
 
+/// Configuration options for firmware installation.
 pub const InstallFirmwareOptions = struct {
+    /// Overrides the output format for the binary. If not set, the standard preferred file format for the firmware target is used.
     format: ?BinaryFormat = null,
 };
 
-pub fn installFirmware(mz: *MicroZig, b: *std.Build, firmware: *Firmware, options: InstallFirmwareOptions) void {
+/// Adds a new dependency to the `install` step that will install the `firmware` into the folder `$prefix/firmware`.
+pub fn installFirmware(
+    /// The MicroZig instance that was used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that should perform installation.
+    b: *std.Build,
+    /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
+    firmware: *Firmware,
+    /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
+    options: InstallFirmwareOptions,
+) void {
+    std.debug.assert(mz == firmware.mz);
     const install_step = addInstallFirmware(mz, b, firmware, options);
     b.getInstallStep().dependOn(&install_step.step);
 }
 
-pub fn addInstallFirmware(mz: *MicroZig, b: *std.Build, firmware: *Firmware, options: InstallFirmwareOptions) *std.Build.Step.InstallFile {
+/// Creates a new `std.Build.Step.InstallFile` instance that will install the given firmware to `$prefix/firmware`.
+///
+/// **NOTE:** This does not actually install the firmware yet. You have to add the returned step as a dependency to another step.
+///           If you want to just install the firmware, use `installFirmware` instead!
+pub fn addInstallFirmware(
+    /// The MicroZig instance that was used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that should perform installation.
+    b: *std.Build,
+    /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
+    firmware: *Firmware,
+    /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
+    options: InstallFirmwareOptions,
+) *std.Build.Step.InstallFile {
     const format = firmware.resolveFormat(options.format);
 
     const basename = b.fmt("{s}{s}", .{
@@ -448,8 +612,9 @@ pub fn addInstallFirmware(mz: *MicroZig, b: *std.Build, firmware: *Firmware, opt
     return b.addInstallFileWithDir(firmware.getEmittedBin(format), .{ .custom = "firmware" }, basename);
 }
 
+/// Declaration of a firmware build.
 pub const Firmware = struct {
-    const OutputFileMap = std.ArrayHashMap(BinaryFormat, std.Build.LazyPath, OutputFileMapContext, false);
+    const OutputFileMap = std.ArrayHashMap(BinaryFormat, std.Build.LazyPath, BinaryFormat.Context, false);
 
     const Modules = struct {
         app: *std.Build.Module,
@@ -460,18 +625,31 @@ pub const Firmware = struct {
         microzig: *std.Build.Module,
     };
 
+    // privates:
     mz: *MicroZig,
     host_build: *std.Build,
     target: Target,
-    artifact: *std.Build.Step.Compile,
     output_files: OutputFileMap,
 
+    // publics:
+
+    /// The artifact that is built by Zig.
+    artifact: *std.Build.Step.Compile,
+
+    /// The options step that provides `microzig.config`. If you need custom configuration, you can add this here.
     config: *std.Build.Step.Options,
 
+    /// Declaration of the MicroZig modules used by this firmware.
     modules: Modules,
 
+    /// Path to the emitted elf file, if any.
     emitted_elf: ?std.Build.LazyPath = null,
 
+    /// Returns the emitted ELF file for this firmware. This is useful if you need debug information
+    /// or want to use a debugger like Segger, ST-Link or similar.
+    ///
+    /// **NOTE:** This is similar, but not equivalent to `std.Build.Step.Compile.getEmittedBin`. The call on the compile step does
+    ///           not include post processing of the ELF files necessary by certain targets.
     pub fn getEmittedElf(firmware: *Firmware) std.Build.LazyPath {
         if (firmware.emitted_elf == null) {
             const raw_elf = firmware.artifact.getEmittedBin();
@@ -483,6 +661,10 @@ pub const Firmware = struct {
         return firmware.emitted_elf.?;
     }
 
+    /// Returns the emitted binary for this firmware. The file is either in the preferred file format for
+    /// the target or in `format` if not null.
+    ///
+    /// **NOTE:** The file returned here is the same file that will be installed.
     pub fn getEmittedBin(firmware: *Firmware, format: ?BinaryFormat) std.Build.LazyPath {
         const actual_format = firmware.resolveFormat(format);
 
@@ -517,7 +699,7 @@ pub const Firmware = struct {
                 },
 
                 .uf2 => |family_id| blk: {
-                    const uf2_exe = firmware.mz.dependency("uf2").artifact("elf2uf2");
+                    const uf2_exe = firmware.mz.dependency("uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
 
                     const convert = firmware.host_build.addRunArtifact(uf2_exe);
 
@@ -544,6 +726,7 @@ pub const Firmware = struct {
         depend_on_microzig: bool = false,
     };
 
+    /// Adds a regular dependency to your application.
     pub fn addAppDependency(fw: *Firmware, name: []const u8, module: *std.Build.Module, options: AppDependencyOptions) void {
         if (options.depend_on_microzig) {
             module.dependencies.put("microzig", fw.modules.microzig) catch @panic("OOM");
@@ -585,43 +768,6 @@ pub const Firmware = struct {
         buildConfigError(firmware.host_build, "{s} has no preferred output format, please provide one in the `format` option.", .{
             firmware.target.chip.name,
         });
-    }
-};
-
-const OutputFileMapContext = struct {
-    pub fn hash(self: @This(), fmt: BinaryFormat) u32 {
-        _ = self;
-
-        return switch (@as(BinaryFormat.Enum, fmt)) {
-            inline .elf,
-            .bin,
-            .hex,
-            .dfu,
-            .uf2,
-            .esp,
-            => |tag| comptime std.hash.CityHash32.hash(@tagName(tag)),
-
-            .custom => std.hash.CityHash32.hash(std.mem.asBytes(fmt.custom)),
-        };
-    }
-
-    pub fn eql(self: @This(), fmt_a: BinaryFormat, fmt_b: BinaryFormat, index: usize) bool {
-        _ = self;
-        _ = index;
-        if (@as(BinaryFormat.Enum, fmt_a) != @as(BinaryFormat.Enum, fmt_b))
-            return false;
-
-        return switch (fmt_a) {
-            .elf,
-            .bin,
-            .hex,
-            .dfu,
-            .uf2,
-            .esp,
-            => true,
-
-            .custom => |a| (a == fmt_b.custom),
-        };
     }
 };
 
@@ -698,11 +844,11 @@ fn buildConfigError(b: *std.Build, comptime fmt: []const u8, args: anytype) nore
     @panic(msg);
 }
 
-fn dependency(mz: *MicroZig, name: []const u8) *std.Build.Dependency {
-    return mz.self.builder.dependency(name, .{});
+fn dependency(mz: *MicroZig, name: []const u8, args: anytype) *std.Build.Dependency {
+    return mz.self.builder.dependency(name, args);
 }
 
-fn generateLinkerScript(b: *std.Build, chip: ChipDefinition) !std.Build.LazyPath {
+fn generateLinkerScript(b: *std.Build, chip: Chip) !std.Build.LazyPath {
     const cpu = chip.cpu.getDescriptor();
 
     var contents = std.ArrayList(u8).init(b.allocator);
