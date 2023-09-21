@@ -713,8 +713,8 @@ pub const Firmware = struct {
                     break :blk convert.addOutputFileArg(basename);
                 },
 
-                .dfu => buildConfigError(firmware.host_build, "DFU is not implemented yet. See <LINK HERE> for more details!", .{}),
-                .esp => buildConfigError(firmware.host_build, "ESP firmware image is not implemented yet. See <LINK HERE> for more details!", .{}),
+                .dfu => buildConfigError(firmware.host_build, "DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!", .{}),
+                .esp => buildConfigError(firmware.host_build, "ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!", .{}),
 
                 .custom => |generator| generator.convert(generator, elf_file),
             };
