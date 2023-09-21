@@ -1,6 +1,9 @@
 const std = @import("std");
 const rp2040 = @import("rp2040");
 const stm32 = @import("stm32");
+const lpc = @import("lpc");
+const gd32 = @import("gd32");
+const nrf5x = @import("nrf5x");
 
 pub fn build(b: *std.Build) void {
     const microzig = @import("microzig").init(b, "microzig");
@@ -28,6 +31,28 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stm32f4discovery", .target = stm32.boards.stm32f4discovery },
         .{ .name = "stm3240geval", .target = stm32.boards.stm3240geval },
         .{ .name = "stm32f429idiscovery", .target = stm32.boards.stm32f429idiscovery },
+
+        // NXP LPC
+        // TODO: Add checksum postprocessing
+        .{ .name = "lpc176x5x", .target = lpc.chips.lpc176x5x },
+        .{ .name = "mbed-lpc1768", .target = lpc.boards.mbed.lpc1768 },
+
+        // GigaDevice GD32
+        .{ .name = "gd32vf103xb", .target = gd32.chips.gd32vf103xb },
+        .{ .name = "gd32vf103x8", .target = gd32.chips.gd32vf103x8 },
+        .{ .name = "sipeed-longan_nano", .target = gd32.boards.sipeed.longan_nano },
+
+        // Nordic Nrf5x
+        .{ .name = "nrf52832", .target = nrf5x.chips.nrf52832 },
+        .{ .name = "nrf52840", .target = nrf5x.chips.nrf52840 },
+        .{ .name = "nrf52840-dongle", .target = nrf5x.boards.nordic.nRF52840_Dongle }, // TODO: Add support for DFU files!
+
+        // Espressif ESP
+        // .{ .name = "nrf52832", .target = nrf5x.chips.nrf52832 },
+        // TODO: Add support for Espressif Update Binaries
+
+        // Microchip ATmega
+        // TODO: Fix compiler bugs
     };
 
     for (available_targets) |dest| {
