@@ -15,8 +15,8 @@
             .hash = "12208cab5f60ef97cac4165ad694f3ba0c7b28f279538c1539b74f7c152f34fe306d",
         },
         .lpc = .{
-            .url = "https://github.com/ZigEmbeddedGroup/nxp-lpc/archive/be4280a8b55690e8446fd4c3186dcd6673118cd3.tar.gz",
-            .hash = "1220891bc5fa43b30cd024a628f8915f54691e5664d2a34e6653bf92722b222b7c7e",
+            .url = "https://github.com/ZigEmbeddedGroup/nxp-lpc/archive/130a1316c0892415e7da958a5e9548ed87bba54d.tar.gz",
+            .hash = "1220165879f85a1d51656d35b3963a95f3585dc665fc7414f76aa6aad4e6635536cf",
         },
         .gd32 = .{
             .url = "https://github.com/ZigEmbeddedGroup/gigadevice-gd32/archive/9324753cc3b8e7afe83fcda085bcfe76681a3be3.tar.gz",
@@ -27,12 +27,12 @@
             .hash = "1220980da06f9634dcff06afefa7aa111bd030018fea49f79e86657dab69621e1d08",
         },
         .esp = .{
-            .url = "https://github.com/ZigEmbeddedGroup/espressif-esp/archive/f7e47d07996565036501f55ed781a5f6e786b2f7.tar.gz",
-            .hash = "12209b0365f56df4ce83b1300da86bef605bd299e94b87f373571351f71fa2ccd461",
+            .url = "https://github.com/ZigEmbeddedGroup/espressif-esp/archive/59b8ca028915c0d6224ec88dbf4db19afbb559c0.tar.gz",
+            .hash = "1220f6e5f22416fdc63442cd8869fcaa35f9abf30d878ea3d80073176677dc6f8a65",
         },
         .atmega = .{
-            .url = "https://github.com/ZigEmbeddedGroup/microchip-atmega/archive/46dfd08ad13e0a9a84351cfd595b1e6e341d4839.tar.gz",
-            .hash = "1220b2df269bf997b77bebcebea63a8e39aea354a7075cf99878423e304394bc28eb",
+            .url = "https://github.com/ZigEmbeddedGroup/microchip-atmega/archive/feefcb87a63c0aae31afb783d4e388e90c4d922f.tar.gz",
+            .hash = "1220048dc5d22729ee119a496f8b8ca3556838af1f3bd32ce6acd5f76480ec942965",
         },
     },
 }

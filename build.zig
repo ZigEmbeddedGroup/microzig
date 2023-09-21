@@ -4,6 +4,8 @@ const stm32 = @import("stm32");
 const lpc = @import("lpc");
 const gd32 = @import("gd32");
 const nrf5x = @import("nrf5x");
+const esp = @import("esp");
+const atmega = @import("atmega");
 
 pub fn build(b: *std.Build) void {
     const microzig = @import("microzig").init(b, "microzig");
@@ -33,7 +35,6 @@ pub fn build(b: *std.Build) void {
         .{ .name = "stm32f429idiscovery", .target = stm32.boards.stm32f429idiscovery },
 
         // NXP LPC
-        // TODO: Add checksum postprocessing
         .{ .name = "lpc176x5x", .target = lpc.chips.lpc176x5x },
         .{ .name = "mbed-lpc1768", .target = lpc.boards.mbed.lpc1768 },
 
@@ -47,12 +48,15 @@ pub fn build(b: *std.Build) void {
         .{ .name = "nrf52840", .target = nrf5x.chips.nrf52840 },
         .{ .name = "nrf52840-dongle", .target = nrf5x.boards.nordic.nRF52840_Dongle }, // TODO: Add support for DFU files!
 
-        // Espressif ESP
-        // .{ .name = "nrf52832", .target = nrf5x.chips.nrf52832 },
-        // TODO: Add support for Espressif Update Binaries
+        // RISC-V Espressif ESP
+        .{ .name = "esp32-c3", .target = esp.chips.esp32_c3 }, // TODO: Add support for Espressif Update Binaries
 
         // Microchip ATmega
         // TODO: Fix compiler bugs
+        // - https://github.com/ziglang/zig/issues/17219
+        // .{ .name = "atmega328p", .target = atmega.chips.atmega328p },
+        // .{ .name = "arduino-nano", .target = atmega.boards.arduino.nano },
+        // .{ .name = "arduino-uno-rev3", .target = atmega.boards.arduino.uno_rev3 },
     };
 
     for (available_targets) |dest| {
@@ -73,5 +77,8 @@ pub fn build(b: *std.Build) void {
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
         microzig.installFirmware(b, firmware, .{});
+
+        // For debugging, we also always install the firmware as an ELF file
+        microzig.installFirmware(b, firmware, .{ .format = .elf });
     }
 }
