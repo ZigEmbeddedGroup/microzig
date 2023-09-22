@@ -1,0 +1,38 @@
+.{
+    .name = "microzig-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .rp2040 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/67d36eebb0fbd89633db1a51d6d2bcb049f2066a.tar.gz",
+            .hash = "122094bf268f45b188f3916f9e5964f4257414afaafba98a455ac47d25389a456832",
+        },
+        .stm32 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/stmicro-stm32/archive/cb2893707efa6aa289fa72f02959ad5f2d9db2a1.tar.gz",
+            .hash = "12208cab5f60ef97cac4165ad694f3ba0c7b28f279538c1539b74f7c152f34fe306d",
+        },
+        .lpc = .{
+            .url = "https://github.com/ZigEmbeddedGroup/nxp-lpc/archive/130a1316c0892415e7da958a5e9548ed87bba54d.tar.gz",
+            .hash = "1220165879f85a1d51656d35b3963a95f3585dc665fc7414f76aa6aad4e6635536cf",
+        },
+        .gd32 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/gigadevice-gd32/archive/9324753cc3b8e7afe83fcda085bcfe76681a3be3.tar.gz",
+            .hash = "122043ff4dcbc342f25dbb936b0d9eaa701ac3509e2cbe6764be37b90d31c7a385d0",
+        },
+        .nrf5x = .{
+            .url = "https://github.com/ZigEmbeddedGroup/nordic-nrf5x/archive/0ab136860ccf7eb1d07969c3ef523f3cd898e2ff.tar.gz",
+            .hash = "1220980da06f9634dcff06afefa7aa111bd030018fea49f79e86657dab69621e1d08",
+        },
+        .esp = .{
+            .url = "https://github.com/ZigEmbeddedGroup/espressif-esp/archive/59b8ca028915c0d6224ec88dbf4db19afbb559c0.tar.gz",
+            .hash = "1220f6e5f22416fdc63442cd8869fcaa35f9abf30d878ea3d80073176677dc6f8a65",
+        },
+        .atmega = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microchip-atmega/archive/feefcb87a63c0aae31afb783d4e388e90c4d922f.tar.gz",
+            .hash = "1220048dc5d22729ee119a496f8b8ca3556838af1f3bd32ce6acd5f76480ec942965",
+        },
+    },
+}
