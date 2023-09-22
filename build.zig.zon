@@ -1,10 +1,5 @@
 .{
     .name = "microzig-espressif-esp",
     .version = "0.1.0",
-    .dependencies = .{
-        .microzig = .{
-            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/0b3be0a4cc7e6d45714cb09961efc771e364723c.tar.gz",
-            .hash = "1220ada6d01db7b3d0aa8642df89b1af9ee71b681438249e9a7efb2275fc4cf32152",
-        },
-    },
+    .dependencies = .{},
 }
