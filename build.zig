@@ -1,15 +1,101 @@
 const std = @import("std");
-const Build = std.Build;
-const comptimePrint = std.fmt.comptimePrint;
+const microzig = @import("root").dependencies.imports.microzig; // HACK: Please import MicroZig always under the name `microzig`. Otherwise the RP2040 module will fail to be properly imported.
 
-const microzig = @import("microzig");
-
-pub const chips = @import("src/chips.zig");
-pub const boards = @import("src/boards.zig");
-
+fn root() []const u8 {
+    return comptime (std.fs.path.dirname(@src().file) orelse ".");
+}
 const build_root = root();
 
-const linkerscript_path = build_root ++ "/rp2040.ld";
+////////////////////////////////////////
+//      MicroZig Gen 2 Interface      //
+////////////////////////////////////////
+
+pub fn build(b: *std.Build) !void {
+    //  Dummy func to make package manager happy
+    _ = b;
+}
+
+pub const chips = struct {
+    // Note: This chip has no flash support defined and requires additional configuration!
+    pub const rp2040 = .{
+        .preferred_format = .{ .uf2 = .RP2040 },
+        .chip = chip,
+        .hal = hal,
+        .board = null,
+        .linker_script = linker_script,
+    };
+};
+
+pub const boards = struct {
+    pub const raspberry_pi = struct {
+        pub const pico = .{
+            .preferred_format = .{ .uf2 = .RP2040 },
+            .chip = chip,
+            .hal = hal,
+            .linker_script = linker_script,
+            .board = .{
+                .name = "RaspberryPi Pico",
+                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/raspberry_pi_pico.zig" },
+                .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+            },
+            .configure = rp2040_configure(.w25q080),
+        };
+    };
+
+    pub const waveshare = struct {
+        pub const rp2040_plus_4m = .{
+            .preferred_format = .{ .uf2 = .RP2040 },
+            .chip = chip,
+            .hal = hal,
+            .linker_script = linker_script,
+            .board = .{
+                .name = "Waveshare RP2040-Plus (4M Flash)",
+                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_4m.zig" },
+                .url = "https://www.waveshare.com/rp2040-plus.htm",
+            },
+            .configure = rp2040_configure(.w25q080),
+        };
+
+        pub const rp2040_plus_16m = .{
+            .preferred_format = .{ .uf2 = .RP2040 },
+            .chip = chip,
+            .hal = hal,
+            .linker_script = linker_script,
+            .board = .{
+                .name = "Waveshare RP2040-Plus (16M Flash)",
+                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_16m.zig" },
+                .url = "https://www.waveshare.com/rp2040-plus.htm",
+            },
+            .configure = rp2040_configure(.w25q080),
+        };
+
+        pub const rp2040_eth = .{
+            .preferred_format = .{ .uf2 = .RP2040 },
+            .chip = chip,
+            .hal = hal,
+            .linker_script = linker_script,
+            .board = .{
+                .name = "Waveshare RP2040-ETH Mini",
+                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_eth.zig" },
+                .url = "https://www.waveshare.com/rp2040-eth.htm",
+            },
+            .configure = rp2040_configure(.w25q080),
+        };
+
+        pub const rp2040_matrix = .{
+            .preferred_format = .{ .uf2 = .RP2040 },
+            .chip = chip,
+            .hal = hal,
+            .linker_script = linker_script,
+            .board = .{
+                .name = "Waveshare RP2040-Matrix",
+                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_matrix.zig" },
+                .url = "https://www.waveshare.com/rp2040-matrix.htm",
+            },
+            .configure = rp2040_configure(.w25q080),
+        };
+    };
+};
 
 pub const BootROM = union(enum) {
     artifact: *std.build.CompileStep, // provide a custom startup code
@@ -26,24 +112,54 @@ pub const BootROM = union(enum) {
     legacy,
 };
 
-pub const PicoExecutableOptions = struct {
-    name: []const u8,
-    source_file: std.Build.LazyPath,
-    optimize: std.builtin.OptimizeMode = .Debug,
-
-    board: boards.Board = boards.raspberry_pi_pico,
-
-    bootrom: ?BootROM = null,
+const linker_script = .{
+    .source_file = .{ .cwd_relative = build_root ++ "/rp2040.ld" },
 };
 
-pub const addPiPicoExecutable = addExecutable; // Deprecated, use addExecutable!
+const hal = .{
+    .source_file = .{ .cwd_relative = build_root ++ "/src/hal.zig" },
+};
+
+const chip = .{
+    .name = "RP2040",
+    .url = "https://www.raspberrypi.com/products/rp2040/",
+    .cpu = .cortex_m0plus,
+    .register_definition = .{
+        .json = .{ .cwd_relative = build_root ++ "/src/chips/RP2040.json" },
+    },
+    .memory_regions = &.{
+        .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+        .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+        .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+    },
+};
+
+/// Returns a configuration function that will add the provided `BootROM` to the firmware.
+pub fn rp2040_configure(comptime bootrom: BootROM) *const fn (host_build: *std.Build, *microzig.Firmware) void {
+    const T = struct {
+        fn configure(host_build: *std.Build, fw: *microzig.Firmware) void {
+            const bootrom_file = getBootrom(host_build, bootrom);
+
+            // HACK: Inject the file as a dependency to MicroZig.board
+            fw.modules.board.?.dependencies.put(
+                "bootloader",
+                host_build.createModule(.{
+                    .source_file = bootrom_file.bin,
+                }),
+            ) catch @panic("oom");
+            bootrom_file.bin.addStepDependencies(&fw.artifact.step);
+        }
+    };
+
+    return T.configure;
+}
 
 pub const Stage2Bootloader = struct {
     bin: std.Build.LazyPath,
     elf: ?std.Build.LazyPath,
 };
 
-pub fn getBootrom(b: *Build, rom: BootROM) Stage2Bootloader {
+pub fn getBootrom(b: *std.Build, rom: BootROM) Stage2Bootloader {
     const rom_exe = switch (rom) {
         .artifact => |artifact| artifact,
         .blob => |blob| return Stage2Bootloader{
@@ -52,7 +168,7 @@ pub fn getBootrom(b: *Build, rom: BootROM) Stage2Bootloader {
         },
 
         else => blk: {
-            var target = chips.rp2040.cpu.target;
+            var target = @as(microzig.CpuModel, chip.cpu).getDescriptor().target;
             target.abi = .eabi;
 
             const rom_path = b.pathFromRoot(b.fmt("{s}/src/bootroms/{s}.S", .{ build_root, @tagName(rom) }));
@@ -84,134 +200,106 @@ pub fn getBootrom(b: *Build, rom: BootROM) Stage2Bootloader {
     };
 }
 
-pub fn addExecutable(
-    b: *Build,
-    opts: PicoExecutableOptions,
-) *microzig.EmbeddedExecutable {
-    var exe = microzig.addEmbeddedExecutable(b, .{
-        .name = opts.name,
-        .source_file = opts.source_file,
-        .backing = .{ .board = opts.board.inner },
-        .optimize = opts.optimize,
-        .linkerscript_source_file = .{ .path = linkerscript_path },
-    });
+/////////////////////////////////////////
+//      MicroZig Legacy Interface      //
+/////////////////////////////////////////
 
-    const i: *std.Build.CompileStep = exe.inner;
+// // this build script is mostly for testing and verification of this
+// // package. In an attempt to modularize -- designing for a case where a
+// // project requires multiple HALs, it accepts microzig as a param
+// pub fn build(b: *Build) !void {
+//     const optimize = b.standardOptimizeOption(.{});
 
-    const bootrom_file = getBootrom(b, opts.bootrom orelse opts.board.bootrom);
+//     const args_dep = b.dependency("args", .{});
+//     const args_mod = args_dep.module("args");
 
-    // HACK: Inject the file as a dependency to MicroZig.board
-    i.modules.get("microzig").?.dependencies.get("board").?.dependencies.put(
-        "bootloader",
-        b.createModule(.{
-            .source_file = bootrom_file.bin,
-        }),
-    ) catch @panic("oom");
-    bootrom_file.bin.addStepDependencies(&i.step);
+//     var examples = Examples.init(b, optimize);
+//     examples.install(b);
 
-    return exe;
-}
+//     const pio_tests = b.addTest(.{
+//         .root_source_file = .{
+//             .path = "src/hal.zig",
+//         },
+//         .optimize = optimize,
+//     });
+//     pio_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
 
-// this build script is mostly for testing and verification of this
-// package. In an attempt to modularize -- designing for a case where a
-// project requires multiple HALs, it accepts microzig as a param
-pub fn build(b: *Build) !void {
-    const optimize = b.standardOptimizeOption(.{});
+//     const test_step = b.step("test", "run unit tests");
+//     test_step.dependOn(&b.addRunArtifact(pio_tests).step);
 
-    const args_dep = b.dependency("args", .{});
-    const args_mod = args_dep.module("args");
+//     {
+//         const flash_tool = b.addExecutable(.{
+//             .name = "rp2040-flash",
+//             .optimize = .Debug,
+//             .target = .{},
+//             .root_source_file = .{ .path = "tools/rp2040-flash.zig" },
+//         });
+//         flash_tool.addModule("args", args_mod);
 
-    var examples = Examples.init(b, optimize);
-    examples.install(b);
+//         b.installArtifact(flash_tool);
+//     }
 
-    const pio_tests = b.addTest(.{
-        .root_source_file = .{
-            .path = "src/hal.zig",
-        },
-        .optimize = optimize,
-    });
-    pio_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
+//     // Install all bootroms for debugging and CI
+//     inline for (comptime std.enums.values(std.meta.Tag(BootROM))) |rom| {
+//         if (rom == .artifact or rom == .blob) {
+//             continue;
+//         }
 
-    const test_step = b.step("test", "run unit tests");
-    test_step.dependOn(&b.addRunArtifact(pio_tests).step);
+//         if (rom == .is25lp080) {
+//             // TODO: https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/issues/79
+//             //  is25lp080.o:(text+0x16): has non-ABS relocation R_ARM_THM_CALL against symbol 'read_flash_sreg'
+//             continue;
+//         }
 
-    {
-        const flash_tool = b.addExecutable(.{
-            .name = "rp2040-flash",
-            .optimize = .Debug,
-            .target = .{},
-            .root_source_file = .{ .path = "tools/rp2040-flash.zig" },
-        });
-        flash_tool.addModule("args", args_mod);
+//         const files = getBootrom(b, rom);
+//         if (files.elf) |elf| {
+//             b.getInstallStep().dependOn(
+//                 &b.addInstallFileWithDir(elf, .{ .custom = "stage2" }, b.fmt("{s}.elf", .{@tagName(rom)})).step,
+//             );
+//         }
+//         b.getInstallStep().dependOn(
+//             &b.addInstallFileWithDir(files.bin, .{ .custom = "stage2" }, b.fmt("{s}.bin", .{@tagName(rom)})).step,
+//         );
+//     }
+// }
 
-        b.installArtifact(flash_tool);
-    }
+// pub const Examples = struct {
+//     adc: *microzig.EmbeddedExecutable,
+//     blinky: *microzig.EmbeddedExecutable,
+//     blinky_core1: *microzig.EmbeddedExecutable,
+//     gpio_clk: *microzig.EmbeddedExecutable,
+//     i2c_bus_scan: *microzig.EmbeddedExecutable,
+//     pwm: *microzig.EmbeddedExecutable,
+//     spi_master: *microzig.EmbeddedExecutable,
+//     uart: *microzig.EmbeddedExecutable,
+//     squarewave: *microzig.EmbeddedExecutable,
+//     //uart_pins: microzig.EmbeddedExecutable,
+//     flash_program: *microzig.EmbeddedExecutable,
+//     usb_device: *microzig.EmbeddedExecutable,
+//     usb_hid: *microzig.EmbeddedExecutable,
+//     ws2812: *microzig.EmbeddedExecutable,
+//     random: *microzig.EmbeddedExecutable,
 
-    // Install all bootroms for debugging and CI
-    inline for (comptime std.enums.values(std.meta.Tag(BootROM))) |rom| {
-        if (rom == .artifact or rom == .blob) {
-            continue;
-        }
+//     pub fn init(b: *Build, optimize: std.builtin.OptimizeMode) Examples {
+//         var ret: Examples = undefined;
+//         inline for (@typeInfo(Examples).Struct.fields) |field| {
+//             const path = comptime root() ++ "examples/" ++ field.name ++ ".zig";
 
-        if (rom == .is25lp080) {
-            // TODO: https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/issues/79
-            //  is25lp080.o:(text+0x16): has non-ABS relocation R_ARM_THM_CALL against symbol 'read_flash_sreg'
-            continue;
-        }
+//             @field(ret, field.name) = addExecutable(b, .{
+//                 .name = field.name,
+//                 .source_file = .{ .path = path },
+//                 .optimize = optimize,
+//             });
+//         }
 
-        const files = getBootrom(b, rom);
-        if (files.elf) |elf| {
-            b.getInstallStep().dependOn(
-                &b.addInstallFileWithDir(elf, .{ .custom = "stage2" }, b.fmt("{s}.elf", .{@tagName(rom)})).step,
-            );
-        }
-        b.getInstallStep().dependOn(
-            &b.addInstallFileWithDir(files.bin, .{ .custom = "stage2" }, b.fmt("{s}.bin", .{@tagName(rom)})).step,
-        );
-    }
-}
+//         return ret;
+//     }
 
-fn root() []const u8 {
-    return comptime (std.fs.path.dirname(@src().file) orelse ".") ++ "/";
-}
-
-pub const Examples = struct {
-    adc: *microzig.EmbeddedExecutable,
-    blinky: *microzig.EmbeddedExecutable,
-    blinky_core1: *microzig.EmbeddedExecutable,
-    gpio_clk: *microzig.EmbeddedExecutable,
-    i2c_bus_scan: *microzig.EmbeddedExecutable,
-    pwm: *microzig.EmbeddedExecutable,
-    spi_master: *microzig.EmbeddedExecutable,
-    uart: *microzig.EmbeddedExecutable,
-    squarewave: *microzig.EmbeddedExecutable,
-    //uart_pins: microzig.EmbeddedExecutable,
-    flash_program: *microzig.EmbeddedExecutable,
-    usb_device: *microzig.EmbeddedExecutable,
-    usb_hid: *microzig.EmbeddedExecutable,
-    ws2812: *microzig.EmbeddedExecutable,
-    random: *microzig.EmbeddedExecutable,
-
-    pub fn init(b: *Build, optimize: std.builtin.OptimizeMode) Examples {
-        var ret: Examples = undefined;
-        inline for (@typeInfo(Examples).Struct.fields) |field| {
-            const path = comptime root() ++ "examples/" ++ field.name ++ ".zig";
-
-            @field(ret, field.name) = addExecutable(b, .{
-                .name = field.name,
-                .source_file = .{ .path = path },
-                .optimize = optimize,
-            });
-        }
-
-        return ret;
-    }
-
-    pub fn install(examples: *Examples, b: *Build) void {
-        inline for (@typeInfo(Examples).Struct.fields) |field| {
-            b.getInstallStep().dependOn(
-                &b.addInstallFileWithDir(@field(examples, field.name).inner.getEmittedBin(), .{ .custom = "firmware" }, field.name ++ ".elf").step,
-            );
-        }
-    }
-};
+//     pub fn install(examples: *Examples, b: *Build) void {
+//         inline for (@typeInfo(Examples).Struct.fields) |field| {
+//             b.getInstallStep().dependOn(
+//                 &b.addInstallFileWithDir(@field(examples, field.name).inner.getEmittedBin(), .{ .custom = "firmware" }, field.name ++ ".elf").step,
+//             );
+//         }
+//     }
+// };

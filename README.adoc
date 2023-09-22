@@ -8,8 +8,10 @@ HAL and register definitions for the RP2040.
 
 == Supported devices ==
 
-- Raspberry Pi Pico
-- (*experimental*) Waveshare RP2040-Plus (4M Flash)
-- (*experimental*) Waveshare RP2040-Plus (16M Flash)
-- (*experimental*) Waveshare RP2040-ETH Mini
-- (*experimental*) Waveshare RP2040-Matrix
+- Raspberry Pi RP2040 (`chips.rp2040`)
+- Raspberry Pi Pico (`boards.raspberry_pi.pico`)
+- (*experimental*) Waveshare RP2040-Plus (4M Flash) (`boards.waveshare.rp2040_plus_4m`)
+- (*experimental*) Waveshare RP2040-Plus (16M Flash) (`boards.waveshare.rp2040_plus_16m`)
+- (*experimental*) Waveshare RP2040-ETH Mini (`boards.waveshare.rp2040_eth`)
+- (*experimental*) Waveshare RP2040-Matrix (`boards.waveshare.rp2040_matrix`)
+
