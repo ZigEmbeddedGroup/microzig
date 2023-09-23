@@ -12,7 +12,7 @@ const available_targets = [_]TargetDesc{
 const available_examples = [_][]const u8{
     "src/adc.zig",
     "src/blinky.zig",
-    "src/blinky_core1.zig",
+    // TODO: Fix multicore hal! "src/blinky_core1.zig",
     "src/flash_program.zig",
     "src/gpio_clk.zig",
     "src/i2c_bus_scan.zig",
