@@ -1,0 +1,14 @@
+.{
+    .name = "microzig-stmicro-stm32-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .stm32 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/stmicro-stm32/archive/cb2893707efa6aa289fa72f02959ad5f2d9db2a1.tar.gz",
+            .hash = "12208cab5f60ef97cac4165ad694f3ba0c7b28f279538c1539b74f7c152f34fe306d",
+        },
+    },
+}

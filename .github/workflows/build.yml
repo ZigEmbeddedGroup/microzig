@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
+        dir: espressif-esp  generic  gigadevice-gd32  microchip-atmega  nordic-nrf5x  nxp-lpc  rp2040  stmicro-stm32
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -21,4 +22,5 @@ jobs:
           version: 0.11.0
 
       - name: Build examples
+        working-directory: ${{ matrix.dir }}
         run: zig build

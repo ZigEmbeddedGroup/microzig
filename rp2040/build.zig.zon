@@ -1,0 +1,14 @@
+.{
+    .name = "microzig-raspberrypi-rp2040-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .rp2040 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/67d36eebb0fbd89633db1a51d6d2bcb049f2066a.tar.gz",
+            .hash = "122094bf268f45b188f3916f9e5964f4257414afaafba98a455ac47d25389a456832",
+        },
+    },
+}

@@ -1,0 +1,14 @@
+.{
+    .name = "microzig-nordic-nrf5x-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .nrf5x = .{
+            .url = "https://github.com/ZigEmbeddedGroup/nordic-nrf5x/archive/0ab136860ccf7eb1d07969c3ef523f3cd898e2ff.tar.gz",
+            .hash = "1220980da06f9634dcff06afefa7aa111bd030018fea49f79e86657dab69621e1d08",
+        },
+    },
+}
