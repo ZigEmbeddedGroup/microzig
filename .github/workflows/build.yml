@@ -11,19 +11,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        dir:
+          - all-platforms
+          - raspberrypi-rp2040
+          # TODO: - espressif-esp
+          # TODO: - gigadevice-gd32
+          # TODO: - microchip-atmega
+          # TODO: - nordic-nrf5x
+          # TODO: - nxp-lpc
+          # TODO: - stmicro-stm32
         os:
           - windows-latest
           - macos-latest
           - ubuntu-latest
-        dir:
-          - all-platforms
-          - espressif-esp
-          - gigadevice-gd32
-          - microchip-atmega
-          - nordic-nrf5x
-          - nxp-lpc
-          - rp2040
-          - stmicro-stm32
     steps:
       - name: Checkout
         uses: actions/checkout@v2
