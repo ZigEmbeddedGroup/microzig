@@ -1,12 +1,13 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const root = @import("root");
 
-pub fn enable_interrupts() void {
+pub inline fn enable_interrupts() void {
     asm volatile ("sei");
 }
 
-pub fn disable_interrupts() void {
+pub inline fn disable_interrupts() void {
     asm volatile ("cli");
 }
 
@@ -102,13 +103,13 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 }
 
 pub const startup_logic = struct {
-    export fn microzig_unhandled_vector() callconv(.Naked) noreturn {
+    export fn microzig_unhandled_vector() callconv(.C) noreturn {
         @panic("Unhandled interrupt");
     }
 
     extern fn microzig_main() noreturn;
 
-    export fn microzig_start() callconv(.Naked) noreturn {
+    export fn microzig_start() callconv(.C) noreturn {
         // At startup the stack pointer is at the end of RAM
         // so, no need to set it manually!
 
@@ -118,50 +119,77 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
+    // it looks odd to just use a u8 here, but in C it's common to use a
+    // char when linking these values from the linkerscript. What's
+    // important is the addresses of these values.
+    extern var microzig_data_start: u8;
+    extern var microzig_data_end: u8;
+    extern const microzig_data_load_start: u8;
+
     fn copy_data_to_ram() void {
-        asm volatile (
-            \\  ; load Z register with the address of the data in flash
-            \\  ldi r30, lo8(microzig_data_load_start)
-            \\  ldi r31, hi8(microzig_data_load_start)
-            \\  ; load X register with address of the data in ram
-            \\  ldi r26, lo8(microzig_data_start)
-            \\  ldi r27, hi8(microzig_data_start)
-            \\  ; load address of end of the data in ram
-            \\  ldi r24, lo8(microzig_data_end)
-            \\  ldi r25, hi8(microzig_data_end)
-            \\  rjmp .L2
-            \\
-            \\.L1:
-            \\  lpm r18, Z+ ; copy from Z into r18 and increment Z
-            \\  st X+, r18  ; store r18 at location X and increment X
-            \\
-            \\.L2:
-            \\  cp r26, r24
-            \\  cpc r27, r25 ; check and branch if we are at the end of data
-            \\  brne .L1
-        );
-        // Probably a good idea to add clobbers here, but compiler doesn't seem to care
+        if (builtin.target.ofmt == .c) {
+            const data_start: [*]u8 = @ptrCast(&microzig_data_start);
+            const data_end: [*]u8 = @ptrCast(&microzig_data_end);
+            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+            const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
+
+            @memcpy(data_start[0..data_len], data_src[0..data_len]);
+        } else {
+            asm volatile (
+                \\  ; load Z register with the address of the data in flash
+                \\  ldi r30, lo8(microzig_data_load_start)
+                \\  ldi r31, hi8(microzig_data_load_start)
+                \\  ; load X register with address of the data in ram
+                \\  ldi r26, lo8(microzig_data_start)
+                \\  ldi r27, hi8(microzig_data_start)
+                \\  ; load address of end of the data in ram
+                \\  ldi r24, lo8(microzig_data_end)
+                \\  ldi r25, hi8(microzig_data_end)
+                \\  rjmp .copy_to_ram_L2_%=
+                \\
+                \\.copy_to_ram_L1_%=:
+                \\  lpm r18, Z+ ; copy from Z into r18 and increment Z
+                \\  st X+, r18  ; store r18 at location X and increment X
+                \\
+                \\.copy_to_ram_L2_%=:
+                \\  cp r26, r24
+                \\  cpc r27, r25 ; check and branch if we are at the end of data
+                \\  brne .copy_to_ram_L1_%=
+            );
+            // Probably a good idea to add clobbers here, but compiler doesn't seem to care
+        }
     }
 
+    extern var microzig_bss_start: u8;
+    extern var microzig_bss_end: u8;
+
     fn clear_bss() void {
-        asm volatile (
-            \\  ; load X register with the beginning of bss section
-            \\  ldi r26, lo8(microzig_bss_start)
-            \\  ldi r27, hi8(microzig_bss_start)
-            \\  ; load end of the bss in registers
-            \\  ldi r24, lo8(microzig_bss_end)
-            \\  ldi r25, hi8(microzig_bss_end)
-            \\  ldi r18, 0x00
-            \\  rjmp .L4
-            \\
-            \\.L3:
-            \\  st X+, r18
-            \\
-            \\.L4:
-            \\  cp r26, r24
-            \\  cpc r27, r25 ; check and branch if we are at the end of bss
-            \\  brne .L3
-        );
-        // Probably a good idea to add clobbers here, but compiler doesn't seem to care
+        if (builtin.target.ofmt == .c) {
+            const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
+            const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
+            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+
+            @memset(bss_start[0..bss_len], 0);
+        } else {
+            asm volatile (
+                \\  ; load X register with the beginning of bss section
+                \\  ldi r26, lo8(microzig_bss_start)
+                \\  ldi r27, hi8(microzig_bss_start)
+                \\  ; load end of the bss in registers
+                \\  ldi r24, lo8(microzig_bss_end)
+                \\  ldi r25, hi8(microzig_bss_end)
+                \\  ldi r18, 0x00
+                \\  rjmp .L4
+                \\
+                \\.L3:
+                \\  st X+, r18
+                \\
+                \\.L4:
+                \\  cp r26, r24
+                \\  cpc r27, r25 ; check and branch if we are at the end of bss
+                \\  brne .L3
+            );
+            // Probably a good idea to add clobbers here, but compiler doesn't seem to care
+        }
     }
 };

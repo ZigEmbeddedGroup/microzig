@@ -780,6 +780,7 @@ pub const cpus = struct {
             .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
             .os_tag = .freestanding,
             .abi = .eabi,
+            .ofmt = .c,
         },
     };
 
@@ -944,17 +945,21 @@ fn generateLinkerScript(b: *std.Build, chip: Chip) !std.Build.LazyPath {
         try writer.writeAll(
             \\  .data :
             \\  {
+            \\      __data_start = .; /* required by avr-gcc */
             \\     microzig_data_start = .;
             \\     *(.rodata*)
             \\     *(.data*)
             \\     microzig_data_end = .;
+            \\      __data_end = .; /* required by avr-gcc */
             \\  } > ram0 AT> flash0
             \\
             \\  .bss (NOLOAD) :
             \\  {
+            \\      __bss_start = .; /* required by avr-gcc */
             \\      microzig_bss_start = .;
             \\      *(.bss*)
             \\      microzig_bss_end = .;
+            \\      __bss_end = .; /* required by avr-gcc */
             \\  } > ram0
             \\
             \\  microzig_data_load_start = LOADADDR(.data);
