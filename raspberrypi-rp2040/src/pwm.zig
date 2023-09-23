@@ -14,10 +14,16 @@ const pin_config = rp2040.pins.GlobalConfiguration{
 pub fn main() !void {
     const pins = pin_config.apply();
     pins.led.slice().set_wrap(100);
-    pins.led.set_level(10);
     pins.led.slice().enable();
 
     while (true) {
-        time.sleep_ms(250);
+        for (0..101) |level| {
+            pins.led.set_level(@truncate(level));
+            time.sleep_ms(10);
+        }
+        for (1..100) |level| {
+            pins.led.set_level(@truncate(100 - level));
+            time.sleep_ms(10);
+        }
     }
 }
