@@ -17,10 +17,11 @@ const available_examples = [_]Example{
     .{ .name = "pico_usb-hid", .target = rp2040.boards.raspberry_pi.pico, .file = "src/usb_hid.zig" },
     .{ .name = "pico_ws2812", .target = rp2040.boards.raspberry_pi.pico, .file = "src/ws2812.zig" },
 
+    .{ .name = "rp2040-matrix_tiles", .target = rp2040.boards.waveshare.rp2040_matrix, .file = "src/tiles.zig" },
+
     //     .{ .name = "rp2040-eth", .target = rp2040.boards.waveshare.rp2040_eth },
     //     .{ .name = "rp2040-plus-4m", .target = rp2040.boards.waveshare.rp2040_plus_4m },
     //     .{ .name = "rp2040-plus-16m", .target = rp2040.boards.waveshare.rp2040_plus_16m },
-    //     .{ .name = "rp2040-matrix", .target = rp2040.boards.waveshare.rp2040_matrix },
 };
 
 pub fn build(b: *std.Build) void {
