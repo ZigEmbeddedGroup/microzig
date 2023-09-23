@@ -9,9 +9,21 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-        dir: espressif-esp  generic  gigadevice-gd32  microchip-atmega  nordic-nrf5x  nxp-lpc  rp2040  stmicro-stm32
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+        dir:
+          - all-platforms
+          - espressif-esp
+          - gigadevice-gd32
+          - microchip-atmega
+          - nordic-nrf5x
+          - nxp-lpc
+          - rp2040
+          - stmicro-stm32
     steps:
       - name: Checkout
         uses: actions/checkout@v2
