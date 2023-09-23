@@ -16,8 +16,8 @@ jobs:
           - raspberrypi-rp2040
           - espressif-esp
           - nxp-lpc
+          - microchip-atmega
           # TODO: - gigadevice-gd32
-          # TODO: - microchip-atmega
           # TODO: - nordic-nrf5x
           # TODO: - stmicro-stm32
         os:
