@@ -15,10 +15,10 @@ jobs:
           - all-platforms
           - raspberrypi-rp2040
           - espressif-esp
+          - nxp-lpc
           # TODO: - gigadevice-gd32
           # TODO: - microchip-atmega
           # TODO: - nordic-nrf5x
-          # TODO: - nxp-lpc
           # TODO: - stmicro-stm32
         os:
           - windows-latest
