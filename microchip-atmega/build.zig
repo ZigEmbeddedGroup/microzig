@@ -2,7 +2,7 @@ const std = @import("std");
 const atmega = @import("atmega");
 
 const available_examples = [_]Example{
-    .{ .name = "arduino-nano_blinky", .target = atmega.boards.arduino.nano, .file = "src/blinky.zig" },
+    // TODO:    .{ .name = "arduino-nano_blinky", .target = atmega.boards.arduino.nano, .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
