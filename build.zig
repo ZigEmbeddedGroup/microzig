@@ -5,6 +5,7 @@ fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
 }
 const build_root = root();
+
 const KiB = 1024;
 
 ////////////////////////////////////////
@@ -29,6 +30,9 @@ pub const chips = struct {
             .register_definition = .{
                 .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F103.json" },
             },
+        },
+        .hal = .{
+            .source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F103/hal.zig" },
         },
     };
 
