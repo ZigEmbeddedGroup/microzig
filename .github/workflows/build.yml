@@ -9,8 +9,21 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        dir:
+          - all-platforms
+          - raspberrypi-rp2040
+          - espressif-esp
+          - nxp-lpc
+          - microchip-atmega
+          - gigadevice-gd32
+          - nordic-nrf5x
+          - stmicro-stm32
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -21,4 +34,5 @@ jobs:
           version: 0.11.0
 
       - name: Build examples
+        working-directory: ${{ matrix.dir }}
         run: zig build

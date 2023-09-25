@@ -1,0 +1,14 @@
+.{
+    .name = "microzig-gigadevice-gd32-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .gd32 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/gigadevice-gd32/archive/9324753cc3b8e7afe83fcda085bcfe76681a3be3.tar.gz",
+            .hash = "122043ff4dcbc342f25dbb936b0d9eaa701ac3509e2cbe6764be37b90d31c7a385d0",
+        },
+    },
+}

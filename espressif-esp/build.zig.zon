@@ -1,0 +1,14 @@
+.{
+    .name = "microzig-espressif-esp-examples",
+    .version = "0.1.0",
+    .dependencies = .{
+        .microzig = .{
+            .url = "https://github.com/ZigEmbeddedGroup/microzig/archive/c6c9ec4516f57638e751141085c9d76120990312.tar.gz",
+            .hash = "1220af58bdaa721b8189f3a7adfda660517dd354463463388e96d69fe4ceccf80b92",
+        },
+        .esp = .{
+            .url = "https://github.com/ZigEmbeddedGroup/espressif-esp/archive/59b8ca028915c0d6224ec88dbf4db19afbb559c0.tar.gz",
+            .hash = "1220f6e5f22416fdc63442cd8869fcaa35f9abf30d878ea3d80073176677dc6f8a65",
+        },
+    },
+}

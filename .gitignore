@@ -1,4 +1,9 @@
 zig-cache/
-dev-scripts/
-zig-out
+zig-out/
+
+ezpkg.sh
+
+.vscode
+
 .envrc
+shell.nix

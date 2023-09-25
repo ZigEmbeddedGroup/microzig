@@ -1,5 +1,5 @@
 .{
-    .name = "microzig-examples",
+    .name = "microzig-all-platforms-examples",
     .version = "0.1.0",
     .dependencies = .{
         .microzig = .{
