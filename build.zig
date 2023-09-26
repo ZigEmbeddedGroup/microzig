@@ -793,7 +793,7 @@ pub const cpus = struct {
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
     };
 
@@ -804,7 +804,7 @@ pub const cpus = struct {
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
     };
 
@@ -815,7 +815,7 @@ pub const cpus = struct {
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
     };
 
@@ -826,7 +826,7 @@ pub const cpus = struct {
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
             .os_tag = .freestanding,
-            .abi = .none,
+            .abi = .eabi,
         },
     };
 
