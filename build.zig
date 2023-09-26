@@ -538,6 +538,9 @@ pub fn addFirmware(
         },
     });
 
+    const umm = mz.dependency("umm-zig", .{}).module("umm");
+    fw.modules.microzig.dependencies.put("umm", umm) catch @panic("out of memory");
+
     fw.artifact.addModule("app", fw.modules.app);
     fw.artifact.addModule("microzig", fw.modules.microzig);
 
