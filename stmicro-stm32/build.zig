@@ -2,7 +2,7 @@ const std = @import("std");
 const stm32 = @import("stm32");
 
 const available_examples = [_]Example{
-    // TODO: .{ .name = "stm32f103x8", .target = stm32.chips.stm32f103x8, .file = "src/blinky.zig" },
+    .{ .name = "stm32f103x8", .target = stm32.chips.stm32f103x8, .file = "src/blinky.zig" },
     // TODO: .{ .name = "stm32f303vc", .target = stm32.chips.stm32f303vc, .file = "src/blinky.zig" },
     // TODO: .{ .name = "stm32f407vg", .target = stm32.chips.stm32f407vg, .file = "src/blinky.zig" },
     // TODO: .{ .name = "stm32f429zit6u", .target = stm32.chips.stm32f429zit6u, .file = "src/blinky.zig" },
