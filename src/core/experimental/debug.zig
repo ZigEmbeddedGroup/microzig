@@ -30,7 +30,7 @@ const DebugWriter = std.io.Writer(void, DebugErr, writer_write);
 pub fn write(string: []const u8) void {
     if (!config.has_board)
         return;
-    if (!@hasDecl(board, "debugWrite"))
+    if (!@hasDecl(board, "debug_write"))
         return;
 
     board.debug_write(string);
