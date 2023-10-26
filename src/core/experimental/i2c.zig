@@ -28,7 +28,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     }
 
                     fn read_some(self: *Self, buffer: []u8) ReadError!usize {
-                        try self.state.readNoEof(buffer);
+                        try self.state.read_no_eof(buffer);
                         return buffer.len;
                     }
 
@@ -41,7 +41,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     /// Note that some platforms set the repeated START condition
                     /// on the first read or write call.
                     pub fn restart_transfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
-                        return Transfer(direction){ .state = try self.state.restartTransfer(new_direction) };
+                        return Transfer(direction){ .state = try self.state.restart_transfer(new_direction) };
                     }
                 },
                 .write => struct {
@@ -59,7 +59,7 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     }
 
                     fn write_some(self: *Self, buffer: []const u8) WriteError!usize {
-                        try self.state.writeAll(buffer);
+                        try self.state.write_all(buffer);
                         return buffer.len;
                     }
 
@@ -73,8 +73,8 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
                     /// on the first read or write call.
                     pub fn restart_transfer(self: *Self, comptime new_direction: Direction) !Transfer(new_direction) {
                         return switch (new_direction) {
-                            .read => Transfer(new_direction){ .state = try self.state.restartRead() },
-                            .write => Transfer(new_direction){ .state = try self.state.restartWrite() },
+                            .read => Transfer(new_direction){ .state = try self.state.restart_read() },
+                            .write => Transfer(new_direction){ .state = try self.state.restart_write() },
                         };
                     }
                 },
@@ -93,12 +93,12 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
 
         /// Shorthand for 'register-based' devices
         pub fn write_register(self: Device, register_address: u8, byte: u8) ReadError!void {
-            try self.writeRegisters(register_address, &.{byte});
+            try self.write_registers(register_address, &.{byte});
         }
 
         /// Shorthand for 'register-based' devices
-        pub fn write_registers(self: Device, register_address: u8, buffer: []u8) ReadError!void {
-            var wt = try self.startTransfer(.write);
+        pub fn write_registers(self: Device, register_address: u8, buffer: []const u8) ReadError!void {
+            var wt = try self.start_transfer(.write);
             defer wt.stop() catch {};
             try wt.writer().writeByte(register_address);
             try wt.writer().writeAll(buffer);
@@ -107,17 +107,17 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         /// Shorthand for 'register-based' devices
         pub fn read_register(self: Device, register_address: u8) ReadError!u8 {
             var buffer: [1]u8 = undefined;
-            try self.readRegisters(register_address, &buffer);
+            try self.read_registers(register_address, &buffer);
             return buffer[0];
         }
 
         /// Shorthand for 'register-based' devices
         pub fn read_registers(self: Device, register_address: u8, buffer: []u8) ReadError!void {
             var rt = write_and_restart: {
-                var wt = try self.startTransfer(.write);
+                var wt = try self.start_transfer(.write);
                 errdefer wt.stop() catch {};
                 try wt.writer().writeByte(1 << 7 | register_address); // MSB == 'keep sending until I STOP'
-                break :write_and_restart try wt.restartTransfer(.read);
+                break :write_and_restart try wt.restart_transfer(.read);
             };
             defer rt.stop() catch {};
             try rt.reader().readNoEof(buffer);

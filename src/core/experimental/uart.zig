@@ -20,21 +20,21 @@ pub fn Uart(comptime index: usize, comptime pins: Pins) type {
         /// If the UART is already initialized, try to return a handle to it,
         /// else initialize with the given config.
         pub fn get_or_init(config: Config) InitError!Self {
-            if (!@hasDecl(SystemUart, "getOrInit")) {
+            if (!@hasDecl(SystemUart, "get_or_init")) {
                 // fallback to reinitializing the UART
                 return init(config);
             }
             return Self{
-                .internal = try SystemUart.getOrInit(config),
+                .internal = try SystemUart.get_or_init(config),
             };
         }
 
         pub fn can_read(self: Self) bool {
-            return self.internal.canRead();
+            return self.internal.can_read();
         }
 
         pub fn can_write(self: Self) bool {
-            return self.internal.canWrite();
+            return self.internal.can_write();
         }
 
         pub fn reader(self: Self) Reader {
