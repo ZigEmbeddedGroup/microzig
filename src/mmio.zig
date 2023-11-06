@@ -22,7 +22,9 @@ pub fn Mmio(comptime PackedT: type) type {
         pub const underlying_type = PackedT;
 
         pub inline fn read(addr: *volatile Self) PackedT {
-            return @bitCast(addr.raw);
+            const result: PackedT = @bitCast(addr.raw);
+            std.mem.doNotOptimizeAway(result); // work around https://github.com/ziglang/zig/issues/17882
+            return result;
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
