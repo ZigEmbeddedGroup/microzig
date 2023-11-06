@@ -29,6 +29,10 @@ This repo contains the infrastructure for getting started in an embedded Zig pro
 * device drivers for interacting with external hardware
 * an uncomplicated method to define xref:interrupts[interrupts]
 
+== Getting Started 
+
+Visit https://github.com/ZigEmbeddedGroup/microzig-examples to find examples for your specific board. 
+
 == Design
 
 For MicroZig internals please see the xref:docs/design.adoc[Design Document].
