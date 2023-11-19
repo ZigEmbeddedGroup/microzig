@@ -1,6 +1,6 @@
 # regz
 
-[![Build status](https://badge.buildkite.com/c56a26cdbd9262c17f84c26c81a587696d84aef891e84cdc90.svg)](https://buildkite.com/zig-embedded-group/regz)
+[![build](https://github.com/ZigEmbeddedGroup/regz/actions/workflows/ci.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/regz/actions/workflows/ci.yml)
 
 regz is a Zig code generator for microcontrollers. Vendors often publish files
 that have the details of special function registers, for ARM this is called a
