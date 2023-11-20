@@ -803,6 +803,9 @@ fn populate_peripheral(
     if (db.attrs.version.get(id)) |version|
         try peripheral.put("version", .{ .string = version });
 
+    if (db.attrs.group.contains(id))
+        try peripheral.put("group", .{ .bool = true });
+
     if (db.attrs.count.get(id)) |count|
         try peripheral.put("count", .{ .integer = @as(i64, @intCast(count)) });
 

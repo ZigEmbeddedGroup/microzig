@@ -71,6 +71,7 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
+    const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&tests.step);
+    test_step.dependOn(&run_tests.step);
 }

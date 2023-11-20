@@ -84,7 +84,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     // peripherals
     // vendorExtensions
 
-    var cpu_it = root.iterate(&.{}, "cpu");
+    var cpu_it = root.iterate(&.{}, &.{"cpu"});
     if (cpu_it.next()) |cpu| {
         const required_properties: []const []const u8 = &.{
             "name",
@@ -138,7 +138,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
     const register_props = try RegisterProperties.parse(root);
     try ctx.register_props.put(db.gpa, device_id, register_props);
 
-    var peripheral_it = root.iterate(&.{"peripherals"}, "peripheral");
+    var peripheral_it = root.iterate(&.{"peripherals"}, &.{"peripheral"});
     while (peripheral_it.next()) |peripheral_node|
         load_peripheral(&ctx, peripheral_node, device_id) catch |err|
             log.warn("failed to load peripheral: {}", .{err});
@@ -286,7 +286,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void
         try db.add_size(type_id, elements.dim_increment);
     }
 
-    var interrupt_it = node.iterate(&.{}, "interrupt");
+    var interrupt_it = node.iterate(&.{}, &.{"interrupt"});
     while (interrupt_it.next()) |interrupt_node|
         try load_interrupt(db, interrupt_node, device_id);
 
@@ -302,13 +302,13 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void
     const register_props = try ctx.derive_register_properties_from(node, device_id);
     try ctx.register_props.put(db.gpa, type_id, register_props);
 
-    var register_it = node.iterate(&.{"registers"}, "register");
+    var register_it = node.iterate(&.{"registers"}, &.{"register"});
     while (register_it.next()) |register_node|
         load_register(ctx, register_node, type_id) catch |err|
             log.warn("failed to load register: {}", .{err});
 
     // TODO: handle errors when implemented
-    var cluster_it = node.iterate(&.{"registers"}, "cluster");
+    var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
     while (cluster_it.next()) |cluster_node|
         load_cluster(ctx, cluster_node, type_id) catch |err|
             log.warn("failed to load cluster: {}", .{err});
@@ -425,7 +425,7 @@ fn load_register(
     });
     errdefer db.destroy_entity(id);
 
-    var field_it = node.iterate(&.{"fields"}, "field");
+    var field_it = node.iterate(&.{"fields"}, &.{"field"});
     while (field_it.next()) |field_node|
         load_field(ctx, field_node, id) catch |err|
             log.warn("failed to load register: {}", .{err});
@@ -470,7 +470,7 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
     if (node.get_value("access")) |access_str|
         try db.add_access(id, try parse_access(access_str));
 
-    if (node.find_child("enumeratedValues")) |enum_values_node|
+    if (node.find_child(&.{"enumeratedValues"})) |enum_values_node|
         try load_enumerated_values(ctx, enum_values_node, id);
 
     if (node.get_attribute("derivedFrom")) |derived_from|
@@ -503,7 +503,7 @@ fn load_enumerated_values(ctx: *Context, node: xml.Node, field_id: EntityId) !vo
 
     try db.attrs.@"enum".putNoClobber(db.gpa, field_id, id);
 
-    var value_it = node.iterate(&.{}, "enumeratedValue");
+    var value_it = node.iterate(&.{}, &.{"enumeratedValue"});
     while (value_it.next()) |value_node|
         try load_enumerated_value(ctx, value_node, id);
 }

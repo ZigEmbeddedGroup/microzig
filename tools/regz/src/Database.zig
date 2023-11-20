@@ -9,6 +9,7 @@ attrs: struct {
     description: HashMap(EntityId, []const u8) = .{},
     offset: HashMap(EntityId, u64) = .{},
     access: HashMap(EntityId, Access) = .{},
+    group: HashMap(EntityId, void) = .{},
     count: HashMap(EntityId, u64) = .{},
     size: HashMap(EntityId, u64) = .{},
     reset_value: HashMap(EntityId, u64) = .{},
@@ -75,6 +76,7 @@ const log = std.log.scoped(.database);
 
 pub const EntityId = u32;
 pub const EntitySet = ArrayHashMap(EntityId, void);
+pub const RegisterKind = enum { register, register_group };
 
 // concrete arch's that we support in codegen, for stuff like interrupt
 // table generation
@@ -217,6 +219,7 @@ pub fn deinit(db: *Database) void {
     db.attrs.description.deinit(db.gpa);
     db.attrs.offset.deinit(db.gpa);
     db.attrs.access.deinit(db.gpa);
+    db.attrs.group.deinit(db.gpa);
     db.attrs.count.deinit(db.gpa);
     db.attrs.size.deinit(db.gpa);
     db.attrs.reset_value.deinit(db.gpa);
@@ -324,6 +327,7 @@ pub fn destroy_entity(db: *Database, id: EntityId) void {
             log.debug("{}: destroying peripheral", .{id});
             // TODO: remove children
             _ = db.types.peripherals.swapRemove(id);
+            _ = db.instances.peripherals.swapRemove(id);
         },
         else => {},
     }
@@ -476,6 +480,7 @@ pub fn create_register(
         offset: u64,
         /// size is in bits
         size: u64,
+        kind: RegisterKind = .register,
         /// count if there is an array
         count: ?u64 = null,
         access: ?Access = null,
@@ -498,6 +503,11 @@ pub fn create_register(
 
     try db.add_offset(id, opts.offset);
     try db.add_size(id, opts.size);
+
+    switch (opts.kind) {
+        .register => {},
+        .register_group => try db.add_group(id),
+    }
 
     if (opts.count) |c|
         try db.add_count(id, c);
@@ -728,6 +738,11 @@ pub fn add_reset_mask(db: *Database, id: EntityId, reset_mask: u64) !void {
 pub fn add_access(db: *Database, id: EntityId, access: Access) !void {
     log.debug("{}: adding access: {}", .{ id, access });
     try db.attrs.access.putNoClobber(db.gpa, id, access);
+}
+
+pub fn add_group(db: *Database, id: EntityId) !void {
+    log.debug("{}: adding register group", .{id});
+    try db.attrs.group.putNoClobber(db.gpa, id, {});
 }
 
 pub fn add_count(db: *Database, id: EntityId, count: u64) !void {

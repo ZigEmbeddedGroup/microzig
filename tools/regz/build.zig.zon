@@ -1,6 +1,15 @@
 .{
     .name = "regz",
     .version = "0.0.0",
+    .paths = .{
+        "LICENSE",
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "characterized",
+        "src",
+        "tests",
+    },
     .dependencies = .{
         .libxml2 = .{
             .url = "https://github.com/mitchellh/zig-build-libxml2/archive/4e80a167d6e13e09e0da77457310401084e758cc.tar.gz",

@@ -42,7 +42,7 @@ pub fn to_zig(db: Database, out_writer: anytype) !void {
     try writer.writeByte(0);
 
     // format the generated code
-    var ast = try std.zig.Ast.parse(db.gpa, @as([:0]const u8, @ptrCast(buffer.items[0 .. buffer.items.len - 1])), .zig);
+    var ast = try std.zig.Ast.parse(db.gpa, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
     defer ast.deinit(db.gpa);
 
     // TODO: ast check?
@@ -262,7 +262,7 @@ fn write_peripheral_instance(db: Database, instance_id: EntityId, offset: u64, o
     else
         "";
 
-    try writer.print("pub const {s} = @as(*volatile {s}{s}, @ptrFromInt(0x{x}));\n", .{
+    try writer.print("pub const {s}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
         std.zig.fmtId(name),
         array_prefix,
         type_ref,
@@ -687,7 +687,13 @@ fn write_register(
     else
         "";
 
-    if (db.children.fields.get(register_id)) |field_set| {
+    if (db.attrs.group.contains(register_id)) {
+        try writer.print("{s}: {s}{s},\n", .{
+            std.zig.fmtId(name),
+            array_prefix,
+            std.zig.fmtId(name),
+        });
+    } else if (db.children.fields.get(register_id)) |field_set| {
         var fields = std.ArrayList(EntityWithOffset).init(db.gpa);
         defer fields.deinit();
 
@@ -906,7 +912,7 @@ test "gen.peripheral instantiation" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @as(*volatile types.peripherals.TEST_PERIPHERAL, @ptrFromInt(0x1000));
+        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
         \\        };
         \\    };
         \\};
@@ -940,8 +946,8 @@ test "gen.peripherals with a shared type" {
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
-        \\            pub const TEST0 = @as(*volatile types.peripherals.TEST_PERIPHERAL, @ptrFromInt(0x1000));
-        \\            pub const TEST1 = @as(*volatile types.peripherals.TEST_PERIPHERAL, @ptrFromInt(0x2000));
+        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
+        \\            pub const TEST1: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x2000);
         \\        };
         \\    };
         \\};
@@ -1160,8 +1166,8 @@ test "gen.namespaced register groups" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile types.peripherals.PORT.PORTB, @ptrFromInt(0x23));
-        \\            pub const PORTC = @as(*volatile types.peripherals.PORT.PORTC, @ptrFromInt(0x26));
+        \\            pub const PORTB: *volatile types.peripherals.PORT.PORTB = @ptrFromInt(0x23);
+        \\            pub const PORTC: *volatile types.peripherals.PORT.PORTC = @ptrFromInt(0x26);
         \\        };
         \\    };
         \\};
@@ -1202,7 +1208,7 @@ test "gen.peripheral with reserved register" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile types.peripherals.PORTB, @ptrFromInt(0x23));
+        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
         \\        };
         \\    };
         \\};
@@ -1235,7 +1241,7 @@ test "gen.peripheral with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile [4]types.peripherals.PORTB, @ptrFromInt(0x23));
+        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
         \\        };
         \\    };
         \\};
@@ -1268,7 +1274,7 @@ test "gen.peripheral with count, padding required" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile [4]types.peripherals.PORTB, @ptrFromInt(0x23));
+        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
         \\        };
         \\    };
         \\};
@@ -1302,7 +1308,7 @@ test "gen.register with count" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile types.peripherals.PORTB, @ptrFromInt(0x23));
+        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
         \\        };
         \\    };
         \\};
@@ -1335,7 +1341,7 @@ test "gen.register with count and fields" {
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
-        \\            pub const PORTB = @as(*volatile types.peripherals.PORTB, @ptrFromInt(0x23));
+        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
         \\        };
         \\    };
         \\};

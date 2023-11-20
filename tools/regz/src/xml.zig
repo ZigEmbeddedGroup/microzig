@@ -17,21 +17,23 @@ pub const Node = struct {
 
     pub const Iterator = struct {
         node: ?Node,
-        filter: []const u8,
+        filter: []const []const u8,
 
         pub fn next(it: *Iterator) ?Node {
             // TODO: what if current node doesn't fit the bill?
-            return while (it.node != null) : (it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null) {
+            while (it.node != null) : (it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null) {
                 if (it.node.?.impl.type != 1)
                     continue;
 
                 if (it.node.?.impl.name) |name|
-                    if (std.mem.eql(u8, it.filter, std.mem.span(name))) {
-                        const ret = it.node;
-                        it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null;
-                        break ret;
-                    };
-            } else return null;
+                    for (it.filter) |elem|
+                        if (std.mem.eql(u8, elem, std.mem.span(name))) {
+                            const ret = it.node;
+                            it.node = if (it.node.?.impl.next) |impl| Node{ .impl = impl } else null;
+                            return ret;
+                        };
+            }
+            return null;
         }
     };
 
@@ -57,6 +59,10 @@ pub const Node = struct {
         }
     };
 
+    pub fn get_name(node: Node) []const u8 {
+        return std.mem.span(node.impl.name);
+    }
+
     pub fn get_attribute(node: Node, key: [:0]const u8) ?[]const u8 {
         if (c.xmlHasProp(node.impl, key.ptr)) |prop| {
             if (@as(*c.xmlAttr, @ptrCast(prop)).children) |value_node| {
@@ -69,24 +75,26 @@ pub const Node = struct {
         return null;
     }
 
-    pub fn find_child(node: Node, key: []const u8) ?Node {
+    pub fn find_child(node: Node, keys: []const []const u8) ?Node {
         var it = @as(?*c.xmlNode, @ptrCast(node.impl.children));
-        return while (it != null) : (it = it.?.next) {
+        while (it != null) : (it = it.?.next) {
             if (it.?.type != 1)
                 continue;
 
             const name = std.mem.span(it.?.name orelse continue);
-            if (std.mem.eql(u8, key, name))
-                break Node{ .impl = it.? };
-        } else null;
+            for (keys) |key|
+                if (std.mem.eql(u8, key, name))
+                    return Node{ .impl = it.? };
+        }
+        return null;
     }
 
     // `skip` will only delve into a specific path of elements
     // `name` will iterate the child elements with that name
-    pub fn iterate(node: Node, skip: []const []const u8, filter: []const u8) Iterator {
+    pub fn iterate(node: Node, skip: []const []const u8, filter: []const []const u8) Iterator {
         var current: Node = node;
         for (skip) |elem|
-            current = current.find_child(elem) orelse return Iterator{
+            current = current.find_child(&.{elem}) orelse return Iterator{
                 .node = null,
                 .filter = filter,
             };
@@ -105,7 +113,7 @@ pub const Node = struct {
 
     /// up to you to copy
     pub fn get_value(node: Node, key: []const u8) ?[:0]const u8 {
-        return if (node.find_child(key)) |child|
+        return if (node.find_child(&.{key})) |child|
             if (child.impl.children) |value_node|
                 if (@as(*c.xmlNode, @ptrCast(value_node)).content) |content|
                     std.mem.span(content)
