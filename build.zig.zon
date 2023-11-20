@@ -1,14 +1,25 @@
 .{
     .name = "microzig",
     .version = "0.1.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "design",
+        "docs",
+        "LICENSE",
+        "README.adoc",
+        "src",
+        "test",
+        "thoughts.md",
+    },
     .dependencies = .{
         .uf2 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/c523a4d23469282f95658a879f5ba925757dc9d9.tar.gz",
-            .hash = "12208530bdc194e8c1f3405ad681a409c7fabfe82735cd3972ec07c221a7786db03a",
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/0550d4b1519264669b4ac5d944c370b41ebd6579.tar.gz",
+            .hash = "122058e26facbba3f6e06881ec0d356c7f9046e88edc46b9f244b50d366062528471",
         },
         .regz = .{
-            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/b0ded63fc284da0ed9f4776eb7d1c4ad7175622d.tar.gz",
-            .hash = "1220e9299f949d3566a1dc4dd62caf82a06bb6c8ad5a693e62117b0941da9dc55ea2",
+            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/d66ffd56f51fc46c071412141b5d0c74dc83c310.tar.gz",
+            .hash = "122002c5f2e31c11373ede6e8a8dd9a61aabd60d38df667ec33b5f994d1f0b503823",
         },
         .@"umm-zig" = .{
             .url = "https://github.com/ZigEmbeddedGroup/umm-zig/archive/99d815adfbc5cc4ad385dd765a6192f85e54179f.tar.gz",
