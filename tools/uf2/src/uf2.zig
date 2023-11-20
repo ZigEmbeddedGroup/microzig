@@ -73,99 +73,50 @@ pub const Archive = struct {
         std.sort.insertion(Segment, segments.items, {}, Segment.lessThan);
         // TODO: check for overlaps, assert no zero sized segments
 
-        var blocks = std.ArrayList(Block).init(self.allocator);
-        defer blocks.deinit();
-
-        const last_segment_end = last_segment_end: {
-            const last_segment = &segments.items[segments.items.len - 1];
-            break :last_segment_end last_segment.addr + last_segment.size;
-        };
-
-        var segment_idx: usize = 0;
-        var addr = std.mem.alignBackward(u32, segments.items[0].addr, prog_page_size);
-        while (addr < last_segment_end and segment_idx < segments.items.len) {
-            const segment = &segments.items[segment_idx];
-            const segment_end = segment.addr + segment.size;
-
-            // if the last segment is not full, then there was a partial write
-            // of the end of the last segment, and we've started processing a
-            // new segment
-            if (blocks.items.len > 0 and blocks.items[blocks.items.len - 1].payload_size != prog_page_size) {
-                const block = &blocks.items[blocks.items.len - 1];
-                assert(segment.addr >= block.target_addr);
-                const block_end = block.target_addr + prog_page_size;
-
-                if (segment.addr < block_end) {
-                    const n_bytes = @min(segment.size, block_end - segment.addr);
-                    try file.seekTo(segment.file_offset);
-                    const block_offset = segment.addr - block.target_addr;
-                    const n_read = try file.reader().readAll(block.data[block_offset .. block_offset + n_bytes]);
-                    if (n_read != n_bytes)
-                        return error.ExpectedMoreElf;
-
-                    addr += n_bytes;
-                    block.payload_size += n_bytes;
-
-                    // in this case the segment can fit in the page and there
-                    // is room for an additional segment
-                    if (block.payload_size < prog_page_size) {
-                        segment_idx += 1;
-                        continue;
-                    }
-                } else {
-                    block.payload_size = prog_page_size;
-                    addr = std.mem.alignBackward(u32, segment.addr, prog_page_size);
+        var first = true;
+        for (segments.items) |segment| {
+            var segment_offset: u32 = 0;
+            while (segment_offset < segment.size) {
+                const addr = segment.addr + segment_offset;
+                if (first or addr >= self.blocks.items[self.blocks.items.len - 1].target_addr + prog_page_size) {
+                    try self.blocks.append(.{
+                        .flags = .{
+                            .not_main_flash = false,
+                            .file_container = false,
+                            .family_id_present = opts.family_id != null,
+                            .md5_checksum_present = false,
+                            .extension_tags_present = false,
+                        },
+                        .target_addr = std.mem.alignBackward(u32, addr, prog_page_size),
+                        .payload_size = 0,
+                        .block_number = undefined,
+                        .total_blocks = undefined,
+                        .file_size_or_family_id = .{
+                            .family_id = if (opts.family_id) |family_id|
+                                family_id
+                            else
+                                @as(FamilyId, @enumFromInt(0)),
+                        },
+                        .data = .{0} ** 476,
+                    });
+                    first = false;
                 }
+
+                const block = &self.blocks.items[self.blocks.items.len - 1];
+                const block_offset = addr - block.target_addr;
+                const n_bytes = @min(prog_page_size - block_offset, segment.size - segment_offset);
+
+                try file.seekTo(segment.file_offset + segment_offset);
+                try file.reader().readNoEof(block.data[block_offset..][0..n_bytes]);
+
+                segment_offset += n_bytes;
+                block.payload_size = block_offset + n_bytes;
             }
-
-            try blocks.append(.{
-                .flags = .{
-                    .not_main_flash = false,
-                    .file_container = false,
-                    .family_id_present = opts.family_id != null,
-                    .md5_checksum_present = false,
-                    .extension_tags_present = false,
-                },
-                .target_addr = addr,
-                .payload_size = @min(prog_page_size, segment_end - addr),
-                .block_number = undefined,
-                .total_blocks = undefined,
-                .file_size_or_family_id = .{
-                    .family_id = if (opts.family_id) |family_id|
-                        family_id
-                    else
-                        @as(FamilyId, @enumFromInt(0)),
-                },
-                .data = std.mem.zeroes([476]u8),
-            });
-
-            const block = &blocks.items[blocks.items.len - 1];
-
-            // in the case where padding is prepended to the block
-            if (addr < segment.addr)
-                addr = segment.addr;
-
-            const n_bytes = (block.target_addr + block.payload_size) - addr;
-            assert(n_bytes <= prog_page_size);
-
-            try file.seekTo(segment.file_offset + addr - segment.addr);
-            const block_offset = addr - block.target_addr;
-            const n_read = try file.reader().readAll(block.data[block_offset .. block_offset + n_bytes]);
-            if (n_read != n_bytes)
-                return error.ExpectedMoreElf;
-
-            addr += n_bytes;
-
-            assert(addr <= segment_end);
-            if (addr == segment_end)
-                segment_idx += 1;
         }
 
         // pad last page with zeros
-        if (blocks.items.len > 0)
-            blocks.items[blocks.items.len - 1].payload_size = prog_page_size;
+        if (!first) self.blocks.items[self.blocks.items.len - 1].payload_size = prog_page_size;
 
-        try self.blocks.appendSlice(blocks.items);
         if (opts.bundle_source)
             @panic("TODO: bundle source in UF2 file");
     }
