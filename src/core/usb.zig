@@ -511,7 +511,7 @@ pub const Dir = enum(u8) {
 };
 
 /// Describes an endpoint within an interface
-pub const EndpointDescriptor = packed struct {
+pub const EndpointDescriptor = extern struct {
     /// Length of this struct, must be 7.
     length: u8,
     /// Type of this descriptor, must be `Endpoint`.
@@ -542,7 +542,7 @@ pub const EndpointDescriptor = packed struct {
 };
 
 /// Description of an interface within a configuration.
-pub const InterfaceDescriptor = packed struct {
+pub const InterfaceDescriptor = extern struct {
     /// Length of this structure, must be 9.
     length: u8,
     /// Type of this descriptor, must be `Interface`.
@@ -580,7 +580,7 @@ pub const InterfaceDescriptor = packed struct {
 };
 
 /// Description of a single available device configuration.
-pub const ConfigurationDescriptor = packed struct {
+pub const ConfigurationDescriptor = extern struct {
     /// Length of this structure, must be 9.
     length: u8,
     /// Type of this descriptor, must be `Config`.
@@ -625,7 +625,7 @@ pub const ConfigurationDescriptor = packed struct {
 
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
-pub const DeviceDescriptor = packed struct {
+pub const DeviceDescriptor = extern struct {
     /// Length of this structure, must be 18.
     length: u8,
     /// Type of this descriptor, must be `Device`.
@@ -682,7 +682,7 @@ pub const DeviceDescriptor = packed struct {
 
 /// USB Device Qualifier Descriptor
 /// This descriptor is mostly the same as the DeviceDescriptor
-pub const DeviceQualifierDescriptor = packed struct {
+pub const DeviceQualifierDescriptor = extern struct {
     /// Length of this structure, must be 18.
     length: u8 = 10,
     /// Type of this descriptor, must be `Device`.
@@ -720,7 +720,7 @@ pub const DeviceQualifierDescriptor = packed struct {
 };
 
 /// Layout of an 8-byte USB SETUP packet.
-pub const SetupPacket = packed struct {
+pub const SetupPacket = extern struct {
     /// Request type; in practice, this is always either OUT (host-to-device) or
     /// IN (device-to-host), whose values are given in the `Dir` enum.
     request_type: u8,

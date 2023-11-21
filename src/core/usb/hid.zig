@@ -87,7 +87,7 @@ pub const DescType = enum(u8) {
 };
 
 /// USB HID descriptor
-pub const HidDescriptor = packed struct {
+pub const HidDescriptor = extern struct {
     length: u8 = 9,
     descriptor_type: DescType = DescType.Hid,
     /// Numeric expression identifying the HID Class Specification release
