@@ -19,6 +19,14 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
 
+    const xml = b.addStaticLibrary(.{
+        .name = "xml2",
+        .target = target,
+        .optimize = optimize,
+    });
+    xml.linkLibrary(libxml2_dep.artifact("xml2"));
+    b.installArtifact(xml);
+
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = .{ .path = "src/main.zig" },
@@ -28,6 +36,10 @@ pub fn build(b: *std.build.Builder) !void {
     regz.addModule("clap", clap_dep.module("clap"));
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     b.installArtifact(regz);
+
+    _ = b.addModule("regz", .{
+        .source_file = .{ .path = "src/module.zig" },
+    });
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());

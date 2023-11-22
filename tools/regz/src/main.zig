@@ -1,7 +1,6 @@
 const std = @import("std");
 const clap = @import("clap");
 const xml = @import("xml.zig");
-const svd = @import("svd.zig");
 const Database = @import("Database.zig");
 
 const ArenaAllocator = std.heap.ArenaAllocator;
