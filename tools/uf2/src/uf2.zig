@@ -88,7 +88,7 @@ pub const Archive = struct {
                             .extension_tags_present = false,
                         },
                         .target_addr = std.mem.alignBackward(u32, addr, prog_page_size),
-                        .payload_size = 0,
+                        .payload_size = prog_page_size,
                         .block_number = undefined,
                         .total_blocks = undefined,
                         .file_size_or_family_id = .{
@@ -110,12 +110,8 @@ pub const Archive = struct {
                 try file.reader().readNoEof(block.data[block_offset..][0..n_bytes]);
 
                 segment_offset += n_bytes;
-                block.payload_size = block_offset + n_bytes;
             }
         }
-
-        // pad last page with zeros
-        if (!first) self.blocks.items[self.blocks.items.len - 1].payload_size = prog_page_size;
 
         if (opts.bundle_source)
             @panic("TODO: bundle source in UF2 file");
