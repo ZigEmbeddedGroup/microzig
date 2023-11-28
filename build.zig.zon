@@ -14,8 +14,8 @@
     },
     .dependencies = .{
         .uf2 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/0550d4b1519264669b4ac5d944c370b41ebd6579.tar.gz",
-            .hash = "122058e26facbba3f6e06881ec0d356c7f9046e88edc46b9f244b50d366062528471",
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/8037b439ccbac862471392b25e94a8995d784e2c.tar.gz",
+            .hash = "1220cc66563fc1ecefca7990968441dc9d4db717884ffa9a2de657f60ed4bb74a70a",
         },
         .regz = .{
             .url = "https://github.com/ZigEmbeddedGroup/regz/archive/d66ffd56f51fc46c071412141b5d0c74dc83c310.tar.gz",
