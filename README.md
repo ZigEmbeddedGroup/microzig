@@ -33,6 +33,8 @@ Start by grabbing a header marked with ⏳ or 🛠 and implement the functions f
 
 Leverage functions from Zig `std` if possible as they are already well tested and should work.
 
+Which functions belong into which header can be figured out by taking a look at the *C11 Standard Draft* document or the *IBM libc functions* list. [cppreference.com](https://en.cppreference.com/w/c) usually has the better docs though, so best check out both.
+
 ## Links
 
 - [C11 Standard](https://www.iso.org/standard/57853.html)
@@ -41,6 +43,7 @@ Leverage functions from Zig `std` if possible as they are already well tested an
 - [libc-test](https://wiki.musl-libc.org/libc-test.html) by musl
 - [cppreference on freestanding](https://en.cppreference.com/w/cpp/freestanding)
 - [IBM libc functions](https://www.ibm.com/docs/en/i/7.5?topic=extensions-standard-c-library-functions-table-by-name) (function to header map)
+- [cppreference](https://en.cppreference.com/w/c)
 
 ## Status
 
