@@ -27,6 +27,11 @@ user@microzig ~/foundation-libc $
 
 to compile the libc and generate a lib file in `zig-out/lib` as well as the headers in `zig-out/include`.
 
+## Contribution
+
+Start by grabbing a header marked with ⏳ or 🛠 and implement the functions from that header. See if others already have a PR open for those functions so you don't do work twice!
+
+Leverage functions from Zig `std` if possible as they are already well tested and should work.
 
 ## Links
 
@@ -62,9 +67,9 @@ to compile the libc and generate a lib file in `zig-out/lib` as well as the head
 - 🔀 `stddef.h` Common macro definitions
 - 🔀 `stdint.h` (since C99) Fixed-width integer types
 - ❌ `stdio.h` Input/output
-- ⏳ `stdlib.h` General utilities: memory management, program utilities, string conversions, random numbers, algorithms
+- 🛠 `stdlib.h` General utilities: memory management, program utilities, string conversions, random numbers, algorithms
 - ⏳ `stdnoreturn.h` (since C11) noreturn convenience macro
-- ⏳ `string.h` String handling
+- 🛠 `string.h` String handling
 - ⏳ `tgmath.h` (since C99) Type-generic math (macros wrapping math.h and complex.h)
 - ❌ `threads.h` (since C11) Thread library
 - ❌ `time.h` Time/date utilities
