@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
     const libc = createLibrary(b, target, optimize);
     b.installArtifact(libc);
 
-    b.addInstallHeaderFile("include/stdlib.h");
-    b.addInstallHeaderFile("include/string.h");
+    // Add all headers here:
+    b.getInstallStep().dependOn(&b.addInstallHeaderFile("include/stdlib.h", "stdlib.h").step);
+    b.getInstallStep().dependOn(&b.addInstallHeaderFile("include/string.h", "string.h").step);
 }
