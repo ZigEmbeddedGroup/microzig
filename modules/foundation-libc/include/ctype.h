@@ -1,0 +1,4 @@
+#ifndef _FOUNDATION_LIBC_CTYPE_H_
+#define _FOUNDATION_LIBC_CTYPE_H_
+
+#endif

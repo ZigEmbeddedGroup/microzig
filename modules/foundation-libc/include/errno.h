@@ -1,0 +1,4 @@
+#ifndef _FOUNDATION_LIBC_ERRNO_H_
+#define _FOUNDATION_LIBC_ERRNO_H_
+
+#endif
