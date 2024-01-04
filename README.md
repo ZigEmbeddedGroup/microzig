@@ -1,5 +1,7 @@
 # MicroZig
 
+[![Continuous Integration](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml)
+
 ## Overview
 
 - `core/` contains the shared components of MicroZig.
@@ -17,3 +19,12 @@ Zigs versions, but with our own commit abbreviations and counters.
 As MicroZig sticks to tagged Zig releases, `${zig_version}` will show to which Zig version the MicroZig build is compatible.
 
 Consider the version `0.11.0-abcdef-123` means that this MicroZig version has a commit starting with `abcdef`, which was the 123rd commit of the version that is compatible with Zig 0.11.0.
+
+## TODO (before exchanging upstream)
+
+- Integrate https://github.com/ZigEmbeddedGroup/microzig-driver-framework as package
+- Create support for nice GitHub badges
+- validate that the table on https://github.com/ZigEmbeddedGroup is correct (in CI)
+- make system build again properly
+- start porting everything to 0.12/unstable
+
