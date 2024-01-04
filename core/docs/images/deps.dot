@@ -1,0 +1,23 @@
+digraph {
+    root -> app
+    root -> microzig
+
+    app -> microzig
+    app -> A
+    app -> B
+
+    subgraph cluster_0 {
+            style="dotted"
+            graph [labelloc=b]
+            A -> C
+            B -> C
+            B -> D
+            label = "Application Dependencies";
+    }
+
+    microzig -> config
+    microzig -> cpu [dir="both"]
+    microzig -> chip [dir="both"]
+    microzig -> board [dir="both", style="dashed"]
+    microzig -> hal [dir="both", style="dashed"]
+}

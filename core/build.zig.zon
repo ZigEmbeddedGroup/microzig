@@ -1,0 +1,29 @@
+.{
+    .name = "microzig",
+    .version = "0.1.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "design",
+        "docs",
+        "LICENSE",
+        "README.adoc",
+        "src",
+        "test",
+        "thoughts.md",
+    },
+    .dependencies = .{
+        .uf2 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/8037b439ccbac862471392b25e94a8995d784e2c.tar.gz",
+            .hash = "1220cc66563fc1ecefca7990968441dc9d4db717884ffa9a2de657f60ed4bb74a70a",
+        },
+        .regz = .{
+            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/d66ffd56f51fc46c071412141b5d0c74dc83c310.tar.gz",
+            .hash = "122002c5f2e31c11373ede6e8a8dd9a61aabd60d38df667ec33b5f994d1f0b503823",
+        },
+        .@"umm-zig" = .{
+            .url = "https://github.com/ZigEmbeddedGroup/umm-zig/archive/99d815adfbc5cc4ad385dd765a6192f85e54179f.tar.gz",
+            .hash = "12207ef7375ea45e97f4fba9c5dfa74d022902893c4dbf1a0076726b7ec39a02ea3f",
+        },
+    },
+}
