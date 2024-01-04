@@ -1,0 +1,2947 @@
+{
+  "version": "0.1.0",
+  "types": {
+    "peripherals": {
+      "FUSE": {
+        "description": "Fuses",
+        "children": {
+          "registers": {
+            "EXTENDED": {
+              "offset": 2,
+              "size": 8,
+              "reset_value": 255,
+              "children": {
+                "fields": {
+                  "BODLEVEL": {
+                    "description": "Brown-out Detector trigger level",
+                    "offset": 0,
+                    "size": 3,
+                    "enum": "types.peripherals.FUSE.children.enums.ENUM_BODLEVEL"
+                  }
+                }
+              }
+            },
+            "HIGH": {
+              "offset": 1,
+              "size": 8,
+              "reset_value": 217,
+              "children": {
+                "fields": {
+                  "RSTDISBL": {
+                    "description": "Reset Disabled (Enable PC6 as i/o pin)",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "DWEN": {
+                    "description": "Debug Wire enable",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "SPIEN": {
+                    "description": "Serial program downloading (SPI) enabled",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "WDTON": {
+                    "description": "Watch-dog Timer always on",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "EESAVE": {
+                    "description": "Preserve EEPROM through the Chip Erase cycle",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "BOOTSZ": {
+                    "description": "Select boot size",
+                    "offset": 1,
+                    "size": 2,
+                    "enum": "types.peripherals.FUSE.children.enums.ENUM_BOOTSZ"
+                  },
+                  "BOOTRST": {
+                    "description": "Boot Reset vector Enabled",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "LOW": {
+              "offset": 0,
+              "size": 8,
+              "reset_value": 98,
+              "children": {
+                "fields": {
+                  "CKDIV8": {
+                    "description": "Divide clock by 8 internally",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "CKOUT": {
+                    "description": "Clock output on PORTB0",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "SUT_CKSEL": {
+                    "description": "Select Clock Source",
+                    "offset": 0,
+                    "size": 6,
+                    "enum": "types.peripherals.FUSE.children.enums.ENUM_SUT_CKSEL"
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "ENUM_SUT_CKSEL": {
+              "size": 6,
+              "children": {
+                "enum_fields": {
+                  "EXTCLK_6CK_14CK_0MS": {
+                    "description": "Ext. Clock; Start-up time PWRDWN/RESET: 6 CK/14 CK + 0 ms",
+                    "value": 0
+                  },
+                  "EXTCLK_6CK_14CK_4MS1": {
+                    "description": "Ext. Clock; Start-up time PWRDWN/RESET: 6 CK/14 CK + 4.1 ms",
+                    "value": 16
+                  },
+                  "EXTCLK_6CK_14CK_65MS": {
+                    "description": "Ext. Clock; Start-up time PWRDWN/RESET: 6 CK/14 CK + 65 ms",
+                    "value": 32
+                  },
+                  "INTRCOSC_8MHZ_6CK_14CK_0MS": {
+                    "description": "Int. RC Osc. 8 MHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 0 ms",
+                    "value": 2
+                  },
+                  "INTRCOSC_8MHZ_6CK_14CK_4MS1": {
+                    "description": "Int. RC Osc. 8 MHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 4.1 ms",
+                    "value": 18
+                  },
+                  "INTRCOSC_8MHZ_6CK_14CK_65MS": {
+                    "description": "Int. RC Osc. 8 MHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 65 ms",
+                    "value": 34
+                  },
+                  "INTRCOSC_128KHZ_6CK_14CK_0MS": {
+                    "description": "Int. RC Osc. 128kHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 0 ms",
+                    "value": 3
+                  },
+                  "INTRCOSC_128KHZ_6CK_14CK_4MS1": {
+                    "description": "Int. RC Osc. 128kHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 4.1 ms",
+                    "value": 19
+                  },
+                  "INTRCOSC_128KHZ_6CK_14CK_65MS": {
+                    "description": "Int. RC Osc. 128kHz; Start-up time PWRDWN/RESET: 6 CK/14 CK + 65 ms",
+                    "value": 35
+                  },
+                  "EXTLOFXTAL_1KCK_14CK_0MS": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 1K CK/14 CK + 0 ms",
+                    "value": 4
+                  },
+                  "EXTLOFXTAL_1KCK_14CK_4MS1": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 1K CK/14 CK + 4.1 ms",
+                    "value": 20
+                  },
+                  "EXTLOFXTAL_1KCK_14CK_65MS": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 1K CK/14 CK + 65 ms",
+                    "value": 36
+                  },
+                  "EXTLOFXTAL_32KCK_14CK_0MS": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 32K CK/14 CK + 0 ms",
+                    "value": 5
+                  },
+                  "EXTLOFXTAL_32KCK_14CK_4MS1": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 32K CK/14 CK + 4.1 ms",
+                    "value": 21
+                  },
+                  "EXTLOFXTAL_32KCK_14CK_65MS": {
+                    "description": "Ext. Low-Freq. Crystal; Start-up time PWRDWN/RESET: 32K CK/14 CK + 65 ms",
+                    "value": 37
+                  },
+                  "EXTFSXTAL_258CK_14CK_4MS1": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 258 CK/14 CK + 4.1 ms",
+                    "value": 6
+                  },
+                  "EXTFSXTAL_258CK_14CK_65MS": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 258 CK/14 CK + 65 ms",
+                    "value": 22
+                  },
+                  "EXTFSXTAL_1KCK_14CK_0MS": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 1K CK /14 CK + 0 ms",
+                    "value": 38
+                  },
+                  "EXTFSXTAL_1KCK_14CK_4MS1": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 1K CK /14 CK + 4.1 ms",
+                    "value": 54
+                  },
+                  "EXTFSXTAL_1KCK_14CK_65MS": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 1K CK /14 CK + 65 ms",
+                    "value": 7
+                  },
+                  "EXTFSXTAL_16KCK_14CK_0MS": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 16K CK/14 CK + 0 ms",
+                    "value": 23
+                  },
+                  "EXTFSXTAL_16KCK_14CK_4MS1": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 16K CK/14 CK + 4.1 ms",
+                    "value": 39
+                  },
+                  "EXTFSXTAL_16KCK_14CK_65MS": {
+                    "description": "Ext. Full-swing Crystal; Start-up time PWRDWN/RESET: 16K CK/14 CK + 65 ms",
+                    "value": 55
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_258CK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 4.1 ms",
+                    "value": 8
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_258CK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 65 ms",
+                    "value": 24
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_1KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 0 ms",
+                    "value": 40
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_1KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 4.1 ms",
+                    "value": 56
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_1KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 65 ms",
+                    "value": 9
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_16KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 0 ms",
+                    "value": 25
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_16KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 4.1 ms",
+                    "value": 41
+                  },
+                  "EXTXOSC_0MHZ4_0MHZ9_16KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.4-0.9 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 65 ms",
+                    "value": 57
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_258CK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 4.1 ms",
+                    "value": 10
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_258CK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 65 ms",
+                    "value": 26
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_1KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 0 ms",
+                    "value": 42
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_1KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 4.1 ms",
+                    "value": 58
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_1KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 65 ms",
+                    "value": 11
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_16KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 0 ms",
+                    "value": 27
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_16KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 4.1 ms",
+                    "value": 43
+                  },
+                  "EXTXOSC_0MHZ9_3MHZ_16KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 0.9-3.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 65 ms",
+                    "value": 59
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_258CK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 4.1 ms",
+                    "value": 12
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_258CK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 65 ms",
+                    "value": 28
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_1KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 0 ms",
+                    "value": 44
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_1KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 4.1 ms",
+                    "value": 60
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_1KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 65 ms",
+                    "value": 13
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_16KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 0 ms",
+                    "value": 29
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_16KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 4.1 ms",
+                    "value": 45
+                  },
+                  "EXTXOSC_3MHZ_8MHZ_16KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 3.0-8.0 MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 65 ms",
+                    "value": 61
+                  },
+                  "EXTXOSC_8MHZ_XX_258CK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 4.1 ms",
+                    "value": 14
+                  },
+                  "EXTXOSC_8MHZ_XX_258CK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 258 CK/14 CK + 65 ms",
+                    "value": 30
+                  },
+                  "EXTXOSC_8MHZ_XX_1KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 0 ms",
+                    "value": 46
+                  },
+                  "EXTXOSC_8MHZ_XX_1KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 4.1 ms",
+                    "value": 62
+                  },
+                  "EXTXOSC_8MHZ_XX_1KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 1K CK /14 CK + 65 ms",
+                    "value": 15
+                  },
+                  "EXTXOSC_8MHZ_XX_16KCK_14CK_0MS": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 0 ms",
+                    "value": 31
+                  },
+                  "EXTXOSC_8MHZ_XX_16KCK_14CK_4MS1": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 4.1 ms",
+                    "value": 47
+                  },
+                  "EXTXOSC_8MHZ_XX_16KCK_14CK_65MS": {
+                    "description": "Ext. Crystal Osc. 8.0-    MHz; Start-up time PWRDWN/RESET: 16K CK/14 CK + 65 ms",
+                    "value": 63
+                  }
+                }
+              }
+            },
+            "ENUM_BODLEVEL": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "4V3": {
+                    "description": "Brown-out detection at VCC=4.3 V",
+                    "value": 4
+                  },
+                  "2V7": {
+                    "description": "Brown-out detection at VCC=2.7 V",
+                    "value": 5
+                  },
+                  "1V8": {
+                    "description": "Brown-out detection at VCC=1.8 V",
+                    "value": 6
+                  },
+                  "DISABLED": {
+                    "description": "Brown-out detection disabled",
+                    "value": 7
+                  }
+                }
+              }
+            },
+            "ENUM_BOOTSZ": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "256W_3F00": {
+                    "description": "Boot Flash size=256 words start address=$3F00",
+                    "value": 3
+                  },
+                  "512W_3E00": {
+                    "description": "Boot Flash size=512 words start address=$3E00",
+                    "value": 2
+                  },
+                  "1024W_3C00": {
+                    "description": "Boot Flash size=1024 words start address=$3C00",
+                    "value": 1
+                  },
+                  "2048W_3800": {
+                    "description": "Boot Flash size=2048 words start address=$3800",
+                    "value": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "LOCKBIT": {
+        "description": "Lockbits",
+        "children": {
+          "registers": {
+            "LOCKBIT": {
+              "offset": 0,
+              "size": 8,
+              "reset_value": 255,
+              "children": {
+                "fields": {
+                  "LB": {
+                    "description": "Memory Lock",
+                    "offset": 0,
+                    "size": 2,
+                    "enum": "types.peripherals.LOCKBIT.children.enums.ENUM_LB"
+                  },
+                  "BLB0": {
+                    "description": "Boot Loader Protection Mode",
+                    "offset": 2,
+                    "size": 2,
+                    "enum": "types.peripherals.LOCKBIT.children.enums.ENUM_BLB"
+                  },
+                  "BLB1": {
+                    "description": "Boot Loader Protection Mode",
+                    "offset": 4,
+                    "size": 2,
+                    "enum": "types.peripherals.LOCKBIT.children.enums.ENUM_BLB2"
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "ENUM_LB": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "PROG_VER_DISABLED": {
+                    "description": "Further programming and verification disabled",
+                    "value": 0
+                  },
+                  "PROG_DISABLED": {
+                    "description": "Further programming disabled",
+                    "value": 2
+                  },
+                  "NO_LOCK": {
+                    "description": "No memory lock features enabled",
+                    "value": 3
+                  }
+                }
+              }
+            },
+            "ENUM_BLB": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "LPM_SPM_DISABLE": {
+                    "description": "LPM and SPM prohibited in Application Section",
+                    "value": 0
+                  },
+                  "LPM_DISABLE": {
+                    "description": "LPM prohibited in Application Section",
+                    "value": 1
+                  },
+                  "SPM_DISABLE": {
+                    "description": "SPM prohibited in Application Section",
+                    "value": 2
+                  },
+                  "NO_LOCK": {
+                    "description": "No lock on SPM and LPM in Application Section",
+                    "value": 3
+                  }
+                }
+              }
+            },
+            "ENUM_BLB2": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "LPM_SPM_DISABLE": {
+                    "description": "LPM and SPM prohibited in Boot Section",
+                    "value": 0
+                  },
+                  "LPM_DISABLE": {
+                    "description": "LPM prohibited in Boot Section",
+                    "value": 1
+                  },
+                  "SPM_DISABLE": {
+                    "description": "SPM prohibited in Boot Section",
+                    "value": 2
+                  },
+                  "NO_LOCK": {
+                    "description": "No lock on SPM and LPM in Boot Section",
+                    "value": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "USART": {
+        "description": "USART",
+        "children": {
+          "register_groups": {
+            "USART0": {
+              "description": "USART",
+              "children": {
+                "registers": {
+                  "UDR0": {
+                    "description": "USART I/O Data Register",
+                    "offset": 6,
+                    "size": 8
+                  },
+                  "UCSR0A": {
+                    "description": "USART Control and Status Register A",
+                    "offset": 0,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "RXC0": {
+                          "description": "USART Receive Complete",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "TXC0": {
+                          "description": "USART Transmitt Complete",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "UDRE0": {
+                          "description": "USART Data Register Empty",
+                          "offset": 5,
+                          "size": 1
+                        },
+                        "FE0": {
+                          "description": "Framing Error",
+                          "offset": 4,
+                          "size": 1
+                        },
+                        "DOR0": {
+                          "description": "Data overRun",
+                          "offset": 3,
+                          "size": 1
+                        },
+                        "UPE0": {
+                          "description": "Parity Error",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "U2X0": {
+                          "description": "Double the USART transmission speed",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "MPCM0": {
+                          "description": "Multi-processor Communication Mode",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "UCSR0B": {
+                    "description": "USART Control and Status Register B",
+                    "offset": 1,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "RXCIE0": {
+                          "description": "RX Complete Interrupt Enable",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "TXCIE0": {
+                          "description": "TX Complete Interrupt Enable",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "UDRIE0": {
+                          "description": "USART Data register Empty Interrupt Enable",
+                          "offset": 5,
+                          "size": 1
+                        },
+                        "RXEN0": {
+                          "description": "Receiver Enable",
+                          "offset": 4,
+                          "size": 1
+                        },
+                        "TXEN0": {
+                          "description": "Transmitter Enable",
+                          "offset": 3,
+                          "size": 1
+                        },
+                        "UCSZ02": {
+                          "description": "Character Size - together with UCSZ0 in UCSR0C",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "RXB80": {
+                          "description": "Receive Data Bit 8",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TXB80": {
+                          "description": "Transmit Data Bit 8",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "UCSR0C": {
+                    "description": "USART Control and Status Register C",
+                    "offset": 2,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "UMSEL0": {
+                          "description": "USART Mode Select",
+                          "offset": 6,
+                          "size": 2,
+                          "enum": "types.peripherals.USART.children.enums.COMM_USART_MODE_2BIT"
+                        },
+                        "UPM0": {
+                          "description": "Parity Mode Bits",
+                          "offset": 4,
+                          "size": 2,
+                          "enum": "types.peripherals.USART.children.enums.COMM_UPM_PARITY_MODE"
+                        },
+                        "USBS0": {
+                          "description": "Stop Bit Select",
+                          "offset": 3,
+                          "size": 1,
+                          "enum": "types.peripherals.USART.children.enums.COMM_STOP_BIT_SEL"
+                        },
+                        "UCSZ0": {
+                          "description": "Character Size - together with UCSZ2 in UCSR0B",
+                          "offset": 1,
+                          "size": 2
+                        },
+                        "UCPOL0": {
+                          "description": "Clock Polarity",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "UBRR0": {
+                    "description": "USART Baud Rate Register Bytes",
+                    "offset": 4,
+                    "size": 16
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "COMM_USART_MODE_2BIT": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "ASYNCHRONOUS_USART": {
+                    "description": "Asynchronous USART",
+                    "value": 0
+                  },
+                  "SYNCHRONOUS_USART": {
+                    "description": "Synchronous USART",
+                    "value": 1
+                  },
+                  "MASTER_SPI": {
+                    "description": "Master SPI",
+                    "value": 3
+                  }
+                }
+              }
+            },
+            "COMM_UPM_PARITY_MODE": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "DISABLED": {
+                    "description": "Disabled",
+                    "value": 0
+                  },
+                  "RESERVED": {
+                    "description": "Reserved",
+                    "value": 1
+                  },
+                  "ENABLED_EVEN_PARITY": {
+                    "description": "Enabled, Even Parity",
+                    "value": 2
+                  },
+                  "ENABLED_ODD_PARITY": {
+                    "description": "Enabled, Odd Parity",
+                    "value": 3
+                  }
+                }
+              }
+            },
+            "COMM_STOP_BIT_SEL": {
+              "size": 1,
+              "children": {
+                "enum_fields": {
+                  "1_BIT": {
+                    "description": "1-bit",
+                    "value": 0
+                  },
+                  "2_BIT": {
+                    "description": "2-bit",
+                    "value": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TWI": {
+        "description": "Two Wire Serial Interface",
+        "children": {
+          "registers": {
+            "TWAMR": {
+              "description": "TWI (Slave) Address Mask Register",
+              "offset": 5,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "TWAM": {
+                    "offset": 1,
+                    "size": 7
+                  }
+                }
+              }
+            },
+            "TWBR": {
+              "description": "TWI Bit Rate register",
+              "offset": 0,
+              "size": 8
+            },
+            "TWCR": {
+              "description": "TWI Control Register",
+              "offset": 4,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "TWINT": {
+                    "description": "TWI Interrupt Flag",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "TWEA": {
+                    "description": "TWI Enable Acknowledge Bit",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "TWSTA": {
+                    "description": "TWI Start Condition Bit",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "TWSTO": {
+                    "description": "TWI Stop Condition Bit",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "TWWC": {
+                    "description": "TWI Write Collition Flag",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "TWEN": {
+                    "description": "TWI Enable Bit",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "TWIE": {
+                    "description": "TWI Interrupt Enable",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "TWSR": {
+              "description": "TWI Status Register",
+              "offset": 1,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "TWS": {
+                    "description": "TWI Status",
+                    "offset": 3,
+                    "size": 5
+                  },
+                  "TWPS": {
+                    "description": "TWI Prescaler",
+                    "offset": 0,
+                    "size": 2,
+                    "enum": "types.peripherals.TWI.children.enums.COMM_TWI_PRESACLE"
+                  }
+                }
+              }
+            },
+            "TWDR": {
+              "description": "TWI Data register",
+              "offset": 3,
+              "size": 8
+            },
+            "TWAR": {
+              "description": "TWI (Slave) Address register",
+              "offset": 2,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "TWA": {
+                    "description": "TWI (Slave) Address register Bits",
+                    "offset": 1,
+                    "size": 7
+                  },
+                  "TWGCE": {
+                    "description": "TWI General Call Recognition Enable Bit",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "COMM_TWI_PRESACLE": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "1": {
+                    "description": "1",
+                    "value": 0
+                  },
+                  "4": {
+                    "description": "4",
+                    "value": 1
+                  },
+                  "16": {
+                    "description": "16",
+                    "value": 2
+                  },
+                  "64": {
+                    "description": "64",
+                    "value": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TC16": {
+        "description": "Timer/Counter, 16-bit",
+        "children": {
+          "register_groups": {
+            "TC1": {
+              "description": "Timer/Counter, 16-bit",
+              "children": {
+                "registers": {
+                  "TIMSK1": {
+                    "description": "Timer/Counter Interrupt Mask Register",
+                    "offset": 57,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "ICIE1": {
+                          "description": "Timer/Counter1 Input Capture Interrupt Enable",
+                          "offset": 5,
+                          "size": 1
+                        },
+                        "OCIE1B": {
+                          "description": "Timer/Counter1 Output CompareB Match Interrupt Enable",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCIE1A": {
+                          "description": "Timer/Counter1 Output CompareA Match Interrupt Enable",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOIE1": {
+                          "description": "Timer/Counter1 Overflow Interrupt Enable",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TIFR1": {
+                    "description": "Timer/Counter Interrupt Flag register",
+                    "offset": 0,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "ICF1": {
+                          "description": "Input Capture Flag 1",
+                          "offset": 5,
+                          "size": 1
+                        },
+                        "OCF1B": {
+                          "description": "Output Compare Flag 1B",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCF1A": {
+                          "description": "Output Compare Flag 1A",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOV1": {
+                          "description": "Timer/Counter1 Overflow Flag",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TCCR1A": {
+                    "description": "Timer/Counter1 Control Register A",
+                    "offset": 74,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "COM1A": {
+                          "description": "Compare Output Mode 1A, bits",
+                          "offset": 6,
+                          "size": 2
+                        },
+                        "COM1B": {
+                          "description": "Compare Output Mode 1B, bits",
+                          "offset": 4,
+                          "size": 2
+                        },
+                        "WGM1": {
+                          "description": "Waveform Generation Mode",
+                          "offset": 0,
+                          "size": 2
+                        }
+                      }
+                    }
+                  },
+                  "TCCR1B": {
+                    "description": "Timer/Counter1 Control Register B",
+                    "offset": 75,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "ICNC1": {
+                          "description": "Input Capture 1 Noise Canceler",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "ICES1": {
+                          "description": "Input Capture 1 Edge Select",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "WGM1": {
+                          "description": "Waveform Generation Mode",
+                          "offset": 3,
+                          "size": 2
+                        },
+                        "CS1": {
+                          "description": "Prescaler source of Timer/Counter 1",
+                          "offset": 0,
+                          "size": 3,
+                          "enum": "types.peripherals.TC16.children.enums.CLK_SEL_3BIT_EXT"
+                        }
+                      }
+                    }
+                  },
+                  "TCCR1C": {
+                    "description": "Timer/Counter1 Control Register C",
+                    "offset": 76,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "FOC1A": {
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "FOC1B": {
+                          "offset": 6,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TCNT1": {
+                    "description": "Timer/Counter1  Bytes",
+                    "offset": 78,
+                    "size": 16
+                  },
+                  "OCR1A": {
+                    "description": "Timer/Counter1 Output Compare Register  Bytes",
+                    "offset": 82,
+                    "size": 16
+                  },
+                  "OCR1B": {
+                    "description": "Timer/Counter1 Output Compare Register  Bytes",
+                    "offset": 84,
+                    "size": 16
+                  },
+                  "ICR1": {
+                    "description": "Timer/Counter1 Input Capture Register  Bytes",
+                    "offset": 80,
+                    "size": 16
+                  },
+                  "GTCCR": {
+                    "description": "General Timer/Counter Control Register",
+                    "offset": 13,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "TSM": {
+                          "description": "Timer/Counter Synchronization Mode",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "PSRSYNC": {
+                          "description": "Prescaler Reset Timer/Counter1 and Timer/Counter0",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "CLK_SEL_3BIT_EXT": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "NO_CLOCK_SOURCE_STOPPED": {
+                    "description": "No Clock Source (Stopped)",
+                    "value": 0
+                  },
+                  "RUNNING_NO_PRESCALING": {
+                    "description": "Running, No Prescaling",
+                    "value": 1
+                  },
+                  "RUNNING_CLK_8": {
+                    "description": "Running, CLK/8",
+                    "value": 2
+                  },
+                  "RUNNING_CLK_64": {
+                    "description": "Running, CLK/64",
+                    "value": 3
+                  },
+                  "RUNNING_CLK_256": {
+                    "description": "Running, CLK/256",
+                    "value": 4
+                  },
+                  "RUNNING_CLK_1024": {
+                    "description": "Running, CLK/1024",
+                    "value": 5
+                  },
+                  "RUNNING_EXTCLK_TN_FALLING_EDGE": {
+                    "description": "Running, ExtClk Tn Falling Edge",
+                    "value": 6
+                  },
+                  "RUNNING_EXTCLK_TN_RISING_EDGE": {
+                    "description": "Running, ExtClk Tn Rising Edge",
+                    "value": 7
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TC8_ASYNC": {
+        "description": "Timer/Counter, 8-bit Async",
+        "children": {
+          "register_groups": {
+            "TC2": {
+              "description": "Timer/Counter, 8-bit Async",
+              "children": {
+                "registers": {
+                  "TIMSK2": {
+                    "description": "Timer/Counter Interrupt Mask register",
+                    "offset": 57,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "OCIE2B": {
+                          "description": "Timer/Counter2 Output Compare Match B Interrupt Enable",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCIE2A": {
+                          "description": "Timer/Counter2 Output Compare Match A Interrupt Enable",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOIE2": {
+                          "description": "Timer/Counter2 Overflow Interrupt Enable",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TIFR2": {
+                    "description": "Timer/Counter Interrupt Flag Register",
+                    "offset": 0,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "OCF2B": {
+                          "description": "Output Compare Flag 2B",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCF2A": {
+                          "description": "Output Compare Flag 2A",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOV2": {
+                          "description": "Timer/Counter2 Overflow Flag",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TCCR2A": {
+                    "description": "Timer/Counter2 Control Register A",
+                    "offset": 121,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "COM2A": {
+                          "description": "Compare Output Mode bits",
+                          "offset": 6,
+                          "size": 2
+                        },
+                        "COM2B": {
+                          "description": "Compare Output Mode bits",
+                          "offset": 4,
+                          "size": 2
+                        },
+                        "WGM2": {
+                          "description": "Waveform Genration Mode",
+                          "offset": 0,
+                          "size": 2
+                        }
+                      }
+                    }
+                  },
+                  "TCCR2B": {
+                    "description": "Timer/Counter2 Control Register B",
+                    "offset": 122,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "FOC2A": {
+                          "description": "Force Output Compare A",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "FOC2B": {
+                          "description": "Force Output Compare B",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "WGM22": {
+                          "description": "Waveform Generation Mode",
+                          "offset": 3,
+                          "size": 1
+                        },
+                        "CS2": {
+                          "description": "Clock Select bits",
+                          "offset": 0,
+                          "size": 3,
+                          "enum": "types.peripherals.TC8_ASYNC.children.enums.CLK_SEL_3BIT"
+                        }
+                      }
+                    }
+                  },
+                  "TCNT2": {
+                    "description": "Timer/Counter2",
+                    "offset": 123,
+                    "size": 8
+                  },
+                  "OCR2B": {
+                    "description": "Timer/Counter2 Output Compare Register B",
+                    "offset": 125,
+                    "size": 8
+                  },
+                  "OCR2A": {
+                    "description": "Timer/Counter2 Output Compare Register A",
+                    "offset": 124,
+                    "size": 8
+                  },
+                  "ASSR": {
+                    "description": "Asynchronous Status Register",
+                    "offset": 127,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "EXCLK": {
+                          "description": "Enable External Clock Input",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "AS2": {
+                          "description": "Asynchronous Timer/Counter2",
+                          "offset": 5,
+                          "size": 1
+                        },
+                        "TCN2UB": {
+                          "description": "Timer/Counter2 Update Busy",
+                          "offset": 4,
+                          "size": 1
+                        },
+                        "OCR2AUB": {
+                          "description": "Output Compare Register2 Update Busy",
+                          "offset": 3,
+                          "size": 1
+                        },
+                        "OCR2BUB": {
+                          "description": "Output Compare Register 2 Update Busy",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "TCR2AUB": {
+                          "description": "Timer/Counter Control Register2 Update Busy",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TCR2BUB": {
+                          "description": "Timer/Counter Control Register2 Update Busy",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "GTCCR": {
+                    "description": "General Timer Counter Control register",
+                    "offset": 12,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "TSM": {
+                          "description": "Timer/Counter Synchronization Mode",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "PSRASY": {
+                          "description": "Prescaler Reset Timer/Counter2",
+                          "offset": 1,
+                          "size": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "CLK_SEL_3BIT": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "NO_CLOCK_SOURCE_STOPPED": {
+                    "description": "No Clock Source (Stopped)",
+                    "value": 0
+                  },
+                  "RUNNING_NO_PRESCALING": {
+                    "description": "Running, No Prescaling",
+                    "value": 1
+                  },
+                  "RUNNING_CLK_8": {
+                    "description": "Running, CLK/8",
+                    "value": 2
+                  },
+                  "RUNNING_CLK_32": {
+                    "description": "Running, CLK/32",
+                    "value": 3
+                  },
+                  "RUNNING_CLK_64": {
+                    "description": "Running, CLK/64",
+                    "value": 4
+                  },
+                  "RUNNING_CLK_128": {
+                    "description": "Running, CLK/128",
+                    "value": 5
+                  },
+                  "RUNNING_CLK_256": {
+                    "description": "Running, CLK/256",
+                    "value": 6
+                  },
+                  "RUNNING_CLK_1024": {
+                    "description": "Running, CLK/1024",
+                    "value": 7
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ADC": {
+        "description": "Analog-to-Digital Converter",
+        "children": {
+          "registers": {
+            "ADMUX": {
+              "description": "The ADC multiplexer Selection Register",
+              "offset": 4,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "REFS": {
+                    "description": "Reference Selection Bits",
+                    "offset": 6,
+                    "size": 2,
+                    "enum": "types.peripherals.ADC.children.enums.ANALOG_ADC_V_REF3"
+                  },
+                  "ADLAR": {
+                    "description": "Left Adjust Result",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "MUX": {
+                    "description": "Analog Channel Selection Bits",
+                    "offset": 0,
+                    "size": 4,
+                    "enum": "types.peripherals.ADC.children.enums.ADC_MUX_SINGLE"
+                  }
+                }
+              }
+            },
+            "ADC": {
+              "description": "ADC Data Register  Bytes",
+              "offset": 0,
+              "size": 16
+            },
+            "ADCSRA": {
+              "description": "The ADC Control and Status register A",
+              "offset": 2,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "ADEN": {
+                    "description": "ADC Enable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "ADSC": {
+                    "description": "ADC Start Conversion",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "ADATE": {
+                    "description": "ADC  Auto Trigger Enable",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "ADIF": {
+                    "description": "ADC Interrupt Flag",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "ADIE": {
+                    "description": "ADC Interrupt Enable",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "ADPS": {
+                    "description": "ADC  Prescaler Select Bits",
+                    "offset": 0,
+                    "size": 3,
+                    "enum": "types.peripherals.ADC.children.enums.ANALOG_ADC_PRESCALER"
+                  }
+                }
+              }
+            },
+            "ADCSRB": {
+              "description": "The ADC Control and Status register B",
+              "offset": 3,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "ACME": {
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "ADTS": {
+                    "description": "ADC Auto Trigger Source bits",
+                    "offset": 0,
+                    "size": 3,
+                    "enum": "types.peripherals.ADC.children.enums.ANALOG_ADC_AUTO_TRIGGER"
+                  }
+                }
+              }
+            },
+            "DIDR0": {
+              "description": "Digital Input Disable Register",
+              "offset": 6,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "ADC5D": {
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "ADC4D": {
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "ADC3D": {
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "ADC2D": {
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "ADC1D": {
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "ADC0D": {
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "ANALOG_ADC_V_REF3": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "AREF_INTERNAL_VREF_TURNED_OFF": {
+                    "description": "AREF, Internal Vref turned off",
+                    "value": 0
+                  },
+                  "AVCC_WITH_EXTERNAL_CAPACITOR_AT_AREF_PIN": {
+                    "description": "AVCC with external capacitor at AREF pin",
+                    "value": 1
+                  },
+                  "RESERVED": {
+                    "description": "Reserved",
+                    "value": 2
+                  },
+                  "INTERNAL_1_1V_VOLTAGE_REFERENCE_WITH_EXTERNAL_CAPACITOR_AT_AREF_PIN": {
+                    "description": "Internal 1.1V Voltage Reference with external capacitor at AREF pin",
+                    "value": 3
+                  }
+                }
+              }
+            },
+            "ADC_MUX_SINGLE": {
+              "size": 4,
+              "children": {
+                "enum_fields": {
+                  "ADC0": {
+                    "description": "ADC Single Ended Input pin 0",
+                    "value": 0
+                  },
+                  "ADC1": {
+                    "description": "ADC Single Ended Input pin 1",
+                    "value": 1
+                  },
+                  "ADC2": {
+                    "description": "ADC Single Ended Input pin 2",
+                    "value": 2
+                  },
+                  "ADC3": {
+                    "description": "ADC Single Ended Input pin 3",
+                    "value": 3
+                  },
+                  "ADC4": {
+                    "description": "ADC Single Ended Input pin 4",
+                    "value": 4
+                  },
+                  "ADC5": {
+                    "description": "ADC Single Ended Input pin 5",
+                    "value": 5
+                  },
+                  "ADC6": {
+                    "description": "ADC Single Ended Input pin 6",
+                    "value": 6
+                  },
+                  "ADC7": {
+                    "description": "ADC Single Ended Input pin 7",
+                    "value": 7
+                  },
+                  "TEMPSENS": {
+                    "description": "Temperature sensor",
+                    "value": 8
+                  },
+                  "ADC_VBG": {
+                    "description": "Internal Reference (VBG)",
+                    "value": 14
+                  },
+                  "ADC_GND": {
+                    "description": "0V (GND)",
+                    "value": 15
+                  }
+                }
+              }
+            },
+            "ANALOG_ADC_PRESCALER": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "2": {
+                    "description": "2",
+                    "value": 1
+                  },
+                  "4": {
+                    "description": "4",
+                    "value": 2
+                  },
+                  "8": {
+                    "description": "8",
+                    "value": 3
+                  },
+                  "16": {
+                    "description": "16",
+                    "value": 4
+                  },
+                  "32": {
+                    "description": "32",
+                    "value": 5
+                  },
+                  "64": {
+                    "description": "64",
+                    "value": 6
+                  },
+                  "128": {
+                    "description": "128",
+                    "value": 7
+                  }
+                }
+              }
+            },
+            "ANALOG_ADC_AUTO_TRIGGER": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "FREE_RUNNING_MODE": {
+                    "description": "Free Running mode",
+                    "value": 0
+                  },
+                  "ANALOG_COMPARATOR": {
+                    "description": "Analog Comparator",
+                    "value": 1
+                  },
+                  "EXTERNAL_INTERRUPT_REQUEST_0": {
+                    "description": "External Interrupt Request 0",
+                    "value": 2
+                  },
+                  "TIMER_COUNTER0_COMPARE_MATCH_A": {
+                    "description": "Timer/Counter0 Compare Match A",
+                    "value": 3
+                  },
+                  "TIMER_COUNTER0_OVERFLOW": {
+                    "description": "Timer/Counter0 Overflow",
+                    "value": 4
+                  },
+                  "TIMER_COUNTER1_COMPARE_MATCH_B": {
+                    "description": "Timer/Counter1 Compare Match B",
+                    "value": 5
+                  },
+                  "TIMER_COUNTER1_OVERFLOW": {
+                    "description": "Timer/Counter1 Overflow",
+                    "value": 6
+                  },
+                  "TIMER_COUNTER1_CAPTURE_EVENT": {
+                    "description": "Timer/Counter1 Capture Event",
+                    "value": 7
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AC": {
+        "description": "Analog Comparator",
+        "children": {
+          "registers": {
+            "ACSR": {
+              "description": "Analog Comparator Control And Status Register",
+              "offset": 0,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "ACD": {
+                    "description": "Analog Comparator Disable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "ACBG": {
+                    "description": "Analog Comparator Bandgap Select",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "ACO": {
+                    "description": "Analog Compare Output",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "ACI": {
+                    "description": "Analog Comparator Interrupt Flag",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "ACIE": {
+                    "description": "Analog Comparator Interrupt Enable",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "ACIC": {
+                    "description": "Analog Comparator Input Capture Enable",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "ACIS": {
+                    "description": "Analog Comparator Interrupt Mode Select bits",
+                    "offset": 0,
+                    "size": 2,
+                    "enum": "types.peripherals.AC.children.enums.ANALOG_COMP_INTERRUPT"
+                  }
+                }
+              }
+            },
+            "DIDR1": {
+              "description": "Digital Input Disable Register 1",
+              "offset": 47,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "AIN1D": {
+                    "description": "AIN1 Digital Input Disable",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "AIN0D": {
+                    "description": "AIN0 Digital Input Disable",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "ANALOG_COMP_INTERRUPT": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "INTERRUPT_ON_TOGGLE": {
+                    "description": "Interrupt on Toggle",
+                    "value": 0
+                  },
+                  "RESERVED": {
+                    "description": "Reserved",
+                    "value": 1
+                  },
+                  "INTERRUPT_ON_FALLING_EDGE": {
+                    "description": "Interrupt on Falling Edge",
+                    "value": 2
+                  },
+                  "INTERRUPT_ON_RISING_EDGE": {
+                    "description": "Interrupt on Rising Edge",
+                    "value": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PORT": {
+        "description": "I/O Port",
+        "children": {
+          "register_groups": {
+            "PORTB": {
+              "description": "I/O Port",
+              "children": {
+                "registers": {
+                  "PORTB": {
+                    "description": "Port B Data Register",
+                    "offset": 2,
+                    "size": 8
+                  },
+                  "DDRB": {
+                    "description": "Port B Data Direction Register",
+                    "offset": 1,
+                    "size": 8
+                  },
+                  "PINB": {
+                    "description": "Port B Input Pins",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            },
+            "PORTC": {
+              "description": "I/O Port",
+              "children": {
+                "registers": {
+                  "PORTC": {
+                    "description": "Port C Data Register",
+                    "offset": 2,
+                    "size": 8
+                  },
+                  "DDRC": {
+                    "description": "Port C Data Direction Register",
+                    "offset": 1,
+                    "size": 8
+                  },
+                  "PINC": {
+                    "description": "Port C Input Pins",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            },
+            "PORTD": {
+              "description": "I/O Port",
+              "children": {
+                "registers": {
+                  "PORTD": {
+                    "description": "Port D Data Register",
+                    "offset": 2,
+                    "size": 8
+                  },
+                  "DDRD": {
+                    "description": "Port D Data Direction Register",
+                    "offset": 1,
+                    "size": 8
+                  },
+                  "PIND": {
+                    "description": "Port D Input Pins",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TC8": {
+        "description": "Timer/Counter, 8-bit",
+        "children": {
+          "register_groups": {
+            "TC0": {
+              "description": "Timer/Counter, 8-bit",
+              "children": {
+                "registers": {
+                  "OCR0B": {
+                    "description": "Timer/Counter0 Output Compare Register",
+                    "offset": 19,
+                    "size": 8
+                  },
+                  "OCR0A": {
+                    "description": "Timer/Counter0 Output Compare Register",
+                    "offset": 18,
+                    "size": 8
+                  },
+                  "TCNT0": {
+                    "description": "Timer/Counter0",
+                    "offset": 17,
+                    "size": 8
+                  },
+                  "TCCR0B": {
+                    "description": "Timer/Counter Control Register B",
+                    "offset": 16,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "FOC0A": {
+                          "description": "Force Output Compare A",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "FOC0B": {
+                          "description": "Force Output Compare B",
+                          "offset": 6,
+                          "size": 1
+                        },
+                        "WGM02": {
+                          "offset": 3,
+                          "size": 1
+                        },
+                        "CS0": {
+                          "description": "Clock Select",
+                          "offset": 0,
+                          "size": 3,
+                          "enum": "types.peripherals.TC16.children.enums.CLK_SEL_3BIT_EXT"
+                        }
+                      }
+                    }
+                  },
+                  "TCCR0A": {
+                    "description": "Timer/Counter  Control Register A",
+                    "offset": 15,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "COM0A": {
+                          "description": "Compare Output Mode, Phase Correct PWM Mode",
+                          "offset": 6,
+                          "size": 2
+                        },
+                        "COM0B": {
+                          "description": "Compare Output Mode, Fast PWm",
+                          "offset": 4,
+                          "size": 2
+                        },
+                        "WGM0": {
+                          "description": "Waveform Generation Mode",
+                          "offset": 0,
+                          "size": 2
+                        }
+                      }
+                    }
+                  },
+                  "TIMSK0": {
+                    "description": "Timer/Counter0 Interrupt Mask Register",
+                    "offset": 57,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "OCIE0B": {
+                          "description": "Timer/Counter0 Output Compare Match B Interrupt Enable",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCIE0A": {
+                          "description": "Timer/Counter0 Output Compare Match A Interrupt Enable",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOIE0": {
+                          "description": "Timer/Counter0 Overflow Interrupt Enable",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "TIFR0": {
+                    "description": "Timer/Counter0 Interrupt Flag register",
+                    "offset": 0,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "OCF0B": {
+                          "description": "Timer/Counter0 Output Compare Flag 0B",
+                          "offset": 2,
+                          "size": 1
+                        },
+                        "OCF0A": {
+                          "description": "Timer/Counter0 Output Compare Flag 0A",
+                          "offset": 1,
+                          "size": 1
+                        },
+                        "TOV0": {
+                          "description": "Timer/Counter0 Overflow Flag",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  },
+                  "GTCCR": {
+                    "description": "General Timer/Counter Control Register",
+                    "offset": 14,
+                    "size": 8,
+                    "children": {
+                      "fields": {
+                        "TSM": {
+                          "description": "Timer/Counter Synchronization Mode",
+                          "offset": 7,
+                          "size": 1
+                        },
+                        "PSRSYNC": {
+                          "description": "Prescaler Reset Timer/Counter1 and Timer/Counter0",
+                          "offset": 0,
+                          "size": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "CLK_SEL_3BIT_EXT": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "NO_CLOCK_SOURCE_STOPPED": {
+                    "description": "No Clock Source (Stopped)",
+                    "value": 0
+                  },
+                  "RUNNING_NO_PRESCALING": {
+                    "description": "Running, No Prescaling",
+                    "value": 1
+                  },
+                  "RUNNING_CLK_8": {
+                    "description": "Running, CLK/8",
+                    "value": 2
+                  },
+                  "RUNNING_CLK_64": {
+                    "description": "Running, CLK/64",
+                    "value": 3
+                  },
+                  "RUNNING_CLK_256": {
+                    "description": "Running, CLK/256",
+                    "value": 4
+                  },
+                  "RUNNING_CLK_1024": {
+                    "description": "Running, CLK/1024",
+                    "value": 5
+                  },
+                  "RUNNING_EXTCLK_TN_FALLING_EDGE": {
+                    "description": "Running, ExtClk Tn Falling Edge",
+                    "value": 6
+                  },
+                  "RUNNING_EXTCLK_TN_RISING_EDGE": {
+                    "description": "Running, ExtClk Tn Rising Edge",
+                    "value": 7
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "EXINT": {
+        "description": "External Interrupts",
+        "children": {
+          "registers": {
+            "EICRA": {
+              "description": "External Interrupt Control Register",
+              "offset": 46,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "ISC1": {
+                    "description": "External Interrupt Sense Control 1 Bits",
+                    "offset": 2,
+                    "size": 2,
+                    "enum": "types.peripherals.EXINT.children.enums.INTERRUPT_SENSE_CONTROL"
+                  },
+                  "ISC0": {
+                    "description": "External Interrupt Sense Control 0 Bits",
+                    "offset": 0,
+                    "size": 2,
+                    "enum": "types.peripherals.EXINT.children.enums.INTERRUPT_SENSE_CONTROL"
+                  }
+                }
+              }
+            },
+            "EIMSK": {
+              "description": "External Interrupt Mask Register",
+              "offset": 2,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "INT": {
+                    "description": "External Interrupt Request 1 Enable",
+                    "offset": 0,
+                    "size": 2
+                  }
+                }
+              }
+            },
+            "EIFR": {
+              "description": "External Interrupt Flag Register",
+              "offset": 1,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "INTF": {
+                    "description": "External Interrupt Flags",
+                    "offset": 0,
+                    "size": 2
+                  }
+                }
+              }
+            },
+            "PCICR": {
+              "description": "Pin Change Interrupt Control Register",
+              "offset": 45,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PCIE": {
+                    "description": "Pin Change Interrupt Enables",
+                    "offset": 0,
+                    "size": 3
+                  }
+                }
+              }
+            },
+            "PCMSK2": {
+              "description": "Pin Change Mask Register 2",
+              "offset": 50,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PCINT": {
+                    "description": "Pin Change Enable Masks",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            },
+            "PCMSK1": {
+              "description": "Pin Change Mask Register 1",
+              "offset": 49,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PCINT": {
+                    "description": "Pin Change Enable Masks",
+                    "offset": 0,
+                    "size": 7
+                  }
+                }
+              }
+            },
+            "PCMSK0": {
+              "description": "Pin Change Mask Register 0",
+              "offset": 48,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PCINT": {
+                    "description": "Pin Change Enable Masks",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            },
+            "PCIFR": {
+              "description": "Pin Change Interrupt Flag Register",
+              "offset": 0,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PCIF": {
+                    "description": "Pin Change Interrupt Flags",
+                    "offset": 0,
+                    "size": 3
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "INTERRUPT_SENSE_CONTROL": {
+              "description": "Interrupt Sense Control",
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "LOW_LEVEL_OF_INTX": {
+                    "description": "Low Level of INTX",
+                    "value": 0
+                  },
+                  "ANY_LOGICAL_CHANGE_OF_INTX": {
+                    "description": "Any Logical Change of INTX",
+                    "value": 1
+                  },
+                  "FALLING_EDGE_OF_INTX": {
+                    "description": "Falling Edge of INTX",
+                    "value": 2
+                  },
+                  "RISING_EDGE_OF_INTX": {
+                    "description": "Rising Edge of INTX",
+                    "value": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SPI": {
+        "description": "Serial Peripheral Interface",
+        "children": {
+          "registers": {
+            "SPDR": {
+              "description": "SPI Data Register",
+              "offset": 2,
+              "size": 8
+            },
+            "SPSR": {
+              "description": "SPI Status Register",
+              "offset": 1,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "SPIF": {
+                    "description": "SPI Interrupt Flag",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "WCOL": {
+                    "description": "Write Collision Flag",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "SPI2X": {
+                    "description": "Double SPI Speed Bit",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "SPCR": {
+              "description": "SPI Control Register",
+              "offset": 0,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "SPIE": {
+                    "description": "SPI Interrupt Enable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "SPE": {
+                    "description": "SPI Enable",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "DORD": {
+                    "description": "Data Order",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "MSTR": {
+                    "description": "Master/Slave Select",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "CPOL": {
+                    "description": "Clock polarity",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "CPHA": {
+                    "description": "Clock Phase",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "SPR": {
+                    "description": "SPI Clock Rate Selects",
+                    "offset": 0,
+                    "size": 2,
+                    "enum": "types.peripherals.SPI.children.enums.COMM_SCK_RATE_3BIT"
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "COMM_SCK_RATE_3BIT": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "FOSC_2_OR_FOSC_4": {
+                    "description": "fosc/2 or fosc/4",
+                    "value": 0
+                  },
+                  "FOSC_8_OR_FOSC_16": {
+                    "description": "fosc/8 or fosc/16",
+                    "value": 1
+                  },
+                  "FOSC_32_OR_FOSC_64": {
+                    "description": "fosc/32 or fosc/64",
+                    "value": 2
+                  },
+                  "FOSC_64_OR_FOSC_128": {
+                    "description": "fosc/64 or fosc/128",
+                    "value": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "WDT": {
+        "description": "Watchdog Timer",
+        "children": {
+          "registers": {
+            "WDTCSR": {
+              "description": "Watchdog Timer Control Register",
+              "offset": 0,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "WDIF": {
+                    "description": "Watchdog Timeout Interrupt Flag",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "WDIE": {
+                    "description": "Watchdog Timeout Interrupt Enable",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "WDP_bit0": {
+                    "description": "Watchdog Timer Prescaler Bits",
+                    "offset": 0,
+                    "size": 1
+                  },
+                  "WDP_bit1": {
+                    "description": "Watchdog Timer Prescaler Bits",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "WDP_bit2": {
+                    "description": "Watchdog Timer Prescaler Bits",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "WDP_bit3": {
+                    "description": "Watchdog Timer Prescaler Bits",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "WDCE": {
+                    "description": "Watchdog Change Enable",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "WDE": {
+                    "description": "Watch Dog Enable",
+                    "offset": 3,
+                    "size": 1
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "WDOG_TIMER_PRESCALE_4BITS": {
+              "size": 4,
+              "children": {
+                "enum_fields": {
+                  "OSCILLATOR_CYCLES_2K": {
+                    "description": "Oscillator Cycles 2K",
+                    "value": 0
+                  },
+                  "OSCILLATOR_CYCLES_4K": {
+                    "description": "Oscillator Cycles 4K",
+                    "value": 1
+                  },
+                  "OSCILLATOR_CYCLES_8K": {
+                    "description": "Oscillator Cycles 8K",
+                    "value": 2
+                  },
+                  "OSCILLATOR_CYCLES_16K": {
+                    "description": "Oscillator Cycles 16K",
+                    "value": 3
+                  },
+                  "OSCILLATOR_CYCLES_32K": {
+                    "description": "Oscillator Cycles 32K",
+                    "value": 4
+                  },
+                  "OSCILLATOR_CYCLES_64K": {
+                    "description": "Oscillator Cycles 64K",
+                    "value": 5
+                  },
+                  "OSCILLATOR_CYCLES_128K": {
+                    "description": "Oscillator Cycles 128K",
+                    "value": 6
+                  },
+                  "OSCILLATOR_CYCLES_256K": {
+                    "description": "Oscillator Cycles 256K",
+                    "value": 7
+                  },
+                  "OSCILLATOR_CYCLES_512K": {
+                    "description": "Oscillator Cycles 512K",
+                    "value": 8
+                  },
+                  "OSCILLATOR_CYCLES_1024K": {
+                    "description": "Oscillator Cycles 1024K",
+                    "value": 9
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CPU": {
+        "description": "CPU Registers",
+        "children": {
+          "registers": {
+            "PRR": {
+              "description": "Power Reduction Register",
+              "offset": 38,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "PRTWI": {
+                    "description": "Power Reduction TWI",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "PRTIM2": {
+                    "description": "Power Reduction Timer/Counter2",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "PRTIM0": {
+                    "description": "Power Reduction Timer/Counter0",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "PRTIM1": {
+                    "description": "Power Reduction Timer/Counter1",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "PRSPI": {
+                    "description": "Power Reduction Serial Peripheral Interface",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "PRUSART0": {
+                    "description": "Power Reduction USART",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "PRADC": {
+                    "description": "Power Reduction ADC",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "OSCCAL": {
+              "description": "Oscillator Calibration Value",
+              "offset": 40,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "OSCCAL": {
+                    "description": "Oscillator Calibration ",
+                    "offset": 0,
+                    "size": 8
+                  }
+                }
+              }
+            },
+            "CLKPR": {
+              "description": "Clock Prescale Register",
+              "offset": 35,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "CLKPCE": {
+                    "description": "Clock Prescaler Change Enable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "CLKPS": {
+                    "description": "Clock Prescaler Select Bits",
+                    "offset": 0,
+                    "size": 4,
+                    "enum": "types.peripherals.CPU.children.enums.CPU_CLK_PRESCALE_4_BITS_SMALL"
+                  }
+                }
+              }
+            },
+            "SREG": {
+              "description": "Status Register",
+              "offset": 33,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "I": {
+                    "description": "Global Interrupt Enable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "T": {
+                    "description": "Bit Copy Storage",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "H": {
+                    "description": "Half Carry Flag",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "S": {
+                    "description": "Sign Bit",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "V": {
+                    "description": "Two's Complement Overflow Flag",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "N": {
+                    "description": "Negative Flag",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "Z": {
+                    "description": "Zero Flag",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "C": {
+                    "description": "Carry Flag",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "SP": {
+              "description": "Stack Pointer ",
+              "offset": 31,
+              "size": 16
+            },
+            "SPMCSR": {
+              "description": "Store Program Memory Control and Status Register",
+              "offset": 25,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "SPMIE": {
+                    "description": "SPM Interrupt Enable",
+                    "offset": 7,
+                    "size": 1
+                  },
+                  "RWWSB": {
+                    "description": "Read-While-Write Section Busy",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "SIGRD": {
+                    "description": "Signature Row Read",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "RWWSRE": {
+                    "description": "Read-While-Write section read enable",
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "BLBSET": {
+                    "description": "Boot Lock Bit Set",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "PGWRT": {
+                    "description": "Page Write",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "PGERS": {
+                    "description": "Page Erase",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "SPMEN": {
+                    "description": "Store Program Memory",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "MCUCR": {
+              "description": "MCU Control Register",
+              "offset": 23,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "BODS": {
+                    "description": "BOD Sleep",
+                    "offset": 6,
+                    "size": 1
+                  },
+                  "BODSE": {
+                    "description": "BOD Sleep Enable",
+                    "offset": 5,
+                    "size": 1
+                  },
+                  "PUD": {
+                    "offset": 4,
+                    "size": 1
+                  },
+                  "IVSEL": {
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "IVCE": {
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "MCUSR": {
+              "description": "MCU Status Register",
+              "offset": 22,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "WDRF": {
+                    "description": "Watchdog Reset Flag",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "BORF": {
+                    "description": "Brown-out Reset Flag",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "EXTRF": {
+                    "description": "External Reset Flag",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "PORF": {
+                    "description": "Power-on reset flag",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "SMCR": {
+              "description": "Sleep Mode Control Register",
+              "offset": 21,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "SM": {
+                    "description": "Sleep Mode Select Bits",
+                    "offset": 1,
+                    "size": 3,
+                    "enum": "types.peripherals.CPU.children.enums.CPU_SLEEP_MODE_3BITS2"
+                  },
+                  "SE": {
+                    "description": "Sleep Enable",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            },
+            "GPIOR2": {
+              "description": "General Purpose I/O Register 2",
+              "offset": 13,
+              "size": 8
+            },
+            "GPIOR1": {
+              "description": "General Purpose I/O Register 1",
+              "offset": 12,
+              "size": 8
+            },
+            "GPIOR0": {
+              "description": "General Purpose I/O Register 0",
+              "offset": 0,
+              "size": 8
+            }
+          },
+          "enums": {
+            "CPU_CLK_PRESCALE_4_BITS_SMALL": {
+              "size": 4,
+              "children": {
+                "enum_fields": {
+                  "1": {
+                    "description": "1",
+                    "value": 0
+                  },
+                  "2": {
+                    "description": "2",
+                    "value": 1
+                  },
+                  "4": {
+                    "description": "4",
+                    "value": 2
+                  },
+                  "8": {
+                    "description": "8",
+                    "value": 3
+                  },
+                  "16": {
+                    "description": "16",
+                    "value": 4
+                  },
+                  "32": {
+                    "description": "32",
+                    "value": 5
+                  },
+                  "64": {
+                    "description": "64",
+                    "value": 6
+                  },
+                  "128": {
+                    "description": "128",
+                    "value": 7
+                  },
+                  "256": {
+                    "description": "256",
+                    "value": 8
+                  }
+                }
+              }
+            },
+            "CPU_SLEEP_MODE_3BITS2": {
+              "size": 3,
+              "children": {
+                "enum_fields": {
+                  "IDLE": {
+                    "description": "Idle",
+                    "value": 0
+                  },
+                  "ADC": {
+                    "description": "ADC Noise Reduction (If Available)",
+                    "value": 1
+                  },
+                  "PDOWN": {
+                    "description": "Power Down",
+                    "value": 2
+                  },
+                  "PSAVE": {
+                    "description": "Power Save",
+                    "value": 3
+                  },
+                  "VAL_0x04": {
+                    "description": "Reserved",
+                    "value": 4
+                  },
+                  "VAL_0x05": {
+                    "description": "Reserved",
+                    "value": 5
+                  },
+                  "STDBY": {
+                    "description": "Standby",
+                    "value": 6
+                  },
+                  "ESTDBY": {
+                    "description": "Extended Standby",
+                    "value": 7
+                  }
+                }
+              }
+            },
+            "OSCCAL_VALUE_ADDRESSES": {
+              "description": "Oscillator Calibration Values",
+              "size": 1,
+              "children": {
+                "enum_fields": {
+                  "8_0_MHz": {
+                    "description": "8.0 MHz",
+                    "value": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "EEPROM": {
+        "description": "EEPROM",
+        "children": {
+          "registers": {
+            "EEAR": {
+              "description": "EEPROM Address Register  Bytes",
+              "offset": 2,
+              "size": 16
+            },
+            "EEDR": {
+              "description": "EEPROM Data Register",
+              "offset": 1,
+              "size": 8
+            },
+            "EECR": {
+              "description": "EEPROM Control Register",
+              "offset": 0,
+              "size": 8,
+              "children": {
+                "fields": {
+                  "EEPM": {
+                    "description": "EEPROM Programming Mode Bits",
+                    "offset": 4,
+                    "size": 2,
+                    "enum": "types.peripherals.EEPROM.children.enums.EEP_MODE"
+                  },
+                  "EERIE": {
+                    "description": "EEPROM Ready Interrupt Enable",
+                    "offset": 3,
+                    "size": 1
+                  },
+                  "EEMPE": {
+                    "description": "EEPROM Master Write Enable",
+                    "offset": 2,
+                    "size": 1
+                  },
+                  "EEPE": {
+                    "description": "EEPROM Write Enable",
+                    "offset": 1,
+                    "size": 1
+                  },
+                  "EERE": {
+                    "description": "EEPROM Read Enable",
+                    "offset": 0,
+                    "size": 1
+                  }
+                }
+              }
+            }
+          },
+          "enums": {
+            "EEP_MODE": {
+              "size": 2,
+              "children": {
+                "enum_fields": {
+                  "ERASE_AND_WRITE_IN_ONE_OPERATION": {
+                    "description": "Erase and Write in one operation",
+                    "value": 0
+                  },
+                  "ERASE_ONLY": {
+                    "description": "Erase Only",
+                    "value": 1
+                  },
+                  "WRITE_ONLY": {
+                    "description": "Write Only",
+                    "value": 2
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "devices": {
+    "ATmega328P": {
+      "arch": "avr8",
+      "properties": {
+        "family": "megaAVR",
+        "arch": "AVR8"
+      },
+      "children": {
+        "interrupts": {
+          "RESET": {
+            "index": 0,
+            "description": "External Pin, Power-on Reset, Brown-out Reset and Watchdog Reset"
+          },
+          "INT0": {
+            "index": 1,
+            "description": "External Interrupt Request 0"
+          },
+          "INT1": {
+            "index": 2,
+            "description": "External Interrupt Request 1"
+          },
+          "PCINT0": {
+            "index": 3,
+            "description": "Pin Change Interrupt Request 0"
+          },
+          "PCINT1": {
+            "index": 4,
+            "description": "Pin Change Interrupt Request 1"
+          },
+          "PCINT2": {
+            "index": 5,
+            "description": "Pin Change Interrupt Request 2"
+          },
+          "WDT": {
+            "index": 6,
+            "description": "Watchdog Time-out Interrupt"
+          },
+          "TIMER2_COMPA": {
+            "index": 7,
+            "description": "Timer/Counter2 Compare Match A"
+          },
+          "TIMER2_COMPB": {
+            "index": 8,
+            "description": "Timer/Counter2 Compare Match B"
+          },
+          "TIMER2_OVF": {
+            "index": 9,
+            "description": "Timer/Counter2 Overflow"
+          },
+          "TIMER1_CAPT": {
+            "index": 10,
+            "description": "Timer/Counter1 Capture Event"
+          },
+          "TIMER1_COMPA": {
+            "index": 11,
+            "description": "Timer/Counter1 Compare Match A"
+          },
+          "TIMER1_COMPB": {
+            "index": 12,
+            "description": "Timer/Counter1 Compare Match B"
+          },
+          "TIMER1_OVF": {
+            "index": 13,
+            "description": "Timer/Counter1 Overflow"
+          },
+          "TIMER0_COMPA": {
+            "index": 14,
+            "description": "TimerCounter0 Compare Match A"
+          },
+          "TIMER0_COMPB": {
+            "index": 15,
+            "description": "TimerCounter0 Compare Match B"
+          },
+          "TIMER0_OVF": {
+            "index": 16,
+            "description": "Timer/Couner0 Overflow"
+          },
+          "SPI_STC": {
+            "index": 17,
+            "description": "SPI Serial Transfer Complete"
+          },
+          "USART_RX": {
+            "index": 18,
+            "description": "USART Rx Complete"
+          },
+          "USART_UDRE": {
+            "index": 19,
+            "description": "USART, Data Register Empty"
+          },
+          "USART_TX": {
+            "index": 20,
+            "description": "USART Tx Complete"
+          },
+          "ADC": {
+            "index": 21,
+            "description": "ADC Conversion Complete"
+          },
+          "EE_READY": {
+            "index": 22,
+            "description": "EEPROM Ready"
+          },
+          "ANALOG_COMP": {
+            "index": 23,
+            "description": "Analog Comparator"
+          },
+          "TWI": {
+            "index": 24,
+            "description": "Two-wire Serial Interface"
+          },
+          "SPM_Ready": {
+            "index": 25,
+            "description": "Store Program Memory Read"
+          }
+        },
+        "peripheral_instances": {
+          "USART0": {
+            "description": "USART",
+            "offset": 192,
+            "type": "types.peripherals.USART.children.register_groups.USART0"
+          },
+          "TWI": {
+            "description": "Two Wire Serial Interface",
+            "offset": 184,
+            "type": "types.peripherals.TWI"
+          },
+          "TC1": {
+            "description": "Timer/Counter, 16-bit",
+            "offset": 54,
+            "type": "types.peripherals.TC16.children.register_groups.TC1"
+          },
+          "TC2": {
+            "description": "Timer/Counter, 8-bit Async",
+            "offset": 55,
+            "type": "types.peripherals.TC8_ASYNC.children.register_groups.TC2"
+          },
+          "ADC": {
+            "description": "Analog-to-Digital Converter",
+            "offset": 120,
+            "type": "types.peripherals.ADC"
+          },
+          "AC": {
+            "description": "Analog Comparator",
+            "offset": 80,
+            "type": "types.peripherals.AC"
+          },
+          "PORTB": {
+            "description": "I/O Port",
+            "offset": 35,
+            "type": "types.peripherals.PORT.children.register_groups.PORTB"
+          },
+          "PORTC": {
+            "description": "I/O Port",
+            "offset": 38,
+            "type": "types.peripherals.PORT.children.register_groups.PORTC"
+          },
+          "PORTD": {
+            "description": "I/O Port",
+            "offset": 41,
+            "type": "types.peripherals.PORT.children.register_groups.PORTD"
+          },
+          "TC0": {
+            "description": "Timer/Counter, 8-bit",
+            "offset": 53,
+            "type": "types.peripherals.TC8.children.register_groups.TC0"
+          },
+          "EXINT": {
+            "description": "External Interrupts",
+            "offset": 59,
+            "type": "types.peripherals.EXINT"
+          },
+          "SPI": {
+            "description": "Serial Peripheral Interface",
+            "offset": 76,
+            "type": "types.peripherals.SPI"
+          },
+          "WDT": {
+            "description": "Watchdog Timer",
+            "offset": 96,
+            "type": "types.peripherals.WDT"
+          },
+          "EEPROM": {
+            "description": "EEPROM",
+            "offset": 63,
+            "type": "types.peripherals.EEPROM"
+          },
+          "CPU": {
+            "description": "CPU Registers",
+            "offset": 62,
+            "type": "types.peripherals.CPU"
+          },
+          "FUSE": {
+            "description": "Fuses",
+            "offset": 0,
+            "type": "types.peripherals.FUSE"
+          },
+          "LOCKBIT": {
+            "description": "Lockbits",
+            "offset": 0,
+            "type": "types.peripherals.LOCKBIT"
+          }
+        }
+      }
+    }
+  }
+}
