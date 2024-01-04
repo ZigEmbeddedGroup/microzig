@@ -11,19 +11,28 @@ fn root() []const u8 {
 
 const build_root = root();
 
+pub const chip_atsamd51j19 = .{
+    .name = "ATSAMD51J19A",
+    .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
+    .cpu = .cortex_m4,
+    .register_definition = .{
+        .atdf = .{ .path = build_root ++ "/src/chips/ATSAMD51J19A.atdf" },
+    },
+    .memory_regions = &.{
+        .{ .kind = .flash, .offset = 0x00004000, .length = 512 * 1024 }, // Embedded Flash
+        .{ .kind = .ram, .offset = 0x20000000, .length = 192 * 1024 }, // Embedded SRAM
+        .{ .kind = .ram, .offset = 0x47000000, .length = 8 * 1024 }, // Backup SRAM
+        .{ .kind = .flash, .offset = 0x00804000, .length = 512 }, // NVM User Row
+    },
+};
+
 pub const chips = struct {
     pub const atsamd51j19 = .{
-        .name = "ATSAMD51J19A",
-        .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
-        .cpu = .cortex_m4,
-        .register_definition = .{
-            .atdf = .{ .path = build_root ++ "/src/chips/ATSAMD51J19A.atdf" },
-        },
-        .memory_regions = &.{
-            .{ .kind = .flash, .offset = 0x00004000, .length = 512 * 1024 }, // Embedded Flash
-            .{ .kind = .ram, .offset = 0x20000000, .length = 192 * 1024 }, // Embedded SRAM
-            .{ .kind = .ram, .offset = 0x47000000, .length = 8 * 1024 }, // Backup SRAM
-            .{ .kind = .flash, .offset = 0x00804000, .length = 512 }, // NVM User Row
-        },
+        .preferred_format = .elf,
+        .chip = chip_atsamd51j19,
     };
+};
+
+pub const boards = struct {
+    // empty right now
 };

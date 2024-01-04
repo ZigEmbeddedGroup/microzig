@@ -40,6 +40,3 @@ fi
     # https://stackoverflow.com/a/53083343
     tar -caf "${output_file}" $(git ls-files -- . ':!:microzig-package.json')
 )
-
-# echo "included files:"
-# tar -tf "${output_file}"

@@ -47,6 +47,10 @@ pub const chips = struct {
     };
 };
 
+pub const boards = struct {
+    // empty right now
+};
+
 pub fn build(b: *std.Build) void {
     _ = b;
     // const optimize = b.standardOptimizeOption(.{});

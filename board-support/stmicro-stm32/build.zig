@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("root").dependencies.imports.microzig; // HACK: Please import MicroZig always under the name `microzig`. Otherwise the RP2040 module will fail to be properly imported.
+const microzig = @import("microzig");
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");

@@ -86,6 +86,7 @@ for dir in $(find -type f -name microzig-package.json -exec dirname '{}' ';'); d
 
         out_dir=""
         out_basename=""
+        extra_json="{}"
 
         case "${pkg_type}" in
             core)
@@ -96,6 +97,17 @@ for dir in $(find -type f -name microzig-package.json -exec dirname '{}' ';'); d
             board-support)
                 out_dir="${deploy_target}/board-support/$(dirname "${pkg_name}")"
                 out_basename="$(basename "${pkg_name}")"
+
+                extra_json="$(
+                    zig run \
+                        "${repo_root}/tools/extract-bsp-info.zig" \
+                        --cache-dir "${repo_root}/zig-cache" \
+                        --deps bsp,microzig \
+                        --mod "bsp:microzig:${dir}/build.zig" \
+                        --mod "microzig:uf2:${repo_root}/core/build.zig" \
+                        --mod "uf2::${repo_root}/tools/lib/dummy_uf2.zig" \
+                )"
+
                 ;;
 
             *)
@@ -132,7 +144,8 @@ for dir in $(find -type f -name microzig-package.json -exec dirname '{}' ';'); d
             --arg fhash "${file_hash}" \
             --arg fsize "${file_size}" \
             --argjson pkg "${pkg_info}" \
-                '. + {
+            --argjson extra "${extra_json}" \
+                '. + $extra + {
                     version: $vers,
                     created: {
                         unix: $ts_unix,
@@ -152,6 +165,5 @@ for dir in $(find -type f -name microzig-package.json -exec dirname '{}' ';'); d
             ln -s "${all_files_dir}/${out_fullname}" "${out_name}"
             ln -s "${all_files_dir}/${out_fullmeta}" "${out_meta}"
         )
-
     )
 done
