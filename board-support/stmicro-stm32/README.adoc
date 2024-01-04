@@ -1,0 +1,14 @@
+= stm32
+
+HALs and register definitions for stm32 (STMicro) devices
+
+== What version of Zig to use
+
+Right now we are following https://ziglang.org/download/[master], but once 0.11.0 is released, we will be switching to the latest stable version of Zig.
+
+== stm32 boards that renode supports:
+
+- blue pill (stm32f103)
+- nucleo 64 (stm32f103)
+- f4 discovery
+- f7 discovery
