@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -euo pipefail
+set -eu
 
 # test for all required tools:
 which tar gzip jq basename dirname realpath > /dev/null

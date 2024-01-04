@@ -5,14 +5,14 @@
 # Creates all packages into /microzig-deploy with the final folder structure.
 #
 
-set -euo pipefail
+set -eu
 
 all_files_dir=".data"
 
 # test for all required tools:
 which zig date find jq mkdir dirname realpath > /dev/null
 
-[ "$(zig version)" == "0.11.0" ]
+[ "$(zig version)" = "0.11.0" ]
 
 repo_root="$(dirname "$(dirname "$(realpath "$0")")")"
 [ -d "${repo_root}" ]
@@ -32,7 +32,7 @@ git_description="$(git describe --match "*.*.*" --tags --abbrev=9)"
 version=""
 
 # render-version <major> <minor> <patch> <counter> <hash>
-function render_version()
+render_version()
 {
     [ "$#" -eq 5 ] 
     echo "$1.$2.$3-$4-$5"
@@ -132,7 +132,7 @@ for dir in $(find -type f -name microzig-package.json -exec dirname '{}' ';'); d
         create_package "${dir}" "${out_path}"
 
         # get some required metadata
-        file_hash=($(sha256sum "${out_path}" | cut -f 1))
+        file_hash="$(sha256sum "${out_path}" | cut -d " " -f 1)"
         file_size="$(stat --format="%s" "${out_path}")"
 
         pkg_info="$(archive_info ${out_path})"

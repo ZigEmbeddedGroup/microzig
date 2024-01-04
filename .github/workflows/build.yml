@@ -1,4 +1,5 @@
-name: Build
+name: Continuous Integration
+
 on:
   push:
     branches: [main]
@@ -6,33 +7,32 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        dir:
-          - all-platforms
-          - raspberrypi-rp2040
-          - espressif-esp
-          - nxp-lpc
-          - microchip-atmega
-          - gigadevice-gd32
-          - nordic-nrf5x
-          - stmicro-stm32
-        os:
-          - windows-latest
-          - macos-latest
-          - ubuntu-latest
+  generate-packages:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true # required for "git describe"
+
+      - name: Fetch more data from git
+        run: |
+          # fetch everything back till the 0.11.0 tag.
+          # https://stackoverflow.com/a/58082274
+          git fetch --shallow-exclude 0.11.0
+          git fetch --deepen=2
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.11.0
 
-      - name: Build examples
-        working-directory: ${{ matrix.dir }}
-        run: zig build
+      - name: Generate and validate packages
+        run: |
+          ./tools/bundle.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: microzig-deploy/
