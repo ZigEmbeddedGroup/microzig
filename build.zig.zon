@@ -1,0 +1,5 @@
+.{
+    .name = "microzig-espressif-esp",
+    .version = "0.1.0",
+    .dependencies = .{},
+}
