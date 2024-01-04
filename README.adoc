@@ -1,0 +1,162 @@
+:imagesdir: design
+:toc: macro
+
+image::logo-text-auto.svg[]
+
+image::https://img.shields.io/discord/824493524413710336.svg?logo=discord[link=https://discord.gg/ShUWykk38X]
+
+[NOTE]
+This is in development; breaks in the API are bound to happen.
+
+toc::[]
+
+== What version of Zig to use
+
+0.11.0
+
+== Contributing
+
+Please see the https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1[project page], it's used as a place to brainstorm and organize work in ZEG. There will be issues marked as `good first issue` or drafts for larger ideas that need scoping/breaking ground on.
+
+== Introduction
+
+This repo contains the infrastructure for getting started in an embedded Zig project; it "gets you to main()". Specifically, it offers:
+
+* a single easy-to-use builder function that:
+** generates your linker script
+** sets up packages and startup code
+* generalized interfaces for common devices, such as UART.
+* device drivers for interacting with external hardware
+* an uncomplicated method to define xref:interrupts[interrupts]
+
+== Getting Started 
+
+Visit https://github.com/ZigEmbeddedGroup/microzig-examples to find examples for your specific board. 
+
+== Design
+
+For MicroZig internals please see the xref:docs/design.adoc[Design Document].
+
+== Does MicroZig support X hardware?
+
+MicroZig is designed to cover as wide a swath of hardware as possible. The https://github.com/ZigEmbeddedGroup[Zig Embedded Group] has some repositories that contain hardware-specific code. You will find them with the `hardware-support-package` label. If you can't find your specific device, it doesn't mean that you can't run Zig on it, it's likely you're just the first! In that case, see xref:#getting-microzig-on-new-hardware[Getting MicroZig on New Hardware].
+
+Start with an empty Zig project by running `zig init-exe`, and add the hardware support package as a submodule. We'll use `microchip-atmega` in our example:
+
+[source,zig]
+----
+const std = @import("std");
+const atmega = @import("deps/microchip-atmega/build.zig");
+
+// the hardware support package should have microzig as a dependency
+const microzig = @import("deps/hardware_support_package/deps/microzig/build.zig");
+
+pub fn build(b: *std.build.Builder) !void {
+    const optimize = b.standardOptimizeOption(.{});
+    var exe = microzig.addEmbeddedExecutable( b, .{
+        .name = "my-executable",
+        .source_file = .{
+            .path = "src/main.zig",
+        },
+        .backing = .{
+            .board = atmega.boards.arduino_nano,
+
+            // instead of a board, you can use the raw chip as well
+            // .chip = atmega.chips.atmega328p,
+        },
+        .optimize = optimize,
+    });
+    exe.installArtifact(b);
+}
+----
+
+`zig build` and now you have an executable for an Arduino Nano. In your application you can import `microzig` in order to interact with the hardware:
+
+[source,zig]
+----
+const microzig = @import("microzig");
+
+// `microzig.config`: comptime access to configuration
+// `microzig.chip`: access to register definitions, generated code
+// `microzig.board`: access to board information
+// `microzig.hal`: access to hand-written code for interacting with the hardware
+// `microzig.cpu`: access to AVR5 specific functions
+
+pub fn main() !void {
+    // your program here
+}
+----
+
+== Getting MicroZig on New Hardware
+
+If you have a board/chip that isn't defined in microzig, you can set it up yourself! You need to have:
+
+* SVD or ATDF file defining registers
+* flash and ram address and sizes
+
+First, use https://github.com/ZigEmbeddedGroup/regz[Regz] to generate the register definitions for your chip and save them to a file. Then define the chip:
+
+[source,zig]
+----
+const nrf52832 = Chip{
+    .name = "nRF52832",
+    .source = .{
+        .path = "path/to/generated/file.zig",
+    },
+    .cpu = cpus.cortex_m4,
+    .memory_regions = &.{
+        MemoryRegion{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
+        MemoryRegion{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
+    },
+};
+
+const backing = .{
+    .chip = nrf52832,
+};
+----
+
+It's important that the chip name actually matches one of the entries under `devices` in the generated code.
+
+=== Optional: JSON Register Schema
+
+You can also invoke `regz` to generate a JSON representation of the hardware:
+
+[source]
+----
+regz --json <path to svd/atdf>
+----
+
+This file could then be used by tooling. You can add it to a `Chip` like so:
+
+
+[source,zig]
+----
+const nrf52832 = Chip{
+    .name = "nRF52832",
+    .json_register_schema = .{
+        .path = "path/to.json",
+    },
+    // ...
+};
+----
+
+== Interrupts
+
+The currently supported architectures for interrupt vector generation are ARM and AVR. To define the Interrupt Service Routine (ISR) for a given interrupt, you create a function with the same name in an `interrupts` namespace, which is nested in a `microzig_options` namespace:
+
+[source,zig]
+----
+pub const microzig_options = struct {
+  pub const interrupts = struct {
+      pub fn PCINT0() void {
+        // interrupt handling code
+      }
+  };
+}
+
+pub fn main() !void {
+    // my application
+}
+----
+
+We're using compile-time checks along with the generated code to determine the list of interrupts. If a function is defined whose name is not in this list, you'll get a compiler error with the list of interrupts/valid names.
