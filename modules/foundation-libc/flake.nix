@@ -38,7 +38,7 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
             pkgs.zigpkgs."0.11.0"
-            pkgs.llvmPackages_16.clang-unwrapped
+            pkgs.llvmPackages_17.clangUseLLVM
           ];
 
           buildInputs = [
@@ -47,6 +47,9 @@
             # in non-interactive mode
             pkgs.bashInteractive
           ];
+
+          # see https://github.com/NixOS/nixpkgs/issues/18995
+          hardeningDisable = ["all"];
 
           shellHook = ''
             # once we set SHELL to point to the interactive bash, neovim will
