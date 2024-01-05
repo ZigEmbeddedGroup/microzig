@@ -1,5 +1,9 @@
 const std = @import("std");
 
+pub const include_path = std.Build.LazyPath{
+    .cwd_relative = sdk_root ++ "/include",
+};
+
 const header_files = [_][]const u8{
     "ctype.h",
     "errno.h",
@@ -40,4 +44,10 @@ pub fn build(b: *std.Build) void {
             header_name,
         ).step);
     }
+}
+
+const sdk_root = computeSdkRoot();
+
+fn computeSdkRoot() []const u8 {
+    return std.fs.path.dirname(@src().path).?;
 }
