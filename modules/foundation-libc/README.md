@@ -35,6 +35,15 @@ Leverage functions from Zig `std` if possible as they are already well tested an
 
 Which functions belong into which header can be figured out by taking a look at the *C11 Standard Draft* document or the *IBM libc functions* list. [cppreference.com](https://en.cppreference.com/w/c) usually has the better docs though, so best check out both.
 
+### Style Guides
+
+- The header files are ment to be as minimal as possible
+  - Do not use comments documenting the functions, they are well documented everywhere else.
+  - Only insert empty lines between functions if necessarity for clarity
+  - Keep function names sorted alphabetically
+- Try not to use macros at all
+- Use `clang-format` with the provided style file.
+
 ## Links
 
 - [C11 Standard](https://www.iso.org/standard/57853.html)

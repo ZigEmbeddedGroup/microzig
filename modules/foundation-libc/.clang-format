@@ -1,0 +1,17 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+QualifierAlignment: Right # use east const for better readability
+PointerAlignment: Middle # do not tack pointer to type nor value
+
+# align function names and keep them apart at least one line
+AlignConsecutiveDeclarations: AcrossEmptyLines
+
+SortIncludes: CaseSensitive
+
+---
+
