@@ -22,11 +22,14 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const single_threaded = b.option(bool, "single-threaded", "Create a single-threaded libc implementation (default: false)") orelse false;
+
     // check if the host has a gcc or clang available:
     const maybe_gcc = b.findProgram(&.{"gcc"}, &.{}) catch null;
     const maybe_clang = b.findProgram(&.{"clang"}, &.{}) catch null;
 
     const libc = createLibrary(b, target, optimize);
+    libc.single_threaded = single_threaded;
     b.installArtifact(libc);
 
     for (header_files) |header_name| {
