@@ -2,6 +2,25 @@
 
 const std = @import("std");
 
+// Implemented in compiler_rt:
+// * memcpy
+// * memset
+
+// TODO: memchr
+// TODO: memcmp
+// TODO: memmove
+// TODO: strcat
+// TODO: strcmp
+// TODO: strcpy
+// TODO: strcspn
+// TODO: strerror
+// TODO: strncat
+// TODO: strncpy
+// TODO: strpbrk
+// TODO: strrchr
+// TODO: strspn
+// TODO: strstr
+
 /// https://en.cppreference.com/w/c/string/byte/strchr
 export fn strchr(str: ?[*:0]const c_char, ch: c_int) ?[*:0]c_char {
     const s = str orelse return null;
