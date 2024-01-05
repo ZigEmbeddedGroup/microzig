@@ -1,17 +1,26 @@
 ---
 Language: Cpp
 BasedOnStyle: LLVM
+
+# basic indentation is 4 spaces, indented by spaces:
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 
-QualifierAlignment: Right # use east const for better readability
-PointerAlignment: Middle # do not tack pointer to type nor value
+# use east const for better readability:
+QualifierAlignment: Right 
+
+# do not tack pointer to type nor value:
+PointerAlignment: Middle 
 
 # align function names and keep them apart at least one line
 AlignConsecutiveDeclarations: AcrossEmptyLines
 
-SortIncludes: CaseSensitive
+# we sort includes to prevent merge conflicts:
+SortIncludes: CaseSensitive 
+
+# disable column limit:
+ColumnLimit: 0 
 
 ---
 

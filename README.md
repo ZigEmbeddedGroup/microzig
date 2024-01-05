@@ -13,6 +13,7 @@ The first goal is to reach full C11 *freestanding* support.
 - No allocator (ship your own!)
 - No support for functions that require an operating system of sorts in the background.
 - No support for `wchar_t` and `wchar.h` as it isn't portable between compilers.
+- Multi-byte character strings are implemented as UTF-8.
 
 ## Development
 
@@ -52,6 +53,7 @@ Which functions belong into which header can be figured out by taking a look at 
 - [ziglibc](https://github.com/marler8997/ziglibc) 
 - [libc-test](https://wiki.musl-libc.org/libc-test.html) by musl
 - [cppreference on freestanding](https://en.cppreference.com/w/cpp/freestanding)
+- [GCC on freestanding](https://gcc.gnu.org/onlinedocs/gcc/Standards.html#C-Language)
 - [IBM libc functions](https://www.ibm.com/docs/en/i/7.5?topic=extensions-standard-c-library-functions-table-by-name) (function to header map)
 - [cppreference](https://en.cppreference.com/w/c)
 - [clang-format style options](https://releases.llvm.org/16.0.0/tools/clang/docs/ClangFormatStyleOptions.html)
@@ -85,12 +87,12 @@ Which functions belong into which header can be figured out by taking a look at 
 | `stdint.h`      | 🔀             |                       | (since C99) Fixed-width integer types                                                                   |
 | `stdio.h`       | ❌             |                       | Input/output                                                                                            |
 | `stdlib.h`      | 🛠             | 🛠                     | General utilities: memory management, program utilities, string conversions, random numbers, algorithms |
-| `stdnoreturn.h` | ⏳             |                       | (since C11) noreturn convenience macro                                                                  |
+| `stdnoreturn.h` | 🔀             |                       | (since C11) noreturn convenience macro                                                                  |
 | `string.h`      | ✅             | 🛠                     | String handling                                                                                         |
 | `tgmath.h`      | ⏳             | ⏳                     | (since C99) Type-generic math (macros wrapping math.h and complex.h)                                    |
 | `threads.h`     | ❌             |                       | (since C11) Thread library                                                                              |
 | `time.h`        | ❌             |                       | Time/date utilities                                                                                     |
-| `uchar.h`       | ⏳             | ⏳                     | (since C11) UTF-16 and UTF-32 character utilities                                                       |
+| `uchar.h`       | 🛠             | ⏳                     | (since C11) UTF-16 and UTF-32 character utilities                                                       |
 | `wchar.h`       | ❌             |                       | (since C95) Extended multibyte and wide character utilities                                             |
 | `wctype.h`      | ❌             |                       | (since C95) Functions to determine the type contained in wide character data                            |
 
