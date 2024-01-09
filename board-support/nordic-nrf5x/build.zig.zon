@@ -1,5 +1,0 @@
-.{
-    .name = "microzig-nordic-nrf5x",
-    .version = "0.1.0",
-    .dependencies = .{},
-}

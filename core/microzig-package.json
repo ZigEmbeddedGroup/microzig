@@ -1,4 +1,10 @@
 {
-  "package_name": "microzig",
-  "package_type": "core"
+    "package_name": "core",
+    "package_type": "core",
+    "external_dependencies": {
+        "umm-zig": {
+            "url": "https://github.com/ZigEmbeddedGroup/umm-zig/archive/99d815adfbc5cc4ad385dd765a6192f85e54179f.tar.gz",
+            "hash": "12207ef7375ea45e97f4fba9c5dfa74d022902893c4dbf1a0076726b7ec39a02ea3f"
+        }
+    }
 }

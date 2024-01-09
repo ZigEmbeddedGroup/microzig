@@ -4,3 +4,4 @@ microzig-deploy/
 .DS_Store
 .gdbinit
 .lldbinit
+.direnv/

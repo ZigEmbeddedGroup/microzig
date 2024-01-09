@@ -21,7 +21,13 @@ const JsonInfo = struct {
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
+
     const allocator = gpa.allocator();
+
+    var arena_impl = std.heap.ArenaAllocator.init(allocator);
+    defer arena_impl.deinit();
+
+    const arena = arena_impl.allocator();
 
     const argv = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
@@ -35,13 +41,13 @@ pub fn main() !void {
 
     var buffered = std.io.bufferedReaderSize(4096, file.reader());
 
-    var decompress = try std.compress.gzip.decompress(allocator, buffered.reader());
-    defer decompress.deinit();
+    // var decompress = try std.compress.gzip.decompress(allocator, buffered.reader());
+    // defer decompress.deinit();
 
-    var arc = try Archive.read_from_tar(allocator, decompress.reader(), .{
+    var arc = try Archive.read_from_tar(arena, buffered.reader(), .{
         .strip_components = 0,
     });
-    defer arc.deinit(allocator);
+    defer arc.deinit(arena);
 
     {
         var paths = std.ArrayList([]const u8).init(allocator);
@@ -197,9 +203,11 @@ const Archive = struct {
                     if (start + rounded_file_size > end) return error.TarHeadersTooBig;
                     start = @as(usize, @intCast(start + rounded_file_size));
                 },
-                .hard_link => return error.TarUnsupportedFileType,
-                .symbolic_link => return error.TarUnsupportedFileType,
-                else => return error.TarUnsupportedFileType,
+                // includes .symlink, .hardlink
+                else => {
+                    std.log.err("unsupported tar type ({}) for '{s}'", .{ header.fileType(), unstripped_file_name });
+                    return error.TarUnsupportedFileType;
+                },
             }
         }
 

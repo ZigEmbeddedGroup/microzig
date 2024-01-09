@@ -1,4 +1,14 @@
 {
-  "package_name": "microzig-build",
-  "package_type": "core"
+    "package_name": "build",
+    "package_type": "build",
+    "external_dependencies": {
+        "uf2": {
+            "url": "https://github.com/ZigEmbeddedGroup/uf2/archive/8037b439ccbac862471392b25e94a8995d784e2c.tar.gz",
+            "hash": "1220cc66563fc1ecefca7990968441dc9d4db717884ffa9a2de657f60ed4bb74a70a"
+        },
+        "regz": {
+            "url": "https://github.com/ZigEmbeddedGroup/regz/archive/d66ffd56f51fc46c071412141b5d0c74dc83c310.tar.gz",
+            "hash": "122002c5f2e31c11373ede6e8a8dd9a61aabd60d38df667ec33b5f994d1f0b503823"
+        }
+    }
 }

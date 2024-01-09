@@ -1,0 +1,473 @@
+#!/usr/bin/env python3
+#
+# Prepares a full deployment of MicroZig.
+# Creates all packages into /microzig-deploy with the final folder structure.
+#
+
+import sys, os, subprocess,datetime, re, shutil, json, hashlib
+from pathlib import Path, PurePosixPath
+from dataclasses import dataclass, field 
+from dataclasses_json import dataclass_json, config as  dcj_config, Exclude as JsonExclude
+from semver import Version
+from marshmallow import fields
+from enum import Enum as StrEnum
+import pathspec
+import stat 
+from marshmallow import fields as mm_fields
+from typing import Optional
+
+
+VERBOSE = False 
+ALL_FILES_DIR=".data"
+REQUIRED_TOOLS = [
+    "zig",
+    "git",
+    # "date",
+    # "find",
+    # "jq",
+    # "mkdir",
+    # "dirname",
+    # "realpath",
+]
+
+REPO_ROOT = Path(__file__).parent.parent
+assert REPO_ROOT.is_dir()
+
+
+
+
+class PackageType(StrEnum):
+    build = "build"
+    core = "core"
+    board_support = "board-support"
+
+@dataclass_json
+@dataclass
+class Archive:
+    size: int
+    sha256sum: str
+
+@dataclass_json
+@dataclass
+class Package:
+    hash: str
+    files: list[str] = field(default_factory=lambda:[])
+
+@dataclass_json
+@dataclass
+class ExternalDependency:
+    url: str
+    hash: str 
+    
+@dataclass_json
+@dataclass
+class Timestamp:
+    unix: str
+    iso: str 
+
+@dataclass_json
+@dataclass
+class PackageConfiguration:
+    package_name: str 
+    package_type: PackageType
+
+    version: Optional[Version] = field(default=None, metadata=dcj_config(decoder=Version.parse, encoder=Version.__str__, mm_field=fields.String()))
+    
+    external_dependencies: dict[str,ExternalDependency] = field(default_factory=lambda:dict())
+    inner_dependencies: set[str] = field(default_factory=lambda:set())
+    
+    archive: Optional[Archive] = field(default = None)
+    created: Optional[Timestamp] = field(default = None)
+    package: Optional[Package]  = field(default= None)
+
+    # inner fields:
+    # package_dir: Path = field(default=None, metadata = dcj_config(exclude=JsonExclude.ALWAYS))
+
+PackageSchema = Package.schema()
+PackageConfigurationSchema = PackageConfiguration.schema()
+
+def file_digest(path: Path, hashfunc) -> bytes:
+    BUF_SIZE = 65536
+
+    digest = hashfunc()
+
+    with path.open('rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            digest.update(data)
+
+    return digest.digest()
+
+
+FILE_STAT_MAP = {
+    stat.S_IFDIR: "directory",
+    stat.S_IFCHR: "character device",
+    stat.S_IFBLK: "block device",
+    stat.S_IFREG: "regular",
+    stat.S_IFIFO: "fifo",
+    stat.S_IFLNK: "link",
+    stat.S_IFSOCK: "socket",
+    }
+
+def file_type(path: Path) -> str:
+    return FILE_STAT_MAP[stat.S_IFMT( path.stat().st_mode)]
+
+def execute_raw(*args,hide_stderr = False,**kwargs):
+    args = [ str(f) for f in args]
+    if VERBOSE:
+        print(*args)
+    res = subprocess.run(args, **kwargs, check=False)
+    if res.stderr is not None and (not hide_stderr or res.returncode != 0):
+        sys.stderr.buffer.write(res.stderr)
+    if res.returncode != 0:
+        sys.stderr.write(f"command {' '.join(args)} failed with exit code {res.returncode}")
+    res.check_returncode()
+    return res 
+
+def execute(*args,**kwargs):
+    execute_raw(*args, **kwargs, capture_output=False)
+
+def slurp(*args, **kwargs):
+    res = execute_raw(*args, **kwargs, capture_output=True)
+    return res.stdout
+
+def check_required_tools():
+    for tool in REQUIRED_TOOLS:
+        slurp("which", tool)
+
+
+def check_zig_version(expected):
+    actual = slurp("zig", "version")
+    if actual.strip() != expected.encode():
+        raise RuntimeError(f"Unexpected zig version! Expected {expected}, but found {actual.strip()}!")
+
+def build_zig_tools():    
+    # ensure we have our tools available:
+    execute("zig", "build", "tools", cwd=REPO_ROOT)
+
+    archive_info = REPO_ROOT / "zig-out/tools/archive-info"
+    create_pkg_descriptor = REPO_ROOT / "zig-out/tools/create-pkg-descriptor"
+    
+    assert archive_info.is_file()
+    assert create_pkg_descriptor.is_file()
+
+    return {
+        "archive_info": archive_info,
+        "create_pkg_descriptor": create_pkg_descriptor,
+    }
+
+
+# Determines the correct version:
+def get_version_from_git() -> str:
+
+    raw_git_out = slurp("git", "describe", "--match", "*.*.*", "--tags", "--abbrev=9", cwd=REPO_ROOT).strip().decode()
+
+    def render_version(major,minor,patch,counter,hash):
+        return f"{major}.{minor}.{patch}-{counter}-{hash}"
+    
+    full_version = re.match('^([0-9]+)\.([0-9]+)\.([0-9]+)\-([0-9]+)\-([a-z0-9]+)$', raw_git_out)
+    if full_version:
+        return render_version(*full_version.groups())
+
+    
+    base_version = re.match('^([0-9]+)\.([0-9]+)\.([0-9]+)$', raw_git_out)
+    if base_version:
+        commit_hash = slurp("git", "rev-parse", "--short=9", "HEAD")
+        return render_version(*base_version.groups(), 0, commit_hash) 
+
+    raise RuntimeError(f"Bad result '{raw_git_out}' from git describe.")
+    
+
+def create_output_directory(repo_root: Path) -> Path:
+
+    deploy_target=repo_root / "microzig-deploy"
+    if deploy_target.is_dir():
+        shutil.rmtree(deploy_target)
+    assert not deploy_target.exists()
+
+    deploy_target.mkdir()
+
+    return deploy_target
+
+def resolve_dependency_order(packages: dict[PackageConfiguration]) -> list[PackageConfiguration]:
+
+    open_list = list(packages.values())
+
+    closed_set = set()
+    closed_list = []
+    while len(open_list) > 0:
+
+        head = open_list.pop(0)
+
+        all_resolved = True
+        for dep_name in head.inner_dependencies:
+            
+            dep = packages[dep_name]
+
+            if dep.package_name not in closed_set:
+                all_resolved = False
+                break 
+        
+        if all_resolved:
+            closed_set.add(head.package_name)
+            closed_list.append(head)
+        else:
+            open_list.append(head)
+
+    return closed_list
+
+def get_batch_timestamp():
+    render_time = datetime.datetime.now()
+    return Timestamp(
+        unix=str(int(render_time.timestamp())),
+        iso=render_time.isoformat(),
+    )
+
+def main():
+
+    check_required_tools()
+
+    check_zig_version("0.11.0")
+
+    print("preparing environment...")
+
+    deploy_target = create_output_directory(REPO_ROOT)    
+
+    # Some generic meta information:
+    batch_timestamp = get_batch_timestamp()
+
+    version = get_version_from_git()
+
+    tools = build_zig_tools()
+
+    # After building the tools, zig-cache should exist, so we can tap into it for our own caching purposes:
+
+    cache_root = REPO_ROOT / "zig-cache"
+    assert cache_root.is_dir()
+
+    cache_dir = cache_root / "microzig"
+    cache_root.mkdir(exist_ok=True)
+
+    # Prepare `.gitignore` pattern matcher:
+    global_ignore_spec = pathspec.PathSpec.from_lines(
+        pathspec.patterns.GitWildMatchPattern, 
+        (REPO_ROOT / ".gitignore").read_text().splitlines(),
+    )
+
+    # also insert a pattern to exclude 
+    global_ignore_spec.patterns.append(
+        pathspec.patterns.GitWildMatchPattern("microzig-package.json")
+    )
+
+    print(global_ignore_spec)      
+
+    # Fetch and find all packages:
+
+    print("validating packages...")
+
+    packages = {}
+    validation_ok = True
+
+    for meta_path in REPO_ROOT.rglob("microzig-package.json"):
+        assert meta_path.is_file()
+
+        pkg_dir = meta_path.parent
+
+        pkg_dict = json.loads(meta_path.read_bytes())
+        pkg = PackageConfigurationSchema.load(pkg_dict)
+
+        pkg.version = version
+        pkg.created = batch_timestamp
+        pkg.package_dir = pkg_dir
+
+        if pkg.package_type == PackageType.core:
+            pass
+        elif pkg.package_type == PackageType.build:
+            pass        
+        elif pkg.package_type == PackageType.board_support:
+            pkg.inner_dependencies.add("core") # BSPs implicitly depend on the core "microzig" package
+        else:
+            assert False 
+
+        buildzig_path = pkg_dir / "build.zig"
+        buildzon_path = pkg_dir / "build.zig.zon"
+        
+        if not buildzig_path.is_file():
+            print("")
+            print(f"The package at {meta_path} is missing its build.zig file: {buildzig_path}")
+            print("Please create a build.zig for that package!")
+            validation_ok = False
+            
+        if buildzon_path.is_file():
+            print("")
+            print(f"The package at {meta_path} has a build.zig.zon: {buildzon_path}")
+            print("Please remove that file and merge it into microzig-package.json!")
+            validation_ok = False
+        
+        if pkg.package_name not in packages:
+            packages[pkg.package_name] = pkg
+        else:
+            print("")
+            print(f"The package at {meta_path} has a duplicate package name {pkg.package_name}")
+            print("Please remove that file and merge it into microzig-package.json!")
+            validation_ok = False
+
+        # print("%d\t%s\n", "${pkg_prio}" "${reldir}" >> "${cache_dir}/packages.raw")
+
+    # cat "${cache_dir}/packages.raw" | sort | cut -f 2 > "${cache_dir}/packages.list"
+
+    if not validation_ok:
+        print("Not all packages are valid. Fix the packages and try again!" )
+        exit(1)
+
+    print("loaded packages:")
+    for key in packages:
+        print(f"  * {key}")
+
+    print("resolving inner dependencies...")
+    
+    evaluation_ordered_packages = resolve_dependency_order(packages)
+
+    # bundle everything:
+
+    
+
+
+    print("creating packages...")
+    for pkg in evaluation_ordered_packages:
+        print(f"bundling {pkg.package_name}...")
+        
+        pkg_dir = pkg.package_dir        
+
+        pkg_cache_dir = cache_dir / hashlib.md5(pkg.package_name.encode()).hexdigest()
+        pkg_cache_dir.mkdir(exist_ok=True)
+        
+        meta_path = pkg_dir / "microzig-package.json"
+        pkg_zon_file = pkg_cache_dir / "build.zig.zon" 
+
+        out_rel_dir: PurePosixPath 
+        out_basename: str 
+        extra_json: dict = {}
+        
+        if pkg.package_type == PackageType.build:
+            out_rel_dir = PurePosixPath(".")
+            out_basename = pkg.package_name
+
+        elif pkg.package_type == PackageType.core:
+            out_rel_dir = PurePosixPath(".")
+            out_basename = pkg.package_name
+
+        elif pkg.package_type == PackageType.board_support:
+            parsed_pkg_name = PurePosixPath(pkg.package_name)
+
+            out_rel_dir = "board-support" / parsed_pkg_name.parent
+            out_basename = parsed_pkg_name.name
+
+            bsp_info = slurp(
+                "zig", "build-exe",
+                    f"{REPO_ROOT}/tools/extract-bsp-info.zig" ,
+                    "--cache-dir", f"{REPO_ROOT}/zig-cache",
+                    "--deps", "bsp,microzig",
+                    "--mod", f"bsp:microzig:{pkg_dir}/build.zig",
+                    "--mod", f"microzig:uf2:{REPO_ROOT}/core/build.zig",
+                    "--mod", f"uf2::{REPO_ROOT}/tools/lib/dummy_uf2.zig",
+                    "--name", "extract-bsp-info",
+                cwd=pkg_cache_dir,
+            )
+
+            extra_json_str=slurp(pkg_cache_dir/"extract-bsp-info")
+
+            extra_json = json.loads(extra_json_str)
+
+        else:
+            assert False 
+
+        assert out_rel_dir is not None
+        assert out_basename is not None
+        assert isinstance(extra_json, dict)
+
+        # File names:
+
+        out_file_name_tar = f"{out_basename}-{version}.tar"
+        out_file_name_compr = f"{out_file_name_tar}.gz"
+        out_file_name_meta = f"{out_basename}-{version}.json"
+
+        out_symlink_pkg_name = f"{out_basename}.tar.gz"
+        out_symlink_meta_name = f"{out_basename}.json"
+
+        
+        # Directories_:        
+        out_base_dir = deploy_target / out_rel_dir
+        out_data_dir = out_base_dir / ALL_FILES_DIR
+
+        # paths:
+        out_file_tar = out_data_dir / out_file_name_tar
+        out_file_targz = out_data_dir / out_file_name_compr
+        out_file_meta = out_data_dir / out_file_name_meta
+
+        out_symlink_pkg = out_base_dir / out_symlink_pkg_name
+        out_symlink_meta = out_base_dir / out_symlink_meta_name
+   
+        # ensure the directories exist:
+        out_base_dir.mkdir(parents = True, exist_ok=True)
+        out_data_dir.mkdir(parents = True, exist_ok=True)
+
+        # find files that should be packaged:
+
+        package_files = [*global_ignore_spec.match_tree(pkg_dir,negate = True )]
+        # package_files = [ 
+        #     file.relative_to(pkg_dir)
+        #     for file in pkg_dir.rglob("*") 
+        #         if not global_ignore_spec.match_file(str(file))
+        #         if file.name != 
+        # ]
+
+        if VERBOSE:
+            print("\n".join(f"  * {str(f)} ({file_type(pkg_dir / f)})" for f in package_files))
+            print()
+
+        # tar -cf "${out_tar}" $(git ls-files -- . ':!:microzig-package.json')
+        execute("tar", "-cf", out_file_tar, "--hard-dereference", *package_files, cwd=pkg_dir)
+
+        zon_data = slurp(
+            tools["create_pkg_descriptor"], version, out_rel_dir, 
+            input=PackageConfigurationSchema.dumps(pkg).encode(),
+        )
+
+        with pkg_zon_file.open("wb") as f:
+            f.write(zon_data)
+
+        slurp("zig", "fmt", pkg_zon_file) # slurp the message away
+
+        execute("tar", "-rf", out_file_tar, "--hard-dereference", pkg_zon_file.name, cwd=pkg_zon_file.parent)
+
+        # tar --list --file "${out_tar}" > "${pkg_cache_dir}/contents.list"
+        
+        zig_pkg_info_str = slurp(tools["archive_info"], out_file_tar)
+        pkg.package = PackageSchema.loads(zig_pkg_info_str)
+
+        # explicitly use maximum compression level here as we're shipping to potentially many people
+        execute("gzip", "-f9", out_file_tar)
+        assert not out_file_tar.exists()
+        assert out_file_targz.is_file()
+        del out_file_tar
+
+        pkg.archive = Archive(
+            sha256sum = file_digest(out_file_targz, hashlib.sha256).hex(),
+            size = str(out_file_targz.stat().st_size),
+        )
+        
+        with out_file_meta.open("w") as f:
+            f.write(PackageConfigurationSchema.dumps(pkg))
+
+        out_symlink_pkg.symlink_to(out_file_targz.relative_to(out_symlink_pkg.parent))
+        out_symlink_meta.symlink_to(out_file_meta.relative_to(out_symlink_meta.parent))
+
+    # TODO: Verify that each package can be unpacked and built
+
+
+
+if __name__ == "__main__":
+    main()
