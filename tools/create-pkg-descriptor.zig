@@ -36,9 +36,27 @@ const MetaData = struct {
     archive: ?Archive = null,
     package: ?Package = null,
     created: ?Timestamp = null,
+
+    download_url: ?[]const u8 = null,
+
+    microzig: std.json.Value = .null,
 };
 
-// create-pkg-descriptor <version>
+fn findPackage(packages: []const MetaData, name: []const u8) ?*const MetaData {
+    return for (packages) |*pkg| {
+        if (std.mem.eql(u8, pkg.package_name, name))
+            return pkg;
+    } else null;
+}
+
+fn renderDep(writer: anytype, name: []const u8, url: []const u8, hash: []const u8) !void {
+    try writer.print("            .{} = .{{\n", .{fmtId(name)});
+    try writer.print("                .url = \"{}\",\n", .{fmtEscapes(url)});
+    try writer.print("                .hash = \"{}\",\n", .{fmtEscapes(hash)});
+    try writer.writeAll("        },\n");
+}
+
+// create-pkg-descriptor <package_name>
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -52,66 +70,54 @@ pub fn main() !void {
 
     const argv = try std.process.argsAlloc(arena);
 
-    if (argv.len != 3) {
+    if (argv.len != 2) {
         @panic("version and/or relpath missing!");
     }
 
-    // System configuration:
-    const deployment_base_url = "https://download.microzig.tech/packages"; // TODO: Make those configurable
-
     // build inputs:
-    const version_string = argv[1];
-    const rel_pkg_path = argv[2];
-
-    const version = try std.SemanticVersion.parse(version_string);
+    const pkg_name = argv[1];
 
     const json_input = try std.io.getStdIn().readToEndAlloc(arena, 1 << 20);
 
     errdefer std.log.err("failed to parse json from {s}", .{json_input});
 
-    const metadata = try std.json.parseFromSliceLeaky(MetaData, arena, json_input, .{});
+    const all_packages = try std.json.parseFromSliceLeaky([]MetaData, arena, json_input, .{});
+
+    const package = findPackage(all_packages, pkg_name).?;
+
+    const version = try std.SemanticVersion.parse(package.version);
 
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());
 
     const stdout = buffered_stdout.writer();
     {
         try stdout.writeAll(".{\n");
-        try stdout.print("    .name = \"{}\",\n", .{fmtEscapes(metadata.package_name)});
+        try stdout.print("    .name = \"{}\",\n", .{fmtEscapes(package.package_name)});
         try stdout.print("    .version = \"{}\",\n", .{version});
         try stdout.writeAll("    .dependencies = .{\n");
-        if (metadata.external_dependencies != .null) {
-            const deps = &metadata.external_dependencies.object;
+        if (package.external_dependencies != .null) {
+            const deps = &package.external_dependencies.object;
             for (deps.keys(), deps.values()) |key, value| {
                 const dep: *const std.json.ObjectMap = &value.object;
-
-                //
-
-                try stdout.print("            .{} = .{{\n", .{fmtId(key)});
-
-                try stdout.print("                .url = \"{}\",\n", .{fmtEscapes(dep.get("url").?.string)});
-                try stdout.print("                .hash = \"{}\",\n", .{fmtEscapes(dep.get("hash").?.string)});
-                try stdout.writeAll("        },\n");
+                try renderDep(
+                    stdout,
+                    key,
+                    dep.get("url").?.string,
+                    dep.get("hash").?.string,
+                );
             }
         }
 
-        switch (metadata.package_type) {
-            .core => {
-                // core packages are always "standalone" in the microzig environment and provide the root
-                // of the build
-            },
+        // Add all other dependencies:
+        for (package.inner_dependencies) |dep_name| {
+            const dep = findPackage(all_packages, dep_name).?;
 
-            .build => {
-                //
-            },
-
-            .@"board-support" => {
-                // bsp packages implicitly depend on the "microzig" package:
-
-                try stdout.writeAll("            .microzig = .{\n");
-                try stdout.print("                .url = \"{}/{}\",\n", .{ fmtEscapes(deployment_base_url), fmtEscapes(rel_pkg_path) });
-                try stdout.print("                .hash = \"{}\",\n", .{fmtEscapes("???")});
-                try stdout.writeAll("        },\n");
-            },
+            try renderDep(
+                stdout,
+                "microzig",
+                dep.download_url.?,
+                dep.package.?.hash,
+            );
         }
 
         try stdout.writeAll("    },\n");

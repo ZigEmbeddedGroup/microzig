@@ -14,7 +14,7 @@ from enum import Enum as StrEnum
 import pathspec
 import stat 
 from marshmallow import fields as mm_fields
-from typing import Optional
+from typing import Optional, Any
 
 
 VERBOSE = False 
@@ -29,6 +29,7 @@ REQUIRED_TOOLS = [
     # "dirname",
     # "realpath",
 ]
+DEPLOYMENT_BASE="https://download.microzig.tech/packages"
 
 REPO_ROOT = Path(__file__).parent.parent
 assert REPO_ROOT.is_dir()
@@ -44,7 +45,7 @@ class PackageType(StrEnum):
 @dataclass_json
 @dataclass
 class Archive:
-    size: int
+    size: str
     sha256sum: str
 
 @dataclass_json
@@ -64,7 +65,7 @@ class ExternalDependency:
 class Timestamp:
     unix: str
     iso: str 
-
+    
 @dataclass_json
 @dataclass
 class PackageConfiguration:
@@ -80,9 +81,30 @@ class PackageConfiguration:
     created: Optional[Timestamp] = field(default = None)
     package: Optional[Package]  = field(default= None)
 
+    download_url: Optional[str] = field(default=None)
+
+    microzig: Optional[Any] = field(default=None)
+
     # inner fields:
     # package_dir: Path = field(default=None, metadata = dcj_config(exclude=JsonExclude.ALWAYS))
 
+@dataclass_json
+@dataclass
+class PackageDesc:
+    name: str
+    type: PackageType
+    version: str # semver
+    metadata: str # url to json
+    download: str # url to tar.gz
+
+@dataclass_json
+@dataclass
+class PackageIndex:
+    
+    last_update: Timestamp
+    packages: list[PackageDesc]
+
+PackageIndexSchema = PackageIndex.schema()
 PackageSchema = Package.schema()
 PackageConfigurationSchema = PackageConfiguration.schema()
 
@@ -261,8 +283,6 @@ def main():
         pathspec.patterns.GitWildMatchPattern("microzig-package.json")
     )
 
-    print(global_ignore_spec)      
-
     # Fetch and find all packages:
 
     print("validating packages...")
@@ -282,14 +302,27 @@ def main():
         pkg.created = batch_timestamp
         pkg.package_dir = pkg_dir
 
+
         if pkg.package_type == PackageType.core:
-            pass
+            pkg.out_rel_dir = PurePosixPath(".")
+            pkg.out_basename = pkg.package_name
+
         elif pkg.package_type == PackageType.build:
-            pass        
+            pkg.out_rel_dir = PurePosixPath(".")
+            pkg.out_basename = pkg.package_name
+
         elif pkg.package_type == PackageType.board_support:
-            pkg.inner_dependencies.add("core") # BSPs implicitly depend on the core "microzig" package
+            parsed_pkg_name = PurePosixPath(pkg.package_name)
+
+            pkg.out_rel_dir = "board-support" / parsed_pkg_name.parent
+            pkg.out_basename = parsed_pkg_name.name
+
+            pkg.inner_dependencies.add("microzig-core") # BSPs implicitly depend on the core "microzig" package
         else:
             assert False 
+
+        download_path = pkg.out_rel_dir / ALL_FILES_DIR / f"{pkg.out_basename}-{version}.tar.gz"
+        pkg.download_url = f"{DEPLOYMENT_BASE}/{download_path}"
 
         buildzig_path = pkg_dir / "build.zig"
         buildzon_path = pkg_dir / "build.zig.zon"
@@ -313,11 +346,7 @@ def main():
             print(f"The package at {meta_path} has a duplicate package name {pkg.package_name}")
             print("Please remove that file and merge it into microzig-package.json!")
             validation_ok = False
-
-        # print("%d\t%s\n", "${pkg_prio}" "${reldir}" >> "${cache_dir}/packages.raw")
-
-    # cat "${cache_dir}/packages.raw" | sort | cut -f 2 > "${cache_dir}/packages.list"
-
+        
     if not validation_ok:
         print("Not all packages are valid. Fix the packages and try again!" )
         exit(1)
@@ -332,8 +361,10 @@ def main():
 
     # bundle everything:
 
-    
-
+    index = PackageIndex(
+        last_update = batch_timestamp,
+        packages = [],
+    )
 
     print("creating packages...")
     for pkg in evaluation_ordered_packages:
@@ -347,24 +378,10 @@ def main():
         meta_path = pkg_dir / "microzig-package.json"
         pkg_zon_file = pkg_cache_dir / "build.zig.zon" 
 
-        out_rel_dir: PurePosixPath 
-        out_basename: str 
-        extra_json: dict = {}
+        out_rel_dir: PurePosixPath = pkg.out_rel_dir
+        out_basename: str = pkg.out_basename
         
-        if pkg.package_type == PackageType.build:
-            out_rel_dir = PurePosixPath(".")
-            out_basename = pkg.package_name
-
-        elif pkg.package_type == PackageType.core:
-            out_rel_dir = PurePosixPath(".")
-            out_basename = pkg.package_name
-
-        elif pkg.package_type == PackageType.board_support:
-            parsed_pkg_name = PurePosixPath(pkg.package_name)
-
-            out_rel_dir = "board-support" / parsed_pkg_name.parent
-            out_basename = parsed_pkg_name.name
-
+        if pkg.package_type == PackageType.board_support:
             bsp_info = slurp(
                 "zig", "build-exe",
                     f"{REPO_ROOT}/tools/extract-bsp-info.zig" ,
@@ -379,14 +396,11 @@ def main():
 
             extra_json_str=slurp(pkg_cache_dir/"extract-bsp-info")
 
-            extra_json = json.loads(extra_json_str)
+            pkg.microzig = json.loads(extra_json_str)
 
-        else:
-            assert False 
 
         assert out_rel_dir is not None
         assert out_basename is not None
-        assert isinstance(extra_json, dict)
 
         # File names:
 
@@ -432,8 +446,9 @@ def main():
         execute("tar", "-cf", out_file_tar, "--hard-dereference", *package_files, cwd=pkg_dir)
 
         zon_data = slurp(
-            tools["create_pkg_descriptor"], version, out_rel_dir, 
-            input=PackageConfigurationSchema.dumps(pkg).encode(),
+            tools["create_pkg_descriptor"],
+            pkg.package_name, 
+            input=PackageConfigurationSchema.dumps(evaluation_ordered_packages, many=True ).encode(),
         )
 
         with pkg_zon_file.open("wb") as f:
@@ -464,6 +479,17 @@ def main():
 
         out_symlink_pkg.symlink_to(out_file_targz.relative_to(out_symlink_pkg.parent))
         out_symlink_meta.symlink_to(out_file_meta.relative_to(out_symlink_meta.parent))
+
+        index.packages.append(PackageDesc(
+            name = pkg.package_name,
+            type = pkg.package_type,
+            version = version,
+            metadata = pkg.download_url.removesuffix(".tar.gz") + ".json",
+            download = pkg.download_url,
+        ))
+
+    with (deploy_target / "index.json").open("w") as f:
+        f.write(PackageIndexSchema.dumps(index))
 
     # TODO: Verify that each package can be unpacked and built
 

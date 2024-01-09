@@ -1,5 +1,5 @@
 {
-    "package_name": "build",
+    "package_name": "microzig-build",
     "package_type": "build",
     "external_dependencies": {
         "uf2": {

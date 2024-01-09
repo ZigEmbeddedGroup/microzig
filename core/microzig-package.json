@@ -1,5 +1,5 @@
 {
-    "package_name": "core",
+    "package_name": "microzig-core",
     "package_type": "core",
     "external_dependencies": {
         "umm-zig": {
