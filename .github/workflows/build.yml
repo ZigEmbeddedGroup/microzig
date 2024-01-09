@@ -27,9 +27,13 @@ jobs:
         with:
           version: 0.11.0
 
+      - name: Install PIP packages
+        run: |
+          pip install dataclasses_json==0.6.3 marshmallow typing-inspect semver pathspec
+
       - name: Generate and validate packages
         run: |
-          ./tools/bundle.sh
+          ./tools/bundle.py
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

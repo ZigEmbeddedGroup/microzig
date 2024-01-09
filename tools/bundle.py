@@ -248,7 +248,7 @@ def main():
     assert cache_root.is_dir()
 
     cache_dir = cache_root / "microzig"
-    cache_root.mkdir(exist_ok=True)
+    cache_dir.mkdir(exist_ok=True)
 
     # Prepare `.gitignore` pattern matcher:
     global_ignore_spec = pathspec.PathSpec.from_lines(
