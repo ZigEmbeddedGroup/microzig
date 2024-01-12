@@ -1,5 +1,9 @@
 name: Continuous Integration
 
+env:
+  # Specify the current Zig version MicroZig uses:
+  ZIG_VERSION: 0.11.0
+
 on:
   push:
     branches: [main]
@@ -17,15 +21,15 @@ jobs:
 
       - name: Fetch more data from git
         run: |
-          # fetch everything back till the 0.11.0 tag.
+          # fetch everything back till the $(ZIG_VERSION) tag.
           # https://stackoverflow.com/a/58082274
-          git fetch --shallow-exclude 0.11.0
+          git fetch --shallow-exclude ${{ env.ZIG_VERSION }}
           git fetch --deepen=2
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.11.0
+          version: ${{ env.ZIG_VERSION }}
 
       - name: Install PIP packages
         run: |
