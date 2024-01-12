@@ -1,3 +1,17 @@
+//!
+//! Creates a `build.zig.zon` based on a JSON array of `microzig-package.json` files.
+//!
+//! Usage: create-pkg-descriptor <package-name> < all-packages.json > build.zig.zon
+//!
+//! Searches for a package called `<package-name>` in the `microzig-package.json` descriptors
+//! passed in on stdin.
+//!
+//! Those package descriptors must have `version`, `package_name`, `external_dependencies` and `inner_dependencies` set,
+//! The inner dependencies must also have `download_url` and `package.hash` available.
+//!
+//! This program is intended for the use from the `tools/bundly.py` bundler. See this script for more usage information.
+//!
+
 const std = @import("std");
 const eggzon = @import("eggzon");
 
@@ -56,7 +70,6 @@ fn renderDep(writer: anytype, name: []const u8, url: []const u8, hash: []const u
     try writer.writeAll("        },\n");
 }
 
-// create-pkg-descriptor <package_name>
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();

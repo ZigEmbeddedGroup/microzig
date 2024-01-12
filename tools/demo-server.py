@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-
+#
+# A small web server that can serve the `${root}/microzig-deploy` folder for testing the package infrastructure.
+#
+# Basically `python -m http.server 8080`, but also hides folders starting with `.data` so the "internals" aren't shown
+# to the user in the file listing.
+#
 
 from pathlib import Path
 from http.server import HTTPServer,SimpleHTTPRequestHandler

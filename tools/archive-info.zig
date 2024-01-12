@@ -1,8 +1,9 @@
 //!
-//! Computes some meta information for packages and prints them as JSON.
+//! Computes the hash and some meta information for package tar balls and prints them as JSON.
+//!
 //! Usage: archive-info <file>
 //!
-//! Is used in `/tools/bundle.sh` to extend the `microzig-package.json` file.
+//! Is used in `/tools/bundle.py` to extend the `microzig-package.json` file.
 //!
 
 const std = @import("std");

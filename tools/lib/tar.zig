@@ -1,3 +1,7 @@
+//!
+//! Extracted from https://github.com/mattnite/ezpkg.
+//!
+
 const std = @import("std");
 const builtin = @import("builtin");
 

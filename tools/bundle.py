@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 #
 # Prepares a full deployment of MicroZig.
-# Creates all packages into /microzig-deploy with the final folder structure.
+# Creates all packages into ${repo}/microzig-deploy with the final folder structure.
 #
+# Just invoke this script to create a deployment structure for MicroZig.
+#
+
 
 import sys, os, subprocess,datetime, re, shutil, json, hashlib
 from pathlib import Path, PurePosixPath
@@ -22,12 +25,6 @@ ALL_FILES_DIR=".data"
 REQUIRED_TOOLS = [
     "zig",
     "git",
-    # "date",
-    # "find",
-    # "jq",
-    # "mkdir",
-    # "dirname",
-    # "realpath",
 ]
 DEPLOYMENT_BASE="https://download.microzig.tech/packages"
 

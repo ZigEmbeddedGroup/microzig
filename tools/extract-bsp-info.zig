@@ -1,5 +1,5 @@
 //!
-//! A tool that extracs which chips and boards are avaiilable from a board support package
+//! A tool that extracs which chips and boards are available from a board support package
 //! and validates that the declarations conform
 //!
 
@@ -62,7 +62,7 @@ fn renderMicroZigTarget(stream: anytype, key: []const u8, target: microzig.Targe
     for (target.chip.memory_regions) |reg| {
         switch (reg.kind) {
             .flash => jtarget.memory.flash += reg.length,
-            .ram => jtarget.memory.flash += reg.length,
+            .ram => jtarget.memory.ram += reg.length,
             else => {},
         }
     }
