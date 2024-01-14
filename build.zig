@@ -495,7 +495,7 @@ pub fn addFirmware(
     };
     errdefer fw.output_files.deinit();
 
-    fw.modules.chip = micro_build.createModule(.{
+    fw.modules.chip = mz.b.createModule(.{
         .source_file = chip_source,
         .dependencies = &.{
             .{ .name = "microzig", .module = fw.modules.microzig },
@@ -503,7 +503,7 @@ pub fn addFirmware(
     });
     fw.modules.microzig.dependencies.put("chip", fw.modules.chip) catch @panic("out of memory");
 
-    fw.modules.cpu = micro_build.createModule(.{
+    fw.modules.cpu = mz.b.createModule(.{
         .source_file = cpu.source_file,
         .dependencies = &.{
             .{ .name = "microzig", .module = fw.modules.microzig },
@@ -512,7 +512,7 @@ pub fn addFirmware(
     fw.modules.microzig.dependencies.put("cpu", fw.modules.cpu) catch @panic("out of memory");
 
     if (maybe_hal) |hal| {
-        fw.modules.hal = micro_build.createModule(.{
+        fw.modules.hal = mz.b.createModule(.{
             .source_file = hal.source_file,
             .dependencies = &.{
                 .{ .name = "microzig", .module = fw.modules.microzig },
@@ -522,7 +522,7 @@ pub fn addFirmware(
     }
 
     if (maybe_board) |brd| {
-        fw.modules.board = micro_build.createModule(.{
+        fw.modules.board = mz.b.createModule(.{
             .source_file = brd.source_file,
             .dependencies = &.{
                 .{ .name = "microzig", .module = fw.modules.microzig },
