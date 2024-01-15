@@ -17,6 +17,20 @@ pub const CodeModel = enum(u24) {
     code22 = 0x3F_FFFF,
 };
 
+// see: https://en.wikipedia.org/wiki/Atmel_AVR_instruction_set#Instruction_set_inheritance
+pub const InstructionSet = enum {
+    avr1,
+    avr2,
+    @"avr2.5",
+    avr3,
+    avr4,
+    avr5,
+    @"avr5.1",
+    avr6,
+    avrxmega,
+    avrtiny10,
+};
+
 const InstructionEffect = enum {
     none,
 
@@ -37,6 +51,7 @@ trace: bool = false,
 
 // Device:
 code_model: CodeModel,
+instruction_set: InstructionSet,
 sio: SpecialIoRegisters,
 flash: Flash,
 sram: RAM,

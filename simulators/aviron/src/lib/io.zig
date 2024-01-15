@@ -6,6 +6,8 @@ pub const Flash = struct {
 
     ctx: ?*anyopaque,
     vtable: *const VTable,
+
+    /// Size of the flash memory in bytes. Is always 2-aligned.
     size: usize,
 
     pub fn read(mem: Flash, addr: Address) u16 {
@@ -60,6 +62,8 @@ pub const RAM = struct {
 
     ctx: ?*anyopaque,
     vtable: *const VTable,
+
+    /// Size of the RAM memory space in bytes.
     size: usize,
 
     pub fn read(mem: RAM, addr: Address) u8 {
@@ -133,6 +137,8 @@ pub const IO = struct {
     pub const Address = u6;
 
     ctx: ?*anyopaque,
+
+    /// Size of the EEPROM in bytes.
     vtable: *const VTable,
 
     pub fn read(mem: IO, addr: Address) u8 {
