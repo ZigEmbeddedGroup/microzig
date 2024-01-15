@@ -66,9 +66,9 @@ pub fn main() !u8 {
         try stdout.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
         try stdout.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
-        try stdout.print("  RAM:        {d: >5} bytes\n", .{flash_storage.memory().size});
-        try stdout.print("  Flash:      {d: >5} bytes\n", .{sram.memory().size});
-        try stdout.print("  EEPROM:     {d: >5} bytes\n", .{eeprom.memory().size});
+        try stdout.print("  RAM:        {d: >5} bytes\n", .{cpu.flash.size});
+        try stdout.print("  Flash:      {d: >5} bytes\n", .{cpu.sram.size});
+        try stdout.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
         return 0;
     }
 
