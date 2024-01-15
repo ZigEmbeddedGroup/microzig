@@ -9,10 +9,23 @@ pub fn main() !u8 {
     var cli = args_parser.parseForCurrentProcess(Cli, allocator, .print) catch return 1;
     defer cli.deinit();
 
-    if (cli.positionals.len == 0)
-        @panic("usage: aviron [--trace] <elf>");
+    if (cli.options.help or (cli.positionals.len == 0 and !cli.options.info)) {
+        var stderr = std.io.getStdErr();
+
+        try args_parser.printHelp(
+            Cli,
+            cli.executable_name orelse "aviron",
+            stderr.writer(),
+        );
+
+        return if (cli.options.help) @as(u8, 0) else 1;
+    }
 
     // Emulate Atmega382p device size:
+
+    // TODO: Add support for more MCUs!
+    std.debug.assert(cli.options.mcu == .atmega328p);
+
     var flash_storage = aviron.Flash.Static(32768){};
     var sram = aviron.RAM.Static(2048){};
     var eeprom = aviron.EEPROM.Static(1024){};
@@ -21,6 +34,45 @@ pub fn main() !u8 {
         .sp = 2047,
     };
 
+    var cpu = aviron.Cpu{
+        .trace = cli.options.trace,
+
+        .flash = flash_storage.memory(),
+        .sram = sram.memory(),
+        .eeprom = eeprom.memory(),
+        .io = io.memory(),
+
+        .code_model = .code16,
+        .instruction_set = .avr5,
+
+        .sio = .{
+            .ramp_x = null,
+            .ramp_y = null,
+            .ramp_z = null,
+            .ramp_d = null,
+            .e_ind = null,
+
+            .sp_l = @intFromEnum(IO.Register.sp_l),
+            .sp_h = @intFromEnum(IO.Register.sp_h),
+
+            .sreg = @intFromEnum(IO.Register.sreg),
+        },
+    };
+
+    io.sreg = &cpu.sreg;
+
+    if (cli.options.info) {
+        var stdout = std.io.getStdOut().writer();
+        try stdout.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
+        try stdout.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
+        try stdout.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
+        try stdout.print("  RAM:        {d: >5} bytes\n", .{flash_storage.memory().size});
+        try stdout.print("  Flash:      {d: >5} bytes\n", .{sram.memory().size});
+        try stdout.print("  EEPROM:     {d: >5} bytes\n", .{eeprom.memory().size});
+        return 0;
+    }
+
+    // Load all provided executables:
     for (cli.positionals) |file_path| {
         var elf_file = try std.fs.cwd().openFile(file_path, .{});
         defer elf_file.close();
@@ -46,32 +98,6 @@ pub fn main() !u8 {
         }
     }
 
-    var cpu = aviron.Cpu{
-        .trace = cli.options.trace,
-
-        .flash = flash_storage.memory(),
-        .sram = sram.memory(),
-        .eeprom = eeprom.memory(),
-        .io = io.memory(),
-
-        .code_model = .code16,
-
-        .sio = .{
-            .ramp_x = null,
-            .ramp_y = null,
-            .ramp_z = null,
-            .ramp_d = null,
-            .e_ind = null,
-
-            .sp_l = @intFromEnum(IO.Register.sp_l),
-            .sp_h = @intFromEnum(IO.Register.sp_h),
-
-            .sreg = @intFromEnum(IO.Register.sreg),
-        },
-    };
-
-    io.sreg = &cpu.sreg;
-
     const result = try cpu.run(null);
 
     std.debug.print("STOP: {s}\n", .{@tagName(result)});
@@ -79,10 +105,39 @@ pub fn main() !u8 {
     return 0;
 }
 
+// not actually marvel cinematic universe, but microcontroller unit ;
+pub const MCU = enum {
+    atmega328p,
+};
+
 const Cli = struct {
     help: bool = false,
-
     trace: bool = false,
+    mcu: MCU = .atmega328p,
+    info: bool = false,
+
+    pub const shorthands = .{
+        .h = "help",
+        .t = "trace",
+        .m = "mcu",
+        .I = "info",
+    };
+    pub const meta = .{
+        .summary = "[-h] [-t] [-m <mcu>] <elf> ...",
+        .full_text =
+        \\AViRon is a simulator for the AVR cpu architecture as well as an basic emulator for several microcontrollers from Microchip/Atmel.
+        \\
+        \\Loads at least a single <elf> file into the memory of the system and executes it with the provided MCU.
+        \\
+        \\The code can use certain special registers to perform I/O and exit the emulator.
+        ,
+        .option_docs = .{
+            .help = "Prints this help text.",
+            .trace = "Trace all executed instructions.",
+            .mcu = "Selects the emulated MCU.",
+            .info = "Prints information about the given MCUs memory.",
+        },
+    };
 };
 
 const IO = struct {
