@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("microzig");
+const microzig = @import("microzig-build");
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) !void {
 
 pub const chips = struct {
     // Note: This chip has no flash support defined and requires additional configuration!
-    pub const rp2040 = .{
+    pub const rp2040 = microzig.Target{
         .preferred_format = .{ .uf2 = .RP2040 },
         .chip = chip,
         .hal = hal,
@@ -28,7 +28,7 @@ pub const chips = struct {
 
 pub const boards = struct {
     pub const raspberry_pi = struct {
-        pub const pico = .{
+        pub const pico = microzig.Target{
             .preferred_format = .{ .uf2 = .RP2040 },
             .chip = chip,
             .hal = hal,
@@ -43,7 +43,7 @@ pub const boards = struct {
     };
 
     pub const waveshare = struct {
-        pub const rp2040_plus_4m = .{
+        pub const rp2040_plus_4m = microzig.Target{
             .preferred_format = .{ .uf2 = .RP2040 },
             .chip = chip,
             .hal = hal,
@@ -56,7 +56,7 @@ pub const boards = struct {
             .configure = rp2040_configure(.w25q080),
         };
 
-        pub const rp2040_plus_16m = .{
+        pub const rp2040_plus_16m = microzig.Target{
             .preferred_format = .{ .uf2 = .RP2040 },
             .chip = chip,
             .hal = hal,
@@ -69,7 +69,7 @@ pub const boards = struct {
             .configure = rp2040_configure(.w25q080),
         };
 
-        pub const rp2040_eth = .{
+        pub const rp2040_eth = microzig.Target{
             .preferred_format = .{ .uf2 = .RP2040 },
             .chip = chip,
             .hal = hal,
@@ -82,7 +82,7 @@ pub const boards = struct {
             .configure = rp2040_configure(.w25q080),
         };
 
-        pub const rp2040_matrix = .{
+        pub const rp2040_matrix = microzig.Target{
             .preferred_format = .{ .uf2 = .RP2040 },
             .chip = chip,
             .hal = hal,

@@ -16,6 +16,8 @@ from marshmallow import fields
 from enum import Enum as StrEnum
 import pathspec
 import stat 
+import tarfile
+
 from marshmallow import fields as mm_fields
 from typing import Optional, Any
 
@@ -26,7 +28,8 @@ REQUIRED_TOOLS = [
     "zig",
     "git",
 ]
-DEPLOYMENT_BASE="https://download.microzig.tech/packages"
+# DEPLOYMENT_BASE="https://download.microzig.tech/packages"
+DEPLOYMENT_BASE="https://public.devspace.random-projects.net"
 
 REPO_ROOT = Path(__file__).parent.parent
 assert REPO_ROOT.is_dir()
@@ -300,13 +303,17 @@ def main():
         pkg.package_dir = pkg_dir
 
 
-        if pkg.package_type == PackageType.core:
-            pkg.out_rel_dir = PurePosixPath(".")
-            pkg.out_basename = pkg.package_name
 
-        elif pkg.package_type == PackageType.build:
+        if pkg.package_type == PackageType.build:
             pkg.out_rel_dir = PurePosixPath(".")
             pkg.out_basename = pkg.package_name
+            
+        elif pkg.package_type == PackageType.core:
+            pkg.out_rel_dir = PurePosixPath(".")
+            pkg.out_basename = pkg.package_name
+            
+            # Implicit dependencies:
+            pkg.inner_dependencies.add("microzig-build") # core requires the build types
 
         elif pkg.package_type == PackageType.board_support:
             parsed_pkg_name = PurePosixPath(pkg.package_name)
@@ -314,7 +321,9 @@ def main():
             pkg.out_rel_dir = "board-support" / parsed_pkg_name.parent
             pkg.out_basename = parsed_pkg_name.name
 
-            pkg.inner_dependencies.add("microzig-core") # BSPs implicitly depend on the core "microzig" package
+            # Implicit dependencies:
+            pkg.inner_dependencies.add("microzig-build") # BSPs also require build types
+            pkg.inner_dependencies.add("microzig-core") # but also the core types (?)
         else:
             assert False 
 
@@ -373,7 +382,7 @@ def main():
         pkg_cache_dir.mkdir(exist_ok=True)
         
         meta_path = pkg_dir / "microzig-package.json"
-        pkg_zon_file = pkg_cache_dir / "build.zig.zon" 
+        pkg_zon_file = pkg_cache_dir / pkg_dir.name / "build.zig.zon" 
 
         out_rel_dir: PurePosixPath = pkg.out_rel_dir
         out_basename: str = pkg.out_basename
@@ -383,9 +392,9 @@ def main():
                 "zig", "build-exe",
                     f"{REPO_ROOT}/tools/extract-bsp-info.zig" ,
                     "--cache-dir", f"{REPO_ROOT}/zig-cache",
-                    "--deps", "bsp,microzig",
-                    "--mod", f"bsp:microzig:{pkg_dir}/build.zig",
-                    "--mod", f"microzig:uf2:{REPO_ROOT}/core/build.zig",
+                    "--deps", "bsp,microzig-build",
+                    "--mod", f"bsp:microzig-build:{pkg_dir}/build.zig",
+                    "--mod", f"microzig-build:uf2:{REPO_ROOT}/build/build.zig",
                     "--mod", f"uf2::{REPO_ROOT}/tools/lib/dummy_uf2.zig",
                     "--name", "extract-bsp-info",
                 cwd=pkg_cache_dir,
@@ -440,7 +449,8 @@ def main():
             print()
 
         # tar -cf "${out_tar}" $(git ls-files -- . ':!:microzig-package.json')
-        execute("tar", "-cf", out_file_tar, "--hard-dereference", *package_files, cwd=pkg_dir)
+
+        execute("tar", "-cf", out_file_tar, "--hard-dereference", *( f"{pkg_dir.name}/{file}" for file in package_files), cwd=pkg_dir.parent)
 
         zon_data = slurp(
             tools["create_pkg_descriptor"],
@@ -448,12 +458,14 @@ def main():
             input=PackageConfigurationSchema.dumps(evaluation_ordered_packages, many=True ).encode(),
         )
 
+        pkg_zon_file.parent.mkdir(exist_ok=True)
+
         with pkg_zon_file.open("wb") as f:
             f.write(zon_data)
 
         slurp("zig", "fmt", pkg_zon_file) # slurp the message away
 
-        execute("tar", "-rf", out_file_tar, "--hard-dereference", pkg_zon_file.name, cwd=pkg_zon_file.parent)
+        execute("tar", "-rf", out_file_tar, "--hard-dereference", f"{pkg_zon_file.parent.name}/{pkg_zon_file.name}", cwd=pkg_zon_file.parent.parent)
 
         # tar --list --file "${out_tar}" > "${pkg_cache_dir}/contents.list"
         

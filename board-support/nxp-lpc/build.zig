@@ -1,4 +1,5 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
 
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
@@ -11,7 +12,7 @@ const hal = .{
 };
 
 pub const chips = struct {
-    pub const lpc176x5x = .{
+    pub const lpc176x5x = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             // TODO: Separate over those chips, this is not generic!
@@ -33,7 +34,7 @@ pub const chips = struct {
 
 pub const boards = struct {
     pub const mbed = struct {
-        pub const lpc1768 = .{
+        pub const lpc1768 = MicroZig.Target{
             .preferred_format = .hex,
             .chip = chips.lpc176x5x.chip,
             .hal = hal,

@@ -27,4 +27,4 @@ Consider the version `0.11.0-abcdef-123` means that this MicroZig version has a 
 - validate that the table on https://github.com/ZigEmbeddedGroup is correct (in CI)
 - make system build again properly
 - start porting everything to 0.12/unstable
-
+- Try to get some autodocs to build.

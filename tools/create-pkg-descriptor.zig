@@ -127,7 +127,7 @@ pub fn main() !void {
 
             try renderDep(
                 stdout,
-                "microzig",
+                dep_name,
                 dep.download_url.?,
                 dep.package.?.hash,
             );

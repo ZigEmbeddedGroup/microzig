@@ -5,7 +5,7 @@
 
 const std = @import("std");
 const bsp = @import("bsp");
-const microzig = @import("microzig");
+const microzig = @import("microzig-build");
 
 const JsonTarget = struct {
     id: []const u8,

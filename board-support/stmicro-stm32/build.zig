@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("microzig");
+const microzig = @import("microzig-build");
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");

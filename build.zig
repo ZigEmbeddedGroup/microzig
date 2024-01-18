@@ -1,7 +1,10 @@
 const std = @import("std");
+// const examples = @import("examples/build.zig");
 
 pub fn build(b: *std.Build) void {
     buildTools(b);
+
+    // examples.build(b);
 }
 
 fn buildTools(b: *std.Build) void {

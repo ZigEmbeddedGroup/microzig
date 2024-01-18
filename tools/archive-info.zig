@@ -46,7 +46,7 @@ pub fn main() !void {
     // defer decompress.deinit();
 
     var arc = try Archive.read_from_tar(arena, buffered.reader(), .{
-        .strip_components = 0,
+        .strip_components = 1,
     });
     defer arc.deinit(arena);
 
@@ -57,7 +57,23 @@ pub fn main() !void {
         try paths.appendSlice(arc.files.keys());
         std.mem.sort([]const u8, paths.items, {}, Archive.path_less_than);
 
-        const calculated_hash = try arc.hash(allocator, .ignore_executable_bit);
+        const calculated_hash = blk: {
+            var arc_hasher = Hash.init(.{});
+
+            for (paths.items) |path| {
+                const archived_file = arc.files.getPtr(path).?;
+
+                var file_hasher = Hash.init(.{});
+                file_hasher.update(path);
+                file_hasher.update(&.{ 0, 0 }); // second part is "executable bit"
+                file_hasher.update(archived_file.text);
+
+                arc_hasher.update(&file_hasher.finalResult());
+            }
+
+            break :blk arc_hasher.finalResult();
+        };
+
         var hash_buf: [4 + 2 * calculated_hash.len]u8 = undefined;
         const hash_str = try std.fmt.bufPrint(&hash_buf, "1220{}", .{std.fmt.fmtSliceHexLower(&calculated_hash)});
 
@@ -92,13 +108,13 @@ const Archive = struct {
         return if (mod > 0) 512 - mod else 0;
     }
 
-    pub fn entry_should_be_skipped(path: []const u8) !bool {
-        var it = try std.fs.path.componentIterator(path);
-        const first = it.next().?;
-        return std.mem.eql(u8, first.name, ".git") or
-            std.mem.eql(u8, first.name, "zig-out") or
-            std.mem.eql(u8, first.name, "zig-cache");
-    }
+    // pub fn entry_should_be_skipped(path: []const u8) !bool {
+    //     var it = try std.fs.path.componentIterator(path);
+    //     const first = it.next().?;
+    //     return std.mem.eql(u8, first.name, ".git") or
+    //         std.mem.eql(u8, first.name, "zig-out") or
+    //         std.mem.eql(u8, first.name, "zig-cache");
+    // }
 
     fn stripComponents(path: []const u8, count: u32) ![]const u8 {
         var i: usize = 0;
@@ -239,36 +255,5 @@ const Archive = struct {
         } else {
             return (mode & std.os.S.IXUSR) != 0;
         }
-    }
-
-    pub fn hash(
-        archive: Archive,
-        allocator: Allocator,
-        executable_bit: WhatToDoWithExecutableBit,
-    ) ![Hash.digest_length]u8 {
-        var paths = std.ArrayList([]const u8).init(allocator);
-        defer paths.deinit();
-
-        var hashes = std.ArrayList([Hash.digest_length]u8).init(allocator);
-        defer hashes.deinit();
-
-        try paths.appendSlice(archive.files.keys());
-        try hashes.appendNTimes(undefined, paths.items.len);
-        std.mem.sort([]const u8, paths.items, {}, path_less_than);
-
-        for (paths.items, hashes.items) |path, *result| {
-            const file = archive.files.get(path).?;
-            var hasher = Hash.init(.{});
-            hasher.update(path);
-            hasher.update(&.{ 0, @intFromBool(is_executable(file.mode, executable_bit)) });
-            hasher.update(file.text);
-            hasher.final(result);
-        }
-
-        var hasher = Hash.init(.{});
-        for (hashes.items) |file_hash|
-            hasher.update(&file_hash);
-
-        return hasher.finalResult();
     }
 };

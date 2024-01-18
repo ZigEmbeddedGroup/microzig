@@ -1,4 +1,5 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
 
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
@@ -7,7 +8,7 @@ fn path(comptime suffix: []const u8) std.Build.LazyPath {
 }
 
 pub const chips = struct {
-    pub const nrf52840 = .{
+    pub const nrf52840 = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "nrf52840",
@@ -29,7 +30,7 @@ pub const chips = struct {
         },
     };
 
-    pub const nrf52832 = .{
+    pub const nrf52832 = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "nrf52",
@@ -48,7 +49,7 @@ pub const chips = struct {
 
 pub const boards = struct {
     pub const nordic = struct {
-        pub const nRF52840_Dongle = .{
+        pub const nRF52840_Dongle = MicroZig.Target{
             .preferred_format = .elf,
             .chip = chips.nrf52840.chip,
             .board = .{
