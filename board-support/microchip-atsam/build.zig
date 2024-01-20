@@ -1,4 +1,7 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
+
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
 
 pub fn build(b: *std.Build) void {
     _ = b;
@@ -27,7 +30,7 @@ pub const chip_atsamd51j19 = .{
 };
 
 pub const chips = struct {
-    pub const atsamd51j19 = .{
+    pub const atsamd51j19 = MicroZig.Target{
         .preferred_format = .elf,
         .chip = chip_atsamd51j19,
     };

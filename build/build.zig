@@ -9,10 +9,131 @@ const uf2 = @import("uf2");
 //      MicroZig Gen 3 Interface      //
 ////////////////////////////////////////
 
-pub const EnvironmentInfo = struct {
-    /// include package names of your board support packages here:
-    board_support: []const []const u8,
+pub const BoardSupportPackageDefinition = struct {
+    pub const TargetDefinition = struct {
+        id: []const u8, // full "uri"
+        target: Target,
+    };
 
+    bsp_root: type,
+    targets: []const TargetDefinition,
+
+    fn init(comptime bsp_root: type) BoardSupportPackageDefinition {
+        var targets: []const TargetDefinition = &.{};
+
+        if (@hasDecl(bsp_root, "chips")) {
+            targets = targets ++ construct_target_database("chip:", bsp_root.chips);
+        }
+
+        if (@hasDecl(bsp_root, "boards")) {
+            targets = targets ++ construct_target_database("board:", bsp_root.boards);
+        }
+
+        if (targets.len == 0) {
+            @compileError("Board support package contains not a single target. Please add at least one target!");
+        }
+
+        return BoardSupportPackageDefinition{
+            .bsp_root = bsp_root,
+            .targets = targets,
+        };
+    }
+
+    fn construct_target_database(comptime prefix: []const u8, comptime namespace: type) []const TargetDefinition {
+        var list: []const TargetDefinition = &.{};
+
+        inline for (@typeInfo(namespace).Struct.decls) |decl_info| {
+            const decl = @field(namespace, decl_info.name);
+            const T = @TypeOf(decl);
+
+            const name = comptime prefix ++ decl_info.name; // board:vendor/name
+
+            if (T == Target) {
+                const target: Target = decl;
+
+                list = list ++ &[_]TargetDefinition{.{
+                    .id = name,
+                    .target = target,
+                }};
+                // be.targets.put(be.host_build.allocator, name, target) catch @panic("out of memory");
+            } else {
+                if (T != type) {
+                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to be a 'type', found {s}.", .{
+                        name,
+                        @typeName(T),
+                    }));
+                }
+
+                const ti = @typeInfo(decl);
+                if (ti != .Struct) {
+                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to be a 'struct', found {s}.", .{
+                        name,
+                        @tagName(ti),
+                    }));
+                }
+
+                if (ti.Struct.fields.len > 0) {
+                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to have no fields, but found {} fields.", .{
+                        name,
+                        ti.Struct.fields.len,
+                    }));
+                }
+
+                const sublist = construct_target_database(
+                    comptime name ++ "/",
+                    decl,
+                );
+
+                list = list ++ sublist;
+            }
+        }
+
+        return list;
+    }
+};
+
+/// Validates a board support package and returns a registration type that can be used
+/// with MicroZig automatic BSP discovery.
+///
+/// Store the return value into a public constant named "" at the root of your build script:
+///
+///     pub const microzig_board_support = microzig.registerBoardSupport(@This());
+///
+pub fn registerBoardSupport(comptime bsp_root: type) BoardSupportPackageDefinition {
+    return BoardSupportPackageDefinition.init(bsp_root);
+}
+
+const ImportedBSP = struct {
+    import_name: []const u8,
+    bsp: BoardSupportPackageDefinition,
+};
+
+fn get_declared_bsps() []const ImportedBSP {
+
+    // Keep in sync with the logic from Build.zig:dependency
+    const build_runner = @import("root");
+    const deps = build_runner.dependencies;
+
+    var bsps: []const ImportedBSP = &.{};
+    inline for (@typeInfo(deps.imports).Struct.decls) |decl| {
+        if (comptime std.mem.indexOfScalar(u8, decl.name, '.') == null) {
+            const maybe_bsp = @field(deps.imports, decl.name);
+
+            if (@hasDecl(maybe_bsp, "microzig_board_support")) {
+                const bsp = @field(maybe_bsp, "microzig_board_support");
+                if (@TypeOf(bsp) == BoardSupportPackageDefinition) {
+                    bsps = bsps ++ [_]ImportedBSP{.{
+                        .import_name = decl.name,
+                        .bsp = bsp,
+                    }};
+                }
+            }
+        }
+    }
+    return bsps;
+}
+
+pub const EnvironmentInfo = struct {
     /// package name of the build package (optional)
     self: []const u8 = "microzig",
 
@@ -21,91 +142,35 @@ pub const EnvironmentInfo = struct {
 };
 
 pub fn createBuildEnvironment(b: *std.Build, comptime info: EnvironmentInfo) *BuildEnvironment {
+    const available_bsps = comptime get_declared_bsps();
+
     const be = b.allocator.create(BuildEnvironment) catch @panic("out of memory");
     be.* = BuildEnvironment{
         .host_build = b,
         .self = undefined,
         .microzig_core = undefined,
-        .board_support_packages = b.allocator.alloc(BoardSupportPackage, info.board_support.len) catch @panic("out of memory"),
+        .board_support_packages = b.allocator.alloc(BoardSupportPackage, available_bsps.len) catch @panic("out of memory"),
         .targets = .{},
     };
 
     be.self = b.dependency(info.self, .{});
     be.microzig_core = b.dependency(info.core, .{});
 
-    for (be.board_support_packages, info.board_support) |*out, in| {
-        out.* = BoardSupportPackage{
-            .name = in,
-            .dep = b.dependency(in, .{}),
+    inline for (be.board_support_packages, available_bsps) |*bsp, def| {
+        bsp.* = BoardSupportPackage{
+            .name = def.import_name,
+            .dep = b.dependency(def.import_name, .{}),
         };
-    }
 
-    // Fetch and collect all supported targets:
-    inline for (info.board_support) |bsp_name| {
-        // Keep in sync with the logic from Build.zig:dependency
-        const build_runner = @import("root");
-        const deps = build_runner.dependencies;
+        for (def.bsp.targets) |tgt| {
+            const full_name = b.fmt("{s}#{s}", .{ tgt.id, def.import_name });
 
-        const bsp_root = @field(deps.imports, bsp_name);
-
-        if (@hasDecl(bsp_root, "chips")) {
-            fetch_microzig_targets("chip:", bsp_root.chips, bsp_name, be);
-        }
-
-        if (@hasDecl(bsp_root, "boards")) {
-            fetch_microzig_targets("board:", bsp_root.boards, bsp_name, be);
+            be.targets.put(be.host_build.allocator, tgt.id, tgt.target) catch @panic("out of memory");
+            be.targets.put(be.host_build.allocator, full_name, tgt.target) catch @panic("out of memory");
         }
     }
 
     return be;
-}
-
-fn fetch_microzig_targets(comptime prefix: []const u8, comptime namespace: type, comptime bsp_name: []const u8, be: *BuildEnvironment) void {
-    inline for (@typeInfo(namespace).Struct.decls) |decl_info| {
-        const decl = @field(namespace, decl_info.name);
-        const T = @TypeOf(decl);
-
-        const name = comptime prefix ++ decl_info.name; // board:vendor/name
-        const full_name = comptime name ++ "#" ++ bsp_name; // board:vendor/name#bsp-package-name
-
-        if (T == Target) {
-            const target: Target = decl;
-
-            be.targets.put(be.host_build.allocator, name, target) catch @panic("out of memory");
-            be.targets.put(be.host_build.allocator, full_name, target) catch @panic("out of memory");
-        } else {
-            const ok = blk: {
-                if (comptime T != type) {
-                    // @compileLog(full_name, "check 1:", T, decl);
-                    break :blk false;
-                }
-
-                const ti = @typeInfo(decl);
-                if (comptime ti != .Struct) {
-                    // @compileLog(full_name, "check 2:", ti);
-                    break :blk false;
-                }
-
-                if (comptime ti.Struct.fields.len > 0) {
-                    // @compileLog(full_name, "check 3:", ti.Struct);
-                    // @compileLog(full_name, "check 3:", ti.Struct.fields);
-                    break :blk false;
-                }
-
-                fetch_microzig_targets(
-                    comptime name ++ "/",
-                    decl,
-                    bsp_name,
-                    be,
-                );
-
-                break :blk true;
-            };
-            if (!ok) {
-                std.debug.print("Bad BSP: {s} is neither namespace nor a microzig.Target\n", .{ prefix, full_name });
-            }
-        }
-    }
 }
 
 pub const BoardSupportPackage = struct {

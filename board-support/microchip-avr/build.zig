@@ -1,4 +1,7 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
+
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
 
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
@@ -11,7 +14,7 @@ const hal = .{
 };
 
 pub const chips = struct {
-    pub const atmega328p = .{
+    pub const atmega328p = MicroZig.Target{
         .preferred_format = .hex,
         .chip = .{
             .name = "ATmega328P",
@@ -31,7 +34,7 @@ pub const chips = struct {
 
 pub const boards = struct {
     pub const arduino = struct {
-        pub const nano = .{
+        pub const nano = MicroZig.Target{
             .preferred_format = .hex,
             .chip = chips.atmega328p.chip,
             .hal = hal,
@@ -42,7 +45,7 @@ pub const boards = struct {
             },
         };
 
-        pub const uno_rev3 = .{
+        pub const uno_rev3 = MicroZig.Target{
             .preferred_format = .hex,
             .chip = chips.atmega328p.chip,
             .hal = hal,

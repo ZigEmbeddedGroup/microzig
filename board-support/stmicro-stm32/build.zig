@@ -1,5 +1,7 @@
 const std = @import("std");
-const microzig = @import("microzig-build");
+const MicroZig = @import("microzig-build");
+
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
@@ -18,7 +20,7 @@ pub fn build(b: *std.Build) !void {
 }
 
 pub const chips = struct {
-    pub const stm32f103x8 = .{
+    pub const stm32f103x8 = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "STM32F103",
@@ -36,7 +38,7 @@ pub const chips = struct {
         },
     };
 
-    pub const stm32f303vc = .{
+    pub const stm32f303vc = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "STM32F303",
@@ -51,7 +53,7 @@ pub const chips = struct {
         },
     };
 
-    pub const stm32f407vg = .{
+    pub const stm32f407vg = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "STM32F407",
@@ -67,7 +69,7 @@ pub const chips = struct {
         },
     };
 
-    pub const stm32f429zit6u = .{
+    pub const stm32f429zit6u = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "STM32F429",
@@ -85,8 +87,8 @@ pub const chips = struct {
 
     // All STM32L0x1 series MCUs differ only in memory size. So we create a comptime function
     // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x1.html
-    fn stm32l0x1(comptime rom_size: u64, comptime ram_size: u64) microzig.Target {
-        return microzig.Target{
+    fn stm32l0x1(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
+        return MicroZig.Target{
             .preferred_format = .elf,
             .chip = .{
                 .name = "STM32L0x1",
@@ -123,8 +125,8 @@ pub const chips = struct {
 
     // All STM32L0x2 series MCUs differ only in memory size. So we create a comptime function
     // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x2.html
-    fn stm32l0x2(comptime rom_size: u64, comptime ram_size: u64) microzig.Target {
-        return microzig.Target{
+    fn stm32l0x2(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
+        return MicroZig.Target{
             .preferred_format = .elf,
             .chip = .{
                 .name = "STM32L0x2",
@@ -154,8 +156,8 @@ pub const chips = struct {
 
     // All STM32L0x2 series MCUs differ only in memory size. So we create a comptime function
     // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x3.html
-    fn stm32l0x3(comptime rom_size: u64, comptime ram_size: u64) microzig.Target {
-        return microzig.Target{
+    fn stm32l0x3(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
+        return MicroZig.Target{
             .preferred_format = .elf,
             .chip = .{
                 .name = "STM32L0x3",
@@ -187,7 +189,7 @@ pub const chips = struct {
 };
 
 pub const boards = struct {
-    pub const stm32f3discovery = .{
+    pub const stm32f3discovery = MicroZig.Target{
         .preferred_format = .elf,
         .chip = chips.stm32f303vc.chip,
         .board = .{
@@ -196,7 +198,7 @@ pub const boards = struct {
         },
     };
 
-    pub const stm32f4discovery = .{
+    pub const stm32f4discovery = MicroZig.Target{
         .preferred_format = .elf,
         .chip = chips.stm32f407vg.chip,
         .board = .{
@@ -205,7 +207,7 @@ pub const boards = struct {
         },
     };
 
-    pub const stm3240geval = .{
+    pub const stm3240geval = MicroZig.Target{
         .preferred_format = .elf,
         .chip = chips.stm32f407vg.chip,
         .board = .{
@@ -214,7 +216,7 @@ pub const boards = struct {
         },
     };
 
-    pub const stm32f429idiscovery = .{
+    pub const stm32f429idiscovery = MicroZig.Target{
         .preferred_format = .elf,
         .chip = chips.stm32f429zit6u.chip,
         .board = .{

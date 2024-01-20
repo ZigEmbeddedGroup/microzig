@@ -1,4 +1,7 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
+
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
 
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
@@ -11,7 +14,7 @@ const hal = .{
 };
 
 pub const chips = struct {
-    pub const gd32vf103xb = .{
+    pub const gd32vf103xb = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "GD32VF103",
@@ -27,7 +30,7 @@ pub const chips = struct {
         .hal = hal,
     };
 
-    pub const gd32vf103x8 = .{
+    pub const gd32vf103x8 = MicroZig.Target{
         .preferred_format = .elf,
         .chip = .{
             .name = "GD32VF103",
@@ -46,7 +49,7 @@ pub const chips = struct {
 
 pub const boards = struct {
     pub const sipeed = struct {
-        pub const longan_nano = .{
+        pub const longan_nano = MicroZig.Target{
             .preferred_format = .elf,
             .chip = chips.gd32vf103xb.chip,
             .hal = hal,

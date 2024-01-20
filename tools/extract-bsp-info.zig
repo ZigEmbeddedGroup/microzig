@@ -70,33 +70,26 @@ fn renderMicroZigTarget(stream: anytype, key: []const u8, target: microzig.Targe
     try std.json.stringify(jtarget, .{}, stream);
 }
 
-fn renderTargetArray(stream: anytype, comptime array: type) !void {
-    inline for (comptime std.meta.declarations(array), 0..) |fld, i| {
+fn renderTargetArray(stream: anytype, targets: []const microzig.BoardSupportPackageDefinition.TargetDefinition) !void {
+    for (targets, 0..) |target_def, i| {
         if (i > 0) try stream.writeAll(",");
-        const target = comptime @field(array, fld.name);
-
-        if (@TypeOf(target) == type) {
-            // recurse
-            try renderTargetArray(stream, target);
-        } else {
-            try renderMicroZigTarget(
-                stream,
-                fld.name,
-                target,
-            );
-        }
+        try renderMicroZigTarget(
+            stream,
+            target_def.id,
+            target_def.target,
+        );
     }
 }
 
 pub fn main() !void {
+    const info = bsp.microzig_board_support;
+
     var stdout = std.io.getStdOut().writer();
 
     try stdout.writeAll("{ \"board-support\": {");
 
-    try stdout.writeAll("\"chips\":[");
-    try renderTargetArray(stdout, bsp.chips);
-    try stdout.writeAll("],\"boards\":[");
-    try renderTargetArray(stdout, bsp.boards);
+    try stdout.writeAll("\"targets\":[");
+    try renderTargetArray(stdout, info.targets);
 
     try stdout.writeAll("]}}");
 }

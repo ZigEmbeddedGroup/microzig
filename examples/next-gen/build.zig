@@ -5,11 +5,6 @@ pub fn build(b: *std.Build) void {
     const microzig = MicroZig.createBuildEnvironment(b, .{
         .self = "microzig", // package name of the build package (optional)
         .core = "microzig-core", // package name of the core package (optional)
-        .board_support = &.{
-            // package names for BSP packages:
-            "microzig-bsp-nxp",
-            "microzig-bsp-rp2040",
-        },
     });
 
     const optimize = b.standardOptimizeOption(.{});

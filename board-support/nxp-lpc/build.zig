@@ -1,6 +1,8 @@
 const std = @import("std");
 const MicroZig = @import("microzig-build");
 
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
+
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
         .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),

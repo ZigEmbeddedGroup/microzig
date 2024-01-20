@@ -1,4 +1,7 @@
 const std = @import("std");
+const MicroZig = @import("microzig-build");
+
+pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
 
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
@@ -26,7 +29,7 @@ const hal = .{
 };
 
 pub const chips = struct {
-    pub const esp32_c3 = .{
+    pub const esp32_c3 = MicroZig.Target{
         .preferred_format = .bin, // TODO: Exchange FLAT format with .esp format
         .chip = .{
             .name = "ESP32-C3",

@@ -1,6 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig-build");
 
+pub const microzig_board_support = microzig.registerBoardSupport(@This());
+
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
 }
