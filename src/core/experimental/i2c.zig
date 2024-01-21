@@ -2,6 +2,25 @@ const std = @import("std");
 const hal = @import("hal");
 const cfg = @import("config");
 
+/// This says whether or not (we think) code generation fails on returning an empty struct,
+/// which was observed on ATmega328P and STM32F303.
+/// There presumably is a more precise builtin.target-based check for this.
+///
+/// As @PhilippWendel says in https://github.com/ZigEmbeddedGroup/microzig/pull/125,
+/// not passing around an empty struct
+///
+/// > prevents the controller from hanging/crash when running this line
+/// > ```
+/// > const i2c = try interfaces.i2c.I2CController(0, .{}).init(.{ .target_speed = 400_000 });
+/// > ```
+/// > I think this is caused because the struct that is returned contains just functions
+/// > so it has size 0 and clangs avr code gen cant handle that properly.
+///
+/// And the same seems to happen for at least STM32. -- @marnix Klooster
+const codegen_fails_on_empty_struct =
+    std.mem.eql(u8, cfg.chip_name[0..2], "AT") or
+    std.mem.eql(u8, cfg.chip_name[0..5], "STM32");
+
 pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
     const SystemI2CController = hal.I2CController(index, pins);
 
@@ -128,7 +147,8 @@ pub fn I2CController(comptime index: usize, comptime pins: Pins) type {
         const Self = @This();
 
         internal: SystemI2CController,
-        variable_so_struct_is_not_of_size_zero_and_mcu_hangs_when_returning_struct_on_avr: if (std.mem.eql(u8, cfg.chip_name, "ATmega328P")) u8 else void = undefined,
+
+        dummy: if (@sizeOf(SystemI2CController) == 0 and codegen_fails_on_empty_struct) u8 else void = undefined,
 
         pub fn init(config: Config) InitError!Self {
             return Self{
