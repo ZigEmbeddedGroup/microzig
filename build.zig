@@ -14,6 +14,11 @@ pub fn createLibrary(b: *std.Build, target: std.zig.CrossTarget, optimize: std.b
     });
 
     libc.addIncludePath(.{ .path = "include" });
+    for (header_files) |header_name|
+        libc.installHeader(
+            b.fmt("include/{s}", .{header_name}),
+            header_name,
+        );
 
     return libc;
 }
@@ -38,13 +43,6 @@ pub fn build(b: *std.Build) void {
     const libc = createLibrary(b, target, optimize);
     libc.single_threaded = single_threaded;
     b.installArtifact(libc);
-
-    for (header_files) |header_name| {
-        b.getInstallStep().dependOn(&b.addInstallHeaderFile(
-            b.fmt("include/{s}", .{header_name}),
-            header_name,
-        ).step);
-    }
 
     // test suite:
     {
@@ -118,6 +116,7 @@ pub fn build(b: *std.Build) void {
 }
 
 const header_files = [_][]const u8{
+    "assert.h",
     "ctype.h",
     "errno.h",
     "inttypes.h",
