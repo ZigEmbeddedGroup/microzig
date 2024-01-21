@@ -2,6 +2,7 @@
 // our own files must be included as non-system includes to trigger warnings:
 #include "ctype.h"
 #include "errno.h"
+#include "foundation/libc.h"
 #include "inttypes.h"
 #include "math.h"
 #include "setjmp.h"

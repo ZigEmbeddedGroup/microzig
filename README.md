@@ -17,6 +17,16 @@ The first goal is to reach full C11 *freestanding* support.
 - No support for `wchar_t` and `wchar.h` as it isn't portable between compilers.
 - Multi-byte character strings are implemented as UTF-8.
 
+## Customization
+
+Foundation libc doesn't really support much customization/configuration except for the hard required options.
+
+There is [`foundation/libc.h`](include/foundation/libc.h) which documents the behaviour of all required configurations.
+
+Right now, the following configurations exist:
+
+- `foundation_libc_panic_handler`, which allows users to catch detectable undefined behaviour.
+
 ## Development
 
 Zig Version: 0.11
@@ -67,7 +77,7 @@ Which functions belong into which header can be figured out by taking a look at 
 | --------------- | ------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
 | `assert.h`      | ❌             |                       | Conditionally compiled macro that compares its argument to zero                                         |
 | `complex.h`     | ❌             |                       | (since C99) Complex number arithmetic                                                                   |
-| `ctype.h`       | ✅             | ⏳                     | Functions to determine the type contained in character data                                             |
+| `ctype.h`       | ✅             | ✅                     | Functions to determine the type contained in character data                                             |
 | `errno.h`       | ✅             | ✅                     | Macros reporting error conditions                                                                       |
 | `fenv.h`        | 🔮             |                       | (since C99) Floating-point environment                                                                  |
 | `float.h`       | 🔀             |                       | Limits of floating-point types                                                                          |

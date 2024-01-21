@@ -1,7 +1,7 @@
 #ifndef _FOUNDATION_LIBC_CTYPE_H_
 #define _FOUNDATION_LIBC_CTYPE_H_
 
-// TODO: #define EOF (-1)
+#define EOF (-1)
 
 int isalnum(int c);
 int isalpha(int c);
