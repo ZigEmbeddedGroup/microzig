@@ -19,10 +19,17 @@ pub fn createLibrary(b: *std.Build, target: std.zig.CrossTarget, optimize: std.b
 }
 
 pub fn build(b: *std.Build) void {
+    const validation_step = b.step("validate", "Runs the test suite and validates everything. Automatically triggered in Debug builds.");
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const single_threaded = b.option(bool, "single-threaded", "Create a single-threaded libc implementation (default: false)") orelse false;
+
+    // Run validation in debug builds for convenience:
+    if (optimize == .Debug) {
+        b.getInstallStep().dependOn(validation_step);
+    }
 
     // check if the host has a gcc or clang available:
     const maybe_gcc = b.findProgram(&.{"gcc"}, &.{}) catch null;
@@ -41,6 +48,22 @@ pub fn build(b: *std.Build) void {
 
     // test suite:
     {
+        // Compile for huge amount of targets to detect breakage early on:
+        for ([_]bool{ false, true }) |validation_single_threaded| {
+            for (std.enums.values(std.builtin.OptimizeMode)) |validation_optimize| {
+                for (validation_target_list) |validation_target| {
+
+                    // skip everything that cannot support multithreading on freestanding:
+                    if (!validation_single_threaded and !target_can_multithread(validation_target))
+                        continue;
+
+                    const vlc = createLibrary(b, validation_target, validation_optimize);
+                    vlc.single_threaded = validation_single_threaded;
+                    validation_step.dependOn(&vlc.step);
+                }
+            }
+        }
+
         const syntax_validator_source: std.Build.LazyPath = .{ .path = "tests/syntactic-validation.c" };
 
         // use the shipped C compiler to validate our code:
@@ -59,7 +82,7 @@ pub fn build(b: *std.Build) void {
             _ = syntax_validator.getEmittedBin();
 
             // Just compile, do not install:
-            b.getInstallStep().dependOn(&syntax_validator.step);
+            validation_step.dependOn(&syntax_validator.step);
         }
 
         // use the host C compilers to validate our code:
@@ -89,7 +112,7 @@ pub fn build(b: *std.Build) void {
             ext_compiler.addArg("-o");
             ext_compiler.addArg(b.pathJoin(&.{ b.makeTempPath(), "dummy" })); // we don't really care where this ends up
 
-            b.getInstallStep().dependOn(&ext_compiler.step);
+            validation_step.dependOn(&ext_compiler.step);
         }
     }
 }
@@ -104,6 +127,7 @@ const header_files = [_][]const u8{
     "string.h",
     "tgmath.h",
     "uchar.h",
+    "foundation/libc.h",
 };
 
 const common_c_flags = [_][]const u8{
@@ -117,6 +141,110 @@ const common_c_flags = [_][]const u8{
     //
     "-Wno-reserved-macro-identifier", // we actually want to implement those!
     "-Wno-reserved-identifier", // we actually want to implement those!
+};
+
+fn target_can_multithread(target: std.zig.CrossTarget) bool {
+    return switch (target.getCpuArch()) {
+        .wasm32,
+        .wasm64,
+        .msp430,
+        => false,
+
+        else => true,
+    };
+}
+
+const validation_target_list = [_]std.zig.CrossTarget{
+    .{}, // regular host platform
+    .{ .os_tag = .freestanding }, // host platform, but no OS
+
+    // Check several common cpu targets:
+
+    // arm:
+    .{ .cpu_arch = .arm, .os_tag = .freestanding },
+    .{ .cpu_arch = .armeb, .os_tag = .freestanding },
+    .{ .cpu_arch = .thumb, .os_tag = .freestanding },
+    .{ .cpu_arch = .thumbeb, .os_tag = .freestanding },
+    .{ .cpu_arch = .aarch64, .os_tag = .freestanding },
+    // .{ .cpu_arch = .aarch64_32, .os_tag = .freestanding }, // error: unknown target triple 'aarch64_32-unknown-unknown-eabi', please use -triple or -arch
+    .{ .cpu_arch = .aarch64_be, .os_tag = .freestanding },
+
+    // risc-v:
+    .{ .cpu_arch = .riscv32, .os_tag = .freestanding },
+    .{ .cpu_arch = .riscv64, .os_tag = .freestanding },
+
+    // intel:
+    .{ .cpu_arch = .x86_64, .os_tag = .freestanding },
+    .{ .cpu_arch = .x86, .os_tag = .freestanding },
+
+    // mips:
+    .{ .cpu_arch = .mips, .os_tag = .freestanding },
+    .{ .cpu_arch = .mips64, .os_tag = .freestanding },
+    .{ .cpu_arch = .mips64el, .os_tag = .freestanding },
+    .{ .cpu_arch = .mipsel, .os_tag = .freestanding },
+
+    // sparc:
+    .{ .cpu_arch = .sparc, .os_tag = .freestanding },
+    .{ .cpu_arch = .sparc64, .os_tag = .freestanding },
+    .{ .cpu_arch = .sparcel, .os_tag = .freestanding },
+
+    // power:
+    .{ .cpu_arch = .powerpc, .os_tag = .freestanding },
+    .{ .cpu_arch = .powerpc64, .os_tag = .freestanding },
+    .{ .cpu_arch = .powerpc64le, .os_tag = .freestanding },
+    .{ .cpu_arch = .powerpcle, .os_tag = .freestanding },
+
+    // web assembly:
+    .{ .cpu_arch = .wasm32, .os_tag = .freestanding },
+    .{ .cpu_arch = .wasm64, .os_tag = .freestanding },
+
+    // nice to have, but broken:
+    .{ .cpu_arch = .avr, .os_tag = .freestanding },
+    // .{ .cpu_arch = .msp430, .os_tag = .freestanding }, // error: unknown target CPU 'generic'
+    // .{ .cpu_arch = .m68k, .os_tag = .freestanding },
+    // .{ .cpu_arch = .xtensa, .os_tag = .freestanding },
+
+    // Not evaluated if reasonable to check:
+    //   arc
+    //   csky
+    //   hexagon
+    //   hsail
+    //   hsail64
+    //   kalimba
+    //   lanai
+    //   le32
+    //   le64
+    //   loongarch32
+    //   loongarch64
+    //   r600
+    //   s390x
+    //   shave
+    //   spu_2
+    //   tce
+    //   tcele
+    //   ve
+    //   xcore
+
+    // will never be supported due to their properties:
+    //   spir
+    //   spir64
+    //   spirv32
+    //   spirv64
+
+    //   bpfeb
+    //   bpfel
+
+    //   renderscript32
+    //   renderscript64
+
+    //   amdgcn
+    //   amdil
+    //   amdil64
+
+    //   nvptx
+    //   nvptx64
+
+    //   dxil
 };
 
 const sdk_root = computeSdkRoot();
