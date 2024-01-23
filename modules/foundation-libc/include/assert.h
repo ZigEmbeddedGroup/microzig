@@ -1,16 +1,43 @@
 #ifndef _FOUNDATION_LIBC_ASSERT_H_
 #define _FOUNDATION_LIBC_ASSERT_H_
 
-#ifndef NDEBUG
-#define assert(expr)
+#include "foundation/builtins.h"
+
+extern FOUNDATION_LIBC_NORETURN void foundation_libc_assert(char const * assertion, char const * file, unsigned line);
+
+#if FOUNDATION_LIBC_ASSERT == FOUNDATION_LIBC_ASSERT_DEFAULT
+
+#define assert(expr)                                           \
+    do {                                                       \
+        if ((expr) == 0) {                                     \
+            foundation_libc_assert(#expr, __FILE__, __LINE__); \
+        }                                                      \
+    } while (0)
+
+#elif FOUNDATION_LIBC_ASSERT == FOUNDATION_LIBC_ASSERT_NOFILE
+
+#define assert(expr)                                     \
+    do {                                                 \
+        if ((expr) == 0) {                               \
+            foundation_libc_assert(#expr, "", __LINE__); \
+        }                                                \
+    } while (0)
+
+#elif FOUNDATION_LIBC_ASSERT == FOUNDATION_LIBC_ASSERT_NOMSG
+
+#define assert(expr)                                  \
+    do {                                              \
+        if ((expr) == 0) {                            \
+            foundation_libc_assert("", "", __LINE__); \
+        }                                             \
+    } while (0)
+
+#elif FOUNDATION_LIBC_ASSERT == FOUNDATION_LIBC_ASSERT_EXPECTED
+
+#define assert(expr) FOUNDATION_LIBC_EXPECT(expr)
+
 #else
-extern void __assert(char const * assertion, char const * file, unsigned line) __attribute__((__noreturn__));
-
-#define assert(expr) \
-    ((expr)          \
-         ? void(0)   \
-         : __assert(#expr, __FILE__, __LINE__))
-
+#error "bad definition of FOUNDATION_LIBC_ASSERT_DEFAULT!"
 #endif
 
 #endif

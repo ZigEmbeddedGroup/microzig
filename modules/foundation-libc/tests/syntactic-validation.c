@@ -1,5 +1,6 @@
 
 // our own files must be included as non-system includes to trigger warnings:
+#include "assert.h"
 #include "ctype.h"
 #include "errno.h"
 #include "foundation/libc.h"

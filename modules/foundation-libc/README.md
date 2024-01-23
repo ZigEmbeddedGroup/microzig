@@ -27,6 +27,21 @@ Right now, the following configurations exist:
 
 - `foundation_libc_panic_handler`, which allows users to catch detectable undefined behaviour.
 
+You can also configure the libc by chosing the build mode:
+
+- `Debug`: Implements additional safety checks and adds breakpoints in panics.
+- `ReleaseSafe`: Keeps the safety checks, but removes breakpoints.
+- `ReleaseSmall`: Still keeps a certain amount of safety, but drops long internal strings to reduce code and ram size.
+- `ReleaseFast`: Gotta go fast. Drops all safety and assumes all code behaves well.
+
+There are also certain "usage" configurations that can be chosen to affect behaviour when *using* the headers. Those are implemented as C macros/defines:
+
+- `FOUNDATION_LIBC_ASSERT` is a global macro that defines how `assert()` should behave:
+  - `FOUNDATION_LIBC_ASSERT_DEFAULT=0`: Behaves like a regular assert that can print file name, assertion message and line.
+  - `FOUNDATION_LIBC_ASSERT_NOFILE=1`: Drops the filename from the assertion to reduce code size.
+  - `FOUNDATION_LIBC_ASSERT_NOMSG=2`: Additionally drops the assertion message from the assertion to reduce code size.
+  - `FOUNDATION_LIBC_ASSERT_EXPECTED=3`: Replaces `assert(…)` with a construct that tells the compiler the assertion is always met. Makes code very fast. Assertions aren't checked.
+
 ## Development
 
 Zig Version: 0.11
@@ -75,7 +90,7 @@ Which functions belong into which header can be figured out by taking a look at 
 
 | Header File     | Header Status | Implementation Status | Description                                                                                             |
 | --------------- | ------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| `assert.h`      | ❌             |                       | Conditionally compiled macro that compares its argument to zero                                         |
+| `assert.h`      | ✅             | ✅                     | Conditionally compiled macro that compares its argument to zero                                         |
 | `complex.h`     | ❌             |                       | (since C99) Complex number arithmetic                                                                   |
 | `ctype.h`       | ✅             | ✅                     | Functions to determine the type contained in character data                                             |
 | `errno.h`       | ✅             | ✅                     | Macros reporting error conditions                                                                       |
