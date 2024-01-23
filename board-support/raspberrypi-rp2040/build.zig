@@ -137,15 +137,15 @@ const chip = .{
 };
 
 /// Returns a configuration function that will add the provided `BootROM` to the firmware.
-pub fn rp2040_configure(comptime bootrom: BootROM) *const fn (host_build: *std.Build, *microzig.Firmware) void {
+pub fn rp2040_configure(comptime bootrom: BootROM) *const fn (env: *microzig.BuildEnvironment, *microzig.Firmware) void {
     const T = struct {
-        fn configure(host_build: *std.Build, fw: *microzig.Firmware) void {
-            const bootrom_file = getBootrom(host_build, bootrom);
+        fn configure(env: *microzig.BuildEnvironment, fw: *microzig.Firmware) void {
+            const bootrom_file = getBootrom(env, bootrom);
 
             // HACK: Inject the file as a dependency to MicroZig.board
             fw.modules.board.?.dependencies.put(
                 "bootloader",
-                host_build.createModule(.{
+                env.host_build.createModule(.{
                     .source_file = bootrom_file.bin,
                 }),
             ) catch @panic("oom");
@@ -161,7 +161,7 @@ pub const Stage2Bootloader = struct {
     elf: ?std.Build.LazyPath,
 };
 
-pub fn getBootrom(b: *std.Build, rom: BootROM) Stage2Bootloader {
+pub fn getBootrom(env: *microzig.BuildEnvironment, rom: BootROM) Stage2Bootloader {
     const rom_exe = switch (rom) {
         .artifact => |artifact| artifact,
         .blob => |blob| return Stage2Bootloader{
@@ -170,13 +170,13 @@ pub fn getBootrom(b: *std.Build, rom: BootROM) Stage2Bootloader {
         },
 
         else => blk: {
-            var target = @as(microzig.CpuModel, chip.cpu).getDescriptor().target;
+            var target = env.getCpuDescriptor(chip.cpu).target;
             target.abi = .eabi;
 
-            const rom_path = b.pathFromRoot(b.fmt("{s}/src/bootroms/{s}.S", .{ build_root, @tagName(rom) }));
+            const rom_path = env.host_build.pathFromRoot(env.host_build.fmt("{s}/src/bootroms/{s}.S", .{ build_root, @tagName(rom) }));
 
-            const rom_exe = b.addExecutable(.{
-                .name = b.fmt("stage2-{s}", .{@tagName(rom)}),
+            const rom_exe = env.host_build.addExecutable(.{
+                .name = env.host_build.fmt("stage2-{s}", .{@tagName(rom)}),
                 .optimize = .ReleaseSmall,
                 .target = target,
                 .root_source_file = null,
@@ -191,8 +191,8 @@ pub fn getBootrom(b: *std.Build, rom: BootROM) Stage2Bootloader {
         },
     };
 
-    const rom_objcopy = b.addObjCopy(rom_exe.getEmittedBin(), .{
-        .basename = b.fmt("{s}.bin", .{@tagName(rom)}),
+    const rom_objcopy = env.host_build.addObjCopy(rom_exe.getEmittedBin(), .{
+        .basename = env.host_build.fmt("{s}.bin", .{@tagName(rom)}),
         .format = .bin,
     });
 

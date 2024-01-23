@@ -7,6 +7,11 @@ const std = @import("std");
 const bsp = @import("bsp");
 const microzig = @import("microzig-build");
 
+// Fake build_runner.zig api:
+pub const dependencies = struct {
+    pub const imports = struct {};
+};
+
 const JsonTarget = struct {
     id: []const u8,
 

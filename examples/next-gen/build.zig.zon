@@ -4,19 +4,19 @@
     .dependencies = .{
         .microzig = .{
             .url = "https://public.devspace.random-projects.net/microzig-build.tar.gz",
-            .hash = "1220c87cc608598bdb4ae5ed6436c6fa3e126c57d3d1bbfaf01625c3af0c15da44e4",
+            .hash = "12208fcae95a6d3bc80301bfbabe9f937cf299188f44bed100f61e39437d8fc4a49a",
         },
         .@"microzig-core" = .{
             .url = "https://public.devspace.random-projects.net/microzig-core.tar.gz",
-            .hash = "1220a37d914f0585bbaeba2bc4d4d15586bef310a6af340af87f0e13fde0b4ddfb1a",
+            .hash = "122085d8c30906f461a3aecb54eb0dadb644c25724b0eb2d3fc89f1f4c3a8d411be2",
         },
         .@"microzig-bsp-nxp" = .{
             .url = "https://public.devspace.random-projects.net/board-support/nxp/lpc.tar.gz",
-            .hash = "122040dc9467f6dac90a1376fff25350b2a5abd291904db7bea48a78db4f6e6dff13",
+            .hash = "12201530a2d4d2751a5bc93720d3a3d6eab0349cc271004102bcc470beffb02c7e84",
         },
         .@"microzig-bsp-rp2040" = .{
             .url = "https://public.devspace.random-projects.net/board-support/raspberrypi/rp2040.tar.gz",
-            .hash = "1220142a13e590252deb7667569bdd3f6147c5b461f6b0343a825079a7dd3a24dea9",
+            .hash = "1220817e39ac34923bae65047afc344706c11e7dd054efee3ca31ff78adc78a4e0f6",
         },
     },
 }

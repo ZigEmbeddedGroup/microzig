@@ -145,7 +145,7 @@ def execute_raw(*args,hide_stderr = False,**kwargs):
         sys.stderr.buffer.write(res.stderr)
     if res.returncode != 0:
         sys.stderr.write(f"command {' '.join(args)} failed with exit code {res.returncode}")
-    res.check_returncode()
+        sys.exit(res.returncode)
     return res 
 
 def execute(*args,**kwargs):
