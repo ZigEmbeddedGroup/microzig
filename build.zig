@@ -112,6 +112,32 @@ pub fn build(b: *std.Build) void {
 
             validation_step.dependOn(&ext_compiler.step);
         }
+
+        // Validate all modes of assertion:
+        for ([_][]const u8{
+            "FOUNDATION_LIBC_ASSERT_DEFAULT",
+            "FOUNDATION_LIBC_ASSERT_NOFILE",
+            "FOUNDATION_LIBC_ASSERT_NOMSG",
+            "FOUNDATION_LIBC_ASSERT_EXPECTED",
+        }) |assert_mode| {
+            // Check if the syntax of all of our header files is valid:
+            const assert_validator = b.addStaticLibrary(.{
+                .name = "assert-validator",
+                .target = .{}, // just build for the host
+                .optimize = .Debug,
+            });
+            assert_validator.addCSourceFile(.{
+                .file = .{ .path = "tests/assert-validator.c" },
+                .flags = &common_c_flags,
+            });
+            assert_validator.addIncludePath(include_path);
+            _ = assert_validator.getEmittedBin();
+
+            assert_validator.defineCMacro("FOUNDATION_LIBC_ASSERT", assert_mode);
+
+            // Just compile, do not install:
+            validation_step.dependOn(&assert_validator.step);
+        }
     }
 }
 
