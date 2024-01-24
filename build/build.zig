@@ -246,22 +246,66 @@ pub fn createBuildEnvironment(b: *std.Build, comptime info: EnvironmentInfo) *Bu
         .self_pkg_name = comptime info.self,
         .core_pkg_name = comptime info.core,
         .cpus = &core_module.cpus,
+
+        .show_targets_step = std.Build.Step.init(.{
+            .id = .custom,
+            .name = "Show MicroZig targets",
+            .owner = b,
+            .makeFn = BuildEnvironment.print_target_steps,
+            .first_ret_addr = null,
+        }),
     };
 
     be.self = b.dependency(info.self, .{});
     be.microzig_core = b.dependency(info.core, .{});
 
-    inline for (be.board_support_packages, requested_bsps) |*bsp, def| {
-        bsp.* = BoardSupportPackage{
-            .name = def.import_name,
-            .dep = b.dependency(def.import_name, .{}),
-        };
+    // Fetch all available board support packages and targets:
+    {
+        var duplicate_package_names = std.StringArrayHashMap(void).init(be.host_build.allocator);
+        defer duplicate_package_names.deinit();
 
-        for (def.bsp.targets) |tgt| {
-            const full_name = b.fmt("{s}#{s}", .{ tgt.id, def.import_name });
+        inline for (be.board_support_packages, requested_bsps) |*bsp, def| {
+            bsp.* = BoardSupportPackage{
+                .name = def.import_name,
+                .dep = b.dependency(def.import_name, .{}),
+            };
 
-            be.targets.put(be.host_build.allocator, tgt.id, tgt.target) catch @panic("out of memory");
-            be.targets.put(be.host_build.allocator, full_name, tgt.target) catch @panic("out of memory");
+            for (def.bsp.targets) |tgt| {
+                const full_name = b.fmt("{s}#{s}", .{ tgt.id, def.import_name });
+
+                const old_value = be.targets.fetchPut(be.host_build.allocator, tgt.id, tgt.target) catch @panic("out of memory");
+                be.targets.put(be.host_build.allocator, full_name, tgt.target) catch @panic("out of memory");
+
+                if (old_value != null) {
+                    duplicate_package_names.put(tgt.id, {}) catch @panic("out of memory");
+                }
+            }
+        }
+
+        // Remove all non-unique packages from the list as they are ambigious:
+        for (duplicate_package_names.keys()) |key| {
+            _ = be.targets.orderedRemove(key);
+        }
+
+        // reuse set to store names of unique long names
+        duplicate_package_names.clearRetainingCapacity();
+
+        // Find all elements where only a single non-hashed variant exists:
+        for (be.targets.keys()) |long_value| {
+            const index = std.mem.indexOfScalar(u8, long_value, '#') orelse continue;
+
+            const short_value = long_value[0..index];
+
+            if (be.targets.get(short_value) != null) {
+                // If we have the short variant, we don't have a duplicate anymore, so
+                // let's drop the long variant:
+                duplicate_package_names.put(long_value, {}) catch @panic("out of memory");
+            }
+        }
+
+        // Drop all unnecessary long variants:
+        for (duplicate_package_names.keys()) |key| {
+            _ = be.targets.orderedRemove(key);
         }
     }
 
@@ -288,9 +332,16 @@ pub const BuildEnvironment = struct {
 
     cpus: *const CpuArray,
 
+    show_targets_step: std.Build.Step,
+
     /// Searches for a target called `name` and returns a pointer to the MicroZig Target if it exists.
     pub fn findTarget(env: *const BuildEnvironment, name: []const u8) ?*const Target {
         return env.targets.getPtr(name);
+    }
+
+    /// Returns a slice to all available target names.
+    pub fn getTargetNames(env: *const BuildEnvironment) []const []const u8 {
+        return env.targets.keys();
     }
 
     /// Returns the instance to the CPU descriptor for the given CPU model.
@@ -299,6 +350,13 @@ pub const BuildEnvironment = struct {
             model.custom
         else
             env.cpus.getPtrConst(model);
+    }
+
+    /// Returns a build step that will print all available targets to this instance.
+    ///
+    /// Can be used to provide a list to the user or developer.
+    pub fn getShowTargetsStep(env: *BuildEnvironment) *std.Build.Step {
+        return &env.show_targets_step;
     }
 
     /// Declares a new MicroZig firmware file.
@@ -639,6 +697,17 @@ pub const BuildEnvironment = struct {
         const write = env.host_build.addWriteFiles();
 
         return write.add("linker.ld", contents.items);
+    }
+
+    fn print_target_steps(step: *std.Build.Step, prog_node: *std.Progress.Node) !void {
+        _ = prog_node;
+
+        const env = @fieldParentPtr(BuildEnvironment, "show_targets_step", step);
+
+        std.debug.print("Available MicroZig targets:\n", .{});
+        for (env.targets.keys()) |listed_target_name| {
+            std.debug.print("* {s}\n", .{listed_target_name});
+        }
     }
 };
 
