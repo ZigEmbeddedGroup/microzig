@@ -128,12 +128,12 @@ pub var vector_table: VectorTable = blk: {
         if (@typeInfo(interrupts) != .Struct)
             @compileLog("root.interrupts must be a struct");
 
-        inline for (@typeInfo(interrupts).Struct.decls) |decl| {
+        for (@typeInfo(interrupts).Struct.decls) |decl| {
             const function = @field(interrupts, decl.name);
 
             if (!@hasField(VectorTable, decl.name)) {
                 var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
-                inline for (std.meta.fields(VectorTable)) |field| {
+                for (std.meta.fields(VectorTable)) |field| {
                     if (is_valid_field(field.name)) {
                         msg = msg ++ "    " ++ field.name ++ "\n";
                     }

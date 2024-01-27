@@ -34,14 +34,8 @@ pub fn init(b: *std.Build, dependency_name: []const u8) *MicroZig {
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.Build) !void {
-    const uf2_dep = b.dependency("uf2", .{});
-
     const build_test = b.addTest(.{
         .root_source_file = .{ .path = "build.zig" },
-    });
-
-    build_test.addAnonymousModule("uf2", .{
-        .source_file = .{ .cwd_relative = uf2_dep.builder.pathFromRoot("build.zig") },
     });
 
     const install_docs = b.addInstallDirectory(.{
@@ -218,10 +212,10 @@ pub const Cpu = struct {
     name: []const u8,
 
     /// Source file providing startup code and memory initialization routines.
-    source_file: std.build.LazyPath,
+    source_file: std.Build.LazyPath,
 
-    /// The compiler target we use to compile all the code.
-    target: std.zig.CrossTarget,
+    /// Query to resolve target used to compile all code.
+    query: std.Target.Query,
 };
 
 /// A descriptor for memory regions in a microcontroller.
@@ -321,13 +315,13 @@ pub const LinkerScript = union(enum) {
     generated,
 
     /// Externally defined linker script.
-    source_file: std.build.LazyPath,
+    source_file: std.Build.LazyPath,
 };
 
 /// A compilation target for MicroZig. Provides information about the chip,
 /// hal, board and so on.
 ///
-/// This is used instead of `std.zig.CrossTarget` to define a MicroZig Firmware.
+/// This is used instead of `std.Target.Query` to define a MicroZig Firmware.
 pub const Target = struct {
     /// The preferred binary format of this MicroZig target. If `null`, the user must
     /// explicitly give the `.format` field during a call to `getEmittedBin()` or installation steps.
@@ -464,7 +458,7 @@ pub fn addFirmware(
         .artifact = host_build.addExecutable(.{
             .name = options.name,
             .optimize = options.optimize,
-            .target = cpu.target,
+            .target = host_build.resolveTargetQuery(cpu.query),
             .linkage = .static,
             .root_source_file = .{ .cwd_relative = mz.self.builder.pathFromRoot("src/start.zig") },
         }),
@@ -475,11 +469,11 @@ pub fn addFirmware(
 
         .modules = .{
             .microzig = micro_build.createModule(.{
-                .source_file = .{ .cwd_relative = micro_build.pathFromRoot("src/microzig.zig") },
-                .dependencies = &.{
+                .root_source_file = .{ .cwd_relative = micro_build.pathFromRoot("src/microzig.zig") },
+                .imports = &.{
                     .{
                         .name = "config",
-                        .module = micro_build.createModule(.{ .source_file = config.getSource() }),
+                        .module = micro_build.createModule(.{ .root_source_file = config.getSource() }),
                     },
                 },
             }),
@@ -494,58 +488,60 @@ pub fn addFirmware(
         },
     };
     errdefer fw.output_files.deinit();
+    // disable default entrypoint and use the one provided by the linker script
+    fw.artifact.entry = .disabled;
 
     fw.modules.chip = mz.b.createModule(.{
-        .source_file = chip_source,
-        .dependencies = &.{
+        .root_source_file = chip_source,
+        .imports = &.{
             .{ .name = "microzig", .module = fw.modules.microzig },
         },
     });
-    fw.modules.microzig.dependencies.put("chip", fw.modules.chip) catch @panic("out of memory");
+    fw.modules.microzig.addImport("chip", fw.modules.chip);
 
     fw.modules.cpu = mz.b.createModule(.{
-        .source_file = cpu.source_file,
-        .dependencies = &.{
+        .root_source_file = cpu.source_file,
+        .imports = &.{
             .{ .name = "microzig", .module = fw.modules.microzig },
         },
     });
-    fw.modules.microzig.dependencies.put("cpu", fw.modules.cpu) catch @panic("out of memory");
+    fw.modules.microzig.addImport("cpu", fw.modules.cpu);
 
     if (maybe_hal) |hal| {
         fw.modules.hal = mz.b.createModule(.{
-            .source_file = hal.source_file,
-            .dependencies = &.{
+            .root_source_file = hal.source_file,
+            .imports = &.{
                 .{ .name = "microzig", .module = fw.modules.microzig },
             },
         });
-        fw.modules.microzig.dependencies.put("hal", fw.modules.hal.?) catch @panic("out of memory");
+        fw.modules.microzig.addImport("hal", fw.modules.hal.?);
     }
 
     if (maybe_board) |brd| {
         fw.modules.board = mz.b.createModule(.{
-            .source_file = brd.source_file,
-            .dependencies = &.{
+            .root_source_file = brd.source_file,
+            .imports = &.{
                 .{ .name = "microzig", .module = fw.modules.microzig },
             },
         });
-        fw.modules.microzig.dependencies.put("board", fw.modules.board.?) catch @panic("out of memory");
+        fw.modules.microzig.addImport("board", fw.modules.board.?);
     }
 
     fw.modules.app = host_build.createModule(.{
-        .source_file = options.source_file,
-        .dependencies = &.{
+        .root_source_file = options.source_file,
+        .imports = &.{
             .{ .name = "microzig", .module = fw.modules.microzig },
         },
     });
 
     const umm = mz.dependency("umm-zig", .{}).module("umm");
-    fw.modules.microzig.dependencies.put("umm", umm) catch @panic("out of memory");
+    fw.modules.microzig.addImport("umm", umm);
 
-    fw.artifact.addModule("app", fw.modules.app);
-    fw.artifact.addModule("microzig", fw.modules.microzig);
+    fw.artifact.root_module.addImport("app", fw.modules.app);
+    fw.artifact.root_module.addImport("microzig", fw.modules.microzig);
 
-    fw.artifact.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
-    fw.artifact.single_threaded = options.single_threaded orelse fw.target.single_threaded;
+    fw.artifact.root_module.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
+    fw.artifact.root_module.single_threaded = options.single_threaded orelse fw.target.single_threaded;
     fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
 
     switch (linker_script) {
@@ -778,7 +774,7 @@ pub const cpus = struct {
     pub const avr5 = Cpu{
         .name = "AVR5",
         .source_file = .{ .path = build_root ++ "/src/cpus/avr5.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .avr,
             .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
             .os_tag = .freestanding,
@@ -789,7 +785,7 @@ pub const cpus = struct {
     pub const cortex_m0 = Cpu{
         .name = "ARM Cortex-M0",
         .source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
             .os_tag = .freestanding,
@@ -800,7 +796,7 @@ pub const cpus = struct {
     pub const cortex_m0plus = Cpu{
         .name = "ARM Cortex-M0+",
         .source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
             .os_tag = .freestanding,
@@ -811,7 +807,7 @@ pub const cpus = struct {
     pub const cortex_m3 = Cpu{
         .name = "ARM Cortex-M3",
         .source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
             .os_tag = .freestanding,
@@ -822,7 +818,7 @@ pub const cpus = struct {
     pub const cortex_m4 = Cpu{
         .name = "ARM Cortex-M4",
         .source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
             .os_tag = .freestanding,
@@ -833,7 +829,7 @@ pub const cpus = struct {
     pub const riscv32_imac = Cpu{
         .name = "RISC-V 32-bit",
         .source_file = .{ .path = build_root ++ "/src/cpus/riscv32.zig" },
-        .target = std.zig.CrossTarget{
+        .query = std.Target.Query{
             .cpu_arch = .riscv32,
             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
             .os_tag = .freestanding,
@@ -933,7 +929,7 @@ fn generateLinkerScript(b: *std.Build, chip: Chip) !std.Build.LazyPath {
             \\
         );
 
-        switch (cpu.target.getCpuArch()) {
+        switch (cpu.query.cpu_arch orelse return error.InvalidTarget) {
             .arm, .thumb => try writer.writeAll(
                 \\  .ARM.exidx : {
                 \\      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
