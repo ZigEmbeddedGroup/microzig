@@ -182,7 +182,7 @@ fn get_declared_bsps() []const ImportedBSP {
 
 pub const EnvironmentInfo = struct {
     /// package name of the build package (optional)
-    self: []const u8 = "microzig",
+    self: []const u8 = "microzig-build",
 
     /// package name of the core package (optional)
     core: []const u8 = "microzig-core",

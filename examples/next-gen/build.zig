@@ -1,5 +1,5 @@
 const std = @import("std");
-const MicroZig = @import("microzig");
+const MicroZig = @import("microzig-build");
 
 pub fn build(b: *std.Build) void {
     const microzig = MicroZig.createBuildEnvironment(b, .{});

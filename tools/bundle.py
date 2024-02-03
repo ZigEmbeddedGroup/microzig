@@ -21,6 +21,7 @@ import tarfile
 from marshmallow import fields as mm_fields
 from typing import Optional, Any
 
+LEGAL_PACKAGE_NAME = re.compile("^[A-Za-z]$")
 
 VERBOSE = False 
 ALL_FILES_DIR=".data"
@@ -41,6 +42,7 @@ class PackageType(StrEnum):
     build = "build"
     core = "core"
     board_support = "board-support"
+    example = "example"
 
 @dataclass_json
 @dataclass
@@ -290,6 +292,9 @@ def main():
     packages = {}
     validation_ok = True
 
+    PACKAGES_ROOT = PurePosixPath("packages")
+    EXAMPLES_ROOT = PurePosixPath("examples")
+
     for meta_path in REPO_ROOT.rglob("microzig-package.json"):
         assert meta_path.is_file()
 
@@ -305,25 +310,39 @@ def main():
 
 
         if pkg.package_type == PackageType.build:
-            pkg.out_rel_dir = PurePosixPath(".")
+            pkg.out_rel_dir = PACKAGES_ROOT
             pkg.out_basename = pkg.package_name
             
         elif pkg.package_type == PackageType.core:
-            pkg.out_rel_dir = PurePosixPath(".")
+            pkg.out_rel_dir = PACKAGES_ROOT
             pkg.out_basename = pkg.package_name
             
             # Implicit dependencies:
             pkg.inner_dependencies.add("microzig-build") # core requires the build types
 
         elif pkg.package_type == PackageType.board_support:
-            parsed_pkg_name = PurePosixPath(pkg.package_name)
+            parsed_pkg_name = PurePosixPath( pkg.package_name)
 
-            pkg.out_rel_dir = "board-support" / parsed_pkg_name.parent
+            pkg.out_rel_dir = PACKAGES_ROOT / "board-support" / parsed_pkg_name.parent
             pkg.out_basename = parsed_pkg_name.name
 
             # Implicit dependencies:
             pkg.inner_dependencies.add("microzig-build") # BSPs also require build types
             pkg.inner_dependencies.add("microzig-core") # but also the core types (?)
+            
+            
+        elif pkg.package_type == PackageType.example:
+            parsed_pkg_name = PurePosixPath( pkg.package_name)
+
+            pkg.package_name = "examples:" + pkg.package_name # patch the name so we can use the same name for BSP and Example 
+
+            pkg.out_rel_dir = EXAMPLES_ROOT / parsed_pkg_name.parent
+            pkg.out_basename = parsed_pkg_name.name
+
+            # Implicit dependencies:
+            pkg.inner_dependencies.add("microzig-build") # BSPs also require build types
+            pkg.inner_dependencies.add("microzig-core") # but also the core types (?)
+
         else:
             assert False 
 

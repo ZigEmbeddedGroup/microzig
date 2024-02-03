@@ -38,6 +38,7 @@ const MetaData = struct {
         @"board-support",
         core,
         build,
+        example,
     };
 
     package_name: []const u8,
