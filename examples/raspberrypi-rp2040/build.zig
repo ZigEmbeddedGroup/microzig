@@ -16,7 +16,7 @@ const available_examples = [_]Example{
     .{ .target = "board:raspberry_pi/pico", .name = "pico_usb-device", .file = "src/usb_device.zig" },
     .{ .target = "board:raspberry_pi/pico", .name = "pico_usb-hid", .file = "src/usb_hid.zig" },
     .{ .target = "board:raspberry_pi/pico", .name = "pico_ws2812", .file = "src/ws2812.zig" },
-    // TODO: Fix multicore hal! .{ .name = "pico", .target = "board:raspberry_pi/pico" , .file = "src/blinky_core1.zig" },
+    // TODO: Fix multicore hal! .{ .target = "board:raspberry_pi/pico", .name = "pico_multicore" , .file = "src/blinky_core1.zig" },
 
     // WaveShare Boards:
     .{ .target = "board:waveshare/rp2040_matrix", .name = "rp2040-matrix_tiles", .file = "src/tiles.zig" },
