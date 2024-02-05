@@ -66,8 +66,6 @@ def main():
         cwd=build_root,
     )
 
-    # print(list(example_build_root.glob("*")))
-
     execute(
         "zig",
         "build",

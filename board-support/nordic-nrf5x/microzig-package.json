@@ -1,4 +1,4 @@
 {
-  "package_name": "nordic/nrf52",
-  "package_type": "board-support"
+    "package_name": "nordic/nrf5x",
+    "package_type": "board-support"
 }

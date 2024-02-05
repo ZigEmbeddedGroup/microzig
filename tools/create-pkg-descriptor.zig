@@ -34,18 +34,21 @@ const Timestamp = struct {
 };
 
 const MetaData = struct {
-    const Type = enum {
-        @"board-support",
-        core,
-        build,
-        example,
+    const Type = enum(u32) {
+        // we "abuse" the enum value here to map our keys to a priority mapping:
+        // Zig 0.11 must have dependencies with inner dependencies in the right order,
+        // otherwise the build system won't find the dependencies:
+        build = 0, // must always be first
+        core = 300,
+        @"board-support" = 500,
+        example = 900,
     };
 
     package_name: []const u8,
     package_type: Type,
     version: []const u8,
 
-    inner_dependencies: []const []const u8 = &.{},
+    inner_dependencies: [][]const u8 = &.{},
     external_dependencies: std.json.Value = .null,
 
     archive: ?Archive = null,
@@ -122,6 +125,8 @@ pub fn main() !void {
             }
         }
 
+        std.sort.block([]const u8, package.inner_dependencies, all_packages, orderPackagesByPriority);
+
         // Add all other dependencies:
         for (package.inner_dependencies) |dep_name| {
             const dep = findPackage(all_packages, dep_name).?;
@@ -139,4 +144,19 @@ pub fn main() !void {
     }
 
     try buffered_stdout.flush();
+}
+
+fn orderPackagesByPriority(mt: []MetaData, lhs_name: []const u8, rhs_name: []const u8) bool {
+    const rhs = findPackage(mt, rhs_name).?;
+    const lhs = findPackage(mt, lhs_name).?;
+
+    const rhs_prio = @intFromEnum(rhs.package_type);
+    const lhs_prio = @intFromEnum(lhs.package_type);
+
+    if (lhs_prio < rhs_prio)
+        return true;
+    if (lhs_prio > rhs_prio)
+        return false;
+
+    return std.ascii.lessThanIgnoreCase(lhs_name, rhs_name);
 }

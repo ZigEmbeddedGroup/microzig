@@ -9,3 +9,4 @@ mkdir -p "${tmpdir}"
 
 "${root}/validate-example.py" --build-root "${tmpdir}" --example raspberrypi/rp2040
 "${root}/validate-example.py" --build-root "${tmpdir}" --example stmicro/stm32
+"${root}/validate-example.py" --build-root "${tmpdir}" --example nxp/lpc
