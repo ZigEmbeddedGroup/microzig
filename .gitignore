@@ -5,3 +5,4 @@ microzig-deploy/
 .gdbinit
 .lldbinit
 .direnv/
+__pycache__/

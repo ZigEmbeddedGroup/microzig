@@ -27,7 +27,6 @@ const available_examples = [_]Example{
 
 pub fn build(b: *std.Build) void {
     const microzig = MicroZig.createBuildEnvironment(b, .{});
-
     const optimize = b.standardOptimizeOption(.{});
 
     const show_targets_step = b.step("show-targets", "Shows all available MicroZig targets");

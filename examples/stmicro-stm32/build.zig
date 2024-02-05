@@ -1,22 +1,27 @@
 const std = @import("std");
-const stm32 = @import("stm32");
+const MicroZig = @import("microzig-build");
 
 const available_examples = [_]Example{
-    .{ .name = "stm32f103x8", .target = stm32.chips.stm32f103x8, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f303vc", .target = stm32.chips.stm32f303vc, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f407vg", .target = stm32.chips.stm32f407vg, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f429zit6u", .target = stm32.chips.stm32f429zit6u, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f3discovery", .target = stm32.boards.stm32f3discovery, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f4discovery", .target = stm32.boards.stm32f4discovery, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm3240geval", .target = stm32.boards.stm3240geval, .file = "src/blinky.zig" },
-    // TODO: .{ .name = "stm32f429idiscovery", .target = stm32.boards.stm32f429idiscovery, .file = "src/blinky.zig" },
+    .{ .target = "chip:stm32f103x8",.name = "stm32f103x8",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "chip:stm32f303vc", .name = "stm32f303vc",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "chip:stm32f407vg", .name = "stm32f407vg",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "chip:stm32f429zit6u", .name = "stm32f429zit6u",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "board:stm32f3discovery", .name = "stm32f3discovery",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "board:stm32f4discovery", .name = "stm32f4discovery",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "board:stm3240geval", .name = "stm3240geval",  .file = "src/blinky.zig" },
+    // TODO: .{ .target = "board:stm32f429idiscovery", .name = "stm32f429idiscovery",  .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
-    const microzig = @import("microzig").init(b, "microzig");
-    const optimize = .ReleaseSmall; // The others are not really an option on AVR
+    const microzig = MicroZig.createBuildEnvironment(b, .{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const show_targets_step = b.step("show-targets", "Shows all available MicroZig targets");
+    show_targets_step.dependOn(microzig.getShowTargetsStep());
 
     for (available_examples) |example| {
+        const target = microzig.findTarget(example.target).?;
+
         // `addFirmware` basically works like addExecutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
         //
@@ -24,7 +29,7 @@ pub fn build(b: *std.Build) void {
         // cpu and potentially the board as well.
         const firmware = microzig.addFirmware(b, .{
             .name = example.name,
-            .target = example.target,
+            .target = target,
             .optimize = optimize,
             .source_file = .{ .path = example.file },
         });
@@ -41,7 +46,7 @@ pub fn build(b: *std.Build) void {
 }
 
 const Example = struct {
-    target: @import("microzig").Target,
+    target: []const u8,
     name: []const u8,
     file: []const u8,
 };
