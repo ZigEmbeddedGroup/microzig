@@ -1,17 +1,22 @@
 const std = @import("std");
-const gd32 = @import("gd32");
+const MicroZig = @import("microzig-build");
 
 const available_examples = [_]Example{
-    // .{ .name = "gd32vf103xb", .target = gd32.chips.gd32vf103xb, .file = "src/blinky.zig" },
-    // .{ .name = "gd32vf103x8", .target = gd32.chips.gd32vf103x8, .file = "src/blinky.zig" },
-    // .{ .name = "sipeed-longan_nano", .target = gd32.boards.sipeed.longan_nano, .file = "src/blinky.zig" },
+    .{ .target = "chip:gd32vf103xb", .name = "gd32vf103xb", .file = "src/empty.zig" },
+    .{ .target = "chip:gd32vf103x8", .name = "gd32vf103x8", .file = "src/empty.zig" },
+    .{ .target = "board:sipeed/longan_nano", .name = "sipeed-longan_nano", .file = "src/empty.zig" },
 };
 
 pub fn build(b: *std.Build) void {
-    const microzig = @import("microzig").init(b, "microzig");
-    const optimize = .ReleaseSmall; // The others are not really an option on AVR
+    const microzig = MicroZig.createBuildEnvironment(b, .{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const show_targets_step = b.step("show-targets", "Shows all available MicroZig targets");
+    show_targets_step.dependOn(microzig.getShowTargetsStep());
 
     for (available_examples) |example| {
+        const target = microzig.findTarget(example.target).?;
+
         // `addFirmware` basically works like addExecutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
         //
@@ -19,7 +24,7 @@ pub fn build(b: *std.Build) void {
         // cpu and potentially the board as well.
         const firmware = microzig.addFirmware(b, .{
             .name = example.name,
-            .target = example.target,
+            .target = target,
             .optimize = optimize,
             .source_file = .{ .path = example.file },
         });
@@ -36,7 +41,7 @@ pub fn build(b: *std.Build) void {
 }
 
 const Example = struct {
-    target: @import("microzig").Target,
+    target: []const u8,
     name: []const u8,
     file: []const u8,
 };

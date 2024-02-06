@@ -1,0 +1,7 @@
+{
+    "package_name": "espressif/esp",
+    "package_type": "example",
+    "inner_dependencies": [
+        "espressif/esp"
+    ]
+}
