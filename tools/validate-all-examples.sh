@@ -7,6 +7,8 @@ tmpdir="/tmp/microzig-test"
 
 mkdir -p "${tmpdir}"
 
-"${root}/validate-example.py" --build-root "${tmpdir}" --example raspberrypi/rp2040
-"${root}/validate-example.py" --build-root "${tmpdir}" --example stmicro/stm32
-"${root}/validate-example.py" --build-root "${tmpdir}" --example nxp/lpc
+examples="espressif/esp stmicro/stm32 nordic/nrf5x gigadevice/gd32 raspberrypi/rp2040 nxp/lpc microchip/atsam"
+
+for key in ${examples}; do
+    "${root}/validate-example.py" --build-root "${tmpdir}" --example "$key"
+done
