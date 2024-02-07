@@ -102,13 +102,13 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 }
 
 pub const startup_logic = struct {
-    export fn microzig_unhandled_vector() callconv(.Naked) noreturn {
+    export fn microzig_unhandled_vector() callconv(.C) noreturn {
         @panic("Unhandled interrupt");
     }
 
     extern fn microzig_main() noreturn;
 
-    export fn microzig_start() callconv(.Naked) noreturn {
+    export fn microzig_start() callconv(.C) noreturn {
         // At startup the stack pointer is at the end of RAM
         // so, no need to set it manually!
 

@@ -1,15 +1,21 @@
 const std = @import("std");
-const atmega = @import("atmega");
+const MicroZig = @import("microzig-build");
 
 const available_examples = [_]Example{
-    // TODO:    .{ .name = "arduino-nano_blinky", .target = atmega.boards.arduino.nano, .file = "src/blinky.zig" },
+    .{ .target = "board:arduino/nano", .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
+    .{ .target = "board:arduino/uno_rev3", .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
-    const microzig = @import("microzig").init(b, "microzig");
-    const optimize = .ReleaseSmall; // The others are not really an option on AVR
+    const microzig = MicroZig.createBuildEnvironment(b, .{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const show_targets_step = b.step("show-targets", "Shows all available MicroZig targets");
+    show_targets_step.dependOn(microzig.getShowTargetsStep());
 
     for (available_examples) |example| {
+        const target = microzig.findTarget(example.target).?;
+
         // `addFirmware` basically works like addExecutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
         //
@@ -17,7 +23,7 @@ pub fn build(b: *std.Build) void {
         // cpu and potentially the board as well.
         const firmware = microzig.addFirmware(b, .{
             .name = example.name,
-            .target = example.target,
+            .target = target,
             .optimize = optimize,
             .source_file = .{ .path = example.file },
         });
@@ -34,7 +40,7 @@ pub fn build(b: *std.Build) void {
 }
 
 const Example = struct {
-    target: @import("microzig").Target,
+    target: []const u8,
     name: []const u8,
     file: []const u8,
 };

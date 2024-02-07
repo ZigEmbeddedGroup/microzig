@@ -523,6 +523,7 @@ pub const BuildEnvironment = struct {
         if (options.target.configure) |configure| {
             configure(fw.env, fw);
         }
+        
 
         return fw;
     }
