@@ -3,6 +3,7 @@ name: Continuous Integration
 env:
   # Specify the current Zig version MicroZig uses:
   ZIG_VERSION: 0.11.0
+  DEPLOYMENT_URL: "https://download.microzig.tech"
 
 on:
   push:
@@ -69,12 +70,22 @@ jobs:
         run: |
           pip install dataclasses_json==0.6.3 marshmallow typing-inspect semver pathspec
 
-      - name: Generate and validate packages
+      - name: Generate packages
         run: |
-          ./tools/bundle.py
+          ./tools/bundle.py --debug
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Spawn local web server
+        uses: Eun/http-server-action@v1
         with:
-          name: packages
-          path: microzig-deploy/
+          directory: "${{ github.workspace }}/microzig-deploy"
+          port: 8080
+          content-types: |
+            {
+              "gz": "application/gzip",
+              "json": "application/json"
+            }
+
+      - name: Validate examples
+        run: |
+          mkdir -p "${{ github.workspace }}/microzig-test"
+          ./tools/validate-all-examples.sh --build-root "${{ github.workspace }}/microzig-test"

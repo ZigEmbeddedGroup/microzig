@@ -8,6 +8,7 @@ import sys
 import shutil
 
 REQUIRED_TOOLS = ["zig", "curl", "tar", "gunzip"]
+DEBUG_DEPLOYMENT_BASE="http://localhost:8080"
 
 
 def main():
@@ -20,10 +21,13 @@ def main():
 
     parser.add_argument("--example", type=PurePosixPath, required=True)
     parser.add_argument("--build-root", type=Path, required=True)
+    parser.add_argument("--base-url", type=str, required=False, default=DEBUG_DEPLOYMENT_BASE, help="Sets the download URL for the packages.")
+
     args = parser.parse_args()
 
     example_id: PurePosixPath = args.example 
     build_root: Path = args.build_root
+    base_url: str = args.base_url
 
     if len(example_id.parents) != 2 or str(example_id.parents[1]) != ".":
         print(f"example must be <group>/<id>", file=sys.stderr)
@@ -41,7 +45,7 @@ def main():
         "curl",
         "-o",
         f"{example_name}.tar.gz",
-        f"https://public.devspace.random-projects.net/examples/{example_group}/{example_name}.tar.gz",
+        f"{base_url}/examples/{example_group}/{example_name}.tar.gz",
         cwd=build_root,
     )
 

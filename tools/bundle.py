@@ -14,6 +14,7 @@ from dataclasses_json import dataclass_json, config as  dcj_config, Exclude as J
 from semver import Version
 from marshmallow import fields
 from enum import Enum as StrEnum
+from argparse import ArgumentParser
 import pathspec
 import stat 
 import tarfile
@@ -26,6 +27,9 @@ from typing import Optional, Any
 from lib.common import  execute_raw, execute, slurp, check_zig_version, check_required_tools
 import lib.common as common
 
+DEFAULT_DEPLOYMENT_BASE="https://download.microzig.tech/packages"
+DEBUG_DEPLOYMENT_BASE="http://localhost:8080"
+
 LEGAL_PACKAGE_NAME = re.compile("^[A-Za-z]$")
 
 VERBOSE = False 
@@ -34,8 +38,7 @@ REQUIRED_TOOLS = [
     "zig",
     "git",
 ]
-# DEPLOYMENT_BASE="https://download.microzig.tech/packages"
-DEPLOYMENT_BASE="https://public.devspace.random-projects.net"
+
 
 REPO_ROOT = Path(__file__).parent.parent
 assert REPO_ROOT.is_dir()
@@ -230,6 +233,17 @@ def get_batch_timestamp():
 
 def main():
 
+    
+    arg_parser = ArgumentParser()
+
+    arg_parser.add_argument("--base-url", type=str, required=False, default=DEFAULT_DEPLOYMENT_BASE, help="Sets the download URL for the packages.")
+    arg_parser.add_argument("--debug", action="store_true", required=False, default=False, help="Creates a deployment for local development, hosted by localhost:8080")
+
+    cli_args = arg_parser.parse_args()
+
+    base_url = cli_args.base_url if not cli_args.debug else DEBUG_DEPLOYMENT_BASE
+
+
     check_required_tools(REQUIRED_TOOLS)
 
     check_zig_version("0.11.0")
@@ -326,7 +340,7 @@ def main():
             assert False 
 
         download_path = pkg.out_rel_dir / ALL_FILES_DIR / f"{pkg.out_basename}-{version}.tar.gz"
-        pkg.download_url = f"{DEPLOYMENT_BASE}/{download_path}"
+        pkg.download_url = f"{base_url}/{download_path}"
 
         buildzig_path = pkg_dir / "build.zig"
         buildzon_path = pkg_dir / "build.zig.zon"
