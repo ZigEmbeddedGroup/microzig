@@ -4,10 +4,11 @@
 
 ## Overview
 
+- `build/` contains the build components of MicroZig.
 - `core/` contains the shared components of MicroZig.
 - `board-support/` contains all official board support package.
 - `examples/` contains examples that can be used with the board support packages.
-- `tools/` contains tooling to work *on* MicroZig.
+- `tools/` contains tooling to work *on* MicroZig itself, so deployment, testing, ...
 
 ## Versioning Scheme
 
@@ -25,6 +26,5 @@ Consider the version `0.11.0-abcdef-123` means that this MicroZig version has a 
 - Integrate https://github.com/ZigEmbeddedGroup/microzig-driver-framework as package
 - Create support for nice GitHub badges
 - validate that the table on https://github.com/ZigEmbeddedGroup is correct (in CI)
-- make system build again properly
 - start porting everything to 0.12/unstable
 - Try to get some autodocs to build.

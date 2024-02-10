@@ -1,0 +1,50 @@
+name: Continuous Deployment
+
+env:
+  # Specify the current Zig version MicroZig uses:
+  ZIG_VERSION: 0.11.0
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true # required for "git describe"
+
+      - name: Fetch more data from git
+        run: |
+          # fetch everything back till the $(ZIG_VERSION) tag.
+          # https://stackoverflow.com/a/58082274
+          git fetch --shallow-exclude ${{ env.ZIG_VERSION }}
+          git fetch --deepen=2
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Install PIP packages
+        run: |
+          pip install dataclasses_json==0.6.3 marshmallow typing-inspect semver pathspec
+
+      - name: Generate and validate packages
+        run: |
+          ./tools/bundle.py --base-url "${{ secrets.DOWNLOADS_URL }}"
+
+      - name: Deploy
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          ARGS: "-vzrli"
+          SOURCE: "microzig-deploy/"
+          REMOTE_HOST: ${{ secrets.DEPLOY_HOST }}
+          REMOTE_USER: ${{ secrets.DEPLOY_USER }}
+          REMOTE_PORT: ${{ secrets.DEPLOY_PORT }}
+          TARGET: "."
+    

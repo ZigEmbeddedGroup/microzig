@@ -141,7 +141,7 @@ FILE_STAT_MAP = {
     stat.S_IFIFO: "fifo",
     stat.S_IFLNK: "link",
     stat.S_IFSOCK: "socket",
-    }
+}
 
 def file_type(path: Path) -> str:
     return FILE_STAT_MAP[stat.S_IFMT( path.stat().st_mode)]
