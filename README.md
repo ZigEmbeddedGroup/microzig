@@ -1,4 +1,4 @@
-# MicroZig
+![MicroZig Logo](design/logo-text-auto.svg)
 
 [![Continuous Integration](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml)
 
