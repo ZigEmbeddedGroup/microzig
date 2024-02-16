@@ -168,7 +168,10 @@ def build_zig_tools():
 # Determines the correct version:
 def get_version_from_git() -> str:
 
-    raw_git_out = slurp("git", "describe", "--match", "*.*.*", "--tags", "--abbrev=9", cwd=REPO_ROOT).strip().decode()
+    raw_git_out = slurp("git", "describe", "--match", "*.*.*", "--tags", "--abbrev=9", cwd=REPO_ROOT, allow_failure=True).strip().decode()
+    if len(raw_git_out) == 0:
+        print("failed to get version from git, using 'development'", file=sys.stderr)
+        return "development"
 
     def render_version(major,minor,patch,counter,hash):
         return f"{major}.{minor}.{patch}-{counter}-{hash}"
