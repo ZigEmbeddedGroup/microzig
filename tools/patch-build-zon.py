@@ -39,7 +39,7 @@ def main():
         elif stripped.startswith(".hash = \""):
             try:
                 pkg_path = PurePosixPath(last_pkg_url.path)
-                assert pkg_path.suffixes ==  ['.tar', '.gz']
+                assert pkg_path.suffixes[-2:] ==  ['.tar', '.gz']
                 pkg_json_url = urlunparse(
                     # scheme, netloc, url, params, query, fragment
                     (
@@ -58,12 +58,14 @@ def main():
 
                 line_prefix = re.match("^(\s*)", line).group(1)
 
+                print(f"Updating hash of {urlunparse(last_pkg_url)} to {pkg_hash}")
+
                 output_lines.append(f'{line_prefix}.hash = "{pkg_hash}",')
                 last_pkg_url = None 
-                
-
+            except AssertionError:
+                raise 
             except BaseException as ex:
-                print(ex)
+                print(f"error: {type(ex)} {ex}")
                 output_lines.append(line)
         else:
             output_lines.append(line)
