@@ -14,7 +14,7 @@ from dataclasses_json import dataclass_json, config as  dcj_config, Exclude as J
 from semver import Version
 from marshmallow import fields
 from enum import Enum as StrEnum
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 import pathspec
 import stat 
 import tarfile
@@ -231,6 +231,9 @@ def get_batch_timestamp():
         iso=render_time.isoformat(),
     )
 
+def list_of_str(arg):
+    return arg.split(',')
+
 def main():
 
     
@@ -238,6 +241,8 @@ def main():
 
     arg_parser.add_argument("--base-url", type=str, required=False, default=DEFAULT_DEPLOYMENT_BASE, help="Sets the download URL for the packages.")
     arg_parser.add_argument("--debug", action="store_true", required=False, default=False, help="Creates a deployment for local development, hosted by localhost:8080")
+    arg_parser.add_argument("--examples", action=BooleanOptionalAction, required=False, default=True, help="Build the examples")
+    arg_parser.add_argument("--boards", type=list_of_str, help='list of boards to build', default=[])
 
     cli_args = arg_parser.parse_args()
 
@@ -295,6 +300,13 @@ def main():
 
         pkg_dict = json.loads(meta_path.read_bytes())
         pkg = PackageConfigurationSchema.load(pkg_dict)
+
+        # Skip examples or non enabled boards
+        if any([
+            pkg.package_type == PackageType.example and not cli_args.examples,
+            pkg.package_type == PackageType.board_support and cli_args.boards and pkg.package_name not in cli_args.boards
+           ]):
+            continue
 
         pkg.version = version
         pkg.created = batch_timestamp
