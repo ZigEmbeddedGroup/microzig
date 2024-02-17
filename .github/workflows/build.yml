@@ -28,7 +28,7 @@ jobs:
 
       - name: Install PIP packages
         run: |
-          pip install dataclasses_json==0.6.3 marshmallow typing-inspect semver pathspec
+          pip install -r tools/requirements.txt
 
       - name: Generate and validate packages
         run: |
@@ -56,7 +56,7 @@ jobs:
 
       - name: Install PIP packages
         run: |
-          pip install dataclasses_json==0.6.3 marshmallow typing-inspect semver pathspec
+          pip install -r tools/requirements.txt
 
       - name: Generate packages
         run: |
