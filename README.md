@@ -80,7 +80,7 @@ Now you can use curl to fetch the packages, or you can just create a local devel
 **Step 3:** You can use the tool `tools/patch-build-zon.py` to patch/upgrade your development project inplace:
 
 ```sh-session
-[user@host] microzig-monorepo/ $ python3 ./tools/patch-build-zon.py /tmp/dev-project
+[user@host] microzig-monorepo/ $ python3 ./tools/patch-build-zon.py /tmp/dev-project/build.zig.zon
 Updating hash of http://localhost:8080/packages/microzig-build.tar.gz to 12200040a36bbbb2fe09809861f565fcda9a10ec3064d70357aa40ad0a61596c16fb
 Updating hash of http://localhost:8080/packages/microzig-core.tar.gz to 122013a37ce9ac295303f26057c203e722b9ceaefa5b4403fe5a18ab065f03079e7d
 Updating hash of http://localhost:8080/packages/board-support/stmicro/stm32.tar.gz to 12207c278b78c5aeb08cd7889647d7d0d9a359cb28fe68105d2e43f85dabb3865981
