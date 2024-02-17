@@ -19,13 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true # required for "git describe"
-
-      # - name: Fetch more data from git
-      #   run: |
-      #     # fetch everything back till the $(ZIG_VERSION) tag.
-      #     # https://stackoverflow.com/a/58082274
-      #     git fetch --shallow-exclude ${{ env.ZIG_VERSION }}
-      #     git fetch --deepen=2
+          fetch-depth: 0
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -53,13 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true # required for "git describe"
-
-      # - name: Fetch more data from git
-      #   run: |
-      #     # fetch everything back till the $(ZIG_VERSION) tag.
-      #     # https://stackoverflow.com/a/58082274
-      #     git fetch --shallow-exclude ${{ env.ZIG_VERSION }}
-      #     git fetch --deepen=2
+          fetch-depth: 0
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
