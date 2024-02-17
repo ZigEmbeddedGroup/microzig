@@ -2,7 +2,7 @@
 
 [![Chat](https://img.shields.io/discord/824493524413710336.svg?logo=discord)](link=https://discord.gg/ShUWykk38X)
 [![Downloads](https://img.shields.io/badge/Zig_Package-Download-blue)](https://downloads.microzig.tech/)
-[![Continuous Integration](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/microzig-monorepo/actions/workflows/build.yml)
+[![Continuous Integration](https://github.com/ZigEmbeddedGroup/microzig/actions/workflows/build.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/microzig/actions/workflows/build.yml)
 
 > **NOTE:** This is in development; breaks in the API are bound to happen.
 
