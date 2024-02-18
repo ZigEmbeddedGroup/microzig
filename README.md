@@ -1,6 +1,6 @@
 # ![MicroZig Logo](design/logo-text-auto.svg)
 
-[![Chat](https://img.shields.io/discord/824493524413710336.svg?logo=discord)](link=https://discord.gg/ShUWykk38X)
+[![Chat](https://img.shields.io/discord/824493524413710336.svg?logo=discord)](https://discord.gg/ShUWykk38X)
 [![Downloads](https://img.shields.io/badge/Zig_Package-Download-blue)](https://downloads.microzig.tech/)
 [![Continuous Integration](https://github.com/ZigEmbeddedGroup/microzig/actions/workflows/build.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/microzig/actions/workflows/build.yml)
 
@@ -10,9 +10,27 @@
 
 0.11.0
 
-## Contributing
+## Getting Started With MicroZig
+
+### I Want To Use MicroZig
+
+**IMPORTANT:** You don't have to clone this repository to get started!
+
+MicroZig uses a monorepo architecture, but provides a lot of different packages. If you just want to get started, head over to [downloads.microzig.tech](https://downloads.microzig.tech/) and download an example for the chip family you desire.
+
+We support several chip families like the [RP2 family by RaspberryPi Foundation](https://www.raspberrypi.com/products/rp2040/), [STM32 by STMicroelectronics](https://www.st.com/content/st_com/en.html), and many others.
+
+Unpack the example, and run `zig build` in the resulting example folder gives you `zig-out/firmware` which contains the resulting files.
+
+Right now, you gotta figure out how to flash the MCU yourself, but as people say: Google is your friend. But you can also ask for help [on our Discord server](https://discord.gg/ShUWykk38X).
+
+### I Want To Contribute To MicroZig
+
+**IMPORTANT:** Developer experience is degraded right now, and not really good. Windows isn't really a supported dev target and you got to expect some friction. [There's a project for improving DX, feel free to grab tasks from there!](https://github.com/orgs/ZigEmbeddedGroup/projects/4)
 
 Please see the [project page](https://github.com/orgs/ZigEmbeddedGroup/projects/1/views/1), it’s used as a place to brainstorm and organize work in ZEG. There will be issues marked as good first issue or drafts for larger ideas that need scoping/breaking ground on.
+
+More words on contribution and development on MicroZig are [further down below](#developing).
 
 ## Introduction
 
@@ -24,12 +42,6 @@ This repo contains the infrastructure for getting started in an embedded Zig pro
 * generalized interfaces for common devices, such as UART.
 * device drivers for interacting with external hardware
 * an uncomplicated method to define xref:interrupts[interrupts]
-
-## Getting Started
-
-Search for your chip family in [the examples](https://downloads.microzig.tech/examples/) and get the archive.
-
-You can easily get started based on that.
 
 ## Design
 
