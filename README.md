@@ -41,7 +41,13 @@ Right now, the developer experience is not optimal due to 0.11 not really suppor
 
 If you want to test your changes, you gotta to the following:
 
-**Step 1:** Create a deployment for local usage:
+**Step 1:** Install required python pacakges:
+
+```sh-session
+[user@host] microzig-monorepo/ $ pip3 install -r tools/requirements.txt
+```
+
+**Step 2:** Create a deployment for local usage:
 
 ```sh-session
 [user@host] microzig-monorepo/ $ python3 ./tools/bundle.py --debug
@@ -65,7 +71,7 @@ bundling microchip/avr...
 
 This command yields output in `./microzig-deploy` that is meant to be fetched via `http://localhost:8080/`.
 
-**Step 2:** To serve the files on this port, you can start a pre-bundled web server:
+**Step 3:** To serve the files on this port, you can start a pre-bundled web server:
 
 ```sh-session
 [user@host] microzig-monorepo/ $ python3 ./tools/demo-server.py
@@ -77,7 +83,7 @@ start fetching packages from this.
 
 Now you can use curl to fetch the packages, or you can just create a local development project.
 
-**Step 3:** You can use the tool `tools/patch-build-zon.py` to patch/upgrade your development project inplace:
+**Step 4:** You can use the tool `tools/patch-build-zon.py` to patch/upgrade your development project inplace:
 
 ```sh-session
 [user@host] microzig-monorepo/ $ python3 ./tools/patch-build-zon.py /tmp/dev-project/build.zig.zon
