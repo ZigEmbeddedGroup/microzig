@@ -1,4 +1,4 @@
 {
-  "package_name": "espressif/esp",
-  "package_type": "board-support"
+    "package_name": "espressif/esp",
+    "package_type": "board-support"
 }

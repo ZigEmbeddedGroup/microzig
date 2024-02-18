@@ -7,7 +7,7 @@
 #
 
 
-import sys, os, datetime, re, shutil, json, hashlib
+import io, sys, os, datetime, re, shutil, json, hashlib, html 
 from pathlib import Path, PurePosixPath
 from dataclasses import dataclass, field 
 from dataclasses_json import dataclass_json, config as  dcj_config, Exclude as JsonExclude
@@ -96,7 +96,7 @@ class PackageConfiguration:
 
     download_url: Optional[str] = field(default=None)
 
-    microzig: Optional[Any] = field(default=None)
+    microzig: Optional[Any] = field(default=None) # optional configuration field with microzig-specific options
 
     # inner fields:
     # package_dir: Path = field(default=None, metadata = dcj_config(exclude=JsonExclude.ALWAYS))
@@ -261,7 +261,7 @@ def main():
 
     print("preparing environment...")
 
-    deploy_target = create_output_directory(REPO_ROOT)    
+    deploy_target = create_output_directory(REPO_ROOT)
 
     # Some generic meta information:
     batch_timestamp = get_batch_timestamp()
@@ -277,6 +277,9 @@ def main():
 
     cache_dir = cache_root / "microzig"
     cache_dir.mkdir(exist_ok=True)
+
+    detail_files_dir = deploy_target / ALL_FILES_DIR
+    detail_files_dir.mkdir(exist_ok=True)
 
     # Prepare `.gitignore` pattern matcher:
     global_ignore_spec = pathspec.PathSpec.from_lines(
@@ -530,9 +533,215 @@ def main():
     with (deploy_target / "index.json").open("w") as f:
         f.write(PackageIndexSchema.dumps(index))
 
-    # TODO: Verify that each package can be unpacked and built
+
+    with (detail_files_dir / "chip-families.svg").open("w") as f:
+        ICON_YES = TableIcon(
+            glyph="✅",
+            path="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z",
+            color="#0f0",
+        )
+        ICON_NO = TableIcon(
+            glyph="❌",
+            path="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+            color="#f44336",
+        )
+        ICON_WIP = TableIcon(
+            glyph="🛠",
+            path="M13.78 15.3L19.78 21.3L21.89 19.14L15.89 13.14L13.78 15.3M17.5 10.1C17.11 10.1 16.69 10.05 16.36 9.91L4.97 21.25L2.86 19.14L10.27 11.74L8.5 9.96L7.78 10.66L6.33 9.25V12.11L5.63 12.81L2.11 9.25L2.81 8.55H5.62L4.22 7.14L7.78 3.58C8.95 2.41 10.83 2.41 12 3.58L9.89 5.74L11.3 7.14L10.59 7.85L12.38 9.63L14.2 7.75C14.06 7.42 14 7 14 6.63C14 4.66 15.56 3.11 17.5 3.11C18.09 3.11 18.61 3.25 19.08 3.53L16.41 6.2L17.91 7.7L20.58 5.03C20.86 5.5 21 6 21 6.63C21 8.55 19.45 10.1 17.5 10.1Z",
+            color="#82aec0",
+        )
+        ICON_EXPERIMENTAL = TableIcon(
+            glyph="🧪",
+            path="M7,2V4H8V18A4,4 0 0,0 12,22A4,4 0 0,0 16,18V4H17V2H7M11,16C10.4,16 10,15.6 10,15C10,14.4 10.4,14 11,14C11.6,14 12,14.4 12,15C12,15.6 11.6,16 11,16M13,12C12.4,12 12,11.6 12,11C12,10.4 12.4,10 13,10C13.6,10 14,10.4 14,11C14,11.6 13.6,12 13,12M14,7H10V4H14V7Z",
+            color="#2ac9b4"
+        )
+        ICON_UNKNOWN = TableIcon(
+            glyph="❓",
+            path="M10,19H13V22H10V19M12,2C17.35,2.22 19.68,7.62 16.5,11.67C15.67,12.67 14.33,13.33 13.67,14.17C13,15 13,16 13,17H10C10,15.33 10,13.92 10.67,12.92C11.33,11.92 12.67,11.33 13.5,10.67C15.92,8.43 15.32,5.26 12,5A3,3 0 0,0 9,8H6A6,6 0 0,1 12,2Z",
+            color="#ed4034"
+        )
+        
+        def bsp_info(bsp: PackageConfiguration):
+
+            targets = bsp.microzig["board-support"]["targets"]
+
+            num_chips = len([
+                1
+                for tgt
+                in targets
+                if tgt["board"] is None
+            ])
+            num_boards = len(targets) - num_chips
+
+            any_hal = any(
+                tgt["features"]["hal"]
+                for tgt
+                in targets
+            )
+
+            all_hal = all(
+                tgt["features"]["hal"]
+                for tgt
+                in targets
+            )
+
+            hal_support = ICON_NO
+            if all_hal:
+                hal_support = ICON_YES
+            elif any_hal:
+                hal_support = ICON_WIP
+
+            examples = packages.get(f"examples:{bsp.package_name}", None)
 
 
+            return [
+                bsp.package_name, # Chip Family
+                num_chips,  # Chips
+                num_boards,  # Boards
+                hal_support,  # HAL
+                TableLink(href=f"https://downloads.microzig.tech/examples/{bsp.package_name}.tar.gz", content="Download") if examples is not None else "", # Examples
+            ]
+
+        render_table(
+            target=f,
+            columns=[
+                TableColumn(title="Chip Family", width=200),
+                TableColumn(title="Chips", width=70),
+                TableColumn(title="Boards", width=70),
+                TableColumn(title="HAL", width=50),
+                TableColumn(title="Examples", width=100),
+                # TableColumn(title="Abstractions", width=120),
+            ],
+            rows = [
+                bsp_info(bsp)
+                for key, bsp
+                in sorted(packages.items())
+                if bsp.package_type == PackageType.board_support
+            ],
+        ) 
+
+@dataclass
+class TableLink:
+    href: str
+    content: any
+
+@dataclass
+class TableIcon:
+    glyph: str
+    path: str
+    color: str = field(default="#fff")
+
+@dataclass
+class TableColumn:
+    title: str
+    width: int
+
+def render_table(target: io.IOBase, columns: list[TableColumn], rows: list[list[str]]):
+
+    cell_height = 25
+
+    total_width = sum(col.width for col in columns)
+    total_height = cell_height * (1 + len(rows))
+
+    target.write('<?xml version="1.0" encoding="UTF-8" standalone="no"?>')
+    target.write('<svg')
+    target.write(' width="%s"' % (total_width))
+    target.write(' height="%s"' % (total_height))
+    target.write(' viewBox="0 0 %s %s"' % (total_width, total_height))
+    target.write(' version="1.1"')
+    target.write(' xmlns="http://www.w3.org/2000/svg">')
+    target.write("""<style>
+        svg {
+            background-color: #0d1117;
+        }
+        rect {
+            fill: none;
+            stroke: #30363d;
+            stroke-width: 1;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-opacity: 1;
+        }
+        rect.odd {
+            fill: #161b22;
+        }
+        text {
+            font-style: normal;
+            font-variant: normal;
+            font-weight: normal;
+            font-stretch: normal;
+            font-size: 20;
+            line-height:1.25;
+            font-family: sans-serif;
+            font-variant-ligatures: normal;
+            font-variant-caps: normal;
+            font-variant-numeric: normal;
+            stroke-width: 1;
+            fill: #e6edf3;
+        }
+        text.heading {
+            font-weight: bold;
+        }
+        a {
+            fill: #2c81f7;
+        }
+   </style>""")
+    target.write('<g>')
+
+    x = 0
+    y = 0
+
+    def valueout(content: any):
+
+        if isinstance(content, TableLink):
+            target.write(f'<a target="_blank" href="{content.href}">')
+            valueout(content.content)
+            target.write('</a>')
+        elif isinstance(content, TableIcon):
+            target.write(content.glyph)
+        else:
+            target.write(html.escape(str(content)))
+
+    def cellout(col: TableColumn, content: any, is_heading: bool = False):
+        nonlocal x, y 
+        
+        target.write('<rect')
+        target.write(f' width="{col.width}"')
+        target.write(f' height="{cell_height}"')
+        target.write(f' x="{x}"')
+        target.write(f' y="{y}"')
+        target.write('/>')
+
+        target.write('<text')
+        if is_heading:
+            target.write(' class="heading"')
+        target.write(f' space="preserve"')
+        target.write(f' x="{x+5}"')
+        target.write(f' y="{y+cell_height-5}"')
+        target.write('>')
+        valueout(content)
+        target.write("</text>")
+
+        x += col.width
+
+    def endrow():
+        nonlocal x, y
+        x = 0
+        y += cell_height
+
+    for col in columns:
+        cellout(col, col.title, is_heading=True)
+    endrow()
+
+    for row in rows:
+
+        for col, cell in zip(columns, row):
+            cellout(col, cell)
+        endrow()
+
+    target.write("""  </g>
+</svg>
+""")
 
 if __name__ == "__main__":
     main()
