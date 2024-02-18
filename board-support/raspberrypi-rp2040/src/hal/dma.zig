@@ -26,7 +26,7 @@ pub fn claim_unused_channel() ?Channel {
     for (0..num_channels) |i| {
         if (claimed_channels.get(i)) {
             claimed_channels.set(i, true);
-            return channel(i);
+            return channel(@intCast(i));
         }
     }
 

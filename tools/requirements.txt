@@ -2,4 +2,4 @@ dataclasses_json==0.6.3
 marshmallow
 typing-inspect
 semver
-pathspec
+pathspec>=0.12.0
