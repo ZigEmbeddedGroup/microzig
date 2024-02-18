@@ -53,10 +53,19 @@ Right now, the developer experience is not optimal due to 0.11 not really suppor
 
 If you want to test your changes, you gotta to the following:
 
-**Step 1:** Install required python pacakges:
+**Step 1:** Install required python packages, either systemwide or via a [virtual environment](https://docs.python.org/3/library/venv.html):
 
 ```sh-session
+# systemwide:
+[user@host] microzig-monorepo/ $ pip install -r tools/requirements.txt
+[user@host] microzig-monorepo/ $ 
+
+# using virtual environments:
+[user@host] microzig-monorepo/ $ python3 -m venv .venv
+[user@host] microzig-monorepo/ $ . .venv/bin/activate # on linux, macos
+[user@host] microzig-monorepo/ $ . .venv/Scripts/activate # on windows
 [user@host] microzig-monorepo/ $ pip3 install -r tools/requirements.txt
+[user@host] microzig-monorepo/ $ 
 ```
 
 **Step 2:** Create a deployment for local usage:
@@ -95,7 +104,11 @@ start fetching packages from this.
 
 Now you can use curl to fetch the packages, or you can just create a local development project.
 
-**Step 4:** You can use the tool `tools/patch-build-zon.py` to patch/upgrade your development project inplace:
+**Step 4:** Create a local test environment
+
+This is basically done by unpacking an example from the `./microzig-deploy/examples` folder, and starting to test changes.
+As the `build.zig.zon` has to be updated after running `./tools/bundle.py` again, there's a script that helps here:
+`tools/patch-build-zon.py` can be used to patch/upgrade your development project inplace based on what it finds in `./microzig-deploy`:
 
 ```sh-session
 [user@host] microzig-monorepo/ $ python3 ./tools/patch-build-zon.py /tmp/dev-project/build.zig.zon
@@ -104,6 +117,8 @@ Updating hash of http://localhost:8080/packages/microzig-core.tar.gz to 122013a3
 Updating hash of http://localhost:8080/packages/board-support/stmicro/stm32.tar.gz to 12207c278b78c5aeb08cd7889647d7d0d9a359cb28fe68105d2e43f85dabb3865981
 [user@host] microzig-monorepo/ $
 ```
+
+Both compiling the local example and updating the `build.zig.zon` requires running the local development server.
 
 ## Repository structure
 
