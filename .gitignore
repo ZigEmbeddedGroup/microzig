@@ -6,3 +6,4 @@ microzig-deploy/
 .lldbinit
 .direnv/
 __pycache__/
+.venv
