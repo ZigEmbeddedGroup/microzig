@@ -37,6 +37,8 @@ ALL_FILES_DIR=".data"
 REQUIRED_TOOLS = [
     "zig",
     "git",
+    "tar",
+    "gzip",
 ]
 REQUIRED_ZIG_VERSION="0.11.0"
 
