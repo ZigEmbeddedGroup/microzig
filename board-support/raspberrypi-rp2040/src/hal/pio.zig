@@ -83,6 +83,7 @@ pub const ClkDivOptions = struct {
 };
 
 pub const ExecOptions = struct {
+    jmp_pin: u5 = 0,
     wrap: u5 = 31,
     wrap_target: u5 = 0,
     side_pindir: bool = false,
@@ -132,6 +133,7 @@ pub const LoadAndStartProgramOptions = struct {
     clkdiv: ClkDivOptions,
     shift: ShiftOptions = .{},
     pin_mappings: PinMappingOptions = .{},
+    exec: ExecOptions = .{},
 };
 
 pub const Pio = enum(u1) {
@@ -254,10 +256,12 @@ pub const Pio = enum(u1) {
     pub fn sm_set_exec_options(self: Pio, sm: StateMachine, options: ExecOptions) void {
         const sm_regs = self.get_sm_regs(sm);
         sm_regs.execctrl.modify(.{
+            // NOTE: EXEC_STALLED is RO
             .WRAP_BOTTOM = options.wrap_target,
             .WRAP_TOP = options.wrap,
             .SIDE_PINDIR = @intFromBool(options.side_pindir),
             .SIDE_EN = @intFromBool(options.side_set_optional),
+            .JMP_PIN = options.jmp_pin,
 
             // TODO: plug in rest of the options
             // STATUS_N
@@ -265,7 +269,6 @@ pub const Pio = enum(u1) {
             // OUT_STICKY
             // INLINE_OUT_EN
             // OUT_EN_SEL
-            // JMP_PIN
             // EXEC_STALLED
         });
     }
@@ -514,6 +517,8 @@ pub const Pio = enum(u1) {
                     side_set.optional
                 else
                     false,
+
+                .jmp_pin = options.exec.jmp_pin,
             },
         });
     }
