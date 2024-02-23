@@ -10,24 +10,22 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v1
+        uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.10.1
+          version: master
       - name: Render website
         run: |
-          zig build gen
-      - name: Deploy preview with SCP
-        uses: horochx/deploy-via-scp@1.1.0
-        with:
-          local: render/*
-          remote: 'zeg-pr/${{ github.event.number }}/'
-          ensureRemote: true
-          user: generic-ci
-          host: random-projects.net
-          key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
-  write_comment:
-    runs-on: ubuntu-latest
-    steps:
+          zig build
+      # - name: Deploy preview with SCP
+      #   uses: horochx/deploy-via-scp@1.1.0
+      #   with:
+      #     local: render/*
+      #     remote: 'zeg-pr/${{ github.event.number }}/'
+      #     ensureRemote: true
+      #     user: generic-ci
+      #     host: random-projects.net
+      #     key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
+
       - uses: mshick/add-pr-comment@v1
         with:
           message: |

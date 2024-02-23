@@ -18,17 +18,17 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: 0.10.1
+          version: master
 
       - name: Render website
         run: |
-          zig build gen
+          zig build
 
-      - name: Deploy with SCP
-        uses: noobly314/deploy-with-scp@v1
-        with:
-          src: render/*
-          dest: zeg/
-          username: generic-ci
-          server-ip: random-projects.net
-          ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
+      # - name: Deploy with SCP
+      #   uses: noobly314/deploy-with-scp@v1
+      #   with:
+      #     src: render/*
+      #     dest: zeg/
+      #     username: generic-ci
+      #     server-ip: random-projects.net
+      #     ssh-key: ${{ secrets.WEBSITE_PRIVATE_KEY }} #
