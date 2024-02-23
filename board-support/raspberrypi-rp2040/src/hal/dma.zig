@@ -107,7 +107,12 @@ pub const Channel = enum(u4) {
         regs.ctrl_trig.modify(.{
             .EN = @intFromBool(config.enable),
             .DATA_SIZE = .{
-                .value = .SIZE_BYTE,
+                .value = switch (config.transfer_size_bytes) {
+                    1 => @TypeOf(regs.ctrl_trig.read().DATA_SIZE.value).SIZE_BYTE,
+                    2 => .SIZE_HALFWORD,
+                    4 => .SIZE_WORD,
+                    else => unreachable,
+                },
             },
             .INCR_READ = @intFromBool(config.read_increment),
             .INCR_WRITE = @intFromBool(config.write_increment),
