@@ -1,3 +1,0 @@
-[submodule "deps/koino"]
-	path = deps/koino
-	url = https://github.com/MasterQ32/koino

@@ -1,3 +1,13 @@
+---
+{
+  "title": "Embedded Basics",
+  "date": "2020-07-06T00:00:00",
+  "author": "Felix Queißner",
+  "draft": false,
+  "layout": "tutorial.html",
+  "tags": []
+}
+---
 # Embedded Programming
 
 In this tutorial, you'll learn the ways of the embedded programmer and how to master your MCU.
@@ -39,9 +49,9 @@ And last, but not least: You need a [text editor of your choice](https://en.wiki
 
 So to get an embedded program up and running, we first need to check out the *memory map* in the datasheet. These usually look like this:
 
-![Memory Map of LPC1768](../img/memory-map.png)
+![Memory Map of LPC1768](memory-map.png)
 
-Here you can see that the memory contains continuous flash memory (*On-chip [non-volatile memory](https://en.wikipedia.org/wiki/Non-volatile_memory)*), two sections of SRAM (*On-chip [SRAM](https://en.wikipedia.org/wiki/Static_random-access_memory)*), some *Boot ROM*, and peripherials. 
+Here you can see that the memory contains continuous flash memory (*On-chip [non-volatile memory](https://en.wikipedia.org/wiki/Non-volatile_memory)*), two sections of SRAM (*On-chip [SRAM](https://en.wikipedia.org/wiki/Static_random-access_memory)*), some *Boot ROM*, and peripherials.
 
 This memory map tells us how to design the [linker script](https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html#SEC6) and how to lay out our sections (`.text`, `.data`, …). As sections are quite complex topic for themselves, they [will be explained later](#text-data-and-other-curious-sections). For now, we only need to know that `.text` is all of our code (this is where our functions live), `.rodata` is pre-initialized immutable data, `.data` is the pre-initialized mutable data and `.bss` is zero-initialized mutable data.
 
@@ -127,7 +137,7 @@ extern fn _start() callconv(.Naked) noreturn {
   std.mem.copy(u8, dst_ptr[0..length], src_ptr[0..length]);
 
   // call your program enty point here:
-  …
+  // …
 }
 ```
 

@@ -1,3 +1,13 @@
+---
+{
+  "title": "Embedded Basics",
+  "date": "2020-07-06T00:00:00",
+  "author": "Felix Queißner",
+  "draft": false,
+  "layout": "tutorial.html",
+  "tags": []
+}  
+---
 # Embedded Basics
 
 In this tutorial, you'll learn the absolute basics of the embedded world. If
@@ -21,6 +31,7 @@ Wikipedia does a good job defining embedded systems with this opener:
 So at the end of the day, if you are adding any sort of computation to some object who's main purpose is not being a computer, it's an embedded system.
 
 Some examples of Embedded systems:
+
 - cars
 - industrial control systems
 - mars rovers
