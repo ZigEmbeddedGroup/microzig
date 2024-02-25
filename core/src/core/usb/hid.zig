@@ -103,7 +103,7 @@ pub const HidDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
-        out[0] = 9; // length
+        out[0] = self.length;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(self.bcd_hid & 0xff);
         out[3] = @intCast((self.bcd_hid >> 8) & 0xff);
