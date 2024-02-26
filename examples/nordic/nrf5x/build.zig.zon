@@ -1,0 +1,13 @@
+.{
+    .name = "microzig/examples/nordic/nrf5x",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/bsp/nordic/nrf5x" = .{ .path = "../../../bsp/nordic/nrf5x" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

@@ -1,0 +1,13 @@
+.{
+    .name = "microzig/examples/gigadevice/gd32",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/bsp/gigadevice/gd32" = .{ .path = "../../../bsp/gigadevice/gd32" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

@@ -1,20 +1,28 @@
-//! Some words on the build script here:
-//! We cannot use a test runner here as we're building for freestanding.
-//! This means we need to use addExecutable() instead of using
+//! MicroZig Build Interface
+host_build: *Build,
+self: *Build.Dependency,
+microzig_core: *Build.Dependency,
+generate_linkerscript: *Build.Step.Compile,
 
 const std = @import("std");
+const Build = std.Build;
+const LazyPath = Build.LazyPath;
+
+const core = @import("microzig/core");
+
+const MicroZig = @This();
 const uf2 = @import("uf2");
 
 /// This build script validates usage patterns we expect from MicroZig
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *Build) !void {
     const uf2_dep = b.dependency("uf2", .{});
 
     const build_test = b.addTest(.{
         .root_source_file = .{ .path = "build.zig" },
     });
 
-    build_test.addAnonymousModule("uf2", .{
-        .source_file = .{ .cwd_relative = uf2_dep.builder.pathFromRoot("build.zig") },
+    build_test.root_module.addAnonymousImport("uf2", .{
+        .root_source_file = .{ .cwd_relative = uf2_dep.builder.pathFromRoot("build.zig") },
     });
 
     const install_docs = b.addInstallDirectory(.{
@@ -26,702 +34,251 @@ pub fn build(b: *std.Build) !void {
     b.getInstallStep().dependOn(&install_docs.step);
 }
 
-////////////////////////////////////////
-//      MicroZig Gen 3 Interface      //
-////////////////////////////////////////
-
-const zig_deps = struct {
-    // Keep in sync with the logic from Build.zig:dependency:
-
-    const build_runner = @import("root");
-    const deps = build_runner.dependencies;
-
-    const names = blk: {
-        var list: []const []const u8 = &.{};
-        for (@typeInfo(deps.imports).Struct.decls) |decl| {
-            list = list ++ [_][]const u8{decl.name};
-        }
-        break :blk list;
-    };
-
-    const modules = blk: {
-        var list: []const type = &.{};
-        for (@typeInfo(deps.imports).Struct.decls) |decl| {
-            list = list ++ [_]type{@field(deps.imports, decl.name)};
-        }
-        break :blk list;
-    };
-
-    fn get(comptime name: []const u8) ?type {
-        for (names, modules) |item, mod| {
-            if (std.mem.eql(u8, item, name))
-                return mod;
-        }
-        return null;
-    }
-};
-
-pub const CpuArray = std.enums.EnumArray(CpuType, Cpu);
-
-pub const BoardSupportPackageDefinition = struct {
-    pub const TargetDefinition = struct {
-        id: []const u8, // full "uri"
-        target: Target,
-    };
-
-    bsp_root: type,
-    targets: []const TargetDefinition,
-
-    fn init(comptime bsp_root: type) BoardSupportPackageDefinition {
-        var targets: []const TargetDefinition = &.{};
-
-        if (@hasDecl(bsp_root, "chips")) {
-            targets = targets ++ construct_target_database("chip:", bsp_root.chips);
-        }
-
-        if (@hasDecl(bsp_root, "boards")) {
-            targets = targets ++ construct_target_database("board:", bsp_root.boards);
-        }
-
-        if (targets.len == 0) {
-            @compileError("Board support package contains not a single target. Please add at least one target!");
-        }
-
-        return BoardSupportPackageDefinition{
-            .bsp_root = bsp_root,
-            .targets = targets,
-        };
-    }
-
-    fn construct_target_database(comptime prefix: []const u8, comptime namespace: type) []const TargetDefinition {
-        var list: []const TargetDefinition = &.{};
-
-        inline for (@typeInfo(namespace).Struct.decls) |decl_info| {
-            const decl = @field(namespace, decl_info.name);
-            const T = @TypeOf(decl);
-
-            const name = comptime prefix ++ decl_info.name; // board:vendor/name
-
-            if (T == Target) {
-                const target: Target = decl;
-
-                list = list ++ &[_]TargetDefinition{.{
-                    .id = name,
-                    .target = target,
-                }};
-                // be.targets.put(be.host_build.allocator, name, target) catch @panic("out of memory");
-            } else {
-                if (T != type) {
-                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to be a 'type', found {s}.", .{
-                        name,
-                        @typeName(T),
-                    }));
-                }
-
-                const ti = @typeInfo(decl);
-                if (ti != .Struct) {
-                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to be a 'struct', found {s}.", .{
-                        name,
-                        @tagName(ti),
-                    }));
-                }
-
-                if (ti.Struct.fields.len > 0) {
-                    @compileError(std.fmt.comptimePrint("Declaration {s} is neither a MicroZig.Target nor a namespace. Expected declaration to have no fields, but found {} fields.", .{
-                        name,
-                        ti.Struct.fields.len,
-                    }));
-                }
-
-                const sublist = construct_target_database(
-                    comptime name ++ "/",
-                    decl,
-                );
-
-                list = list ++ sublist;
-            }
-        }
-
-        return list;
-    }
-};
-
-/// Validates a board support package and returns a registration type that can be used
-/// with MicroZig automatic BSP discovery.
-///
-/// Store the return value into a public constant named "" at the root of your build script:
-///
-///     pub const microzig_board_support = microzig.registerBoardSupport(@This());
-///
-pub fn registerBoardSupport(comptime bsp_root: type) BoardSupportPackageDefinition {
-    return BoardSupportPackageDefinition.init(bsp_root);
-}
-
-const ImportedBSP = struct {
-    import_name: []const u8,
-    bsp: BoardSupportPackageDefinition,
-};
-
-fn get_declared_bsps() []const ImportedBSP {
-    var bsps: []const ImportedBSP = &.{};
-    inline for (zig_deps.names, zig_deps.modules) |name, maybe_bsp| {
-        if (comptime std.mem.indexOfScalar(u8, name, '.') == null) {
-            if (@hasDecl(maybe_bsp, "microzig_board_support")) {
-                const bsp = @field(maybe_bsp, "microzig_board_support");
-                if (@TypeOf(bsp) == BoardSupportPackageDefinition) {
-                    bsps = bsps ++ [_]ImportedBSP{.{
-                        .import_name = name,
-                        .bsp = bsp,
-                    }};
-                }
-            }
-        }
-    }
-    return bsps;
-}
-
-pub const EnvironmentInfo = struct {
-    /// package name of the build package (optional)
-    self: []const u8 = "microzig-build",
-
-    /// package name of the core package (optional)
-    core: []const u8 = "microzig-core",
-
-    board_support_packages: BspSource = .from_dependencies,
-
-    pub const BspSource = union(enum) {
-        from_dependencies,
-        explicit: []const []const u8,
-    };
-};
-
 /// Creates a new MicroZig build environment that can be used to create new firmware.
-pub fn createBuildEnvironment(b: *std.Build, comptime info: EnvironmentInfo) *BuildEnvironment {
-    const available_bsps = comptime get_declared_bsps();
-
-    const requested_bsps = switch (info.board_support_packages) {
-        .from_dependencies => available_bsps,
-        .explicit => |list| comptime blk: {
-            var used = std.StaticBitSet(list.len).initEmpty();
-
-            var requested_bsps: []const ImportedBSP = &.{};
-            for (list, 0..) |name, index| {
-                for (available_bsps) |bsp| {
-                    if (std.mem.eql(u8, bsp.name, name)) {
-                        requested_bsps = requested_bsps ++ [_]ImportedBSP{bsp};
-                    } else {
-                        used.set(index);
-                    }
-                }
-            }
-
-            if (used.count > 0) {
-                var msg: []const u8 = "Not all requested board support packages were declared in build.zig.zon. The following packages are missing:";
-                var iter = used.iterator();
-                while (iter.next()) |index| {
-                    msg = msg ++ std.fmt.comptimePrint("\n* {s}", .{
-                        list[index].name,
-                    });
-                }
-                @compileError(msg);
-            }
-
-            break :blk requested_bsps;
-        },
-    };
-
-    const core_module = zig_deps.get(info.core) orelse @compileError("A module named " ++ info.core ++ " is not declared in build.zig.zon!");
-    const build_module = zig_deps.get(info.self) orelse @compileError("A module named " ++ info.self ++ " is not declared in build.zig.zon!");
-    if (build_module != @This()) {
-        @compileError("The module " ++ info.self ++ " is not the same of which this function is called. Please pass the exact same module name to this function as you pass to import!");
-    }
-
-    const be = b.allocator.create(BuildEnvironment) catch @panic("out of memory");
-    be.* = BuildEnvironment{
+pub fn init(b: *Build, opts: struct {
+    dependency_name: []const u8 = "microzig/build",
+}) *MicroZig {
+    const mz_dep = b.dependency(opts.dependency_name, .{});
+    const core_dep = mz_dep.builder.dependency("microzig/core", .{});
+    const ret = b.allocator.create(MicroZig) catch @panic("OOM");
+    ret.* =
+        MicroZig{
         .host_build = b,
-        .self = undefined,
-        .microzig_core = undefined,
-        .board_support_packages = b.allocator.alloc(BoardSupportPackage, requested_bsps.len) catch @panic("out of memory"),
-        .targets = .{},
-        .self_pkg_name = comptime info.self,
-        .core_pkg_name = comptime info.core,
-        .cpus = &core_module.cpus,
-
-        .show_targets_step = std.Build.Step.init(.{
-            .id = .custom,
-            .name = "Show MicroZig targets",
-            .owner = b,
-            .makeFn = BuildEnvironment.print_target_steps,
-            .first_ret_addr = null,
+        .self = mz_dep,
+        .microzig_core = core_dep,
+        .generate_linkerscript = mz_dep.builder.addExecutable(.{
+            .name = "generate-linkerscript",
+            .root_source_file = .{ .path = "src/generate_linkerscript.zig" },
+            .target = mz_dep.builder.host,
         }),
     };
 
-    be.self = b.dependency(info.self, .{});
-    be.microzig_core = b.dependency(info.core, .{});
-
-    // Fetch all available board support packages and targets:
-    {
-        var duplicate_package_names = std.StringArrayHashMap(void).init(be.host_build.allocator);
-        defer duplicate_package_names.deinit();
-
-        inline for (be.board_support_packages, requested_bsps) |*bsp, def| {
-            bsp.* = BoardSupportPackage{
-                .name = def.import_name,
-                .dep = b.dependency(def.import_name, .{}),
-            };
-
-            for (def.bsp.targets) |tgt| {
-                const full_name = b.fmt("{s}#{s}", .{ tgt.id, def.import_name });
-
-                const old_value = be.targets.fetchPut(be.host_build.allocator, tgt.id, tgt.target) catch @panic("out of memory");
-                be.targets.put(be.host_build.allocator, full_name, tgt.target) catch @panic("out of memory");
-
-                if (old_value != null) {
-                    duplicate_package_names.put(tgt.id, {}) catch @panic("out of memory");
-                }
-            }
-        }
-
-        // Remove all non-unique packages from the list as they are ambigious:
-        for (duplicate_package_names.keys()) |key| {
-            _ = be.targets.orderedRemove(key);
-        }
-
-        // reuse set to store names of unique long names
-        duplicate_package_names.clearRetainingCapacity();
-
-        // Find all elements where only a single non-hashed variant exists:
-        for (be.targets.keys()) |long_value| {
-            const index = std.mem.indexOfScalar(u8, long_value, '#') orelse continue;
-
-            const short_value = long_value[0..index];
-
-            if (be.targets.get(short_value) != null) {
-                // If we have the short variant, we don't have a duplicate anymore, so
-                // let's drop the long variant:
-                duplicate_package_names.put(long_value, {}) catch @panic("out of memory");
-            }
-        }
-
-        // Drop all unnecessary long variants:
-        for (duplicate_package_names.keys()) |key| {
-            _ = be.targets.orderedRemove(key);
-        }
-    }
-
-    return be;
+    return ret;
 }
 
-pub const BoardSupportPackage = struct {
-    dep: *std.Build.Dependency,
-    name: []const u8,
-};
+pub fn add_firmware(
+    /// The MicroZig instance that should be used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that is calling this function.
+    host_build: *Build,
+    /// Options that define how the firmware is built.
+    options: FirmwareOptions,
+) *Firmware {
+    const micro_build = mz.self.builder;
 
-pub const BuildEnvironment = struct {
-    host_build: *std.Build,
-    self: *std.Build.Dependency,
+    const chip = &options.target.chip;
+    const maybe_hal = options.hal orelse options.target.hal;
+    const maybe_board = options.board orelse options.target.board;
 
-    microzig_core: *std.Build.Dependency,
+    const linker_script = options.linker_script orelse options.target.linker_script;
 
-    self_pkg_name: []const u8,
-    core_pkg_name: []const u8,
+    // TODO: let the user override which ram section to use the stack on,
+    // for now just using the first ram section in the memory region list
+    const first_ram = blk: {
+        for (chip.memory_regions) |region| {
+            if (region.kind == .ram)
+                break :blk region;
+        } else @panic("no ram memory region found for setting the end-of-stack address");
+    };
 
-    board_support_packages: []BoardSupportPackage,
+    // On demand, generate chip definitions via regz:
+    const chip_source = switch (chip.register_definition) {
+        .json, .atdf, .svd => |file| blk: {
+            const regz_exe = mz.dependency("regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
 
-    targets: std.StringArrayHashMapUnmanaged(Target),
+            const regz_gen = host_build.addRunArtifact(regz_exe);
 
-    cpus: *const CpuArray,
+            regz_gen.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+            regz_gen.addArg(@tagName(chip.register_definition));
 
-    show_targets_step: std.Build.Step,
+            regz_gen.addArg("--output_path"); // Write to a file
+            const zig_file = regz_gen.addOutputFileArg("chip.zig");
 
-    /// Searches for a target called `name` and returns a pointer to the MicroZig Target if it exists.
-    pub fn findTarget(env: *const BuildEnvironment, name: []const u8) ?*const Target {
-        return env.targets.getPtr(name);
-    }
+            regz_gen.addFileArg(file);
 
-    /// Returns a slice to all available target names.
-    pub fn getTargetNames(env: *const BuildEnvironment) []const []const u8 {
-        return env.targets.keys();
-    }
+            break :blk zig_file;
+        },
 
-    /// Returns the instance to the CPU descriptor for the given CPU model.
-    pub fn getCpuDescriptor(env: *BuildEnvironment, model: CpuModel) *const Cpu {
-        return if (model == .custom)
-            model.custom
-        else
-            env.cpus.getPtrConst(model);
-    }
+        .zig => |src| src,
+    };
 
-    /// Returns a build step that will print all available targets to this instance.
-    ///
-    /// Can be used to provide a list to the user or developer.
-    pub fn getShowTargetsStep(env: *BuildEnvironment) *std.Build.Step {
-        return &env.show_targets_step;
-    }
+    const config = host_build.addOptions();
+    config.addOption(bool, "has_hal", (maybe_hal != null));
+    config.addOption(bool, "has_board", (maybe_board != null));
 
-    /// Declares a new MicroZig firmware file.
-    pub fn addFirmware(
-        /// The MicroZig instance that should be used to create the firmware.
-        env: *BuildEnvironment,
-        /// The instance of the `build.zig` that is calling this function.
-        host_build: *std.Build,
-        /// Options that define how the firmware is built.
-        options: FirmwareOptions,
-    ) *Firmware {
-        const micro_build = env.self.builder;
+    config.addOption(?[]const u8, "board_name", if (maybe_board) |brd| brd.name else null);
 
-        const chip = &options.target.chip;
-        const cpu = env.getCpuDescriptor(chip.cpu);
-        const maybe_hal = options.hal orelse options.target.hal;
-        const maybe_board = options.board orelse options.target.board;
+    config.addOption([]const u8, "chip_name", chip.name);
+    config.addOption([]const u8, "cpu_name", chip.name);
+    config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
 
-        const linker_script = options.linker_script orelse options.target.linker_script;
+    const fw: *Firmware = host_build.allocator.create(Firmware) catch @panic("out of memory");
+    fw.* = Firmware{
+        .mz = mz,
+        .host_build = host_build,
+        .artifact = host_build.addExecutable(.{
+            .name = options.name,
+            .optimize = options.optimize,
+            .target = mz.host_build.resolveTargetQuery(chip.cpu.target),
+            .linkage = .static,
+            .root_source_file = .{ .cwd_relative = mz.microzig_core.builder.pathFromRoot("src/start.zig") },
+        }),
+        .target = options.target,
+        .output_files = Firmware.OutputFileMap.init(host_build.allocator),
 
-        // TODO: let the user override which ram section to use the stack on,
-        // for now just using the first ram section in the memory region list
-        const first_ram = blk: {
-            for (chip.memory_regions) |region| {
-                if (region.kind == .ram)
-                    break :blk region;
-            } else @panic("no ram memory region found for setting the end-of-stack address");
-        };
+        .config = config,
 
-        // On demand, generate chip definitions via regz:
-        const chip_source = switch (chip.register_definition) {
-            .json, .atdf, .svd => |file| blk: {
-                const regz_exe = env.dependency("regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
-
-                const regz_gen = host_build.addRunArtifact(regz_exe);
-
-                regz_gen.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
-                regz_gen.addArg(@tagName(chip.register_definition));
-
-                regz_gen.addArg("--output_path"); // Write to a file
-                const zig_file = regz_gen.addOutputFileArg("chip.zig");
-
-                regz_gen.addFileArg(file);
-
-                break :blk zig_file;
-            },
-
-            .zig => |src| src,
-        };
-
-        const config = host_build.addOptions();
-        config.addOption(bool, "has_hal", (maybe_hal != null));
-        config.addOption(bool, "has_board", (maybe_board != null));
-
-        config.addOption(?[]const u8, "board_name", if (maybe_board) |brd| brd.name else null);
-
-        config.addOption([]const u8, "chip_name", chip.name);
-        config.addOption([]const u8, "cpu_name", chip.name);
-        config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
-
-        const fw: *Firmware = host_build.allocator.create(Firmware) catch @panic("out of memory");
-        fw.* = Firmware{
-            .env = env,
-            .host_build = host_build,
-            .artifact = host_build.addExecutable(.{
-                .name = options.name,
-                .optimize = options.optimize,
-                .target = cpu.target,
-                .linkage = .static,
-                .root_source_file = .{ .cwd_relative = env.microzig_core.builder.pathFromRoot("src/start.zig") },
+        .modules = .{
+            .microzig = micro_build.createModule(.{
+                .root_source_file = .{ .cwd_relative = mz.microzig_core.builder.pathFromRoot("src/microzig.zig") },
+                .imports = &.{
+                    .{
+                        .name = "config",
+                        .module = micro_build.createModule(.{ .root_source_file = config.getSource() }),
+                    },
+                },
             }),
-            .target = options.target,
-            .output_files = Firmware.OutputFileMap.init(host_build.allocator),
 
-            .config = config,
+            .cpu = undefined,
+            .chip = undefined,
 
-            .modules = .{
-                .microzig = micro_build.createModule(.{
-                    .source_file = .{ .cwd_relative = env.microzig_core.builder.pathFromRoot("src/microzig.zig") },
-                    .dependencies = &.{
-                        .{
-                            .name = "config",
-                            .module = micro_build.createModule(.{ .source_file = config.getSource() }),
-                        },
-                    },
-                }),
+            .board = null,
+            .hal = null,
 
-                .cpu = undefined,
-                .chip = undefined,
+            .app = undefined,
+        },
+    };
+    errdefer fw.output_files.deinit();
 
-                .board = null,
-                .hal = null,
+    fw.modules.chip = micro_build.createModule(.{
+        .root_source_file = chip_source,
+        .imports = &.{
+            .{ .name = "microzig", .module = fw.modules.microzig },
+        },
+    });
+    fw.modules.microzig.addImport("chip", fw.modules.chip);
 
-                .app = undefined,
+    fw.modules.cpu = micro_build.createModule(.{
+        .root_source_file = chip.cpu.source_file,
+        .imports = &.{
+            .{ .name = "microzig", .module = fw.modules.microzig },
+        },
+    });
+    fw.modules.microzig.addImport("cpu", fw.modules.cpu);
+
+    if (maybe_hal) |hal| {
+        fw.modules.hal = micro_build.createModule(.{
+            .root_source_file = hal.source_file,
+            .imports = &.{
+                .{ .name = "microzig", .module = fw.modules.microzig },
             },
+        });
+        fw.modules.microzig.addImport("hal", fw.modules.hal.?);
+    }
+
+    if (maybe_board) |brd| {
+        fw.modules.board = micro_build.createModule(.{
+            .root_source_file = brd.source_file,
+            .imports = &.{
+                .{ .name = "microzig", .module = fw.modules.microzig },
+            },
+        });
+        fw.modules.microzig.addImport("board", fw.modules.board.?);
+    }
+
+    fw.modules.app = host_build.createModule(.{
+        .root_source_file = options.source_file,
+        .imports = &.{
+            .{ .name = "microzig", .module = fw.modules.microzig },
+        },
+    });
+
+    //const umm = mz.microzig_core.builder.dependency("umm-zig", .{}).module("umm");
+    //fw.modules.microzig.addImport("umm", umm);
+
+    fw.artifact.root_module.addImport("app", fw.modules.app);
+    fw.artifact.root_module.addImport("microzig", fw.modules.microzig);
+
+    fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
+
+    if (linker_script) |ls| {
+        fw.artifact.setLinkerScriptPath(ls);
+    } else {
+        const target = mz.host_build.resolveTargetQuery(chip.cpu.target);
+        const generate_linkerscript_args = GenerateLinkerscriptArgs{
+            .cpu_name = target.result.cpu.model.name,
+            .cpu_arch = target.result.cpu.arch,
+            .chip_name = chip.name,
+            .memory_regions = chip.memory_regions,
         };
-        errdefer fw.output_files.deinit();
 
-        fw.modules.chip = micro_build.createModule(.{
-            .source_file = chip_source,
-            .dependencies = &.{
-                .{ .name = "microzig", .module = fw.modules.microzig },
-            },
-        });
-        fw.modules.microzig.dependencies.put("chip", fw.modules.chip) catch @panic("out of memory");
+        const args_str = std.json.stringifyAlloc(
+            mz.microzig_core.builder.allocator,
+            generate_linkerscript_args,
+            .{},
+        ) catch @panic("OOM");
 
-        fw.modules.cpu = micro_build.createModule(.{
-            .source_file = cpu.source_file,
-            .dependencies = &.{
-                .{ .name = "microzig", .module = fw.modules.microzig },
-            },
-        });
-        fw.modules.microzig.dependencies.put("cpu", fw.modules.cpu) catch @panic("out of memory");
+        const generate_linkerscript_run = mz.microzig_core.builder.addRunArtifact(mz.generate_linkerscript);
+        generate_linkerscript_run.addArg(args_str);
+        const linkerscript = generate_linkerscript_run.addOutputFileArg("linker.ld");
 
-        if (maybe_hal) |hal| {
-            fw.modules.hal = micro_build.createModule(.{
-                .source_file = hal.source_file,
-                .dependencies = &.{
-                    .{ .name = "microzig", .module = fw.modules.microzig },
-                },
-            });
-            fw.modules.microzig.dependencies.put("hal", fw.modules.hal.?) catch @panic("out of memory");
-        }
-
-        if (maybe_board) |brd| {
-            fw.modules.board = micro_build.createModule(.{
-                .source_file = brd.source_file,
-                .dependencies = &.{
-                    .{ .name = "microzig", .module = fw.modules.microzig },
-                },
-            });
-            fw.modules.microzig.dependencies.put("board", fw.modules.board.?) catch @panic("out of memory");
-        }
-
-        fw.modules.app = host_build.createModule(.{
-            .source_file = options.source_file,
-            .dependencies = &.{
-                .{ .name = "microzig", .module = fw.modules.microzig },
-            },
-        });
-
-        const umm = env.microzig_core.builder.dependency("umm-zig", .{}).module("umm");
-        fw.modules.microzig.dependencies.put("umm", umm) catch @panic("out of memory");
-
-        fw.artifact.addModule("app", fw.modules.app);
-        fw.artifact.addModule("microzig", fw.modules.microzig);
-
-        fw.artifact.strip = false; // we always want debug symbols, stripping brings us no benefit on embedded
-        fw.artifact.single_threaded = options.single_threaded orelse fw.target.single_threaded;
-        fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
-
-        switch (linker_script) {
-            .generated => {
-                fw.artifact.setLinkerScript(
-                    env.generateLinkerScript(chip.*) catch @panic("out of memory"),
-                );
-            },
-
-            .source_file => |source| {
-                fw.artifact.setLinkerScriptPath(source);
-            },
-        }
-
-        if (options.target.configure) |configure| {
-            configure(fw.env, fw);
-        }
-        
-
-        return fw;
+        // If not specified then generate the linker script
+        fw.artifact.setLinkerScript(linkerscript);
     }
 
-    /// Adds a new dependency to the `install` step that will install the `firmware` into the folder `$prefix/firmware`.
-    pub fn installFirmware(
-        /// The MicroZig instance that was used to create the firmware.
-        env: *BuildEnvironment,
-        /// The instance of the `build.zig` that should perform installation.
-        b: *std.Build,
-        /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
-        firmware: *Firmware,
-        /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
-        options: InstallFirmwareOptions,
-    ) void {
-        std.debug.assert(env == firmware.env);
-        const install_step = addInstallFirmware(env, b, firmware, options);
-        b.getInstallStep().dependOn(&install_step.step);
+    if (options.target.configure) |configure| {
+        configure(fw.mz, fw);
     }
 
-    /// Creates a new `std.Build.Step.InstallFile` instance that will install the given firmware to `$prefix/firmware`.
-    ///
-    /// **NOTE:** This does not actually install the firmware yet. You have to add the returned step as a dependency to another step.
-    ///           If you want to just install the firmware, use `installFirmware` instead!
-    pub fn addInstallFirmware(
-        /// The MicroZig instance that was used to create the firmware.
-        env: *BuildEnvironment,
-        /// The instance of the `build.zig` that should perform installation.
-        b: *std.Build,
-        /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
-        firmware: *Firmware,
-        /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
-        options: InstallFirmwareOptions,
-    ) *std.Build.Step.InstallFile {
-        _ = env;
-        const format = firmware.resolveFormat(options.format);
-
-        const basename = b.fmt("{s}{s}", .{
-            firmware.artifact.name,
-            format.getExtension(),
-        });
-
-        return b.addInstallFileWithDir(firmware.getEmittedBin(format), .{ .custom = "firmware" }, basename);
-    }
-
-    fn dependency(env: *BuildEnvironment, name: []const u8, args: anytype) *std.Build.Dependency {
-        return env.self.builder.dependency(name, args);
-    }
-
-    fn generateLinkerScript(env: *BuildEnvironment, chip: Chip) !std.Build.LazyPath {
-        const cpu = env.getCpuDescriptor(chip.cpu);
-
-        var contents = std.ArrayList(u8).init(env.host_build.allocator);
-        const writer = contents.writer();
-        try writer.print(
-            \\/*
-            \\ * This file was auto-generated by microzig
-            \\ *
-            \\ * Target CPU:  {[cpu]s}
-            \\ * Target Chip: {[chip]s}
-            \\ */
-            \\
-            // This is not the "true" entry point, but there's no such thing on embedded platforms
-            // anyways. This is the logical entrypoint that should be invoked when
-            // stack, .data and .bss are set up and the CPU is ready to be used.
-            \\ENTRY(microzig_main);
-            \\
-            \\
-        , .{
-            .cpu = cpu.name,
-            .chip = chip.name,
-        });
-
-        try writer.writeAll("MEMORY\n{\n");
-        {
-            var counters = [4]usize{ 0, 0, 0, 0 };
-            for (chip.memory_regions) |region| {
-                // flash (rx!w) : ORIGIN = 0x00000000, LENGTH = 512k
-
-                switch (region.kind) {
-                    .flash => {
-                        try writer.print("  flash{d}    (rx!w)", .{counters[0]});
-                        counters[0] += 1;
-                    },
-
-                    .ram => {
-                        try writer.print("  ram{d}      (rw!x)", .{counters[1]});
-                        counters[1] += 1;
-                    },
-
-                    .io => {
-                        try writer.print("  io{d}       (rw!x)", .{counters[2]});
-                        counters[2] += 1;
-                    },
-
-                    .reserved => {
-                        try writer.print("  reserved{d} (rw!x)", .{counters[3]});
-                        counters[3] += 1;
-                    },
-
-                    .private => |custom| {
-                        try writer.print("  {s} (", .{custom.name});
-                        if (custom.readable) try writer.writeAll("r");
-                        if (custom.writeable) try writer.writeAll("w");
-                        if (custom.executable) try writer.writeAll("x");
-
-                        if (!custom.readable or !custom.writeable or !custom.executable) {
-                            try writer.writeAll("!");
-                            if (!custom.readable) try writer.writeAll("r");
-                            if (!custom.writeable) try writer.writeAll("w");
-                            if (!custom.executable) try writer.writeAll("x");
-                        }
-                        try writer.writeAll(")");
-                    },
-                }
-                try writer.print(" : ORIGIN = 0x{X:0>8}, LENGTH = 0x{X:0>8}\n", .{ region.offset, region.length });
-            }
-        }
-
-        try writer.writeAll("}\n\nSECTIONS\n{\n");
-        {
-            try writer.writeAll(
-                \\  .text :
-                \\  {
-                \\     KEEP(*(microzig_flash_start))
-                \\     *(.text*)
-                \\  } > flash0
-                \\
-                \\
-            );
-
-            switch (cpu.target.getCpuArch()) {
-                .arm, .thumb => try writer.writeAll(
-                    \\  .ARM.exidx : {
-                    \\      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-                    \\  } >flash0
-                    \\
-                    \\
-                ),
-                else => {},
-            }
-
-            try writer.writeAll(
-                \\  .data :
-                \\  {
-                \\     microzig_data_start = .;
-                \\     *(.rodata*)
-                \\     *(.data*)
-                \\     microzig_data_end = .;
-                \\  } > ram0 AT> flash0
-                \\
-                \\  .bss (NOLOAD) :
-                \\  {
-                \\      microzig_bss_start = .;
-                \\      *(.bss*)
-                \\      microzig_bss_end = .;
-                \\  } > ram0
-                \\
-                \\  microzig_data_load_start = LOADADDR(.data);
-                \\
-            );
-        }
-        try writer.writeAll("}\n");
-
-        // TODO: Assert that the flash can actually hold all data!
-        // try writer.writeAll(
-        //     \\
-        //     \\  ASSERT( (SIZEOF(.text) + SIZEOF(.data) > LENGTH(flash0)), "Error: .text + .data is too large for flash!" );
-        //     \\
-        // );
-
-        const write = env.host_build.addWriteFiles();
-
-        return write.add("linker.ld", contents.items);
-    }
-
-    fn print_target_steps(step: *std.Build.Step, prog_node: *std.Progress.Node) !void {
-        _ = prog_node;
-
-        const env = @fieldParentPtr(BuildEnvironment, "show_targets_step", step);
-
-        std.debug.print("Available MicroZig targets:\n", .{});
-        for (env.targets.keys()) |listed_target_name| {
-            std.debug.print("* {s}\n", .{listed_target_name});
-        }
-    }
-};
-
-////////////////////////////////////////
-//      MicroZig Gen 2 Interface      //
-////////////////////////////////////////
-
-fn root() []const u8 {
-    return comptime (std.fs.path.dirname(@src().file) orelse ".");
+    return fw;
 }
-const build_root = root();
 
-const MicroZig = @This();
+const GenerateLinkerscriptArgs = @import("src/generate_linkerscript.zig").Args;
+
+/// Adds a new dependency to the `install` step that will install the `firmware` into the folder `$prefix/firmware`.
+pub fn install_firmware(
+    /// The MicroZig instance that was used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that should perform installation.
+    b: *Build,
+    /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
+    firmware: *Firmware,
+    /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
+    options: InstallFirmwareOptions,
+) void {
+    std.debug.assert(mz == firmware.mz);
+    const install_step = add_install_firmware(mz, b, firmware, options);
+    b.getInstallStep().dependOn(&install_step.step);
+}
+
+/// Creates a new `std.Build.Step.InstallFile` instance that will install the given firmware to `$prefix/firmware`.
+///
+/// **NOTE:** This does not actually install the firmware yet. You have to add the returned step as a dependency to another step.
+///           If you want to just install the firmware, use `installFirmware` instead!
+pub fn add_install_firmware(
+    /// The MicroZig instance that was used to create the firmware.
+    mz: *MicroZig,
+    /// The instance of the `build.zig` that should perform installation.
+    b: *Build,
+    /// The firmware that should be installed. Please make sure that this was created with the same `MicroZig` instance as `mz`.
+    firmware: *Firmware,
+    /// Optional configuration of the installation process. Pass `.{}` if you're not sure what to do here.
+    options: InstallFirmwareOptions,
+) *Build.Step.InstallFile {
+    _ = mz;
+    const format = firmware.resolve_format(options.format);
+
+    const basename = b.fmt("{s}{s}", .{
+        firmware.artifact.name,
+        format.get_extension(),
+    });
+
+    return b.addInstallFileWithDir(firmware.get_emitted_bin(format), .{ .custom = "firmware" }, basename);
+}
+
+fn dependency(env: *MicroZig, name: []const u8, args: anytype) *Build.Dependency {
+    return env.self.builder.dependency(name, args);
+}
 
 /// The resulting binary format for the firmware file.
 /// A lot of embedded systems don't use plain ELF files, thus we provide means
@@ -750,7 +307,7 @@ pub const BinaryFormat = union(enum) {
     custom: *Custom,
 
     /// Returns the standard extension for the resulting binary file.
-    pub fn getExtension(format: BinaryFormat) []const u8 {
+    pub fn get_extension(format: BinaryFormat) []const u8 {
         return switch (format) {
             .elf => ".elf",
             .bin => ".bin",
@@ -771,7 +328,7 @@ pub const BinaryFormat = union(enum) {
         ///
         /// The `*Custom` format is passed so contextual information can be obtained by using
         /// `@fieldParentPtr` to provide access to tooling.
-        convert: *const fn (*Custom, elf: std.Build.LazyPath) std.Build.LazyPath,
+        convert: *const fn (*Custom, elf: Build.LazyPath) Build.LazyPath,
     };
 
     const Enum = std.meta.Tag(BinaryFormat);
@@ -815,24 +372,7 @@ pub const BinaryFormat = union(enum) {
     };
 };
 
-/// The CPU model a target uses.
-///
-/// The CPUs usually require special care on how to do interrupts, and getting an entry point.
-///
-/// MicroZig officially only supports the CPUs listed here, but other CPUs might be provided
-/// via the `custom` field.
-pub const CpuModel = union(enum) {
-    avr5,
-    cortex_m0,
-    cortex_m0plus,
-    cortex_m3,
-    cortex_m4,
-    riscv32_imac,
-    custom: *const Cpu,
-};
-
-/// Tag of CpuModel
-pub const CpuType = std.meta.Tag(CpuModel);
+pub const cpus = core.cpus;
 
 /// A cpu descriptor.
 pub const Cpu = struct {
@@ -840,50 +380,13 @@ pub const Cpu = struct {
     name: []const u8,
 
     /// Source file providing startup code and memory initialization routines.
-    source_file: std.build.LazyPath,
+    source_file: LazyPath,
 
     /// The compiler target we use to compile all the code.
-    target: std.zig.CrossTarget,
+    target: std.Target.Query,
 };
 
-/// A descriptor for memory regions in a microcontroller.
-pub const MemoryRegion = struct {
-    /// The type of the memory region for generating a proper linker script.
-    kind: Kind,
-    offset: u64,
-    length: u64,
-
-    pub const Kind = union(enum) {
-        /// This is a (normally) immutable memory region where the code is stored.
-        flash,
-
-        /// This is a mutable memory region for data storage.
-        ram,
-
-        /// This is a memory region that maps MMIO devices.
-        io,
-
-        /// This is a memory region that exists, but is reserved and must not be used.
-        reserved,
-
-        /// This is a memory region used for internal linking tasks required by the board support package.
-        private: PrivateRegion,
-    };
-
-    pub const PrivateRegion = struct {
-        /// The name of the memory region. Will not have an automatic numeric counter and must be unique.
-        name: []const u8,
-
-        /// Is the memory region executable?
-        executable: bool,
-
-        /// Is the memory region readable?
-        readable: bool,
-
-        /// Is the memory region writable?
-        writeable: bool,
-    };
-};
+pub const MemoryRegion = @import("src/generate_linkerscript.zig").MemoryRegion;
 
 /// Defines a custom microcontroller.
 pub const Chip = struct {
@@ -894,21 +397,21 @@ pub const Chip = struct {
     url: ?[]const u8 = null,
 
     /// The cpu model this controller uses.
-    cpu: CpuModel,
+    cpu: Cpu,
 
     /// The provider for register definitions.
     register_definition: union(enum) {
         /// Use `regz` to create a zig file from a JSON schema.
-        json: std.Build.LazyPath,
+        json: LazyPath,
 
         /// Use `regz` to create a json file from a SVD schema.
-        svd: std.Build.LazyPath,
+        svd: LazyPath,
 
         /// Use `regz` to create a zig file from an ATDF schema.
-        atdf: std.Build.LazyPath,
+        atdf: LazyPath,
 
         /// Use the provided file directly as the chip file.
-        zig: std.Build.LazyPath,
+        zig: LazyPath,
     },
 
     /// The memory regions that are present in this chip.
@@ -918,7 +421,7 @@ pub const Chip = struct {
 /// Defines a hardware abstraction layer.
 pub const HardwareAbstractionLayer = struct {
     /// Root source file for this HAL.
-    source_file: std.Build.LazyPath,
+    source_file: LazyPath,
 };
 
 /// Provides a description of a board.
@@ -934,16 +437,7 @@ pub const BoardDefinition = struct {
     url: ?[]const u8 = null,
 
     /// Provides the root file for the board definition.
-    source_file: std.Build.LazyPath,
-};
-
-/// The linker script used to link the firmware.
-pub const LinkerScript = union(enum) {
-    /// Auto-generated linker script derived from the memory regions of the chip.
-    generated,
-
-    /// Externally defined linker script.
-    source_file: std.build.LazyPath,
+    source_file: LazyPath,
 };
 
 /// A compilation target for MicroZig. Provides information about the chip,
@@ -978,30 +472,30 @@ pub const Target = struct {
     board: ?BoardDefinition = null,
 
     /// (optional) Provide a custom linker script for the hardware or define a custom generation.
-    linker_script: LinkerScript = .generated,
+    linker_script: ?LazyPath = null,
 
     /// (optional) Further configures the created firmware depending on the chip and/or board settings.
     /// This can be used to set/change additional properties on the created `*Firmware` object.
-    configure: ?*const fn (env: *BuildEnvironment, *Firmware) void = null,
+    configure: ?*const fn (env: *MicroZig, *Firmware) void = null,
 
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
-    binary_post_process: ?*const fn (host_build: *std.Build, std.Build.LazyPath) std.Build.LazyPath = null,
+    binary_post_process: ?*const fn (host_build: *std.Build, LazyPath) std.Build.LazyPath = null,
 };
 
-/// Options to the `addFirmware` function.
+/// Options to the `add_firmware` function.
 pub const FirmwareOptions = struct {
     /// The name of the firmware file.
     name: []const u8,
 
     /// The MicroZig target that the firmware is built for. Either a board or a chip.
-    target: *const Target,
+    target: Target,
 
     /// The optimization level that should be used. Usually `ReleaseSmall` or `Debug` is a good choice.
     /// Also using `std.Build.standardOptimizeOption` is a good idea.
     optimize: std.builtin.OptimizeMode,
 
     /// The root source file for the application. This is your `src/main.zig` file.
-    source_file: std.Build.LazyPath,
+    source_file: LazyPath,
 
     // Overrides:
 
@@ -1018,7 +512,7 @@ pub const FirmwareOptions = struct {
     board: ?BoardDefinition = null,
 
     /// If set, overrides the `linker_script` property of the target.
-    linker_script: ?LinkerScript = null,
+    linker_script: ?LazyPath = null,
 };
 
 /// Configuration options for firmware installation.
@@ -1029,7 +523,7 @@ pub const InstallFirmwareOptions = struct {
 
 /// Declaration of a firmware build.
 pub const Firmware = struct {
-    const OutputFileMap = std.ArrayHashMap(BinaryFormat, std.Build.LazyPath, BinaryFormat.Context, false);
+    const OutputFileMap = std.ArrayHashMap(BinaryFormat, LazyPath, BinaryFormat.Context, false);
 
     const Modules = struct {
         app: *std.Build.Module,
@@ -1041,9 +535,9 @@ pub const Firmware = struct {
     };
 
     // privates:
-    env: *BuildEnvironment,
+    mz: *MicroZig,
     host_build: *std.Build,
-    target: *const Target,
+    target: Target,
     output_files: OutputFileMap,
 
     // publics:
@@ -1058,14 +552,14 @@ pub const Firmware = struct {
     modules: Modules,
 
     /// Path to the emitted elf file, if any.
-    emitted_elf: ?std.Build.LazyPath = null,
+    emitted_elf: ?LazyPath = null,
 
     /// Returns the emitted ELF file for this firmware. This is useful if you need debug information
     /// or want to use a debugger like Segger, ST-Link or similar.
     ///
     /// **NOTE:** This is similar, but not equivalent to `std.Build.Step.Compile.getEmittedBin`. The call on the compile step does
     ///           not include post processing of the ELF files necessary by certain targets.
-    pub fn getEmittedElf(firmware: *Firmware) std.Build.LazyPath {
+    pub fn get_emitted_elf(firmware: *Firmware) LazyPath {
         if (firmware.emitted_elf == null) {
             const raw_elf = firmware.artifact.getEmittedBin();
             firmware.emitted_elf = if (firmware.target.binary_post_process) |binary_post_process|
@@ -1080,16 +574,16 @@ pub const Firmware = struct {
     /// the target or in `format` if not null.
     ///
     /// **NOTE:** The file returned here is the same file that will be installed.
-    pub fn getEmittedBin(firmware: *Firmware, format: ?BinaryFormat) std.Build.LazyPath {
-        const actual_format = firmware.resolveFormat(format);
+    pub fn get_emitted_bin(firmware: *Firmware, format: ?BinaryFormat) LazyPath {
+        const actual_format = firmware.resolve_format(format);
 
         const gop = firmware.output_files.getOrPut(actual_format) catch @panic("out of memory");
         if (!gop.found_existing) {
-            const elf_file = firmware.getEmittedElf();
+            const elf_file = firmware.get_emitted_elf();
 
             const basename = firmware.host_build.fmt("{s}{s}", .{
                 firmware.artifact.name,
-                actual_format.getExtension(),
+                actual_format.get_extension(),
             });
 
             gop.value_ptr.* = switch (actual_format) {
@@ -1114,7 +608,7 @@ pub const Firmware = struct {
                 },
 
                 .uf2 => |family_id| blk: {
-                    const uf2_exe = firmware.env.dependency("uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
+                    const uf2_exe = firmware.mz.dependency("uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
 
                     const convert = firmware.host_build.addRunArtifact(uf2_exe);
 
@@ -1128,8 +622,8 @@ pub const Firmware = struct {
                     break :blk convert.addOutputFileArg(basename);
                 },
 
-                .dfu => buildConfigError(firmware.host_build, "DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!", .{}),
-                .esp => buildConfigError(firmware.host_build, "ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!", .{}),
+                .dfu => build_config_error(firmware.host_build, "DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!", .{}),
+                .esp => build_config_error(firmware.host_build, "ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!", .{}),
 
                 .custom => |generator| generator.convert(generator, elf_file),
             };
@@ -1142,26 +636,26 @@ pub const Firmware = struct {
     };
 
     /// Adds a regular dependency to your application.
-    pub fn addAppDependency(fw: *Firmware, name: []const u8, module: *std.Build.Module, options: AppDependencyOptions) void {
+    pub fn add_app_import(fw: *Firmware, name: []const u8, module: *std.Build.Module, options: AppDependencyOptions) void {
         if (options.depend_on_microzig) {
             module.dependencies.put("microzig", fw.modules.microzig) catch @panic("OOM");
         }
         fw.modules.app.dependencies.put(name, module) catch @panic("OOM");
     }
 
-    pub fn addIncludePath(fw: *Firmware, path: std.Build.LazyPath) void {
+    pub fn add_include_path(fw: *Firmware, path: LazyPath) void {
         fw.artifact.addIncludePath(path);
     }
 
-    pub fn addSystemIncludePath(fw: *Firmware, path: std.Build.LazyPath) void {
+    pub fn add_system_include_path(fw: *Firmware, path: LazyPath) void {
         fw.artifact.addSystemIncludePath(path);
     }
 
-    pub fn addCSourceFile(fw: *Firmware, source: std.Build.Step.Compile.CSourceFile) void {
+    pub fn add_c_source_file(fw: *Firmware, source: std.Build.Step.Compile.CSourceFile) void {
         fw.artifact.addCSourceFile(source);
     }
 
-    pub fn addOptions(fw: *Firmware, module_name: []const u8, options: *std.Build.OptionsStep) void {
+    pub fn add_options(fw: *Firmware, module_name: []const u8, options: *std.Build.OptionsStep) void {
         fw.artifact.addOptions(module_name, options);
         fw.modules.app.dependencies.put(
             module_name,
@@ -1171,22 +665,22 @@ pub const Firmware = struct {
         ) catch @panic("OOM");
     }
 
-    pub fn addObjectFile(fw: *Firmware, source: std.Build.LazyPath) void {
+    pub fn add_object_file(fw: *Firmware, source: LazyPath) void {
         fw.artifact.addObjectFile(source);
     }
 
-    fn resolveFormat(firmware: *Firmware, format: ?BinaryFormat) BinaryFormat {
+    fn resolve_format(firmware: *Firmware, format: ?BinaryFormat) BinaryFormat {
         if (format) |fmt| return fmt;
 
         if (firmware.target.preferred_format) |fmt| return fmt;
 
-        buildConfigError(firmware.host_build, "{s} has no preferred output format, please provide one in the `format` option.", .{
+        build_config_error(firmware.host_build, "{s} has no preferred output format, please provide one in the `format` option.", .{
             firmware.target.chip.name,
         });
     }
 };
 
-fn buildConfigError(b: *std.Build, comptime fmt: []const u8, args: anytype) noreturn {
+fn build_config_error(b: *std.Build, comptime fmt: []const u8, args: anytype) noreturn {
     const msg = b.fmt(fmt, args);
     @panic(msg);
 }

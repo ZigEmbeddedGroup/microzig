@@ -1,7 +1,0 @@
-{
-    "package_name": "stmicro/stm32",
-    "package_type": "example",
-    "inner_dependencies": [
-        "stmicro/stm32"
-    ]
-}

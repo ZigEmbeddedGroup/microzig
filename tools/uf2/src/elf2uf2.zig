@@ -38,7 +38,7 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    var args = try std.process.argsAlloc(gpa.allocator());
+    const args = try std.process.argsAlloc(gpa.allocator());
     defer std.process.argsFree(gpa.allocator(), args);
 
     for (args) |arg| if (std.mem.eql(u8, "--help", arg)) {

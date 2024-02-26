@@ -1,0 +1,13 @@
+.{
+    .name = "microzig/examples/raspberrypi/rp2040",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/bsp/raspberrypi/rp2040" = .{ .path = "../../../bsp/raspberrypi/rp2040" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

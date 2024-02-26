@@ -240,7 +240,7 @@ pub const Block = extern struct {
         var block: Block = undefined;
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
-                u32 => @field(block, field.name) = try reader.readIntLittle(u32),
+                u32 => @field(block, field.name) = try reader.readInt(u32, .little),
                 [476]u8 => {
                     const n = try reader.readAll(&@field(block, field.name));
                     if (n != @sizeOf(field.type))
@@ -249,7 +249,7 @@ pub const Block = extern struct {
                 else => {
                     assert(4 == @sizeOf(field.type));
                     @field(block, field.name) =
-                        @as(field.type, @bitCast(try reader.readIntLittle(u32)));
+                        @as(field.type, @bitCast(try reader.readInt(u32, .little)));
                 },
             }
         }
@@ -260,13 +260,14 @@ pub const Block = extern struct {
     pub fn write_to(self: Block, writer: anytype) !void {
         inline for (std.meta.fields(Block)) |field| {
             switch (field.type) {
-                u32 => try writer.writeIntLittle(u32, @field(self, field.name)),
+                u32 => try writer.writeInt(u32, @field(self, field.name), .little),
                 [476]u8 => try writer.writeAll(&@field(self, field.name)),
                 else => {
                     assert(4 == @sizeOf(field.type));
-                    try writer.writeIntLittle(
+                    try writer.writeInt(
                         u32,
                         @as(u32, @bitCast(@field(self, field.name))),
+                        .little,
                     );
                 },
             }

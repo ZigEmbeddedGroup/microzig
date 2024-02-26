@@ -5,7 +5,7 @@
 
 const std = @import("std");
 const bsp = @import("bsp");
-const microzig = @import("microzig-build");
+const microzig = @import("microzig/build");
 
 // Fake build_runner.zig api:
 pub const dependencies = struct {

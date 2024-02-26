@@ -1,7 +1,0 @@
-{
-    "package_name": "nordic/nrf5x",
-    "package_type": "example",
-    "inner_dependencies": [
-        "nordic/nrf5x"
-    ]
-}

@@ -1,10 +1,10 @@
 const std = @import("std");
-const Builder = std.build.Builder;
-const LibExeObjStep = std.build.LibExeObjStep;
-const Step = std.build.Step;
-const GeneratedFile = std.build.GeneratedFile;
+const Build = std.Build;
+const Compile = Build.Compile;
+const Step = Build.Step;
+const GeneratedFile = Build.GeneratedFile;
 
-pub fn build(b: *std.build.Builder) !void {
+pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -19,27 +19,20 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
 
-    const xml = b.addStaticLibrary(.{
-        .name = "xml2",
-        .target = target,
-        .optimize = optimize,
-    });
-    xml.linkLibrary(libxml2_dep.artifact("xml2"));
-    b.installArtifact(xml);
-
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    regz.addModule("clap", clap_dep.module("clap"));
+    regz.root_module.addImport("clap", clap_dep.module("clap"));
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     b.installArtifact(regz);
 
-    _ = b.addModule("regz", .{
-        .source_file = .{ .path = "src/module.zig" },
+    const exported_module = b.addModule("regz", .{
+        .root_source_file = .{ .path = "src/module.zig" },
     });
+    exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -55,6 +48,7 @@ pub fn build(b: *std.build.Builder) !void {
         .root_source_file = .{
             .path = "src/contextualize-fields.zig",
         },
+        .target = b.host,
     });
     contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
     const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
@@ -69,6 +63,7 @@ pub fn build(b: *std.build.Builder) !void {
         .root_source_file = .{
             .path = "src/characterize.zig",
         },
+        .target = b.host,
     });
     characterize.linkLibrary(libxml2_dep.artifact("xml2"));
     const characterize_run = b.addRunArtifact(characterize);

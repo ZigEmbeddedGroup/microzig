@@ -1,0 +1,13 @@
+.{
+    .name = "microzig/examples/nxp/lpc",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/bsp/nxp/lpc" = .{ .path = "../../../bsp/nxp/lpc" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

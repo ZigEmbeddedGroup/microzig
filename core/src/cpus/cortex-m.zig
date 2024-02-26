@@ -104,18 +104,19 @@ pub const startup_logic = struct {
     }
 };
 
+pub fn export_startup_logic() void {
+    @export(startup_logic._start, .{
+        .name = "_start",
+    });
+}
+
 fn is_valid_field(field_name: []const u8) bool {
     return !std.mem.startsWith(u8, field_name, "reserved") and
         !std.mem.eql(u8, field_name, "initial_stack_pointer") and
         !std.mem.eql(u8, field_name, "reset");
 }
 
-const VectorTable = if (@hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "VectorTable"))
-    root.microzig_options.VectorTable
-else if (microzig.hal != void and @hasDecl(microzig.hal, "VectorTable"))
-    microzig.hal.VectorTable
-else
-    microzig.chip.VectorTable;
+const VectorTable = microzig.chip.VectorTable;
 
 // will be imported by microzig.zig to allow system startup.
 pub var vector_table: VectorTable = blk: {
@@ -123,31 +124,12 @@ pub var vector_table: VectorTable = blk: {
         .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
-    if (@hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "interrupts")) {
-        const interrupts = root.microzig_options.interrupts;
-        if (@typeInfo(interrupts) != .Struct)
-            @compileLog("root.interrupts must be a struct");
 
-        inline for (@typeInfo(interrupts).Struct.decls) |decl| {
-            const function = @field(interrupts, decl.name);
-
-            if (!@hasField(VectorTable, decl.name)) {
-                var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. Declarations in 'interrupts' must be one of:\n";
-                inline for (std.meta.fields(VectorTable)) |field| {
-                    if (is_valid_field(field.name)) {
-                        msg = msg ++ "    " ++ field.name ++ "\n";
-                    }
-                }
-
-                @compileError(msg);
-            }
-
-            if (!is_valid_field(decl.name))
-                @compileError("You are not allowed to specify '" ++ decl.name ++ "' in the vector table, for your sins you must now pay a $5 fine to the ZSF: https://github.com/sponsors/ziglang");
-
-            @field(tmp, decl.name) = create_interrupt_vector(function);
-        }
+    if (@hasDecl(root, "microzig_options")) {
+        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
     }
+
     break :blk tmp;
 };
 

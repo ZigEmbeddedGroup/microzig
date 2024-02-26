@@ -990,14 +990,16 @@ test "gen.peripheral with modes" {
         \\                {
         \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
         \\                    switch (value) {
-        \\                        0 => return .TEST_MODE1,
+        \\                        0,
+        \\                        => return .TEST_MODE1,
         \\                        else => {},
         \\                    }
         \\                }
         \\                {
         \\                    const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
         \\                    switch (value) {
-        \\                        1 => return .TEST_MODE2,
+        \\                        1,
+        \\                        => return .TEST_MODE2,
         \\                        else => {},
         \\                    }
         \\                }
@@ -1434,7 +1436,7 @@ test "gen.interrupts.avr" {
         \\            const Handler = micro.interrupt.Handler;
         \\            const unhandled = micro.interrupt.unhandled;
         \\
-        \\            RESET: Handler = unhandled,
+        \\            RESET: Handler,
         \\            TEST_VECTOR1: Handler = unhandled,
         \\            reserved2: [1]u16 = undefined,
         \\            TEST_VECTOR2: Handler = unhandled,

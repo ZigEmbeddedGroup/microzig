@@ -47,6 +47,7 @@ fn main_impl() anyerror!void {
 
     var diag = clap.Diagnostic{};
     var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
+        .allocator = allocator,
         .diagnostic = &diag,
     }) catch |err| {
         // Report useful error and exit

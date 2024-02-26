@@ -772,7 +772,7 @@ test "svd.device register properties" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -815,7 +815,7 @@ test "svd.peripheral register properties" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -861,7 +861,7 @@ test "svd.register register properties" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -906,7 +906,7 @@ test "svd.register with fields" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -959,7 +959,7 @@ test "svd.field with enum value" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1014,7 +1014,7 @@ test "svd.peripheral with dimElementGroup" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1052,7 +1052,7 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1088,7 +1088,7 @@ test "svd.register with dimElementGroup" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1129,7 +1129,7 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1166,7 +1166,7 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1200,7 +1200,7 @@ test "svd.register with dimElementGroup, %s in name" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1241,7 +1241,7 @@ test "svd.field with dimElementGroup, suffixed with %s" {
         \\</device>
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_svd(std.testing.allocator, doc);
     defer db.deinit();
 

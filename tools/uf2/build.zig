@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(elf2uf2);
 
     _ = b.addModule("uf2", .{
-        .source_file = .{ .path = "src/uf2.zig" },
+        .root_source_file = .{ .path = "src/uf2.zig" },
     });
 
     const main_tests = b.addTest(.{
@@ -57,6 +57,7 @@ pub fn build(b: *std.Build) void {
     const gen = b.addExecutable(.{
         .name = "gen",
         .root_source_file = .{ .path = "src/gen.zig" },
+        .target = b.host,
     });
     const gen_run_step = b.addRunArtifact(gen);
     const gen_step = b.step("gen", "Generate family id enum");
@@ -65,6 +66,7 @@ pub fn build(b: *std.Build) void {
     const example = b.addExecutable(.{
         .name = "example",
         .root_source_file = .{ .path = "src/example.zig" },
+        .target = b.host,
     });
     b.installArtifact(example);
 }

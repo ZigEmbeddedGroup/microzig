@@ -1,4 +1,9 @@
 .{
-    .name = "uf2",
+    .name = "microzig/tools/uf2",
     .version = "0.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src"
+    },
 }

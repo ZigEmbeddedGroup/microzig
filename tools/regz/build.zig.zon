@@ -1,5 +1,5 @@
 .{
-    .name = "regz",
+    .name = "microzig/tools/regz",
     .version = "0.0.0",
     .paths = .{
         "LICENSE",
@@ -12,13 +12,12 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "https://github.com/mitchellh/zig-build-libxml2/archive/4e80a167d6e13e09e0da77457310401084e758cc.tar.gz",
-            .hash = "1220000fd2a0f192b1aab0c12be0080748e774044399d69a852ffa38a58f2b1dcc09",
+            .url = "https://github.com/mitchellh/zig-build-libxml2/archive/d19d7c83222498cc8b0dda760dfe7c1bd6ca3695.tar.gz",
+            .hash = "12205a9b00f7740f237c2046c1af280d383fdf087454d2178a373ed665b004310cbe",
         },
         .clap = .{
-            .url = "https://github.com/Hejsil/zig-clap/archive/f49b94700e0761b7514abdca0e4f0e7f3f938a93.tar.gz",
-            .hash = "1220f48518ce22882e102255ed3bcdb7aeeb4891f50b2cdd3bd74b5b2e24d3149ba2",
+            .url = "https://github.com/Hejsil/zig-clap/archive/4267b0b60ef6f87cccf3ee6ed481e6d0759180c6.tar.gz",
+            .hash = "12202fa30d679d821292bcd953458b9e76097a5d16999489125a206db63a53392833",
         },
     },
-    .paths = .{""},
 }

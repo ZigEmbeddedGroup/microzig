@@ -1,18 +1,42 @@
 .{
-    .name = "microzig/monorepo",
+    .name = "microzig",
     .version = "0.0.0",
     .dependencies = .{
-        .eggzon = .{
-            .url = "https://github.com/ziglibs/eggzon/archive/refs/heads/master.tar.gz",
-            .hash = "1220cd5cec7e9d4911074a9b2dec2dabef76e1adf94d041bca068163ce7666c4be47",
+        // packages within the monorepo so that others can reach them
+        .@"microzig/build" = .{ .path = "build" },
+        .@"microzig/core" = .{ .path = "core" },
+        .@"microzig/tools/regz" = .{ .path = "tools/regz" },
+        .@"microzig/tools/uf2" = .{ .path = "tools/uf2" },
+        .@"microzig/bsp/nordic/nrf5x" = .{ .path = "bsp/nordic/nrf5x" },
+        .@"microzig/bsp/nxp/lpc" = .{ .path = "bsp/nxp/lpc" },
+        .@"microzig/bsp/microchip/atsam" = .{ .path = "bsp/microchip/atsam" },
+        .@"microzig/bsp/microchip/avr" = .{ .path = "bsp/microchip/avr" },
+        .@"microzig/bsp/gigadevice/gd32" = .{ .path = "bsp/gigadevice/gd32" },
+        .@"microzig/bsp/stmicro/stm32" = .{ .path = "bsp/stmicro/stm32" },
+        .@"microzig/bsp/espressif/esp" = .{ .path = "bsp/espressif/esp" },
+        .@"microzig/bsp/raspberrypi/rp2040" = .{ .path = "bsp/raspberrypi/rp2040" },
+
+        // examples so that we can build them all in one go
+        .@"microzig/examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
+        .@"microzig/examples/nxp/lpc" = .{ .path = "examples/nxp/lpc" },
+        .@"microzig/examples/microchip/atsam" = .{ .path = "examples/microchip/atsam" },
+        .@"microzig/examples/microchip/avr" = .{ .path = "examples/microchip/avr" },
+        .@"microzig/examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
+        .@"microzig/examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
+        .@"microzig/examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
+        .@"microzig/examples/raspberrypi/rp2040" = .{ .path = "examples/raspberrypi/rp2040" },
+
+        // used for creating package tarballs
+        .boxzer = .{
+            .url = "https://github.com/mattnite/boxzer/archive/44183569cb4418f3b127711a989ded8822869a91.tar.gz",
+            .hash = "1220f6fc705e2d658644c96c093ed7907f2c3091252058d6bdfdc0334965dd25d6c4",
         },
-        .uf2 = .{
-            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/8037b439ccbac862471392b25e94a8995d784e2c.tar.gz",
-            .hash = "1220cc66563fc1ecefca7990968441dc9d4db717884ffa9a2de657f60ed4bb74a70a",
-        },
-        .regz = .{
-            .url = "https://github.com/ZigEmbeddedGroup/regz/archive/d66ffd56f51fc46c071412141b5d0c74dc83c310.tar.gz",
-            .hash = "122002c5f2e31c11373ede6e8a8dd9a61aabd60d38df667ec33b5f994d1f0b503823",
-        },
+    },
+
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
     },
 }

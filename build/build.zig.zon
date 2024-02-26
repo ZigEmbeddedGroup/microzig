@@ -1,0 +1,23 @@
+.{
+    .name = "microzig/build",
+    .version = "0.0.0",
+    .dependencies = .{
+        .uf2 = .{
+            .path = "../tools/uf2",
+        },
+        .regz = .{
+            .path = "../tools/regz",
+        },
+        .@"microzig/core" = .{
+            .path = "../core",
+        },
+    },
+
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "src",
+    },
+}

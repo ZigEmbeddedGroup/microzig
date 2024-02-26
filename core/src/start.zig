@@ -2,8 +2,6 @@ const std = @import("std");
 const microzig = @import("microzig");
 const app = @import("app");
 
-pub usingnamespace app;
-
 // Use microzig panic handler if not defined by an application
 pub usingnamespace if (!@hasDecl(app, "panic"))
     struct {
@@ -12,36 +10,74 @@ pub usingnamespace if (!@hasDecl(app, "panic"))
 else
     struct {};
 
+pub const VectorTableOptions = if (@hasDecl(microzig.chip, "VectorTable"))
+blk: {
+    const VectorTable = microzig.chip.VectorTable;
+    const fields_with_default = fields_with_default: {
+        var count = 0;
+        for (@typeInfo(VectorTable).Struct.fields) |field| {
+            if (field.default_value != null)
+                count += 1;
+        }
+
+        break :fields_with_default count;
+    };
+
+    var fields: [fields_with_default]std.builtin.Type.StructField = undefined;
+    var idx = 0;
+    for (@typeInfo(VectorTable).Struct.fields) |field| {
+        if (field.default_value == null)
+            continue;
+
+        fields[idx] = field;
+        idx += 1;
+    }
+
+    break :blk @Type(.{
+        .Struct = .{
+            .fields = &fields,
+            .layout = .Auto,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
+} else struct {};
+
+pub const Options = struct {
+    interrupts: VectorTableOptions = .{},
+    log_level: std.log.Level = std.log.default_level,
+    log_scope_levels: []const std.log.ScopeLevel = &.{},
+    logFn: fn (
+        comptime message_level: std.log.Level,
+        comptime scope: @TypeOf(.enum_literal),
+        comptime format: []const u8,
+        args: anytype,
+    ) void = struct {
+        fn log(
+            comptime message_level: std.log.Level,
+            comptime scope: @Type(.EnumLiteral),
+            comptime format: []const u8,
+            args: anytype,
+        ) void {
+            _ = message_level;
+            _ = scope;
+            _ = format;
+            _ = args;
+        }
+    }.log,
+};
+
+pub const microzig_options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
+
 // Conditionally provide a default no-op logFn if app does not have one
 // defined. Parts of microzig use the stdlib logging facility and
 // compilations will now fail on freestanding systems that use it but do
 // not explicitly set `root.std_options.logFn`
-pub usingnamespace if (!@hasDecl(app, "std_options"))
-    struct {
-        pub const std_options = struct {
-            pub fn logFn(
-                comptime message_level: std.log.Level,
-                comptime scope: @Type(.EnumLiteral),
-                comptime format: []const u8,
-                args: anytype,
-            ) void {
-                _ = message_level;
-                _ = scope;
-                _ = format;
-                _ = args;
-            }
-        };
-    }
-else
-    struct {
-        comptime {
-            // Technically the compiler's errors should be good enough that we
-            // shouldn't include errors like this, but since we add default
-            // behavior we should clarify the situation for the user.
-            if (!@hasDecl(app.std_options, "logFn"))
-                @compileError("By default MicroZig provides a no-op logging function. Since you are exporting `std_options`, you must export the stdlib logging function yourself.");
-        }
-    };
+pub const std_options = std.Options{
+    .log_level = microzig_options.log_level,
+    .log_scope_levels = microzig_options.log_scope_levels,
+    .logFn = microzig_options.logFn,
+};
 
 // Startup logic:
 comptime {
@@ -51,7 +87,7 @@ comptime {
     // .rodata is not always necessary to be populated (flash based systems
     // can just index flash, while harvard or flash-less architectures need
     // to copy .rodata into RAM).
-    _ = microzig.cpu.startup_logic;
+    microzig.cpu.export_startup_logic();
 
     // Export the vector table to flash start if we have any.
     // For a lot of systems, the vector table provides a reset vector

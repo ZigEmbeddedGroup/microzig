@@ -1,7 +1,0 @@
-{
-    "package_name": "gigadevice/gd32",
-    "package_type": "example",
-    "inner_dependencies": [
-        "gigadevice/gd32"
-    ]
-}

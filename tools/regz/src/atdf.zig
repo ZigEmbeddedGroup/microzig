@@ -1145,7 +1145,7 @@ test "atdf.register with bitfields and enum" {
         \\  </modules>
         \\</avr-tools-device-file>
     ;
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1271,7 +1271,7 @@ test "atdf.register with mode" {
         \\
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1394,7 +1394,7 @@ test "atdf.instance of register group" {
         \\
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1433,7 +1433,7 @@ test "atdf.interrupts" {
         \\
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1459,7 +1459,7 @@ test "atdf.interrupts with module-instance" {
         \\
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 
@@ -1492,7 +1492,7 @@ test "atdf.interrupts with interrupt-groups" {
         \\
     ;
 
-    var doc = try xml.Doc.from_memory(text);
+    const doc = try xml.Doc.from_memory(text);
     var db = try Database.init_from_atdf(std.testing.allocator, doc);
     defer db.deinit();
 

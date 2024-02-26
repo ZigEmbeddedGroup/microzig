@@ -25,7 +25,7 @@ pub fn write_interrupt_vector(
         \\    const Handler = micro.interrupt.Handler;
         \\    const unhandled = micro.interrupt.unhandled;
         \\
-        \\    RESET: Handler = unhandled,
+        \\    RESET: Handler,
         \\
     );
 

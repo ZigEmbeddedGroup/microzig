@@ -1,9 +1,4 @@
-name: Continuous Integration
-
-env:
-  # Specify the current Zig version MicroZig uses:
-  ZIG_VERSION: 0.11.0
-  DEPLOYMENT_URL: "https://download.microzig.tech"
+name: Build
 
 on:
   push:
@@ -12,68 +7,23 @@ on:
     branches: [main]
 
 jobs:
-  generate-packages:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-tags: true # required for "git describe"
-          fetch-depth: 0
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: ${{ env.ZIG_VERSION }}
+          version: master
 
-      - name: Install PIP packages
-        run: |
-          pip install -r tools/requirements.txt
-
-      - name: Generate and validate packages
-        run: |
-          ./tools/bundle.py
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages
-          path: microzig-deploy/
-  
-  validate-packages:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-tags: true # required for "git describe"
-          fetch-depth: 0
-
-      - name: Setup Zig
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: ${{ env.ZIG_VERSION }}
-
-      - name: Install PIP packages
-        run: |
-          pip install -r tools/requirements.txt
-
-      - name: Generate packages
-        run: |
-          ./tools/bundle.py --debug
-
-      - name: Spawn local web server
-        uses: Eun/http-server-action@v1
-        with:
-          directory: "${{ github.workspace }}/microzig-deploy"
-          port: 8080
-          content-types: |
-            {
-              "gz": "application/gzip",
-              "json": "application/json"
-            }
-
-      - name: Validate examples
-        run: |
-          mkdir -p "${{ github.workspace }}/microzig-test"
-          ./tools/validate-all-examples.sh --build-root "${{ github.workspace }}/microzig-test"
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall

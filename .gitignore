@@ -7,3 +7,4 @@ microzig-deploy/
 .direnv/
 __pycache__/
 .venv
+boxzer-out

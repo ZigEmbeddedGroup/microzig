@@ -1,7 +1,0 @@
-{
-    "package_name": "microchip/avr",
-    "package_type": "example",
-    "inner_dependencies": [
-        "microchip/avr"
-    ]
-}

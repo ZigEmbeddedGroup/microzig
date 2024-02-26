@@ -766,8 +766,8 @@ pub fn add_child(
     comptime var it = std.mem.tokenize(u8, entity_location, ".");
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
-    comptime _ = it.next();
-    comptime var table = (it.next() orelse unreachable) ++ "s";
+    _ = comptime it.next();
+    const table = comptime (it.next() orelse unreachable) ++ "s";
 
     const result = try @field(db.children, table).getOrPut(db.gpa, parent_id);
     if (!result.found_existing)
@@ -799,8 +799,8 @@ pub fn entity_is(db: Database, comptime entity_location: []const u8, id: EntityI
     comptime var it = std.mem.tokenize(u8, entity_location, ".");
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
-    comptime var group = (it.next() orelse unreachable) ++ "s";
-    comptime var table = (it.next() orelse unreachable) ++ "s";
+    const group = comptime (it.next() orelse unreachable) ++ "s";
+    const table = comptime (it.next() orelse unreachable) ++ "s";
 
     // TODO: nice error messages, like group should either be 'type' or 'instance'
     return @field(@field(db, group), table).contains(id);
@@ -814,8 +814,8 @@ pub fn get_entity_id_by_name(
     comptime var tok_it = std.mem.tokenize(u8, entity_location, ".");
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
-    comptime var group = (tok_it.next() orelse unreachable) ++ "s";
-    comptime var table = (tok_it.next() orelse unreachable) ++ "s";
+    const group = comptime (tok_it.next() orelse unreachable) ++ "s";
+    const table = comptime (tok_it.next() orelse unreachable) ++ "s";
 
     return for (@field(@field(db, group), table).keys()) |id| {
         const entry_name = db.attrs.name.get(id) orelse continue;

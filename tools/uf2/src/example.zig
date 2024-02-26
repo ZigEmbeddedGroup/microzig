@@ -2,7 +2,7 @@ const std = @import("std");
 const uf2 = @import("uf2.zig");
 
 pub fn main() !void {
-    var args = try std.process.argsAlloc(std.heap.page_allocator);
+    const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.process.argsFree(std.heap.page_allocator, args);
 
     if (args.len == 3) {
