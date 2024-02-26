@@ -11,7 +11,6 @@
 //! 5. Call `usb.task()` within the main loop
 
 const std = @import("std");
-const sizeOfCheck = @import("../core.zig").sizeOfCheck;
 
 /// USB Human Interface Device (HID)
 pub const hid = @import("usb/hid.zig");

@@ -42,7 +42,6 @@
 //! The HID descriptor identifies the length and type of subordinate descriptors for device.
 
 const std = @import("std");
-const sizeOfCheck = @import("../../core.zig").sizeOfCheck;
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Common Data Types
