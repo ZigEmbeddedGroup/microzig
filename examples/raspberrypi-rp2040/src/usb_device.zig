@@ -98,7 +98,9 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     },
     .config_descriptor = &.{
         .descriptor_type = usb.DescType.Config,
-        .total_length = @as(u8, @intCast(@sizeOf(usb.ConfigurationDescriptor) + @sizeOf(usb.InterfaceDescriptor) + @sizeOf(usb.EndpointDescriptor) + @sizeOf(usb.EndpointDescriptor))),
+        // This is calculated via the sizes of underlying descriptors contained in this configuration.
+        // ConfigurationDescriptor(9) + InterfaceDescriptor(9) * 1 + EndpointDescriptor(8) * 2
+        .total_length = 34,
         .num_interfaces = 1,
         .configuration_value = 1,
         .configuration_s = 0,
