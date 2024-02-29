@@ -511,9 +511,7 @@ pub const Dir = enum(u8) {
 };
 
 /// Describes an endpoint within an interface
-pub const EndpointDescriptor = extern struct {
-    /// Length of this struct, must be 7.
-    length: u8,
+pub const EndpointDescriptor = struct {
     /// Type of this descriptor, must be `Endpoint`.
     descriptor_type: DescType,
     /// Address of this endpoint, where the bottom 4 bits give the endpoint
@@ -530,7 +528,7 @@ pub const EndpointDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [7]u8 {
         var out: [7]u8 = undefined;
-        out[0] = 7; // length
+        out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = self.endpoint_address;
         out[3] = self.attributes;
@@ -542,9 +540,7 @@ pub const EndpointDescriptor = extern struct {
 };
 
 /// Description of an interface within a configuration.
-pub const InterfaceDescriptor = extern struct {
-    /// Length of this structure, must be 9.
-    length: u8,
+pub const InterfaceDescriptor = struct {
     /// Type of this descriptor, must be `Interface`.
     descriptor_type: DescType,
     /// ID of this interface.
@@ -566,7 +562,7 @@ pub const InterfaceDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
-        out[0] = 9; // length
+        out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = self.interface_number;
         out[3] = self.alternate_setting;
@@ -580,9 +576,7 @@ pub const InterfaceDescriptor = extern struct {
 };
 
 /// Description of a single available device configuration.
-pub const ConfigurationDescriptor = extern struct {
-    /// Length of this structure, must be 9.
-    length: u8,
+pub const ConfigurationDescriptor = struct {
     /// Type of this descriptor, must be `Config`.
     descriptor_type: DescType,
     /// Total length of all descriptors in this configuration, concatenated.
@@ -610,7 +604,7 @@ pub const ConfigurationDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
-        out[0] = 9; // length
+        out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(self.total_length & 0xff);
         out[3] = @intCast((self.total_length >> 8) & 0xff);
@@ -625,9 +619,7 @@ pub const ConfigurationDescriptor = extern struct {
 
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
-pub const DeviceDescriptor = extern struct {
-    /// Length of this structure, must be 18.
-    length: u8,
+pub const DeviceDescriptor = struct {
     /// Type of this descriptor, must be `Device`.
     descriptor_type: DescType,
     /// Version of the device descriptor / USB protocol, in binary-coded
@@ -658,7 +650,7 @@ pub const DeviceDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [18]u8 {
         var out: [18]u8 = undefined;
-        out[0] = 18; // length
+        out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(self.bcd_usb & 0xff);
         out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
@@ -682,9 +674,7 @@ pub const DeviceDescriptor = extern struct {
 
 /// USB Device Qualifier Descriptor
 /// This descriptor is mostly the same as the DeviceDescriptor
-pub const DeviceQualifierDescriptor = extern struct {
-    /// Length of this structure, must be 18.
-    length: u8 = 10,
+pub const DeviceQualifierDescriptor = struct {
     /// Type of this descriptor, must be `Device`.
     descriptor_type: DescType = DescType.DeviceQualifier,
     /// Version of the device descriptor / USB protocol, in binary-coded
@@ -705,7 +695,7 @@ pub const DeviceQualifierDescriptor = extern struct {
 
     pub fn serialize(self: *const @This()) [10]u8 {
         var out: [10]u8 = undefined;
-        out[0] = 10; // length
+        out[0] = out.len;
         out[1] = @intFromEnum(self.descriptor_type);
         out[2] = @intCast(self.bcd_usb & 0xff);
         out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
@@ -721,8 +711,6 @@ pub const DeviceQualifierDescriptor = extern struct {
 
 /// Layout of an 8-byte USB SETUP packet.
 pub const SetupPacket = extern struct {
-    /// Request type; in practice, this is always either OUT (host-to-device) or
-    /// IN (device-to-host), whose values are given in the `Dir` enum.
     request_type: u8,
     /// Request. Standard setup requests are in the `SetupRequest` enum.
     /// Devices can extend this with additional types as long as they don't

@@ -38,7 +38,6 @@ fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
 // add your own endpoints to...
 pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.Dir.Out.endpoint(1),
         .attributes = @intFromEnum(usb.TransferType.Interrupt),
@@ -55,7 +54,6 @@ pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
 
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.Dir.In.endpoint(1),
         .attributes = @intFromEnum(usb.TransferType.Interrupt),
@@ -73,7 +71,6 @@ pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .device_descriptor = &.{
-        .length = @as(u8, @intCast(@sizeOf(usb.DeviceDescriptor))),
         .descriptor_type = usb.DescType.Device,
         .bcd_usb = 0x0200,
         .device_class = 0,
@@ -91,7 +88,6 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .num_configurations = 1,
     },
     .interface_descriptor = &.{
-        .length = @as(u8, @intCast(@sizeOf(usb.InterfaceDescriptor))),
         .descriptor_type = usb.DescType.Interface,
         .interface_number = 0,
         .alternate_setting = 0,
@@ -103,9 +99,10 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .interface_s = 0,
     },
     .config_descriptor = &.{
-        .length = @as(u8, @intCast(@sizeOf(usb.ConfigurationDescriptor))),
         .descriptor_type = usb.DescType.Config,
-        .total_length = @as(u8, @intCast(@sizeOf(usb.ConfigurationDescriptor) + @sizeOf(usb.InterfaceDescriptor) + @sizeOf(usb.EndpointDescriptor) + @sizeOf(usb.EndpointDescriptor))),
+        // This is calculated via the sizes of underlying descriptors contained in this configuration.
+        // ConfigurationDescriptor(9) + InterfaceDescriptor(9) * 1 + EndpointDescriptor(8) * 2
+        .total_length = 34,
         .num_interfaces = 1,
         .configuration_value = 1,
         .configuration_s = 0,

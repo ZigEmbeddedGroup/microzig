@@ -42,7 +42,6 @@ pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_OUT_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
@@ -57,7 +56,6 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
 
 pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .length = @as(u8, @intCast(@sizeOf(usb.EndpointDescriptor))),
         .descriptor_type = usb.DescType.Endpoint,
         .endpoint_address = usb.EP0_IN_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
