@@ -27,3 +27,6 @@ jobs:
 
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
+      
+      - name: Dry run packaging
+        run: zig build package -- https://example.com
