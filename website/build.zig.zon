@@ -1,0 +1,11 @@
+.{
+    .name = "microzig.tech",
+    .version = "0.2.0",
+    .paths = .{"."},
+    .dependencies = .{
+        .zine = .{
+            .url = "https://github.com/kristoff-it/zine/archive/03f80646b83cadb2e693ff5d97445d3e16c8e222.tar.gz",
+            .hash = "1220e3e4938edf652776349c45b3bb58774d540a050034488ff8dab7dbe410cc2977",
+        },
+    },
+}
