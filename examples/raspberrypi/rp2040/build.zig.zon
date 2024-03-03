@@ -1,5 +1,5 @@
 .{
-    .name = "microzig/examples/raspberrypi/rp2040",
+    .name = "examples/raspberrypi/rp2040",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },

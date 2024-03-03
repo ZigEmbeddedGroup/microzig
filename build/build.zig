@@ -8,14 +8,19 @@ const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
 
+const uf2 = @import("microzig/tools/uf2");
 const core = @import("microzig/core");
+const defs = @import("microzig/build/definitions");
+pub const Chip = defs.Chip;
+pub const Cpu = defs.Cpu;
+pub const HardwareAbstractionLayer = defs.HardwareAbstractionLayer;
+pub const BoardDefinition = defs.BoardDefinition;
 
 const MicroZig = @This();
-const uf2 = @import("uf2");
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *Build) !void {
-    const uf2_dep = b.dependency("uf2", .{});
+    const uf2_dep = b.dependency("microzig/tools/uf2", .{});
 
     const build_test = b.addTest(.{
         .root_source_file = .{ .path = "build.zig" },
@@ -53,6 +58,9 @@ pub fn init(b: *Build, opts: struct {
         }),
     };
 
+    const defs_dep = mz_dep.builder.dependency("microzig/build/definitions", .{});
+    ret.generate_linkerscript.root_module.addImport("microzig/build/definitions", defs_dep.module("definitions"));
+
     return ret;
 }
 
@@ -84,7 +92,7 @@ pub fn add_firmware(
     // On demand, generate chip definitions via regz:
     const chip_source = switch (chip.register_definition) {
         .json, .atdf, .svd => |file| blk: {
-            const regz_exe = mz.dependency("regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
+            const regz_exe = mz.dependency("microzig/tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
 
             const regz_gen = host_build.addRunArtifact(regz_exe);
 
@@ -280,165 +288,7 @@ fn dependency(env: *MicroZig, name: []const u8, args: anytype) *Build.Dependency
     return env.self.builder.dependency(name, args);
 }
 
-/// The resulting binary format for the firmware file.
-/// A lot of embedded systems don't use plain ELF files, thus we provide means
-/// to convert the resulting ELF into other common formats.
-pub const BinaryFormat = union(enum) {
-    /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
-    elf,
-
-    /// A flat binary, contains only the loaded portions of the firmware with an unspecified base offset.
-    bin,
-
-    /// The [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format, contains
-    /// an ASCII description of what memory to load where.
-    hex,
-
-    /// A [Device Firmware Upgrade](https://www.usb.org/sites/default/files/DFU_1.1.pdf) file.
-    dfu,
-
-    /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
-    uf2: uf2.FamilyId,
-
-    /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
-    esp,
-
-    /// Custom option for non-standard formats.
-    custom: *Custom,
-
-    /// Returns the standard extension for the resulting binary file.
-    pub fn get_extension(format: BinaryFormat) []const u8 {
-        return switch (format) {
-            .elf => ".elf",
-            .bin => ".bin",
-            .hex => ".hex",
-            .dfu => ".dfu",
-            .uf2 => ".uf2",
-            .esp => ".bin",
-
-            .custom => |c| c.extension,
-        };
-    }
-
-    pub const Custom = struct {
-        /// The standard extension of the format.
-        extension: []const u8,
-
-        /// A function that will convert a given `elf` file into the custom output format.
-        ///
-        /// The `*Custom` format is passed so contextual information can be obtained by using
-        /// `@fieldParentPtr` to provide access to tooling.
-        convert: *const fn (*Custom, elf: Build.LazyPath) Build.LazyPath,
-    };
-
-    const Enum = std.meta.Tag(BinaryFormat);
-
-    const Context = struct {
-        pub fn hash(self: @This(), fmt: BinaryFormat) u32 {
-            _ = self;
-
-            var hasher = std.hash.XxHash32.init(0x1337_42_21);
-
-            hasher.update(@tagName(fmt));
-
-            switch (fmt) {
-                .elf, .bin, .hex, .dfu, .esp => |val| {
-                    if (@TypeOf(val) != void) @compileError("Missing update: Context.hash now requires special care!");
-                },
-
-                .uf2 => |family_id| hasher.update(@tagName(family_id)),
-                .custom => |custom| hasher.update(std.mem.asBytes(custom)),
-            }
-
-            return hasher.final();
-        }
-
-        pub fn eql(self: @This(), fmt_a: BinaryFormat, fmt_b: BinaryFormat, index: usize) bool {
-            _ = self;
-            _ = index;
-            if (@as(BinaryFormat.Enum, fmt_a) != @as(BinaryFormat.Enum, fmt_b))
-                return false;
-
-            return switch (fmt_a) {
-                .elf, .bin, .hex, .dfu, .esp => |val| {
-                    if (@TypeOf(val) != void) @compileError("Missing update: Context.eql now requires special care!");
-                    return true;
-                },
-
-                .uf2 => |a| (a == fmt_b.uf2),
-                .custom => |a| (a == fmt_b.custom),
-            };
-        }
-    };
-};
-
 pub const cpus = core.cpus;
-
-/// A cpu descriptor.
-pub const Cpu = struct {
-    /// Display name of the CPU.
-    name: []const u8,
-
-    /// Source file providing startup code and memory initialization routines.
-    source_file: LazyPath,
-
-    /// The compiler target we use to compile all the code.
-    target: std.Target.Query,
-};
-
-pub const MemoryRegion = @import("src/generate_linkerscript.zig").MemoryRegion;
-
-/// Defines a custom microcontroller.
-pub const Chip = struct {
-    /// The display name of the controller.
-    name: []const u8,
-
-    /// (optional) link to the documentation/vendor page of the controller.
-    url: ?[]const u8 = null,
-
-    /// The cpu model this controller uses.
-    cpu: Cpu,
-
-    /// The provider for register definitions.
-    register_definition: union(enum) {
-        /// Use `regz` to create a zig file from a JSON schema.
-        json: LazyPath,
-
-        /// Use `regz` to create a json file from a SVD schema.
-        svd: LazyPath,
-
-        /// Use `regz` to create a zig file from an ATDF schema.
-        atdf: LazyPath,
-
-        /// Use the provided file directly as the chip file.
-        zig: LazyPath,
-    },
-
-    /// The memory regions that are present in this chip.
-    memory_regions: []const MemoryRegion,
-};
-
-/// Defines a hardware abstraction layer.
-pub const HardwareAbstractionLayer = struct {
-    /// Root source file for this HAL.
-    source_file: LazyPath,
-};
-
-/// Provides a description of a board.
-///
-/// Boards provide additional information to a chip and HAL package.
-/// For example, they can list attached peripherials, external crystal frequencies,
-/// flash sizes, ...
-pub const BoardDefinition = struct {
-    /// Display name of the board
-    name: []const u8,
-
-    /// (optional) link to the documentation/vendor page of the board.
-    url: ?[]const u8 = null,
-
-    /// Provides the root file for the board definition.
-    source_file: LazyPath,
-};
 
 /// A compilation target for MicroZig. Provides information about the chip,
 /// hal, board and so on.
@@ -608,7 +458,7 @@ pub const Firmware = struct {
                 },
 
                 .uf2 => |family_id| blk: {
-                    const uf2_exe = firmware.mz.dependency("uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
+                    const uf2_exe = firmware.mz.dependency("microzig/tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
 
                     const convert = firmware.host_build.addRunArtifact(uf2_exe);
 
@@ -684,3 +534,95 @@ fn build_config_error(b: *std.Build, comptime fmt: []const u8, args: anytype) no
     const msg = b.fmt(fmt, args);
     @panic(msg);
 }
+
+/// The resulting binary format for the firmware file.
+/// A lot of embedded systems don't use plain ELF files, thus we provide means
+/// to convert the resulting ELF into other common formats.
+pub const BinaryFormat = union(enum) {
+    /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
+    elf,
+
+    /// A flat binary, contains only the loaded portions of the firmware with an unspecified base offset.
+    bin,
+
+    /// The [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format, contains
+    /// an ASCII description of what memory to load where.
+    hex,
+
+    /// A [Device Firmware Upgrade](https://www.usb.org/sites/default/files/DFU_1.1.pdf) file.
+    dfu,
+
+    /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
+    uf2: uf2.FamilyId,
+
+    /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
+    esp,
+
+    /// Custom option for non-standard formats.
+    custom: *Custom,
+
+    /// Returns the standard extension for the resulting binary file.
+    pub fn get_extension(format: BinaryFormat) []const u8 {
+        return switch (format) {
+            .elf => ".elf",
+            .bin => ".bin",
+            .hex => ".hex",
+            .dfu => ".dfu",
+            .uf2 => ".uf2",
+            .esp => ".bin",
+
+            .custom => |c| c.extension,
+        };
+    }
+
+    pub const Custom = struct {
+        /// The standard extension of the format.
+        extension: []const u8,
+
+        /// A function that will convert a given `elf` file into the custom output format.
+        ///
+        /// The `*Custom` format is passed so contextual information can be obtained by using
+        /// `@fieldParentPtr` to provide access to tooling.
+        convert: *const fn (*Custom, elf: Build.LazyPath) Build.LazyPath,
+    };
+
+    const Enum = std.meta.Tag(BinaryFormat);
+
+    pub const Context = struct {
+        pub fn hash(self: @This(), fmt: BinaryFormat) u32 {
+            _ = self;
+
+            var hasher = std.hash.XxHash32.init(0x1337_42_21);
+
+            hasher.update(@tagName(fmt));
+
+            switch (fmt) {
+                .elf, .bin, .hex, .dfu, .esp => |val| {
+                    if (@TypeOf(val) != void) @compileError("Missing update: Context.hash now requires special care!");
+                },
+
+                .uf2 => |family_id| hasher.update(@tagName(family_id)),
+                .custom => |custom| hasher.update(std.mem.asBytes(custom)),
+            }
+
+            return hasher.final();
+        }
+
+        pub fn eql(self: @This(), fmt_a: BinaryFormat, fmt_b: BinaryFormat, index: usize) bool {
+            _ = self;
+            _ = index;
+            if (@as(BinaryFormat.Enum, fmt_a) != @as(BinaryFormat.Enum, fmt_b))
+                return false;
+
+            return switch (fmt_a) {
+                .elf, .bin, .hex, .dfu, .esp => |val| {
+                    if (@TypeOf(val) != void) @compileError("Missing update: Context.eql now requires special care!");
+                    return true;
+                },
+
+                .uf2 => |a| (a == fmt_b.uf2),
+                .custom => |a| (a == fmt_b.custom),
+            };
+        }
+    };
+};

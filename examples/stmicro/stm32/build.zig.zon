@@ -1,5 +1,5 @@
 .{
-    .name = "microzig/examples/stmicro/stm32",
+    .name = "examples/stmicro/stm32",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },

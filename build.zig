@@ -16,14 +16,14 @@ const std = @import("std");
 //    assert(@alignOf(i16) == 2);
 //    ~~~~~~^~~~~~~~~~~~~~~~~~~~
 const example_dep_names: []const []const u8 = &.{
-    "microzig/examples/nordic/nrf5x",
-    "microzig/examples/nxp/lpc",
-    "microzig/examples/microchip/atsam",
-    //"microzig/examples/microchip/avr",
-    "microzig/examples/gigadevice/gd32",
-    "microzig/examples/stmicro/stm32",
-    "microzig/examples/espressif/esp",
-    "microzig/examples/raspberrypi/rp2040",
+    "examples/nordic/nrf5x",
+    "examples/nxp/lpc",
+    "examples/microchip/atsam",
+    //"examples/microchip/avr",
+    "examples/gigadevice/gd32",
+    "examples/stmicro/stm32",
+    "examples/espressif/esp",
+    "examples/raspberrypi/rp2040",
 };
 
 pub fn build(b: *std.Build) void {

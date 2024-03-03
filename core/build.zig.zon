@@ -1,8 +1,8 @@
 .{
-    .name = "microzig/core",
+    .name = "core",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../build" },
+        .@"microzig/build/definitions" = .{ .path = "../build/definitions" },
     },
     .paths = .{
         "build.zig",

@@ -1,5 +1,5 @@
 .{
-    .name = "microzig/bsp/gigadevice/gd32",
+    .name = "bsp/gigadevice/gd32",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },

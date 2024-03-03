@@ -1,5 +1,5 @@
 .{
-    .name = "microzig/bsp/raspberrypi/rp2040",
+    .name = "bsp/raspberrypi/rp2040",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{

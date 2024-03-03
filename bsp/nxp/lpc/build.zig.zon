@@ -1,5 +1,5 @@
 .{
-    .name = "microzig/bsp/nxp/lpc",
+    .name = "bsp/nxp/lpc",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },

@@ -1,15 +1,18 @@
 .{
-    .name = "microzig/build",
+    .name = "build",
     .version = "0.0.0",
     .dependencies = .{
-        .uf2 = .{
+        .@"microzig/tools/uf2" = .{
             .path = "../tools/uf2",
         },
-        .regz = .{
+        .@"microzig/tools/regz" = .{
             .path = "../tools/regz",
         },
         .@"microzig/core" = .{
             .path = "../core",
+        },
+        .@"microzig/build/definitions" = .{
+            .path = "definitions",
         },
     },
 
