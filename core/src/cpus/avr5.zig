@@ -28,44 +28,25 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
 
 pub const vector_table = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
-    var asm_str: []const u8 = "jmp microzig_start\n";
+    const asm_str: []const u8 = "jmp microzig_start\n";
 
-    const has_interrupts = @hasDecl(root, "microzig_options") and @hasDecl(root.microzig_options, "interrupts");
-    if (has_interrupts) {
-        const interrupts = root.microzig_options.interrupts;
-        if (@hasDecl(interrupts, "RESET"))
-            @compileError("Not allowed to overload the reset vector");
+    //const has_interrupts = @hasDecl(root, "microzig_options");
+    //for (@typeInfo(root.VectorTableOptions).Struct.fields) |field| {
+    //    const new_insn = if (has_interrupts) overload: {
+    //        const interrupts = root.microzig_options.interrupts;
+    //        if (@hasDecl(interrupts, field.name)) {
+    //            const handler = @field(interrupts, field.name);
 
-        inline for (std.meta.declarations(interrupts)) |decl| {
-            if (!@hasField(microzig.chip.VectorTable, decl.name)) {
-                var msg: []const u8 = "There is no such interrupt as '" ++ decl.name ++ "'. ISRs the 'interrupts' namespace must be one of:\n";
-                inline for (std.meta.fields(microzig.chip.VectorTable)) |field| {
-                    if (!std.mem.eql(u8, "RESET", field.name)) {
-                        msg = msg ++ "    " ++ field.name ++ "\n";
-                    }
-                }
+    //            const isr = make_isr_handler(field.name, handler);
 
-                @compileError(msg);
-            }
-        }
-    }
+    //            break :overload "jmp " ++ isr.exported_name;
+    //        } else {
+    //            break :overload "jmp microzig_unhandled_vector";
+    //        }
+    //    } else "jmp microzig_unhandled_vector";
 
-    inline for (std.meta.fields(microzig.chip.VectorTable)[1..]) |field| {
-        const new_insn = if (has_interrupts) overload: {
-            const interrupts = root.microzig_options.interrupts;
-            if (@hasDecl(interrupts, field.name)) {
-                const handler = @field(interrupts, field.name);
-
-                const isr = make_isr_handler(field.name, handler);
-
-                break :overload "jmp " ++ isr.exported_name;
-            } else {
-                break :overload "jmp microzig_unhandled_vector";
-            }
-        } else "jmp microzig_unhandled_vector";
-
-        asm_str = asm_str ++ new_insn ++ "\n";
-    }
+    //    asm_str = asm_str ++ new_insn ++ "\n";
+    //}
 
     const T = struct {
         fn _start() callconv(.Naked) void {
@@ -75,6 +56,12 @@ pub const vector_table = blk: {
 
     break :blk T._start;
 };
+
+pub fn export_startup_logic() void {
+    @export(vector_table, .{
+        .name = "_start",
+    });
+}
 
 fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
     const calling_convention = switch (@typeInfo(@TypeOf(func))) {
@@ -102,6 +89,7 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 }
 
 pub const startup_logic = struct {
+    pub const _start = vector_table;
     export fn microzig_unhandled_vector() callconv(.C) noreturn {
         @panic("Unhandled interrupt");
     }

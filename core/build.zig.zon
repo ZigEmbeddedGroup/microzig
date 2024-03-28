@@ -1,0 +1,11 @@
+.{
+    .name = "core",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build/definitions" = .{ .path = "../build/definitions" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

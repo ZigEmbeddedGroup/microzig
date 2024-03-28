@@ -1,7 +1,0 @@
-{
-    "package_name": "nxp/lpc",
-    "package_type": "example",
-    "inner_dependencies": [
-        "nxp/lpc"
-    ]
-}

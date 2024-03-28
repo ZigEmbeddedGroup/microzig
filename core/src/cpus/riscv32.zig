@@ -81,6 +81,12 @@ pub const startup_logic = struct {
     }
 };
 
+pub fn export_startup_logic() void {
+    @export(startup_logic._start, .{
+        .name = "_start",
+    });
+}
+
 pub const MSTATUS_UIE = 0x00000001;
 pub const MSTATUS_SIE = 0x00000002;
 pub const MSTATUS_HIE = 0x00000004;

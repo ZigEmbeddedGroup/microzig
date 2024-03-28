@@ -40,7 +40,7 @@ pub fn globally_enabled() bool {
 /// Enters a critical section and disables interrupts globally.
 /// Call `.leave()` on the return value to restore the previous state.
 pub fn enter_critical_section() CriticalSection {
-    var section = CriticalSection{
+    const section = CriticalSection{
         .enable_on_leave = globally_enabled(),
     };
     disable_interrupts();

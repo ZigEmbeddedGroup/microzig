@@ -1,7 +1,0 @@
-{
-    "package_name": "microchip/atsam",
-    "package_type": "example",
-    "inner_dependencies": [
-        "microchip/atsam"
-    ]
-}

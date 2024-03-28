@@ -1,0 +1,4 @@
+{"name":"module.register","repeated":true,"attrs":{"description":"required","width":"required","id":"required","acronym":"optional","internal":"optional","offset":"optional"}}
+{"name":"module","repeated":false,"attrs":{"XML_version":"optional","description":"optional","hidden":"optional","id":"required","HW_revision":"required"}}
+{"name":"module.register.bitfield","repeated":true,"attrs":{"width":"required","end":"required","rwaccess":"required","resetval":"optional","begin":"required","description":"required","id":"required","range":"optional"}}
+{"name":"module.register.bitfield.bitenum","repeated":true,"attrs":{"description":"required","value":"required","id":"required","token":"optional"}}
