@@ -14,18 +14,12 @@ pub fn build(b: *Build) !void {
         .iconv = false,
     });
 
-    const clap_dep = b.dependency("clap", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    regz.root_module.addImport("clap", clap_dep.module("clap"));
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     b.installArtifact(regz);
 

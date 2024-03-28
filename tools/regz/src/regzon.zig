@@ -120,14 +120,14 @@ fn id_to_ref(
     else
         try writer.writeAll("types");
 
-    try writer.print(".{s}.{s}", .{
+    try writer.print(".{s}.{}", .{
         entity_type_to_string(root_type),
         std.zig.fmtId(db.attrs.name.get(ids.items[0]) orelse return error.MissingName),
     });
 
     for (ids.items[1..]) |id| {
         const entity_type = db.get_entity_type(id).?;
-        try writer.print(".children.{s}.{s}", .{
+        try writer.print(".children.{s}.{}", .{
             entity_type_to_string(entity_type),
             std.zig.fmtId(db.attrs.name.get(id) orelse return error.MissingName),
         });

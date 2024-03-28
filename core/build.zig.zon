@@ -5,7 +5,11 @@
         .@"microzig/build/definitions" = .{ .path = "../build/definitions" },
     },
     .paths = .{
+        "LICENSE",
+        "thoughts.md",
         "build.zig",
         "build.zig.zon",
+        "src",
+        "test",
     },
 }

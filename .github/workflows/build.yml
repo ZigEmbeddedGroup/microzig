@@ -2,9 +2,11 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, zig-master]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
   build:
@@ -23,10 +25,27 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: master
+          version: 0.12.0
 
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
-      
+
+      - name: Unit Test BSPs
+        run: zig build run-bsp-tests -Doptimize=ReleaseSmall
+
       - name: Dry run packaging
-        run: zig build package -- https://example.com
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          MICROZIG_VERSION=$(zig build package -- get-version)
+          echo microzig version: $MICROZIG_VERSION
+          zig build package -- http://localhost:8000
+          python3 -m http.server 8000 --directory boxzer-out &
+          sleep 1
+
+          cd tools/package-test
+          zig fetch --save=microzig http://localhost:8000/microzig-${MICROZIG_VERSION}.tar.gz
+          zig build -Doptimize=ReleaseSmall
+          zig build run-bsp-tests
+
+          # clean up server
+          jobs -p | xargs kill

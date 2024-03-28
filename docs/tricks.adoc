@@ -1,3 +1,0 @@
-= Tips and Tricks
-
-This document has some `build.zig` tricks for other pages to reference.

@@ -2,8 +2,6 @@ const std = @import("std");
 const Build = std.Build;
 const MicroZig = @import("microzig/build");
 
-pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
-
 fn path(comptime suffix: []const u8) Build.LazyPath {
     return .{
         .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
@@ -11,7 +9,7 @@ fn path(comptime suffix: []const u8) Build.LazyPath {
 }
 
 const hal = .{
-    .source_file = path("/src/hals/ATmega328P.zig"),
+    .root_source_file = path("/src/hals/ATmega328P.zig"),
 };
 
 pub const chips = struct {
@@ -42,7 +40,7 @@ pub const boards = struct {
             .board = .{
                 .name = "Arduino Nano",
                 .url = "https://docs.arduino.cc/hardware/nano",
-                .source_file = path("/src/boards/arduino_nano.zig"),
+                .root_source_file = path("/src/boards/arduino_nano.zig"),
             },
         };
 
@@ -53,36 +51,12 @@ pub const boards = struct {
             .board = .{
                 .name = "Arduino Uno",
                 .url = "https://docs.arduino.cc/hardware/uno-rev3",
-                .source_file = path("/src/boards/arduino_uno.zig"),
+                .root_source_file = path("/src/boards/arduino_uno.zig"),
             },
         };
     };
 };
 
 pub fn build(b: *Build) void {
-    _ = b;
-    // const optimize = b.standardOptimizeOption(.{});
-    // inline for (@typeInfo(boards).Struct.decls) |decl| {
-    //     const exe = microzig.addEmbeddedExecutable(b, .{
-    //         .name = @field(boards, decl.name).name ++ ".minimal",
-    //         .source_file = .{
-    //             .path = "test/programs/minimal.zig",
-    //         },
-    //         .backing = .{ .board = @field(boards, decl.name) },
-    //         .optimize = optimize,
-    //     });
-    //     exe.installArtifact(b);
-    // }
-
-    // inline for (@typeInfo(chips).Struct.decls) |decl| {
-    //     const exe = microzig.addEmbeddedExecutable(b, .{
-    //         .name = @field(chips, decl.name).name ++ ".minimal",
-    //         .source_file = .{
-    //             .path = "test/programs/minimal.zig",
-    //         },
-    //         .backing = .{ .chip = @field(chips, decl.name) },
-    //         .optimize = optimize,
-    //     });
-    //     exe.installArtifact(b);
-    // }
+    _ = b.step("test", "Run platform agnostic unit tests");
 }

@@ -39,19 +39,19 @@ pub const IrqLevel = enum(u2) {
 
 pub const IrqCallback = fn (gpio: u32, events: u32) callconv(.C) void;
 
-pub const Override = enum {
+pub const Override = enum(u2) {
     normal,
     invert,
     low,
     high,
 };
 
-pub const SlewRate = enum {
+pub const SlewRate = enum(u1) {
     slow,
     fast,
 };
 
-pub const DriveStrength = enum {
+pub const DriveStrength = enum(u2) {
     @"2mA",
     @"4mA",
     @"8mA",

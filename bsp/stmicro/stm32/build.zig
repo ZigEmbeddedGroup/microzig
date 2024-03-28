@@ -1,8 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
 
-pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
-
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
 }
@@ -10,13 +8,8 @@ const build_root = root();
 
 const KiB = 1024;
 
-////////////////////////////////////////
-//      MicroZig Gen 2 Interface      //
-////////////////////////////////////////
-
 pub fn build(b: *std.Build) !void {
-    _ = b;
-    //  Dummy func to make package manager happy
+    _ = b.step("test", "Run platform agnostic unit tests");
 }
 
 pub const chips = struct {
@@ -34,7 +27,7 @@ pub const chips = struct {
             },
         },
         .hal = .{
-            .source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F103/hal.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F103/hal.zig" },
         },
     };
 
@@ -194,7 +187,7 @@ pub const boards = struct {
         .chip = chips.stm32f303vc.chip,
         .board = .{
             .name = "STM32F3DISCOVERY",
-            .source_file = .{ .path = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
+            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
         },
     };
 
@@ -203,7 +196,7 @@ pub const boards = struct {
         .chip = chips.stm32f407vg.chip,
         .board = .{
             .name = "STM32F4DISCOVERY",
-            .source_file = .{ .path = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
+            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
         },
     };
 
@@ -212,7 +205,7 @@ pub const boards = struct {
         .chip = chips.stm32f407vg.chip,
         .board = .{
             .name = "STM3240G_EVAL",
-            .source_file = .{ .path = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
+            .root_source_file = .{ .path = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
         },
     };
 
@@ -221,7 +214,7 @@ pub const boards = struct {
         .chip = chips.stm32f429zit6u.chip,
         .board = .{
             .name = "STM32F429IDISCOVERY",
-            .source_file = .{ .path = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },
+            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },
         },
     };
 };
@@ -235,7 +228,7 @@ pub const boards = struct {
 
 //     const exe = microzig.addEmbeddedExecutable(b, .{
 //         .name = @field(boards, decl.name).name ++ ".minimal",
-//         .source_file = .{
+//         .root_source_file = .{
 //             .path = "test/programs/minimal.zig",
 //         },
 //         .backing = .{ .board = @field(boards, decl.name) },
@@ -250,7 +243,7 @@ pub const boards = struct {
 
 //     const exe = microzig.addEmbeddedExecutable(b, .{
 //         .name = @field(chips, decl.name).name ++ ".minimal",
-//         .source_file = .{
+//         .root_source_file = .{
 //             .path = "test/programs/minimal.zig",
 //         },
 //         .backing = .{ .chip = @field(chips, decl.name) },

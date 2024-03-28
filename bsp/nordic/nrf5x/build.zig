@@ -2,8 +2,6 @@ const std = @import("std");
 const Build = std.Build;
 const MicroZig = @import("microzig/build");
 
-pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
-
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
         .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
@@ -51,19 +49,17 @@ pub const chips = struct {
 };
 
 pub const boards = struct {
-    pub const nordic = struct {
-        pub const nRF52840_Dongle = MicroZig.Target{
-            .preferred_format = .elf,
-            .chip = chips.nrf52840.chip,
-            .board = .{
-                .name = "nRF52840 Dongle",
-                .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
-                .source_file = path("/src/boards/nrf52840-dongle.zig"),
-            },
-        };
+    pub const nordic_nRF52840_Dongle = MicroZig.Target{
+        .preferred_format = .elf,
+        .chip = chips.nrf52840.chip,
+        .board = .{
+            .name = "nRF52840 Dongle",
+            .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
+            .root_source_file = path("/src/boards/nrf52840-dongle.zig"),
+        },
     };
 };
 
 pub fn build(b: *Build) void {
-    _ = b;
+    _ = b.step("test", "Run platform agnostic unit tests");
 }

@@ -86,9 +86,9 @@ pub fn assemble_impl(comptime source: []const u8, diags: *?Diagnostics, options:
                     .name = define.name,
                     .value = define.value,
                 }) catch unreachable;
-            break :blk tmp.slice();
+            break :blk tmp.constSlice();
         },
-        .programs = programs.slice(),
+        .programs = programs.constSlice(),
     };
 }
 

@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy-packages:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Extract tag name
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -18,27 +18,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-tags: true # required for "git describe"
           fetch-depth: 0
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
         with:
-          version: master
+          version: 0.12.0
+
+      - name: Extract version
+        run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
 
       - name: Assemble Packages
         run: zig build package -- "${{ secrets.DOWNLOADS_URL }}"
-
-      # TODO: Validation
 
       - name: Deploy
         uses: easingthemes/ssh-deploy@main
         with:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           ARGS: "-vzrli"
-          SOURCE: "boxzer-out/${{ env.TAG_NAME }}/"
+          SOURCE: "boxzer-out/"
           REMOTE_HOST: ${{ secrets.DEPLOY_HOST }}
           REMOTE_USER: ${{ secrets.DEPLOY_USER }}
           REMOTE_PORT: ${{ secrets.DEPLOY_PORT }}
           TARGET: "."
 
+      - name: Create Release Draft
+        uses: ncipollo/release-action@v1
+        with:
+          artifactErrorsFailBuild: true
+          draft: true
+          generateReleaseNotes: true

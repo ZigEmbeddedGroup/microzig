@@ -60,6 +60,7 @@ pub const Archive = struct {
         var it = header.program_header_iterator(file);
         while (try it.next()) |prog_hdr|
             if (prog_hdr.p_type == std.elf.PT_LOAD and prog_hdr.p_memsz > 0 and prog_hdr.p_filesz > 0) {
+                std.log.debug("segment: {}", .{prog_hdr});
                 try segments.append(.{
                     .addr = @as(u32, @intCast(prog_hdr.p_paddr)),
                     .file_offset = @as(u32, @intCast(prog_hdr.p_offset)),

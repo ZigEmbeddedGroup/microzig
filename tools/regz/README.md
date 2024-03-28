@@ -1,7 +1,5 @@
 # regz
 
-[![build](https://github.com/ZigEmbeddedGroup/regz/actions/workflows/ci.yml/badge.svg)](https://github.com/ZigEmbeddedGroup/regz/actions/workflows/ci.yml)
-
 regz is a Zig code generator for microcontrollers. Vendors often publish files
 that have the details of special function registers, for ARM this is called a
 "System View Description" (SVD), for AVR the format is called ATDF. This tool
@@ -22,10 +20,6 @@ pub fn main() void {
 }
 ```
 
-NOTE: just including that file is not enough to run code on a microcontroller,
-this is a fairly low-level tool and it is intended that the generated code be
-used with something like [microzig](https://github.com/ZigEmbeddedGroup/microzig).
-
 One can get SVD files from your vendor, or another good place is
 [posborne/cmsis-svd](https://github.com/posborne/cmsis-svd/tree/master/data),
 it's a python based SVD parser and they have a large number of files available.
@@ -35,13 +29,11 @@ For ATDF you need to unzip the appropriate atpack from the
 
 ## Building
 
-regz targets zig master.
-
 ```
-git clone --recursive https://github.com/ZigEmbeddedGroup/regz.git
-cd regz
 zig build
 ```
+
+And it'll be under `zig-out/bin`.
 
 ## Using regz to generate code
 
@@ -74,15 +66,3 @@ unimplemented but planned for support.
 The main idea is to target what LLVM can target, however Zig's C backend in
 underway so it's likely more exotic architectures could be reached in the
 future. If you know of any others we should look into, please make an issue!
-
-## Roadmap
-
-- SVD: mostly implemented and usable for mosts MCUs, but a few finishing touches in order to suss out any bugs:
-    - [x] nested clusters
-    - [ ] order generated exactly as defined in schema
-    - [ ] finalize derivation of different components
-    - [ ] comprehensive suite of tests
-    - [ ] RISC-V interrupt table generation
-- [x] ATDF: AVR's register schema format
-- [ ] insert name of Texus Insturment's register schema format for MSP430
-

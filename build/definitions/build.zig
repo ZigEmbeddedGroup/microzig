@@ -14,7 +14,7 @@ pub const Cpu = struct {
     name: []const u8,
 
     /// Source file providing startup code and memory initialization routines.
-    source_file: LazyPath,
+    root_source_file: LazyPath,
 
     /// The compiler target we use to compile all the code.
     target: std.Target.Query,
@@ -53,7 +53,7 @@ pub const Chip = struct {
 /// Defines a hardware abstraction layer.
 pub const HardwareAbstractionLayer = struct {
     /// Root source file for this HAL.
-    source_file: LazyPath,
+    root_source_file: LazyPath,
 };
 
 /// Provides a description of a board.
@@ -69,7 +69,7 @@ pub const BoardDefinition = struct {
     url: ?[]const u8 = null,
 
     /// Provides the root file for the board definition.
-    source_file: LazyPath,
+    root_source_file: LazyPath,
 };
 
 /// A descriptor for memory regions in a microcontroller.

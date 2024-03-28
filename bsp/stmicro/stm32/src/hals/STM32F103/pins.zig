@@ -111,7 +111,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
 
         return @Type(.{
             .Struct = .{
-                .layout = .Auto,
+                .layout = .auto,
                 .is_tuple = false,
                 .fields = fields,
                 .decls = &.{},

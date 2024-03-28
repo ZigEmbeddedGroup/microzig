@@ -36,7 +36,7 @@ blk: {
     break :blk @Type(.{
         .Struct = .{
             .fields = &fields,
-            .layout = .Auto,
+            .layout = .auto,
             .decls = &.{},
             .is_tuple = false,
         },
@@ -97,7 +97,7 @@ comptime {
     const export_opts = .{
         .name = "vector_table",
         .section = "microzig_flash_start",
-        .linkage = .Strong,
+        .linkage = .strong,
     };
 
     if ((microzig.board != void and @hasDecl(microzig.board, "vector_table")))

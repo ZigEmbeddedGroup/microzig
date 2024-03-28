@@ -1,11 +1,8 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
 
-pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
-
 pub fn build(b: *std.Build) void {
-    _ = b;
-    //  Dummy func to make package manager happy
+    _ = b.step("test", "Run platform agnostic unit tests");
 }
 
 fn root() []const u8 {
@@ -25,7 +22,7 @@ pub const chips = struct {
                 .atdf = .{ .path = build_root ++ "/src/chips/ATSAMD51J19A.atdf" },
             },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x00004000, .length = 512 * 1024 }, // Embedded Flash
+                .{ .kind = .flash, .offset = 0x00000000, .length = 512 * 1024 }, // Embedded Flash
                 .{ .kind = .ram, .offset = 0x20000000, .length = 192 * 1024 }, // Embedded SRAM
                 .{ .kind = .ram, .offset = 0x47000000, .length = 8 * 1024 }, // Backup SRAM
                 .{ .kind = .flash, .offset = 0x00804000, .length = 512 }, // NVM User Row

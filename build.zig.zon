@@ -1,11 +1,11 @@
 .{
     .name = "microzig",
-    .version = "0.0.0",
+    .version = "0.12.0",
     .dependencies = .{
         // packages within the monorepo so that others can reach them
-        .@"build" = .{ .path = "build" },
+        .build = .{ .path = "build" },
         .@"build/definitions" = .{ .path = "build/definitions" },
-        .@"core" = .{ .path = "core" },
+        .core = .{ .path = "core" },
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
         .@"bsp/nordic/nrf5x" = .{ .path = "bsp/nordic/nrf5x" },
@@ -29,8 +29,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "https://github.com/mattnite/boxzer/archive/b9f08b4c9b1db709af03763ace69761a6482238c.tar.gz",
-            .hash = "12204fdd9914a6d99abb55366b3a664395a6038d7e6308178c0664158eff9418e188",
+            .url = "https://github.com/mattnite/boxzer/archive/74f17daa97f6861c31b30a5070136216c08eb39b.tar.gz",
+            .hash = "1220a14c01a66c023d8944dc672edd5121f98f82196fefbc09a13bcadb96e1c8e7f1",
         },
     },
 
@@ -39,5 +39,7 @@
         "build.zig",
         "build.zig.zon",
         "LICENSE",
+        "design",
+        "docs",
     },
 }

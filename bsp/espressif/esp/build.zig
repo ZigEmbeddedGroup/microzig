@@ -1,8 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
 
-pub const microzig_board_support = MicroZig.registerBoardSupport(@This());
-
 fn path(comptime suffix: []const u8) std.Build.LazyPath {
     return .{
         .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
@@ -11,7 +9,7 @@ fn path(comptime suffix: []const u8) std.Build.LazyPath {
 
 const esp_riscv = .{
     .name = "Espressif RISC-V",
-    .source_file = path("/src/cpus/espressif-riscv.zig"),
+    .root_source_file = path("/src/cpus/espressif-riscv.zig"),
     .target = std.zig.CrossTarget{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
@@ -25,7 +23,7 @@ const esp_riscv = .{
 };
 
 const hal = .{
-    .source_file = path("/src/hals/ESP32_C3.zig"),
+    .root_source_file = path("/src/hals/ESP32_C3.zig"),
 };
 
 pub const chips = struct {
@@ -50,32 +48,8 @@ pub const chips = struct {
     };
 };
 
-pub const boards = struct {
-    // empty right now
-};
+pub const boards = struct {};
 
 pub fn build(b: *std.Build) void {
-    _ = b;
-    // const optimize = b.standardOptimizeOption(.{});
-
-    // var exe = microzig.addEmbeddedExecutable(b, .{
-    //     .name = "esp-bringup",
-    //     .source_file = .{
-    //         .path = "src/example/blinky.zig",
-    //     },
-    //     .backing = .{ .chip = chips.esp32_c3 },
-    //     .optimize = optimize,
-    // });
-
-    // const fw_objcopy = b.addObjCopy(exe.inner.getEmittedBin(), .{
-    //     .format = .bin,
-    // });
-
-    // const fw_bin = fw_objcopy.getOutput();
-
-    // const install_fw_bin = b.addInstallFile(fw_bin, "firmware/blinky.bin");
-
-    // b.getInstallStep().dependOn(&install_fw_bin.step);
-
-    // b.installArtifact(exe.inner);
+    _ = b.step("test", "Run platform agnostic unit tests");
 }

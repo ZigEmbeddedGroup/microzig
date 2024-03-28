@@ -11,8 +11,14 @@ fn root() []const u8 {
 const build_root = root();
 
 pub fn build(b: *Build) !void {
-    //  Dummy func to make package manager happy
-    _ = b;
+    const unit_tests = b.addTest(.{
+        .root_source_file = .{ .path = "src/hal.zig" },
+    });
+    unit_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
+
+    const unit_tests_run = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+    test_step.dependOn(&unit_tests_run.step);
 }
 
 pub const chips = struct {
@@ -35,7 +41,7 @@ pub const boards = struct {
             .linker_script = linker_script,
             .board = .{
                 .name = "RaspberryPi Pico",
-                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/raspberry_pi_pico.zig" },
+                .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/raspberry_pi_pico.zig" },
                 .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
             },
             .configure = rp2040_configure(.w25q080),
@@ -50,7 +56,7 @@ pub const boards = struct {
             .linker_script = linker_script,
             .board = .{
                 .name = "Waveshare RP2040-Plus (4M Flash)",
-                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_4m.zig" },
+                .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_4m.zig" },
                 .url = "https://www.waveshare.com/rp2040-plus.htm",
             },
             .configure = rp2040_configure(.w25q080),
@@ -63,7 +69,7 @@ pub const boards = struct {
             .linker_script = linker_script,
             .board = .{
                 .name = "Waveshare RP2040-Plus (16M Flash)",
-                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_16m.zig" },
+                .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_plus_16m.zig" },
                 .url = "https://www.waveshare.com/rp2040-plus.htm",
             },
             .configure = rp2040_configure(.w25q080),
@@ -76,7 +82,7 @@ pub const boards = struct {
             .linker_script = linker_script,
             .board = .{
                 .name = "Waveshare RP2040-ETH Mini",
-                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_eth.zig" },
+                .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_eth.zig" },
                 .url = "https://www.waveshare.com/rp2040-eth.htm",
             },
             .configure = rp2040_configure(.w25q080),
@@ -89,7 +95,7 @@ pub const boards = struct {
             .linker_script = linker_script,
             .board = .{
                 .name = "Waveshare RP2040-Matrix",
-                .source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_matrix.zig" },
+                .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/waveshare_rp2040_matrix.zig" },
                 .url = "https://www.waveshare.com/rp2040-matrix.htm",
             },
             .configure = rp2040_configure(.w25q080),
@@ -117,7 +123,7 @@ const linker_script = .{
 };
 
 const hal = .{
-    .source_file = .{ .cwd_relative = build_root ++ "/src/hal.zig" },
+    .root_source_file = .{ .cwd_relative = build_root ++ "/src/hal.zig" },
 };
 
 const chip = .{
@@ -125,7 +131,7 @@ const chip = .{
     .url = "https://www.raspberrypi.com/products/rp2040/",
     .cpu = MicroZig.cpus.cortex_m0plus,
     .register_definition = .{
-        .json = .{ .cwd_relative = build_root ++ "/src/chips/RP2040.json" },
+        .svd = .{ .cwd_relative = build_root ++ "/src/chips/rp2040.svd" },
     },
     .memory_regions = &.{
         .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
@@ -181,11 +187,10 @@ pub fn get_bootrom(mz: *MicroZig, rom: BootROM) Stage2Bootloader {
                 .target = mz.host_build.resolveTargetQuery(target),
                 .root_source_file = null,
             });
-            rom_exe.linkage = .static;
-            // rom_exe.pie = false;
-            // rom_exe.force_pic = false;
+            //rom_exe.linkage = .static;
             rom_exe.setLinkerScript(.{ .path = build_root ++ "/src/bootroms/shared/stage2.ld" });
             rom_exe.addAssemblyFile(.{ .path = rom_path });
+            rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
 
             break :blk rom_exe;
         },
@@ -201,66 +206,3 @@ pub fn get_bootrom(mz: *MicroZig, rom: BootROM) Stage2Bootloader {
         .elf = rom_exe.getEmittedBin(),
     };
 }
-
-/////////////////////////////////////////
-//      MicroZig Legacy Interface      //
-/////////////////////////////////////////
-
-// // this build script is mostly for testing and verification of this
-// // package. In an attempt to modularize -- designing for a case where a
-// // project requires multiple HALs, it accepts microzig as a param
-// pub fn build(b: *Build) !void {
-//     const optimize = b.standardOptimizeOption(.{});
-
-//     const args_dep = b.dependency("args", .{});
-//     const args_mod = args_dep.module("args");
-
-//     var examples = Examples.init(b, optimize);
-//     examples.install(b);
-
-//     const pio_tests = b.addTest(.{
-//         .root_source_file = .{
-//             .path = "src/hal.zig",
-//         },
-//         .optimize = optimize,
-//     });
-//     pio_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
-
-//     const test_step = b.step("test", "run unit tests");
-//     test_step.dependOn(&b.addRunArtifact(pio_tests).step);
-
-//     {
-//         const flash_tool = b.addExecutable(.{
-//             .name = "rp2040-flash",
-//             .optimize = .Debug,
-//             .target = .{},
-//             .root_source_file = .{ .path = "tools/rp2040-flash.zig" },
-//         });
-//         flash_tool.addModule("args", args_mod);
-
-//         b.installArtifact(flash_tool);
-//     }
-
-//     // Install all bootroms for debugging and CI
-//     inline for (comptime std.enums.values(std.meta.Tag(BootROM))) |rom| {
-//         if (rom == .artifact or rom == .blob) {
-//             continue;
-//         }
-
-//         if (rom == .is25lp080) {
-//             // TODO: https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/issues/79
-//             //  is25lp080.o:(text+0x16): has non-ABS relocation R_ARM_THM_CALL against symbol 'read_flash_sreg'
-//             continue;
-//         }
-
-//         const files = get_bootrom(b, rom);
-//         if (files.elf) |elf| {
-//             b.getInstallStep().dependOn(
-//                 &b.addInstallFileWithDir(elf, .{ .custom = "stage2" }, b.fmt("{s}.elf", .{@tagName(rom)})).step,
-//             );
-//         }
-//         b.getInstallStep().dependOn(
-//             &b.addInstallFileWithDir(files.bin, .{ .custom = "stage2" }, b.fmt("{s}.bin", .{@tagName(rom)})).step,
-//         );
-//     }
-// }

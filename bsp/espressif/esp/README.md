@@ -1,9 +1,5 @@
-= ESP MicroZig Package
+# ESP MicroZig Package
 
 [WIP]
 
 SVD is copied from https://github.com/esp-rs/esp-pacs
-
-== What version of Zig to use
-
-0.11.0

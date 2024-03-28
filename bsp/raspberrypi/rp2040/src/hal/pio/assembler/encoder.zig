@@ -78,22 +78,25 @@ pub fn Encoder(comptime options: Options) type {
             pub fn to_exported_program(comptime bounded: BoundedProgram) assembler.Program {
                 comptime var program_name: [bounded.name.len]u8 = undefined;
                 std.mem.copyForwards(u8, &program_name, bounded.name);
+                const name_const = program_name;
                 return assembler.Program{
-                    .name = &program_name,
+                    .name = &name_const,
                     .defines = blk: {
                         var tmp = std.BoundedArray(assembler.Define, options.max_defines).init(0) catch unreachable;
                         for (bounded.defines.slice()) |define| {
                             comptime var define_name: [define.name.len]u8 = undefined;
                             std.mem.copyForwards(u8, &define_name, define.name);
+                            const const_def_name = define_name;
                             tmp.append(.{
-                                .name = &define_name,
+                                .name = &const_def_name,
                                 .value = @as(i64, @intCast(define.value)),
                             }) catch unreachable;
                         }
 
-                        break :blk tmp.slice();
+                        const defines_const = tmp;
+                        break :blk defines_const.constSlice();
                     },
-                    .instructions = @as([]const u16, @ptrCast(bounded.instructions.slice())),
+                    .instructions = @as([]const u16, @ptrCast(bounded.instructions.constSlice())),
                     .origin = bounded.origin,
                     .side_set = bounded.side_set,
                     .wrap_target = bounded.wrap_target,

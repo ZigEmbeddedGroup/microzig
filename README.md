@@ -8,7 +8,7 @@
 
 ## What version of Zig to use
 
-Zig master/nightly
+Zig 0.12.0
 
 ## Getting Started With MicroZig
 

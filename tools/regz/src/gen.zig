@@ -119,7 +119,7 @@ fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
         try write_comment(db.arena.allocator(), description, writer);
 
     try writer.print(
-        \\pub const {s} = struct {{
+        \\pub const {} = struct {{
         \\
     , .{std.zig.fmtId(name)});
 
@@ -129,7 +129,7 @@ fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
         try writer.writeAll("pub const properties = struct {\n");
         var it = properties.iterator();
         while (it.next()) |entry| {
-            try writer.print("pub const {s} = ", .{
+            try writer.print("pub const {} = ", .{
                 std.zig.fmtId(entry.key_ptr.*),
             });
 
@@ -209,7 +209,7 @@ fn types_reference(db: Database, type_id: EntityId) ![]const u8 {
     }
 
     for (full_name_components.items) |component|
-        try writer.print(".{s}", .{
+        try writer.print(".{}", .{
             std.zig.fmtId(component),
         });
 
@@ -262,7 +262,7 @@ fn write_peripheral_instance(db: Database, instance_id: EntityId, offset: u64, o
     else
         "";
 
-    try writer.print("pub const {s}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
+    try writer.print("pub const {}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
         std.zig.fmtId(name),
         array_prefix,
         type_ref,
@@ -371,7 +371,7 @@ fn write_peripheral(
     const zero_sized = is_peripheral_zero_sized(db, peripheral_id);
     const has_modes = db.children.modes.contains(peripheral_id);
     try writer.print(
-        \\pub const {s} = {s} {s} {{
+        \\pub const {} = {s} {s} {{
         \\
     , .{
         std.zig.fmtId(name),
@@ -437,7 +437,7 @@ fn write_enum(db: Database, enum_id: EntityId, out_writer: anytype) !void {
     if (db.attrs.description.get(enum_id)) |description|
         try write_comment(db.arena.allocator(), description, writer);
 
-    try writer.print("pub const {s} = enum(u{}) {{\n", .{
+    try writer.print("pub const {} = enum(u{}) {{\n", .{
         std.zig.fmtId(name),
         size,
     });
@@ -478,7 +478,7 @@ fn write_enum_field(
     if (db.attrs.description.get(enum_field_id)) |description|
         try write_comment(db.arena.allocator(), description, writer);
 
-    try writer.print("{s} = 0x{x},\n", .{ std.zig.fmtId(name), value });
+    try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(name), value });
 }
 
 fn write_mode_enum_and_fn(
@@ -494,7 +494,7 @@ fn write_mode_enum_and_fn(
 
     for (mode_set.keys()) |mode_id| {
         const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
-        try writer.print("{s},\n", .{std.zig.fmtId(mode_name)});
+        try writer.print("{},\n", .{std.zig.fmtId(mode_name)});
     }
 
     try writer.writeAll(
@@ -531,7 +531,7 @@ fn write_mode_enum_and_fn(
             const value = try std.fmt.parseInt(u64, token, 0);
             try writer.print("{},\n", .{value});
         }
-        try writer.print("=> return .{s},\n", .{std.zig.fmtId(mode_name)});
+        try writer.print("=> return .{},\n", .{std.zig.fmtId(mode_name)});
         try writer.writeAll("else => {},\n");
         try writer.writeAll("}\n");
         try writer.writeAll("}\n");
@@ -580,7 +580,7 @@ fn write_registers_with_modes(
             } else try moded_registers.append(register);
         }
 
-        try writer.print("{s}: extern struct {{\n", .{
+        try writer.print("{}: extern struct {{\n", .{
             std.zig.fmtId(mode_name),
         });
 
@@ -657,10 +657,10 @@ fn write_registers_base(
         if (offset > size)
             @panic("peripheral size too small, parsing should have caught this");
 
-        if (offset != size)
-            try writer.print("padding: [{}]u8,\n", .{
-                size - offset,
-            });
+        //if (offset != size)
+        //    try writer.print("padding: [{}]u8,\n", .{
+        //        size - offset,
+        //    });
     }
 
     try out_writer.writeAll(buffer.items);
@@ -682,13 +682,13 @@ fn write_register(
         try write_comment(db.arena.allocator(), description, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
-    const array_prefix = if (db.attrs.count.get(register_id)) |count|
+    const array_prefix: []const u8 = if (db.attrs.count.get(register_id)) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
     else
         "";
 
     if (db.attrs.group.contains(register_id)) {
-        try writer.print("{s}: {s}{s},\n", .{
+        try writer.print("{}: {s}{},\n", .{
             std.zig.fmtId(name),
             array_prefix,
             std.zig.fmtId(name),
@@ -704,7 +704,7 @@ fn write_register(
             });
 
         std.sort.insertion(EntityWithOffset, fields.items, {}, EntityWithOffset.less_than);
-        try writer.print("{s}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
+        try writer.print("{}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
             std.zig.fmtId(name),
             array_prefix,
             size,
@@ -712,7 +712,7 @@ fn write_register(
 
         try write_fields(db, fields.items, size, writer);
         try writer.writeAll("}),\n");
-    } else try writer.print("{s}: {s}u{},\n", .{
+    } else try writer.print("{}: {s}u{},\n", .{
         std.zig.fmtId(name),
         array_prefix,
         size,
@@ -794,7 +794,7 @@ fn write_fields(
             if (db.attrs.@"enum".contains(fields[i].id))
                 log.warn("TODO: field array with enums", .{});
 
-            try writer.print("{s}: packed struct(u{}) {{ ", .{
+            try writer.print("{}: packed struct(u{}) {{ ", .{
                 std.zig.fmtId(name),
                 next.size,
             });
@@ -811,9 +811,9 @@ fn write_fields(
         } else if (db.attrs.@"enum".get(fields[i].id)) |enum_id| {
             if (db.attrs.name.get(enum_id)) |enum_name| {
                 try writer.print(
-                    \\{s}: packed union {{
+                    \\{}: packed union {{
                     \\    raw: u{},
-                    \\    value: {s},
+                    \\    value: {},
                     \\}},
                     \\
                 , .{
@@ -823,7 +823,7 @@ fn write_fields(
                 });
             } else {
                 try writer.print(
-                    \\{s}: packed union {{
+                    \\{}: packed union {{
                     \\    raw: u{},
                     \\    value: enum(u{}) {{
                     \\

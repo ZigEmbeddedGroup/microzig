@@ -10,7 +10,7 @@ const PIO1 = microzig.chip.peripherals.PIO1;
 const gpio = @import("gpio.zig");
 const resets = @import("resets.zig");
 const hw = @import("hw.zig");
-const assembler = @import("pio/assembler.zig");
+pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");
 
 // global state for keeping track of used things

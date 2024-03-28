@@ -7,6 +7,12 @@
         },
     },
     .paths = .{
+        "LICENSE",
+        "README.md",
         "build.zig.zon",
+        "build.zig",
+        "src",
+        "tools",
+        "rp2040.ld",
     },
 }

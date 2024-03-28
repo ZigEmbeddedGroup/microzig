@@ -1151,7 +1151,7 @@ const DirectiveTag = @typeInfo(Token.Directive).Union.tag_type.?;
 const PayloadTag = @typeInfo(Token.Instruction.Payload).Union.tag_type.?;
 
 fn expect_program(expected: []const u8, actual: Token) !void {
-    try expectEqual(Token.Tag.program, actual.data);
+    try expectEqual(Token.Tag.program, @as(Token.Tag, actual.data));
     try expectEqualStrings(expected, actual.data.program);
 }
 
@@ -1173,7 +1173,7 @@ fn expect_opt_value(expected: ?Value, actual: ?Value) !void {
 }
 
 fn expect_define(expected: Token.Define, actual: Token) !void {
-    try expectEqual(Token.Tag.define, actual.data);
+    try expectEqual(Token.Tag.define, @as(Token.Tag, actual.data));
 
     const define = actual.data.define;
     try expectEqualStrings(expected.name, define.name);
@@ -1181,12 +1181,12 @@ fn expect_define(expected: Token.Define, actual: Token) !void {
 }
 
 fn expect_origin(expected: Value, actual: Token) !void {
-    try expectEqual(Token.Tag.origin, actual.data);
+    try expectEqual(Token.Tag.origin, @as(Token.Tag, actual.data));
     try expect_value(expected, actual.data.origin);
 }
 
 fn expect_side_set(expected: Token.SideSet, actual: Token) !void {
-    try expectEqual(Token.Tag.side_set, actual.data);
+    try expectEqual(Token.Tag.side_set, @as(Token.Tag, actual.data));
 
     const side_set = actual.data.side_set;
     try expect_value(expected.count, side_set.count);
@@ -1195,15 +1195,15 @@ fn expect_side_set(expected: Token.SideSet, actual: Token) !void {
 }
 
 fn expect_wrap_target(actual: Token) !void {
-    try expectEqual(Token.Tag.wrap_target, actual.data);
+    try expectEqual(Token.Tag.wrap_target, @as(Token.Tag, actual.data));
 }
 
 fn expect_wrap(actual: Token) !void {
-    try expectEqual(Token.Tag.wrap, actual.data);
+    try expectEqual(Token.Tag.wrap, @as(Token.Tag, actual.data));
 }
 
 fn expect_lang_opt(expected: Token.LangOpt, actual: Token) !void {
-    try expectEqual(Token.Tag.lang_opt, actual.data);
+    try expectEqual(Token.Tag.lang_opt, @as(Token.Tag, actual.data));
 
     const lang_opt = actual.data.lang_opt;
     try expectEqualStrings(expected.lang, lang_opt.lang);
@@ -1212,12 +1212,12 @@ fn expect_lang_opt(expected: Token.LangOpt, actual: Token) !void {
 }
 
 fn expect_word(expected: Value, actual: Token) !void {
-    try expectEqual(Token.Tag.word, actual.data);
+    try expectEqual(Token.Tag.word, @as(Token.Tag, actual.data));
     try expect_value(expected, actual.data.word);
 }
 
 fn expect_label(expected: Token.Label, actual: Token) !void {
-    try expectEqual(Token.Tag.label, actual.data);
+    try expectEqual(Token.Tag.label, @as(Token.Tag, actual.data));
 
     const label = actual.data.label;
     try expectEqual(expected.public, label.public);
@@ -1230,8 +1230,8 @@ const ExpectedNopInstr = struct {
 };
 
 fn expect_instr_nop(expected: ExpectedNopInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.nop, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.nop, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1246,8 +1246,8 @@ const ExpectedSetInstr = struct {
 };
 
 fn expect_instr_set(expected: ExpectedSetInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.set, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.set, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1266,8 +1266,8 @@ const ExpectedJmpInstr = struct {
 };
 
 fn expect_instr_jmp(expected: ExpectedJmpInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.jmp, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.jmp, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1289,8 +1289,8 @@ const ExpectedWaitInstr = struct {
 };
 
 fn expect_instr_wait(expected: ExpectedWaitInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.wait, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.wait, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1310,8 +1310,8 @@ const ExpectedInInstr = struct {
 };
 
 fn expect_instr_in(expected: ExpectedInInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.in, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.in, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1330,8 +1330,8 @@ const ExpectedOutInstr = struct {
 };
 
 fn expect_instr_out(expected: ExpectedOutInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.out, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.out, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1350,8 +1350,8 @@ const ExpectedPushInstr = struct {
 };
 
 fn expect_instr_push(expected: ExpectedPushInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.push, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.push, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1370,8 +1370,8 @@ const ExpectedPullInstr = struct {
 };
 
 fn expect_instr_pull(expected: ExpectedPullInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.pull, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.pull, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1391,8 +1391,8 @@ const ExpectedMovInstr = struct {
 };
 
 fn expect_instr_mov(expected: ExpectedMovInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.mov, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.mov, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1414,8 +1414,8 @@ const ExpectedIrqInstr = struct {
 };
 
 fn expect_instr_irq(expected: ExpectedIrqInstr, actual: Token) !void {
-    try expectEqual(Token.Tag.instruction, actual.data);
-    try expectEqual(PayloadTag.irq, actual.data.instruction.payload);
+    try expectEqual(Token.Tag.instruction, @as(Token.Tag, actual.data));
+    try expectEqual(PayloadTag.irq, @as(PayloadTag, actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);

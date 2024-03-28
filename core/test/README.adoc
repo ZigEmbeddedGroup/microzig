@@ -1,3 +1,0 @@
-= MicroZig Test Area
-
-These are minimal tests to validate MicroZig behavior.
