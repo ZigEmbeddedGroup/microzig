@@ -60,6 +60,9 @@ pub const chips = struct {
                 .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F407.json" },
             },
         },
+        .hal = .{
+            .source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F407.zig" },
+        },
     };
 
     pub const stm32f429zit6u = MicroZig.Target{
