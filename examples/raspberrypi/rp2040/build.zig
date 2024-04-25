@@ -7,6 +7,7 @@ const available_examples = [_]Example{
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/adc.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_blinky", .file = "src/blinky.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/flash_program.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/flash_id.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_gpio-clk", .file = "src/gpio_clk.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/pwm.zig" },

@@ -61,7 +61,7 @@ pub const chips = struct {
             },
         },
         .hal = .{
-            .source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F407.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F407.zig" },
         },
     };
 

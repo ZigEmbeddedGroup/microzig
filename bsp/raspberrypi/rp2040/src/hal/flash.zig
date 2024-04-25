@@ -1,6 +1,12 @@
 //! See [rp2040 docs](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf), page 136.
 const rom = @import("rom.zig");
 
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
+
+const IO_QSPI = peripherals.IO_QSPI;
+const XIP_SSI = peripherals.XIP_SSI;
+
 pub const Command = enum(u8) {
     block_erase = 0xd8,
     ruid_cmd = 0x4b,
@@ -107,4 +113,87 @@ export fn _range_program(offset: u32, data: [*]const u8, len: usize) linksection
     rom.flash_flush_cache()();
 
     boot2.flash_enable_xip();
+}
+
+/// Force the chip select using IO overrides, in case RAM-resident IRQs
+/// are still running, and the FIFO bottoms out
+pub inline fn force_cs(high: bool) void {
+    @call(.never_inline, _force_cs, .{high});
+}
+
+fn _force_cs(high: bool) linksection(".time_critical") void {
+    const value = v: {
+        var value: u32 = 0x2;
+        if (high) {
+            value = 0x3;
+        }
+        break :v value << 8;
+    };
+
+    const IO_QSPI_GPIO_QSPI_SS_CTRL: *volatile u32 = @ptrFromInt(@intFromPtr(IO_QSPI) + 0x0C);
+    IO_QSPI_GPIO_QSPI_SS_CTRL.* = (IO_QSPI_GPIO_QSPI_SS_CTRL.* ^ value) & 0x300;
+}
+
+/// Execute a command on the flash chip
+///
+/// Configures flash for serial mode operation, sends a command, receives response
+/// and then configures flash back to XIP mode
+pub inline fn cmd(tx_buf: []const u8, rx_buf: []u8) void {
+    @call(.never_inline, _cmd, .{ tx_buf, rx_buf });
+}
+
+fn _cmd(tx_buf: []const u8, rx_buf: []u8) linksection(".time_critical") void {
+    boot2.flash_init();
+    asm volatile ("" ::: "memory"); // memory barrier
+    rom.connect_internal_flash()();
+    rom.flash_exit_xip()();
+    force_cs(false);
+
+    // can't use peripherals, because its functions are not in ram
+    const XIP_SSI_SR: *volatile u32 = @ptrFromInt(@intFromPtr(XIP_SSI) + 0x28);
+    const XIP_SSI_DR0: *volatile u8 = @ptrFromInt(@intFromPtr(XIP_SSI) + 0x60);
+
+    const len = tx_buf.len;
+    var tx_remaining = len;
+    var rx_remaining = len;
+    const fifo_depth = 16 - 2;
+    while (tx_remaining > 0 or rx_remaining > 0) {
+        const can_put = XIP_SSI_SR.* & 0x2 != 0; // TFNF
+        const can_get = XIP_SSI_SR.* & 0x8 != 0; // RFNE
+
+        if (can_put and tx_remaining > 0 and rx_remaining < tx_remaining + fifo_depth) {
+            XIP_SSI_DR0.* = tx_buf[len - tx_remaining];
+            tx_remaining -= 1;
+        }
+        if (can_get and rx_remaining > 0) {
+            rx_buf[len - rx_remaining] = XIP_SSI_DR0.*;
+            rx_remaining -= 1;
+        }
+    }
+
+    force_cs(true);
+    rom.flash_flush_cache()();
+    boot2.flash_enable_xip();
+}
+
+const id_dummy_len = 4;
+const id_data_len = 8;
+const id_total_len = 1 + id_dummy_len + id_data_len;
+var id_buf: ?[id_data_len]u8 = null;
+
+/// Read the flash chip's ID which is unique to each RP2040
+pub fn id() [id_data_len]u8 {
+    if (id_buf) |b| {
+        return b;
+    }
+
+    var tx_buf: [id_total_len]u8 = undefined;
+    var rx_buf: [id_total_len]u8 = undefined;
+    tx_buf[0] = @intFromEnum(Command.ruid_cmd);
+    cmd(&tx_buf, &rx_buf);
+
+    id_buf = undefined;
+    @memcpy(&id_buf.?, rx_buf[1 + id_dummy_len ..]);
+
+    return id_buf.?;
 }
