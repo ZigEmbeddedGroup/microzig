@@ -82,11 +82,12 @@ pub fn add_firmware(
 
     // TODO: let the user override which ram section to use the stack on,
     // for now just using the first ram section in the memory region list
-    const first_ram = blk: {
+    const first_ram: defs.MemoryRegion = blk: {
         for (chip.memory_regions) |region| {
             if (region.kind == .ram)
                 break :blk region;
-        } else @panic("no ram memory region found for setting the end-of-stack address");
+            // for native targets create dummy ram region
+        } else if (chip.cpu.target.os_tag == null) break :blk .{ .kind = .ram, .offset = 0, .length = 0 } else @panic("no ram memory region found for setting the end-of-stack address");
     };
 
     // On demand, generate chip definitions via regz:

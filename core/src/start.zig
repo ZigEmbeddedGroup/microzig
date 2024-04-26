@@ -195,3 +195,10 @@ pub fn initialize_system_memories() void {
         @memcpy(data_start[0..data_len], data_src[0..data_len]);
     }
 }
+
+// for native(for example linux/windows) targets we need to export the main function
+pub usingnamespace if (@import("builtin").os.tag != .freestanding) struct {
+    pub fn main() void {
+        microzig.cpu.startup_logic._start();
+    }
+} else struct {};
