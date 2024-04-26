@@ -8,6 +8,9 @@
     # required for latest zig
     zig.url = "github:mitchellh/zig-overlay";
 
+    zls.url = "github:zigtools/zls";
+
+
     # Used for shell.nix
     flake-compat = {
       url = github:edolstra/flake-compat;
@@ -26,6 +29,7 @@
         # Other overlays
         (final: prev: {
           zigpkgs = inputs.zig.packages.${prev.system};
+          zls = inputs.zls.packages.${prev.system}.zls;
         })
       ];
 
@@ -84,7 +88,8 @@
       rec {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
-            pkgs.zigpkgs."0.11.0"
+            pkgs.zigpkgs."0.12.0"
+            pkgs.zls
             (python3.withPackages (ps: [
               ps.dataclasses_json
               ps.marshmallow
