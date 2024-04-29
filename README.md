@@ -43,7 +43,7 @@ This repo contains the infrastructure for getting started in an embedded Zig pro
 
 ## Design
 
-For MicroZig internals please see the [Design Document](docs/design.adoc).
+For MicroZig internals please see the [Design Document](docs/design.md).
 
 ## Repository structure
 
