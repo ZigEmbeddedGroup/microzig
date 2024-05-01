@@ -119,7 +119,7 @@ pub const BootROM = union(enum) {
 };
 
 const linker_script = .{
-    .path = build_root ++ "/rp2040.ld",
+    .explicit = .{ .path = build_root ++ "/rp2040.ld" },
 };
 
 const hal = .{

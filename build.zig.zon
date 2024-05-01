@@ -16,6 +16,7 @@
         .@"bsp/stmicro/stm32" = .{ .path = "bsp/stmicro/stm32" },
         .@"bsp/espressif/esp" = .{ .path = "bsp/espressif/esp" },
         .@"bsp/raspberrypi/rp2040" = .{ .path = "bsp/raspberrypi/rp2040" },
+        .@"bsp/posix" = .{ .path = "bsp/posix" },
 
         // examples so that we can build them all in one go
         .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
@@ -26,6 +27,7 @@
         .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
         .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
         .@"examples/raspberrypi/rp2040" = .{ .path = "examples/raspberrypi/rp2040" },
+        .@"examples/posix" = .{ .path = "examples/posix" },
 
         // used for creating package tarballs
         .boxzer = .{

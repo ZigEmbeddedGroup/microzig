@@ -1,0 +1,13 @@
+.{
+    .name = "examples/posix",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../build" },
+        .@"microzig/bsp/posix" = .{ .path = "../../bsp/posix" },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

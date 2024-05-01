@@ -82,11 +82,12 @@ pub fn add_firmware(
 
     // TODO: let the user override which ram section to use the stack on,
     // for now just using the first ram section in the memory region list
-    const first_ram = blk: {
+    const first_ram: defs.MemoryRegion = blk: {
         for (chip.memory_regions) |region| {
             if (region.kind == .ram)
                 break :blk region;
-        } else @panic("no ram memory region found for setting the end-of-stack address");
+            // for native targets create dummy ram region
+        } else if (chip.cpu.target.os_tag == null) break :blk .{ .kind = .ram, .offset = 0, .length = 0 } else @panic("no ram memory region found for setting the end-of-stack address");
     };
 
     // On demand, generate chip definitions via regz:
@@ -204,29 +205,33 @@ pub fn add_firmware(
 
     fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
 
-    if (linker_script) |ls| {
-        fw.artifact.setLinkerScriptPath(ls);
-    } else {
-        const target = mz.host_build.resolveTargetQuery(chip.cpu.target);
-        const generate_linkerscript_args = GenerateLinkerscriptArgs{
-            .cpu_name = target.result.cpu.model.name,
-            .cpu_arch = target.result.cpu.arch,
-            .chip_name = chip.name,
-            .memory_regions = chip.memory_regions,
-        };
+    switch (linker_script) {
+        .explicit => |ls| {
+            fw.artifact.setLinkerScriptPath(ls);
+        },
+        .generated => {
+            const target = mz.host_build.resolveTargetQuery(chip.cpu.target);
+            const generate_linkerscript_args = GenerateLinkerscriptArgs{
+                .cpu_name = target.result.cpu.model.name,
+                .cpu_arch = target.result.cpu.arch,
+                .chip_name = chip.name,
+                .memory_regions = chip.memory_regions,
+            };
 
-        const args_str = std.json.stringifyAlloc(
-            mz.microzig_core.builder.allocator,
-            generate_linkerscript_args,
-            .{},
-        ) catch @panic("OOM");
+            const args_str = std.json.stringifyAlloc(
+                mz.microzig_core.builder.allocator,
+                generate_linkerscript_args,
+                .{},
+            ) catch @panic("OOM");
 
-        const generate_linkerscript_run = mz.microzig_core.builder.addRunArtifact(mz.generate_linkerscript);
-        generate_linkerscript_run.addArg(args_str);
-        const linkerscript = generate_linkerscript_run.addOutputFileArg("linker.ld");
+            const generate_linkerscript_run = mz.microzig_core.builder.addRunArtifact(mz.generate_linkerscript);
+            generate_linkerscript_run.addArg(args_str);
+            const linkerscript = generate_linkerscript_run.addOutputFileArg("linker.ld");
 
-        // If not specified then generate the linker script
-        fw.artifact.setLinkerScript(linkerscript);
+            // If not specified then generate the linker script
+            fw.artifact.setLinkerScript(linkerscript);
+        },
+        .none => {},
     }
 
     if (options.target.configure) |configure| {
@@ -317,7 +322,7 @@ pub const Target = struct {
     board: ?BoardDefinition = null,
 
     /// (optional) Provide a custom linker script for the hardware or define a custom generation.
-    linker_script: ?LazyPath = null,
+    linker_script: LinkerScript = .{ .generated = {} },
 
     /// (optional) Further configures the created firmware depending on the chip and/or board settings.
     /// This can be used to set/change additional properties on the created `*Firmware` object.
@@ -325,6 +330,12 @@ pub const Target = struct {
 
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
     binary_post_process: ?*const fn (host_build: *std.Build, LazyPath) std.Build.LazyPath = null,
+};
+
+pub const LinkerScript = union(enum) {
+    generated: void,
+    explicit: LazyPath,
+    none: void,
 };
 
 /// Options to the `add_firmware` function.
@@ -357,7 +368,7 @@ pub const FirmwareOptions = struct {
     board: ?BoardDefinition = null,
 
     /// If set, overrides the `linker_script` property of the target.
-    linker_script: ?LazyPath = null,
+    linker_script: ?LinkerScript = null,
 };
 
 /// Configuration options for firmware installation.

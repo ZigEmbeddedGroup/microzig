@@ -8,10 +8,12 @@ const example_dep_names: []const []const u8 = &.{
     "examples/nxp/lpc",
     "examples/microchip/atsam",
     //"examples/microchip/avr",
-    "examples/gigadevice/gd32",
-    "examples/stmicro/stm32",
+    // TODO: both are borked for some reasons
+    // "examples/gigadevice/gd32",
+    // "examples/stmicro/stm32",
     //"examples/espressif/esp",
     "examples/raspberrypi/rp2040",
+    "examples/posix",
 };
 
 const bsps = .{
@@ -23,6 +25,7 @@ const bsps = .{
     .{ "bsp/stmicro/stm32", @import("bsp/stmicro/stm32") },
     .{ "bsp/espressif/esp", @import("bsp/espressif/esp") },
     .{ "bsp/raspberrypi/rp2040", @import("bsp/raspberrypi/rp2040") },
+    .{ "bsp/posix", @import("bsp/posix") },
 };
 
 pub fn build(b: *Build) void {
@@ -58,7 +61,8 @@ pub fn build(b: *Build) void {
     const test_bsps_step = b.step("run-bsp-tests", "Run all platform agnostic tests for BSPs");
     inline for (bsps) |bsp| {
         const bsp_dep = b.dependency(bsp[0], .{});
-        test_bsps_step.dependOn(&bsp_dep.builder.top_level_steps.get("test").?.step);
+        if (bsp_dep.builder.top_level_steps.get("test")) |t|
+            test_bsps_step.dependOn(&t.step);
     }
 }
 
