@@ -522,7 +522,7 @@ pub const GlobalConfiguration = struct {
                     if (comptime pin_config.get_direction() != .in)
                         @compileError("Only input pins can have pull up/down enabled");
 
-                    gpio.set_pull(gpio_num, pull);
+                    gpio.num(gpio_num).set_pull(pull);
                 };
         }
 
