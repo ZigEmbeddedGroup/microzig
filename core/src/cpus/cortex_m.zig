@@ -3,28 +3,49 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const root = @import("root");
 
-pub const regs = struct {
-    // Interrupt Control and State Register
-    pub const ICSR: *volatile mmio.Mmio(packed struct {
-        VECTACTIVE: u9,
-        reserved0: u2,
-        RETTOBASE: u1,
-        VECTPENDING: u9,
-        reserved1: u1,
-        ISRPENDING: u1,
-        ISRPREEMPT: u1,
-        reserved2: u1,
-        PENDSTCLR: u1,
-        PENDSTSET: u1,
-        PENDSVCLR: u1,
-        PENDSVSET: u1,
-        reserved3: u2,
-        NMIPENDSET: u1,
-    }) = @ptrFromInt(0xE000ED04);
+const scs_base = 0xE000E000;
+const itm_base = 0xE0000000;
+const dwt_base = 0xE0001000;
+const tpi_base = 0xE0040000;
+const coredebug_base = 0xE000EDF0;
+const systick_base = scs_base + 0x0010;
+const nvic_base = scs_base + 0x0100;
+const scb_base = scs_base + 0x0D00;
+const mpu_base = scs_base + 0x0D90;
+
+const Core = enum {
+    @"ARM Cortex-M0",
+    @"ARM Cortex-M0+",
+    @"ARM Cortex-M3",
+    @"ARM Cortex-M4",
 };
 
+const core: type = blk: {
+    const cortex_m = std.meta.stringToEnum(microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+    break :blk switch (cortex_m) {
+        .@"ARM Cortex-M0" => @import("cortex_m/m0"),
+        .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
+        .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
+        .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
+    };
+};
+
+const properties = microzig.chip.properties;
+// TODO: will have to standardize this with regz code generation
+const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
+
+/// System Control Block (SCB)
+pub const scb: *volatile core.SystemControlBlock = @ptrFromInt(scb_base);
+/// Nested Vector Interrupt Controller (NVIC)
+pub const nvic: *volatile core.NestedVectorInterruptController = @ptrFromInt(nvic_base);
+/// Memory Protection Unit (MPU)
+pub const mpu: *volatile core.MemoryProtectionUnit = if (mpu_present)
+    @ptrFromInt(mpu_base)
+else
+    @compileError("Cortex-M does not have an MPU");
+
 pub fn executing_isr() bool {
-    return regs.ICSR.read().VECTACTIVE != 0;
+    return scb.ICSR.read().VECTACTIVE != 0;
 }
 
 pub fn enable_interrupts() void {
