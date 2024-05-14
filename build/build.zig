@@ -130,6 +130,7 @@ pub fn add_firmware(
             .target = mz.host_build.resolveTargetQuery(chip.cpu.target),
             .linkage = .static,
             .root_source_file = .{ .cwd_relative = mz.microzig_core.builder.pathFromRoot("src/start.zig") },
+            .strip = options.strip,
         }),
         .target = options.target,
         .output_files = Firmware.OutputFileMap.init(host_build.allocator),
@@ -358,6 +359,8 @@ pub const FirmwareOptions = struct {
 
     /// If set, overrides the `linker_script` property of the target.
     linker_script: ?LazyPath = null,
+
+    strip: bool = false,
 };
 
 /// Configuration options for firmware installation.

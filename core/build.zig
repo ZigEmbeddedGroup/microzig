@@ -29,7 +29,7 @@ pub const cpus = struct {
 
     pub const cortex_m0 = MicroZig.Cpu{
         .name = "ARM Cortex-M0",
-        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
+        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
@@ -40,7 +40,7 @@ pub const cpus = struct {
 
     pub const cortex_m0plus = MicroZig.Cpu{
         .name = "ARM Cortex-M0+",
-        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
+        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
@@ -51,7 +51,7 @@ pub const cpus = struct {
 
     pub const cortex_m3 = MicroZig.Cpu{
         .name = "ARM Cortex-M3",
-        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
+        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
@@ -62,7 +62,7 @@ pub const cpus = struct {
 
     pub const cortex_m4 = MicroZig.Cpu{
         .name = "ARM Cortex-M4",
-        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex-m.zig" },
+        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
