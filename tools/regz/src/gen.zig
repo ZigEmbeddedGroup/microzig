@@ -657,10 +657,10 @@ fn write_registers_base(
         if (offset > size)
             @panic("peripheral size too small, parsing should have caught this");
 
-        //if (offset != size)
-        //    try writer.print("padding: [{}]u8,\n", .{
-        //        size - offset,
-        //    });
+        if (offset != size)
+            try writer.print("padding: [{}]u8,\n", .{
+                size - offset,
+            });
     }
 
     try out_writer.writeAll(buffer.items);
