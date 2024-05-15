@@ -1,6 +1,6 @@
 .{
     .name = "microzig",
-    .version = "0.12.0",
+    .version = "0.12.1",
     .dependencies = .{
         // packages within the monorepo so that others can reach them
         .build = .{ .path = "build" },
