@@ -1,6 +1,6 @@
 .{
     .name = "build",
-    .version = "0.0.0",
+    .version = "0.0.1",
     .dependencies = .{
         .@"microzig/tools/uf2" = .{
             .path = "../tools/uf2",
