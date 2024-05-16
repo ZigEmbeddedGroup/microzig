@@ -71,6 +71,18 @@ pub const cpus = struct {
         },
     };
 
+    pub const cortex_m4f = MicroZig.Cpu{
+        .name = "ARM Cortex-M4F",
+        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
+        .target = std.zig.CrossTarget{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+            .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+            .os_tag = .freestanding,
+            .abi = .eabihf,
+        },
+    };
+
     pub const riscv32_imac = MicroZig.Cpu{
         .name = "RISC-V 32-bit",
         .root_source_file = .{ .path = build_root ++ "/src/cpus/riscv32.zig" },
