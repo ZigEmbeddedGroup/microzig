@@ -481,7 +481,7 @@ pub const Tokenizer = struct {
         };
     }
 
-    const directives = std.ComptimeStringMap(*const fn (*Tokenizer, u32, *?Diagnostics) TokenizeError!Token, .{
+    const directives = std.StaticStringMap(*const fn (*Tokenizer, u32, *?Diagnostics) TokenizeError!Token).initComptime(.{
         .{ "program", get_program },
         .{ "define", get_define },
         .{ "origin", get_origin },
@@ -527,7 +527,7 @@ pub const Tokenizer = struct {
 
     fn get_jmp(self: *Tokenizer, diags: *?Diagnostics) TokenizeError!Token.Instruction.Payload {
         const Condition = Token.Instruction.Jmp.Condition;
-        const conditions = std.ComptimeStringMap(Condition, .{
+        const conditions = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
             .{ "x--", .x_dec },
             .{ "!y", .y_is_zero },
@@ -828,7 +828,7 @@ pub const Tokenizer = struct {
         };
     }
 
-    const instructions = std.ComptimeStringMap(*const fn (*Tokenizer, *?Diagnostics) TokenizeError!Token.Instruction.Payload, .{
+    const instructions = std.StaticStringMap(*const fn (*Tokenizer, *?Diagnostics) TokenizeError!Token.Instruction.Payload).initComptime(.{
         .{ "nop", get_nop },
         .{ "jmp", get_jmp },
         .{ "wait", get_wait },
