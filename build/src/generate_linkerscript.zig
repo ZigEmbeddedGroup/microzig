@@ -121,8 +121,9 @@ pub fn main() !void {
             \\  .data :
             \\  {
             \\     microzig_data_start = .;
-            \\     *(.rodata*)
+            \\     *(.sdata*)
             \\     *(.data*)
+            \\     *(.rodata*)
             \\     microzig_data_end = .;
             \\  } > ram0 AT> flash0
             \\
