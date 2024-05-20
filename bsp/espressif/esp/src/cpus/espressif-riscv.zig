@@ -61,7 +61,7 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    export fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
+    pub fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
         microzig.cpu.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
@@ -103,5 +103,7 @@ pub const startup_logic = struct {
 };
 
 pub fn export_startup_logic() void {
-    // no op as it's already being exported
+    @export(startup_logic._start, .{
+        .name = "_start",
+    });
 }
