@@ -138,6 +138,14 @@ pub fn main() !void {
             \\
         );
     }
+
+    switch (program_args.cpu_arch) {
+        .riscv32, .riscv64 => try writer.writeAll(
+            \\  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+        ),
+        else => {},
+    }
+
     try writer.writeAll("}\n");
 
     // TODO: Assert that the flash can actually hold all data!
