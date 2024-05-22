@@ -67,7 +67,12 @@ pub const startup_logic = struct {
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
-        asm volatile ("la gp, __global_pointer$");
+        asm volatile (
+            \\.option push
+            \\.option norelax
+            \\la gp, __global_pointer$
+            \\.option pop
+        );
         microzig.cpu.setStatusBit(.mtvec, microzig.config.end_of_stack);
         root.initialize_system_memories();
         microzig_main();
