@@ -85,6 +85,27 @@ pub fn Usb(comptime f: anytype) type {
                 // Some scratch space that we'll use for things like preparing string
                 // descriptors for transmission.
                 var tmp: [64]u8 = .{0} ** 64;
+                // Keeps track of sent data from tmp buffer
+                var buffer_reader = BufferReader.new(&.{});
+            };
+            
+            // Command endpoint utilities
+            const CmdEndpoint = struct {
+
+                /// Command response utility function that can split long data in multiple packets
+                fn send_cmd_response(data: []const u8, expected_length: u16) void {
+                    const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
+
+                    S.buffer_reader = BufferReader.new(data[0..@min(data.len, expected_length)]);
+                    const data_chunk = S.buffer_reader.try_peek(cmd_in_endpoint.descriptor.max_packet_size);
+
+                    if (data_chunk.len > 0) {
+                        f.usb_start_tx(
+                            cmd_in_endpoint,
+                            data_chunk
+                        );
+                    }
+                }
             };
 
             // Check which interrupt flags are set.
@@ -156,69 +177,36 @@ pub fn Usb(comptime f: anytype) type {
                                 // implementation.
                                 usb_config.?.endpoints[EP0_IN_IDX].next_pid_1 = true;
 
-                                const dc = usb_config.?.device_descriptor.serialize();
-                                @memcpy(S.tmp[0..dc.len], &dc);
+                                var bw = BufferWriter.new(&S.tmp);
+                                try bw.write(&usb_config.?.device_descriptor.serialize());
 
-                                // Configure EP0 IN to send the device descriptor
-                                // when it's next asked.
-                                f.usb_start_tx(
-                                    usb_config.?.endpoints[EP0_IN_IDX],
-                                    S.tmp[0..dc.len],
-                                );
+                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
                             },
                             .Config => {
                                 if (debug) std.log.info("        Config", .{});
+                                
                                 // Config descriptor requests are slightly unusual.
                                 // We can respond with just our config descriptor,
                                 // but we can _also_ append our interface and
                                 // endpoint descriptors to the end, saving some
-                                // round trips. We'll choose to do this if the
-                                // number of bytes the host will accept (in the
-                                // `length` field) is large enough.
-                                var used: usize = 0;
+                                // round trips.
+                                var bw = BufferWriter.new(&S.tmp);
+                                try bw.write(&usb_config.?.config_descriptor.serialize());
+                                try bw.write(&usb_config.?.interface_descriptor.serialize());
 
-                                const cd = usb_config.?.config_descriptor.serialize();
-                                @memcpy(S.tmp[used .. used + cd.len], &cd);
-                                used += cd.len;
 
-                                if (setup.length > used) {
-                                    // Do the rest!
-                                    //
-                                    // This is slightly incorrect because the host
-                                    // might have asked for a number of bytes in
-                                    // between the size of a config descriptor, and
-                                    // the amount we're going to send back. However,
-                                    // in practice, the host always asks for either
-                                    // (1) the exact size of a config descriptor, or
-                                    // (2) 64 bytes, and this all fits in 64 bytes.
-                                    const id = usb_config.?.interface_descriptor.serialize();
-                                    @memcpy(S.tmp[used .. used + id.len], &id);
-                                    used += id.len;
-
-                                    // Seems like the host does not bother asking for the
-                                    // hid descriptor so we'll just send it with the
-                                    // other descriptors.
-                                    if (usb_config.?.hid) |hid_conf| {
-                                        const hd = hid_conf.hid_descriptor.serialize();
-                                        @memcpy(S.tmp[used .. used + hd.len], &hd);
-                                        used += hd.len;
-                                    }
-
-                                    // TODO: depending on the number of endpoints
-                                    // this might not fit in 64 bytes -> split message
-                                    // into multiple packets
-                                    for (usb_config.?.endpoints[2..]) |ep| {
-                                        const ed = ep.descriptor.serialize();
-                                        @memcpy(S.tmp[used .. used + ed.len], &ed);
-                                        used += ed.len;
-                                    }
+                                // Seems like the host does not bother asking for the
+                                // hid descriptor so we'll just send it with the
+                                // other descriptors.
+                                if (usb_config.?.hid) |hid_conf| {
+                                    try bw.write(&hid_conf.hid_descriptor.serialize());
                                 }
 
-                                // Set up EP0 IN to send the stuff we just composed.
-                                f.usb_start_tx(
-                                    usb_config.?.endpoints[EP0_IN_IDX],
-                                    S.tmp[0..used],
-                                );
+                                for (usb_config.?.endpoints[2..]) |ep| {
+                                    try bw.write(&ep.descriptor.serialize());
+                                }
+
+                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
                             },
                             .String => {
                                 if (debug) std.log.info("        String", .{});
@@ -235,19 +223,16 @@ pub fn Usb(comptime f: anytype) type {
                                         const s = usb_config.?.descriptor_strings[i - 1];
                                         const len = 2 + s.len;
 
-                                        S.tmp[0] = @intCast(len);
-                                        S.tmp[1] = 0x03;
-                                        @memcpy(S.tmp[2..len], s);
+                                        var wb = BufferWriter.new(&S.tmp);
+                                        try wb.write_byte(@intCast(len));
+                                        try wb.write_byte(0x03);
+                                        try wb.write(s);
 
-                                        break :StringBlk S.tmp[0..len];
+                                        break :StringBlk wb.get_slice();
                                     }
                                 };
-                                // Set up EP0 IN to send whichever thing we just
-                                // decided on.
-                                f.usb_start_tx(
-                                    usb_config.?.endpoints[EP0_IN_IDX],
-                                    bytes,
-                                );
+                                
+                                CmdEndpoint.send_cmd_response(bytes, setup.length);
                             },
                             .Interface => {
                                 if (debug) std.log.info("        Interface", .{});
@@ -278,13 +263,10 @@ pub fn Usb(comptime f: anytype) type {
                                     .num_configurations = usb_config.?.device_descriptor.num_configurations,
                                 };
 
-                                const data = dqd.serialize();
-                                @memcpy(S.tmp[0..data.len], &data);
+                                var bw = BufferWriter.new(&S.tmp);
+                                try bw.write(&dqd.serialize());
 
-                                f.usb_start_tx(
-                                    usb_config.?.endpoints[EP0_IN_IDX],
-                                    S.tmp[0..data.len],
-                                );
+                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
                             },
                         }
                     } else {
@@ -298,23 +280,17 @@ pub fn Usb(comptime f: anytype) type {
                                     .Hid => {
                                         if (debug) std.log.info("        HID", .{});
 
-                                        const hd = hid_conf.hid_descriptor.serialize();
-                                        @memcpy(S.tmp[0..hd.len], &hd);
+                                        var bw = BufferWriter.new(&S.tmp);
+                                        try bw.write(&hid_conf.hid_descriptor.serialize());
 
-                                        f.usb_start_tx(
-                                            usb_config.?.endpoints[EP0_IN_IDX],
-                                            S.tmp[0..hd.len],
-                                        );
+                                        CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
                                     },
                                     .Report => {
                                         if (debug) std.log.info("        Report", .{});
 
                                         // The report descriptor is already a (static)
                                         // u8 array, i.e., we can pass it directly
-                                        f.usb_start_tx(
-                                            usb_config.?.endpoints[EP0_IN_IDX],
-                                            hid_conf.report_descriptor,
-                                        );
+                                        CmdEndpoint.send_cmd_response(hid_conf.report_descriptor, setup.length);
                                     },
                                     .Physical => {
                                         if (debug) std.log.info("        Physical", .{});
@@ -352,11 +328,26 @@ pub fn Usb(comptime f: anytype) type {
                     switch (epb.endpoint.descriptor.endpoint_address) {
                         EP0_IN_ADDR => {
                             if (debug) std.log.info("    EP0_IN_ADDR", .{});
+                            
+                            const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
+                            const buffer_reader = &S.buffer_reader;
+                            
                             // We use this opportunity to finish the delayed
                             // SetAddress request, if there is one:
                             if (S.new_address) |addr| {
                                 // Change our address:
                                 f.set_address(@intCast(addr));
+                            }
+                            
+                            if (epb.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
+                                _ = buffer_reader.try_advance(epb.buffer.len);
+                                const next_data_chunk = buffer_reader.try_read(cmd_in_endpoint.descriptor.max_packet_size);
+                                if (next_data_chunk.len > 0) {
+                                    f.usb_start_tx(
+                                         cmd_in_endpoint,
+                                         next_data_chunk,
+                                     );
+                                }
                             } else {
                                 // Otherwise, we've just finished sending
                                 // something to the host. We expect an ensuing
@@ -840,6 +831,79 @@ pub const EPBIter = struct {
     device_config: *const DeviceConfiguration,
     /// Get the next available input buffer
     next: *const fn (self: *@This()) ?EPB,
+};
+
+const BufferWriter = struct {
+    buffer: []u8 = &.{},
+    pos: usize = 0,
+
+    pub fn new(buffer: []u8) BufferWriter {
+        return BufferWriter{ .buffer = buffer };
+    }
+
+    pub fn get_slice(self: *const @This()) []const u8 {
+        return self.buffer[0..self.pos];
+    }
+
+    pub fn advance(self: *@This(), bytes: usize) !void {
+        try self.bound_check(bytes);
+        self.pos += bytes;
+    }
+
+    pub fn write(self: *@This(), value: []const u8) !void {
+        try self.bound_check(value.len);
+        @memcpy(self.buffer[self.pos..self.pos + value.len], value);
+        try self.advance(value.len);
+    }
+
+    pub fn write_byte(self: *@This(), byte: u8) !void {
+        try self.bound_check(1);
+        self.buffer[self.pos] = byte;
+        try self.advance(1);
+    }
+
+    pub fn get_written_bytes_count(self: *const @This()) usize {
+        return self.pos;
+    }
+
+    fn bound_check(self: *const @This(), count: usize) !void {
+        if (self.pos + count > self.buffer.len) {
+            return error.OutOfBounds;
+        }
+    }
+};
+
+const BufferReader = struct {
+    buffer: []const u8 = &.{},
+    pos: usize = 0,
+
+    pub fn new(buffer: []const u8) BufferReader {
+        return BufferReader{ .buffer = buffer };
+    }
+
+    pub fn try_advance(self: *@This(), bytes: usize) usize {
+        const size = @min(bytes, self.buffer.len - self.pos);
+        self.pos += size;
+        return size;
+    }
+
+    pub fn try_read(self: *@This(), bytes: usize) []const u8 {
+        const size = @min(bytes, self.buffer.len - self.pos);
+        if (size == 0) return &.{};
+        const tmpPos = self.pos;
+        self.pos += size;
+        return self.buffer[tmpPos..tmpPos+size];
+    }
+
+    pub fn try_peek(self: *@This(), bytes: usize) []const u8 {
+        const size = @min(bytes, self.buffer.len - self.pos);
+        if (size == 0) return &.{};
+        return self.buffer[self.pos..self.pos+size];
+    }
+
+    pub fn get_remaining_bytes_count(self: *const @This()) usize {
+        return self.buffer.len - self.pos;
+    }
 };
 
 /// Convert an utf8 into an utf16 (little endian) string
