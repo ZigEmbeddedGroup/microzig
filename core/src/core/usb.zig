@@ -11,6 +11,7 @@
 //! 5. Call `usb.task()` within the main loop
 
 const std = @import("std");
+const builtin = @import("builtin");
 
 /// USB Human Interface Device (HID)
 pub const hid = @import("usb/hid.zig");
@@ -86,7 +87,7 @@ pub fn Usb(comptime f: anytype) type {
                 // descriptors for transmission.
                 var tmp: [128]u8 = .{0} ** 128;
                 // Keeps track of sent data from tmp buffer
-                var buffer_reader = BufferReader.new(&.{});
+                var buffer_reader = BufferReader { .buffer = &.{} };
             };
             
             // Command endpoint utilities
@@ -96,7 +97,7 @@ pub fn Usb(comptime f: anytype) type {
                 fn send_cmd_response(data: []const u8, expected_length: u16) void {
                     const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
 
-                    S.buffer_reader = BufferReader.new(data[0..@min(data.len, expected_length)]);
+                    S.buffer_reader = BufferReader { .buffer = data[0..@min(data.len, expected_length)] };
                     const data_chunk = S.buffer_reader.try_peek(cmd_in_endpoint.descriptor.max_packet_size);
 
                     if (data_chunk.len > 0) {
@@ -177,10 +178,10 @@ pub fn Usb(comptime f: anytype) type {
                                 // implementation.
                                 usb_config.?.endpoints[EP0_IN_IDX].next_pid_1 = true;
 
-                                var bw = BufferWriter.new(&S.tmp);
+                                var bw = BufferWriter { .buffer = &S.tmp };
                                 try bw.write(&usb_config.?.device_descriptor.serialize());
 
-                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
+                                CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                             },
                             .Config => {
                                 if (debug) std.log.info("        Config", .{});
@@ -190,7 +191,7 @@ pub fn Usb(comptime f: anytype) type {
                                 // but we can _also_ append our interface and
                                 // endpoint descriptors to the end, saving some
                                 // round trips.
-                                var bw = BufferWriter.new(&S.tmp);
+                                var bw = BufferWriter { .buffer = &S.tmp };
                                 try bw.write(&usb_config.?.config_descriptor.serialize());
                                 try bw.write(&usb_config.?.interface_descriptor.serialize());
 
@@ -206,7 +207,7 @@ pub fn Usb(comptime f: anytype) type {
                                     try bw.write(&ep.descriptor.serialize());
                                 }
 
-                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
+                                CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                             },
                             .String => {
                                 if (debug) std.log.info("        String", .{});
@@ -223,12 +224,12 @@ pub fn Usb(comptime f: anytype) type {
                                         const s = usb_config.?.descriptor_strings[i - 1];
                                         const len = 2 + s.len;
 
-                                        var wb = BufferWriter.new(&S.tmp);
-                                        try wb.write_byte(@intCast(len));
-                                        try wb.write_byte(0x03);
+                                        var wb = BufferWriter { .buffer = &S.tmp };
+                                        try wb.write_int(u8, @intCast(len));
+                                        try wb.write_int(u8,0x03);
                                         try wb.write(s);
 
-                                        break :StringBlk wb.get_slice();
+                                        break :StringBlk wb.get_written_slice();
                                     }
                                 };
                                 
@@ -263,10 +264,10 @@ pub fn Usb(comptime f: anytype) type {
                                     .num_configurations = usb_config.?.device_descriptor.num_configurations,
                                 };
 
-                                var bw = BufferWriter.new(&S.tmp);
+                                var bw = BufferWriter { .buffer = &S.tmp };
                                 try bw.write(&dqd.serialize());
 
-                                CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
+                                CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                             },
                         }
                     } else {
@@ -280,10 +281,10 @@ pub fn Usb(comptime f: anytype) type {
                                     .Hid => {
                                         if (debug) std.log.info("        HID", .{});
 
-                                        var bw = BufferWriter.new(&S.tmp);
+                                        var bw = BufferWriter { .buffer = &S.tmp };
                                         try bw.write(&hid_conf.hid_descriptor.serialize());
 
-                                        CmdEndpoint.send_cmd_response(bw.get_slice(), setup.length);
+                                        CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
                                     },
                                     .Report => {
                                         if (debug) std.log.info("        Report", .{});
@@ -384,6 +385,7 @@ pub fn Usb(comptime f: anytype) type {
                 S.new_address = null;
                 S.configured = false;
                 S.started = false;
+                S.buffer_reader = BufferReader { .buffer = &.{} };
             }
 
             // If we have been configured but haven't reached this point yet, set up
@@ -834,75 +836,89 @@ pub const EPBIter = struct {
 };
 
 const BufferWriter = struct {
-    buffer: []u8 = &.{},
+    buffer: []u8,
     pos: usize = 0,
+    endian: std.builtin.Endian = builtin.cpu.arch.endian(),
 
-    pub fn new(buffer: []u8) BufferWriter {
-        return BufferWriter{ .buffer = buffer };
+    pub const Error = error{ EndOfBuffer };
+
+    /// Moves forward write cursor by the provided number of bytes.
+    pub fn advance(self: *@This(), bytes: usize) Error!void {
+        try self.bound_check(bytes);
+        self.advance_unsafe(bytes);
     }
 
-    pub fn get_slice(self: *const @This()) []const u8 {
+    /// Writes data provided as a slice to the buffer and moves write cursor forward by data size.
+    pub fn write(self: *@This(), data: []const u8) Error!void {
+        try self.bound_check(data.len);
+        defer self.advance_unsafe(data.len);
+        @memcpy(self.buffer[self.pos..self.pos + data.len], data);
+    }
+
+    /// Writes an int with respect to the buffer's endianness and moves write cursor forward by int size.
+    pub fn write_int(self: *@This(), comptime T: type, value: T) Error!void {
+        const size = @divExact(@typeInfo(T).Int.bits, 8);
+        try self.bound_check(size);
+        defer self.advance_unsafe(size);
+        std.mem.writeInt(T, self.buffer[self.pos..][0..size], value, self.endian);
+    }
+
+    /// Writes an int with respect to the buffer's endianness but ship bound check.
+    /// Useful in cases where the bound can be checked once for batch of ints.
+    pub fn write_int_unsafe(self: *@This(), comptime T: type, value: T) void {
+        const size = @divExact(@typeInfo(T).Int.bits, 8);
+        defer self.advance_unsafe(size);
+        std.mem.writeInt(T, self.buffer[self.pos..][0..size], value, self.endian);
+    }
+
+    /// Returns a slice of the internal buffer containing the written data.
+    pub fn get_written_slice(self: *const @This()) []const u8 {
         return self.buffer[0..self.pos];
     }
 
-    pub fn advance(self: *@This(), bytes: usize) !void {
-        try self.bound_check(bytes);
+    /// Performs a buffer bound check against the current cursor position and the provided number of bytes to check forward.
+    pub fn bound_check(self: *const @This(), bytes: usize) Error!void {
+        if (self.pos + bytes > self.buffer.len) return error.EndOfBuffer;
+    }
+
+    fn advance_unsafe(self: *@This(), bytes: usize) void {
         self.pos += bytes;
-    }
-
-    pub fn write(self: *@This(), value: []const u8) !void {
-        try self.bound_check(value.len);
-        @memcpy(self.buffer[self.pos..self.pos + value.len], value);
-        try self.advance(value.len);
-    }
-
-    pub fn write_byte(self: *@This(), byte: u8) !void {
-        try self.bound_check(1);
-        self.buffer[self.pos] = byte;
-        try self.advance(1);
-    }
-
-    pub fn get_written_bytes_count(self: *const @This()) usize {
-        return self.pos;
-    }
-
-    fn bound_check(self: *const @This(), count: usize) !void {
-        if (self.pos + count > self.buffer.len) {
-            return error.OutOfBounds;
-        }
     }
 };
 
 const BufferReader = struct {
-    buffer: []const u8 = &.{},
+    buffer: []const u8,
     pos: usize = 0,
+    endian: std.builtin.Endian = builtin.cpu.arch.endian(),
 
-    pub fn new(buffer: []const u8) BufferReader {
-        return BufferReader{ .buffer = buffer };
-    }
-
+    /// Attempts to move read cursor forward by the specified number of bytes.
+    /// Returns the actual number of bytes advanced, up to the specified number.
     pub fn try_advance(self: *@This(), bytes: usize) usize {
         const size = @min(bytes, self.buffer.len - self.pos);
-        self.pos += size;
+        self.advance_unsafe(size);
         return size;
     }
 
+    /// Attempts to read the given amount of bytes (or less if close to buffer end) and advances the read cursor.
     pub fn try_read(self: *@This(), bytes: usize) []const u8 {
         const size = @min(bytes, self.buffer.len - self.pos);
-        if (size == 0) return &.{};
-        const tmpPos = self.pos;
-        self.pos += size;
-        return self.buffer[tmpPos..tmpPos+size];
+        defer self.advance_unsafe(size);
+        return self.buffer[self.pos..self.pos + size];
     }
 
+    /// Attempts to read the given amount of bytes (or less if close to buffer end) without advancing the read cursor.
     pub fn try_peek(self: *@This(), bytes: usize) []const u8 {
         const size = @min(bytes, self.buffer.len - self.pos);
-        if (size == 0) return &.{};
-        return self.buffer[self.pos..self.pos+size];
+        return self.buffer[self.pos..self.pos + size];
     }
 
+    /// Returns the number of bytes remaining from the current read cursor position to the end of the underlying buffer.
     pub fn get_remaining_bytes_count(self: *const @This()) usize {
         return self.buffer.len - self.pos;
+    }
+
+    fn advance_unsafe(self: *@This(), bytes: usize) void {
+        self.pos += bytes;
     }
 };
 
