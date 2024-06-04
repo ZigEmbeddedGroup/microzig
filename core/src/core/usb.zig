@@ -94,10 +94,10 @@ pub fn Usb(comptime f: anytype) type {
             const CmdEndpoint = struct {
 
                 /// Command response utility function that can split long data in multiple packets
-                fn send_cmd_response(data: []const u8, expected_length: u16) void {
+                fn send_cmd_response(data: []const u8, expected_max_length: u16) void {
                     const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
 
-                    S.buffer_reader = BufferReader { .buffer = data[0..@min(data.len, expected_length)] };
+                    S.buffer_reader = BufferReader { .buffer = data[0..@min(data.len, expected_max_length)] };
                     const data_chunk = S.buffer_reader.try_peek(cmd_in_endpoint.descriptor.max_packet_size);
 
                     if (data_chunk.len > 0) {
@@ -226,7 +226,7 @@ pub fn Usb(comptime f: anytype) type {
 
                                         var wb = BufferWriter { .buffer = &S.tmp };
                                         try wb.write_int(u8, @intCast(len));
-                                        try wb.write_int(u8,0x03);
+                                        try wb.write_int(u8, 0x03);
                                         try wb.write(s);
 
                                         break :StringBlk wb.get_written_slice();
@@ -863,7 +863,7 @@ const BufferWriter = struct {
         std.mem.writeInt(T, self.buffer[self.pos..][0..size], value, self.endian);
     }
 
-    /// Writes an int with respect to the buffer's endianness but ship bound check.
+    /// Writes an int with respect to the buffer's endianness but skip bound check.
     /// Useful in cases where the bound can be checked once for batch of ints.
     pub fn write_int_unsafe(self: *@This(), comptime T: type, value: T) void {
         const size = @divExact(@typeInfo(T).Int.bits, 8);
