@@ -348,6 +348,11 @@ pub fn Usb(comptime f: anytype) type {
                                          cmd_in_endpoint,
                                          next_data_chunk,
                                      );
+                                } else {
+                                    f.usb_start_rx(
+                                        usb_config.?.endpoints[EP0_OUT_IDX], // EP0_OUT_CFG,
+                                        0,
+                                    );
                                 }
                             } else {
                                 // Otherwise, we've just finished sending
