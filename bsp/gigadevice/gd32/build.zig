@@ -9,7 +9,7 @@ fn path(comptime suffix: []const u8) std.Build.LazyPath {
 }
 
 const hal = .{
-    .root_source_file = path("/src/hals/GD32VF103.zig"),
+    .root_source_file = path("/src/hals/GD32VF103/hal.zig"),
 };
 
 pub const chips = struct {

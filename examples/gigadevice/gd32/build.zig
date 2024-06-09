@@ -6,6 +6,7 @@ const available_examples = [_]Example{
     .{ .target = gd32.chips.gd32vf103xb, .name = "gd32vf103xb", .file = "src/empty.zig" },
     .{ .target = gd32.chips.gd32vf103x8, .name = "gd32vf103x8", .file = "src/empty.zig" },
     .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano", .file = "src/empty.zig" },
+    .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano_blinky", .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
@@ -32,7 +33,7 @@ pub fn build(b: *std.Build) void {
         microzig.install_firmware(b, firmware, .{});
 
         // For debugging, we also always install the firmware as an ELF file
-        microzig.install_firmware(b, firmware, .{ .format = .elf });
+        microzig.install_firmware(b, firmware, .{ .format = .bin });
     }
 }
 
