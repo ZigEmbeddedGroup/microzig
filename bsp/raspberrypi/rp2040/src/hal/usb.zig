@@ -7,9 +7,8 @@ const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
-/// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
-pub const prim = usb.hid;
+pub const prim = usb.prim;
 pub const desc = usb.desc;
 pub const hid = usb.hid;
 
