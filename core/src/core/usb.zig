@@ -14,7 +14,7 @@ const std = @import("std");
 const buffers = @import("buffers.zig");
 
 /// USB primitive types
-pub const prim = @import("usb/primitives.zig");
+pub const types = @import("usb/types.zig");
 /// USB common descriptors
 pub const desc = @import("usb/descriptors.zig");
 /// USB Human Interface Device (HID)
@@ -24,7 +24,7 @@ pub const cdc = @import("usb/cdc.zig");
 /// Configuration
 pub const config = @import("usb/config.zig");
 
-const DescType = prim.DescType;
+const DescType = types.DescType;
 const BufferReader = buffers.BufferReader;
 const BufferWriter = buffers.BufferWriter;
 const DeviceConfiguration = config.DeviceConfiguration;

@@ -8,7 +8,7 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
 pub const usb = microzig.core.usb;
-pub const prim = usb.prim;
+pub const types = usb.types;
 pub const desc = usb.desc;
 pub const hid = usb.hid;
 
@@ -33,11 +33,11 @@ pub const utils = usb.config.ConfigUtils;
 pub const templates = usb.config.DescriptorsConfigTemplates;
 
 pub const DeviceConfiguration = usb.config.DeviceConfiguration;
-pub const DescType = usb.prim.DescType;
+pub const DescType = usb.types.DescType;
 pub const EndpointDescriptor = usb.desc.EndpointDescriptor;
 pub const EndpointConfiguration = usb.config.EndpointConfiguration;
 pub const Dir = usb.Dir;
-pub const TransferType = usb.prim.TransferType;
+pub const TransferType = usb.types.TransferType;
 
 
 pub var EP0_OUT_CFG: EndpointConfiguration = .{

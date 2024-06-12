@@ -6,11 +6,11 @@
 const std = @import("std");
 const buffers = @import("../buffers.zig");
 
-const prim = @import("primitives.zig");
+const types = @import("types.zig");
 const desc = @import("descriptors.zig");
 
 const BufferWriter = buffers.BufferWriter;
-const DescType = prim.DescType;
+const DescType = types.DescType;
 
 pub const DescSubType = enum(u8) {
     Header = 0x00,

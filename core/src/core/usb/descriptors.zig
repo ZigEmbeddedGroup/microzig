@@ -2,10 +2,10 @@ const std = @import("std");
 const buffers = @import("../buffers.zig");
 
 /// USB primitive types
-const prim = @import("primitives.zig");
+const types = @import("types.zig");
 
 const BufferWriter = buffers.BufferWriter;
-const DescType = prim.DescType;
+const DescType = types.DescType;
 
 /// Describes an endpoint within an interface
 pub const EndpointDescriptor = struct {
