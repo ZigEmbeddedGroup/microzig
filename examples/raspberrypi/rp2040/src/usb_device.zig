@@ -14,6 +14,12 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const usb_packet_size = 64;
+const usb_config_len = usb.templates.config_descriptor_len + usb.templates.vendor_descriptor_len;
+const usb_config_descriptor = 
+        usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
+        usb.templates.vendor_descriptor(0, 0, usb.Dir.Out.endpoint(1), usb.Dir.In.endpoint(1), usb_packet_size);
+
 // First we define two callbacks that will be used by the endpoints we define next...
 fn ep1_in_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
     _ = data;
@@ -37,13 +43,7 @@ fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
 // The endpoints EP0_IN and EP0_OUT are already defined but you can
 // add your own endpoints to...
 pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Dir.Out.endpoint(1),
-        .attributes = @intFromEnum(usb.TransferType.Bulk),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
+    .descriptor = usb.utils.get_enpoint_descriptor(usb.Dir.Out.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 2,
     .buffer_control_index = 3,
     .data_buffer_index = 2,
@@ -53,13 +53,7 @@ pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Dir.In.endpoint(1),
-        .attributes = @intFromEnum(usb.TransferType.Bulk),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
+    .descriptor = usb.utils.get_enpoint_descriptor(usb.Dir.In.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 1,
     .buffer_control_index = 2,
     .data_buffer_index = 3,
@@ -85,33 +79,11 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .serial_s = 0,
         .num_configurations = 1,
     },
-    .interface_descriptor = &.{
-        .descriptor_type = usb.DescType.Interface,
-        .interface_number = 0,
-        .alternate_setting = 0,
-        // We have two endpoints (EP0 IN/OUT don't count)
-        .num_endpoints = 2,
-        .interface_class = 0xff,
-        .interface_subclass = 0,
-        .interface_protocol = 0,
-        .interface_s = 0,
-    },
-    .config_descriptor = &.{
-        .descriptor_type = usb.DescType.Config,
-        // This is calculated via the sizes of underlying descriptors contained in this configuration.
-        // ConfigurationDescriptor(9) + InterfaceDescriptor(9) * 1 + EndpointDescriptor(8) * 2
-        .total_length = 34,
-        .num_interfaces = 1,
-        .configuration_value = 1,
-        .configuration_s = 0,
-        .attributes = 0xc0,
-        .max_power = 0x32,
-    },
+    .config_descriptors = &usb_config_descriptor,
     .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
     .descriptor_strings = &.{
-        // ugly unicode :|
-        "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00",
-        "P\x00i\x00c\x00o\x00 \x00T\x00e\x00s\x00t\x00 \x00D\x00e\x00v\x00i\x00c\x00e\x00",
+        &usb.utf8ToUtf16Le("Raspberry Pi"),
+        &usb.utf8ToUtf16Le("Pico Test Device"),
     },
     // Here we pass all endpoints to the config
     // Dont forget to pass EP0_[IN|OUT] in the order seen below!

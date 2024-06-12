@@ -9,6 +9,7 @@ const peripherals = microzig.chip.peripherals;
 
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
+pub const desc = usb.desc;
 pub const hid = usb.hid;
 
 const rom = @import("rom.zig");
@@ -28,9 +29,11 @@ pub const EP0_IN_IDX = 1;
 /// are used by the abstract USB impl of microzig.
 pub const Usb = usb.Usb(F);
 
+pub const utils = usb.ConfigUtils;
+pub const templates = usb.DescriptorsConfigTemplates;
 pub const DeviceConfiguration = usb.DeviceConfiguration;
 pub const DeviceDescriptor = usb.DeviceDescriptor;
-pub const DescType = usb.DescType;
+pub const DescType = desc.DescType;
 pub const InterfaceDescriptor = usb.InterfaceDescriptor;
 pub const ConfigurationDescriptor = usb.ConfigurationDescriptor;
 pub const EndpointDescriptor = usb.EndpointDescriptor;
@@ -41,8 +44,8 @@ pub const TransferType = usb.TransferType;
 pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
+    .descriptor = &desc.EndpointDescriptor{
+        .descriptor_type = DescType.Endpoint,
         .endpoint_address = usb.EP0_OUT_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
         .max_packet_size = 64,
@@ -55,8 +58,8 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
+    .descriptor = &desc.EndpointDescriptor{
+        .descriptor_type = DescType.Endpoint,
         .endpoint_address = usb.EP0_IN_ADDR,
         .attributes = @intFromEnum(usb.TransferType.Control),
         .max_packet_size = 64,
