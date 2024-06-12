@@ -9,6 +9,7 @@ const peripherals = microzig.chip.peripherals;
 
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
+pub const prim = usb.hid;
 pub const desc = usb.desc;
 pub const hid = usb.hid;
 
@@ -29,25 +30,22 @@ pub const EP0_IN_IDX = 1;
 /// are used by the abstract USB impl of microzig.
 pub const Usb = usb.Usb(F);
 
-pub const utils = usb.ConfigUtils;
-pub const templates = usb.DescriptorsConfigTemplates;
-pub const DeviceConfiguration = usb.DeviceConfiguration;
-pub const DeviceDescriptor = usb.DeviceDescriptor;
-pub const DescType = desc.DescType;
-pub const InterfaceDescriptor = usb.InterfaceDescriptor;
-pub const ConfigurationDescriptor = usb.ConfigurationDescriptor;
-pub const EndpointDescriptor = usb.EndpointDescriptor;
-pub const EndpointConfiguration = usb.EndpointConfiguration;
+pub const utils = usb.config.ConfigUtils;
+pub const templates = usb.config.DescriptorsConfigTemplates;
+
+pub const DeviceConfiguration = usb.config.DeviceConfiguration;
+pub const DescType = usb.prim.DescType;
+pub const EndpointDescriptor = usb.desc.EndpointDescriptor;
+pub const EndpointConfiguration = usb.config.EndpointConfiguration;
 pub const Dir = usb.Dir;
-pub const TransferType = usb.TransferType;
+pub const TransferType = usb.prim.TransferType;
 
-pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
-pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &desc.EndpointDescriptor{
+pub var EP0_OUT_CFG: EndpointConfiguration = .{
+    .descriptor = &EndpointDescriptor{
         .descriptor_type = DescType.Endpoint,
         .endpoint_address = usb.EP0_OUT_ADDR,
-        .attributes = @intFromEnum(usb.TransferType.Control),
+        .attributes = @intFromEnum(TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -57,11 +55,11 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
     .next_pid_1 = false,
 };
 
-pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &desc.EndpointDescriptor{
+pub var EP0_IN_CFG: EndpointConfiguration = .{
+    .descriptor = &EndpointDescriptor{
         .descriptor_type = DescType.Endpoint,
         .endpoint_address = usb.EP0_IN_ADDR,
-        .attributes = @intFromEnum(usb.TransferType.Control),
+        .attributes = @intFromEnum(TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -153,7 +151,7 @@ pub const F = struct {
         // We now have the stable 48MHz reference clock required for USB:
     }
 
-    pub fn usb_init_device(device_config: *usb.DeviceConfiguration) void {
+    pub fn usb_init_device(device_config: *DeviceConfiguration) void {
         // Bring USB out of reset
         resets.reset(.{ .usbctrl = true });
 
@@ -307,7 +305,7 @@ pub const F = struct {
     /// reuse `buffer` immediately after this returns. No need to wait for the
     /// packet to be sent.
     pub fn usb_start_tx(
-        ep: *usb.EndpointConfiguration,
+        ep: *EndpointConfiguration,
         buffer: []const u8,
     ) void {
         // It is technically possible to support longer buffers but this demo
@@ -352,7 +350,7 @@ pub const F = struct {
     }
 
     pub fn usb_start_rx(
-        ep: *usb.EndpointConfiguration,
+        ep: *EndpointConfiguration,
         len: usize,
     ) void {
         // It is technically possible to support longer buffers but this demo
@@ -428,7 +426,7 @@ pub const F = struct {
         peripherals.USBCTRL_REGS.ADDR_ENDP.modify(.{ .ADDRESS = addr });
     }
 
-    pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
+    pub fn get_EPBIter(dc: *const DeviceConfiguration) usb.EPBIter {
         return .{
             .bufbits = peripherals.USBCTRL_REGS.BUFF_STATUS.raw,
             .device_config = dc,
@@ -610,7 +608,7 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
     // corresponds to this address. We could use a smarter
     // method here, but in practice, the number of endpoints is
     // small so a linear scan doesn't kill us.
-    var endpoint: ?*usb.EndpointConfiguration = null;
+    var endpoint: ?*EndpointConfiguration = null;
     for (self.device_config.endpoints) |ep| {
         if (ep.descriptor.endpoint_address == ep_addr) {
             endpoint = ep;

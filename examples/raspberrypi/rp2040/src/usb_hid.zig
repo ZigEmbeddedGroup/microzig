@@ -84,9 +84,9 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .config_descriptors = &usb_config_descriptor,
     .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
     .descriptor_strings = &.{
-        &usb.utf8ToUtf16Le("Raspberry Pi"),
-        &usb.utf8ToUtf16Le("Pico Test Device"),
-        &usb.utf8ToUtf16Le("cafebabe"),
+        &usb.utils.utf8ToUtf16Le("Raspberry Pi"),
+        &usb.utils.utf8ToUtf16Le("Pico Test Device"),
+        &usb.utils.utf8ToUtf16Le("cafebabe"),
     },
     .hid = .{
         .report_descriptor = &usb.hid.ReportDescriptorFidoU2f,

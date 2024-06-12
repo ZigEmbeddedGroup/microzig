@@ -1,28 +1,11 @@
 const std = @import("std");
 const buffers = @import("../buffers.zig");
 
-const BufferReader = buffers.BufferReader;
+/// USB primitive types
+const prim = @import("primitives.zig");
+
 const BufferWriter = buffers.BufferWriter;
-
-pub const DescType = enum(u8) {
-    Device = 0x01,
-    Config = 0x02,
-    String = 0x03,
-    Interface = 0x04,
-    Endpoint = 0x05,
-    DeviceQualifier = 0x06,
-    InterfaceAssociation = 0x0b,
-    //-------- Class Specific Descriptors ----------
-    CsDevice = 0x21,
-    CsConfig = 0x22,
-    CsString = 0x23,
-    CsInterface = 0x24,
-    CsEndpoint = 0x25,
-
-    pub fn from_u16(v: u16) ?@This() {
-        return std.meta.intToEnum(@This(), v) catch null;
-    }
-};
+const DescType = prim.DescType;
 
 /// Describes an endpoint within an interface
 pub const EndpointDescriptor = struct {
