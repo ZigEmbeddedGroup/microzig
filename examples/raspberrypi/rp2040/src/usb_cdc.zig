@@ -36,7 +36,7 @@ pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP2_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_enpoint_descriptor(usb_cdc_ep_out, usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb_cdc_ep_out, usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 2,
     .buffer_control_index = 3,
     .data_buffer_index = 2,
@@ -44,7 +44,7 @@ pub var EP2_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP2_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_enpoint_descriptor(usb_cdc_ep_in, usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb_cdc_ep_in, usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 1,
     .buffer_control_index = 2,
     .data_buffer_index = 3,

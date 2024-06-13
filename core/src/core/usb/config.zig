@@ -138,7 +138,7 @@ pub const DescriptorsConfigTemplates = struct {
 
 pub const ConfigUtils = struct {
     /// Get endpoint descriptor from array of configuration descriptors by endpoint address
-    pub fn get_enpoint_descriptor(comptime endpoint_address: u8, comptime N: usize, array: [N]DescriptorConfig) *const desc.EndpointDescriptor {
+    pub fn get_endpoint_descriptor(comptime endpoint_address: u8, comptime N: usize, array: [N]DescriptorConfig) *const desc.EndpointDescriptor {
         for (array) |config| {
             switch (config) {
                 .endpoint => |endpoint| {

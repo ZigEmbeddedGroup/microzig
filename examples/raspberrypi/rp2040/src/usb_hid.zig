@@ -43,7 +43,7 @@ fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
 // The endpoints EP0_IN and EP0_OUT are already defined but you can
 // add your own endpoints to...
 pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_enpoint_descriptor(usb.Dir.Out.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb.Dir.Out.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 2,
     .buffer_control_index = 3,
     .data_buffer_index = 2,
@@ -53,7 +53,7 @@ pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_enpoint_descriptor(usb.Dir.In.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb.Dir.In.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 1,
     .buffer_control_index = 2,
     .data_buffer_index = 3,
