@@ -25,6 +25,8 @@ pub const cdc = @import("usb/cdc.zig");
 pub const config = @import("usb/config.zig");
 
 const DescType = types.DescType;
+const Dir = types.Dir;
+const SetupRequest = types.SetupRequest;
 const BufferReader = buffers.BufferReader;
 const BufferWriter = buffers.BufferWriter;
 const DeviceConfiguration = config.DeviceConfiguration;
@@ -141,7 +143,7 @@ pub fn Usb(comptime f: anytype) type {
                 // Attempt to parse the request type and request into one of our
                 // known enum values, and then inspect them. (These will return None
                 // if we get an unexpected numeric value.)
-                const reqty = Dir.of_endpoint_addr(setup.request_type);
+                const reqty = setup.request_type.direction;
                 const req = SetupRequest.from_u8(setup.request);
 
                 if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetAddress) {
@@ -323,7 +325,7 @@ pub fn Usb(comptime f: anytype) type {
                     // will be whatever was sent by the host. For IN, it's a copy of
                     // whatever we sent.
                     switch (epb.endpoint.descriptor.endpoint_address) {
-                        EP0_IN_ADDR => {
+                        Endpoint.EP0_IN_ADDR => {
                             if (debug) std.log.info("    EP0_IN_ADDR", .{});
                             
                             const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
@@ -394,7 +396,7 @@ pub fn Usb(comptime f: anytype) type {
             if (S.configured and !S.started) {
                 // We can skip the first two endpoints because those are EP0_OUT and EP0_IN
                 for (usb_config.?.endpoints[2..]) |ep| {
-                    if (Dir.of_endpoint_addr(ep.descriptor.endpoint_address) == .Out) {
+                    if (Endpoint.dir_from_address(ep.descriptor.endpoint_address) == .Out) {
                         // Hey host! we expect data!
                         f.usb_start_rx(
                             ep,
@@ -408,84 +410,21 @@ pub fn Usb(comptime f: anytype) type {
     };
 }
 
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Data Types
-// +++++++++++++++++++++++++++++++++++++++++++++++++
 
-//            -------------------------
-//            |    DeviceDescriptor   |
-//            -------------------------
-//                        |
-//                        v
-//            -------------------------
-//            |   ConfigurationDesc   |
-//            -------------------------
-//                        |
-//                        v
-//            -------------------------
-//            | InterfaceDescriptor   |
-//            -------------------------
-//                        |    |
-//                        v    ------------------------------
-//            -------------------------                     |
-//            |  EndpointDescriptor   |                     v
-//            -------------------------            ---------------------
-//                                                 |   HID Descriptor  |
-//                                                 ---------------------
-
-/// The types of USB SETUP requests that we understand.
-pub const SetupRequest = enum(u8) {
-    /// Asks the device to send a certain descriptor back to the host. Always
-    /// used on an IN request.
-    GetDescriptor = 0x06,
-    /// Notifies the device that it's being moved to a different address on the
-    /// bus. Always an OUT.
-    SetAddress = 0x05,
-    /// Configures a device by choosing one of the options listed in its
-    /// descriptors. Always an OUT.
-    SetConfiguration = 0x09,
-
-    pub fn from_u8(request: u8) ?@This() {
-        return switch (request) {
-            0x06 => SetupRequest.GetDescriptor,
-            0x05 => SetupRequest.SetAddress,
-            0x09 => SetupRequest.SetConfiguration,
-            else => null,
+pub const Endpoint = struct {
+    pub inline fn to_address(num: u8, dir: Dir) u8 {
+        return switch (dir) {
+            .Out => num,
+            .In => num | Dir.DIR_IN_MASK
         };
     }
-};
 
-/// USB deals in two different transfer directions, called OUT (host-to-device)
-/// and IN (device-to-host). In the vast majority of cases, OUT is represented
-/// by a 0 byte, and IN by an `0x80` byte.
-pub const Dir = enum(u8) {
-    Out = 0,
-    In = 0x80,
-
-    pub inline fn endpoint(self: @This(), num: u8) u8 {
-        return num | @intFromEnum(self);
+    pub inline fn dir_from_address(addr: u8) Dir {
+        return if (addr & Dir.DIR_IN_MASK != 0) Dir.In else Dir.Out;
     }
 
-    pub inline fn of_endpoint_addr(addr: u8) @This() {
-        return if (addr & @intFromEnum(@This().In) != 0) @This().In else @This().Out;
-    }
-};
-
-/// Layout of an 8-byte USB SETUP packet.
-pub const SetupPacket = extern struct {
-    request_type: u8,
-    /// Request. Standard setup requests are in the `SetupRequest` enum.
-    /// Devices can extend this with additional types as long as they don't
-    /// conflict.
-    request: u8,
-    /// A simple argument of up to 16 bits, specific to the request.
-    value: u16,
-    /// Not used in the requests we support.
-    index: u16,
-    /// If data will be transferred after this request (in the direction given
-    /// by `request_type`), this gives the number of bytes (OUT) or maximum
-    /// number of bytes (IN).
-    length: u16,
+    pub const EP0_IN_ADDR: u8 = to_address(0, .In);
+    pub const EP0_OUT_ADDR: u8 = to_address(0, .Out);
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -511,13 +450,6 @@ pub const Buffers = struct {
         };
     }
 };
-
-// Handy constants for the endpoints we use here
-pub const EP0_IN_ADDR: u8 = Dir.In.endpoint(0);
-pub const EP0_OUT_ADDR: u8 = Dir.Out.endpoint(0);
-const EP1_OUT_ADDR: u8 = Dir.Out.endpoint(1);
-const EP1_IN_ADDR: u8 = Dir.In.endpoint(1);
-const EP2_IN_ADDR: u8 = Dir.In.endpoint(2);
 
 /// USB interrupt status
 ///

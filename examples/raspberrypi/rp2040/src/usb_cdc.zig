@@ -14,9 +14,9 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-const usb_cdc_ep_cmd = usb.Dir.In.endpoint(1);
-const usb_cdc_ep_out = usb.Dir.Out.endpoint(2);
-const usb_cdc_ep_in = usb.Dir.In.endpoint(2);
+const usb_cdc_ep_cmd = usb.Endpoint.to_address(1, .In);
+const usb_cdc_ep_out = usb.Endpoint.to_address(2, .Out);
+const usb_cdc_ep_in = usb.Endpoint.to_address(2, .In);
 const usb_cdc_cmd_max_size = 8;
 const usb_cdc_in_out_max_size = 64;
 

@@ -18,7 +18,7 @@ const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.vendor_descriptor_len;
 const usb_config_descriptor = 
         usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.vendor_descriptor(0, 0, usb.Dir.Out.endpoint(1), usb.Dir.In.endpoint(1), usb_packet_size);
+        usb.templates.vendor_descriptor(0, 0, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size);
 
 // First we define two callbacks that will be used by the endpoints we define next...
 fn ep1_in_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
@@ -43,7 +43,7 @@ fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
 // The endpoints EP0_IN and EP0_OUT are already defined but you can
 // add your own endpoints to...
 pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_endpoint_descriptor(usb.Dir.Out.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb.Endpoint.to_address(1, .Out), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 2,
     .buffer_control_index = 3,
     .data_buffer_index = 2,
@@ -53,7 +53,7 @@ pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_endpoint_descriptor(usb.Dir.In.endpoint(1), usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_endpoint_descriptor(usb.Endpoint.to_address(1, .In), usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 1,
     .buffer_control_index = 2,
     .data_buffer_index = 3,
