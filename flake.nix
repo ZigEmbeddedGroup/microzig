@@ -37,8 +37,8 @@
       in rec {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
-            pkgs.zigpkgs."0.11.0"
-            pkgs.llvmPackages_17.clangUseLLVM
+            pkgs.zigpkgs."0.13.0"
+            pkgs.llvmPackages.clangUseLLVM
           ];
 
           buildInputs = [
