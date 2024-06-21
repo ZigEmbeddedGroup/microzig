@@ -13,8 +13,15 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+/// USB primitive types
+pub const types = @import("usb/types.zig");
 /// USB Human Interface Device (HID)
 pub const hid = @import("usb/hid.zig");
+
+
+const DescType = types.DescType;
+const Dir = types.Dir;
+const SetupRequest = types.SetupRequest;
 
 /// Create a USB device
 ///
@@ -41,10 +48,6 @@ pub fn Usb(comptime f: anytype) type {
         /// The clock has been initialized [Y/n]
         var clk_init: bool = false;
 
-        /// Index of enpoint buffer 0 out
-        pub const EP0_OUT_IDX = 0;
-        /// Index of enpoint buffer 0 in
-        pub const EP0_IN_IDX = 1;
         /// The callbacks passed provided by the caller
         pub const callbacks = f;
 
@@ -95,7 +98,7 @@ pub fn Usb(comptime f: anytype) type {
 
                 /// Command response utility function that can split long data in multiple packets
                 fn send_cmd_response(data: []const u8, expected_max_length: u16) void {
-                    const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
+                    const cmd_in_endpoint = usb_config.?.endpoints[Endpoint.EP0_IN_IDX];
 
                     S.buffer_reader = BufferReader { .buffer = data[0..@min(data.len, expected_max_length)] };
                     const data_chunk = S.buffer_reader.try_peek(cmd_in_endpoint.descriptor.max_packet_size);
@@ -106,6 +109,13 @@ pub fn Usb(comptime f: anytype) type {
                             data_chunk
                         );
                     }
+                }
+
+                fn send_cmd_ack() void {
+                    f.usb_start_tx(
+                        usb_config.?.endpoints[Endpoint.EP0_IN_IDX],
+                        &.{},
+                    );
                 }
             };
 
@@ -122,12 +132,12 @@ pub fn Usb(comptime f: anytype) type {
                 // Reset PID to 1 for EP0 IN. Every DATA packet we send in response
                 // to an IN on EP0 needs to use PID DATA1, and this line will ensure
                 // that.
-                usb_config.?.endpoints[EP0_IN_IDX].next_pid_1 = true;
+                usb_config.?.endpoints[Endpoint.EP0_IN_IDX].next_pid_1 = true;
 
                 // Attempt to parse the request type and request into one of our
                 // known enum values, and then inspect them. (These will return None
                 // if we get an unexpected numeric value.)
-                const reqty = Dir.of_endpoint_addr(setup.request_type);
+                const reqty = setup.request_type.direction;
                 const req = SetupRequest.from_u8(setup.request);
 
                 if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetAddress) {
@@ -136,20 +146,14 @@ pub fn Usb(comptime f: anytype) type {
                     S.new_address = @as(u8, @intCast(setup.value & 0xff));
                     // The address will actually get set later, we have
                     // to use address 0 to send a status response.
-                    f.usb_start_tx(
-                        usb_config.?.endpoints[EP0_IN_IDX], //EP0_IN_CFG,
-                        &.{}, // <- see, empty buffer
-                    );
+                    CmdEndpoint.send_cmd_ack();
                     if (debug) std.log.info("    SetAddress: {}", .{S.new_address.?});
                 } else if (reqty == Dir.Out and req != null and req.? == SetupRequest.SetConfiguration) {
                     // We only have one configuration, and it doesn't really
                     // mean anything to us -- more of a formality. All we do in
                     // response to this is:
                     S.configured = true;
-                    f.usb_start_tx(
-                        usb_config.?.endpoints[EP0_IN_IDX], //EP0_IN_CFG,
-                        &.{}, // <- see, empty buffer
-                    );
+                    CmdEndpoint.send_cmd_ack();
                     if (debug) std.log.info("    SetConfiguration", .{});
                 } else if (reqty == Dir.Out) {
                     // This is sort of a hack, but: if we get any other kind of
@@ -159,10 +163,7 @@ pub fn Usb(comptime f: anytype) type {
                     // while we NAK.
                     //
                     // This behavior copied shamelessly from the C example.
-                    f.usb_start_tx(
-                        usb_config.?.endpoints[EP0_IN_IDX], // EP0_IN_CFG,
-                        &.{}, // <- see, empty buffer
-                    );
+                    CmdEndpoint.send_cmd_ack();
                     if (debug) std.log.info("    Just OUT", .{});
                 } else if (reqty == Dir.In and req != null and req.? == SetupRequest.GetDescriptor) {
                     // Identify the requested descriptor type, which is in the
@@ -176,7 +177,7 @@ pub fn Usb(comptime f: anytype) type {
                                 // TODO: this sure looks like a duplicate, but it's
                                 // a duplicate that was present in the C
                                 // implementation.
-                                usb_config.?.endpoints[EP0_IN_IDX].next_pid_1 = true;
+                                usb_config.?.endpoints[Endpoint.EP0_IN_IDX].next_pid_1 = true;
 
                                 var bw = BufferWriter { .buffer = &S.tmp };
                                 try bw.write(&usb_config.?.device_descriptor.serialize());
@@ -268,7 +269,7 @@ pub fn Usb(comptime f: anytype) type {
                                 try bw.write(&dqd.serialize());
 
                                 CmdEndpoint.send_cmd_response(bw.get_written_slice(), setup.length);
-                            },
+                            }
                         }
                     } else {
                         // Maybe the unknown request type is a hid request
@@ -327,10 +328,10 @@ pub fn Usb(comptime f: anytype) type {
                     // will be whatever was sent by the host. For IN, it's a copy of
                     // whatever we sent.
                     switch (epb.endpoint.descriptor.endpoint_address) {
-                        EP0_IN_ADDR => {
+                        Endpoint.EP0_IN_ADDR => {
                             if (debug) std.log.info("    EP0_IN_ADDR", .{});
                             
-                            const cmd_in_endpoint = usb_config.?.endpoints[EP0_IN_IDX];
+                            const cmd_in_endpoint = usb_config.?.endpoints[Endpoint.EP0_IN_IDX];
                             const buffer_reader = &S.buffer_reader;
                             
                             // We use this opportunity to finish the delayed
@@ -350,7 +351,7 @@ pub fn Usb(comptime f: anytype) type {
                                      );
                                 } else {
                                     f.usb_start_rx(
-                                        usb_config.?.endpoints[EP0_OUT_IDX], // EP0_OUT_CFG,
+                                        usb_config.?.endpoints[Endpoint.EP0_OUT_IDX], // EP0_OUT_CFG,
                                         0,
                                     );
                                 }
@@ -361,7 +362,7 @@ pub fn Usb(comptime f: anytype) type {
                                 // OUT) a zero-byte DATA packet, so, set that
                                 // up:
                                 f.usb_start_rx(
-                                    usb_config.?.endpoints[EP0_OUT_IDX], // EP0_OUT_CFG,
+                                    usb_config.?.endpoints[Endpoint.EP0_OUT_IDX], // EP0_OUT_CFG,
                                     0,
                                 );
                             }
@@ -398,7 +399,7 @@ pub fn Usb(comptime f: anytype) type {
             if (S.configured and !S.started) {
                 // We can skip the first two endpoints because those are EP0_OUT and EP0_IN
                 for (usb_config.?.endpoints[2..]) |ep| {
-                    if (Dir.of_endpoint_addr(ep.descriptor.endpoint_address) == .Out) {
+                    if (Endpoint.dir_from_address(ep.descriptor.endpoint_address) == .Out) {
                         // Hey host! we expect data!
                         f.usb_start_rx(
                             ep,
@@ -437,75 +438,23 @@ pub fn Usb(comptime f: anytype) type {
 //                                                 |   HID Descriptor  |
 //                                                 ---------------------
 
-/// Types of USB descriptor
-pub const DescType = enum(u8) {
-    Device = 0x01,
-    Config = 0x02,
-    String = 0x03,
-    Interface = 0x04,
-    Endpoint = 0x05,
-    DeviceQualifier = 0x06,
-    //-------- Class Specific Descriptors ----------
-    // 0x21 ...
-
-    pub fn from_u16(v: u16) ?@This() {
-        return switch (v) {
-            1 => @This().Device,
-            2 => @This().Config,
-            3 => @This().String,
-            4 => @This().Interface,
-            5 => @This().Endpoint,
-            6 => @This().DeviceQualifier,
-            else => null,
+pub const Endpoint = struct {
+    pub inline fn to_address(num: u8, dir: Dir) u8 {
+        return switch (dir) {
+            .Out => num,
+            .In => num | Dir.DIR_IN_MASK
         };
     }
-};
 
-/// Types of transfer that can be indicated by the `attributes` field on
-/// `EndpointDescriptor`.
-pub const TransferType = enum(u2) {
-    Control = 0,
-    Isochronous = 1,
-    Bulk = 2,
-    Interrupt = 3,
-};
-
-/// The types of USB SETUP requests that we understand.
-pub const SetupRequest = enum(u8) {
-    /// Asks the device to send a certain descriptor back to the host. Always
-    /// used on an IN request.
-    GetDescriptor = 0x06,
-    /// Notifies the device that it's being moved to a different address on the
-    /// bus. Always an OUT.
-    SetAddress = 0x05,
-    /// Configures a device by choosing one of the options listed in its
-    /// descriptors. Always an OUT.
-    SetConfiguration = 0x09,
-
-    pub fn from_u8(request: u8) ?@This() {
-        return switch (request) {
-            0x06 => SetupRequest.GetDescriptor,
-            0x05 => SetupRequest.SetAddress,
-            0x09 => SetupRequest.SetConfiguration,
-            else => null,
-        };
-    }
-};
-
-/// USB deals in two different transfer directions, called OUT (host-to-device)
-/// and IN (device-to-host). In the vast majority of cases, OUT is represented
-/// by a 0 byte, and IN by an `0x80` byte.
-pub const Dir = enum(u8) {
-    Out = 0,
-    In = 0x80,
-
-    pub inline fn endpoint(self: @This(), num: u8) u8 {
-        return num | @intFromEnum(self);
+    pub inline fn dir_from_address(addr: u8) Dir {
+        return if (addr & Dir.DIR_IN_MASK != 0) Dir.In else Dir.Out;
     }
 
-    pub inline fn of_endpoint_addr(addr: u8) @This() {
-        return if (addr & @intFromEnum(@This().In) != 0) @This().In else @This().Out;
-    }
+    pub const EP0_OUT_IDX = 0;
+    pub const EP0_IN_IDX = 1;
+
+    pub const EP0_IN_ADDR: u8 = to_address(0, .In);
+    pub const EP0_OUT_ADDR: u8 = to_address(0, .Out);
 };
 
 /// Describes an endpoint within an interface
@@ -707,23 +656,6 @@ pub const DeviceQualifierDescriptor = struct {
     }
 };
 
-/// Layout of an 8-byte USB SETUP packet.
-pub const SetupPacket = extern struct {
-    request_type: u8,
-    /// Request. Standard setup requests are in the `SetupRequest` enum.
-    /// Devices can extend this with additional types as long as they don't
-    /// conflict.
-    request: u8,
-    /// A simple argument of up to 16 bits, specific to the request.
-    value: u16,
-    /// Not used in the requests we support.
-    index: u16,
-    /// If data will be transferred after this request (in the direction given
-    /// by `request_type`), this gives the number of bytes (OUT) or maximum
-    /// number of bytes (IN).
-    length: u16,
-};
-
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Driver support stuctures
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -787,13 +719,6 @@ pub const Buffers = struct {
         };
     }
 };
-
-// Handy constants for the endpoints we use here
-pub const EP0_IN_ADDR: u8 = Dir.In.endpoint(0);
-pub const EP0_OUT_ADDR: u8 = Dir.Out.endpoint(0);
-const EP1_OUT_ADDR: u8 = Dir.Out.endpoint(1);
-const EP1_IN_ADDR: u8 = Dir.In.endpoint(1);
-const EP2_IN_ADDR: u8 = Dir.In.endpoint(2);
 
 /// USB interrupt status
 ///

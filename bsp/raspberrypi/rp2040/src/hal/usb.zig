@@ -30,21 +30,22 @@ pub const Usb = usb.Usb(F);
 
 pub const DeviceConfiguration = usb.DeviceConfiguration;
 pub const DeviceDescriptor = usb.DeviceDescriptor;
-pub const DescType = usb.DescType;
+pub const DescType = usb.types.DescType;
 pub const InterfaceDescriptor = usb.InterfaceDescriptor;
 pub const ConfigurationDescriptor = usb.ConfigurationDescriptor;
 pub const EndpointDescriptor = usb.EndpointDescriptor;
 pub const EndpointConfiguration = usb.EndpointConfiguration;
-pub const Dir = usb.Dir;
-pub const TransferType = usb.TransferType;
+pub const Dir = usb.types.Dir;
+pub const TransferType = usb.types.TransferType;
+pub const Endpoint = usb.Endpoint;
 
 pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.EP0_OUT_ADDR,
-        .attributes = @intFromEnum(usb.TransferType.Control),
+        .descriptor_type = usb.types.DescType.Endpoint,
+        .endpoint_address = usb.Endpoint.EP0_OUT_ADDR,
+        .attributes = @intFromEnum(usb.types.TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -56,9 +57,9 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
 
 pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.EP0_IN_ADDR,
-        .attributes = @intFromEnum(usb.TransferType.Control),
+        .descriptor_type = usb.types.DescType.Endpoint,
+        .endpoint_address = usb.Endpoint.EP0_IN_ADDR,
+        .attributes = @intFromEnum(usb.types.TransferType.Control),
         .max_packet_size = 64,
         .interval = 0,
     },
@@ -392,7 +393,7 @@ pub const F = struct {
     ///
     /// One can assume that this function is only called if the
     /// setup request falg is set.
-    pub fn get_setup_packet() usb.SetupPacket {
+    pub fn get_setup_packet() usb.types.SetupPacket {
         // Clear the status flag (write-one-to-clear)
         peripherals.USBCTRL_REGS.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
@@ -411,7 +412,7 @@ pub const F = struct {
         _ = rom.memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
         _ = rom.memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
         // Reinterpret as setup packet
-        return std.mem.bytesToValue(usb.SetupPacket, &setup_packet);
+        return std.mem.bytesToValue(usb.types.SetupPacket, &setup_packet);
     }
 
     /// Called on a bus reset interrupt
@@ -596,9 +597,9 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
     const epnum = @as(u8, @intCast(lowbit_index >> 1));
     // Of the pair, the IN endpoint comes first, followed by OUT, so
     // we can get the direction by:
-    const dir = if (lowbit_index & 1 == 0) usb.Dir.In else usb.Dir.Out;
+    const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
 
-    const ep_addr = dir.endpoint(epnum);
+    const ep_addr = usb.Endpoint.to_address(epnum, dir);
     // Process the buffer-done event.
 
     // Process the buffer-done event.

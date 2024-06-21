@@ -39,7 +39,7 @@ fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
 pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
         .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Dir.Out.endpoint(1),
+        .endpoint_address = usb.Endpoint.to_address(1, .Out),
         .attributes = @intFromEnum(usb.TransferType.Bulk),
         .max_packet_size = 64,
         .interval = 0,
@@ -55,7 +55,7 @@ pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
     .descriptor = &usb.EndpointDescriptor{
         .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Dir.In.endpoint(1),
+        .endpoint_address = usb.Endpoint.to_address(1, .In),
         .attributes = @intFromEnum(usb.TransferType.Bulk),
         .max_packet_size = 64,
         .interval = 0,
