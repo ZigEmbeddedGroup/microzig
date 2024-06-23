@@ -14,59 +14,11 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-// First we define two callbacks that will be used by the endpoints we define next...
-fn ep1_in_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
-    _ = data;
-    // The host has collected the data we repeated onto
-    // EP1! Set up to receive more data on EP1.
-    usb.Usb.callbacks.usb_start_rx(
-        dc.endpoints[2], // EP1_OUT_CFG,
-        64,
-    );
-}
-
-fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
-    // We've gotten data from the host on our custom
-    // EP1! Set up EP1 to repeat it.
-    usb.Usb.callbacks.usb_start_tx(
-        dc.endpoints[3], // EP1_IN_CFG,
-        data,
-    );
-}
-
-// The endpoints EP0_IN and EP0_OUT are already defined but you can
-// add your own endpoints to...
-pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Endpoint.to_address(1, .Out),
-        .attributes = @intFromEnum(usb.TransferType.Interrupt),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
-    .endpoint_control_index = 2,
-    .buffer_control_index = 3,
-    .data_buffer_index = 2,
-    .next_pid_1 = false,
-    // The callback will be executed if we got an interrupt on EP1_OUT
-    .callback = ep1_out_callback,
-};
-
-pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
-        .descriptor_type = usb.DescType.Endpoint,
-        .endpoint_address = usb.Endpoint.to_address(1, .In),
-        .attributes = @intFromEnum(usb.TransferType.Interrupt),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
-    .endpoint_control_index = 1,
-    .buffer_control_index = 2,
-    .data_buffer_index = 3,
-    .next_pid_1 = false,
-    // The callback will be executed if we got an interrupt on EP1_IN
-    .callback = ep1_in_callback,
-};
+const usb_packet_size = 64;
+const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
+const usb_config_descriptor = 
+        usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
+        usb.templates.hid_in_out_descriptor(0, 0, 0, 34, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size, 0);
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
@@ -87,45 +39,14 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .serial_s = 3,
         .num_configurations = 1,
     },
-    .interface_descriptor = &.{
-        .descriptor_type = usb.DescType.Interface,
-        .interface_number = 0,
-        .alternate_setting = 0,
-        // We have two endpoints (EP0 IN/OUT don't count)
-        .num_endpoints = 2,
-        .interface_class = 3,
-        .interface_subclass = 0,
-        .interface_protocol = 0,
-        .interface_s = 0,
-    },
-    .config_descriptor = &.{
-        .descriptor_type = usb.DescType.Config,
-        // This is calculated via the sizes of underlying descriptors contained in this configuration.
-        // ConfigurationDescriptor(9) + InterfaceDescriptor(9) * 1 + EndpointDescriptor(8) * 2
-        .total_length = 34,
-        .num_interfaces = 1,
-        .configuration_value = 1,
-        .configuration_s = 0,
-        .attributes = 0xc0,
-        .max_power = 0x32,
-    },
+    .config_descriptor = &usb_config_descriptor,
     .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
     .descriptor_strings = &.{
-        // ugly unicode :|
-        //"R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00",
-        &usb.utf8ToUtf16Le("Raspberry Pi"),
-        //"P\x00i\x00c\x00o\x00 \x00T\x00e\x00s\x00t\x00 \x00D\x00e\x00v\x00i\x00c\x00e\x00",
-        &usb.utf8ToUtf16Le("Pico Test Device"),
-        //"c\x00a\x00f\x00e\x00b\x00a\x00b\x00e\x00",
-        &usb.utf8ToUtf16Le("cafebabe"),
+        &usb.utils.utf8ToUtf16Le("Raspberry Pi"),
+        &usb.utils.utf8ToUtf16Le("Pico Test Device"),
+        &usb.utils.utf8ToUtf16Le("cafebabe"),
     },
     .hid = .{
-        .hid_descriptor = &.{
-            .bcd_hid = 0x0111,
-            .country_code = 0,
-            .num_descriptors = 1,
-            .report_length = 34,
-        },
         .report_descriptor = &usb.hid.ReportDescriptorFidoU2f,
     },
     // Here we pass all endpoints to the config
@@ -133,8 +54,6 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .endpoints = .{
         &usb.EP0_OUT_CFG,
         &usb.EP0_IN_CFG,
-        &EP1_OUT_CFG,
-        &EP1_IN_CFG,
     },
 };
 
@@ -172,7 +91,7 @@ pub fn main() !void {
     while (true) {
         // You can now poll for USB events
         rp2040.usb.Usb.task(
-            true, // debug output over UART [Y/n]
+            false, // debug output over UART [Y/n]
         ) catch unreachable;
 
         new = time.get_time_since_boot().to_us();

@@ -14,24 +14,30 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const usb_cdc_ep_cmd = usb.Endpoint.to_address(1, .In);
+const usb_cdc_ep_out = usb.Endpoint.to_address(2, .Out);
+const usb_cdc_ep_in = usb.Endpoint.to_address(2, .In);
+const usb_cdc_cmd_max_size = 8;
+const usb_cdc_in_out_max_size = 64;
+
 const usb_packet_size = 64;
-const usb_config_len = usb.templates.config_descriptor_len + usb.templates.vendor_descriptor_len;
+const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
 const usb_config_descriptor = 
-        usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.vendor_descriptor(0, 0, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size);
+        usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
+        usb.templates.cdc_descriptor(0, 4, usb_cdc_ep_cmd, usb_cdc_cmd_max_size, usb_cdc_ep_out, usb_cdc_ep_in, usb_cdc_in_out_max_size);
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .device_descriptor = &.{
         .descriptor_type = usb.DescType.Device,
-        .bcd_usb = 0x0110,
+        .bcd_usb = 0x0200,
         .device_class = 0,
         .device_subclass = 0,
         .device_protocol = 0,
         .max_packet_size0 = 64,
         .vendor = 0,
         .product = 1,
-        .bcd_device = 0,
+        .bcd_device = 0x0100,
         .manufacturer_s = 1,
         .product_s = 2,
         .serial_s = 0,
@@ -42,6 +48,8 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .descriptor_strings = &.{
         &usb.utils.utf8ToUtf16Le("Raspberry Pi"),
         &usb.utils.utf8ToUtf16Le("Pico Test Device"),
+        &usb.utils.utf8ToUtf16Le("someserial"),
+        &usb.utils.utf8ToUtf16Le("Board CDC"),
     },
     // Here we pass all endpoints to the config
     // Dont forget to pass EP0_[IN|OUT] in the order seen below!

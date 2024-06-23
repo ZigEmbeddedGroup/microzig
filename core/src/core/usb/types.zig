@@ -7,6 +7,12 @@ pub const DescType = enum(u8) {
     Interface            = 0x04,
     Endpoint             = 0x05,
     DeviceQualifier      = 0x06,
+    InterfaceAssociation = 0x0b,
+    CsDevice             = 0x21,
+    CsConfig             = 0x22,
+    CsString             = 0x23,
+    CsInterface          = 0x24,
+    CsEndpoint           = 0x25,
 
     pub fn from_u16(v: u16) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -107,4 +113,236 @@ pub const SetupPacket = extern struct {
     /// by `request_type`), this gives the number of bytes (OUT) or maximum
     /// number of bytes (IN).
     length: u16,
+};
+
+/// Describes an endpoint within an interface
+pub const EndpointDescriptor = struct {
+    /// Type of this descriptor, must be `Endpoint`.
+    descriptor_type: DescType = DescType.Endpoint,
+    /// Address of this endpoint, where the bottom 4 bits give the endpoint
+    /// number (0..15) and the top bit distinguishes IN (1) from OUT (0).
+    endpoint_address: u8,
+    /// Endpoint attributes; the most relevant part is the bottom 2 bits, which
+    /// control the transfer type using the values from `TransferType`.
+    attributes: u8,
+    /// Maximum packet size this endpoint can accept/produce.
+    max_packet_size: u16,
+    /// Interval for polling interrupt/isochronous endpoints (which we don't
+    /// currently support) in milliseconds.
+    interval: u8,
+
+    pub fn serialize(self: *const @This()) [7]u8 {
+        var out: [7]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = self.endpoint_address;
+        out[3] = self.attributes;
+        out[4] = @intCast(self.max_packet_size & 0xff);
+        out[5] = @intCast((self.max_packet_size >> 8) & 0xff);
+        out[6] = self.interval;
+        return out;
+    }
+};
+
+/// Description of an interface within a configuration.
+pub const InterfaceDescriptor = struct {
+    /// Type of this descriptor, must be `Interface`.
+    descriptor_type: DescType = DescType.Interface,
+    /// ID of this interface.
+    interface_number: u8,
+    /// Allows a single `interface_number` to have several alternate interface
+    /// settings, where each alternate increments this field. Normally there's
+    /// only one, and `alternate_setting` is zero.
+    alternate_setting: u8,
+    /// Number of endpoint descriptors in this interface.
+    num_endpoints: u8,
+    /// Interface class code, distinguishing the type of interface.
+    interface_class: u8,
+    /// Interface subclass code, refining the class of interface.
+    interface_subclass: u8,
+    /// Protocol within the interface class/subclass.
+    interface_protocol: u8,
+    /// Index of interface name within string descriptor table.
+    interface_s: u8,
+
+    pub fn serialize(self: *const @This()) [9]u8 {
+        var out: [9]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = self.interface_number;
+        out[3] = self.alternate_setting;
+        out[4] = self.num_endpoints;
+        out[5] = self.interface_class;
+        out[6] = self.interface_subclass;
+        out[7] = self.interface_protocol;
+        out[8] = self.interface_s;
+        return out;
+    }
+};
+
+/// USB interface association descriptor (IAD) allows the device to group interfaces that belong to a function.
+pub const InterfaceAssociationDescriptor = struct {
+    // Type of this descriptor, must be `InterfaceAssociation`.
+    descriptor_type: DescType = DescType.InterfaceAssociation,
+    // First interface number of the set of interfaces that follow this
+    // descriptor.
+    first_interface: u8,
+    // The number of interfaces that follow this descriptor that are considered
+    // associated.
+    interface_count: u8,
+    // The interface class used for associated interfaces.
+    function_class: u8,
+    // The interface subclass used for associated interfaces.
+    function_subclass: u8,
+    // The interface protocol used for associated interfaces.
+    function_protocol: u8,
+    // Index of the string descriptor describing the associated interfaces.
+    function: u8,
+
+    pub fn serialize(self: *const @This()) [8]u8 {
+        var out: [8]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = self.first_interface;
+        out[3] = self.interface_count;
+        out[4] = self.function_class;
+        out[5] = self.function_subclass;
+        out[6] = self.function_protocol;
+        out[7] = self.function;
+        return out;
+    }
+};
+
+/// Description of a single available device configuration.
+pub const ConfigurationDescriptor = struct {
+    /// Type of this descriptor, must be `Config`.
+    descriptor_type: DescType = DescType.Config,
+    /// Total length of all descriptors in this configuration, concatenated.
+    /// This will include this descriptor, plus at least one interface
+    /// descriptor, plus each interface descriptor's endpoint descriptors.
+    total_length: u16,
+    /// Number of interface descriptors in this configuration.
+    num_interfaces: u8,
+    /// Number to use when requesting this configuration via a
+    /// `SetConfiguration` request.
+    configuration_value: u8,
+    /// Index of this configuration's name in the string descriptor table.
+    configuration_s: u8,
+    /// Bit set of device attributes:
+    ///
+    /// - Bit 7 should be set (indicates that device can be bus powered in USB
+    /// 1.0).
+    /// - Bit 6 indicates that the device can be self-powered.
+    /// - Bit 5 indicates that the device can signal remote wakeup of the host
+    /// (like a keyboard).
+    /// - The rest are reserved and should be zero.
+    attributes: u8,
+    /// Maximum device power consumption in units of 2mA.
+    max_power: u8,
+
+    pub fn serialize(self: *const @This()) [9]u8 {
+        var out: [9]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = @intCast(self.total_length & 0xff);
+        out[3] = @intCast((self.total_length >> 8) & 0xff);
+        out[4] = self.num_interfaces;
+        out[5] = self.configuration_value;
+        out[6] = self.configuration_s;
+        out[7] = self.attributes;
+        out[8] = self.max_power;
+        return out;
+    }
+};
+
+/// Describes a device. This is the most broad description in USB and is
+/// typically the first thing the host asks for.
+pub const DeviceDescriptor = struct {
+    /// Type of this descriptor, must be `Device`.
+    descriptor_type: DescType = DescType.Device,
+    /// Version of the device descriptor / USB protocol, in binary-coded
+    /// decimal. This is typically `0x01_10` for USB 1.1.
+    bcd_usb: u16,
+    /// Class of device, giving a broad functional area.
+    device_class: u8,
+    /// Subclass of device, refining the class.
+    device_subclass: u8,
+    /// Protocol within the subclass.
+    device_protocol: u8,
+    /// Maximum unit of data this device can move.
+    max_packet_size0: u8,
+    /// ID of product vendor.
+    vendor: u16,
+    /// ID of product.
+    product: u16,
+    /// Device version number, as BCD again.
+    bcd_device: u16,
+    /// Index of manufacturer name in string descriptor table.
+    manufacturer_s: u8,
+    /// Index of product name in string descriptor table.
+    product_s: u8,
+    /// Index of serial number in string descriptor table.
+    serial_s: u8,
+    /// Number of configurations supported by this device.
+    num_configurations: u8,
+
+    pub fn serialize(self: *const @This()) [18]u8 {
+        var out: [18]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = @intCast(self.bcd_usb & 0xff);
+        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
+        out[4] = self.device_class;
+        out[5] = self.device_subclass;
+        out[6] = self.device_protocol;
+        out[7] = self.max_packet_size0;
+        out[8] = @intCast(self.vendor & 0xff);
+        out[9] = @intCast((self.vendor >> 8) & 0xff);
+        out[10] = @intCast(self.product & 0xff);
+        out[11] = @intCast((self.product >> 8) & 0xff);
+        out[12] = @intCast(self.bcd_device & 0xff);
+        out[13] = @intCast((self.bcd_device >> 8) & 0xff);
+        out[14] = self.manufacturer_s;
+        out[15] = self.product_s;
+        out[16] = self.serial_s;
+        out[17] = self.num_configurations;
+        return out;
+    }
+};
+
+/// USB Device Qualifier Descriptor
+/// This descriptor is mostly the same as the DeviceDescriptor
+pub const DeviceQualifierDescriptor = struct {
+    /// Type of this descriptor, must be `Device`.
+    descriptor_type: DescType = DescType.DeviceQualifier,
+    /// Version of the device descriptor / USB protocol, in binary-coded
+    /// decimal. This is typically `0x01_10` for USB 1.1.
+    bcd_usb: u16,
+    /// Class of device, giving a broad functional area.
+    device_class: u8,
+    /// Subclass of device, refining the class.
+    device_subclass: u8,
+    /// Protocol within the subclass.
+    device_protocol: u8,
+    /// Maximum unit of data this device can move.
+    max_packet_size0: u8,
+    /// Number of configurations supported by this device.
+    num_configurations: u8,
+    /// Reserved for future use; must be 0
+    reserved: u8 = 0,
+
+    pub fn serialize(self: *const @This()) [10]u8 {
+        var out: [10]u8 = undefined;
+        out[0] = out.len;
+        out[1] = @intFromEnum(self.descriptor_type);
+        out[2] = @intCast(self.bcd_usb & 0xff);
+        out[3] = @intCast((self.bcd_usb >> 8) & 0xff);
+        out[4] = self.device_class;
+        out[5] = self.device_subclass;
+        out[6] = self.device_protocol;
+        out[7] = self.max_packet_size0;
+        out[8] = self.num_configurations;
+        out[9] = self.reserved;
+        return out;
+    }
 };

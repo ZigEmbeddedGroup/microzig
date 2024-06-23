@@ -10,6 +10,8 @@ const peripherals = microzig.chip.peripherals;
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
 pub const hid = usb.hid;
+pub const templates = usb.templates.DescriptorsConfigTemplates;
+pub const utils = usb.UsbUtils;
 
 const rom = @import("rom.zig");
 const resets = @import("resets.zig");
@@ -31,9 +33,9 @@ pub const Usb = usb.Usb(F);
 pub const DeviceConfiguration = usb.DeviceConfiguration;
 pub const DeviceDescriptor = usb.DeviceDescriptor;
 pub const DescType = usb.types.DescType;
-pub const InterfaceDescriptor = usb.InterfaceDescriptor;
-pub const ConfigurationDescriptor = usb.ConfigurationDescriptor;
-pub const EndpointDescriptor = usb.EndpointDescriptor;
+pub const InterfaceDescriptor = usb.types.InterfaceDescriptor;
+pub const ConfigurationDescriptor = usb.types.ConfigurationDescriptor;
+pub const EndpointDescriptor = usb.types.EndpointDescriptor;
 pub const EndpointConfiguration = usb.EndpointConfiguration;
 pub const Dir = usb.types.Dir;
 pub const TransferType = usb.types.TransferType;
@@ -42,7 +44,7 @@ pub const Endpoint = usb.Endpoint;
 pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
+    .descriptor = &usb.types.EndpointDescriptor{
         .descriptor_type = usb.types.DescType.Endpoint,
         .endpoint_address = usb.Endpoint.EP0_OUT_ADDR,
         .attributes = @intFromEnum(usb.types.TransferType.Control),
@@ -56,7 +58,7 @@ pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
 };
 
 pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.EndpointDescriptor{
+    .descriptor = &usb.types.EndpointDescriptor{
         .descriptor_type = usb.types.DescType.Endpoint,
         .endpoint_address = usb.Endpoint.EP0_IN_ADDR,
         .attributes = @intFromEnum(usb.types.TransferType.Control),
