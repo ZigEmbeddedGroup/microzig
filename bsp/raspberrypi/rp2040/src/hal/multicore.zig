@@ -5,7 +5,7 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const SIO = peripherals.SIO;
 const PSM = peripherals.PSM;
-const SCB = peripherals.SCB;
+const PPB = peripherals.PPB;
 
 pub const fifo = struct {
     /// Check if the FIFO has valid data for reading.
@@ -92,7 +92,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         0,
         0,
         1,
-        SCB.VTOR.raw,
+        PPB.VTOR.raw,
         stack_ptr,
         @intFromPtr(wrapper),
     };
