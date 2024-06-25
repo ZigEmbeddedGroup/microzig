@@ -9,7 +9,10 @@ const peripherals = microzig.chip.peripherals;
 
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
+pub const types = usb.types;
 pub const hid = usb.hid;
+pub const cdc = usb.cdc;
+pub const vendor = usb.vendor;
 pub const templates = usb.templates.DescriptorsConfigTemplates;
 pub const utils = usb.UsbUtils;
 
@@ -39,36 +42,19 @@ pub const EndpointDescriptor = usb.types.EndpointDescriptor;
 pub const EndpointConfiguration = usb.EndpointConfiguration;
 pub const Dir = usb.types.Dir;
 pub const TransferType = usb.types.TransferType;
-pub const Endpoint = usb.Endpoint;
+pub const Endpoint = usb.types.Endpoint;
 
 pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
-pub var EP0_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.types.EndpointDescriptor{
-        .descriptor_type = usb.types.DescType.Endpoint,
-        .endpoint_address = usb.Endpoint.EP0_OUT_ADDR,
-        .attributes = @intFromEnum(usb.types.TransferType.Control),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
-    .endpoint_control_index = null,
-    .buffer_control_index = 1,
-    .data_buffer_index = 0,
-    .next_pid_1 = false,
-};
-
-pub var EP0_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = &usb.types.EndpointDescriptor{
-        .descriptor_type = usb.types.DescType.Endpoint,
-        .endpoint_address = usb.Endpoint.EP0_IN_ADDR,
-        .attributes = @intFromEnum(usb.types.TransferType.Control),
-        .max_packet_size = 64,
-        .interval = 0,
-    },
-    .endpoint_control_index = null,
-    .buffer_control_index = 0,
-    .data_buffer_index = 0,
-    .next_pid_1 = false,
+const HardwareEndpoint = struct {
+    configured: bool,
+    ep_addr: u8,
+    next_pid_1: bool,
+    max_packet_size: u16,
+    transfer_type: types.TransferType,
+    endpoint_control_index: usize,
+    buffer_control_index: usize,
+    data_buffer_index: usize,
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -121,6 +107,9 @@ pub const buffers = struct {
 /// A set of functions required by the abstract USB impl to
 /// create a concrete one.
 pub const F = struct {
+    // Fixed number 4, probably should be comptime number up to 16
+    var endpoints: [4][2]HardwareEndpoint = undefined;
+
     /// Initialize the USB clock to 48 MHz
     ///
     /// This requres that the system clock has been set up before hand
@@ -153,7 +142,7 @@ pub const F = struct {
         // We now have the stable 48MHz reference clock required for USB:
     }
 
-    pub fn usb_init_device(device_config: *usb.DeviceConfiguration) void {
+    pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
         // Bring USB out of reset
         resets.reset(.{ .usbctrl = true });
 
@@ -267,33 +256,9 @@ pub const F = struct {
             .SETUP_REQ = 1,
         });
 
-        // setup endpoints
-        for (device_config.endpoints) |ep| {
-            // EP0 doesn't have an endpoint control index; only process the other
-            // endpoints here.
-            if (ep.endpoint_control_index) |epci| {
-                // We need to compute the offset from the base of USB SRAM to the
-                // buffer we're choosing, because that's how the peripheral do.
-                const buf_base = @intFromPtr(buffers.B.get(ep.data_buffer_index));
-                const dpram_base = @intFromPtr(peripherals.USBCTRL_DPRAM);
-                // The offset _should_ fit in a u16, but if we've gotten something
-                // wrong in the past few lines, a common symptom will be integer
-                // overflow producing a Very Large Number,
-                const dpram_offset = @as(u16, @intCast(buf_base - dpram_base));
-
-                // Configure the endpoint!
-                modify_endpoint_control(epci, .{
-                    .ENABLE = 1,
-                    // Please set the corresponding bit in buff_status when a
-                    // buffer is done, thx.
-                    .INTERRUPT_PER_BUFF = 1,
-                    // Select bulk vs control (or interrupt as soon as implemented).
-                    .ENDPOINT_TYPE = .{ .raw = @as(u2, @intCast(ep.descriptor.attributes)) },
-                    // And, designate our buffer by its offset.
-                    .BUFFER_ADDRESS = dpram_offset,
-                });
-            }
-        }
+        @memset(std.mem.asBytes(&endpoints), 0);
+        endpoint_init(Endpoint.EP0_IN_ADDR, 64, types.TransferType.Control);
+        endpoint_init(Endpoint.EP0_OUT_ADDR, 64, types.TransferType.Control);
 
         // Present full-speed device by enabling pullup on DP. This is the point
         // where the host will notice our presence.
@@ -307,7 +272,7 @@ pub const F = struct {
     /// reuse `buffer` immediately after this returns. No need to wait for the
     /// packet to be sent.
     pub fn usb_start_tx(
-        ep: *usb.EndpointConfiguration,
+        ep_addr: u8,
         buffer: []const u8,
     ) void {
         // It is technically possible to support longer buffers but this demo
@@ -315,6 +280,8 @@ pub const F = struct {
         // TODO: assert!(buffer.len() <= 64);
         // You should only be calling this on IN endpoints.
         // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::In);
+
+        const ep = hardware_endpoint_get_by_address(ep_addr);
 
         // Copy the given data into the corresponding ep buffer
         const epbuffer = buffers.B.get(ep.data_buffer_index);
@@ -352,7 +319,7 @@ pub const F = struct {
     }
 
     pub fn usb_start_rx(
-        ep: *usb.EndpointConfiguration,
+        ep_addr: u8,
         len: usize,
     ) void {
         // It is technically possible to support longer buffers but this demo
@@ -360,6 +327,8 @@ pub const F = struct {
         // TODO: assert!(len <= 64);
         // You should only be calling this on OUT endpoints.
         // TODO: assert!(UsbDir::of_endpoint_addr(ep.descriptor.endpoint_address) == UsbDir::Out);
+
+        const ep = hardware_endpoint_get_by_address(ep_addr);
 
         // Check which DATA0/1 PID this endpoint is expecting next.
         const np: u1 = if (ep.next_pid_1) 1 else 0;
@@ -428,6 +397,11 @@ pub const F = struct {
         peripherals.USBCTRL_REGS.ADDR_ENDP.modify(.{ .ADDRESS = addr });
     }
 
+    pub fn reset_ep0() void {
+        var ep = hardware_endpoint_get_by_address(Endpoint.EP0_IN_IDX);
+        ep.next_pid_1 = true;
+    }
+
     pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
         return .{
             .bufbits = peripherals.USBCTRL_REGS.BUFF_STATUS.raw,
@@ -435,20 +409,60 @@ pub const F = struct {
             .next = next,
         };
     }
+
+    fn hardware_endpoint_get_by_address(ep_addr: u8) *HardwareEndpoint {
+        const num = Endpoint.num_from_address(ep_addr);
+        const dir = Endpoint.dir_from_address(ep_addr);
+        return &endpoints[num][dir.as_number()];
+    }
+
+    pub fn endpoint_init(ep_addr: u8, max_packet_size: u16, transfer_type: types.TransferType) void {
+        const ep_num = Endpoint.num_from_address(ep_addr);
+        const ep_dir = Endpoint.dir_from_address(ep_addr);
+
+        var ep = hardware_endpoint_get_by_address(ep_addr);
+        ep.ep_addr = ep_addr;
+        ep.max_packet_size = max_packet_size;
+        ep.transfer_type = transfer_type;
+        ep.next_pid_1 = false;
+
+        ep.buffer_control_index = 2 * ep_num + ep_dir.as_number_reversed();
+        // TODO - some other way to deal with it
+        ep.data_buffer_index = 2 * ep_num + ep_dir.as_number();
+
+        if (ep_num == 0) {
+            ep.endpoint_control_index = 0;
+        } else {
+            ep.endpoint_control_index = 2*ep_num - ep_dir.as_number();
+            endpoint_alloc(ep, transfer_type);
+        }
+    }
+
+    fn endpoint_alloc(ep: *HardwareEndpoint, transfer_type: TransferType) void {
+        const buf_base = @intFromPtr(buffers.B.get(ep.data_buffer_index));
+        const dpram_base = @intFromPtr(peripherals.USBCTRL_DPRAM);
+        // The offset _should_ fit in a u16, but if we've gotten something
+        // wrong in the past few lines, a common symptom will be integer
+        // overflow producing a Very Large Number,
+        const dpram_offset = @as(u16, @intCast(buf_base - dpram_base));
+
+        // Configure the endpoint!
+        modify_endpoint_control(ep.endpoint_control_index, .{
+            .ENABLE = 1,
+            // Please set the corresponding bit in buff_status when a
+            // buffer is done, thx.
+            .INTERRUPT_PER_BUFF = 1,
+            // Select bulk vs control (or interrupt as soon as implemented).
+            .ENDPOINT_TYPE = .{ .raw = transfer_type.as_number() },
+            // And, designate our buffer by its offset.
+            .BUFFER_ADDRESS = dpram_offset,
+        });
+    }
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Utility functions
 // +++++++++++++++++++++++++++++++++++++++++++++++++
-
-/// Check if the corresponding buffer is available
-pub fn buffer_available(
-    ep: *usb.EndpointConfiguration,
-) bool {
-    const rbc = read_raw_buffer_control(ep.buffer_control_index);
-    // Bit 11 of the EPn_X_BUFFER_CONTROL register represents the AVAILABLE_0 flag
-    return ((rbc & 0x400) == 0);
-}
 
 pub fn modify_buffer_control(
     i: usize,
@@ -601,7 +615,7 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
     // we can get the direction by:
     const dir = if (lowbit_index & 1 == 0) usb.types.Dir.In else usb.types.Dir.Out;
 
-    const ep_addr = usb.Endpoint.to_address(epnum, dir);
+    const ep_addr = Endpoint.to_address(epnum, dir);
     // Process the buffer-done event.
 
     // Process the buffer-done event.
@@ -610,17 +624,13 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
     // corresponds to this address. We could use a smarter
     // method here, but in practice, the number of endpoints is
     // small so a linear scan doesn't kill us.
-    var endpoint: ?*usb.EndpointConfiguration = null;
-    for (self.device_config.endpoints) |ep| {
-        if (ep.descriptor.endpoint_address == ep_addr) {
-            endpoint = ep;
-            break;
-        }
-    }
+    
+    const endpoint = F.hardware_endpoint_get_by_address(ep_addr);
+
     // Buffer event for unknown EP?!
     // TODO: if (endpoint == null) return EPBError.UnknownEndpoint;
     // Read the buffer control register to check status.
-    const bc = read_raw_buffer_control(endpoint.?.buffer_control_index);
+    const bc = read_raw_buffer_control(endpoint.buffer_control_index);
 
     // We should only get here if we've been notified that
     // the buffer is ours again. This is indicated by the hw
@@ -634,7 +644,7 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
 
     // Get a pointer to the buffer in USB SRAM. This is the
     // buffer _contents_. See the safety comments below.
-    const epbuffer = buffers.B.get(endpoint.?.data_buffer_index);
+    const epbuffer = buffers.B.get(endpoint.data_buffer_index);
 
     // Get the actual length of the data, which may be less
     // than the buffer size.
@@ -642,7 +652,7 @@ pub fn next(self: *usb.EPBIter) ?usb.EPB {
 
     // Copy the data from SRAM
     return usb.EPB{
-        .endpoint = endpoint.?,
+        .endpoint_address = ep_addr,
         .buffer = epbuffer[0..len],
     };
 }

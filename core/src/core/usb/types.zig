@@ -14,9 +14,17 @@ pub const DescType = enum(u8) {
     CsInterface          = 0x24,
     CsEndpoint           = 0x25,
 
-    pub fn from_u16(v: u16) ?@This() {
+    pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
     }
+};
+
+pub const ClassCode = enum(u8) {
+    Unspecified = 0,
+    Audio       = 1,
+    Cdc         = 2,
+    Hid         = 3,
+    CdcData     = 10,
 };
 
 /// Types of transfer that can be indicated by the `attributes` field on `EndpointDescriptor`.
@@ -25,6 +33,21 @@ pub const TransferType = enum(u2) {
     Isochronous = 1,
     Bulk        = 2,
     Interrupt   = 3,
+
+    pub fn from_u8(v: u8) ?@This() {
+        return std.meta.intToEnum(@This(), v) catch null;
+    }
+
+    pub inline fn as_number(self: @This()) u2 {
+        return @intFromEnum(self);
+    }
+};
+
+pub const ControlStage = enum {
+    Idle,
+    Setup,
+    Data,
+    Ack
 };
 
 /// The types of USB SETUP requests that we understand.
@@ -46,6 +69,37 @@ pub const Dir = enum(u1) {
     In  = 1,
 
     pub const DIR_IN_MASK = 0x80;
+
+    pub inline fn as_number(self: @This()) u1 {
+        return @intFromEnum(self);
+    }
+
+    pub inline fn as_number_reversed(self: @This()) u1 {
+        return ~@intFromEnum(self);
+    }
+};
+
+pub const Endpoint = struct {
+    pub inline fn to_address(num: u8, dir: Dir) u8 {
+        return switch (dir) {
+            .Out => num,
+            .In => num | Dir.DIR_IN_MASK
+        };
+    }
+
+    pub inline fn num_from_address(addr: u8) u8 {
+        return addr & ~@as(u8, @intCast(Dir.DIR_IN_MASK));
+    }
+
+    pub inline fn dir_from_address(addr: u8) Dir {
+        return if (addr & Dir.DIR_IN_MASK != 0) Dir.In else Dir.Out;
+    }
+
+    pub const EP0_OUT_IDX = 0;
+    pub const EP0_IN_IDX = 1;
+
+    pub const EP0_IN_ADDR: u8 = to_address(0, .In);
+    pub const EP0_OUT_ADDR: u8 = to_address(0, .Out);
 };
 
 pub const RequestType = packed struct(u8) {
@@ -116,9 +170,12 @@ pub const SetupPacket = extern struct {
 };
 
 /// Describes an endpoint within an interface
-pub const EndpointDescriptor = struct {
+pub const EndpointDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.Endpoint;
+
+    length: u8 = 7,
     /// Type of this descriptor, must be `Endpoint`.
-    descriptor_type: DescType = DescType.Endpoint,
+    descriptor_type: DescType = const_descriptor_type,
     /// Address of this endpoint, where the bottom 4 bits give the endpoint
     /// number (0..15) and the top bit distinguishes IN (1) from OUT (0).
     endpoint_address: u8,
@@ -126,7 +183,7 @@ pub const EndpointDescriptor = struct {
     /// control the transfer type using the values from `TransferType`.
     attributes: u8,
     /// Maximum packet size this endpoint can accept/produce.
-    max_packet_size: u16,
+    max_packet_size: u16 align(1),
     /// Interval for polling interrupt/isochronous endpoints (which we don't
     /// currently support) in milliseconds.
     interval: u8,
@@ -145,9 +202,12 @@ pub const EndpointDescriptor = struct {
 };
 
 /// Description of an interface within a configuration.
-pub const InterfaceDescriptor = struct {
+pub const InterfaceDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.Interface;
+
+    length: u8 = 9,
     /// Type of this descriptor, must be `Interface`.
-    descriptor_type: DescType = DescType.Interface,
+    descriptor_type: DescType = const_descriptor_type,
     /// ID of this interface.
     interface_number: u8,
     /// Allows a single `interface_number` to have several alternate interface
@@ -181,9 +241,12 @@ pub const InterfaceDescriptor = struct {
 };
 
 /// USB interface association descriptor (IAD) allows the device to group interfaces that belong to a function.
-pub const InterfaceAssociationDescriptor = struct {
+pub const InterfaceAssociationDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.InterfaceAssociation;
+
+    length: u8 = 8,
     // Type of this descriptor, must be `InterfaceAssociation`.
-    descriptor_type: DescType = DescType.InterfaceAssociation,
+    descriptor_type: DescType = const_descriptor_type,
     // First interface number of the set of interfaces that follow this
     // descriptor.
     first_interface: u8,
@@ -214,13 +277,16 @@ pub const InterfaceAssociationDescriptor = struct {
 };
 
 /// Description of a single available device configuration.
-pub const ConfigurationDescriptor = struct {
+pub const ConfigurationDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.Config;
+
+    length: u8 = 9,
     /// Type of this descriptor, must be `Config`.
-    descriptor_type: DescType = DescType.Config,
+    descriptor_type: DescType = const_descriptor_type,
     /// Total length of all descriptors in this configuration, concatenated.
     /// This will include this descriptor, plus at least one interface
     /// descriptor, plus each interface descriptor's endpoint descriptors.
-    total_length: u16,
+    total_length: u16 align(1),
     /// Number of interface descriptors in this configuration.
     num_interfaces: u8,
     /// Number to use when requesting this configuration via a
@@ -257,12 +323,15 @@ pub const ConfigurationDescriptor = struct {
 
 /// Describes a device. This is the most broad description in USB and is
 /// typically the first thing the host asks for.
-pub const DeviceDescriptor = struct {
+pub const DeviceDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.Device;
+
+    length: u8 = 18,
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: DescType = DescType.Device,
+    descriptor_type: DescType = const_descriptor_type,
     /// Version of the device descriptor / USB protocol, in binary-coded
     /// decimal. This is typically `0x01_10` for USB 1.1.
-    bcd_usb: u16,
+    bcd_usb: u16 align(1),
     /// Class of device, giving a broad functional area.
     device_class: u8,
     /// Subclass of device, refining the class.
@@ -272,11 +341,11 @@ pub const DeviceDescriptor = struct {
     /// Maximum unit of data this device can move.
     max_packet_size0: u8,
     /// ID of product vendor.
-    vendor: u16,
+    vendor: u16 align(1),
     /// ID of product.
-    product: u16,
+    product: u16 align(1),
     /// Device version number, as BCD again.
-    bcd_device: u16,
+    bcd_device: u16 align(1),
     /// Index of manufacturer name in string descriptor table.
     manufacturer_s: u8,
     /// Index of product name in string descriptor table.
@@ -312,12 +381,15 @@ pub const DeviceDescriptor = struct {
 
 /// USB Device Qualifier Descriptor
 /// This descriptor is mostly the same as the DeviceDescriptor
-pub const DeviceQualifierDescriptor = struct {
+pub const DeviceQualifierDescriptor = extern struct {
+    pub const const_descriptor_type = DescType.DeviceQualifier;
+
+    length: u8 = 10,
     /// Type of this descriptor, must be `Device`.
-    descriptor_type: DescType = DescType.DeviceQualifier,
+    descriptor_type: DescType = const_descriptor_type,
     /// Version of the device descriptor / USB protocol, in binary-coded
     /// decimal. This is typically `0x01_10` for USB 1.1.
-    bcd_usb: u16,
+    bcd_usb: u16 align(1),
     /// Class of device, giving a broad functional area.
     device_class: u8,
     /// Subclass of device, refining the class.
@@ -344,5 +416,61 @@ pub const DeviceQualifierDescriptor = struct {
         out[8] = self.num_configurations;
         out[9] = self.reserved;
         return out;
+    }
+};
+
+pub const DriverErrors = error {
+    ExpectedInterfaceDescriptor,
+    UnsupportedInterfaceClassType,
+    UnsupportedInterfaceSubClassType,
+    UnexpectedDescriptor
+};
+
+pub const UsbDevice = struct {
+    fn_ready: *const fn () bool,
+    fn_control_transfer: *const fn (setup: *const SetupPacket, data: []const u8) void,
+    fn_control_ack: *const fn (setup: *const SetupPacket) void,
+    fn_endpoint_open: *const fn (ep_desc: []const u8) void,
+    fn_endpoint_transfer: *const fn (ep_addr: u8, data: []const u8) void,
+
+    pub fn ready(self: *@This()) bool {
+        return self.fn_ready();
+    }
+
+    pub fn control_transfer(self: *@This(), setup: *const SetupPacket, data: []const u8) void {
+        return self.fn_control_transfer(setup, data);
+    }
+
+    pub fn control_ack(self: *@This(), setup: *const SetupPacket) void {
+        return self.fn_control_ack(setup);
+    }
+
+    pub fn endpoint_open(self: *@This(), ep_desc: []const u8) void {
+        return self.fn_endpoint_open(ep_desc);
+    }
+
+    pub fn endpoint_transfer(self: *@This(), ep_addr: u8, data: []const u8) void {
+        return self.fn_endpoint_transfer(ep_addr, data);
+    }
+};
+
+/// USB Class driver interface
+pub const UsbClassDriver = struct {
+    ptr: *anyopaque,
+    fn_init: *const fn (ptr: *anyopaque, device: UsbDevice) void,
+    fn_open: *const fn (ptr: *anyopaque, cfg: []const u8) anyerror!usize,
+    fn_class_control: *const fn (ptr: *anyopaque, stage: ControlStage, setup: *const SetupPacket) bool,
+
+    pub fn init(self: *@This(), device: UsbDevice) void {
+        return self.fn_init(self.ptr, device);
+    }
+
+    /// Driver open (set config) operation. Must return length of consumed driver config data.
+    pub fn open(self: *@This(), cfg: []const u8) !usize {
+        return self.fn_open(self.ptr, cfg);
+    }
+
+    pub fn class_control(self: *@This(), stage: ControlStage, setup: *const SetupPacket) bool {
+        return self.fn_class_control(self.ptr, stage, setup);
     }
 };

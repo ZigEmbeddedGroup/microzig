@@ -14,29 +14,25 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
-const usb_cdc_ep_cmd = usb.Endpoint.to_address(1, .In);
-const usb_cdc_ep_out = usb.Endpoint.to_address(2, .Out);
-const usb_cdc_ep_in = usb.Endpoint.to_address(2, .In);
-const usb_cdc_cmd_max_size = 8;
-const usb_cdc_in_out_max_size = 64;
-
-const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
 const usb_config_descriptor = 
         usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.cdc_descriptor(0, 4, usb_cdc_ep_cmd, usb_cdc_cmd_max_size, usb_cdc_ep_out, usb_cdc_ep_in, usb_cdc_in_out_max_size);
+        usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
+
+var driver_cdc = usb.cdc.CdcClassDriver{};
+var drivers = [_]usb.types.UsbClassDriver{ driver_cdc.driver() };
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .device_descriptor = &.{
         .descriptor_type = usb.DescType.Device,
         .bcd_usb = 0x0200,
-        .device_class = 0,
-        .device_subclass = 0,
-        .device_protocol = 0,
+        .device_class = 0xEF,
+        .device_subclass = 2,
+        .device_protocol = 1,
         .max_packet_size0 = 64,
-        .vendor = 0,
-        .product = 1,
+        .vendor = 0x2E8A,
+        .product = 0x000a,
         .bcd_device = 0x0100,
         .manufacturer_s = 1,
         .product_s = 2,
@@ -51,12 +47,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         &usb.utils.utf8ToUtf16Le("someserial"),
         &usb.utils.utf8ToUtf16Le("Board CDC"),
     },
-    // Here we pass all endpoints to the config
-    // Dont forget to pass EP0_[IN|OUT] in the order seen below!
-    .endpoints = .{
-        &usb.EP0_OUT_CFG,
-        &usb.EP0_IN_CFG,
-    },
+    .drivers = &drivers
 };
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -90,6 +81,9 @@ pub fn main() !void {
     rp2040.usb.Usb.init_device(&DEVICE_CONFIGURATION) catch unreachable;
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
+
+    var i: u32 = 0;
+    var buf: [1024]u8 = undefined;
     while (true) {
         // You can now poll for USB events
         rp2040.usb.Usb.task(
@@ -100,6 +94,12 @@ pub fn main() !void {
         if (new - old > 500000) {
             old = new;
             led.toggle();
+            i += 1;
+            // uart log
+            std.log.info("cdc test: {}\r\n", .{i});
+            // usb log (at this moment 63 bytes is max limit per single call)
+            const text = std.fmt.bufPrint(&buf, "cdc test: {}\r\n", .{i}) catch &.{};
+            driver_cdc.write(text);
         }
     }
 }

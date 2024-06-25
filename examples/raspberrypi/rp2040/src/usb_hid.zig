@@ -18,7 +18,10 @@ const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
 const usb_config_descriptor = 
         usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.hid_in_out_descriptor(0, 0, 0, 34, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size, 0);
+        usb.templates.hid_in_out_descriptor(0, 0, 0, usb.hid.ReportDescriptorGenericInOut.len, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size, 0);
+
+var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
+var drivers = [_]usb.types.UsbClassDriver{ driver_hid.driver() };
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
@@ -30,7 +33,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .device_protocol = 0,
         .max_packet_size0 = 64,
         .vendor = 0xCafe,
-        .product = 1,
+        .product = 2,
         .bcd_device = 0x0100,
         // Those are indices to the descriptor strings
         // Make sure to provide enough string descriptors!
@@ -46,15 +49,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         &usb.utils.utf8ToUtf16Le("Pico Test Device"),
         &usb.utils.utf8ToUtf16Le("cafebabe"),
     },
-    .hid = .{
-        .report_descriptor = &usb.hid.ReportDescriptorFidoU2f,
-    },
-    // Here we pass all endpoints to the config
-    // Dont forget to pass EP0_[IN|OUT] in the order seen below!
-    .endpoints = .{
-        &usb.EP0_OUT_CFG,
-        &usb.EP0_IN_CFG,
-    },
+    .drivers = &drivers
 };
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {

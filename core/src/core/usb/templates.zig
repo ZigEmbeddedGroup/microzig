@@ -1,8 +1,5 @@
-/// USB primitive types
 const types = @import("types.zig");
-/// USB Human Interface Device (HID)
 const hid = @import("hid.zig");
-/// USB Communications Device Class (CDC)
 const cdc = @import("cdc.zig");
 
 pub const DescriptorsConfigTemplates = struct {
