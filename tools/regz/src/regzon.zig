@@ -75,7 +75,7 @@ fn entity_type_to_string(entity_type: Database.EntityType) []const u8 {
     };
 }
 
-const string_to_entity_type_map = std.ComptimeStringMap(Database.EntityType, .{
+const string_to_entity_type_map = std.StaticStringMap(Database.EntityType).initComptime(.{
     .{ "peripherals", .peripheral },
     .{ "register_groups", .register_group },
     .{ "registers", .register },
