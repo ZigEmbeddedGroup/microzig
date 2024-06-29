@@ -16,7 +16,7 @@ pub fn build(b: *Build) !void {
 
     const regz = b.addExecutable(.{
         .name = "regz",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -24,7 +24,7 @@ pub fn build(b: *Build) !void {
     b.installArtifact(regz);
 
     const exported_module = b.addModule("regz", .{
-        .root_source_file = .{ .path = "src/module.zig" },
+        .root_source_file = b.path("src/module.zig"),
     });
     exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
 
@@ -39,9 +39,7 @@ pub fn build(b: *Build) !void {
 
     const contextualize_fields = b.addExecutable(.{
         .name = "contextualize-fields",
-        .root_source_file = .{
-            .path = "src/contextualize-fields.zig",
-        },
+        .root_source_file = b.path("src/contextualize-fields.zig"),
         .target = b.host,
     });
     contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
@@ -54,9 +52,7 @@ pub fn build(b: *Build) !void {
 
     const characterize = b.addExecutable(.{
         .name = "characterize",
-        .root_source_file = .{
-            .path = "src/characterize.zig",
-        },
+        .root_source_file = b.path("src/characterize.zig"),
         .target = b.host,
     });
     characterize.linkLibrary(libxml2_dep.artifact("xml2"));
@@ -65,9 +61,7 @@ pub fn build(b: *Build) !void {
     characterize_step.dependOn(&characterize_run.step);
 
     const tests = b.addTest(.{
-        .root_source_file = .{
-            .path = "src/Database.zig",
-        },
+        .root_source_file = b.path("src/Database.zig"),
         .target = target,
         .optimize = optimize,
     });

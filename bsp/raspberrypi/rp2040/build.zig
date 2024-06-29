@@ -12,9 +12,9 @@ const build_root = root();
 
 pub fn build(b: *Build) !void {
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/hal.zig" },
+        .root_source_file = b.path("src/hal.zig"),
     });
-    unit_tests.addIncludePath(.{ .path = "src/hal/pio/assembler" });
+    unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
 
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
@@ -119,7 +119,7 @@ pub const BootROM = union(enum) {
 };
 
 const linker_script = .{
-    .path = build_root ++ "/rp2040.ld",
+    .cwd_relative = build_root ++ "/rp2040.ld",
 };
 
 const hal = .{
@@ -188,8 +188,8 @@ pub fn get_bootrom(mz: *MicroZig, rom: BootROM) Stage2Bootloader {
                 .root_source_file = null,
             });
             //rom_exe.linkage = .static;
-            rom_exe.setLinkerScript(.{ .path = build_root ++ "/src/bootroms/shared/stage2.ld" });
-            rom_exe.addAssemblyFile(.{ .path = rom_path });
+            rom_exe.setLinkerScript(.{ .cwd_relative = build_root ++ "/src/bootroms/shared/stage2.ld" });
+            rom_exe.addAssemblyFile(.{ .cwd_relative = rom_path });
             rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
 
             break :blk rom_exe;

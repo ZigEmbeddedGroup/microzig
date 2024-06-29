@@ -190,7 +190,7 @@ pub const boards = struct {
         .chip = chips.stm32f303vc.chip,
         .board = .{
             .name = "STM32F3DISCOVERY",
-            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
         },
     };
 
@@ -199,7 +199,7 @@ pub const boards = struct {
         .chip = chips.stm32f407vg.chip,
         .board = .{
             .name = "STM32F4DISCOVERY",
-            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
         },
     };
 
@@ -208,7 +208,7 @@ pub const boards = struct {
         .chip = chips.stm32f407vg.chip,
         .board = .{
             .name = "STM3240G_EVAL",
-            .root_source_file = .{ .path = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
         },
     };
 
@@ -217,7 +217,7 @@ pub const boards = struct {
         .chip = chips.stm32f429zit6u.chip,
         .board = .{
             .name = "STM32F429IDISCOVERY",
-            .root_source_file = .{ .path = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },
+            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },
         },
     };
 };

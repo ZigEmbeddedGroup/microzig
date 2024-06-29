@@ -4,7 +4,7 @@ const LazyPath = Build.LazyPath;
 
 pub fn build(b: *Build) void {
     _ = b.addModule("definitions", .{
-        .root_source_file = .{ .path = "build.zig" },
+        .root_source_file = b.path("build.zig"),
     });
 }
 

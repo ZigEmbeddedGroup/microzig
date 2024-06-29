@@ -44,7 +44,7 @@ const Context = struct {
     }
 };
 
-const svd_boolean = std.ComptimeStringMap(bool, .{
+const svd_boolean = std.StaticStringMap(bool).initComptime(.{
     .{ "true", true },
     .{ "1", true },
     .{ "false", false },
