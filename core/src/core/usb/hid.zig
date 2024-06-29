@@ -42,6 +42,9 @@
 //! The HID descriptor identifies the length and type of subordinate descriptors for device.
 
 const std = @import("std");
+const buffers = @import("../buffers.zig");
+
+const BufferWriter = buffers.BufferWriter;
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Common Data Types
@@ -77,12 +80,7 @@ pub const DescType = enum(u8) {
     Physical = 0x23,
 
     pub fn from_u16(v: u16) ?@This() {
-        return switch (v) {
-            0x21 => @This().Hid,
-            0x22 => @This().Report,
-            0x23 => @This().Physical,
-            else => null,
-        };
+        return std.meta.intToEnum(@This(), v) catch null;
     }
 };
 
@@ -100,20 +98,27 @@ pub const HidDescriptor = struct {
     /// The total size of the Report descriptor
     report_length: u16,
 
-    pub fn serialize(self: *const @This()) [9]u8 {
-        var out: [9]u8 = undefined;
-        out[0] = out.len;
-        out[1] = @intFromEnum(self.descriptor_type);
-        out[2] = @intCast(self.bcd_hid & 0xff);
-        out[3] = @intCast((self.bcd_hid >> 8) & 0xff);
-        out[4] = self.country_code;
-        out[5] = self.num_descriptors;
-        out[6] = @intFromEnum(self.report_type);
-        out[7] = @intCast(self.report_length & 0xff);
-        out[8] = @intCast((self.report_length >> 8) & 0xff);
-        return out;
+    pub fn serialize(self: *const @This(), buff: *BufferWriter) BufferWriter.Error!void {
+        const length = 9;
+        try buff.bound_check(length);
+        buff.write_int_unsafe(u8, length);
+        buff.write_int_unsafe(u8, @intFromEnum(self.descriptor_type));
+        buff.write_int_unsafe(u16, self.bcd_hid);
+        buff.write_int_unsafe(u8, self.country_code);
+        buff.write_int_unsafe(u8, self.num_descriptors);
+        buff.write_int_unsafe(u8, @intFromEnum(self.report_type));
+        buff.write_int_unsafe(u16, self.report_length);
     }
 };
+
+pub const HidReportDescriptor = struct {
+    data: []const u8,
+
+    pub fn serialize(self: *const @This(), buff: *BufferWriter) BufferWriter.Error!void {
+        buff.write(self.data);
+    }
+};
+
 
 /// HID interface Subclass (for UsbInterfaceDescriptor)
 pub const Subclass = enum(u8) {

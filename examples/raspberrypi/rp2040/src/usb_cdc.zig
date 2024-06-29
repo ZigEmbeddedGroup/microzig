@@ -14,52 +14,41 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const usb_cdc_ep_cmd = usb.Endpoint.to_address(1, .In);
+const usb_cdc_ep_out = usb.Endpoint.to_address(2, .Out);
+const usb_cdc_ep_in = usb.Endpoint.to_address(2, .In);
+const usb_cdc_cmd_max_size = 8;
+const usb_cdc_in_out_max_size = 64;
+
 const usb_packet_size = 64;
-const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_inout_descriptor_len;
+const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
 const usb_config_descriptor = 
-        usb.templates.config_descriptor(1, 1, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.hid_inout_descriptor(0, 0, 0, 34, usb.Endpoint.to_address(1, .Out), usb.Endpoint.to_address(1, .In), usb_packet_size, 0);
+        usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
+        usb.templates.cdc_descriptor(0, 4, usb_cdc_ep_cmd, usb_cdc_cmd_max_size, usb_cdc_ep_out, usb_cdc_ep_in, usb_cdc_in_out_max_size);
 
-// First we define two callbacks that will be used by the endpoints we define next...
-fn ep1_in_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
-    _ = data;
-    // The host has collected the data we repeated onto
-    // EP1! Set up to receive more data on EP1.
-    usb.Usb.callbacks.usb_start_rx(
-        dc.endpoints[2], // EP1_OUT_CFG,
-        64,
-    );
-}
-
-fn ep1_out_callback(dc: *usb.DeviceConfiguration, data: []const u8) void {
-    // We've gotten data from the host on our custom
-    // EP1! Set up EP1 to repeat it.
-    usb.Usb.callbacks.usb_start_tx(
-        dc.endpoints[3], // EP1_IN_CFG,
-        data,
-    );
-}
-
-// The endpoints EP0_IN and EP0_OUT are already defined but you can
-// add your own endpoints to...
-pub var EP1_OUT_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_endpoint_descriptor(usb.Endpoint.to_address(1, .Out), usb_config_descriptor.len, usb_config_descriptor),
-    .endpoint_control_index = 2,
-    .buffer_control_index = 3,
-    .data_buffer_index = 2,
-    .next_pid_1 = false,
-    // The callback will be executed if we got an interrupt on EP1_OUT
-    .callback = ep1_out_callback,
-};
-
+// TODO - endpoint configuration will not work as for now - we want to just detect serial port
 pub var EP1_IN_CFG: usb.EndpointConfiguration = .{
-    .descriptor = usb.utils.get_endpoint_descriptor(usb.Endpoint.to_address(1, .In), usb_config_descriptor.len, usb_config_descriptor),
+    .descriptor = usb.utils.get_enpoint_descriptor(usb_cdc_ep_cmd, usb_config_descriptor.len, usb_config_descriptor),
     .endpoint_control_index = 1,
     .buffer_control_index = 2,
+    .data_buffer_index = 1,
+    .next_pid_1 = false,
+};
+
+pub var EP2_OUT_CFG: usb.EndpointConfiguration = .{
+    .descriptor = usb.utils.get_endpoint_descriptor(usb_cdc_ep_out, usb_config_descriptor.len, usb_config_descriptor),
+    .endpoint_control_index = 4,
+    .buffer_control_index = 5,
+    .data_buffer_index = 2,
+    .next_pid_1 = false,
+};
+
+pub var EP2_IN_CFG: usb.EndpointConfiguration = .{
+    .descriptor = usb.utils.get_endpoint_descriptor(usb_cdc_ep_in, usb_config_descriptor.len, usb_config_descriptor),
+    .endpoint_control_index = 3,
+    .buffer_control_index = 4,
     .data_buffer_index = 3,
     .next_pid_1 = false,
-    // The callback will be executed if we got an interrupt on EP1_IN
-    .callback = ep1_in_callback,
 };
 
 // This is our device configuration
@@ -71,14 +60,12 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         .device_subclass = 0,
         .device_protocol = 0,
         .max_packet_size0 = 64,
-        .vendor = 0xCafe,
+        .vendor = 0,
         .product = 1,
         .bcd_device = 0x0100,
-        // Those are indices to the descriptor strings
-        // Make sure to provide enough string descriptors!
         .manufacturer_s = 1,
         .product_s = 2,
-        .serial_s = 3,
+        .serial_s = 0,
         .num_configurations = 1,
     },
     .config_descriptors = &usb_config_descriptor,
@@ -86,18 +73,16 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .descriptor_strings = &.{
         &usb.utils.utf8ToUtf16Le("Raspberry Pi"),
         &usb.utils.utf8ToUtf16Le("Pico Test Device"),
-        &usb.utils.utf8ToUtf16Le("cafebabe"),
-    },
-    .hid = .{
-        .report_descriptor = &usb.hid.ReportDescriptorFidoU2f,
+        &usb.utils.utf8ToUtf16Le("someserial"),
+        &usb.utils.utf8ToUtf16Le("Board CDC"),
     },
     // Here we pass all endpoints to the config
     // Dont forget to pass EP0_[IN|OUT] in the order seen below!
     .endpoints = .{
         &usb.EP0_OUT_CFG,
         &usb.EP0_IN_CFG,
-        &EP1_OUT_CFG,
-        &EP1_IN_CFG,
+        &EP2_OUT_CFG,
+        &EP2_IN_CFG,
     },
 };
 
