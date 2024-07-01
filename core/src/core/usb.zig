@@ -342,7 +342,7 @@ pub fn Usb(comptime f: anytype) type {
                             
                             if (epb.buffer.len > 0 and buffer_reader.get_remaining_bytes_count() > 0) {
                                 _ = buffer_reader.try_advance(epb.buffer.len);
-                                const next_data_chunk = buffer_reader.try_read(cmd_in_endpoint.descriptor.max_packet_size);
+                                const next_data_chunk = buffer_reader.try_peek(cmd_in_endpoint.descriptor.max_packet_size);
                                 if (next_data_chunk.len > 0) {
                                     f.usb_start_tx(
                                          cmd_in_endpoint,
