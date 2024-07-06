@@ -22,7 +22,7 @@ pub const Function = enum(u5) {
     pio1,
     gpck,
     usb,
-    null = 0x1f,
+    disabled = 0x1f,
 };
 
 pub const Direction = enum(u1) {
@@ -66,6 +66,7 @@ pub const Enabled = enum {
 pub const Pull = enum {
     up,
     down,
+    disabled,
 };
 
 pub fn num(n: u5) Pin {
@@ -99,12 +100,30 @@ pub const Mask = enum(u30) {
         }
     }
 
-    pub fn set_pull(self: Mask, pull: ?Pull) void {
+    pub fn set_pull(self: Mask, pull: Pull) void {
         const raw_mask = @intFromEnum(self);
         for (0..@bitSizeOf(Mask)) |i| {
             const bit = @as(u5, @intCast(i));
             if (0 != raw_mask & (@as(u32, 1) << bit))
                 num(bit).set_pull(pull);
+        }
+    }
+
+    pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
+        const raw_mask = @intFromEnum(self);
+        for (0..@bitSizeOf(Mask)) |i| {
+            const bit = @as(u5, @intCast(i));
+            if (0 != raw_mask & (@as(u32, 1) << bit))
+                num(bit).set_slew_rate(slew_rate);
+        }
+    }
+
+    pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+        const raw_mask = @intFromEnum(self);
+        for (0..@bitSizeOf(Mask)) |i| {
+            const bit = @as(u5, @intCast(i));
+            if (0 != raw_mask & (@as(u32, 1) << bit))
+                num(bit).set_schmitt_trigger(enabled);
         }
     }
 
@@ -167,14 +186,12 @@ pub const Pin = enum(u5) {
         return @as(u32, 1) << @intFromEnum(gpio);
     }
 
-    pub inline fn set_pull(gpio: Pin, pull: ?Pull) void {
+    pub inline fn set_pull(gpio: Pin, pull: Pull) void {
         const pads_reg = gpio.get_pads_reg();
-
-        if (pull == null) {
-            pads_reg.modify(.{ .PUE = 0, .PDE = 0 });
-        } else switch (pull.?) {
+        switch (pull) {
             .up => pads_reg.modify(.{ .PUE = 1, .PDE = 0 }),
             .down => pads_reg.modify(.{ .PUE = 0, .PDE = 1 }),
+            .disabled => pads_reg.modify(.{ .PUE = 0, .PDE = 0 }),
         }
     }
 
@@ -229,6 +246,26 @@ pub const Pin = enum(u5) {
             .reserved16 = 0,
             .reserved28 = 0,
             .padding = 0,
+        });
+    }
+
+    pub fn set_slew_rate(gpio: Pin, slew_rate: SlewRate) void {
+        const pads_reg = gpio.get_pads_reg();
+        pads_reg.modify(.{
+            .SLEWFAST = switch (slew_rate) {
+                .slow => @as(u1, 0),
+                .fast => @as(u1, 1),
+            },
+        });
+    }
+
+    pub fn set_schmitt_trigger(gpio: Pin, enabled: Enabled) void {
+        const pads_reg = gpio.get_pads_reg();
+        pads_reg.modify(.{
+            .SCHMITT = switch (enabled) {
+                .enabled => @as(u1, 1),
+                .disabled => @as(u1, 0),
+            },
         });
     }
 };
