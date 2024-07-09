@@ -84,7 +84,7 @@
       rec {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
-            pkgs.zigpkgs."0.11.0"
+            pkgs.zigpkgs."0.12.1"
             (python3.withPackages (ps: [
               ps.dataclasses_json
               ps.marshmallow
