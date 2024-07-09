@@ -481,7 +481,7 @@ pub const Tokenizer = struct {
         };
     }
 
-    const directives = std.ComptimeStringMap(*const fn (*Tokenizer, u32, *?Diagnostics) TokenizeError!Token, .{
+    const directives = std.StaticStringMap(*const fn (*Tokenizer, u32, *?Diagnostics) TokenizeError!Token).initComptime(.{
         .{ "program", get_program },
         .{ "define", get_define },
         .{ "origin", get_origin },
@@ -527,7 +527,7 @@ pub const Tokenizer = struct {
 
     fn get_jmp(self: *Tokenizer, diags: *?Diagnostics) TokenizeError!Token.Instruction.Payload {
         const Condition = Token.Instruction.Jmp.Condition;
-        const conditions = std.ComptimeStringMap(Condition, .{
+        const conditions = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
             .{ "x--", .x_dec },
             .{ "!y", .y_is_zero },
@@ -828,7 +828,7 @@ pub const Tokenizer = struct {
         };
     }
 
-    const instructions = std.ComptimeStringMap(*const fn (*Tokenizer, *?Diagnostics) TokenizeError!Token.Instruction.Payload, .{
+    const instructions = std.StaticStringMap(*const fn (*Tokenizer, *?Diagnostics) TokenizeError!Token.Instruction.Payload).initComptime(.{
         .{ "nop", get_nop },
         .{ "jmp", get_jmp },
         .{ "wait", get_wait },
@@ -1588,7 +1588,7 @@ test "tokenize.instr.jmp.value" {
 
 test "tokenize.instr.jmp.conditions" {
     const Condition = Token.Instruction.Jmp.Condition;
-    const cases = std.ComptimeStringMap(Condition, .{
+    const cases = std.StaticStringMap(Condition).initComptime(.{
         .{ "!x", .x_is_zero },
         .{ "x--", .x_dec },
         .{ "!y", .y_is_zero },
@@ -1598,9 +1598,7 @@ test "tokenize.instr.jmp.conditions" {
         .{ "!osre", .osre_not_empty },
     });
 
-    inline for (cases.kvs) |case| {
-        const op = case.key;
-        const cond = case.value;
+    inline for (comptime cases.keys(), comptime cases.values()) |op, cond| {
         const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
 
         try expect_instr_jmp(.{ .cond = cond, .target = "my_label" }, tokens.get(0));
@@ -1762,16 +1760,14 @@ test "tokenize.instr.mov" {
     }
 
     const Operation = Token.Instruction.Mov.Operation;
-    const operations = std.ComptimeStringMap(Operation, .{
+    const operations = std.StaticStringMap(Operation).initComptime(.{
         .{ "!", .invert },
         .{ "~", .invert },
         .{ "::", .bit_reverse },
     });
 
     inline for (.{ "", " " }) |space| {
-        inline for (operations.kvs) |kv| {
-            const str = kv.key;
-            const operation = kv.value;
+        inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
             const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
                 str,
                 space,
@@ -1792,7 +1788,7 @@ test "tokenize.instr.irq" {
         wait: bool,
     };
 
-    const modes = std.ComptimeStringMap(ClearWait, .{
+    const modes = std.StaticStringMap(ClearWait).initComptime(.{
         .{ "", .{ .clear = false, .wait = false } },
         .{ "set", .{ .clear = false, .wait = false } },
         .{ "nowait", .{ .clear = false, .wait = false } },
@@ -1800,15 +1796,15 @@ test "tokenize.instr.irq" {
         .{ "clear", .{ .clear = true, .wait = false } },
     });
 
-    inline for (modes.kvs, 0..) |kv, num| {
+    inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
         const tokens = try bounded_tokenize(comptime std.fmt.comptimePrint("irq {s} {}", .{
-            kv.key,
+            key,
             num,
         }));
 
         try expect_instr_irq(.{
-            .clear = kv.value.clear,
-            .wait = kv.value.wait,
+            .clear = value.clear,
+            .wait = value.wait,
             .num = num,
         }, tokens.get(0));
     }

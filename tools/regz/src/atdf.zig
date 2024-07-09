@@ -519,7 +519,7 @@ fn assign_modes_to_entity(
         return;
     };
 
-    var tok_it = std.mem.tokenize(u8, mode_names, " ");
+    var tok_it = std.mem.tokenizeScalar(u8, mode_names, ' ');
     while (tok_it.next()) |mode_str| {
         for (mode_set.keys()) |mode_id| {
             if (db.attrs.name.get(mode_id)) |name|

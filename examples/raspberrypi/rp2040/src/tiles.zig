@@ -97,7 +97,7 @@ pub fn main() void {
     }) catch unreachable;
     pio.sm_set_enabled(sm, true);
 
-    var rng_src = std.rand.DefaultPrng.init(0x1234);
+    var rng_src = std.Random.DefaultPrng.init(0x1234);
 
     const rng = rng_src.random();
 

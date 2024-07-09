@@ -23,7 +23,7 @@ pub fn build(b: *Build) !void {
     const uf2_dep = b.dependency("microzig/tools/uf2", .{});
 
     const build_test = b.addTest(.{
-        .root_source_file = .{ .path = "build.zig" },
+        .root_source_file = b.path("build.zig"),
     });
 
     build_test.root_module.addAnonymousImport("uf2", .{
@@ -39,6 +39,9 @@ pub fn build(b: *Build) !void {
     b.getInstallStep().dependOn(&install_docs.step);
 }
 
+fn root() []const u8 {
+    return comptime (std.fs.path.dirname(@src().file) orelse ".");
+}
 /// Creates a new MicroZig build environment that can be used to create new firmware.
 pub fn init(b: *Build, opts: struct {
     dependency_name: []const u8 = "microzig/build",
@@ -53,7 +56,7 @@ pub fn init(b: *Build, opts: struct {
         .microzig_core = core_dep,
         .generate_linkerscript = mz_dep.builder.addExecutable(.{
             .name = "generate-linkerscript",
-            .root_source_file = .{ .path = "src/generate_linkerscript.zig" },
+            .root_source_file = .{ .cwd_relative = comptime root() ++ "/src/generate_linkerscript.zig" },
             .target = mz_dep.builder.host,
         }),
     };

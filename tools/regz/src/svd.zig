@@ -44,7 +44,7 @@ const Context = struct {
     }
 };
 
-const svd_boolean = std.ComptimeStringMap(bool, .{
+const svd_boolean = std.StaticStringMap(bool).initComptime(.{
     .{ "true", true },
     .{ "1", true },
     .{ "false", false },
@@ -680,7 +680,7 @@ const BitRange = struct {
 
         const bit_range_opt = node.get_value("bitRange");
         if (bit_range_opt) |bit_range_str| {
-            var it = std.mem.tokenize(u8, bit_range_str, "[:]");
+            var it = std.mem.tokenizeAny(u8, bit_range_str, "[:]");
             const msb = try std.fmt.parseInt(u8, it.next() orelse return error.NoMsb, 0);
             const lsb = try std.fmt.parseInt(u8, it.next() orelse return error.NoLsb, 0);
 

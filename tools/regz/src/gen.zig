@@ -77,7 +77,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
     defer tokenized.deinit();
 
     var first = true;
-    var tok_it = std.mem.tokenize(u8, comment, "\n\r \t");
+    var tok_it = std.mem.tokenizeAny(u8, comment, "\n\r \t");
     while (tok_it.next()) |token| {
         if (!first)
             first = false
@@ -90,7 +90,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
     const unescaped = try std.mem.replaceOwned(u8, allocator, tokenized.items, "\\n", "\n");
     defer allocator.free(unescaped);
 
-    var line_it = std.mem.tokenize(u8, unescaped, "\n");
+    var line_it = std.mem.tokenizeScalar(u8, unescaped, '\n');
     while (line_it.next()) |line|
         try writer.print("/// {s}\n", .{line});
 }
@@ -98,7 +98,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
 fn write_string(str: []const u8, writer: anytype) !void {
     if (std.mem.containsAtLeast(u8, str, 1, "\n")) {
         try writer.writeByte('\n');
-        var line_it = std.mem.split(u8, str, "\n");
+        var line_it = std.mem.splitScalar(u8, str, '\n');
         while (line_it.next()) |line|
             try writer.print("\\\\{s}\n", .{line});
     } else {
@@ -511,7 +511,7 @@ fn write_mode_enum_and_fn(
         defer components.deinit();
 
         const mode = db.types.modes.get(mode_id).?;
-        var tok_it = std.mem.tokenize(u8, mode.qualifier, ".");
+        var tok_it = std.mem.tokenizeScalar(u8, mode.qualifier, '.');
         while (tok_it.next()) |token|
             try components.append(token);
 
@@ -526,7 +526,7 @@ fn write_mode_enum_and_fn(
         });
         try writer.writeAll("switch (value) {\n");
 
-        tok_it = std.mem.tokenize(u8, mode.value, " ");
+        tok_it = std.mem.tokenizeScalar(u8, mode.value, ' ');
         while (tok_it.next()) |token| {
             const value = try std.fmt.parseInt(u64, token, 0);
             try writer.print("{},\n", .{value});
