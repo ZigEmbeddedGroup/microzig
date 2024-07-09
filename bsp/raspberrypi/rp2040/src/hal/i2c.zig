@@ -56,6 +56,131 @@ pub const ConfigError = error{
     HoldCountViolation,
 };
 
+const TimingRegisterValues = struct {
+    scl_hcnt: u16,
+    scl_lcnt: u16,
+    sda_tx_hold_count: u16,
+    spklen: u8,
+};
+
+fn translate_baudrate(baud_rate: u32, freq_in: u32) ConfigError!TimingRegisterValues {
+    if ((baud_rate < 1) or (baud_rate > 1e6)) {
+        return ConfigError.UnsupportedBaudRate;
+    }
+
+    // Per spec, must suppress at least 50ns spikes
+    const spklen_u32: u32 = @divFloor(50 - 1, (@divFloor(1_000_000_000 - 1, freq_in) + 1)) + 1;
+
+    // You shouldn't be able to drive the sys clock high enough to meet this condition, but doesn't hurt to check
+    if (spklen_u32 > std.math.maxInt(u8)) return ConfigError.InputFreqTooHigh;
+    const spklen: u8 = @intCast(spklen_u32);
+
+    // I2C clock period in peripheral clock counts, rounding up
+    const period: u32 = (freq_in + baud_rate / 2) / baud_rate;
+
+    // Setting SCL low time to 60% duty cycle should meet spec
+    // no matter if the receiver is operating in normal, fast mode,
+    // or fast mode+ across all of those supported frequency ranges.
+    // Note that these desired counts are AFTER the internal clock cycle
+    // additions described below.
+    const scl_lcnt_with_additions: u32 = period * 3 / 5;
+    const scl_hcnt_with_additions: u32 = period - scl_lcnt_with_additions;
+
+    // In the case where a rounding error shifts a timing parameter out of spec,
+    // that means the input clock frequency is too low (not granular enough).
+    // This also serves as a nice sanity check that we're still in spec no matter
+    // the baud rate.
+    const scl_low_ns = (1_000_000_000 / freq_in) * scl_lcnt_with_additions;
+    const scl_high_ns = (1_000_000_000 / freq_in) * scl_hcnt_with_additions;
+    switch (baud_rate) {
+        1...100_000 => {
+            const i2c_normal_scl_low_min_ns = 4700;
+            const i2c_normal_scl_high_min_ns = 4000;
+            if (scl_low_ns < i2c_normal_scl_low_min_ns) return ConfigError.InputFreqTooLow;
+            if (scl_high_ns < i2c_normal_scl_high_min_ns) return ConfigError.InputFreqTooLow;
+        },
+        100_001...400_000 => {
+            const i2c_fm_scl_low_min_ns = 1300;
+            const i2c_fm_scl_high_min_ns = 600;
+            if (scl_low_ns < i2c_fm_scl_low_min_ns) return ConfigError.InputFreqTooLow;
+            if (scl_high_ns < i2c_fm_scl_high_min_ns) return ConfigError.InputFreqTooLow;
+        },
+        400_001...1_000_000 => {
+            const i2c_fmplus_scl_low_min_ns = 500;
+            const i2c_fmplus_scl_high_min_ns = 260;
+            if (scl_low_ns < i2c_fmplus_scl_low_min_ns) return ConfigError.InputFreqTooLow;
+            if (scl_high_ns < i2c_fmplus_scl_high_min_ns) return ConfigError.InputFreqTooLow;
+        },
+        else => unreachable, // Already checked baud rate within spec
+    }
+
+    // Per RP2040 datasheet: "4.3.14.1. Minimum High and Low Counts in SS, FS, and FM+ Modes.":
+    // - IC_FS_SCL_LCNT must be greater than: IC_FS_SPKLEN + 7
+    // - Actual low count in clock cycles is: IC_FS_SCL_LCNT + 1
+    const scl_lcnt_min_val = spklen + 7;
+    const scl_lcnt_internal_additions = 1;
+    // - IC_FS_SCL_HCNT must be greater than: IC_FS_SPKLEN + 5
+    // - Actual high count in clock cycles is: IC_FS_SCL_HCNT + IC_FS_SPKLEN + 7
+    const scl_hcnt_min_val = spklen + 5;
+    const scl_hcnt_internal_additions = spklen + 7;
+    // Check for violating minimum/maximum values for high/low count registers given counts "with additions"
+    if (scl_hcnt_with_additions > std.math.maxInt(u16)) return ConfigError.InputFreqTooHigh;
+    if (scl_lcnt_with_additions > std.math.maxInt(u16)) return ConfigError.InputFreqTooHigh;
+    if (scl_hcnt_with_additions <= scl_hcnt_min_val + scl_hcnt_internal_additions) return ConfigError.InputFreqTooLow;
+    if (scl_lcnt_with_additions <= scl_lcnt_min_val + scl_lcnt_internal_additions) return ConfigError.InputFreqTooLow;
+
+    // Find the actual register settings given these adjustments
+    const scl_hcnt = scl_hcnt_with_additions - scl_hcnt_internal_additions;
+    const scl_lcnt = scl_lcnt_with_additions - scl_lcnt_internal_additions;
+
+    // Per I2C-bus specification a device in standard or fast mode must
+    // internally provide a hold time of at least 300ns for the SDA signal to
+    // bridge the undefined region of the falling edge of SCL. A smaller hold
+    // time of 120ns is used for fast mode plus.
+    const sda_tx_hold_count: u32 = if (baud_rate < 1_000_000)
+        // sda_tx_hold_count = freq_in [cycles/s] * 300ns * (1s / 1e9ns)
+        // Reduce 300/1e9 to 3/1e7 to avoid numbers that don't fit in uint.
+        // Add 1 to avoid division truncation.
+        ((freq_in * 3) / 10_000_000) + 1
+    else
+        // sda_tx_hold_count = freq_in [cycles/s] * 120ns * (1s / 1e9ns)
+        // Reduce 120/1e9 to 3/25e6 to avoid numbers that don't fit in uint.
+        // Add 1 to avoid division truncation.
+        ((freq_in * 3) / 25_000_000) + 1;
+
+    // Per spec, hold count can't exceed lcnt - 2, and must be a u16
+    if ((sda_tx_hold_count > scl_lcnt - 2) or (sda_tx_hold_count > std.math.maxInt(u16))) return ConfigError.HoldCountViolation;
+
+    return .{
+        .scl_hcnt = @as(u16, @intCast(scl_hcnt)),
+        .scl_lcnt = @as(u16, @intCast(scl_lcnt)),
+        .sda_tx_hold_count = @as(u16, @intCast(sda_tx_hold_count)),
+        .spklen = spklen,
+    };
+}
+
+test "i2c.translate_baudrate" {
+    try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 486, .scl_lcnt = 749, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(100_000, 125_000_000));
+    try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 112, .scl_lcnt = 186, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(400_000, 125_000_000));
+    try std.testing.expectError(ConfigError.UnsupportedBaudRate, translate_baudrate(0, 125_000_000));
+    // Taken directly from Table 450 to confirm our calculations match the datasheet's expectations
+    try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(100_000, 2_600_000));
+    try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(400_000, 11_900_000));
+    try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(1_000_000, 31_900_000));
+}
+
+/// Creates a new I2C driver instance, but doesn't configure any peripherals.
+pub fn from_instance_number(instance_num: u1, sda: gpio.Pin, scl: gpio.Pin) I2C {
+    return .{
+        .sda = sda,
+        .scl = scl,
+        .regs = switch (instance_num) {
+            0 => I2C0,
+            1 => I2C1,
+        },
+    };
+}
+
 /// An API for interacting with the RP2040's I2C driver.
 ///
 /// Features of the peripheral that are explicitly NOT supported by this API are:
@@ -70,7 +195,7 @@ pub const I2C = struct {
     regs: *volatile I2cRegs,
     initialized: bool = false,
 
-    inline fn disable(i2c: *I2C) void {
+    inline fn disable(i2c: I2C) void {
         i2c.regs.IC_ENABLE.write(.{
             .ENABLE = .{ .value = .DISABLED },
             .ABORT = .{ .value = .DISABLE },
@@ -79,7 +204,7 @@ pub const I2C = struct {
         });
     }
 
-    inline fn enable(i2c: *I2C) void {
+    inline fn enable(i2c: I2C) void {
         i2c.regs.IC_ENABLE.write(.{
             .ENABLE = .{ .value = .ENABLED },
             .ABORT = .{ .value = .DISABLE },
@@ -88,24 +213,12 @@ pub const I2C = struct {
         });
     }
 
-    /// Creates a new I2C driver instance, but doesn't configure any peripherals.
-    pub fn from_instance_number(instance_num: u1, sda: gpio.Pin, scl: gpio.Pin) I2C {
-        return .{
-            .sda = sda,
-            .scl = scl,
-            .regs = switch (instance_num) {
-                0 => I2C0,
-                1 => I2C1,
-            },
-        };
-    }
-
     const ConfigurationState = enum {
         init,
         deinit,
     };
 
-    fn configure_gpio_for_i2c(pin: *gpio.Pin, config: ConfigurationState) void {
+    fn configure_gpio_for_i2c(pin: gpio.Pin, config: ConfigurationState) void {
         switch (config) {
             .init => {
                 pin.set_function(.i2c);
@@ -156,8 +269,8 @@ pub const I2C = struct {
             .padding = 0,
         });
 
-        configure_gpio_for_i2c(&i2c.sda, .init);
-        configure_gpio_for_i2c(&i2c.scl, .init);
+        configure_gpio_for_i2c(i2c.sda, .init);
+        configure_gpio_for_i2c(i2c.scl, .init);
 
         const peripheral_block_freq = (comptime config.clock_config.get_frequency(.clk_sys)) orelse @compileError("clk_sys must be set for I²C");
         // set_baudrate() enables I2C block before returning
@@ -168,122 +281,9 @@ pub const I2C = struct {
     /// Disables I2C, and returns GPIO to disabled high impedance state.
     pub fn deinit(i2c: *I2C) void {
         i2c.disable();
-        configure_gpio_for_i2c(&i2c.sda, .deinit);
-        configure_gpio_for_i2c(&i2c.scl, .deinit);
+        configure_gpio_for_i2c(i2c.sda, .deinit);
+        configure_gpio_for_i2c(i2c.scl, .deinit);
         i2c.initialized = false;
-    }
-
-    const TimingRegisterValues = struct {
-        scl_hcnt: u16,
-        scl_lcnt: u16,
-        sda_tx_hold_count: u16,
-        spklen: u8,
-    };
-
-    fn translate_baudrate(baud_rate: u32, freq_in: u32) ConfigError!TimingRegisterValues {
-        if ((baud_rate < 1) or (baud_rate > 1e6)) {
-            return ConfigError.UnsupportedBaudRate;
-        }
-
-        // Per spec, must suppress at least 50ns spikes
-        const spklen_u32: u32 = @divFloor(50 - 1, (@divFloor(1_000_000_000 - 1, freq_in) + 1)) + 1;
-
-        // You shouldn't be able to drive the sys clock high enough to meet this condition, but doesn't hurt to check
-        if (spklen_u32 > std.math.maxInt(u8)) return ConfigError.InputFreqTooHigh;
-        const spklen: u8 = @intCast(spklen_u32);
-
-        // I2C clock period in peripheral clock counts, rounding up
-        const period: u32 = (freq_in + baud_rate / 2) / baud_rate;
-
-        // Setting SCL low time to 60% duty cycle should meet spec
-        // no matter if the receiver is operating in normal, fast mode,
-        // or fast mode+ across all of those supported frequency ranges.
-        // Note that these desired counts are AFTER the internal clock cycle
-        // additions described below.
-        const scl_lcnt_with_additions: u32 = period * 3 / 5;
-        const scl_hcnt_with_additions: u32 = period - scl_lcnt_with_additions;
-
-        // In the case where a rounding error shifts a timing parameter out of spec,
-        // that means the input clock frequency is too low (not granular enough).
-        // This also serves as a nice sanity check that we're still in spec no matter
-        // the baud rate.
-        const scl_low_ns = (1_000_000_000 / freq_in) * scl_lcnt_with_additions;
-        const scl_high_ns = (1_000_000_000 / freq_in) * scl_hcnt_with_additions;
-        switch (baud_rate) {
-            1...100_000 => {
-                const i2c_normal_scl_low_min_ns = 4700;
-                const i2c_normal_scl_high_min_ns = 4000;
-                if (scl_low_ns < i2c_normal_scl_low_min_ns) return ConfigError.InputFreqTooLow;
-                if (scl_high_ns < i2c_normal_scl_high_min_ns) return ConfigError.InputFreqTooLow;
-            },
-            100_001...400_000 => {
-                const i2c_fm_scl_low_min_ns = 1300;
-                const i2c_fm_scl_high_min_ns = 600;
-                if (scl_low_ns < i2c_fm_scl_low_min_ns) return ConfigError.InputFreqTooLow;
-                if (scl_high_ns < i2c_fm_scl_high_min_ns) return ConfigError.InputFreqTooLow;
-            },
-            400_001...1_000_000 => {
-                const i2c_fmplus_scl_low_min_ns = 500;
-                const i2c_fmplus_scl_high_min_ns = 260;
-                if (scl_low_ns < i2c_fmplus_scl_low_min_ns) return ConfigError.InputFreqTooLow;
-                if (scl_high_ns < i2c_fmplus_scl_high_min_ns) return ConfigError.InputFreqTooLow;
-            },
-            else => unreachable, // Already checked baud rate within spec
-        }
-
-        // Per RP2040 datasheet: "4.3.14.1. Minimum High and Low Counts in SS, FS, and FM+ Modes.":
-        // - IC_FS_SCL_LCNT must be greater than: IC_FS_SPKLEN + 7
-        // - Actual low count in clock cycles is: IC_FS_SCL_LCNT + 1
-        const scl_lcnt_min_val = spklen + 7;
-        const scl_lcnt_internal_additions = 1;
-        // - IC_FS_SCL_HCNT must be greater than: IC_FS_SPKLEN + 5
-        // - Actual high count in clock cycles is: IC_FS_SCL_HCNT + IC_FS_SPKLEN + 7
-        const scl_hcnt_min_val = spklen + 5;
-        const scl_hcnt_internal_additions = spklen + 7;
-        // Check for violating minimum/maximum values for high/low count registers given counts "with additions"
-        if (scl_hcnt_with_additions > std.math.maxInt(u16)) return ConfigError.InputFreqTooHigh;
-        if (scl_lcnt_with_additions > std.math.maxInt(u16)) return ConfigError.InputFreqTooHigh;
-        if (scl_hcnt_with_additions <= scl_hcnt_min_val + scl_hcnt_internal_additions) return ConfigError.InputFreqTooLow;
-        if (scl_lcnt_with_additions <= scl_lcnt_min_val + scl_lcnt_internal_additions) return ConfigError.InputFreqTooLow;
-
-        // Find the actual register settings given these adjustments
-        const scl_hcnt = scl_hcnt_with_additions - scl_hcnt_internal_additions;
-        const scl_lcnt = scl_lcnt_with_additions - scl_lcnt_internal_additions;
-
-        // Per I2C-bus specification a device in standard or fast mode must
-        // internally provide a hold time of at least 300ns for the SDA signal to
-        // bridge the undefined region of the falling edge of SCL. A smaller hold
-        // time of 120ns is used for fast mode plus.
-        const sda_tx_hold_count: u32 = if (baud_rate < 1_000_000)
-            // sda_tx_hold_count = freq_in [cycles/s] * 300ns * (1s / 1e9ns)
-            // Reduce 300/1e9 to 3/1e7 to avoid numbers that don't fit in uint.
-            // Add 1 to avoid division truncation.
-            ((freq_in * 3) / 10_000_000) + 1
-        else
-            // sda_tx_hold_count = freq_in [cycles/s] * 120ns * (1s / 1e9ns)
-            // Reduce 120/1e9 to 3/25e6 to avoid numbers that don't fit in uint.
-            // Add 1 to avoid division truncation.
-            ((freq_in * 3) / 25_000_000) + 1;
-
-        // Per spec, hold count can't exceed lcnt - 2, and must be a u16
-        if ((sda_tx_hold_count > scl_lcnt - 2) or (sda_tx_hold_count > std.math.maxInt(u16))) return ConfigError.HoldCountViolation;
-
-        return .{
-            .scl_hcnt = @as(u16, @intCast(scl_hcnt)),
-            .scl_lcnt = @as(u16, @intCast(scl_lcnt)),
-            .sda_tx_hold_count = @as(u16, @intCast(sda_tx_hold_count)),
-            .spklen = spklen,
-        };
-    }
-
-    test "i2c.convert_and_validate_baudrate" {
-        try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 486, .scl_lcnt = 749, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(100_000, 125_000_000));
-        try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 112, .scl_lcnt = 186, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(400_000, 125_000_000));
-        try std.testing.expectError(ConfigError.UnsupportedBaudRate, translate_baudrate(0, 125_000_000));
-        // Taken directly from Table 450 to confirm our calculations match the datasheet's expectations
-        try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(100_000, 2_600_000));
-        try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(400_000, 11_900_000));
-        try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(1_000_000, 31_900_000));
     }
 
     /// Configures I2C to run at a specified baud rate given a peripheral clock frequency.
@@ -292,7 +292,7 @@ pub const I2C = struct {
     /// block's configuration capabilities. Note that this does NOT take into account
     /// pin rise/fall time as that is board specific, so actual baud rates may be
     /// slightly lower than specified.
-    pub fn set_baudrate(i2c: *I2C, baud_rate: u32, freq_in: u32) ConfigError!void {
+    pub fn set_baudrate(i2c: I2C, baud_rate: u32, freq_in: u32) ConfigError!void {
         const reg_vals = try translate_baudrate(baud_rate, freq_in);
         i2c.disable();
         i2c.regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
@@ -311,7 +311,7 @@ pub const I2C = struct {
         return i2c.regs.IC_RXFLR.read().RXFLR;
     }
 
-    fn set_address(i2c: *I2C, addr: Address) void {
+    fn set_address(i2c: I2C, addr: Address) void {
         i2c.disable();
         i2c.regs.IC_TAR.write(.{
             .IC_TAR = @intFromEnum(addr),
@@ -322,7 +322,7 @@ pub const I2C = struct {
         i2c.enable();
     }
 
-    fn check_and_clear_abort(i2c: *I2C) TransactionError!void {
+    fn check_and_clear_abort(i2c: I2C) TransactionError!void {
         const abort_reason = i2c.regs.IC_TX_ABRT_SOURCE.read();
         if (@as(u32, @bitCast(abort_reason)) != 0) {
             // Note clearing the abort flag also clears the reason, and
@@ -351,7 +351,7 @@ pub const I2C = struct {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: *I2C, addr: Address, src: []const u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn write_blocking(i2c: I2C, addr: Address, src: []const u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
         if (src.len == 0) return TransactionError.NoData;
@@ -430,7 +430,7 @@ pub const I2C = struct {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn read_blocking(i2c: *I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
         if (dst.len == 0) return TransactionError.NoData;
@@ -493,7 +493,7 @@ pub const I2C = struct {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     /// This is useful for the common scenario of writing an address to a slave device, and then immediately reading bytes from that address
-    pub fn write_then_read_blocking(i2c: *I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
         if (src.len == 0) return TransactionError.NoData;

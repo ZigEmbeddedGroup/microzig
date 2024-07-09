@@ -59,5 +59,5 @@ pub fn get_cpu_id() u32 {
 test "hal tests" {
     _ = pio;
     _ = usb;
-    std.testing.refAllDecls(i2c);
+    _ = i2c;
 }
