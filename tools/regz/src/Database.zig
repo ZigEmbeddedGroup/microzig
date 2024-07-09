@@ -763,7 +763,7 @@ pub fn add_child(
     });
 
     assert(db.entity_is(entity_location, child_id));
-    comptime var it = std.mem.tokenize(u8, entity_location, ".");
+    comptime var it = std.mem.tokenizeScalar(u8, entity_location, '.');
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
     _ = comptime it.next();
@@ -796,7 +796,7 @@ pub fn add_device_property(
 
 // TODO: assert that entity is only found in one table
 pub fn entity_is(db: Database, comptime entity_location: []const u8, id: EntityId) bool {
-    comptime var it = std.mem.tokenize(u8, entity_location, ".");
+    comptime var it = std.mem.tokenizeScalar(u8, entity_location, '.');
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
     const group = comptime (it.next() orelse unreachable) ++ "s";
@@ -811,7 +811,7 @@ pub fn get_entity_id_by_name(
     comptime entity_location: []const u8,
     name: []const u8,
 ) !EntityId {
-    comptime var tok_it = std.mem.tokenize(u8, entity_location, ".");
+    comptime var tok_it = std.mem.tokenizeScalar(u8, entity_location, '.');
     // the tables are in plural form but "type.peripheral" feels better to me
     // for calling this function
     const group = comptime (tok_it.next() orelse unreachable) ++ "s";
