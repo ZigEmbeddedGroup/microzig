@@ -17,7 +17,7 @@ pub const chips = struct {
         .chip = .{
             .name = "ATSAMD51J19A",
             .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
-            .cpu = MicroZig.cpus.cortex_m4,
+            .cpu = MicroZig.cpus.cortex_m4f,
             .register_definition = .{
                 .atdf = .{ .cwd_relative = build_root ++ "/src/chips/ATSAMD51J19A.atdf" },
             },
