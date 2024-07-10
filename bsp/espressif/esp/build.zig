@@ -10,7 +10,7 @@ fn path(comptime suffix: []const u8) std.Build.LazyPath {
 const esp_riscv = .{
     .name = "Espressif RISC-V",
     .root_source_file = path("/src/cpus/espressif-riscv.zig"),
-    .target = std.zig.CrossTarget{
+    .target = std.Target.Query{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         .cpu_features_add = std.Target.riscv.featureSet(&.{

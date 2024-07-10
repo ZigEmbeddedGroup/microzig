@@ -75,7 +75,7 @@ fn entity_type_to_string(entity_type: Database.EntityType) []const u8 {
     };
 }
 
-const string_to_entity_type_map = std.ComptimeStringMap(Database.EntityType, .{
+const string_to_entity_type_map = std.StaticStringMap(Database.EntityType).initComptime(.{
     .{ "peripherals", .peripheral },
     .{ "register_groups", .register_group },
     .{ "registers", .register },
@@ -166,7 +166,7 @@ fn resolve_enums(ctx: *LoadContext) !void {
 
 fn ref_to_id(db: Database, ref: []const u8) !EntityId {
     // TODO: do proper tokenization since we'll need to handle @"" fields. okay to leave for now.
-    var it = std.mem.tokenize(u8, ref, ".");
+    var it = std.mem.tokenizeScalar(u8, ref, '.');
     const first = it.next() orelse return error.Malformed;
     return if (std.mem.eql(u8, "types", first)) blk: {
         var tmp_id: ?EntityId = null;

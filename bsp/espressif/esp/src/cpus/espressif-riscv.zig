@@ -61,13 +61,18 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    export fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
+    pub fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
         microzig.cpu.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
-        asm volatile ("la gp, __global_pointer$");
+        asm volatile (
+            \\.option push
+            \\.option norelax
+            \\la gp, __global_pointer$
+            \\.option pop
+        );
         microzig.cpu.setStatusBit(.mtvec, microzig.config.end_of_stack);
         root.initialize_system_memories();
         microzig_main();
@@ -103,5 +108,7 @@ pub const startup_logic = struct {
 };
 
 pub fn export_startup_logic() void {
-    // no op as it's already being exported
+    @export(startup_logic._start, .{
+        .name = "_start",
+    });
 }

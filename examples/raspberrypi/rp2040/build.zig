@@ -18,7 +18,7 @@ const available_examples = [_]Example{
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-device", .file = "src/usb_device.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/usb_hid.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_ws2812", .file = "src/ws2812.zig" },
-    // TODO: Fix multicore hal! .{ .target = "board:raspberry_pi/pico", .name = "pico_multicore" , .file = "src/blinky_core1.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_multicore" , .file = "src/blinky_core1.zig" },
 
     // WaveShare Boards:
     .{ .target = rp2040.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/tiles.zig" },
@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) void {
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
-            .root_source_file = .{ .path = example.file },
+            .root_source_file = b.path(example.file),
         });
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`

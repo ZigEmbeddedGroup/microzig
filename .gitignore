@@ -1,5 +1,6 @@
 zig-out/
 zig-cache/
+.zig-cache/
 microzig-deploy/
 .DS_Store
 .gdbinit

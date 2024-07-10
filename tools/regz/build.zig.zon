@@ -12,8 +12,8 @@
     },
     .dependencies = .{
         .libxml2 = .{
-            .url = "https://github.com/mattnite/zig-build-libxml2/archive/fca6bbd7f73914acaea685c544d91608797546a8.tar.gz",
-            .hash = "1220c3e12fc08c12d6fc52bcc0ae8b180a69abc08212350e2708d4851879f4c814da",
+            .url = "https://github.com/mattnite/zig-build-libxml2/archive/fab68b5fb06704ef4bdaa221726493a4b6af04b5.tar.gz",
+            .hash = "122084531ab8ba877a0178fb177a61f6dc9bed56bdcdfb11ad362f352680c04d84cb",
         },
     },
 }

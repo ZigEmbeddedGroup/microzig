@@ -1,1 +1,2 @@
 *.zig text=auto eol=lf
+flake.lock -diff

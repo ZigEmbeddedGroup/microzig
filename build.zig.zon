@@ -1,6 +1,7 @@
 .{
     .name = "microzig",
-    .version = "0.12.1",
+    .version = "0.13.0",
+    .minimum_zig_version = "0.13.0",
     .dependencies = .{
         // packages within the monorepo so that others can reach them
         .build = .{ .path = "build" },
@@ -29,8 +30,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "https://github.com/mattnite/boxzer/archive/74f17daa97f6861c31b30a5070136216c08eb39b.tar.gz",
-            .hash = "1220a14c01a66c023d8944dc672edd5121f98f82196fefbc09a13bcadb96e1c8e7f1",
+            .url = "https://github.com/mattnite/boxzer/archive/6bd6636d780f626af1c40a27be2680e223965c8a.tar.gz",
+            .hash = "1220432ca3323f0a7033fd84df6d0f2d66aecf4c5301b3ac70c96cca8b0938164f17",
         },
     },
 

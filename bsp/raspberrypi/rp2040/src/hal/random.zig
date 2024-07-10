@@ -2,7 +2,7 @@
 
 const std = @import("std");
 const assert = std.debug.assert;
-const Random = std.rand.Random;
+const Random = std.Random;
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -20,11 +20,11 @@ const peripherals = microzig.chip.peripherals;
 /// for security systems because the ROSC as entropy source can be
 /// compromised. However, it promises at least equal distribution.
 pub const Ascon = struct {
-    state: std.rand.Ascon,
+    state: Random.Ascon,
     counter: usize = 0,
 
     const reseed_threshold = 4096;
-    const secret_seed_length = std.rand.Ascon.secret_seed_length;
+    const secret_seed_length = Random.Ascon.secret_seed_length;
 
     pub fn init() @This() {
         // Ensure that the system clocks run from the XOSC and/or PLLs
@@ -38,10 +38,10 @@ pub const Ascon = struct {
         var b: [secret_seed_length]u8 = undefined;
         rosc(&b);
 
-        return @This(){ .state = std.rand.Ascon.init(b) };
+        return @This(){ .state = Random.Ascon.init(b) };
     }
 
-    /// Returns a `std.rand.Random` structure backed by the current RNG
+    /// Returns a `std.Random` structure backed by the current RNG
     pub fn random(self: *@This()) Random {
         return Random.init(self, fill);
     }
