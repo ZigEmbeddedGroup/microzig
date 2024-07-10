@@ -73,7 +73,7 @@ pub const cpus = struct {
 
     pub const cortex_m4f = MicroZig.Cpu{
         .name = "ARM Cortex-M4F",
-        .root_source_file = .{ .path = build_root ++ "/src/cpus/cortex_m.zig" },
+        .root_source_file = .{ .cwd_relative = build_root ++ "/src/cpus/cortex_m.zig" },
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
