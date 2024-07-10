@@ -268,7 +268,7 @@ pub fn init(allocator: std.mem.Allocator) !Database {
 }
 
 // TODO: figure out how to do completions: bash, zsh, fish, powershell, cmd
-pub fn init_from_atdf(allocator: Allocator, doc: xml.Doc) !Database {
+fn init_from_atdf_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -276,7 +276,14 @@ pub fn init_from_atdf(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-pub fn init_from_svd(allocator: Allocator, doc: xml.Doc) !Database {
+fn init_from_atdf(allocator: Allocator, text: []const u8) !Database {
+    var doc = try xml.Doc.from_memory(text);
+    defer doc.deinit();
+
+    return init_from_atdf_xml(allocator, doc);
+}
+
+fn init_from_svd_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -284,7 +291,14 @@ pub fn init_from_svd(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-pub fn init_from_dslite(allocator: Allocator, doc: xml.Doc) !Database {
+fn init_from_svd(allocator: Allocator, text: []const u8) !Database {
+    var doc = try xml.Doc.from_memory(text);
+    defer doc.deinit();
+
+    return init_from_svd_xml(allocator, doc);
+}
+
+fn init_from_dslite_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -292,12 +306,68 @@ pub fn init_from_dslite(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-pub fn init_from_json(allocator: Allocator, text: []const u8) !Database {
+fn init_from_dslite(allocator: Allocator, text: []const u8) !Database {
+    var doc = try xml.Doc.from_memory(text);
+    defer doc.deinit();
+
+    return init_from_dslite_xml(allocator, doc);
+}
+
+fn init_from_json(allocator: Allocator, text: []const u8) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
     try regzon.load_into_db(&db, text);
     return db;
+}
+
+pub const Schema = enum {
+    atdf,
+    dslite,
+    json,
+    svd,
+    xml,
+};
+
+pub fn init_from_memory(allocator: Allocator, text: []const u8, schema: ?Schema) !Database {
+    if (schema) |s| {
+        return switch (s) {
+            .json => try Database.init_from_json(allocator, text),
+            .atdf => try Database.init_from_atdf(allocator, text),
+            .svd => Database.init_from_svd(allocator, text),
+            .dslite => Database.init_from_dslite(allocator, text),
+            .xml => return error.Todo,
+        };
+    }
+
+    // try to determine schema
+    if (text.len == 0) return error.StreamTooShort;
+
+    if (text[0] == '{')
+        return try Database.init_from_json(allocator, text);
+
+    if (text[0] == '<') {
+        var doc = try xml.Doc.from_memory(text);
+        defer doc.deinit();
+
+        const root = try doc.get_root_element();
+        const root_name = root.get_name();
+        if (std.mem.eql(u8, root_name, "device"))
+            return try Database.init_from_svd_xml(allocator, doc)
+        else if (std.mem.eql(u8, root_name, "avr-tools-device-file"))
+            return try Database.init_from_atdf_xml(allocator, doc);
+    }
+
+    log.err("unable do detect register schema type", .{});
+    return error.Explained;
+}
+
+pub fn init_from_reader(allocator: Allocator, reader: std.io.AnyReader, schema: ?Schema) !Database {
+    var buffered = std.io.bufferedReader(reader);
+    const buffered_reader = buffered.reader().any();
+    const text = try buffered_reader.readAllAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(text);
+    return init_from_memory(allocator, text, schema);
 }
 
 pub fn create_entity(db: *Database) EntityId {

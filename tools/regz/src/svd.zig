@@ -111,7 +111,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
         for (required_properties) |property| {
             const value = cpu.get_value(property) orelse {
-                std.log.err("missing cpu property: {s}", .{property});
+                log.err("missing cpu property: {s}", .{property});
                 return error.MissingRequiredProperty;
             };
 
