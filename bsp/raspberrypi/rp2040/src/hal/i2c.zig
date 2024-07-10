@@ -79,13 +79,6 @@ pub const I2C = enum(u1) {
 
         i2c.disable();
 
-        regs.IC_ENABLE.write(.{
-            .ENABLE = .{ .value = .DISABLED },
-            .ABORT = .{ .value = .DISABLE },
-            .TX_CMD_BLOCK = .{ .value = .NOT_BLOCKED },
-            .padding = 0,
-        });
-
         // Configure as a fast-mode master with RepStart support, 7-bit addresses
         regs.IC_CON.write(.{
             .MASTER_MODE = .{ .value = .ENABLED },
