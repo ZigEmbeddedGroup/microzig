@@ -43,7 +43,7 @@ pub const TransactionError = error{
     DeviceNotPresent,
     NoAcknowledge,
     Timeout,
-    SlaveAddressReserved,
+    TargetAddressReserved,
     NoData,
     TxFifoFlushed,
     UnknownAbort,
@@ -186,7 +186,7 @@ pub fn from_instance_number(instance_num: u1, sda: gpio.Pin, scl: gpio.Pin) I2C 
 /// Features of the peripheral that are explicitly NOT supported by this API are:
 /// - General Call/Start Byte Behavior
 /// - 10 bit address mode
-/// - Slave mode
+/// - Target mode
 /// - Interrupt Driven/Asynchronous writes/reads
 /// - DMA based writes/reads
 pub const I2C = struct {
@@ -331,7 +331,7 @@ pub const I2C = struct {
             _ = i2c.regs.IC_CLR_TX_ABRT.read();
 
             if (abort_reason.ABRT_7B_ADDR_NOACK.value == .ACTIVE) {
-                // Address byte wasn't acknowledged by any slaves on the bus
+                // Address byte wasn't acknowledged by any targets on the bus
                 return TransactionError.DeviceNotPresent;
             } else if (abort_reason.ABRT_TXDATA_NOACK.value == .ABRT_TXDATA_NOACK_GENERATED) {
                 // Address byte was acknowledged, but a data byte wasn't
@@ -346,14 +346,14 @@ pub const I2C = struct {
         }
     }
 
-    /// Attempts to write number of bytes provided to slave device and blocks until one of the following occurs:
+    /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:
     /// - Bytes have been transmitted successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn write_blocking(i2c: I2C, addr: Address, src: []const u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
-        if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
+        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (src.len == 0) return TransactionError.NoData;
 
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
@@ -425,14 +425,14 @@ pub const I2C = struct {
             return TransactionError.Timeout;
     }
 
-    /// Attempts to read number of bytes in provided slice from slave device and blocks until one of the following occurs:
+    /// Attempts to read number of bytes in provided slice from target device and blocks until one of the following occurs:
     /// - Bytes have been read successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
-        if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
+        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (dst.len == 0) return TransactionError.NoData;
 
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
@@ -486,16 +486,16 @@ pub const I2C = struct {
         }
     }
 
-    /// Attempts to write number of bytes provided to slave device and then immediately read bytes following a repeated
+    /// Attempts to write number of bytes provided to target device and then immediately read bytes following a repeated
     /// start command (or Start + Stop if repeated start is disabled). Blocks until one of the following occurs:
     /// - Bytes have been transmitted and read successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    /// This is useful for the common scenario of writing an address to a slave device, and then immediately reading bytes from that address
+    /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
     pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
         if (!i2c.initialized) return TransactionError.Uninitialized;
-        if (addr.is_reserved()) return TransactionError.SlaveAddressReserved;
+        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (src.len == 0) return TransactionError.NoData;
 
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
