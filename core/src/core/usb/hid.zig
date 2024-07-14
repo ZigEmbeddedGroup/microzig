@@ -43,6 +43,12 @@
 
 const std = @import("std");
 
+const types = @import("types.zig");
+const utils = @import("utils.zig");
+
+const DescType = types.DescType;
+const bos = utils.BosConfig;
+
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Common Data Types
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -68,37 +74,46 @@ const std = @import("std");
 //      |   ReportDescriptor  |     |    PhysicalDesc   |
 //      -----------------------     ---------------------
 
-pub const DescType = enum(u8) {
-    /// HID descriptor
-    Hid = 0x21,
-    /// Report descriptor
-    Report = 0x22,
-    /// Physical descriptor
+pub const HidDescType = enum(u8) {
+    Hid      = 0x21,
+    Report   = 0x22,
     Physical = 0x23,
 
-    pub fn from_u16(v: u16) ?@This() {
-        return switch (v) {
-            0x21 => @This().Hid,
-            0x22 => @This().Report,
-            0x23 => @This().Physical,
-            else => null,
-        };
+    pub fn from_u8(v: u8) ?@This() {
+        return std.meta.intToEnum(@This(), v) catch null;
+    }
+};
+
+pub const HidRequestType = enum(u8) {
+    GetReport   = 0x01,
+    GetIdle     = 0x02,
+    GetProtocol = 0x03,
+    SetReport   = 0x09,
+    SetIdle     = 0x0a,
+    SetProtocol = 0x0b,
+
+    pub fn from_u8(v: u8) ?@This() {
+        return std.meta.intToEnum(@This(), v) catch null;
     }
 };
 
 /// USB HID descriptor
 pub const HidDescriptor = struct {
-    descriptor_type: DescType = DescType.Hid,
+    pub const const_descriptor_type = HidDescType.Hid;
+
+    length: u8 = 9,
+    /// Type of this descriptor
+    descriptor_type: HidDescType = const_descriptor_type,
     /// Numeric expression identifying the HID Class Specification release
-    bcd_hid: u16,
+    bcd_hid: u16 align(1),
     /// Numeric expression identifying country code of the localized hardware
     country_code: u8,
     /// Numeric expression specifying the number of class descriptors
     num_descriptors: u8,
     /// Type of HID class report
-    report_type: DescType = DescType.Report,
+    report_type: HidDescType = HidDescType.Report,
     /// The total size of the Report descriptor
-    report_length: u16,
+    report_length: u16 align(1),
 
     pub fn serialize(self: *const @This()) [9]u8 {
         var out: [9]u8 = undefined;
@@ -249,6 +264,7 @@ pub const LocalItem = enum(u4) {
 
 pub const UsageTable = struct {
     const fido: [2]u8 = "\xD0\xF1".*;
+    const vendor: [2]u8 = "\x00\xFF".*;
 };
 
 pub const FidoAllianceUsage = struct {
@@ -428,6 +444,126 @@ pub const ReportDescriptorFidoU2f = hid_usage_page(2, UsageTable.fido) //
 ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
 // End
 ++ hid_collection_end();
+
+pub const ReportDescriptorGenericInOut = hid_usage_page(2, UsageTable.vendor) //
+++ hid_usage(1, "\x01".*) //
+++ hid_collection(CollectionItem.Application) //
+// Usage Data In
+++ hid_usage(1, "\x02".*) //
+++ hid_logical_min(1, "\x00".*) //
+++ hid_logical_max(2, "\xff\x00".*) //
+++ hid_report_size(1, "\x08".*) //
+++ hid_report_count(1, "\x40".*) //
+++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+// Usage Data Out
+++ hid_usage(1, "\x03".*) //
+++ hid_logical_min(1, "\x00".*) //
+++ hid_logical_max(2, "\xff\x00".*) //
+++ hid_report_size(1, "\x08".*) //
+++ hid_report_count(1, "\x40".*) //
+++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+// End
+++ hid_collection_end();
+
+pub const HidClassDriver = struct {
+
+    device: ?types.UsbDevice = null,
+    ep_in: u8 = 0,
+    ep_out: u8 = 0,
+    hid_descriptor: []const u8 = &.{},
+    report_descriptor: []const u8,
+
+    fn init(ptr: *anyopaque, device: types.UsbDevice) void {
+        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
+        self.device = device;
+    }
+
+    fn open(ptr: *anyopaque, cfg: []const u8) !usize {
+        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
+        var curr_cfg = cfg;
+
+        if (bos.try_get_desc_as(types.InterfaceDescriptor, curr_cfg)) |desc_itf| {
+            if (desc_itf.interface_class != @intFromEnum(types.ClassCode.Hid)) return types.DriverErrors.UnsupportedInterfaceClassType;
+        } else {
+            return types.DriverErrors.ExpectedInterfaceDescriptor;
+        }
+
+        curr_cfg = bos.get_desc_next(curr_cfg);
+        if (bos.try_get_desc_as(HidDescriptor, curr_cfg)) |_| {
+            self.hid_descriptor = curr_cfg[0..bos.get_desc_len(curr_cfg)];
+            curr_cfg = bos.get_desc_next(curr_cfg);
+        } else {
+            return types.DriverErrors.UnexpectedDescriptor;
+        }
+
+        for (0..2) |_| {
+            if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
+                switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
+                    .In => { self.ep_in = desc_ep.endpoint_address; },
+                    .Out => { self.ep_out = desc_ep.endpoint_address; },
+                }
+                self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
+                curr_cfg = bos.get_desc_next(curr_cfg);
+            }
+        }
+
+        return cfg.len - curr_cfg.len;
+    }
+
+    fn class_control(ptr: *anyopaque, stage: types.ControlStage, setup: *const types.SetupPacket) bool {
+        var self: *HidClassDriver = @ptrCast(@alignCast(ptr));
+
+        switch (setup.request_type.type) {
+            .Standard => {
+                if (stage == .Setup) {
+                    const hid_desc_type = HidDescType.from_u8(@intCast((setup.value >> 8) & 0xff));
+                    const request_code = types.SetupRequest.from_u8(setup.request);
+
+                    if (hid_desc_type == null or request_code == null) {
+                        return false;
+                    }
+
+                    if (request_code.? == .GetDescriptor and hid_desc_type == .Hid) {
+                        self.device.?.control_transfer(setup, self.hid_descriptor);
+                    } else if (request_code.? == .GetDescriptor and hid_desc_type == .Report) {
+                        self.device.?.control_transfer(setup, self.report_descriptor);
+                    } else {
+                        return false;
+                    }
+                }
+            },
+            .Class => {
+                const hid_request_type = HidRequestType.from_u8(setup.request);
+                if (hid_request_type == null) return false;
+                
+                switch (hid_request_type.?) {
+                    .SetIdle => {
+                        if (stage == .Setup) {
+                            self.device.?.control_ack(setup);
+                        }
+                    },
+                    else => {
+                        return false;
+                    }
+                }
+            },
+            else => {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    pub fn driver(self: *@This()) types.UsbClassDriver {
+        return .{
+            .ptr = self,
+            .fn_init = init,
+            .fn_open = open,
+            .fn_class_control = class_control
+        };
+    }
+};
 
 test "create hid report item" {
     const r = hid_report_item(

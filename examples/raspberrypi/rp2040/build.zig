@@ -15,8 +15,8 @@ const available_examples = [_]Example{
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_spi-master", .file = "src/spi_master.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_squarewave", .file = "src/squarewave.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_uart", .file = "src/uart.zig" },
-    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-device", .file = "src/usb_device.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/usb_hid.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/usb_cdc.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_ws2812", .file = "src/ws2812.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_multicore" , .file = "src/blinky_core1.zig" },
 
