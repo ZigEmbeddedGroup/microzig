@@ -36,25 +36,32 @@ pub const Mask = packed struct(u32) {
 };
 
 pub fn reset(mask: Mask) void {
-    const raw_mask = @as(u32, @bitCast(mask));
+    const raw_mask: u32 = @bitCast(mask);
 
-    RESETS.RESET.raw = raw_mask;
-    RESETS.RESET.raw = 0;
+    RESETS.RESET.write_raw(raw_mask);
+    RESETS.RESET.write_raw(0);
 
-    while ((RESETS.RESET_DONE.raw & raw_mask) != raw_mask) {}
+    wait_for_reset_done(mask);
 }
 
 pub inline fn reset_block(mask: Mask) void {
-    hw.set_alias_raw(&RESETS.RESET).* = @as(u32, @bitCast(mask));
+    hw.set_alias(RESETS).RESET.write_raw(@bitCast(mask));
 }
 
 pub inline fn unreset_block(mask: Mask) void {
-    hw.clear_alias_raw(&RESETS.RESET).* = @as(u32, @bitCast(mask));
+    hw.clear_alias(RESETS).RESET.write_raw(@bitCast(mask));
 }
 
 pub fn unreset_block_wait(mask: Mask) void {
-    const raw_mask = @as(u32, @bitCast(mask));
-    hw.clear_alias_raw(&RESETS.RESET).* = raw_mask;
+    const raw_mask: u32 = @bitCast(mask);
+
+    hw.clear_alias(RESETS).RESET.write_raw(raw_mask);
+
+    wait_for_reset_done(mask);
+}
+
+inline fn wait_for_reset_done(mask: Mask) void {
+    const raw_mask: u32 = @bitCast(mask);
 
     // have to bitcast after a read() instead of `RESETS.RESET_DONE.raw` due to
     // some optimization bug. While loops will not be optimzed away if the
