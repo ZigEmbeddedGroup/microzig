@@ -131,6 +131,12 @@ pub const Pin = struct {
         }
     }
 
+    pub fn get_output_state(self: Pin) Level {
+        std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[self.number].read().OEN_SEL == 1);
+
+        return @enumFromInt((GPIO.OUT.raw >> self.number & 0x01));
+    }
+
     pub fn read(self: Pin) Level {
         std.debug.assert(IO_MUX.GPIO[self.number].FUN_IE == 1);
 
@@ -138,10 +144,9 @@ pub const Pin = struct {
     }
 
     pub fn toggle(self: Pin) void {
-        if ((GPIO.OUT.raw >> self.number & 0x01) == 0) {
-            write(self, Level.high);
-        } else {
-            write(self, Level.low);
+        switch (get_output_state(self)) {
+            Level.low => write(self, Level.high),
+            Level.high => write(self, Level.low),
         }
     }
 };
