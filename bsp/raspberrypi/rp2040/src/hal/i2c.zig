@@ -39,7 +39,6 @@ pub const Address = enum(u7) {
 };
 
 pub const TransactionError = error{
-    Uninitialized,
     DeviceNotPresent,
     NoAcknowledge,
     Timeout,
@@ -170,18 +169,13 @@ test "i2c.translate_baudrate" {
 }
 
 /// Creates a new I2C driver instance, but doesn't configure any peripherals.
-pub fn from_instance_number(instance_num: u1, sda: gpio.Pin, scl: gpio.Pin) I2C {
-    return .{
-        .sda = sda,
-        .scl = scl,
-        .regs = switch (instance_num) {
-            0 => I2C0,
-            1 => I2C1,
-        },
-    };
+pub fn from_instance_number(instance_number: u1) I2C {
+    return @as(I2C, @enumFromInt(instance_number));
 }
 
 /// An API for interacting with the RP2040's I2C driver.
+///
+/// Note: Assumes proper GPIO configuration, does NOT configure GPIO pins.
 ///
 /// Features of the peripheral that are explicitly NOT supported by this API are:
 /// - General Call/Start Byte Behavior
@@ -189,14 +183,18 @@ pub fn from_instance_number(instance_num: u1, sda: gpio.Pin, scl: gpio.Pin) I2C 
 /// - Target mode
 /// - Interrupt Driven/Asynchronous writes/reads
 /// - DMA based writes/reads
-pub const I2C = struct {
-    sda: gpio.Pin,
-    scl: gpio.Pin,
-    regs: *volatile I2cRegs,
-    initialized: bool = false,
+pub const I2C = enum(u1) {
+    _,
+
+    fn get_regs(i2c: I2C) *volatile I2cRegs {
+        return switch (@intFromEnum(i2c)) {
+            0 => I2C0,
+            1 => I2C1,
+        };
+    }
 
     inline fn disable(i2c: I2C) void {
-        i2c.regs.IC_ENABLE.write(.{
+        i2c.get_regs().IC_ENABLE.write(.{
             .ENABLE = .{ .value = .DISABLED },
             .ABORT = .{ .value = .DISABLE },
             .TX_CMD_BLOCK = .{ .value = .NOT_BLOCKED },
@@ -205,7 +203,7 @@ pub const I2C = struct {
     }
 
     inline fn enable(i2c: I2C) void {
-        i2c.regs.IC_ENABLE.write(.{
+        i2c.get_regs().IC_ENABLE.write(.{
             .ENABLE = .{ .value = .ENABLED },
             .ABORT = .{ .value = .DISABLE },
             .TX_CMD_BLOCK = .{ .value = .NOT_BLOCKED },
@@ -213,38 +211,17 @@ pub const I2C = struct {
         });
     }
 
-    const ConfigurationState = enum {
-        init,
-        deinit,
-    };
-
-    fn configure_gpio_for_i2c(pin: gpio.Pin, config: ConfigurationState) void {
-        switch (config) {
-            .init => {
-                pin.set_function(.i2c);
-                pin.set_pull(.up);
-                pin.set_slew_rate(.slow);
-                pin.set_schmitt_trigger(.enabled);
-            },
-            .deinit => {
-                // Not setting slew_rate and/or schmitt trigger since init() sets them to their POR default values
-                pin.set_pull(.disabled);
-                pin.set_function(.disabled);
-            },
-        }
-    }
-
-    /// Initializes the I2C HW block and corresponding GPIO pins per the Config provided
+    /// Initializes the I2C HW block per the Config provided
     /// Per the API limitations discussed above, the following settings are fixed and not configurable:
-    /// - Master Mode only
+    /// - Controller Mode only
     /// - Fast Mode only (full backwards compatibility in the I2C spec means this is suitable even for standard mode baud rates, IE 100kHz)
     /// - TX_EMPTY_CTRL is always enabled for easy detection of TX finished
     /// - TX and RX FIFO detection thresholds set to 1, this makes polling for TX finished/RX ready much simpler
     /// - DREQ signalling is always enabled, harmless if DMA isn't configured to listen for this
-    pub fn init(i2c: *I2C, comptime config: Config) ConfigError!void {
+    pub fn apply(i2c: I2C, comptime config: Config) ConfigError!void {
         i2c.disable();
 
-        i2c.regs.IC_CON.write(.{
+        i2c.get_regs().IC_CON.write(.{
             .MASTER_MODE = .{ .value = .ENABLED },
             .SPEED = .{ .value = .FAST },
             .IC_RESTART_EN = .{ .value = if (config.repeated_start) .ENABLED else .DISABLED },
@@ -259,31 +236,24 @@ pub const I2C = struct {
         });
 
         // TX and RX FIFO thresholds
-        i2c.regs.IC_RX_TL.write(.{ .RX_TL = 0, .padding = 0 });
-        i2c.regs.IC_TX_TL.write(.{ .TX_TL = 0, .padding = 0 });
+        i2c.get_regs().IC_RX_TL.write(.{ .RX_TL = 0, .padding = 0 });
+        i2c.get_regs().IC_TX_TL.write(.{ .TX_TL = 0, .padding = 0 });
 
         // DREQ signal control
-        i2c.regs.IC_DMA_CR.write(.{
+        i2c.get_regs().IC_DMA_CR.write(.{
             .RDMAE = .{ .value = .ENABLED },
             .TDMAE = .{ .value = .ENABLED },
             .padding = 0,
         });
 
-        configure_gpio_for_i2c(i2c.sda, .init);
-        configure_gpio_for_i2c(i2c.scl, .init);
-
         const peripheral_block_freq = (comptime config.clock_config.get_frequency(.clk_sys)) orelse @compileError("clk_sys must be set for I²C");
         // set_baudrate() enables I2C block before returning
         try i2c.set_baudrate(config.baud_rate, peripheral_block_freq);
-        i2c.initialized = true;
     }
 
-    /// Disables I2C, and returns GPIO to disabled high impedance state.
-    pub fn deinit(i2c: *I2C) void {
+    /// Disables I2C, returns peripheral registers to reset state.
+    pub fn reset(i2c: I2C) void {
         i2c.disable();
-        configure_gpio_for_i2c(i2c.sda, .deinit);
-        configure_gpio_for_i2c(i2c.scl, .deinit);
-        i2c.initialized = false;
     }
 
     /// Configures I2C to run at a specified baud rate given a peripheral clock frequency.
@@ -295,25 +265,25 @@ pub const I2C = struct {
     pub fn set_baudrate(i2c: I2C, baud_rate: u32, freq_in: u32) ConfigError!void {
         const reg_vals = try translate_baudrate(baud_rate, freq_in);
         i2c.disable();
-        i2c.regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
-        i2c.regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt, .padding = 0 });
-        i2c.regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen, .padding = 0 });
-        i2c.regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
+        i2c.get_regs().IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
+        i2c.get_regs().IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt, .padding = 0 });
+        i2c.get_regs().IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen, .padding = 0 });
+        i2c.get_regs().IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
         i2c.enable();
     }
 
     pub inline fn tx_fifo_available_spaces(i2c: I2C) u5 {
         const IC_TX_BUFFER_DEPTH = 16;
-        return IC_TX_BUFFER_DEPTH - i2c.regs.IC_TXFLR.read().TXFLR;
+        return IC_TX_BUFFER_DEPTH - i2c.get_regs().IC_TXFLR.read().TXFLR;
     }
 
     pub inline fn rx_fifo_bytes_ready(i2c: I2C) u5 {
-        return i2c.regs.IC_RXFLR.read().RXFLR;
+        return i2c.get_regs().IC_RXFLR.read().RXFLR;
     }
 
     fn set_address(i2c: I2C, addr: Address) void {
         i2c.disable();
-        i2c.regs.IC_TAR.write(.{
+        i2c.get_regs().IC_TAR.write(.{
             .IC_TAR = @intFromEnum(addr),
             .GC_OR_START = .{ .value = .GENERAL_CALL },
             .SPECIAL = .{ .value = .DISABLED },
@@ -323,12 +293,12 @@ pub const I2C = struct {
     }
 
     fn check_and_clear_abort(i2c: I2C) TransactionError!void {
-        const abort_reason = i2c.regs.IC_TX_ABRT_SOURCE.read();
+        const abort_reason = i2c.get_regs().IC_TX_ABRT_SOURCE.read();
         if (@as(u32, @bitCast(abort_reason)) != 0) {
             // Note clearing the abort flag also clears the reason, and
             // this instance of flag is clear-on-read! Note also the
             // IC_CLR_TX_ABRT register always reads as 0.
-            _ = i2c.regs.IC_CLR_TX_ABRT.read();
+            _ = i2c.get_regs().IC_CLR_TX_ABRT.read();
 
             if (abort_reason.ABRT_7B_ADDR_NOACK.value == .ACTIVE) {
                 // Address byte wasn't acknowledged by any targets on the bus
@@ -352,7 +322,6 @@ pub const I2C = struct {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn write_blocking(i2c: I2C, addr: Address, src: []const u8, timeout: ?time.Duration) TransactionError!void {
-        if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (src.len == 0) return TransactionError.NoData;
 
@@ -371,17 +340,17 @@ pub const I2C = struct {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.regs.IC_CLR_STOP_DET.read();
+            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
         for (src, 0..) |byte, i| {
             const last = (i == (src.len - 1));
-            i2c.regs.IC_DATA_CMD.write(.{
+            i2c.get_regs().IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .WRITE },
@@ -409,8 +378,8 @@ pub const I2C = struct {
         }
 
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
-        // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in init().
-        while (i2c.regs.IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
+        // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
+        while (i2c.get_regs().IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
             if (deadline_maybe) |deadline| {
                 if (deadline.is_reached()) {
                     timed_out = true;
@@ -431,7 +400,6 @@ pub const I2C = struct {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
-        if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (dst.len == 0) return TransactionError.NoData;
 
@@ -450,17 +418,17 @@ pub const I2C = struct {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.regs.IC_CLR_STOP_DET.read();
+            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
         for (dst, 0..) |*byte, i| {
             const last = (i == (dst.len - 1));
-            i2c.regs.IC_DATA_CMD.write(.{
+            i2c.get_regs().IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .READ },
@@ -482,7 +450,7 @@ pub const I2C = struct {
             if (timed_out)
                 return TransactionError.Timeout;
 
-            byte.* = i2c.regs.IC_DATA_CMD.read().DAT;
+            byte.* = i2c.get_regs().IC_DATA_CMD.read().DAT;
         }
     }
 
@@ -494,7 +462,6 @@ pub const I2C = struct {
     ///
     /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
     pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
-        if (!i2c.initialized) return TransactionError.Uninitialized;
         if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
         if (src.len == 0) return TransactionError.NoData;
 
@@ -513,18 +480,18 @@ pub const I2C = struct {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.regs.IC_CLR_STOP_DET.read();
+            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
 
         // Write provided bytes to device
         for (src) |byte| {
-            i2c.regs.IC_DATA_CMD.write(.{
+            i2c.get_regs().IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = 0 },
                 .CMD = .{ .value = .WRITE },
@@ -555,7 +522,7 @@ pub const I2C = struct {
         for (dst, 0..) |*byte, i| {
             const first = (i == 0);
             const last = (i == (dst.len - 1));
-            i2c.regs.IC_DATA_CMD.write(.{
+            i2c.get_regs().IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = @intFromBool(first) },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .READ },
@@ -578,7 +545,7 @@ pub const I2C = struct {
             if (timed_out)
                 return TransactionError.Timeout;
 
-            byte.* = i2c.regs.IC_DATA_CMD.read().DAT;
+            byte.* = i2c.get_regs().IC_DATA_CMD.read().DAT;
         }
     }
 };
