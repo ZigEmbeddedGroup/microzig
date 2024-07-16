@@ -66,6 +66,13 @@ pub const Pin = struct {
             .PIN_PAD_DRIVER = @intFromBool(config.open_drain),
         });
 
+        // NOTE: Assert that the USB_SERIAL_JTAG peripheral which uses pins GPIO18 and GPIO19
+        //       is disabled and USB pullup/down resistors are disabled.
+        if (number == 18 or number == 19) {
+            const usb_conf0 = peripherals.USB_DEVICE.CONF0.read();
+            std.debug.assert(usb_conf0.USB_PAD_ENABLE == 0 and usb_conf0.DP_PULLUP == 0 and usb_conf0.DP_PULLDOWN == 0 and usb_conf0.DM_PULLUP == 0 and usb_conf0.DM_PULLDOWN == 0);
+        }
+
         GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u17, 1) << number, .padding = 0 });
 
         return Pin{
