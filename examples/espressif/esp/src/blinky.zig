@@ -39,9 +39,10 @@ pub fn main() !void {
     // Disable all interrupts
     INTERRUPT_CORE0.CPU_INT_ENABLE.raw = 0;
 
-    var pin_config = gpio.Pin.default_config;
-    pin_config.output_enable = true;
-    pin_config.drive_strength = gpio.DriveStrength.@"40mA";
+    const pin_config = gpio.Pin.Config{
+        .output_enable = true,
+        .drive_strength = gpio.DriveStrength.@"40mA",
+    };
 
     var led_r_pin = gpio.Pin.init(LED_R_PIN, pin_config);
     var led_g_pin = gpio.Pin.init(LED_G_PIN, pin_config);

@@ -20,25 +20,14 @@ pub const Pin = struct {
     number: u5,
 
     pub const Config = struct {
-        input_enable: bool,
-        output_enable: bool,
-        open_drain: bool,
-        pullup_enable: bool,
-        pulldown_enable: bool,
-        input_filter_enable: bool,
-        output_invert: bool,
-        drive_strength: DriveStrength,
-    };
-
-    pub const default_config = Config{
-        .input_enable = false,
-        .output_enable = false,
-        .open_drain = false,
-        .pullup_enable = false,
-        .pulldown_enable = false,
-        .input_filter_enable = false,
-        .output_invert = false,
-        .drive_strength = DriveStrength.@"5mA",
+        input_enable: bool = false,
+        output_enable: bool = false,
+        open_drain: bool = false,
+        pullup_enable: bool = false,
+        pulldown_enable: bool = false,
+        input_filter_enable: bool = false,
+        output_invert: bool = false,
+        drive_strength: DriveStrength = DriveStrength.@"5mA",
     };
 
     pub fn init(number: u5, config: Config) Pin {
