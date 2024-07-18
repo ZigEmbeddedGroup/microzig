@@ -1,0 +1,47 @@
+const std = @import("std");
+const root = @import("root");
+const microzig = @import("microzig");
+
+pub fn enable_interrupts() void {
+    asm volatile ("csrsi mstatus, 0b1000");
+}
+
+pub fn disable_interrupts() void {
+    asm volatile ("csrci mstatus, 0b1000");
+}
+
+pub fn wfi() void {
+    asm volatile ("wfi");
+}
+
+pub fn wfe() void {
+    const PFIC = microzig.chip.peripherals.PFIC;
+    // Treats the subsequent wfi instruction as wfe
+    PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
+    asm volatile ("wfi");
+}
+
+pub const startup_logic = struct {
+    extern fn microzig_main() noreturn;
+
+    pub fn _start() callconv(.C) noreturn {
+        asm volatile ("la gp, __global_pointer$");
+        asm volatile ("mv sp, %[eos]"
+            :
+            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+        );
+        root.initialize_system_memories();
+        asm volatile ("csrsi 0x804, 0b111"); // INTSYSCR: enable EABI + Interrupt nesting + HPE
+        asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
+        microzig.cpu.enable_interrupts();
+        microzig_main();
+    }
+
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.Naked) void {
+        asm volatile ("j _start");
+    }
+};
+
+pub fn export_startup_logic() void {
+    @export(startup_logic._start, .{ .name = "_start" });
+}
