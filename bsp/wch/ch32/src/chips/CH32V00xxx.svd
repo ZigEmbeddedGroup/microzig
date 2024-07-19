@@ -5,6 +5,14 @@
   <name>CH32V00xxx</name>
   <version>1.2</version>
   <description>CH32V00xxx View File</description>
+  <cpu>
+    <name>QINGKEV2</name>
+    <revision>r0p0</revision>
+    <endian>little</endian>
+    <mpuPresent>false</mpuPresent>
+    <fpuPresent>false</fpuPresent>
+    <nvicPrioBits>2</nvicPrioBits>
+  </cpu>
   <!--Bus Interface Properties-->
   <!--RISC-V is byte addressable-->
 

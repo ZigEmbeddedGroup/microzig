@@ -3,7 +3,8 @@ const MicroZig = @import("microzig/build");
 const ch32 = @import("microzig/bsp/wch/ch32");
 
 const available_examples = [_]Example{
-    .{ .target = ch32.chips.ch32v003xx, .name = "ch32v003xx", .file = "src/empty.zig" },
+    .{ .target = ch32.chips.ch32v003xx, .name = "ch32v003xx_empty", .file = "src/empty.zig" },
+    .{ .target = ch32.chips.ch32v003xx, .name = "ch32v003xx_blinky", .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {

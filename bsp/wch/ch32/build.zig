@@ -38,6 +38,9 @@ pub const chips = struct {
                 .svd = path("/src/chips/CH32V00xxx.svd"),
             },
         },
+        .hal = .{
+            .root_source_file = path("/src/hals/CH32V003xx.zig"),
+        },
     };
 };
 

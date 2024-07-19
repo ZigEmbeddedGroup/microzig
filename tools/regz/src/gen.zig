@@ -9,6 +9,7 @@ const EntitySet = Database.EntitySet;
 
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
+const riscv = @import("arch/riscv.zig");
 
 const log = std.log.scoped(.gen);
 
@@ -232,6 +233,8 @@ fn write_vector_table(
         try arm.write_interrupt_vector(db, device_id, writer)
     else if (arch.is_avr())
         try avr.write_interrupt_vector(db, device_id, writer)
+    else if (arch.is_riscv())
+        try riscv.write_interrupt_vector(db, device_id, writer)
     else if (arch == .unknown)
         return
     else

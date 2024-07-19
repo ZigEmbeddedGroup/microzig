@@ -1,6 +1,7 @@
 const std = @import("std");
 const root = @import("root");
 const microzig = @import("microzig");
+const assert = std.debug.assert;
 
 pub fn enable_interrupts() void {
     asm volatile ("csrsi mstatus, 0b1000");
@@ -30,10 +31,13 @@ pub const startup_logic = struct {
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
+
         root.initialize_system_memories();
+
         asm volatile ("csrsi 0x804, 0b111"); // INTSYSCR: enable EABI + Interrupt nesting + HPE
         asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
         microzig.cpu.enable_interrupts();
+
         microzig_main();
     }
 
@@ -45,3 +49,14 @@ pub const startup_logic = struct {
 pub fn export_startup_logic() void {
     @export(startup_logic._start, .{ .name = "_start" });
 }
+
+const VectorTable = microzig.chip.VectorTable;
+pub const vector_table: VectorTable = blk: {
+    var tmp: VectorTable = .{};
+    if (@hasDecl(root, "microzig_options")) {
+        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
+    }
+
+    break :blk tmp;
+};
