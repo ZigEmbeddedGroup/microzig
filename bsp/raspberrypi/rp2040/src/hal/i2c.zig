@@ -168,10 +168,13 @@ test "i2c.translate_baudrate" {
     try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(1_000_000, 31_900_000));
 }
 
-/// Creates a new I2C driver instance, but doesn't configure any peripherals.
-pub fn from_instance_number(instance_number: u1) I2C {
-    return @as(I2C, @enumFromInt(instance_number));
-}
+pub const instance = struct {
+    pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
+    pub const I2C1: I2C = @as(I2C, @enumFromInt(1));
+    pub fn num(instance_number: u1) I2C {
+        return @as(I2C, @enumFromInt(instance_number));
+    }
+};
 
 /// An API for interacting with the RP2040's I2C driver.
 ///
