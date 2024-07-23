@@ -203,7 +203,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn transceive(spi: SPI, PacketType: type, src: []const PacketType, dst: []PacketType) void {
+    pub fn transceive_blocking(spi: SPI, PacketType: type, src: []const PacketType, dst: []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const spi_regs = spi.get_regs();
@@ -231,7 +231,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn write(spi: SPI, PacketType: type, src: []const PacketType) void {
+    pub fn write_blocking(spi: SPI, PacketType: type, src: []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         var tx_remaining = src.len;
@@ -273,7 +273,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn read(spi: SPI, PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
+    pub fn read_blocking(spi: SPI, PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const spi_regs = spi.get_regs();

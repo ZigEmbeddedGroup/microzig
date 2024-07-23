@@ -20,7 +20,7 @@ pub fn main() !void {
     var in_buf: [BUF_LEN]u8 = undefined;
 
     while (true) {
-        _ = spi.transceive(u8, &out_buf, &in_buf);
+        _ = spi.transceive_blocking(u8, &out_buf, &in_buf);
         time.sleep_ms(1 * 1000);
     }
 }
