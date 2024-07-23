@@ -8,7 +8,7 @@ const clocks = rp2040.clocks;
 const peripherals = microzig.chip.peripherals;
 
 const BUF_LEN = 0x100;
-const spi = rp2040.spi.from_instance_number(0);
+const spi = rp2040.spi.instance.SPI0;
 
 // Communicate with another RP2040 over spi
 // Slave implementation: https://github.com/raspberrypi/pico-examples/blob/master/spi/spi_master_slave/spi_slave/spi_slave.c

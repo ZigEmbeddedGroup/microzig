@@ -1,8 +1,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
-const SPI0 = peripherals.SPI0;
-const SPI1 = peripherals.SPI1;
+const SPI0_reg = peripherals.SPI0;
+const SPI1_reg = peripherals.SPI1;
 
 const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
@@ -44,9 +44,13 @@ pub const Config = struct {
     baud_rate: u32 = 1_000_000,
 };
 
-pub fn from_instance_number(instance_number: u1) SPI {
-    return @as(SPI, @enumFromInt(instance_number));
-}
+pub const instance = struct {
+    pub const SPI0: SPI = @as(SPI, @enumFromInt(0));
+    pub const SPI1: SPI = @as(SPI, @enumFromInt(1));
+    pub fn num(instance_number: u1) SPI {
+        return @as(SPI, @enumFromInt(instance_number));
+    }
+};
 
 pub const ConfigError = error{
     InvalidDataWidth,
@@ -68,8 +72,8 @@ pub const SPI = enum(u1) {
 
     fn get_regs(spi: SPI) *volatile SpiRegs {
         return switch (@intFromEnum(spi)) {
-            0 => SPI0,
-            1 => SPI1,
+            0 => SPI0_reg,
+            1 => SPI1_reg,
         };
     }
 
