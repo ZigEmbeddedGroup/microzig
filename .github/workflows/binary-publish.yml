@@ -1,0 +1,81 @@
+name: Reusable binary publish workflow
+
+permissions:
+  contents: write
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: false
+        type: string
+        default: ""
+      artifact:
+        required: true
+        type: string
+      github-artifact-name:
+        required: true
+        type: string
+      artifact-target-name:
+        required: false
+        type: string
+        default: ""
+      target-path:
+        required: false
+        type: string
+        default: ""
+      source:
+        required: true
+        type: string
+    secrets:
+      ssh-key:
+        required: true
+      host:
+        required: true
+      port:
+        required: true
+      user:
+        required: true
+
+jobs:
+  publish:
+    runs-on: macos-latest
+    steps:
+      - name: Check tag status
+        if: ${{ startsWith(github.ref, 'refs/tags/') && ! endsWith(github.ref, input.tag) }}
+        uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed("Provided tag does not match github ref tag")
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ input.github-artifact-name }}
+      - name: Get Target
+        id: get-target
+        run: |
+          if [ -z ${{ input.artifact-target-name }} ]; then 
+            echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT; 
+          else
+            echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT;
+          fi
+      - name: Publish Release
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.ssh-key }}
+          ARGS: "-vzrli"
+          SOURCE: ${{ input.source }}
+          REMOTE_HOST: ${{ secrets.host }}
+          REMOTE_USER: ${{ secrets.user }}
+          REMOTE_PORT: ${{ secrets.port }}
+          TARGET: ${{ steps.get-target.outputs.PUB_TARGET }}/${{ inputs.target }}
+      - name: Create Release Draft
+        if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, input.tag) }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ input.source }}/*
+          artifactErrorsFailBuild: true
+          draft: true
+          generateReleaseNotes: true
+          tag: ${{ inputs.tag }}
+          prerelease: ${{ contains(inputs.tag, '-beta') || contains(inputs.tag, '-alpha') || contains(inputs.tag, '-rc') }}
