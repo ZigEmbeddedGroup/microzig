@@ -5,7 +5,10 @@ on:
   pull_request:
     branches: [zig-master]
 
+<<<<<<< HEAD
 # A simple workflow that will, upon a push or PR to zig-master, build microzig
+=======
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
 jobs:
   # No we don't need this still, I'm just happy about figuring out the jq query
   # (I don't want to hear that it is simple, I think it's cool xD)
@@ -24,12 +27,19 @@ jobs:
   #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-microzig-master-post-pr:
     name: Build with master
+<<<<<<< HEAD
     uses: ./.github/workflows/build-base.yml
+=======
+    uses: ./.github/workflows/zig-build-base.yml
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
     with:
       zig-version: master
       get-submodules: true
       is-packaged: true
       artifact-output-paths: boxzer-out
+<<<<<<< HEAD
       zig-args: -Doptimize=ReleaseSmall
+=======
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}

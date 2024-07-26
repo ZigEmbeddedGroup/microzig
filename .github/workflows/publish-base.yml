@@ -6,10 +6,15 @@ permissions:
 on:
   workflow_call:
     inputs:
+<<<<<<< HEAD
+=======
+      # The tag that we are publishing to
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
       tag:
         required: false
         type: string
         default: ""
+<<<<<<< HEAD
         description: The version tag to publish
       github-artifact-name:
         required: true
@@ -61,10 +66,54 @@ jobs:
         if: |
           startsWith(github.ref, 'refs/tags/') 
             && ! endsWith(github.ref, inputs.tag)
+=======
+      # The name of what we are building
+      artifact:
+        required: true
+        type: string
+      # The name that will be used to same build artifacts to share
+      # between jobs
+      github-artifact-name:
+        required: true
+        type: string
+      # The root path to publish package to. If left blank, artifact
+      # is used.
+      artifact-target-name:
+        required: false
+        type: string
+        default: ""
+      # The target path that goes before the artifact-target-name
+      # {artifact | artifact-target-name}/{target-path}
+      target-path:
+        required: false
+        type: string
+        default: ""
+      # The folder where the stuff to be published is located
+      source:
+        required: true
+        type: string
+    secrets:
+      ssh-key:
+        required: true
+      host:
+        required: true
+      port:
+        required: true
+      user:
+        required: true
+
+jobs:
+  publish:
+    runs-on: macos-latest
+    steps:
+      - name: Check tag status
+        if: ${{ startsWith(github.ref, 'refs/tags/') && ! endsWith(github.ref, input.tag) }}
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
         uses: actions/github-script@v3
         with:
           script: |
             core.setFailed("Provided tag does not match github ref tag")
+<<<<<<< HEAD
       # Download the requested github artifact
       - name: Download artifacts
         id: download
@@ -83,11 +132,26 @@ jobs:
             "${{ steps.download.outputs.download-path }}/${{ inputs.source-path }}" \
             )" >> $GITHUB_OUTPUT
       # Publish to the host
+=======
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ input.github-artifact-name }}
+      - name: Get Target
+        id: get-target
+        run: |
+          if [ -z ${{ input.artifact-target-name }} ]; then 
+            echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT; 
+          else
+            echo "PUB_TARGET=${{ input.artifact-target-name }}" >> $GITHUB_OUTPUT;
+          fi
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
       - name: Publish Release
         uses: easingthemes/ssh-deploy@main
         with:
           SSH_PRIVATE_KEY: ${{ secrets.ssh-key }}
           ARGS: "-vzrli"
+<<<<<<< HEAD
           SOURCE: ${{ steps.get-source-path.outputs.path }}
           REMOTE_HOST: ${{ secrets.host }}
           REMOTE_USER: ${{ secrets.user }}
@@ -100,6 +164,19 @@ jobs:
         with:
           # artifacts: "artifacts-${{ github.sha }}/*"
           # artifactErrorsFailBuild: true
+=======
+          SOURCE: ${{ input.source }}
+          REMOTE_HOST: ${{ secrets.host }}
+          REMOTE_USER: ${{ secrets.user }}
+          REMOTE_PORT: ${{ secrets.port }}
+          TARGET: ${{ steps.get-target.outputs.PUB_TARGET }}/${{ inputs.target-path }}
+      - name: Create Release Draft
+        if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, input.tag) }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ input.source }}/*
+          artifactErrorsFailBuild: true
+>>>>>>> ea386ec (ci: implement build pipeline and patch to zig master)
           draft: true
           generateReleaseNotes: true
           tag: ${{ inputs.tag }}
