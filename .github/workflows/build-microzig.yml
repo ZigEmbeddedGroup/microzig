@@ -1,0 +1,101 @@
+name: Build Microzig
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/**
+      - build.zig*
+      - tools/**
+      - core/**
+      - bsp/**
+      - examples/**
+  pull_request:
+    branches: [main]
+    paths:
+      - build.zig*
+      - tools/**
+      - core/**
+      - bsp/**
+      - examples/**
+
+jobs:
+  build-microzig:
+    if: ${{ ( github.event_name == 'pull_request' && github.base_ref == 'main' ) || github.ref_name == 'main' }}
+    name: Build
+    uses: ./.github/workflows/zig-build-base.yml
+    with:
+      zig-version: 0.13.0
+      get-submodules: true
+      is-packaged: true
+      artifact-output-paths: boxzer-out
+    secrets:
+      downloads-url: ${{ secrets.DOWNLOADS_URL }}
+  create-branch:
+    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+    name: Create Patch Branch
+    needs:
+      - build-microzig
+    runs-on: ubuntu-latest
+    outputs:
+      branch: master-patch/${{ github.sha }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: cbe
+        name: Check branch exists
+        # The list remote returns nothing if the branch does not exist.
+        # So, if there is nothing in the command output, it does not exist
+        run: |
+          if [[ -z "$(git ls-remote --heads origin master-patch/${{ github.sha }})" ]]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Branch
+        if: steps.cbe.outputs.exists == 'false'
+        run: |
+          git config user.name "$(git log -1 --pretty=format:'%an')"
+          git config user.email "$(git log -1 --pretty=format:'%ae')"
+          git checkout -b "master-patch/${{ github.sha }}"
+          git push -u origin "master-patch/${{ github.sha }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master-patch/${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: add-commit
+        run: |
+          git config user.name "$(git log -1 --pretty=format:'%an')"
+          git config user.email "$(git log -1 --pretty=format:'%ae')"
+          git commit --author "ZEG Github Action <>" -m "feat: added commit file" --allow-empty
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: cpe
+        name: check pr exists
+        # github actions pr only outputs when the query find something.
+        # So, if the output is empty, pr does not exist
+        run: |
+          gh pr list -B zig-master -H "master-patch/${{ github.sha }}" 2> check-pr-exists-output
+          if [[ -z "$(cat check-pr-exists-output)" ]]; then 
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+          rm check-pr-exists-output
+        env:
+          GITHUB_TOKEN: ${{ secrets.PR_CREATE_PAT }}
+      - name: create pull request,
+        if: steps.cpe.outputs.exists == 'false'
+        run: |
+          gh pr create -B zig-master -H master-patch/${{ github.sha }} --title 'Testing commit ${{ github.sha }} with zig master' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.PR_CREATE_PAT }}
