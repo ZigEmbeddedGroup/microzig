@@ -1,0 +1,33 @@
+name: Build Microzig Master
+on:
+  push:
+    branches: [zig-master]
+  pull_request:
+    branches: [zig-master]
+
+jobs:
+  # No we don't need this still, I'm just happy about figuring out the jq query
+  # (I don't want to hear that it is simple, I think it's cool xD)
+  # get-branch:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     ref: ${{ steps.gmrp.outputs.ref }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v4
+  #     - name: get-most-recent-pr
+  #       id: gmrp
+  #       run: |
+  #         echo "ref=$(gh pr list -B zig-master --limit 30 --json headRefName,number -q '[.[] | select(.headRefName | startswith("master-patch"))] | max_by(.number) | .headRefName')" >> $GITHUB_OUTPUT
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-microzig-master-post-pr:
+    name: Build with master
+    uses: ./.github/workflows/zig-build-base.yml
+    with:
+      zig-version: master
+      get-submodules: true
+      is-packaged: true
+      artifact-output-paths: boxzer-out
+    secrets:
+      downloads-url: ${{ secrets.DOWNLOADS_URL }}

@@ -38,7 +38,7 @@ pub fn build(b: *Build) void {
         b.getInstallStep().dependOn(example_dep_install_step);
     }
 
-    const boxzer_dep = b.dependency("boxzer", .{});
+    const boxzer_dep = b.dependency("boxzer", .{ .optimize = .ReleaseSafe });
     const boxzer_exe = boxzer_dep.artifact("boxzer");
     const boxzer_run = b.addRunArtifact(boxzer_exe);
     if (b.args) |args|

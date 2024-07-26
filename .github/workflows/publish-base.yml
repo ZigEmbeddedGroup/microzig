@@ -6,24 +6,33 @@ permissions:
 on:
   workflow_call:
     inputs:
+      # The tag that we are publishing to
       tag:
         required: false
         type: string
         default: ""
+      # The name of what we are building
       artifact:
         required: true
         type: string
+      # The name that will be used to same build artifacts to share
+      # between jobs
       github-artifact-name:
         required: true
         type: string
+      # The root path to publish package to. If left blank, artifact
+      # is used.
       artifact-target-name:
         required: false
         type: string
         default: ""
+      # The target path that goes before the artifact-target-name
+      # {artifact | artifact-target-name}/{target-path}
       target-path:
         required: false
         type: string
         default: ""
+      # The folder where the stuff to be published is located
       source:
         required: true
         type: string
@@ -57,7 +66,7 @@ jobs:
           if [ -z ${{ input.artifact-target-name }} ]; then 
             echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT; 
           else
-            echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT;
+            echo "PUB_TARGET=${{ input.artifact-target-name }}" >> $GITHUB_OUTPUT;
           fi
       - name: Publish Release
         uses: easingthemes/ssh-deploy@main
@@ -68,7 +77,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.host }}
           REMOTE_USER: ${{ secrets.user }}
           REMOTE_PORT: ${{ secrets.port }}
-          TARGET: ${{ steps.get-target.outputs.PUB_TARGET }}/${{ inputs.target }}
+          TARGET: ${{ steps.get-target.outputs.PUB_TARGET }}/${{ inputs.target-path }}
       - name: Create Release Draft
         if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, input.tag) }}
         uses: ncipollo/release-action@v1
