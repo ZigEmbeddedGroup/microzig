@@ -223,8 +223,8 @@ pub const I2C = enum(u1) {
     /// - DREQ signalling is always enabled, harmless if DMA isn't configured to listen for this
     pub fn apply(i2c: I2C, comptime config: Config) ConfigError!void {
         i2c.disable();
-
-        i2c.get_regs().IC_CON.write(.{
+        const regs = i2c.get_regs();
+        regs.IC_CON.write(.{
             .MASTER_MODE = .{ .value = .ENABLED },
             .SPEED = .{ .value = .FAST },
             .IC_RESTART_EN = .{ .value = if (config.repeated_start) .ENABLED else .DISABLED },
@@ -239,11 +239,11 @@ pub const I2C = enum(u1) {
         });
 
         // TX and RX FIFO thresholds
-        i2c.get_regs().IC_RX_TL.write(.{ .RX_TL = 0, .padding = 0 });
-        i2c.get_regs().IC_TX_TL.write(.{ .TX_TL = 0, .padding = 0 });
+        regs.IC_RX_TL.write(.{ .RX_TL = 0, .padding = 0 });
+        regs.IC_TX_TL.write(.{ .TX_TL = 0, .padding = 0 });
 
         // DREQ signal control
-        i2c.get_regs().IC_DMA_CR.write(.{
+        regs.IC_DMA_CR.write(.{
             .RDMAE = .{ .value = .ENABLED },
             .TDMAE = .{ .value = .ENABLED },
             .padding = 0,
@@ -268,10 +268,11 @@ pub const I2C = enum(u1) {
     pub fn set_baudrate(i2c: I2C, baud_rate: u32, freq_in: u32) ConfigError!void {
         const reg_vals = try translate_baudrate(baud_rate, freq_in);
         i2c.disable();
-        i2c.get_regs().IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
-        i2c.get_regs().IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt, .padding = 0 });
-        i2c.get_regs().IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen, .padding = 0 });
-        i2c.get_regs().IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
+        const regs = i2c.get_regs();
+        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
+        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt, .padding = 0 });
+        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen, .padding = 0 });
+        regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
         i2c.enable();
     }
 
@@ -296,12 +297,13 @@ pub const I2C = enum(u1) {
     }
 
     fn check_and_clear_abort(i2c: I2C) TransactionError!void {
-        const abort_reason = i2c.get_regs().IC_TX_ABRT_SOURCE.read();
+        const regs = i2c.get_regs();
+        const abort_reason = regs.IC_TX_ABRT_SOURCE.read();
         if (@as(u32, @bitCast(abort_reason)) != 0) {
             // Note clearing the abort flag also clears the reason, and
             // this instance of flag is clear-on-read! Note also the
             // IC_CLR_TX_ABRT register always reads as 0.
-            _ = i2c.get_regs().IC_CLR_TX_ABRT.read();
+            _ = regs.IC_CLR_TX_ABRT.read();
 
             if (abort_reason.ABRT_7B_ADDR_NOACK.value == .ACTIVE) {
                 // Address byte wasn't acknowledged by any targets on the bus
@@ -331,6 +333,7 @@ pub const I2C = enum(u1) {
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
 
         i2c.set_address(addr);
+        const regs = i2c.get_regs();
 
         // Independent of successful write or abort, always ensure
         // the STOP condition is generated and transaction is concluded before
@@ -343,17 +346,17 @@ pub const I2C = enum(u1) {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
+            _ = regs.IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
         for (src, 0..) |byte, i| {
             const last = (i == (src.len - 1));
-            i2c.get_regs().IC_DATA_CMD.write(.{
+            regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .WRITE },
@@ -382,7 +385,7 @@ pub const I2C = enum(u1) {
 
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
         // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
-        while (i2c.get_regs().IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
+        while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
             if (deadline_maybe) |deadline| {
                 if (deadline.is_reached()) {
                     timed_out = true;
@@ -409,6 +412,7 @@ pub const I2C = enum(u1) {
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
 
         i2c.set_address(addr);
+        const regs = i2c.get_regs();
 
         // Independent of successful read or abort, always ensure
         // the STOP condition is generated and transaction is concluded before
@@ -421,17 +425,17 @@ pub const I2C = enum(u1) {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
+            _ = regs.IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
         for (dst, 0..) |*byte, i| {
             const last = (i == (dst.len - 1));
-            i2c.get_regs().IC_DATA_CMD.write(.{
+            regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .READ },
@@ -453,7 +457,7 @@ pub const I2C = enum(u1) {
             if (timed_out)
                 return TransactionError.Timeout;
 
-            byte.* = i2c.get_regs().IC_DATA_CMD.read().DAT;
+            byte.* = regs.IC_DATA_CMD.read().DAT;
         }
     }
 
@@ -471,6 +475,7 @@ pub const I2C = enum(u1) {
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
 
         i2c.set_address(addr);
+        const regs = i2c.get_regs();
 
         // Independent of successful write or abort, always ensure
         // the STOP condition is generated and transaction is concluded before
@@ -483,18 +488,18 @@ pub const I2C = enum(u1) {
             //     condition here? If so, additional code would be needed here
             //     to take care of the abort.
             // As far as I can tell from the datasheet, no, this is not possible.
-            while (i2c.get_regs().IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
                 hw.tight_loop_contents();
                 if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
             }
-            _ = i2c.get_regs().IC_CLR_STOP_DET.read();
+            _ = regs.IC_CLR_STOP_DET.read();
         }
 
         var timed_out = false;
 
         // Write provided bytes to device
         for (src) |byte| {
-            i2c.get_regs().IC_DATA_CMD.write(.{
+            regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = 0 },
                 .CMD = .{ .value = .WRITE },
@@ -525,7 +530,7 @@ pub const I2C = enum(u1) {
         for (dst, 0..) |*byte, i| {
             const first = (i == 0);
             const last = (i == (dst.len - 1));
-            i2c.get_regs().IC_DATA_CMD.write(.{
+            regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = @intFromBool(first) },
                 .STOP = .{ .raw = @intFromBool(last) },
                 .CMD = .{ .value = .READ },
@@ -548,7 +553,7 @@ pub const I2C = enum(u1) {
             if (timed_out)
                 return TransactionError.Timeout;
 
-            byte.* = i2c.get_regs().IC_DATA_CMD.read().DAT;
+            byte.* = regs.IC_DATA_CMD.read().DAT;
         }
     }
 };
