@@ -12,34 +12,49 @@ const hw = @import("hw.zig");
 
 const SpiRegs = microzig.chip.types.peripherals.SPI0;
 
-pub const Motorola = struct {
-    pub const Polarity = enum(u1) {
-        low = 0,
-        high = 1,
-    };
-
-    pub const Phase = enum(u1) {
-        first_edge = 0,
-        second_edge = 1,
-    };
-
-    /// Low means clock is steady state low, high means steady state high
-    clock_polarity: Polarity = .low,
-
-    /// Controls whether data is captured on the first or second clock edge transition
-    clock_phase: Phase = .first_edge,
-};
-
 pub const FrameFormat = union(enum) {
+    pub const Motorola = struct {
+        pub const Polarity = enum(u1) {
+            default_low = 0,
+            default_high = 1,
+        };
+
+        pub const Phase = enum(u1) {
+            first_edge = 0,
+            second_edge = 1,
+        };
+
+        /// default_low means clock is steady state low, default_high means steady state high
+        clock_polarity: Polarity = .default_low,
+
+        /// Controls whether data is captured on the first or second clock edge transition
+        clock_phase: Phase = .first_edge,
+    };
+
     motorola: Motorola,
     texas_instruments,
     ns_microwire,
 };
 
+pub const DataWidthBits = enum(u4) {
+    four = 3,
+    five = 4,
+    six = 5,
+    seven = 6,
+    eight = 7,
+    nine = 8,
+    ten = 9,
+    eleven = 10,
+    twelve = 11,
+    thirteen = 12,
+    fourteen = 13,
+    fifteen = 14,
+    sixteen = 15,
+};
+
 pub const Config = struct {
     clock_config: clocks.GlobalConfiguration,
-    /// Number of bits in a frame can't be less than 4 or more than 16
-    data_width: u4 = 8,
+    data_width: DataWidthBits = .eight,
     frame_format: FrameFormat = .{ .motorola = .{} },
     baud_rate: u32 = 1_000_000,
 };
@@ -82,8 +97,6 @@ pub const SPI = enum(u1) {
     /// - Controller Mode only
     /// - DREQ signalling is always enabled, harmless if DMA isn't configured to listen for this
     pub fn apply(spi: SPI, comptime config: Config) ConfigError!void {
-        if (config.data_width < 4) return ConfigError.InvalidDataWidth;
-
         const peri_freq = config.clock_config.peri.?.output_freq;
         try spi.set_baudrate(config.baud_rate, peri_freq);
 
@@ -93,7 +106,7 @@ pub const SPI = enum(u1) {
             .motorola => |ff| {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b00,
-                    .DSS = config.data_width - 1,
+                    .DSS = @intFromEnum(config.data_width),
                     .SPO = @intFromEnum(ff.clock_polarity),
                     .SPH = @intFromEnum(ff.clock_phase),
                 });
@@ -102,7 +115,7 @@ pub const SPI = enum(u1) {
             .texas_instruments => {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b01,
-                    .DSS = config.data_width - 1,
+                    .DSS = @intFromEnum(config.data_width),
                     .SPO = 0,
                     .SPH = 0,
                 });
@@ -111,7 +124,7 @@ pub const SPI = enum(u1) {
             .ns_microwire => {
                 spi_regs.SSPCR0.modify(.{
                     .FRF = 0b10,
-                    .DSS = config.data_width - 1,
+                    .DSS = @intFromEnum(config.data_width),
                     .SPO = 0,
                     .SPH = 0,
                 });
@@ -157,19 +170,16 @@ pub const SPI = enum(u1) {
         return spi.get_regs().SSPSR.read().RNE == 1;
     }
 
-    fn validate_bitwidth(PacketType: type) void {
-        const acceptable_types = .{ u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15, u16 };
-        for (acceptable_types) |acceptable_type| {
-            if (std.meta.eql(PacketType, acceptable_type)) return;
-        }
-        @compileError("PacketType must be one of u4, u5, ..., u16");
+    fn validate_bitwidth(comptime PacketType: type) void {
+        if (@bitSizeOf(PacketType) < 4 or @bitSizeOf(PacketType) > 16)
+            @compileError("PacketType must be a datatype with a size between 4 and 16 bits inclusive");
     }
 
     const fifo_depth = 8;
 
     /// Disable SPI, pre-fill the TX FIFO as much as possible, and then re-enable to start transmission.
     /// Leads to performance gains in thoroughput. Returns how many bytes were consumed from src.
-    fn prime_tx_fifo(spi: SPI, PacketType: type, src: []const PacketType) usize {
+    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src: []const PacketType) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
@@ -186,7 +196,7 @@ pub const SPI = enum(u1) {
     }
 
     /// Same as prime_tx_fifo but for a repeated byte.
-    fn prime_tx_fifo_repeated(spi: SPI, PacketType: type, repeated_byte: PacketType, repeat_count: usize) usize {
+    fn prime_tx_fifo_repeated(spi: SPI, comptime PacketType: type, repeated_byte: PacketType, repeat_count: usize) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
@@ -207,7 +217,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn transceive_blocking(spi: SPI, PacketType: type, src: []const PacketType, dst: []PacketType) void {
+    pub fn transceive_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType, dst: []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const spi_regs = spi.get_regs();
@@ -235,7 +245,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn write_blocking(spi: SPI, PacketType: type, src: []const PacketType) void {
+    pub fn write_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         var tx_remaining = src.len;
@@ -277,7 +287,7 @@ pub const SPI = enum(u1) {
     /// PacketType specifies the bit width of each packet using any of
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
-    pub fn read_blocking(spi: SPI, PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
+    pub fn read_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
         const spi_regs = spi.get_regs();
