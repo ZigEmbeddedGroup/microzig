@@ -157,6 +157,10 @@ pub fn add_firmware(
     };
     errdefer fw.output_files.deinit();
 
+    fw.artifact.link_gc_sections = options.strip_unused_symbols;
+    fw.artifact.link_function_sections = options.strip_unused_symbols;
+    fw.artifact.link_data_sections = options.strip_unused_symbols;
+
     fw.modules.chip = micro_build.createModule(.{
         .root_source_file = chip_source,
         .imports = &.{
@@ -363,7 +367,15 @@ pub const FirmwareOptions = struct {
     /// If set, overrides the `linker_script` property of the target.
     linker_script: ?LazyPath = null,
 
+    /// Strips stack trace info from final executable.
     strip: bool = false,
+
+    /// Enables the following build options for the firmware executable
+    /// to support stripping unused symbols in all modes (not just Release):
+    ///     exe.link_gc_sections = true;
+    ///     exe.link_data_sections = true;
+    ///     exe.link_function_sections = true;
+    strip_unused_symbols: bool = true,
 };
 
 /// Configuration options for firmware installation.
