@@ -16,17 +16,9 @@ pub fn main() !void {
     };
 }
 
-const Schema = enum {
-    atdf,
-    dslite,
-    json,
-    svd,
-    xml,
-};
-
 const Arguments = struct {
     allocator: Allocator,
-    schema: ?Schema = null,
+    schema: ?Database.Schema = null,
     input_path: ?[]const u8 = null,
     output_path: ?[]const u8 = null,
     output_json: bool = false,
@@ -70,7 +62,7 @@ fn parse_args(allocator: Allocator) !Arguments {
 
             const schema_str = args[i];
 
-            ret.schema = std.meta.stringToEnum(Schema, schema_str) orelse {
+            ret.schema = std.meta.stringToEnum(Database.Schema, schema_str) orelse {
                 std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{
                     schema_str,
                 });
@@ -121,7 +113,7 @@ fn main_impl() anyerror!void {
             // if schema is null, then try to determine using file extension
             const ext = std.fs.path.extension(input_path);
             if (ext.len > 0) {
-                break :schema std.meta.stringToEnum(Schema, ext[1..]) orelse {
+                break :schema std.meta.stringToEnum(Database.Schema, ext[1..]) orelse {
                     std.log.err("unable to determine schema from file extension of '{s}'", .{input_path});
                     return error.Explained;
                 };
@@ -130,34 +122,13 @@ fn main_impl() anyerror!void {
             std.log.err("unable to determine schema from file extension of '{s}'", .{input_path});
             return error.Explained;
         };
-
-        const path = try arena.allocator().dupeZ(u8, input_path);
-        if (schema == .json) {
-            const file = try std.fs.cwd().openFile(path, .{});
-            defer file.close();
-
-            const text = try file.reader().readAllAlloc(allocator, std.math.maxInt(usize));
-            defer allocator.free(text);
-
-            break :blk try Database.init_from_json(allocator, text);
-        }
-
-        // all other schema types are xml based
-        var doc = try xml.Doc.from_file(path);
-        defer doc.deinit();
-
-        break :blk try parse_xml_database(allocator, doc, schema);
+        const file = try std.fs.cwd().openFile(input_path, .{});
+        defer file.close();
+        const reader = file.reader().any();
+        break :blk try Database.init_from_reader(allocator, reader, schema);
     } else blk: {
-        if (args.schema == null) {
-            std.log.err("schema must be chosen when reading from stdin", .{});
-            return error.Explained;
-        }
-
-        var stdin = std.io.getStdIn().reader();
-        var doc = try xml.Doc.from_io(read_fn, &stdin);
-        defer doc.deinit();
-
-        break :blk try parse_xml_database(allocator, doc, args.schema.?);
+        const stdin = std.io.getStdIn().reader().any();
+        break :blk try Database.init_from_reader(allocator, stdin, args.schema);
     };
     defer db.deinit();
 
@@ -188,36 +159,4 @@ fn main_impl() anyerror!void {
         try db.to_zig(buffered.writer());
 
     try buffered.flush();
-}
-
-fn read_fn(ctx: ?*anyopaque, buffer: ?[*]u8, len: c_int) callconv(.C) c_int {
-    if (buffer == null)
-        return -1;
-
-    return if (ctx) |c| blk: {
-        const reader = @as(*std.fs.File.Reader, @ptrCast(@alignCast(c)));
-        const n = reader.read(buffer.?[0..@as(usize, @intCast(len))]) catch return -1;
-        break :blk @as(c_int, @intCast(n));
-    } else -1;
-}
-
-fn parse_xml_database(allocator: Allocator, doc: xml.Doc, schema: Schema) !Database {
-    return switch (schema) {
-        .json => unreachable,
-        .atdf => try Database.init_from_atdf(allocator, doc),
-        .svd => try Database.init_from_svd(allocator, doc),
-        .dslite => return error.Todo,
-        .xml => return error.Todo,
-        //determine_type: {
-        //    const root = try doc.getRootElement();
-        //    if (xml.findValueForKey(root, "device") != null)
-        //        break :determine_type try Database.initFromSvd(allocator, doc)
-        //    else if (xml.findValueForKey(root, "avr-tools-device-file") != null)
-        //        break :determine_type try Database.initFromAtdf(allocator, doc)
-        //    else {
-        //        std.log.err("unable do detect register schema type", .{});
-        //        return error.Explained;
-        //    }
-        //},
-    };
 }
