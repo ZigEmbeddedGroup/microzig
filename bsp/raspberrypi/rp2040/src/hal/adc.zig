@@ -109,8 +109,8 @@ pub const Input = enum(u3) {
         switch (in) {
             else => {
                 const pin = in.get_gpio_pin();
-                pin.set_function(.null);
-                pin.set_pull(null);
+                pin.set_function(.disabled);
+                pin.set_pull(.disabled);
                 pin.set_input_enabled(false);
             },
             .temp_sensor => {},

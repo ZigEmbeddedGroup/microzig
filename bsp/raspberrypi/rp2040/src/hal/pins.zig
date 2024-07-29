@@ -499,7 +499,7 @@ pub const GlobalConfiguration = struct {
                 } else if (comptime func.is_pwm()) {
                     pin.set_function(.pwm);
                 } else if (comptime func.is_adc()) {
-                    pin.set_function(.null);
+                    pin.set_function(.disabled);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
                     pin.set_function(.uart);
                 } else {
