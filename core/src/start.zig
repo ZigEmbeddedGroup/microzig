@@ -5,8 +5,7 @@ const app = @import("app");
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-pub const VectorTableOptions = if (@hasDecl(microzig.chip, "VectorTable"))
-blk: {
+pub const VectorTableOptions = if (@hasDecl(microzig.chip, "VectorTable")) blk: {
     const VectorTable = microzig.chip.VectorTable;
     const fields_with_default = fields_with_default: {
         var count = 0;
