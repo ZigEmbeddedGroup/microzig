@@ -3,13 +3,10 @@ const MicroZig = @import("microzig/build");
 const gd32 = @import("microzig/bsp/gigadevice/gd32");
 
 const available_examples = [_]Example{
-    // TODO:
-    // error: ld.lld: section '.text' will not fit in region 'flash0': overflowed by 152170 bytes
-    // error: ld.lld: section '.data' will not fit in region 'flash0': overflowed by 161520 bytes
-    // .{ .target = gd32.chips.gd32vf103xb, .name = "gd32vf103xb", .file = "src/empty.zig" },
-    // .{ .target = gd32.chips.gd32vf103x8, .name = "gd32vf103x8", .file = "src/empty.zig" },
-    // .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano", .file = "src/empty.zig" },
-    // .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano_blinky", .file = "src/blinky.zig" },
+    .{ .target = gd32.chips.gd32vf103xb, .name = "gd32vf103xb", .file = "src/empty.zig" },
+    .{ .target = gd32.chips.gd32vf103x8, .name = "gd32vf103x8", .file = "src/empty.zig" },
+    .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano", .file = "src/empty.zig" },
+    .{ .target = gd32.boards.sipeed.longan_nano, .name = "sipeed-longan_nano_blinky", .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
