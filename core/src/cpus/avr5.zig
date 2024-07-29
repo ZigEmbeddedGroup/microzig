@@ -26,7 +26,7 @@ pub inline fn cbi(comptime reg: u5, comptime bit: u3) void {
     );
 }
 
-pub const vector_table = blk: {
+pub const vector_table_asm = blk: {
     std.debug.assert(std.mem.eql(u8, "RESET", std.meta.fields(microzig.chip.VectorTable)[0].name));
     const asm_str: []const u8 = "jmp microzig_start\n";
 
@@ -48,16 +48,20 @@ pub const vector_table = blk: {
     //    asm_str = asm_str ++ new_insn ++ "\n";
     //}
 
-    const T = struct {
-        fn _start() callconv(.Naked) void {
-            asm volatile (asm_str);
-        }
-    };
-
-    break :blk T._start;
+    break :blk asm_str;
 };
 
+fn vector_table() callconv(.Naked) noreturn {
+    asm volatile (vector_table_asm);
+}
+
+// @breakpoint() on AVR is calling abort, so we export simple function that is calling hang
+export fn abort() noreturn {
+    microzig.hang();
+}
+
 pub fn export_startup_logic() void {
+    _ = startup_logic;
     @export(vector_table, .{
         .name = "_start",
     });
@@ -89,7 +93,6 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 }
 
 pub const startup_logic = struct {
-    pub const _start = vector_table;
     export fn microzig_unhandled_vector() callconv(.C) noreturn {
         @panic("Unhandled interrupt");
     }
