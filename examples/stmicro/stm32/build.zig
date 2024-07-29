@@ -3,17 +3,15 @@ const MicroZig = @import("microzig/build");
 const stm32 = @import("microzig/bsp/stmicro/stm32");
 
 const available_examples = [_]Example{
-    // error: ld.lld: section '.text' will not fit in region 'flash0': overflowed by 73532 bytes
-    // error: ld.lld: section '.ARM.exidx' will not fit in region 'flash0': overflowed by 74148 bytes
-    // error: ld.lld: section '.data' will not fit in region 'flash0': overflowed by 86028 bytes
-    // TODO: .{ .target = stm32.chips.stm32f103x8, .name = "stm32f103x8", .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.chips.stm32f429zit6u, .name = "stm32f429zit6u",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.boards.stm32f4discovery, .name = "stm32f4discovery",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval",  .file = "src/blinky.zig" },
-    // TODO: .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery",  .file = "src/blinky.zig" },
+    .{ .target = stm32.chips.stm32f103x8, .name = "stm32f103x8", .file = "src/blinky.zig" },
+    // TODO: stm32.pins.GlobalConfiguration is not available on those targets
+    // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
+    // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
+    // .{ .target = stm32.chips.stm32f429zit6u, .name = "stm32f429zit6u", .file = "src/blinky.zig" },
+    // .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
+    // .{ .target = stm32.boards.stm32f4discovery, .name = "stm32f4discovery", .file = "src/blinky.zig" },
+    // .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval", .file = "src/blinky.zig" },
+    // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
