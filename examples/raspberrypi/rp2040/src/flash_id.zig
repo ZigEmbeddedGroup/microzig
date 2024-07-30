@@ -6,7 +6,7 @@ const time = rp2040.time;
 const gpio = rp2040.gpio;
 const flash = rp2040.flash;
 
-const uart = rp2040.uart.num(0);
+const uart = rp2040.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
@@ -19,14 +19,16 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const std_options = struct {
     pub const log_level = .debug;
-    pub const logFn = rp2040.uart.log;
+    pub const logFn = rp2040.uart.logFn;
 };
 
 pub fn main() !void {
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+        pin.set_function(.uart);
+    }
+
     uart.apply(.{
         .baud_rate = baud_rate,
-        .tx_pin = uart_tx_pin,
-        .rx_pin = uart_rx_pin,
         .clock_config = rp2040.clock_config,
     });
 

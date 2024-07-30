@@ -9,18 +9,18 @@ const clocks = rp2040.clocks;
 const usb = rp2040.usb;
 
 const led = gpio.num(25);
-const uart = rp2040.uart.num(0);
+const uart = rp2040.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.cdc_descriptor_len;
-const usb_config_descriptor = 
-        usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
-        usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
+const usb_config_descriptor =
+    usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
+    usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
 
 var driver_cdc = usb.cdc.CdcClassDriver{};
-var drivers = [_]usb.types.UsbClassDriver{ driver_cdc.driver() };
+var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
@@ -47,7 +47,7 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
         &usb.utils.utf8ToUtf16Le("someserial"),
         &usb.utils.utf8ToUtf16Le("Board CDC"),
     },
-    .drivers = &drivers
+    .drivers = &drivers,
 };
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -58,7 +58,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const microzig_options = .{
     .log_level = .debug,
-    .logFn = rp2040.uart.log,
+    .logFn = rp2040.uart.logFn,
 };
 
 pub fn main() !void {
@@ -66,10 +66,12 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+        pin.set_function(.uart);
+    }
+
     uart.apply(.{
         .baud_rate = baud_rate,
-        .tx_pin = uart_tx_pin,
-        .rx_pin = uart_rx_pin,
         .clock_config = rp2040.clock_config,
     });
 

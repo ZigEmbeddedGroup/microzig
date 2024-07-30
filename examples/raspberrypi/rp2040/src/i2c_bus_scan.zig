@@ -8,17 +8,19 @@ const peripherals = microzig.chip.peripherals;
 
 pub const microzig_options = .{
     .log_level = .info,
-    .logFn = rp2040.uart.log,
+    .logFn = rp2040.uart.logFn,
 };
 
-const uart = rp2040.uart.num(0);
+const uart = rp2040.uart.instance.num(0);
 const i2c0 = i2c.instance.num(0);
 
 pub fn main() !void {
+    inline for (&.{ gpio.num(0), gpio.num(1) }) |pin| {
+        pin.set_function(.uart);
+    }
+
     uart.apply(.{
         .baud_rate = 115200,
-        .tx_pin = gpio.num(0),
-        .rx_pin = gpio.num(1),
         .clock_config = rp2040.clock_config,
     });
     rp2040.uart.init_logger(uart);
