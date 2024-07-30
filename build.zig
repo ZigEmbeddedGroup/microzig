@@ -23,6 +23,7 @@ const bsps = .{
     .{ "bsp/stmicro/stm32", @import("bsp/stmicro/stm32") },
     .{ "bsp/espressif/esp", @import("bsp/espressif/esp") },
     .{ "bsp/raspberrypi/rp2040", @import("bsp/raspberrypi/rp2040") },
+    .{ "bsp/wch/ch32", @import("bsp/wch/ch32") },
 };
 
 pub fn build(b: *Build) void {

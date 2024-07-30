@@ -1,0 +1,15 @@
+.{
+    .name = "examples/wch/ch32",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/bsp/wch/ch32" = .{ .path = "../../../bsp/wch/ch32" },
+    },
+
+    .paths = .{
+        "LICENSE",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
