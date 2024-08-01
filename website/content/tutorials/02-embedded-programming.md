@@ -58,7 +58,11 @@ The RAM will contain garbage after startup. Our variables aren't initialized and
 
 To do this, we first have to tell the compiler to store our pre-initialized data somewhere in flash memory, so we can copy it into RAM at startup. This is done via the linker script:
 
+<<<<<<< HEAD
 ```cpp
+=======
+```
+>>>>>>> 8609832 (Update website and zine (Zig 0.13) and fix broken links)
 /* This section declares two memory regions:
  * flash: 512k of non-writeable memory at position 0,
  * ram:   32k of writeable memory at position 256M
