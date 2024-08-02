@@ -1,4 +1,4 @@
-<extend template="base.html">
+<extend template="base.shtml">
 
 <title id="title" var="$page.title"></title>
 
