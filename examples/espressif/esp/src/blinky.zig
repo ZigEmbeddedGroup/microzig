@@ -10,16 +10,6 @@ const INTERRUPT_CORE0 = peripherals.INTERRUPT_CORE0;
 const dogfood: u32 = 0x50D83AA1;
 const super_dogfood: u32 = 0x8F1D312A;
 
-const LED_R_PIN = 3; // GPIO
-const LED_G_PIN = 4; // GPIO
-const LED_B_PIN = 5; // GPIO
-
-const led_pins = [_]u32{
-    LED_R_PIN,
-    LED_G_PIN,
-    LED_B_PIN,
-};
-
 pub fn main() !void {
     // Feed and disable watchdog 0
     TIMG0.WDTWPROTECT.raw = dogfood;
@@ -44,9 +34,13 @@ pub fn main() !void {
         .drive_strength = gpio.DriveStrength.@"40mA",
     };
 
-    var led_r_pin = gpio.Pin.init(LED_R_PIN, pin_config);
-    var led_g_pin = gpio.Pin.init(LED_G_PIN, pin_config);
-    var led_b_pin = gpio.Pin.init(LED_B_PIN, pin_config);
+    const led_r_pin = gpio.instance.GPIO3;
+    const led_g_pin = gpio.instance.GPIO4;
+    const led_b_pin = gpio.instance.GPIO5;
+
+    led_r_pin.apply(pin_config);
+    led_g_pin.apply(pin_config);
+    led_b_pin.apply(pin_config);
 
     uart.write(0, "Hello from Zig!\r\n");
 
