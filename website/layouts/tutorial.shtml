@@ -1,17 +1,17 @@
-<extend template="base.html"/>
+<extend template="base.shtml">
 
 <title id="title" var="$page.title"></title>
 
 <div id="content">
     <nav id="intro-nav">
         <h1>zig embedded group</h1>
-        <img src="img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
+        <img src="/img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
     </nav>
 
     
     <div id="page" var="$page.content"></div>
 
     <footer>
-        <img src="img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
+        <img src="/img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
     </footer>
 </div>

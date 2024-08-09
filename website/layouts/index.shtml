@@ -1,11 +1,11 @@
-<extend template="base.html"/>
+<extend template="base.shtml">
 
 <title id="title" var="$page.title"></title>
 
 <div id="content">
     <nav id="intro-nav">
         <h1>zig embedded group</h1>
-        <img src="img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
+        <img src="/img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
     </nav>
 
     <div id="intro-grid">
@@ -32,7 +32,7 @@
                 </svg>important links</h2>
 
             <ul class="bars">
-                <li><strong><a href="getting-started.htm">documentation / getting started</a></strong></li>
+                <li><strong><a href="/getting-started/">documentation / getting started</a></strong></li>
                 <li><a href="https://github.com/ZigEmbeddedGroup/">code</a></li>
                 <li><a href="https://ziglang.org/">Zig programming language</a></li>
             </ul>
@@ -68,8 +68,8 @@
             <ul class="bars">
                 <li><a href="https://github.com/ZigEmbeddedGroup/microzig/">microzig - Cross-Device Embedded
                         Framework</a></li>
-                <li><a href="https://github.com/ZigEmbeddedGroup/regz/">regz - SVD and ATDF Code Generator</a></li>
-                <li><a href="https://github.com/ZigEmbeddedGroup/uf2">uf2 - Generate UF2 files in your build</a></li>
+                <li><a href="https://github.com/ZigEmbeddedGroup/microzig/tree/main/tools/regz">regz - SVD and ATDF Code Generator</a></li>
+                <li><a href="https://github.com/ZigEmbeddedGroup/microzig/tree/main/tools/uf2">uf2 - Generate UF2 files in your build</a></li>
                 <li><a href="https://github.com/orgs/ZigEmbeddedGroup/repositories">read more…</a></li>
             </ul>
         </div>
@@ -91,6 +91,6 @@
     </div>
 
     <footer>
-        <img src="img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
+        <img src="/img/ember.svg" alt="vectorized Ember, the awesome zeg mascot!">
     </footer>
 </div>

@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title id="title"><super/> - Zig Embedded Group</title>
+    <title id="title"><super> - Zig Embedded Group</title>
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,11 +18,11 @@
     <meta property="og:title" content="$page.title">
     <meta property="og:type" content="website">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
-    <div id="content"><super/></div>
+    <div id="content"><super></div>
 </body>
 
 </html>
