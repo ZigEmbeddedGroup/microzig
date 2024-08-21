@@ -23,12 +23,11 @@ jobs:
   build-microzig:
     if: ${{ ( github.event_name == 'pull_request' && github.base_ref == 'main' ) || github.ref_name == 'main' }}
     name: Build
-    uses: ./.github/workflows/zig-build-base.yml
+    uses: ./.github/workflows/build-base.yml
     with:
       zig-version: 0.13.0
       get-submodules: true
       is-packaged: true
-      artifact-output-paths: boxzer-out
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}
   create-branch:

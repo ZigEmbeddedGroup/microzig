@@ -11,32 +11,28 @@ on:
         required: false
         type: string
         default: ""
-      # The name of what we are building
-      artifact:
-        required: true
-        type: string
-      # The name that will be used to same build artifacts to share
-      # between jobs
+      # The name that will be used to download artifact from github
       github-artifact-name:
         required: true
         type: string
-      # The root path to publish package to. If left blank, artifact
-      # is used.
-      artifact-target-name:
+      # The name of what we are publishing
+      artifact-name:
+        required: true
+        type: string
+      # The path after the target-path to publish the artifact to
+      # {artifact | {target-path}/{target-artifact-path}
+      target-artifact-path:
         required: false
         type: string
         default: ""
-      # The target path that goes before the artifact-target-name
-      # {artifact | artifact-target-name}/{target-path}
-      target-path:
-        required: false
-        type: string
-        default: ""
-      # The folder where the stuff to be published is located
-      source:
+      # The path within the github artifact that the artifact is located at.
+      source-path:
         required: true
         type: string
     secrets:
+      # The target path within the host share to save files to
+      target-path:
+        required: true
       ssh-key:
         required: true
       host:
@@ -51,39 +47,57 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Check tag status
-        if: ${{ startsWith(github.ref, 'refs/tags/') && ! endsWith(github.ref, input.tag) }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && ! endsWith(github.ref, inputs.tag) }}
         uses: actions/github-script@v3
         with:
           script: |
             core.setFailed("Provided tag does not match github ref tag")
       - name: Download artifacts
+        id: download
         uses: actions/download-artifact@v4
         with:
-          name: ${{ input.github-artifact-name }}
-      - name: Get Target
-        id: get-target
+          name: ${{ inputs.github-artifact-name }}
+      - name: Get Source Path
+        shell: bash
+        id: get-source-path
         run: |
-          if [ -z ${{ input.artifact-target-name }} ]; then 
-            echo "PUB_TARGET=${{ input.artifact }}" >> $GITHUB_OUTPUT; 
-          else
-            echo "PUB_TARGET=${{ input.artifact-target-name }}" >> $GITHUB_OUTPUT;
-          fi
+          echo "path=$(realpath -s --relative-to="${{ github.workspace }}" "${{ steps.download.outputs.download-path }}/${{ inputs.source-path }}")" >> $GITHUB_OUTPUT
       - name: Publish Release
         uses: easingthemes/ssh-deploy@main
         with:
           SSH_PRIVATE_KEY: ${{ secrets.ssh-key }}
           ARGS: "-vzrli"
-          SOURCE: ${{ input.source }}
+          SOURCE: ${{ steps.get-source-path.outputs.path }}
           REMOTE_HOST: ${{ secrets.host }}
           REMOTE_USER: ${{ secrets.user }}
           REMOTE_PORT: ${{ secrets.port }}
-          TARGET: ${{ steps.get-target.outputs.PUB_TARGET }}/${{ inputs.target-path }}
+          TARGET: ${{ secrets.target-path }}/${{ inputs.target-artifact-path }}
+      #- name: Handle Folder Release Artifact
+      #  if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, inputs.tag) }}
+      #  shell: bash
+      #  run: |
+      #    mkdir -p "artifacts-${{ github.sha }}"
+      #    for i in "${{ steps.download.outputs.download-path }}/${{ inputs.source-path }}"/*; do
+      #      echo "Artifact path $i"
+      #      if [[ -d "$i" ]]; then
+      #        echo "Artifact is path"
+      #        dirname="$(basename "$i")"
+      #        echo "Artifact directory $dirname. Compressing folder to ${{ inputs.artifact-name }}-${dirname}.tar.gz"
+      #        tar -czvf "${{ inputs.artifact-name }}-${dirname}.tar.gz" -C "$i" .
+      #        echo "Moving tar to artifacts-${{ github.sha }}"
+      #        mv "${{ inputs.artifact-name }}-${dirname}.tar.gz" "artifacts-${{ github.sha }}"
+      #      else
+      #        echo "Artifact is file"
+      #        echo "Move to: artifacts-${{ github.sha }}"
+      #        mv "$i" "artifacts-${{ github.sha }}"
+      #      fi
+      #    done
       - name: Create Release Draft
-        if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, input.tag) }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, inputs.tag) }}
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ${{ input.source }}/*
-          artifactErrorsFailBuild: true
+          # artifacts: "artifacts-${{ github.sha }}/*"
+          # artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
           tag: ${{ inputs.tag }}

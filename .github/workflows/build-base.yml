@@ -37,8 +37,9 @@ on:
         default: ""
       # The path that we should upload artifacts from
       artifact-output-paths:
-        required: true
+        required: false
         type: string
+        default: ""
       ref:
         required: false
         type: string
@@ -79,8 +80,17 @@ jobs:
       - name: Package
         if: ${{ inputs.is-packaged && runner.os == 'macOS' }}
         run: zig build package -- "${{ secrets.downloads-url }}"
+      - name: Get Should Upload bash
+        id: should-upload
+        shell: bash
+        run: |
+          if [[ ! -z "${{ inputs.artifact-output-paths }}" ]] && test -n "$(find . -maxdepth 1 -name '${{ inputs.artifact-output-paths }}' -print -quit)"; then
+            echo "SHOULD_UPLOAD=true" >> $GITHUB_OUTPUT; 
+          else
+            echo "SHOULD_UPLOAD=false" >> $GITHUB_OUTPUT; 
+          fi
       - name: Upload Artifacts
-        if: ${{ inputs.artifact-output-paths == '' }}
+        if: ${{ steps.should-upload.outputs.SHOULD_UPLOAD == 'true' && inputs.github-artifact-name != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.github-artifact-name }}
