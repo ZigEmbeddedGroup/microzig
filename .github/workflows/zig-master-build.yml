@@ -23,7 +23,7 @@ jobs:
   #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-microzig-master-post-pr:
     name: Build with master
-    uses: ./.github/workflows/zig-build-base.yml
+    uses: ./.github/workflows/build-base.yml
     with:
       zig-version: master
       get-submodules: true
