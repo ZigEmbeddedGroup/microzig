@@ -74,7 +74,7 @@ jobs:
         run: |
           git config user.name "$(git log -1 --pretty=format:'%an')"
           git config user.email "$(git log -1 --pretty=format:'%ae')"
-          git commit --author "ZEG Github Action <>" -m "feat: added commit file" --allow-empty
+          git commit --author "ZEG Github Action <>" -m "chore: commit for zig master build ci" --allow-empty
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
