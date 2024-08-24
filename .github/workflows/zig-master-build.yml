@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [zig-master]
 
+# A simple workflow that will, upon a push or PR to zig-master, build microzig
 jobs:
   # No we don't need this still, I'm just happy about figuring out the jq query
   # (I don't want to hear that it is simple, I think it's cool xD)

@@ -10,6 +10,7 @@ on:
       - "v*.*.*-*"
 
 jobs:
+  # Build the project to ensure it works. Also to get the binaries.
   build-microzig:
     uses: ./.github/workflows/build-base.yml
     with:
@@ -20,6 +21,7 @@ jobs:
       artifact-output-paths: boxzer-out
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}
+  # Publish microzig
   publish-microzig:
     uses: ./.github/workflows/publish-base.yml
     needs: build-microzig
