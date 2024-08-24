@@ -3,52 +3,66 @@ name: Reusable zig build workflow
 on:
   workflow_call:
     inputs:
-      # The version to build on
       zig-version:
         required: false
         type: string
         default: 0.13.0
-      # Whether or not to clone submodules
+        description: Version of zig to build with
       get-submodules:
         required: false
         type: string
         default: false
-      # If using sparse checkout, the file patterns to include when cloning
+        description: Whether or not to clone submodules
       sparse-checkout-patterns:
         required: false
         type: string
         default: ""
-      # If building a subproject only, you can specify a working directory
-      # which is the path to that subproject.
+        description: |
+          List of file patterns (globs) to include in the sparse checkout. 
+          If empty, sparse checkout is not used.
       working-directory:
         required: false
         type: string
         default: "."
-      # Whether or not to use a provided package command.
+        description: |
+          If building a sub-project only, you can specify a working directory
+          which is the path to that sub-project.
       is-packaged:
         required: false
         type: boolean
         default: false
+        description: |
+          Whether or not to use a provided package command. This is specifically
+          to output the boxzer output.
       # The github artifact name for uploading build artifacts to
       # If it is blank, nothing will be uploaded
       github-artifact-name:
         required: false
         type: string
         default: ""
+        description: |
+          The name to use for the github actifact that will be uploaded.
       # The path that we should upload artifacts from
       artifact-output-paths:
         required: false
         type: string
         default: ""
+        description: |
+          The path to the generated artifact that will be included within
+          the github artifact upload.
       ref:
         required: false
         type: string
         default: ""
+        description: A sepcific ref to build for (i.e. a version or commit)
     secrets:
       # The downloads url for the packaging step. This is used in boxzer to
       # fill in the manifest downloads location
       downloads-url:
         required: false
+        description: |
+          The download url that will be included in the boxzer manifest output. 
+          If the "is-packaged" option is false, this will not be used.
 
 jobs:
   build-zig:
@@ -57,12 +71,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
+      # If we just want to use the current commit, simply run a checkout
       - name: Checkout
         if: ${{ inputs.ref == '' }}
         uses: actions/checkout@v4
         with:
           sparse-checkout: ${{ inputs.sparse-checkout-patterns }}
           submodules: ${{ inputs.get-submodules }}
+      # If there is a specific ref we want, check that ref out.
       - name: Checkout Specific Ref
         if: ${{ inputs.ref != '' }}
         uses: actions/checkout@v4
@@ -70,6 +86,7 @@ jobs:
           ref: ${{ inputs.ref }}
           sparse-checkout: ${{ inputs.sparse-checkout-patterns }}
           submodules: ${{ inputs.get-submodules }}
+      # Setup zig, we use mlugg's setup because it has caching
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
@@ -80,17 +97,27 @@ jobs:
       - name: Package
         if: ${{ inputs.is-packaged && runner.os == 'macOS' }}
         run: zig build package -- "${{ secrets.downloads-url }}"
+      # We use whether or not an artifact output path is provided and whether
+      # or not there is actually anything in that directory to know whether or
+      # not there is anything to upload.
       - name: Get Should Upload bash
         id: should-upload
         shell: bash
         run: |
-          if [[ ! -z "${{ inputs.artifact-output-paths }}" ]] && test -n "$(find . -maxdepth 1 -name '${{ inputs.artifact-output-paths }}' -print -quit)"; then
+          if [[ ! -z "${{ inputs.artifact-output-paths }}" ]] \
+                && test -n "$(find . -maxdepth 1 \
+                                -name '${{ inputs.artifact-output-paths }}' \
+                                -print -quit)"; then
             echo "SHOULD_UPLOAD=true" >> $GITHUB_OUTPUT; 
           else
             echo "SHOULD_UPLOAD=false" >> $GITHUB_OUTPUT; 
           fi
+      # Upload artifacts if there is something to upload and if there is a
+      # name to upload it to
       - name: Upload Artifacts
-        if: ${{ steps.should-upload.outputs.SHOULD_UPLOAD == 'true' && inputs.github-artifact-name != '' }}
+        if: |
+          steps.should-upload.outputs.SHOULD_UPLOAD == 'true' 
+            && inputs.github-artifact-name != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.github-artifact-name }}
