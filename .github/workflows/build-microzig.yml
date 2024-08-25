@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: create-branch
     permissions:
-      pull-requests: write
+      pull-requests: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -141,4 +141,4 @@ jobs:
             --title 'Testing commit ${{ github.sha }} with zig master' \
             --body 'Created by Github action'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PR_CREATE_TOKEN }}
