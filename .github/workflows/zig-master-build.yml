@@ -4,6 +4,12 @@ on:
     branches: [zig-master]
   pull_request:
     branches: [zig-master]
+  workflow_run:
+    workflows: ["Build Microzig"]
+    types:
+      - completed
+    branches:
+      - main
 
 # A simple workflow that will, upon a push or PR to zig-master, build microzig
 jobs:
