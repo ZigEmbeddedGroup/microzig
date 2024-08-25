@@ -19,6 +19,7 @@ jobs:
       is-packaged: true
       github-artifact-name: microzig-build
       artifact-output-paths: boxzer-out
+      ref: ${{ github.ref_name }}
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}
   # Publish microzig

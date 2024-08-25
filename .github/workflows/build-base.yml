@@ -86,7 +86,32 @@ jobs:
           ref: ${{ inputs.ref }}
           sparse-checkout: ${{ inputs.sparse-checkout-patterns }}
           submodules: ${{ inputs.get-submodules }}
+      - name: Get Semver Details
+        shell: bash
+        id: semver
+        run: |
+          if [[ "${{ inputs.ref }}" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))? ]]; then
+            echo "issemver=true" >> "$GITHUB_OUTPUT"
+            echo "major=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "minor=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+            echo "patch=${BASH_REMATCH[3]}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=${BASH_REMATCH[5]}" >> "$GITHUB_OUTPUT"
+            echo "build=${BASH_REMATCH[10]}" >> "$GITHUB_OUTPUT"
+            echo "version=$(echo "${{ inputs.ref }}" | sed 's/^v\(.*\)/\1/')" >> "$GITHUB_OUTPUT"
+          else
+            echo "issemver=false" >> "$GITHUB_OUTPUT"
+          fi
       # Setup zig, we use mlugg's setup because it has caching
+      - name: Process Version Info
+        if: steps.semver.outputs.issemver == 'true' && runner.os != 'macOS'
+        shell: bash
+        run: |
+          find . -name "*.zig.zon" -exec sed -i 's/\(.version *= *"\)[^\s]*\(",\)/\1${{ steps.semver.outputs.version }}\2/' {} \;
+      - name: Process Version Info - Mac
+        if: steps.semver.outputs.issemver == 'true' && runner.os == 'macOS'
+        shell: bash
+        run: |
+          find . -name "*.zig.zon" -exec sed -i '' 's/\(.version *= *"\)[^\s]*\(",\)/\1${{ steps.semver.outputs.version }}\2/' {} \;
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
