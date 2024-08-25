@@ -63,8 +63,8 @@ jobs:
       # when the build side and publish side were done in one workflow.
       - name: Check tag status
         if: |
-          ${{ startsWith(github.ref, 'refs/tags/') 
-              && ! endsWith(github.ref, inputs.tag) }}
+          startsWith(github.ref, 'refs/tags/') 
+            && ! endsWith(github.ref, inputs.tag)
         uses: actions/github-script@v3
         with:
           script: |
