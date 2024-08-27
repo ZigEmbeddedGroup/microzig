@@ -21,7 +21,7 @@ jobs:
       artifact-output-paths: boxzer-out
       ref: ${{ github.ref_name }}
     secrets:
-      downloads-url: ${{ secrets.DOWNLOADS_URL }}
+      downloads-url: ${{ secrets.BOXZER_DOWNLOADS_URL }}
   # Publish microzig
   publish-microzig:
     uses: ./.github/workflows/publish-base.yml
@@ -35,40 +35,8 @@ jobs:
       github-artifact-name: microzig-build
       source-path: /
     secrets:
-      target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
-      ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-      host: ${{ secrets.DEPLOY_HOST }}
-      port: ${{ secrets.DEPLOY_PORT }}
-      user: ${{ secrets.DEPLOY_USER }}
-  #  publish-microzig-regz:
-  #    concurrency:
-  #      group: publish
-  #      cancel-in-progress: false
-  #    uses: ./.github/workflows/publish-base.yml
-  #    with:
-  #      tag: ${{ github.ref_name }}
-  #      artifact: regz
-  #      github-artifact-name: microzig-build
-  #      artifact-target-name: "tools/regz"
-  #      source: zig-out/
-  #    secrets:
-  #      ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-  #      host: ${{ secrets.DEPLOY_HOST }}
-  #      port: ${{ secrets.DEPLOY_PORT }}
-  #      user: ${{ secrets.DEPLOY_USER }}
-  #  publish-microzig-uf2:
-  #    concurrency:
-  #      group: publish
-  #      cancel-in-progress: false
-  #    uses: ./.github/workflows/publish-base.yml
-  #    with:
-  #      tag: ${{ github.ref_name }}
-  #      artifact: regz
-  #      github-artifact-name: microzig-build
-  #      artifact-target-name: "tools/uf2"
-  #      source: zig-out/
-  #    secrets:
-  #      ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-  #      host: ${{ secrets.DEPLOY_HOST }}
-  #      port: ${{ secrets.DEPLOY_PORT }}
-  #      user: ${{ secrets.DEPLOY_USER }}
+      target-path: ${{ secrets.DEPLOY_MZ_ROOT_DATA_PATH }}
+      ssh-key: ${{ secrets.DEPLOY_MZ_PRIVATE_KEY }}
+      host: ${{ secrets.DEPLOY_MZ_HOST }}
+      port: ${{ secrets.DEPLOY_MZ_PORT }}
+      user: ${{ secrets.DEPLOY_MZ_USER }}
