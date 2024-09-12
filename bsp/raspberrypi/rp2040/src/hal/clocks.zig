@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const forCPU = @import("compat.zig").forCPU;
 const pll = @import("pll.zig");
 const assert = std.debug.assert;
 
@@ -553,10 +554,17 @@ pub const GlobalConfiguration = struct {
         CLOCKS.CLK_SYS_RESUS_CTRL.raw = 0;
 
         if (config.xosc_configured) {
-            WATCHDOG.TICK.modify(.{
-                .CYCLES = xosc_freq / 1_000_000,
-                .ENABLE = 1,
-            });
+            if (comptime forCPU(.RP2040)) {
+                WATCHDOG.TICK.modify(.{
+                    .CYCLES = xosc_freq / 1_000_000,
+                    .ENABLE = 1,
+                });
+            } else {
+                peripherals.TICKS.WATCHDOG_CYCLES.modify(.{
+                    .WATCHDOG_CYCLES = xosc_freq / 1_000_000,
+                });
+                peripherals.TICKS.WATCHDOG_CTRL.modify(.{ .ENABLE = 1 });
+            }
             xosc.init();
         }
 

@@ -1,5 +1,10 @@
 const microzig = @import("microzig");
-const TIMER = microzig.chip.peripherals.TIMER;
+const forCPU = @import("compat.zig").forCPU;
+
+const TIMER = @field(
+    microzig.chip.peripherals,
+    if (forCPU(.RP2040)) "TIMER" else "TIMER0",
+);
 
 /// Using an enum to make it a distinct type, the underlying number is
 /// time since boot in microseconds.

@@ -2,11 +2,13 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
+const forCPU = @import("compat.zig").forCPU;
 const xosc_freq = microzig.board.xosc_freq;
 const peripherals = microzig.chip.peripherals;
 const RESETS = peripherals.RESETS;
 
 const PllRegs = microzig.chip.types.peripherals.PLL_SYS;
+
 
 pub const Configuration = struct {
     refdiv: u6,
@@ -31,17 +33,32 @@ pub const PLL = enum(u1) {
     }
 
     pub fn reset(pll: PLL) void {
-        switch (pll) {
-            .sys => {
-                RESETS.RESET.modify(.{ .pll_sys = 1 });
-                RESETS.RESET.modify(.{ .pll_sys = 0 });
-                while (RESETS.RESET_DONE.read().pll_sys != 1) {}
-            },
-            .usb => {
-                RESETS.RESET.modify(.{ .pll_usb = 1 });
-                RESETS.RESET.modify(.{ .pll_usb = 0 });
-                while (RESETS.RESET_DONE.read().pll_usb != 1) {}
-            },
+        if (comptime forCPU(.RP2040)) {
+            switch (pll) {
+                .sys => {
+                    RESETS.RESET.modify(.{ .pll_sys = 1 });
+                    RESETS.RESET.modify(.{ .pll_sys = 0 });
+                    while (RESETS.RESET_DONE.read().pll_sys != 1) {}
+                },
+                .usb => {
+                    RESETS.RESET.modify(.{ .pll_usb = 1 });
+                    RESETS.RESET.modify(.{ .pll_usb = 0 });
+                    while (RESETS.RESET_DONE.read().pll_usb != 1) {}
+                },
+            }
+        } else {
+            switch (pll) {
+                .sys => {
+                    RESETS.RESET.modify(.{ .PLL_SYS = 1 });
+                    RESETS.RESET.modify(.{ .PLL_SYS = 0 });
+                    while (RESETS.RESET_DONE.read().PLL_SYS != 1) {}
+                },
+                .usb => {
+                    RESETS.RESET.modify(.{ .PLL_USB = 1 });
+                    RESETS.RESET.modify(.{ .PLL_USB = 0 });
+                    while (RESETS.RESET_DONE.read().PLL_USB != 1) {}
+                },
+            }
         }
     }
 
