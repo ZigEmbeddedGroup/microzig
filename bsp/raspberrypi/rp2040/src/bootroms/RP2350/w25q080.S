@@ -328,12 +328,12 @@ _qmi_config:
 // ----------------------------------------------------------------------------
 
 // Pull in standard exit routine
-#include "boot2_helpers/exit_from_boot2.S"
+#include "shared/exit_from_boot2.S"
 
 // Common functions
-#include "boot2_helpers/wait_qmi_ready.S"
+#include "shared/wait_qmi_ready.S"
 #ifdef PROGRAM_STATUS_REG
-#include "boot2_helpers/read_flash_sreg.S"
+#include "shared/read_flash_sreg.S"
 #endif
 
 #ifndef __riscv

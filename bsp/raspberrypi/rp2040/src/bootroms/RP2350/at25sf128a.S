@@ -25,10 +25,10 @@
 //                4-byte checksum. Therefore code size cannot exceed 252 bytes.
 // ----------------------------------------------------------------------------
 
-#include "pico/asm_helper.S"
-#include "hardware/regs/addressmap.h"
-#include "hardware/regs/ssi.h"
-#include "hardware/regs/pads_qspi.h"
+#include "shared/asm_helper.S"
+#include "shared/addressmap.h"
+#include "shared/ssi.h"
+#include "shared/pads_qspi.h"
 
 // todo port to QMI
 
