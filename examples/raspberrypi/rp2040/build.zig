@@ -6,6 +6,7 @@ const available_examples = [_]Example{
     // RaspberryPi Boards:
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/adc.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_blinky", .file = "src/blinky.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico2, .name = "pico2_blinky", .file = "src/blinky.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/flash_program.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/flash_id.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_gpio-clk", .file = "src/gpio_clk.zig" },
