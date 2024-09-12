@@ -34,7 +34,7 @@ pub const chips = struct {
 
     // Note: This chip has no flash support defined and requires additional configuration!
     pub const rp2350_arm = Target{
-        .preferred_format = .{ .uf2 = .RP2040 },
+        .preferred_format = .{ .uf2 = .RP2350_ARM_S },
         .chip = chip_rp2350_arm,
         .hal = hal,
         .board = null,
@@ -43,7 +43,7 @@ pub const chips = struct {
 
     // Note: This chip has no flash support defined and requires additional configuration!
     // pub const rp2350_riscv = Target{
-    //     .preferred_format = .{ .uf2 = .RP2035 },
+    //     .preferred_format = .{ .uf2 = .RP2350_RISC_V },
     //     .chip = chip_rp235X_riscv,
     //     .hal = hal_riscv,
     //     .board = null,
@@ -67,7 +67,7 @@ pub const boards = struct {
         };
 
         pub const pico2 = Target{
-            .preferred_format = .{ .uf2 = .RP2040 },
+            .preferred_format = .{ .uf2 = .RP2350_ARM_S },
             .chip = chip_rp2350_arm,
             .hal = hal,
             .linker_script = linker_script_ld2350,
