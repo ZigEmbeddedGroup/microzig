@@ -60,4 +60,5 @@ test "hal tests" {
     _ = pio;
     _ = usb;
     _ = i2c;
+    _ = uart;
 }
