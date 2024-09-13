@@ -20,7 +20,7 @@ All demos that run on the [RaspberryPi Pico](https://www.raspberrypi.com/product
   Slowly blinks the LED on the Pico with a smooth blinking using PWM.
 - [random](src/random.zig) on [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/)  
   Showcases how to use the internal random generator.
-- [spi master](src/spi_master.zig) on [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/)  
+- [spi host](src/spi_host.zig) on [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/)  
   Showcases how to use the SPI host controller.
 - [squarewave](src/squarewave.zig) on [RaspberryPi Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/)  
   Showcases how to use the PIO to emit a basic square wave.

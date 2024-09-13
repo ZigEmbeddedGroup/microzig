@@ -12,13 +12,13 @@ const available_examples = [_]Example{
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/pwm.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_random", .file = "src/random.zig" },
-    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_spi-master", .file = "src/spi_master.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/spi_host.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_squarewave", .file = "src/squarewave.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_uart", .file = "src/uart.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/usb_hid.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/usb_cdc.zig" },
     .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_ws2812", .file = "src/ws2812.zig" },
-    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_multicore" , .file = "src/blinky_core1.zig" },
+    .{ .target = rp2040.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/blinky_core1.zig" },
 
     // WaveShare Boards:
     .{ .target = rp2040.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/tiles.zig" },
