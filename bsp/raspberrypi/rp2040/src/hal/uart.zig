@@ -42,7 +42,11 @@ pub const Config = struct {
     parity: Parity = .none,
 };
 
-pub const TransactionError = error{
+pub const TransmitError = error{
+    Timeout,
+};
+
+pub const ReceiveError = error{
     OverrunError,
     BreakError,
     ParityError,
@@ -129,8 +133,8 @@ pub const instance = struct {
 pub const UART = enum(u1) {
     _,
 
-    pub const Writer = std.io.GenericWriter(UART, TransactionError, generic_writer_fn);
-    pub const Reader = std.io.GenericReader(UART, TransactionError, generic_reader_fn);
+    pub const Writer = std.io.GenericWriter(UART, TransmitError, generic_writer_fn);
+    pub const Reader = std.io.GenericReader(UART, ReceiveError, generic_reader_fn);
 
     pub fn writer(uart: UART) Writer {
         return .{ .context = uart };
@@ -217,7 +221,7 @@ pub const UART = enum(u1) {
     ///
     /// Note that this does NOT disable reception while this is happening,
     /// so if this takes too long the RX FIFO can potentially overflow.
-    pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?time.Duration) TransmitError!void {
         var tx_remaining = payload.len - uart.prime_tx_fifo(payload);
         const uart_regs = uart.get_regs();
 
@@ -225,19 +229,19 @@ pub const UART = enum(u1) {
 
         while (tx_remaining > 0) {
             while (!uart.is_writeable()) {
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransactionError.Timeout;
+                if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransmitError.Timeout;
             }
             uart_regs.UARTDR.write_raw(payload[payload.len - tx_remaining]);
             tx_remaining -= 1;
         }
 
         while (uart.is_busy()) {
-            if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransactionError.Timeout;
+            if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransmitError.Timeout;
         }
     }
 
     /// Wraps write_blocking() for use as a GenericWriter
-    fn generic_writer_fn(uart: UART, buffer: []const u8) TransactionError!usize {
+    fn generic_writer_fn(uart: UART, buffer: []const u8) TransmitError!usize {
         try uart.write_blocking(buffer, null);
         return buffer.len;
     }
@@ -275,18 +279,18 @@ pub const UART = enum(u1) {
     }
 
     /// Returns the first active error encountered while reading a byte from the RX FIFO.
-    fn read_rx_fifo_with_error_check(uart: UART) TransactionError!u8 {
+    fn read_rx_fifo_with_error_check(uart: UART) ReceiveError!u8 {
         const uart_regs = uart.get_regs();
         const read_val = uart_regs.UARTDR.read();
 
         if (read_val.OE == 1) {
-            return TransactionError.OverrunError;
+            return ReceiveError.OverrunError;
         } else if (read_val.BE == 1) {
-            return TransactionError.BreakError;
+            return ReceiveError.BreakError;
         } else if (read_val.PE == 1) {
-            return TransactionError.ParityError;
+            return ReceiveError.ParityError;
         } else if (read_val.FE == 1) {
-            return TransactionError.FramingError;
+            return ReceiveError.FramingError;
         }
         return read_val.DATA;
     }
@@ -296,25 +300,25 @@ pub const UART = enum(u1) {
     /// Returns a transaction error immediately if it occurs and doesn't
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
-    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?time.Duration) ReceiveError!void {
         const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
         for (buffer) |*byte| {
             while (!uart.is_readable()) {
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransactionError.Timeout;
+                if (deadline_maybe) |deadline| if (deadline.is_reached()) return ReceiveError.Timeout;
             }
             byte.* = try uart.read_rx_fifo_with_error_check();
         }
     }
 
     /// Convenience function for waiting for a single byte to come across the RX line.
-    pub fn read_word(uart: UART, timeout: ?time.Duration) TransactionError!u8 {
+    pub fn read_word(uart: UART, timeout: ?time.Duration) ReceiveError!u8 {
         var byte: [1]u8 = undefined;
         try uart.read_blocking(&byte, timeout);
         return byte[0];
     }
 
     /// Wraps read_blocking() for use as a GenericReader
-    fn generic_reader_fn(uart: UART, buffer: []u8) TransactionError!usize {
+    fn generic_reader_fn(uart: UART, buffer: []u8) ReceiveError!usize {
         try uart.read_blocking(buffer, null);
         return buffer.len;
     }
