@@ -30,5 +30,6 @@ jobs:
       get-submodules: true
       is-packaged: true
       artifact-output-paths: boxzer-out
+      zig-args: -Doptimize=ReleaseSmall
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}

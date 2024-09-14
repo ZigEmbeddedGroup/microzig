@@ -13,22 +13,23 @@ on:
 
 jobs:
   # Build the project to ensure it works. Also to get the binaries.
-  build-microzig:
+  build-website:
     uses: ./.github/workflows/build-base.yml
     with:
       zig-version: 0.13.0
       get-submodules: true
+      target-os: Linux
       github-artifact-name: website-build
-      artifact-output-paths: zig-out
+      artifact-output-path: website/zig-out
+      working-directory: website
   # Publish microzig
-  publish-microzig:
+  publish-website:
     uses: ./.github/workflows/publish-base.yml
-    needs: build-microzig
+    needs: build-website
     concurrency:
       group: publish
       cancel-in-progress: false
     with:
-      artifact-name: website
       github-artifact-name: website-build
       source-path: /
     secrets:

@@ -27,6 +27,12 @@ on:
         description: |
           If building a sub-project only, you can specify a working directory
           which is the path to that sub-project.
+      target-os:
+        required: false
+        type: string
+        default: ""
+        description: |
+          If you need to filter which platform uploads the artifact.
       is-packaged:
         required: false
         type: boolean
@@ -43,7 +49,7 @@ on:
         description: |
           The name to use for the github actifact that will be uploaded.
       # The path that we should upload artifacts from
-      artifact-output-paths:
+      artifact-output-path:
         required: false
         type: string
         default: ""
@@ -55,6 +61,11 @@ on:
         type: string
         default: ""
         description: A sepcific ref to build for (i.e. a version or commit)
+      zig-args:
+        required: false
+        type: string
+        default: ""
+        description: Arguments to add to the zig build command
     secrets:
       # The downloads url for the packaging step. This is used in boxzer to
       # fill in the manifest downloads location
@@ -63,6 +74,28 @@ on:
         description: |
           The download url that will be included in the boxzer manifest output. 
           If the "is-packaged" option is false, this will not be used.
+    outputs:
+      issemver:
+        description: Whether or not it was built with a semver
+        value: ${{ jobs.build-zig.outputs.issemver }}
+      major:
+        description: The major version of the semver
+        value: ${{ jobs.build-zig.outputs.major }}
+      minor:
+        description: The minor version of the semver
+        value: ${{ jobs.build-zig.outputs.minor }}
+      patch:
+        description: The patch version of the semver
+        value: ${{ jobs.build-zig.outputs.patch }}
+      prerelease:
+        description: The prerelease info of the semver
+        value: ${{ jobs.build-zig.outputs.prerelease }}
+      build:
+        description: The build info of the semver
+        value: ${{ jobs.build-zig.outputs.build }}
+      version:
+        description: The full semver string
+        value: ${{ jobs.build-zig.outputs.version }}
 
 jobs:
   build-zig:
@@ -70,6 +103,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    outputs:
+      issemver: ${{ steps.semver.outputs.issemver }}
+      major: ${{ steps.semver.outputs.major }}
+      minor: ${{ steps.semver.outputs.minor }}
+      patch: ${{ steps.semver.outputs.patch }}
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+      build: ${{ steps.semver.outputs.build }}
+      version: ${{ steps.semver.outputs.version }}
     steps:
       # If we just want to use the current commit, simply run a checkout
       - name: Checkout
@@ -86,10 +127,13 @@ jobs:
           ref: ${{ inputs.ref }}
           sparse-checkout: ${{ inputs.sparse-checkout-patterns }}
           submodules: ${{ inputs.get-submodules }}
+      # Parse the reference and pull out the semversion information if it is semversion
       - name: Get Semver Details
         shell: bash
         id: semver
         run: |
+          # This regex is from the semver page. Yes, I too cry at how big it is, just be glad you didn't have to get it working in bash.
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
           if [[ "${{ inputs.ref }}" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))? ]]; then
             echo "issemver=true" >> "$GITHUB_OUTPUT"
             echo "major=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
@@ -101,7 +145,8 @@ jobs:
           else
             echo "issemver=false" >> "$GITHUB_OUTPUT"
           fi
-      # Setup zig, we use mlugg's setup because it has caching
+      # If the reference is semver, modify all zon files to include the version from the reference
+      # Mac needs to be done different than windows/linux (see the sed command)
       - name: Process Version Info
         if: steps.semver.outputs.issemver == 'true' && runner.os != 'macOS'
         shell: bash
@@ -112,16 +157,19 @@ jobs:
         shell: bash
         run: |
           find . -name "*.zig.zon" -exec sed -i '' 's/\(.version *= *"\)[^\s]*\(",\)/\1${{ steps.semver.outputs.version }}\2/' {} \;
+      # Setup zig, we use mlugg's setup because it has caching
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
           version: ${{ inputs.zig-version }}
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall
-        working-directory: ${{ inputs.working-directory }}
+        run: |
+          zig build ${{ inputs.zig-args }}
+        working-directory: ./${{ inputs.working-directory }}
       - name: Package
         if: ${{ inputs.is-packaged && runner.os == 'macOS' }}
         run: zig build package -- "${{ secrets.downloads-url }}"
+        working-directory: ./${{ inputs.working-directory }}
       # We use whether or not an artifact output path is provided and whether
       # or not there is actually anything in that directory to know whether or
       # not there is anything to upload.
@@ -129,9 +177,8 @@ jobs:
         id: should-upload
         shell: bash
         run: |
-          if [[ ! -z "${{ inputs.artifact-output-paths }}" ]] \
-                && test -n "$(find . -maxdepth 1 \
-                                -name '${{ inputs.artifact-output-paths }}' \
+          if [[ ! -z "${{ inputs.artifact-output-path }}" ]] \
+                && test -n "$(find ${{ inputs.artifact-output-path }} -maxdepth 1 \
                                 -print -quit)"; then
             echo "SHOULD_UPLOAD=true" >> $GITHUB_OUTPUT; 
           else
@@ -142,8 +189,9 @@ jobs:
       - name: Upload Artifacts
         if: |
           steps.should-upload.outputs.SHOULD_UPLOAD == 'true' 
-            && inputs.github-artifact-name != ''
+            && inputs.github-artifact-name != '' 
+            && ( runner.os == inputs.target-os || inputs.target-os == '' )
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.github-artifact-name }}
-          path: ${{ inputs.artifact-output-paths }}
+          path: ${{ inputs.artifact-output-path }}

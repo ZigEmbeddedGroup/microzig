@@ -32,6 +32,7 @@ jobs:
       zig-version: 0.13.0
       get-submodules: true
       is-packaged: true
+      zig-args: -Doptimize=ReleaseSmall
     secrets:
       downloads-url: ${{ secrets.DOWNLOADS_URL }}
   # If this is a push to main we want to create an automatic test against the

@@ -15,10 +15,6 @@ on:
         required: true
         type: string
         description: The github artifact to download the artifact from.
-      artifact-name:
-        required: true
-        type: string
-        description: The name of what we are publishing
       # The path after the target-path to publish the artifact to
       # {artifact | {target-path}/{target-artifact-path}
       target-artifact-path:
@@ -57,7 +53,7 @@ on:
 
 jobs:
   publish:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       # If this is somehow not run from a tag, fail. This is a remainder from
       # when the build side and publish side were done in one workflow.
@@ -97,31 +93,6 @@ jobs:
           REMOTE_USER: ${{ secrets.user }}
           REMOTE_PORT: ${{ secrets.port }}
           TARGET: ${{ secrets.target-path }}/${{ inputs.target-artifact-path }}
-      # (Not working as intented) Un-needed for now. This step would go through
-      # every binary and folder within the source path and add it to the release
-      # if it were a file, or compress it and then add the compressed file to
-      # the release.
-      # Issue: Adds things that are not desired in the output.
-      #- name: Handle Folder Release Artifact
-      #  if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, inputs.tag) }}
-      #  shell: bash
-      #  run: |
-      #    mkdir -p "artifacts-${{ github.sha }}"
-      #    for i in "${{ steps.download.outputs.download-path }}/${{ inputs.source-path }}"/*; do
-      #      echo "Artifact path $i"
-      #      if [[ -d "$i" ]]; then
-      #        echo "Artifact is path"
-      #        dirname="$(basename "$i")"
-      #        echo "Artifact directory $dirname. Compressing folder to ${{ inputs.artifact-name }}-${dirname}.tar.gz"
-      #        tar -czvf "${{ inputs.artifact-name }}-${dirname}.tar.gz" -C "$i" .
-      #        echo "Moving tar to artifacts-${{ github.sha }}"
-      #        mv "${{ inputs.artifact-name }}-${dirname}.tar.gz" "artifacts-${{ github.sha }}"
-      #      else
-      #        echo "Artifact is file"
-      #        echo "Move to: artifacts-${{ github.sha }}"
-      #        mv "$i" "artifacts-${{ github.sha }}"
-      #      fi
-      #    done
       # Create the release draft on GitHub.
       - name: Create Release Draft
         if: ${{ startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, inputs.tag) }}
