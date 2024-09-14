@@ -13,26 +13,38 @@ jobs:
   # Build the project to ensure it works. Also to get the binaries.
   build-microzig:
     uses: ./.github/workflows/build-base.yml
+    concurrency:
+      group: build
+      cancel-in-progress: true
     with:
       zig-version: 0.13.0
       get-submodules: true
       is-packaged: true
+      target-os: macOS
       github-artifact-name: microzig-build
-      artifact-output-paths: boxzer-out
+      artifact-output-path: boxzer-out
       ref: ${{ github.ref_name }}
     secrets:
       downloads-url: ${{ secrets.BOXZER_DOWNLOADS_URL }}
+  # Alters the boxzer output to match what we desire
+  alter-microzig-artifact:
+    uses: ./.github/workflows/alter-microzig-artifact.yml
+    needs: build-microzig
+    with:
+      in-gh-artifact-name: microzig-build
+      out-gh-artifact-name: microzig-alt
+      zig-version: 0.13.0
+      microzig-version: ${{ needs.build-microzig.outputs.version }}
   # Publish microzig
   publish-microzig:
     uses: ./.github/workflows/publish-base.yml
-    needs: build-microzig
+    needs: alter-microzig-artifact
     concurrency:
       group: publish
       cancel-in-progress: false
     with:
       tag: ${{ github.ref_name }}
-      artifact-name: microzig
-      github-artifact-name: microzig-build
+      github-artifact-name: microzig-alt
       source-path: /
     secrets:
       target-path: ${{ secrets.DEPLOY_MZ_ROOT_DATA_PATH }}
