@@ -316,11 +316,14 @@ pub fn main() !void {
     }
 
     for (chip_files.items) |chip_file| {
+        const core = chip_file.value.cores[0];
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
             // TODO
-            .arch = .unknown,
+            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_microzig_cpu.get(core.name).?).?,
         });
+
+        try regz.arm.load_system_interrupts(&db, device_id);
 
         // TODO: how do we want to handle multi core MCUs?
         //
@@ -329,7 +332,6 @@ pub fn main() !void {
         // are differences between cores that's something the user will have
         // to keep track of.
 
-        const core = chip_file.value.cores[0];
         for (core.interrupts) |interrupt| {
             _ = try db.create_interrupt(device_id, .{
                 .name = interrupt.name,
@@ -384,7 +386,7 @@ const core_to_microzig_cpu = std.StaticStringMap([]const u8).initComptime(&.{
 fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
     try writer.writeAll(
         \\const std = @import("std");
-        \\const MicroZig = @import("MicroZig");
+        \\const MicroZig = @import("microzig/build");
         \\
         \\fn root() []const u8 {
         \\    return comptime (std.fs.path.dirname(@src().file) orelse ".");
@@ -430,6 +432,21 @@ fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(Chip
             \\            .zig = .{ .cwd_relative = register_definition_path },
             \\        },
             \\    },
+            \\
+        );
+
+        // For now
+        if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
+            try writer.writeAll(
+                \\    .hal = .{
+                \\        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+                \\    },
+                \\
+                ,
+            );
+        }
+
+        try writer.writeAll(
             \\};
             \\
         );

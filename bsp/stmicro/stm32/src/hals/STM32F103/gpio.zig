@@ -81,12 +81,12 @@ pub const Pin = packed struct(u8) {
         const port = gpio.get_port();
         if (gpio.number <= 7) {
             const offset = @as(u5, gpio.number) << 2;
-            port.CRL.raw &= ~(@as(u32, 0b1111) << offset);
-            port.CRL.raw |= config << offset;
+            port.CR[0].raw &= ~(@as(u32, 0b1111) << offset);
+            port.CR[0].raw |= config << offset;
         } else {
             const offset = (@as(u5, gpio.number) - 8) << 2;
-            port.CRH.raw &= ~(@as(u32, 0b1111) << offset);
-            port.CRH.raw |= config << offset;
+            port.CR[1].raw &= ~(@as(u32, 0b1111) << offset);
+            port.CR[1].raw |= config << offset;
         }
     }
 
@@ -103,9 +103,9 @@ pub const Pin = packed struct(u8) {
             2 => GPIOC,
             3 => GPIOD,
             4 => GPIOE,
-            5 => GPIOF,
-            6 => GPIOG,
-            7 => @panic("The STM32 only has ports 0..6 (A..G)"),
+            //5 => GPIOF,
+            //6 => GPIOG,
+            else => @panic("The STM32 only has ports 0..6 (A..G)"),
         };
     }
 

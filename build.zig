@@ -90,6 +90,8 @@ const PartsDb = struct {
 fn generate_parts_db(b: *Build) !Build.LazyPath {
     var chips = std.ArrayList(PartsDb.Chip).init(b.allocator);
     var boards = std.ArrayList(PartsDb.Board).init(b.allocator);
+
+    @setEvalBranchQuota(20000);
     inline for (bsps) |bsp| {
         const chips_start_idx = chips.items.len;
         inline for (@typeInfo(@field(bsp[1], "chips")).Struct.decls) |decl| {

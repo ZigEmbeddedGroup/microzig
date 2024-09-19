@@ -64,7 +64,7 @@ pub const boards = struct {
 
     pub const stm32f429idiscovery = MicroZig.Target{
         .preferred_format = .elf,
-        .chip = chips.STM32F429ZIT6U.chip,
+        .chip = chips.STM32F429ZI.chip,
         .board = .{
             .name = "STM32F429IDISCOVERY",
             .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },

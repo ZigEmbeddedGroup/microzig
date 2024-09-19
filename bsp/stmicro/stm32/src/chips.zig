@@ -1,5 +1,5 @@
 const std = @import("std");
-const MicroZig = @import("MicroZig");
+const MicroZig = @import("microzig/build");
 
 fn root() []const u8 {
     return comptime (std.fs.path.dirname(@src().file) orelse ".");
@@ -2156,6 +2156,9 @@ pub const STM32F103C4 = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103C6 = MicroZig.Target{
@@ -2170,6 +2173,9 @@ pub const STM32F103C6 = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2186,6 +2192,9 @@ pub const STM32F103C8 = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103CB = MicroZig.Target{
@@ -2200,6 +2209,9 @@ pub const STM32F103CB = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2216,6 +2228,9 @@ pub const STM32F103R4 = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103R6 = MicroZig.Target{
@@ -2230,6 +2245,9 @@ pub const STM32F103R6 = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2246,6 +2264,9 @@ pub const STM32F103R8 = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103RB = MicroZig.Target{
@@ -2260,6 +2281,9 @@ pub const STM32F103RB = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2276,6 +2300,9 @@ pub const STM32F103RC = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103RD = MicroZig.Target{
@@ -2291,6 +2318,9 @@ pub const STM32F103RD = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103RE = MicroZig.Target{
@@ -2305,6 +2335,9 @@ pub const STM32F103RE = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2322,6 +2355,9 @@ pub const STM32F103RF = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103RG = MicroZig.Target{
@@ -2338,6 +2374,9 @@ pub const STM32F103RG = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103T4 = MicroZig.Target{
@@ -2352,6 +2391,9 @@ pub const STM32F103T4 = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2368,6 +2410,9 @@ pub const STM32F103T6 = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103T8 = MicroZig.Target{
@@ -2382,6 +2427,9 @@ pub const STM32F103T8 = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2398,6 +2446,9 @@ pub const STM32F103TB = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103V8 = MicroZig.Target{
@@ -2412,6 +2463,9 @@ pub const STM32F103V8 = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2428,6 +2482,9 @@ pub const STM32F103VB = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103VC = MicroZig.Target{
@@ -2442,6 +2499,9 @@ pub const STM32F103VC = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2458,6 +2518,9 @@ pub const STM32F103VD = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103VE = MicroZig.Target{
@@ -2472,6 +2535,9 @@ pub const STM32F103VE = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2489,6 +2555,9 @@ pub const STM32F103VF = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103VG = MicroZig.Target{
@@ -2505,6 +2574,9 @@ pub const STM32F103VG = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103ZC = MicroZig.Target{
@@ -2519,6 +2591,9 @@ pub const STM32F103ZC = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2535,6 +2610,9 @@ pub const STM32F103ZD = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103ZE = MicroZig.Target{
@@ -2549,6 +2627,9 @@ pub const STM32F103ZE = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
@@ -2566,6 +2647,9 @@ pub const STM32F103ZF = MicroZig.Target{
             .zig = .{ .cwd_relative = register_definition_path },
         },
     },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
+    },
 };
 
 pub const STM32F103ZG = MicroZig.Target{
@@ -2581,6 +2665,9 @@ pub const STM32F103ZG = MicroZig.Target{
         .register_definition = .{
             .zig = .{ .cwd_relative = register_definition_path },
         },
+    },
+    .hal = .{
+        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
     },
 };
 
