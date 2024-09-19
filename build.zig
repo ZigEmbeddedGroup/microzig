@@ -58,11 +58,9 @@ pub fn build(b: *Build) void {
     const test_bsps_step = b.step("run-bsp-tests", "Run all platform agnostic tests for BSPs");
     inline for (bsps) |bsp| {
         const bsp_dep = b.dependency(bsp[0], .{});
-        const test_step = bsp_dep.builder.top_level_steps.get("test") orelse {
-            @panic(b.fmt("{s} missing test step", .{bsp[0]}));
-        };
-
-        test_bsps_step.dependOn(&test_step.step);
+        if (bsp_dep.builder.top_level_steps.get("test")) |test_step| {
+            test_bsps_step.dependOn(&test_step.step);
+        }
     }
 }
 
