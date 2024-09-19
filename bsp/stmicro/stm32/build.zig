@@ -13,18 +13,10 @@ pub const chips = @import("src/chips.zig");
 pub fn build(b: *std.Build) !void {
     const update = b.step("update", "Update chip definitions from embassy-rs/stm32-data-generated");
 
+    const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
+
     const regz_dep = b.dependency("microzig/tools/regz", .{});
     const regz = regz_dep.module("regz");
-
-    const curl_commits_run = b.addSystemCommand(&.{
-        "curl", "-s", "https://api.github.com/repos/embassy-rs/stm32-data-generated/commits", "-o",
-    });
-    curl_commits_run.stdio = .inherit;
-    const commits_json = curl_commits_run.addOutputFileArg("commits.json");
-
-    const jq_run = b.addSystemCommand(&.{ "jq", "-r", ".[0].sha" });
-    jq_run.addFileArg(commits_json);
-    const commit = jq_run.captureStdOut();
 
     const generate = b.addExecutable(.{
         .name = "generate",
@@ -36,8 +28,7 @@ pub fn build(b: *std.Build) !void {
 
     const generate_run = b.addRunArtifact(generate);
     generate_run.max_stdio_size = std.math.maxInt(usize);
-    generate_run.addFileArg(commit);
-    _ = generate_run.addOutputDirectoryArg("stm32-data-generated");
+    generate_run.addFileArg(stm32_data_generated.path("."));
     update.dependOn(&generate_run.step);
 
     _ = b.step("test", "Run platform agnostic unit tests");

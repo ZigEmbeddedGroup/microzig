@@ -149,67 +149,17 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    if (args.len < 3)
+    if (args.len < 2)
         return error.InvalidArgs;
 
-    const commit_path = args[1];
-    const tarball_output_path = args[2];
+    const package_path = args[1];
 
-    std.log.info("commit path: {s}", .{commit_path});
-    std.log.info("tarball output path: {s}", .{tarball_output_path});
+    std.log.info("package path: {s}", .{package_path});
 
-    const commit_text = try std.fs.cwd().readFileAlloc(allocator, commit_path, std.math.maxInt(usize));
-    defer allocator.free(commit_text);
+    var package_dir = try std.fs.cwd().openDir(package_path, .{});
+    defer package_dir.close();
 
-    // strip newline
-    const commit = commit_text[0 .. commit_text.len - 1];
-
-    std.log.info("got commit: {s}", .{commit});
-
-    // install tarball
-    var client = std.http.Client{
-        .allocator = allocator,
-    };
-    defer client.deinit();
-
-    var body = std.ArrayList(u8).init(allocator);
-    defer body.deinit();
-
-    const url = try std.fmt.allocPrint(allocator, "https://api.github.com/repos/embassy-rs/stm32-data-generated/tarball/{s}", .{commit});
-    std.log.info("url: {s}", .{url});
-
-    const result = try client.fetch(.{
-        .method = .GET,
-        .location = .{ .url = url },
-        .response_storage = .{ .dynamic = &body },
-        .max_append_size = 100 * 1024 * 1024,
-    });
-    std.log.info("status: {}", .{result.status});
-    if (result.status != .ok)
-        return error.HttpNotOk;
-
-    var output_dir = try std.fs.cwd().openDir(tarball_output_path, .{});
-    defer output_dir.close();
-
-    var fbs = std.io.fixedBufferStream(body.items);
-
-    var decompressor = std.compress.gzip.decompressor(fbs.reader());
-
-    {
-        var tar_diags = std.tar.Diagnostics{
-            .allocator = allocator,
-        };
-        errdefer {
-            std.log.err("{}", .{tar_diags});
-        }
-
-        try std.tar.pipeToFileSystem(output_dir, decompressor.reader(), .{
-            .strip_components = 1,
-            .diagnostics = &tar_diags,
-        });
-    }
-
-    var data_dir = try output_dir.openDir("data", .{});
+    var data_dir = try package_dir.openDir("data", .{});
     defer data_dir.close();
 
     var chip_files = std.ArrayList(std.json.Parsed(ChipFile)).init(allocator);
