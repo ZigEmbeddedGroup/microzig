@@ -45,6 +45,19 @@ pub fn to_zig(db: Database, out_writer: anytype) !void {
     var ast = try std.zig.Ast.parse(db.gpa, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
     defer ast.deinit(db.gpa);
 
+    if (ast.errors.len > 0) {
+        try out_writer.writeAll(buffer.items);
+        for (ast.errors) |err| {
+            std.log.err("err: {}", .{err});
+            var err_msg = std.ArrayList(u8).init(db.gpa);
+            defer err_msg.deinit();
+
+            try ast.renderError(err, err_msg.writer());
+            std.log.err("  {s}", .{err_msg.items});
+        }
+        return error.FailedToParse;
+    }
+
     // TODO: ast check?
     const text = try ast.render(db.gpa);
     defer db.gpa.free(text);
@@ -836,7 +849,7 @@ fn write_fields(
                 try writer.writeAll("},\n},\n");
             }
         } else {
-            try writer.print("{s}: u{},\n", .{ name, next.size });
+            try writer.print("{}: u{},\n", .{ std.zig.fmtId(name), next.size });
         }
 
         offset += next.size;

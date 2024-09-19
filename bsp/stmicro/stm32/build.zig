@@ -8,186 +8,45 @@ const build_root = root();
 
 const KiB = 1024;
 
+pub const chips = @import("src/chips.zig");
+
 pub fn build(b: *std.Build) !void {
+    const update = b.step("update", "Update chip definitions from embassy-rs/stm32-data-generated");
+
+    const regz_dep = b.dependency("microzig/tools/regz", .{});
+    const regz = regz_dep.module("regz");
+
+    const curl_commits_run = b.addSystemCommand(&.{
+        "curl", "-s", "https://api.github.com/repos/embassy-rs/stm32-data-generated/commits", "-o",
+    });
+    curl_commits_run.stdio = .inherit;
+    const commits_json = curl_commits_run.addOutputFileArg("commits.json");
+
+    const jq_run = b.addSystemCommand(&.{ "jq", "-r", ".[0].sha" });
+    jq_run.addFileArg(commits_json);
+    const commit = jq_run.captureStdOut();
+
+    const generate = b.addExecutable(.{
+        .name = "generate",
+        .root_source_file = b.path("src/generate.zig"),
+        .target = b.host,
+        .optimize = .Debug,
+    });
+    generate.root_module.addImport("regz", regz);
+
+    const generate_run = b.addRunArtifact(generate);
+    generate_run.max_stdio_size = std.math.maxInt(usize);
+    generate_run.addFileArg(commit);
+    _ = generate_run.addOutputDirectoryArg("stm32-data-generated");
+    update.dependOn(&generate_run.step);
+
     _ = b.step("test", "Run platform agnostic unit tests");
 }
-
-pub const chips = struct {
-    pub const stm32f103x8 = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = .{
-            .name = "STM32F103",
-            .cpu = MicroZig.cpus.cortex_m3,
-            .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
-            },
-            .register_definition = .{
-                .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F103.json" },
-            },
-        },
-        .hal = .{
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F103/hal.zig" },
-        },
-    };
-
-    pub const stm32f303vc = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = .{
-            .name = "STM32F303",
-            .cpu = MicroZig.cpus.cortex_m4,
-            .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 256 * KiB, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 40 * KiB, .kind = .ram },
-            },
-            .register_definition = .{
-                .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F303.json" },
-            },
-        },
-    };
-
-    pub const stm32f407vg = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = .{
-            .name = "STM32F407",
-            .cpu = MicroZig.cpus.cortex_m4,
-            .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 1024 * KiB, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 128 * KiB, .kind = .ram },
-                .{ .offset = 0x10000000, .length = 64 * KiB, .kind = .ram }, // CCM RAM
-            },
-            .register_definition = .{
-                .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F407.json" },
-            },
-        },
-        .hal = .{
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/hals/STM32F407.zig" },
-        },
-    };
-
-    pub const stm32f429zit6u = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = .{
-            .name = "STM32F429",
-            .cpu = MicroZig.cpus.cortex_m4,
-            .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 2048 * KiB, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 192 * KiB, .kind = .ram },
-                .{ .offset = 0x10000000, .length = 64 * KiB, .kind = .ram }, // CCM RAM
-            },
-            .register_definition = .{
-                .json = .{ .cwd_relative = build_root ++ "/src/chips/STM32F429.json" },
-            },
-        },
-    };
-
-    // All STM32L0x1 series MCUs differ only in memory size. So we create a comptime function
-    // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x1.html
-    fn stm32l0x1(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
-        return MicroZig.Target{
-            .preferred_format = .elf,
-            .chip = .{
-                .name = "STM32L0x1",
-                .cpu = MicroZig.cpus.cortex_m0plus,
-                .memory_regions = &.{
-                    .{ .offset = 0x08000000, .length = rom_size, .kind = .flash },
-                    .{ .offset = 0x20000000, .length = ram_size, .kind = .ram },
-                },
-                .register_definition = .{
-                    .svd = .{ .cwd_relative = build_root ++ "/src/chips/STM32L0x1.svd" },
-                },
-            },
-        };
-    }
-
-    pub const stm32l011x3 = stm32l0x1(8 * KiB, 2 * KiB);
-
-    pub const stm32l011x4 = stm32l0x1(16 * KiB, 2 * KiB);
-    pub const stm32l021x4 = stm32l0x1(16 * KiB, 2 * KiB);
-    pub const stm32l031x4 = stm32l0x1(16 * KiB, 8 * KiB);
-
-    pub const stm32l031x6 = stm32l0x1(32 * KiB, 8 * KiB);
-    pub const stm32l041x6 = stm32l0x1(32 * KiB, 8 * KiB);
-    pub const stm32l051x6 = stm32l0x1(32 * KiB, 8 * KiB);
-
-    pub const stm32l051x8 = stm32l0x1(64 * KiB, 8 * KiB);
-    pub const stm32l071x8 = stm32l0x1(64 * KiB, 20 * KiB);
-
-    pub const stm32l071xb = stm32l0x1(128 * KiB, 20 * KiB);
-    pub const stm32l081cb = stm32l0x1(128 * KiB, 20 * KiB);
-
-    pub const stm32l071xz = stm32l0x1(192 * KiB, 20 * KiB);
-    pub const stm32l081xz = stm32l0x1(192 * KiB, 20 * KiB);
-
-    // All STM32L0x2 series MCUs differ only in memory size. So we create a comptime function
-    // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x2.html
-    fn stm32l0x2(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
-        return MicroZig.Target{
-            .preferred_format = .elf,
-            .chip = .{
-                .name = "STM32L0x2",
-                .cpu = MicroZig.cpus.cortex_m0plus,
-                .memory_regions = &.{
-                    .{ .offset = 0x08000000, .length = rom_size, .kind = .flash },
-                    .{ .offset = 0x20000000, .length = ram_size, .kind = .ram },
-                },
-                .register_definition = .{
-                    .svd = .{ .cwd_relative = build_root ++ "/src/chips/STM32L0x2.svd" },
-                },
-            },
-        };
-    }
-
-    pub const stm32l052x6 = stm32l0x2(32 * KiB, 8 * KiB);
-
-    pub const stm32l052x8 = stm32l0x2(64 * KiB, 8 * KiB);
-    pub const stm32l062x8 = stm32l0x2(64 * KiB, 8 * KiB);
-    pub const stm32l072v8 = stm32l0x2(64 * KiB, 20 * KiB);
-
-    pub const stm32l072xb = stm32l0x2(128 * KiB, 20 * KiB);
-    pub const stm32l082xb = stm32l0x2(128 * KiB, 20 * KiB);
-
-    pub const stm32l072xz = stm32l0x2(192 * KiB, 20 * KiB);
-    pub const stm32l082xz = stm32l0x2(192 * KiB, 20 * KiB);
-
-    // All STM32L0x2 series MCUs differ only in memory size. So we create a comptime function
-    // to generate all MCU variants as per https://www.st.com/en/microcontrollers-microprocessors/stm32l0x3.html
-    fn stm32l0x3(comptime rom_size: u64, comptime ram_size: u64) MicroZig.Target {
-        return MicroZig.Target{
-            .preferred_format = .elf,
-            .chip = .{
-                .name = "STM32L0x3",
-                .cpu = MicroZig.cpus.cortex_m0plus,
-                .memory_regions = &.{
-                    .{ .offset = 0x08000000, .length = rom_size, .kind = .flash },
-                    .{ .offset = 0x20000000, .length = ram_size, .kind = .ram },
-                },
-                .register_definition = .{
-                    .svd = .{ .cwd_relative = build_root ++ "/src/chips/STM32L0x3.svd" },
-                },
-            },
-        };
-    }
-
-    pub const stm32l053x6 = stm32l0x2(32 * KiB, 8 * KiB);
-
-    pub const stm32l053x8 = stm32l0x2(64 * KiB, 8 * KiB);
-    pub const stm32l063x8 = stm32l0x2(64 * KiB, 8 * KiB);
-
-    pub const stm32l073v8 = stm32l0x2(64 * KiB, 20 * KiB);
-    pub const stm32l083v8 = stm32l0x2(64 * KiB, 20 * KiB);
-
-    pub const stm32l073xb = stm32l0x2(128 * KiB, 20 * KiB);
-    pub const stm32l083xb = stm32l0x2(128 * KiB, 20 * KiB);
-
-    pub const stm32l073xz = stm32l0x2(192 * KiB, 20 * KiB);
-    pub const stm32l083xz = stm32l0x2(192 * KiB, 20 * KiB);
-};
 
 pub const boards = struct {
     pub const stm32f3discovery = MicroZig.Target{
         .preferred_format = .elf,
-        .chip = chips.stm32f303vc.chip,
+        .chip = chips.STM32F303VC.chip,
         .board = .{
             .name = "STM32F3DISCOVERY",
             .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
@@ -196,7 +55,7 @@ pub const boards = struct {
 
     pub const stm32f4discovery = MicroZig.Target{
         .preferred_format = .elf,
-        .chip = chips.stm32f407vg.chip,
+        .chip = chips.STM32F407VG.chip,
         .board = .{
             .name = "STM32F4DISCOVERY",
             .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
@@ -205,7 +64,7 @@ pub const boards = struct {
 
     pub const stm3240geval = MicroZig.Target{
         .preferred_format = .elf,
-        .chip = chips.stm32f407vg.chip,
+        .chip = chips.STM32F407VG.chip,
         .board = .{
             .name = "STM3240G_EVAL",
             .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
@@ -214,7 +73,7 @@ pub const boards = struct {
 
     pub const stm32f429idiscovery = MicroZig.Target{
         .preferred_format = .elf,
-        .chip = chips.stm32f429zit6u.chip,
+        .chip = chips.STM32F429ZIT6U.chip,
         .board = .{
             .name = "STM32F429IDISCOVERY",
             .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },

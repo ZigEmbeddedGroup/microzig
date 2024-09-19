@@ -3,6 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
     },
     .paths = .{
         "LICENSE",
