@@ -58,7 +58,9 @@ pub fn build(b: *Build) void {
     const test_bsps_step = b.step("run-bsp-tests", "Run all platform agnostic tests for BSPs");
     inline for (bsps) |bsp| {
         const bsp_dep = b.dependency(bsp[0], .{});
-        test_bsps_step.dependOn(&bsp_dep.builder.top_level_steps.get("test").?.step);
+        if (bsp_dep.builder.top_level_steps.get("test")) |test_step| {
+            test_bsps_step.dependOn(&test_step.step);
+        }
     }
 }
 
@@ -90,6 +92,8 @@ const PartsDb = struct {
 fn generate_parts_db(b: *Build) !Build.LazyPath {
     var chips = std.ArrayList(PartsDb.Chip).init(b.allocator);
     var boards = std.ArrayList(PartsDb.Board).init(b.allocator);
+
+    @setEvalBranchQuota(20000);
     inline for (bsps) |bsp| {
         const chips_start_idx = chips.items.len;
         inline for (@typeInfo(@field(bsp[1], "chips")).Struct.decls) |decl| {

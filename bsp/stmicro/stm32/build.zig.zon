@@ -3,6 +3,12 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
+        .@"stm32-data-generated" = .{
+            .url = "git+https://github.com/embassy-rs/stm32-data-generated.git#5198a6e36b24f6d79c4ac91af5e61e8d54667d88",
+            .hash = "12204e87e362907155063cd01341752a2c602a35566279628cf3665f981f4c960232",
+            .lazy = true,
+        },
     },
     .paths = .{
         "LICENSE",

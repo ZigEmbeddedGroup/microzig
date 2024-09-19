@@ -3,7 +3,7 @@ const MicroZig = @import("microzig/build");
 const stm32 = @import("microzig/bsp/stmicro/stm32");
 
 const available_examples = [_]Example{
-    .{ .target = stm32.chips.stm32f103x8, .name = "stm32f103x8", .file = "src/blinky.zig" },
+    .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },
     // TODO: stm32.pins.GlobalConfiguration is not available on those targets
     // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
     // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
