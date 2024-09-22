@@ -12,5 +12,6 @@ const clock_config = clocks.GlobalConfiguration.init(.{
 
 pub fn main() !void {
     gpout0_pin.set_function(.gpck);
+    clock_config.apply();
     while (true) {}
 }
