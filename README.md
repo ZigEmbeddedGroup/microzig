@@ -14,9 +14,9 @@ Zig 0.13.0
 
 ### I Want To Use MicroZig
 
-**IMPORTANT:** You don't have to clone this repository to get started!
+**IMPORTANT:** You may not have to clone the whole repository to get started.
 
-MicroZig uses a monorepo architecture, but provides a lot of different packages. If you just want to get started, head over to [downloads.microzig.tech](https://downloads.microzig.tech/) and download an example for the chip family you desire.
+MicroZig uses a monorepo architecture, but provides a lot of different packages. If you just want to get started, head over to [downloads.microzig.tech](https://downloads.microzig.tech/) and download an example for the chip family you desire. MicroZig's version listed here match the zig versions assoicated with them, so version 12.0 match zig 12.0. If you don't see the zig version here you will have to clone the repo to get started.
 
 We support several chip families like the [RP2 family by RaspberryPi Foundation](https://www.raspberrypi.com/products/rp2040/), [STM32 by STMicroelectronics](https://www.st.com/content/st_com/en.html), and many others.
 
