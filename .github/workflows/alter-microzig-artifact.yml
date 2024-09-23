@@ -27,7 +27,7 @@ on:
         description: The microzig version to use
 
 jobs:
-  publish:
+  alter:
     runs-on: ubuntu-latest
     steps:
       # Download the requested github artifact
@@ -47,6 +47,14 @@ jobs:
             realpath -s --relative-to="${{ github.workspace }}" \
             "${{ steps.download.outputs.download-path }}/${{ inputs.source-path }}" \
             )" >> $GITHUB_OUTPUT
+      # Generate the folders that will be in the final artifact. Here is an
+      # example:
+      # zig-0.13.0/
+      # └── microzig-0.1.0/
+      #     ├── bsp/
+      #     ├── build/
+      #     ├── tools/
+      #     └── examples/
       - name: Create base folder structure
         shell: bash
         id: base-folders
@@ -59,29 +67,52 @@ jobs:
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/build/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/examples/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/tools/"
+      # In later steps we are going to use the outputs from the steps. To
+      # ensure that when we use them without quotes for globbint, we don't
+      # break things, create sanitized versions of the paths.
       - name: Get glob safe base paths
         id: get-glob-paths
         shell: bash
         run: |
           echo "source-path=$(printf "%q" "${{ steps.get-source-path.outputs.path }}")" >> $GITHUB_OUTPUT
           echo "output-path=$(printf "%q" "${{ steps.base-folders.outputs.path }}")" >> $GITHUB_OUTPUT
-      - name: Copy Root, Build, Core, Tools
+      # Copy files of which there are one of (Things that can be moved and
+      # renamed in the same step easily).
+      # Example:
+      # zig-0.13.0/
+      # └── microzig-0.1.0/
+      #     ├── bsp/
+      #     ├── build/
+      #     │   └── definitions.tar.gz
+      #     ├── tools/
+      #     ├── examples/
+      #     ├── microzig-build.tar.gz
+      #     ├── microzig-core.tar.gz
+      #     └── microzig.tar.gz
+      - name: Copy Root, Build, Core
         shell: bash
         run: |
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*.tar.gz "${{ steps.base-folders.outputs.path }}/microzig.tar.gz"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/build-*.tar.gz "${{ steps.base-folders.outputs.path }}/microzig-build.tar.gz"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/core-*.tar.gz "${{ steps.base-folders.outputs.path }}/microzig-core.tar.gz"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/build/definitions-*.tar.gz "${{ steps.base-folders.outputs.path }}/build/definitions.tar.gz"
-      - name: Move examples, bsp
+      # Move over all of the files of which are similar. These still need to be
+      # renamed (this and the next step could be combined, but I have them
+      # separated to help with mental overhead).
+      - name: Move examples, bsp, tools
         shell: bash
         run: |
+          mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/tools/*.tar.gz "${{ steps.base-folders.outputs.path }}/tools"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/bsp/*/*.tar.gz "${{ steps.base-folders.outputs.path }}/bsp/"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/examples/*/*.tar.gz "${{ steps.base-folders.outputs.path }}/examples/"
-      - name: Rename examples, bsp
+      # Rename all the files to remove the version information from the filename.
+      - name: Rename examples, bsp, tools
         shell: bash
         run: |
           find "${{ steps.base-folders.outputs.path }}/examples" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/-examples.tar.gz/g")"' \;
           find "${{ steps.base-folders.outputs.path }}/bsp" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/-bsp.tar.gz/g")"' \;
+          find "${{ steps.base-folders.outputs.path }}/tools" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/.tar.gz/g")"' \;
+      # Upload everything to the new artifact
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
