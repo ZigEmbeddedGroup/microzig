@@ -17,7 +17,7 @@ jobs:
       group: build
       cancel-in-progress: true
     with:
-      zig-version: 0.13.0
+      zig-version: ${{ vars.MZ_TARGET_ZIG_VERSION }}
       get-submodules: true
       is-packaged: true
       target-os: macOS
@@ -33,7 +33,7 @@ jobs:
     with:
       in-gh-artifact-name: microzig-build
       out-gh-artifact-name: microzig-alt
-      zig-version: 0.13.0
+      zig-version: ${{ vars.MZ_TARGET_ZIG_VERSION }}
       microzig-version: ${{ needs.build-microzig.outputs.version }}
   # Publish microzig
   publish-microzig:
