@@ -47,6 +47,47 @@ pub fn build(b: *Build) void {
     const package_step = b.step("package", "Package monorepo using boxzer");
     package_step.dependOn(&boxzer_run.step);
 
+    const parts_db = generate_parts_db(b) catch @panic("OOM");
+    const parts_db_json = b.addInstallFile(parts_db, "parts-db.json");
+    package_step.dependOn(&parts_db_json.step);
+
+    const test_ports_step = b.step("run-port-tests", "Run all platform agnostic tests for Ports");
+    inline for (ports) |port| {
+        const port_dep = b.dependency(port[0], .{});
+        if (port_dep.builder.top_level_steps.get("test")) |test_step| {
+            test_ports_step.dependOn(&test_step.step);
+        }
+    }
+
+    generate_release_steps(b);
+}
+
+const PartsDb = struct {
+    chips: []const Chip,
+    boards: []const Board,
+
+    const Chip = struct {
+        identifier: []const u8,
+        port_package: []const u8,
+        url: ?[]const u8,
+        cpu: []const u8,
+        has_hal: bool,
+        memory: struct {
+            flash: u64,
+            ram: u64,
+        },
+        output_format: ?[]const u8,
+    };
+    const Board = struct {
+        identifier: []const u8,
+        port_package: []const u8,
+        chip_idx: u32,
+        url: ?[]const u8,
+        output_format: ?[]const u8,
+    };
+};
+
+fn generate_release_steps(b: *Build) void {
     const exe_targets: []const std.Target.Query = &.{
         .{ .cpu_arch = .aarch64, .os_tag = .macos },
         .{ .cpu_arch = .aarch64, .os_tag = .linux },
@@ -91,44 +132,7 @@ pub fn build(b: *Build) void {
         });
         release_uf2_step.dependOn(&uf2_target_output.step);
     }
-
-    const parts_db = generate_parts_db(b) catch @panic("OOM");
-    const parts_db_json = b.addInstallFile(parts_db, "parts-db.json");
-    package_step.dependOn(&parts_db_json.step);
-
-    const test_ports_step = b.step("run-port-tests", "Run all platform agnostic tests for Ports");
-    inline for (ports) |port| {
-        const port_dep = b.dependency(port[0], .{});
-        if (port_dep.builder.top_level_steps.get("test")) |test_step| {
-            test_ports_step.dependOn(&test_step.step);
-        }
-    }
 }
-
-const PartsDb = struct {
-    chips: []const Chip,
-    boards: []const Board,
-
-    const Chip = struct {
-        identifier: []const u8,
-        port_package: []const u8,
-        url: ?[]const u8,
-        cpu: []const u8,
-        has_hal: bool,
-        memory: struct {
-            flash: u64,
-            ram: u64,
-        },
-        output_format: ?[]const u8,
-    };
-    const Board = struct {
-        identifier: []const u8,
-        port_package: []const u8,
-        chip_idx: u32,
-        url: ?[]const u8,
-        output_format: ?[]const u8,
-    };
-};
 
 fn generate_parts_db(b: *Build) !Build.LazyPath {
     var chips = std.ArrayList(PartsDb.Chip).init(b.allocator);
