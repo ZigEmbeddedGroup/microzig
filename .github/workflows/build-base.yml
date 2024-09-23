@@ -162,6 +162,8 @@ jobs:
         uses: mlugg/setup-zig@v1
         with:
           version: ${{ inputs.zig-version }}
+      # Build/Package the project. The working directory is for building
+      # sub-projects.
       - name: Build
         run: |
           zig build ${{ inputs.zig-args }}
