@@ -1,12 +1,10 @@
 ---
-{
-  "title": "Embedded Basics",
-  "date": "2020-07-06T00:00:00",
-  "author": "Felix Queißner",
-  "draft": false,
-  "layout": "tutorial.html",
-  "tags": []
-}
+.title = "Embedded Basics",
+.date = @date("2020-07-06T00:00:00"),
+.author = "Felix Queißner",
+.draft = false,
+.layout = "tutorial.shtml",
+.tags = []
 ---
 # Embedded Programming
 
@@ -60,7 +58,7 @@ The RAM will contain garbage after startup. Our variables aren't initialized and
 
 To do this, we first have to tell the compiler to store our pre-initialized data somewhere in flash memory, so we can copy it into RAM at startup. This is done via the linker script:
 
-```ld
+```cpp
 /* This section declares two memory regions:
  * flash: 512k of non-writeable memory at position 0,
  * ram:   32k of writeable memory at position 256M
