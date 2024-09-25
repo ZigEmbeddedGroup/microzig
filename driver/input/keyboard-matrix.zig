@@ -148,7 +148,7 @@ test KeyboardMatrix {
         matrix_pins[3].digital_io(),
     };
 
-    var matrix = try KeyboardMatrix(2, 2).init(&cols, &rows);
+    var matrix = try KeyboardMatrix(2, 2).init(cols, rows);
 
     const set = try matrix.scan();
     _ = set;
