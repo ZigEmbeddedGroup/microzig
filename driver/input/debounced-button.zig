@@ -25,14 +25,14 @@ pub fn DebouncedButton(
     /// otherwise the given number of samples is used.
     comptime filter_depth: ?comptime_int,
 ) type {
-    return DebouncedButton_Generic(mdf.DigitalIO, active_state, filter_depth);
+    return DebouncedButton_Generic(mdf.base.DigitalIO, active_state, filter_depth);
 }
 
 pub fn DebouncedButton_Generic(
     /// The GPIO pin the button is connected to. Will be initialized when calling Button.init
     comptime DigitalIO: type,
     /// The active state for the button. Use `.high` for active-high, `.low` for active-low.
-    comptime active_state: mdf.DigitalIO.State,
+    comptime active_state: mdf.base.DigitalIO.State,
     /// Optional filter depth for debouncing. If `null` is passed, 16 samples are used to debounce the button,
     /// otherwise the given number of samples is used.
     comptime filter_depth: ?comptime_int,
@@ -43,11 +43,11 @@ pub fn DebouncedButton_Generic(
 
         io: DigitalIO,
         debounce: DebounceFilter,
-        state: mdf.DigitalIO.State,
+        state: mdf.base.DigitalIO.State,
 
         pub fn init(io: DigitalIO) !Button {
-            try io.setBias(active_state.invert());
-            try io.setDirection(.input);
+            try io.set_bias(active_state.invert());
+            try io.set_direction(.input);
             return Button{
                 .io = io,
                 .debounce = 0,

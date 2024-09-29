@@ -1,3 +1,13 @@
+//!
+//! Generic driver for the SSD1306 display controller.
+//!
+//! This controller is usually found in small OLED displays.
+//!
+//! Datasheet:
+//! https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+//!
+//!
+
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
@@ -5,11 +15,16 @@ pub const SSD1306 = SSD1306_Generic(mdf.base.DatagramDevice);
 
 pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
     return struct {
+        const buffer_size = 16;
+
+        const white_line: [128]u8 = .{0xFF} ** 128;
+        const black_line: [128]u8 = .{0x00} ** 128;
+
         const Self = @This();
         dd: DatagramDevice,
 
         // TODO(philippwendel) Add doc comments for functions
-        // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
+        // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
         pub fn init(dev: DatagramDevice) !Self {
             var self = Self{ .dd = dev };
 
@@ -37,6 +52,32 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             return self;
         }
 
+        pub fn write_gdram(self: Self, data: []const u8) !void {
+            try self.dd.connect();
+            defer self.dd.disconnect();
+
+            for (data) |byte| {
+                try self.dd.write(&.{ ControlByte.data_byte, byte });
+            }
+
+            // var buffer: [buffer_size]u8 = undefined;
+            // buffer[0x00] = ControlByte.data_stream;
+
+            // var offset: usize = 0;
+
+            // while (offset < data.len) {
+            //     const chunk_size = @min(buffer.len, data.len - offset);
+
+            //     const chunk = data[offset..][0..chunk_size];
+
+            //     @memcpy(buffer[1 .. chunk_size + 1], chunk);
+
+            //     try self.dd.write(&[_]u8{buffer[0 .. chunk_size + 1]});
+
+            //     offset += chunk_size;
+            // }
+        }
+
         pub fn clear_screen(self: Self, white: bool) !void {
             try self.set_memory_addressing_mode(.horizontal);
             try self.set_column_address(0, 127);
@@ -44,12 +85,11 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             {
                 try self.dd.connect();
                 defer self.dd.disconnect();
-                for (0..(128 * 8)) |_| {
-                    if (white) {
-                        try self.dd.write(&[_]u8{ control_data, 0xFF });
-                    } else {
-                        try self.dd.write(&[_]u8{ control_data, 0x00 });
-                    }
+
+                const color: u8 = if (white) 0xFF else 0x00;
+
+                for (0..128 * 8) |_| {
+                    try self.dd.write(&.{ ControlByte.data_byte, color });
                 }
             }
             try self.entire_display_on(.resumeToRam);
@@ -61,28 +101,28 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x81, contrast });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x81, contrast });
         }
 
         pub fn entire_display_on(self: Self, mode: DisplayOnMode) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, @intFromEnum(mode) });
+            try self.dd.write(&[_]u8{ ControlByte.command, @intFromEnum(mode) });
         }
 
         pub fn set_normal_or_inverse_display(self: Self, mode: NormalOrInverseDisplay) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, @intFromEnum(mode) });
+            try self.dd.write(&[_]u8{ ControlByte.command, @intFromEnum(mode) });
         }
 
         pub fn set_display(self: Self, mode: DisplayMode) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, @intFromEnum(mode) });
+            try self.dd.write(&[_]u8{ ControlByte.command, @intFromEnum(mode) });
         }
 
         // Scrolling Commands
@@ -92,7 +132,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
             try self.dd.write(&[_]u8{
-                command,
+                ControlByte.command,
                 @intFromEnum(direction),
                 0x00, // Dummy byte
                 @as(u8, start_page),
@@ -107,7 +147,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
             try self.dd.write(&[_]u8{
-                command,
+                ControlByte.command,
                 @intFromEnum(direction),
                 0x00, // Dummy byte
                 @as(u8, start_page),
@@ -121,21 +161,21 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x2E });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x2E });
         }
 
         pub fn activate_scroll(self: Self) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x2F });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x2F });
         }
 
         pub fn set_vertical_scroll_area(self: Self, start_row: u6, num_of_rows: u7) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xA3, @as(u8, start_row), @as(u8, num_of_rows) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xA3, @as(u8, start_row), @as(u8, num_of_rows) });
         }
 
         // Addressing Setting Commands
@@ -143,35 +183,35 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, (@as(u8, @intFromEnum(column)) << 4) | @as(u8, address) });
+            try self.dd.write(&[_]u8{ ControlByte.command, (@as(u8, @intFromEnum(column)) << 4) | @as(u8, address) });
         }
 
         pub fn set_memory_addressing_mode(self: Self, mode: MemoryAddressingMode) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x20, @as(u8, @intFromEnum(mode)) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x20, @as(u8, @intFromEnum(mode)) });
         }
 
         pub fn set_column_address(self: Self, start: u7, end: u7) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x21, @as(u8, start), @as(u8, end) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x21, @as(u8, start), @as(u8, end) });
         }
 
         pub fn set_page_address(self: Self, start: u3, end: u3) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x22, @as(u8, start), @as(u8, end) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x22, @as(u8, start), @as(u8, end) });
         }
 
         pub fn set_page_start_address(self: Self, address: u3) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xB0 | @as(u8, address) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xB0 | @as(u8, address) });
         }
 
         // Hardware Configuration Commands
@@ -179,7 +219,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0x40 | @as(u8, line) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0x40 | @as(u8, line) });
         }
 
         // false: column address 0 is mapped to SEG0
@@ -189,9 +229,9 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             defer self.dd.disconnect();
 
             if (remap) {
-                try self.dd.write(&[_]u8{ command, 0xA1 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0xA1 });
             } else {
-                try self.dd.write(&[_]u8{ command, 0xA0 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0xA0 });
             }
         }
 
@@ -201,7 +241,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xA8, @as(u8, ratio) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xA8, @as(u8, ratio) });
         }
 
         /// false: normal (COM0 to COMn)
@@ -211,9 +251,9 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             defer self.dd.disconnect();
 
             if (remap) {
-                try self.dd.write(&[_]u8{ command, 0xC8 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0xC8 });
             } else {
-                try self.dd.write(&[_]u8{ command, 0xC0 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0xC0 });
             }
         }
 
@@ -221,7 +261,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xD3, @as(u8, vertical_shift) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xD3, @as(u8, vertical_shift) });
         }
 
         // TODO(philippwendel) Make config to enum
@@ -229,7 +269,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xDA, @as(u8, config) << 4 | 0x02 });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xDA, @as(u8, config) << 4 | 0x02 });
         }
 
         // Timing & Driving Scheme Setting Commands
@@ -238,7 +278,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xD5, (@as(u8, freq) << 4) | @as(u8, divide_ratio) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xD5, (@as(u8, freq) << 4) | @as(u8, divide_ratio) });
         }
 
         pub fn set_precharge_period(self: Self, phase1: u4, phase2: u4) !void {
@@ -247,7 +287,7 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xD9, @as(u8, phase2) << 4 | @as(u8, phase1) });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xD9, @as(u8, phase2) << 4 | @as(u8, phase1) });
         }
 
         // TODO(philippwendel) Make level to enum
@@ -255,14 +295,14 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xDB, @as(u8, level) << 4 });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xDB, @as(u8, level) << 4 });
         }
 
         pub fn nop(self: Self) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.write(&[_]u8{ command, 0xE3 });
+            try self.dd.write(&[_]u8{ ControlByte.command, 0xE3 });
         }
 
         // Charge Pump Commands
@@ -271,16 +311,40 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             defer self.dd.disconnect();
 
             if (enable) {
-                try self.dd.write(&[_]u8{ command, 0x8D, 0x14 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0x8D, 0x14 });
             } else {
-                try self.dd.write(&[_]u8{ command, 0x8D, 0x10 });
+                try self.dd.write(&[_]u8{ ControlByte.command, 0x8D, 0x10 });
             }
         }
     };
 }
 
-const command = 0x00;
-const control_data = 0x40;
+const ControlByte = packed struct(u8) {
+    zero: u6 = 0,
+    mode: enum(u1) { command = 0, data = 1 },
+    continuous: bool,
+
+    const command: u8 = @bitCast(ControlByte{
+        .mode = .command,
+        .continuous = false,
+    });
+
+    const data_byte: u8 = @bitCast(ControlByte{
+        .mode = .data,
+        .continuous = false,
+    });
+
+    const data_stream: u8 = @bitCast(ControlByte{
+        .mode = .data,
+        .continuous = true,
+    });
+};
+
+comptime {
+    std.debug.assert(ControlByte.command == 0x00);
+    std.debug.assert(ControlByte.data_byte == 0x40);
+    std.debug.assert(ControlByte.data_stream == 0xC0);
+}
 
 // Fundamental Commands
 const DisplayOnMode = enum(u8) { resumeToRam = 0xA4, ignoreRam = 0xA5 };

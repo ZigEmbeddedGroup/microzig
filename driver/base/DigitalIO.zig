@@ -15,6 +15,7 @@ vtable: *const VTable,
 pub const SetDirError = error{Unsupported};
 pub const SetBiasError = error{Unsupported};
 pub const WriteError = error{Unsupported};
+pub const ReadError = error{Unsupported};
 
 pub const State = enum(u1) {
     low = 0,
@@ -47,7 +48,7 @@ pub fn write(dio: DigitalIO, state: State) WriteError!void {
 }
 
 /// Reads the state state of the pin.
-pub fn read(dio: DigitalIO) State {
+pub fn read(dio: DigitalIO) ReadError!State {
     return dio.vtable.read_fn(dio.object);
 }
 

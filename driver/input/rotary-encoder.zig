@@ -39,14 +39,14 @@ pub fn RotaryEncoder_Generic(comptime DigitalIO: type) type {
             return Encoder{
                 .a = a,
                 .b = b,
-                .last_a = a.read(),
-                .last_b = b.read(),
+                .last_a = try a.read(),
+                .last_b = try b.read(),
             };
         }
 
-        pub fn tick(enc: *Encoder) Event {
-            var a = enc.a.read();
-            var b = enc.b.read();
+        pub fn poll(enc: *Encoder) !Event {
+            var a = try enc.a.read();
+            var b = try enc.b.read();
             defer enc.last_a = a;
             defer enc.last_b = b;
 
