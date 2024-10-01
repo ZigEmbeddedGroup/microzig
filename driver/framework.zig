@@ -13,6 +13,8 @@ pub const display = struct {
     // Export color types:
     const colors_ns = @import("display/colors.zig");
 
+    pub const BlackAndWhite = enum(u1) { black = 0, white = 1 };
+
     pub const RGB565 = colors_ns.RGB565;
     pub const RGB888 = colors_ns.RGB888;
 };

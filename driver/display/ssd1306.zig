@@ -52,6 +52,14 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             return self;
         }
 
+        pub fn write_full_display(self: Self, data: *const [128 * 8]u8) !void {
+            try self.set_memory_addressing_mode(.horizontal);
+            try self.set_column_address(0, 127);
+            try self.set_page_address(0, 7);
+
+            try self.write_gdram(data);
+        }
+
         pub fn write_gdram(self: Self, data: []const u8) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
@@ -318,6 +326,52 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
         }
     };
 }
+
+pub const Color = mdf.display.BlackAndWhite;
+
+pub const Framebuffer = struct {
+    pub const width = 128;
+    pub const height = 64;
+
+    pixel_data: [8][128]u8,
+
+    pub fn init_white() Framebuffer {
+        return .{
+            .pixel_data = .{.{0xFF} ** 128} ** 8,
+        };
+    }
+
+    pub fn init_black() Framebuffer {
+        return .{
+            .pixel_data = .{[1]u8{0x00} ** 128} ** 8,
+        };
+    }
+
+    pub fn bit_stream(fb: *const Framebuffer) *const [8 * 128]u8 {
+        return @ptrCast(&fb.pixel_data);
+    }
+
+    pub fn clear(fb: *Framebuffer, color: Color) void {
+        switch (color) {
+            .black => fb.* = init_black(),
+            .white => fb.* = init_white(),
+        }
+    }
+
+    pub fn set_pixel(fb: *Framebuffer, x: u7, y: u6, color: Color) void {
+        const page: u3 = @truncate(y / 8);
+        const bit: u3 = @truncate(y % 8);
+
+        const pixel = &fb.pixel_data[page][x];
+
+        const mask = @as(u8, 1) << bit;
+
+        switch (color) {
+            .black => pixel.* &= ~mask,
+            .white => pixel.* |= ~mask,
+        }
+    }
+};
 
 const ControlByte = packed struct(u8) {
     zero: u6 = 0,
