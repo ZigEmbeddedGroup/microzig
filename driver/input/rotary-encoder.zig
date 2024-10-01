@@ -72,5 +72,5 @@ test RotaryEncoder {
 
     var encoder = try RotaryEncoder.init(a.digital_io(), b.digital_io(), .high);
 
-    _ = encoder.tick();
+    _ = try encoder.poll();
 }

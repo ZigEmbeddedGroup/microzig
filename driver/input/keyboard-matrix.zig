@@ -97,7 +97,7 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime col_count: usize, com
                 busyloop(10);
 
                 for (matrix.rows, 0..) |r_pin, r_index| {
-                    const state = r_pin.read();
+                    const state = try r_pin.read();
                     if (state == .low) {
                         // someone actually pressed a key!
                         result.add(Key.new(

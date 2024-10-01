@@ -11,11 +11,18 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
-pub const SSD1306 = SSD1306_Generic(mdf.base.DatagramDevice);
+pub const SSD1306_Options = struct {
+    buffer_size: u32 = 64,
+    i2c_prefix: bool,
+};
 
-pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
+pub fn SSD1306(comptime options: SSD1306_Options) type {
+    return SSD1306_Generic(mdf.base.DatagramDevice, options);
+}
+
+pub fn SSD1306_Generic(comptime DatagramDevice: type, comptime options: SSD1306_Options) type {
     return struct {
-        const buffer_size = 16;
+        const buffer_size = options.buffer_size;
 
         const white_line: [128]u8 = .{0xFF} ** 128;
         const black_line: [128]u8 = .{0x00} ** 128;
@@ -64,26 +71,36 @@ pub fn SSD1306_Generic(comptime DatagramDevice: type) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            for (data) |byte| {
-                try self.dd.write(&.{ ControlByte.data_byte, byte });
+            const use_safe_and_slow_impl = false;
+
+            if (use_safe_and_slow_impl) {
+                for (data) |byte| {
+                    try self.dd.write(&.{ ControlByte.data_byte, byte });
+                }
+            } else {
+                var buffer: [buffer_size]u8 = undefined;
+                buffer[0x00] = ControlByte.data_stream;
+
+                // std.log.info("start {} bytes", .{data.len});
+
+                var offset: usize = 0;
+
+                while (offset < data.len) {
+                    const chunk_size: usize = @min(buffer.len - 1, data.len - offset);
+
+                    const chunk = data[offset..][0..chunk_size];
+                    @memcpy(buffer[1..][0..chunk_size], chunk);
+
+                    // std.log.info("transfer {} bytes at offset {}", .{ chunk_size, offset });
+                    const cmd_seq = buffer[0 .. chunk_size + 1];
+                    // std.log.info("{}", .{std.fmt.fmtSliceHexLower(cmd_seq)});
+                    try self.dd.write(cmd_seq);
+
+                    offset += chunk_size;
+                }
+
+                // std.log.info("end {} bytes", .{data.len});
             }
-
-            // var buffer: [buffer_size]u8 = undefined;
-            // buffer[0x00] = ControlByte.data_stream;
-
-            // var offset: usize = 0;
-
-            // while (offset < data.len) {
-            //     const chunk_size = @min(buffer.len, data.len - offset);
-
-            //     const chunk = data[offset..][0..chunk_size];
-
-            //     @memcpy(buffer[1 .. chunk_size + 1], chunk);
-
-            //     try self.dd.write(&[_]u8{buffer[0 .. chunk_size + 1]});
-
-            //     offset += chunk_size;
-            // }
         }
 
         pub fn clear_screen(self: Self, white: bool) !void {
@@ -333,71 +350,76 @@ pub const Framebuffer = struct {
     pub const width = 128;
     pub const height = 64;
 
-    pixel_data: [8][128]u8,
+    // layed out in 8 pages with 8*128 pixels each.
+    // each page is column-major with the column encoded in the bits 0 (top) to 7 (bottom).
+    // each byte in the page is a column left-to-right.
+    // first page is thus columns 0..7, second page is 8..15 and so on.
+    pixel_data: [8 * 128]u8,
 
-    pub fn init_white() Framebuffer {
-        return .{
-            .pixel_data = .{.{0xFF} ** 128} ** 8,
-        };
-    }
-
-    pub fn init_black() Framebuffer {
-        return .{
-            .pixel_data = .{[1]u8{0x00} ** 128} ** 8,
-        };
+    pub fn init(fill_color: Color) Framebuffer {
+        var fb = Framebuffer{ .pixel_data = undefined };
+        @memset(&fb.pixel_data, switch (fill_color) {
+            .black => 0x00,
+            .white => 0xFF,
+        });
+        return fb;
     }
 
     pub fn bit_stream(fb: *const Framebuffer) *const [8 * 128]u8 {
-        return @ptrCast(&fb.pixel_data);
+        return &fb.pixel_data;
     }
 
     pub fn clear(fb: *Framebuffer, color: Color) void {
-        switch (color) {
-            .black => fb.* = init_black(),
-            .white => fb.* = init_white(),
-        }
+        fb.* = init(color);
     }
 
     pub fn set_pixel(fb: *Framebuffer, x: u7, y: u6, color: Color) void {
         const page: u3 = @truncate(y / 8);
         const bit: u3 = @truncate(y % 8);
+        const mask: u8 = @as(u8, 1) << bit;
 
-        const pixel = &fb.pixel_data[page][x];
-
-        const mask = @as(u8, 1) << bit;
+        const offset: usize = (@as(usize, page) << 7) + x;
 
         switch (color) {
-            .black => pixel.* &= ~mask,
-            .white => pixel.* |= ~mask,
+            .black => fb.pixel_data[offset] &= ~mask,
+            .white => fb.pixel_data[offset] |= mask,
         }
     }
 };
 
 const ControlByte = packed struct(u8) {
     zero: u6 = 0,
+
+    /// The D/C# bit determines the next data byte is acted as a command or a data. If the D/C# bit is
+    /// set to logic “0”, it defines the following data byte as a command. If the D/C# bit is set to
+    /// logic “1”, it defines the following data byte as a data which will be stored at the GDDRAM.
+    /// The GDDRAM column address pointer will be increased by one automatically after each
+    /// data write.
     mode: enum(u1) { command = 0, data = 1 },
-    continuous: bool,
+
+    /// If the Co bit is set as logic “0”, the transmission of the following information will contain data bytes only.
+    co_bit: u1,
 
     const command: u8 = @bitCast(ControlByte{
         .mode = .command,
-        .continuous = false,
+        .co_bit = 0,
     });
 
     const data_byte: u8 = @bitCast(ControlByte{
         .mode = .data,
-        .continuous = false,
+        .co_bit = 1,
     });
 
     const data_stream: u8 = @bitCast(ControlByte{
         .mode = .data,
-        .continuous = true,
+        .co_bit = 0,
     });
 };
 
 comptime {
     std.debug.assert(ControlByte.command == 0x00);
-    std.debug.assert(ControlByte.data_byte == 0x40);
-    std.debug.assert(ControlByte.data_stream == 0xC0);
+    std.debug.assert(ControlByte.data_byte == 0xC0);
+    std.debug.assert(ControlByte.data_stream == 0x40);
 }
 
 // Fundamental Commands
@@ -795,3 +817,39 @@ test "chargePumpSetting" {
 
 // References:
 // [1] https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+
+test "Framebuffer.init(.black)" {
+    const fb = Framebuffer.init(.black);
+    for (fb.pixel_data) |chunk| {
+        try std.testing.expectEqual(0x00, chunk);
+    }
+}
+
+test "Framebuffer.init(.white)" {
+    const fb = Framebuffer.init(.white);
+    for (fb.pixel_data) |chunk| {
+        try std.testing.expectEqual(0xFF, chunk);
+    }
+}
+
+test "Framebuffer.set_pixel(..., .white)" {
+    var fb = Framebuffer.init(.black);
+
+    fb.set_pixel(0, 0, .white);
+    try std.testing.expectEqual(0x01, fb.pixel_data[0]);
+
+    for (fb.pixel_data[1..]) |chunk| {
+        try std.testing.expectEqual(0x00, chunk);
+    }
+}
+
+test "Framebuffer.set_pixel(..., .black)" {
+    var fb = Framebuffer.init(.white);
+
+    fb.set_pixel(0, 0, .black);
+    try std.testing.expectEqual(0xFE, fb.pixel_data[0]);
+
+    for (fb.pixel_data[1..]) |chunk| {
+        try std.testing.expectEqual(0xFF, chunk);
+    }
+}
