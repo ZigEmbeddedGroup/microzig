@@ -13,7 +13,7 @@ const hw = @import("hw.zig");
 const I2cRegs = microzig.chip.types.peripherals.I2C0;
 
 pub const Config = struct {
-    clock_config: clocks.GlobalConfiguration,
+    clock_config: clocks.config.Global,
     repeated_start: bool = true,
     baud_rate: u32 = 100_000,
 };

@@ -35,7 +35,7 @@ pub const ConfigError = error{
 };
 
 pub const Config = struct {
-    clock_config: clocks.GlobalConfiguration,
+    clock_config: clocks.config.Global,
     baud_rate: u32,
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
@@ -153,7 +153,7 @@ pub const UART = enum(u1) {
 
     fn apply_internal(uart: UART, config: Config) void {
         const uart_regs = uart.get_regs();
-        const peri_freq = config.clock_config.peri.?.output_freq;
+        const peri_freq = config.clock_config.peri.?.frequency();
         uart.set_baudrate(config.baud_rate, peri_freq);
         uart.set_format(config.word_bits, config.stop_bits, config.parity);
         uart_regs.UARTLCR_H.modify(.{ .FEN = 1 });
@@ -175,7 +175,7 @@ pub const UART = enum(u1) {
     /// validation of parameters at compile time. See apply_runtime() if configuration using
     /// parameters known ONLY at runtime is needed.
     pub fn apply(uart: UART, comptime config: Config) void {
-        const peri_freq = config.clock_config.peri.?.output_freq;
+        const peri_freq = comptime config.clock_config.peri.?.frequency();
         comptime validate_baudrate(config.baud_rate, peri_freq) catch unreachable;
         uart.apply_internal(config);
     }
@@ -183,7 +183,7 @@ pub const UART = enum(u1) {
     /// Same as apply(), but due to parameters being runtime known, returns an error on invalid
     /// configurations.
     pub fn apply_runtime(uart: UART, config: Config) ConfigError!void {
-        const peri_freq = config.clock_config.peri.?.output_freq;
+        const peri_freq = config.clock_config.peri.?.frequency();
         try validate_baudrate(config.baud_rate, peri_freq);
         uart.apply_internal(config);
     }
