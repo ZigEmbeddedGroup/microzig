@@ -21,19 +21,23 @@ pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 
-pub const clock_config = clocks.GlobalConfiguration.init(.{
-    .ref = .{ .source = .src_xosc },
-    .sys = .{
-        .source = .pll_sys,
-        .freq = 125_000_000,
-    },
-    .peri = .{ .source = .clk_sys },
-    .usb = .{ .source = .pll_usb },
-    .adc = .{ .source = .pll_usb },
-    .rtc = .{ .source = .pll_usb },
-});
+/// A default clock configuration with sensible defaults that will work
+/// for the majority of use cases. Use this unless you have a specific
+/// clock configuration use case that this wont work for (for instance a custom
+/// board that does NOT use an external oscillator XOSC as the clock source).
+///
+/// Users will have to provide their own init() function to override init() below
+/// to provide their own custom clock config.
+pub const clock_config = clocks.config.preset.default();
 
-pub fn init() void {
+pub inline fn init() void {
+    init_sequence(clock_config);
+}
+
+/// Allows user to easily swap in their own clock config while still
+/// using the reccomended initialization sequence
+pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
+
     // Reset all peripherals to put system into a known state, - except
     // for QSPI pads and the XIP IO bank, as this is fatal if running from
     // flash - and the PLLs, as this is fatal if clock muxing has not been
@@ -46,7 +50,7 @@ pub fn init() void {
     // clocks.
     resets.unreset_block_wait(resets.masks.clocked_by_sys_and_ref);
 
-    clock_config.apply();
+    clocks.default_startup_procedure(clock_cfg);
 
     // Peripheral clocks should now all be running
     resets.unreset_block_wait(resets.masks.all);

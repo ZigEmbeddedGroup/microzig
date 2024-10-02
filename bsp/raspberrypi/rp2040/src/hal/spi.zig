@@ -53,7 +53,7 @@ pub const DataWidthBits = enum(u4) {
 };
 
 pub const Config = struct {
-    clock_config: clocks.GlobalConfiguration,
+    clock_config: clocks.config.Global,
     data_width: DataWidthBits = .eight,
     frame_format: FrameFormat = .{ .motorola = .{} },
     baud_rate: u32 = 1_000_000,
@@ -97,7 +97,7 @@ pub const SPI = enum(u1) {
     /// - Controller Mode only
     /// - DREQ signalling is always enabled, harmless if DMA isn't configured to listen for this
     pub fn apply(spi: SPI, comptime config: Config) ConfigError!void {
-        const peri_freq = config.clock_config.peri.?.output_freq;
+        const peri_freq = comptime config.clock_config.peri.?.frequency();
         try spi.set_baudrate(config.baud_rate, peri_freq);
 
         const spi_regs = spi.get_regs();

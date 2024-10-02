@@ -51,15 +51,15 @@ pub const PLL = enum(u1) {
     }
 
     pub fn apply(pll: PLL, comptime config: Configuration) void {
-        assert(config.fbdiv >= 16 and config.fbdiv <= 320);
-        assert(config.postdiv1 >= 1 and config.postdiv1 <= 7);
-        assert(config.postdiv2 >= 1 and config.postdiv2 <= 7);
-        assert(config.postdiv2 <= config.postdiv1);
+        comptime assert(config.fbdiv >= 16 and config.fbdiv <= 320);
+        comptime assert(config.postdiv1 >= 1 and config.postdiv1 <= 7);
+        comptime assert(config.postdiv2 >= 1 and config.postdiv2 <= 7);
+        comptime assert(config.postdiv2 <= config.postdiv1);
 
         const pll_regs = pll.get_regs();
         const ref_freq = xosc_freq / @as(u32, config.refdiv);
         const vco_freq = ref_freq * config.fbdiv;
-        assert(ref_freq <= vco_freq / 16);
+        comptime assert(ref_freq <= vco_freq / 16);
 
         // 1. program reference clock divider
         // 2. program feedback divider
