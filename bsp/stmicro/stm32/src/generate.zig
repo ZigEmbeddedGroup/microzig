@@ -248,6 +248,38 @@ pub fn main() !void {
         const periph_id = try db.create_peripheral(.{
             .name = name,
         });
+
+        var enums = std.StringArrayHashMap(regz.Database.EntityId).init(allocator);
+        defer enums.deinit();
+
+        for (register_file.value.object.keys(), register_file.value.object.values()) |key, obj| {
+            if (!std.mem.startsWith(u8, key, "enum/"))
+                continue;
+
+            const enum_description: ?[]const u8 = if (obj.object.get("description")) |desc| desc.string else null;
+            const size = obj.object.get("bit_size").?.integer;
+
+            const enum_id = try db.create_enum(periph_id, .{
+                .name = key["enum/".len..],
+                .description = enum_description,
+                .size = @intCast(size),
+            });
+
+            try enums.put(key["enum/".len..], enum_id);
+
+            for (obj.object.get("variants").?.array.items) |item| {
+                const enum_field_name = item.object.get("name").?.string;
+                const enum_field_description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
+                const value = item.object.get("value").?.integer;
+
+                _ = try db.create_enum_field(enum_id, .{
+                    .name = enum_field_name,
+                    .description = enum_field_description,
+                    .value = @intCast(value),
+                });
+            }
+        }
+
         for (register_file.value.object.keys(), register_file.value.object.values()) |key, obj| {
             if (!std.mem.startsWith(u8, key, "block/"))
                 continue;
@@ -302,12 +334,17 @@ pub fn main() !void {
                         };
 
                         const bit_size = field.object.get("bit_size").?.integer;
+                        const enum_id: ?regz.Database.EntityId = if (field.object.get("enum")) |enum_name|
+                            if (enums.get(enum_name.string)) |enum_id| enum_id else null
+                        else
+                            null;
 
                         _ = try db.create_field(register_id, .{
                             .name = field_name,
                             .description = field_description,
                             .offset = @intCast(bit_offset),
                             .size = @intCast(bit_size),
+                            .enum_id = enum_id,
                         });
                     }
                 }
