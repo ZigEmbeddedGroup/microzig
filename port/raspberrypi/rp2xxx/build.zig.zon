@@ -1,0 +1,19 @@
+.{
+    .name = "port/raspberrypi/rp2xxx",
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build" = .{
+            .path = "../../../build",
+        },
+    },
+    .paths = .{
+        "LICENSE",
+        "README.md",
+        "build.zig.zon",
+        "build.zig",
+        "src",
+        "tools",
+        "rp2040.ld",
+        "rp2350.ld",
+    },
+}
