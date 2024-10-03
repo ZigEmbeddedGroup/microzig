@@ -824,28 +824,18 @@ fn write_fields(
         } else if (db.attrs.@"enum".get(fields[i].id)) |enum_id| {
             if (db.attrs.name.get(enum_id)) |enum_name| {
                 try writer.print(
-                // These were phased out in favor of using new builtins
-                //    \\{}: packed union {{
-                //    \\    raw: u{},
-                //    \\    value: {},
-                //    \\}},
                     \\{}: {},
                     \\
                 , .{
                     std.zig.fmtId(name),
-                    next.size,
                     std.zig.fmtId(enum_name),
                 });
             } else {
                 try writer.print(
-                // \\{}: packed union {{
-                // \\    raw: u{},
-                // \\    value: enum(u{}) {{
                     \\{}: enum(u{}) {{
                     \\
                 , .{
                     std.zig.fmtId(name),
-                    next.size,
                     next.size,
                 });
                 try write_enum_fields(db, enum_id, writer);
