@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const gd32 = @import("microzig/bsp/gigadevice/gd32");
+const gd32 = @import("microzig/port/gigadevice/gd32");
 
 const available_examples = [_]Example{
     .{ .target = gd32.chips.gd32vf103xb, .name = "gd32vf103xb", .file = "src/empty.zig" },

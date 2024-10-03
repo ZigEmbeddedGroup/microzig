@@ -19,13 +19,9 @@ pub fn main() !void {
 
     const output_path = args[1];
 
-
-
     var chips = std.ArrayList(MicroZig.Chip).init(allocator);
     var boards = std.ArrayList(MicroZig.Board).init(allocator);
-    inline for (bsps) |bsp| {
-
-    }
+    inline for (port) |port| {}
 
     const json_str = std.json.stringifyAlloc(b.allocator, parts_db, .{}) catch @panic("OOM");
 

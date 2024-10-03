@@ -1,5 +1,5 @@
 .{
-    .name = "bsp/gigadevice/gd32",
+    .name = "port/espressif/esp",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
@@ -10,6 +10,6 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        "test",
+        "docs",
     },
 }

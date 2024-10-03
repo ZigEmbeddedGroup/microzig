@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const rp2040 = @import("microzig/bsp/raspberrypi/rp2040");
+const rp2040 = @import("microzig/port/raspberrypi/rp2040");
 
 const available_examples = [_]Example{
     // RaspberryPi Boards:

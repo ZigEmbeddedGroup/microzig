@@ -3,7 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/bsp/gigadevice/gd32" = .{ .path = "../../../bsp/gigadevice/gd32" },
+        .@"microzig/port/gigadevice/gd32" = .{ .path = "../../../port/gigadevice/gd32" },
     },
 
     .paths = .{

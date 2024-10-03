@@ -1,5 +1,5 @@
 .{
-    .name = "bsp/microchip/avr",
+    .name = "port/microchip/atsam",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },

@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const esp = @import("microzig/bsp/espressif/esp");
+const esp = @import("microzig/port/espressif/esp");
 
 const available_examples = [_]Example{
     .{ .target = esp.chips.esp32_c3, .name = "esp32-c3_blinky", .file = "src/blinky.zig" },

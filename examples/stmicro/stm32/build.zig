@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const stm32 = @import("microzig/bsp/stmicro/stm32");
+const stm32 = @import("microzig/port/stmicro/stm32");
 
 const available_examples = [_]Example{
     .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },
