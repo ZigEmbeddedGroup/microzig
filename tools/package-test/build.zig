@@ -7,6 +7,6 @@ pub fn build(b: *std.Build) void {
     });
     b.getInstallStep().dependOn(microzig_dep.builder.getInstallStep());
 
-    const test_bsps_step = b.step("run-bsp-tests", "Run all platform agnostic tests for BSPs");
-    test_bsps_step.dependOn(&microzig_dep.builder.top_level_steps.get("run-bsp-tests").?.step);
+    const test_ports_step = b.step("run-port-tests", "Run all platform agnostic tests for Ports");
+    test_ports_step.dependOn(&microzig_dep.builder.top_level_steps.get("run-port-tests").?.step);
 }

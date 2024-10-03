@@ -3,7 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/bsp/stmicro/stm32" = .{ .path = "../../../bsp/stmicro/stm32" },
+        .@"microzig/port/stmicro/stm32" = .{ .path = "../../../port/stmicro/stm32" },
     },
 
     .paths = .{

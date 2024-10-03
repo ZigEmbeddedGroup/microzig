@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const lpc = @import("microzig/bsp/nxp/lpc");
+const lpc = @import("microzig/port/nxp/lpc");
 
 const available_examples = [_]ExampleDesc{
     .{ .target = lpc.boards.mbed.lpc1768, .name = "mbed-lpc1768_blinky", .file = "src/blinky.zig" },

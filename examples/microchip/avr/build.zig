@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const avr = @import("microzig/bsp/microchip/avr");
+const avr = @import("microzig/port/microchip/avr");
 
 const available_examples = [_]Example{
     .{ .target = avr.boards.arduino.nano, .name = "arduino-nano_blinky", .file = "src/blinky.zig" },

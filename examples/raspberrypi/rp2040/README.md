@@ -1,4 +1,4 @@
-# Examples for the BSP `raspberrypi-rp2040`
+# Examples for the Port `raspberrypi-rp2040`
 
 ## Demos
 

@@ -1,5 +1,5 @@
 .{
-    .name = "bsp/espressif/esp",
+    .name = "port/nordic/nrf5x",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
@@ -10,6 +10,7 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        "docs",
+        "test",
     },
 }
+

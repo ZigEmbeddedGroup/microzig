@@ -30,8 +30,8 @@ jobs:
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
-      - name: Unit Test BSPs
-        run: zig build run-bsp-tests -Doptimize=ReleaseSmall
+      - name: Unit Test Ports
+        run: zig build run-port-tests -Doptimize=ReleaseSmall
 
       - name: Dry run packaging
         if: ${{ matrix.os == 'macos-latest' }}
@@ -45,7 +45,7 @@ jobs:
           cd tools/package-test
           zig fetch --save=microzig http://localhost:8000/microzig-${MICROZIG_VERSION}.tar.gz
           zig build -Doptimize=ReleaseSmall
-          zig build run-bsp-tests
+          zig build run-port-tests
 
           # clean up server
           jobs -p | xargs kill

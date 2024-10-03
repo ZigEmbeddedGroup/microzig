@@ -1,5 +1,5 @@
 .{
-    .name = "bsp/nxp/lpc",
+    .name = "port/microchip/avr",
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build" = .{ .path = "../../../build" },
@@ -10,6 +10,5 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        "test",
     },
 }

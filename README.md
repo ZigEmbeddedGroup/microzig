@@ -49,7 +49,7 @@ For MicroZig internals please see the [Design Document](docs/design.md).
 
 * `build/` contains the build components of MicroZig.
 * `core/` contains the shared components of MicroZig.
-* `bsp/` contains all official board support package.
+* `port/` contains all official board support package.
 * `examples/` contains examples that can be used with the board support packages.
 * `tools/` contains tooling to work *on* MicroZig itself, so deployment, testing, ...
 * `design/` contains images and logos

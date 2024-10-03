@@ -1,6 +1,6 @@
 const std = @import("std");
 const MicroZig = @import("microzig/build");
-const atsam = @import("microzig/bsp/microchip/atsam");
+const atsam = @import("microzig/port/microchip/atsam");
 
 const available_examples = [_]Example{
     .{ .target = atsam.chips.atsamd51j19, .name = "atsamd51j19-blinky", .file = "src/blinky.zig" },

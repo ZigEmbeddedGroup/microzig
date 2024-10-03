@@ -1,7 +1,7 @@
 const std = @import("std");
 const Build = std.Build;
 const MicroZig = @import("microzig/build");
-const nrf5x = @import("microzig/bsp/nordic/nrf5x");
+const nrf5x = @import("microzig/port/nordic/nrf5x");
 
 const available_examples = [_]Example{
     .{ .target = nrf5x.boards.nordic_nRF52840_Dongle, .name = "nrf52480-dongle_blinky", .file = "src/blinky.zig" },

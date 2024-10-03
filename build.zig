@@ -14,15 +14,15 @@ const example_dep_names: []const []const u8 = &.{
     "examples/raspberrypi/rp2040",
 };
 
-const bsps = .{
-    .{ "bsp/nordic/nrf5x", @import("bsp/nordic/nrf5x") },
-    .{ "bsp/nxp/lpc", @import("bsp/nxp/lpc") },
-    .{ "bsp/microchip/atsam", @import("bsp/microchip/atsam") },
-    .{ "bsp/microchip/avr", @import("bsp/microchip/avr") },
-    .{ "bsp/gigadevice/gd32", @import("bsp/gigadevice/gd32") },
-    .{ "bsp/stmicro/stm32", @import("bsp/stmicro/stm32") },
-    .{ "bsp/espressif/esp", @import("bsp/espressif/esp") },
-    .{ "bsp/raspberrypi/rp2040", @import("bsp/raspberrypi/rp2040") },
+const ports = .{
+    .{ "port/nordic/nrf5x", @import("port/nordic/nrf5x") },
+    .{ "port/nxp/lpc", @import("port/nxp/lpc") },
+    .{ "port/microchip/atsam", @import("port/microchip/atsam") },
+    .{ "port/microchip/avr", @import("port/microchip/avr") },
+    .{ "port/gigadevice/gd32", @import("port/gigadevice/gd32") },
+    .{ "port/stmicro/stm32", @import("port/stmicro/stm32") },
+    .{ "port/espressif/esp", @import("port/espressif/esp") },
+    .{ "port/raspberrypi/rp2040", @import("port/raspberrypi/rp2040") },
 };
 
 pub fn build(b: *Build) void {
@@ -55,11 +55,11 @@ pub fn build(b: *Build) void {
     const parts_db_json = b.addInstallFile(parts_db, "parts-db.json");
     package_step.dependOn(&parts_db_json.step);
 
-    const test_bsps_step = b.step("run-bsp-tests", "Run all platform agnostic tests for BSPs");
-    inline for (bsps) |bsp| {
-        const bsp_dep = b.dependency(bsp[0], .{});
-        if (bsp_dep.builder.top_level_steps.get("test")) |test_step| {
-            test_bsps_step.dependOn(&test_step.step);
+    const test_ports_step = b.step("run-port-tests", "Run all platform agnostic tests for Ports");
+    inline for (ports) |port| {
+        const port_dep = b.dependency(port[0], .{});
+        if (port_dep.builder.top_level_steps.get("test")) |test_step| {
+            test_ports_step.dependOn(&test_step.step);
         }
     }
 }
@@ -70,7 +70,7 @@ const PartsDb = struct {
 
     const Chip = struct {
         identifier: []const u8,
-        bsp_package: []const u8,
+        port_package: []const u8,
         url: ?[]const u8,
         cpu: []const u8,
         has_hal: bool,
@@ -82,7 +82,7 @@ const PartsDb = struct {
     };
     const Board = struct {
         identifier: []const u8,
-        bsp_package: []const u8,
+        port_package: []const u8,
         chip_idx: u32,
         url: ?[]const u8,
         output_format: ?[]const u8,
@@ -94,13 +94,13 @@ fn generate_parts_db(b: *Build) !Build.LazyPath {
     var boards = std.ArrayList(PartsDb.Board).init(b.allocator);
 
     @setEvalBranchQuota(20000);
-    inline for (bsps) |bsp| {
+    inline for (ports) |port| {
         const chips_start_idx = chips.items.len;
-        inline for (@typeInfo(@field(bsp[1], "chips")).Struct.decls) |decl| {
-            const target = @field(@field(bsp[1], "chips"), decl.name);
+        inline for (@typeInfo(@field(port[1], "chips")).Struct.decls) |decl| {
+            const target = @field(@field(port[1], "chips"), decl.name);
             try chips.append(.{
                 .identifier = decl.name,
-                .bsp_package = bsp[0],
+                .port_package = port[0],
                 .url = target.chip.url,
                 .cpu = target.chip.cpu.name,
                 .has_hal = target.hal != null,
@@ -112,20 +112,20 @@ fn generate_parts_db(b: *Build) !Build.LazyPath {
             });
         }
 
-        inline for (@typeInfo(@field(bsp[1], "boards")).Struct.decls) |decl| {
-            const target = @field(@field(bsp[1], "boards"), decl.name);
+        inline for (@typeInfo(@field(port[1], "boards")).Struct.decls) |decl| {
+            const target = @field(@field(port[1], "boards"), decl.name);
             _ = target;
             _ = chips_start_idx;
 
-            //const chip_idx = inline for (@typeInfo(@field(bsp[1], "chips")).Struct.decls, 0..) |chip_decl, idx| {
-            //    const chip = @field(@field(bsp[1], "chips"), chip_decl.name);
+            //const chip_idx = inline for (@typeInfo(@field(port[1], "chips")).Struct.decls, 0..) |chip_decl, idx| {
+            //    const chip = @field(@field(port[1], "chips"), chip_decl.name);
             //    if (std.mem.eql(u8, chip.chip.name, target.chip.name))
             //        break chips_start_idx + idx;
             //} else @compileError("failed to get chip_idx");
 
             try boards.append(.{
                 .identifier = decl.name,
-                .bsp_package = bsp[0],
+                .port_package = port[0],
                 .chip_idx = 0,
                 .url = "",
                 .output_format = null,
