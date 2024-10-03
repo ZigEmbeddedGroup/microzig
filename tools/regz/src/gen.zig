@@ -1113,10 +1113,7 @@ test "gen.field with named enum" {
         \\            };
         \\
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: TEST_ENUM,
-        \\                },
+        \\                TEST_FIELD: TEST_ENUM,
         \\                padding: u4,
         \\            }),
         \\        };
@@ -1142,13 +1139,10 @@ test "gen.field with anonymous enum" {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        TEST_ENUM_FIELD2 = 0x1,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    TEST_ENUM_FIELD2 = 0x1,
+        \\                    _,
         \\                },
         \\                padding: u4,
         \\            }),
