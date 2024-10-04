@@ -58,7 +58,7 @@ pub fn main() !void {
         microzig.core.experimental.debug.busy_sleep(100_000);
 
         led_r_pin.write(gpio.Level.low);
-        led_b_pin.write(gpio.Level.low);
+        led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.high);
         uart.write(0, "B");
         microzig.core.experimental.debug.busy_sleep(100_000);
