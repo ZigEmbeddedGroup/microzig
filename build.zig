@@ -11,7 +11,7 @@ const example_dep_names: []const []const u8 = &.{
     "examples/gigadevice/gd32",
     "examples/stmicro/stm32",
     //"examples/espressif/esp",
-    "examples/raspberrypi/rp2040",
+    "examples/raspberrypi/rp2xxx",
 };
 
 const ports = .{
@@ -22,7 +22,7 @@ const ports = .{
     .{ "port/gigadevice/gd32", @import("port/gigadevice/gd32") },
     .{ "port/stmicro/stm32", @import("port/stmicro/stm32") },
     .{ "port/espressif/esp", @import("port/espressif/esp") },
-    .{ "port/raspberrypi/rp2040", @import("port/raspberrypi/rp2040") },
+    .{ "port/raspberrypi/rp2xxx", @import("port/raspberrypi/rp2xxx") },
 };
 
 pub fn build(b: *Build) void {
