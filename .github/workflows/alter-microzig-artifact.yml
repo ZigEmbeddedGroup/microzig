@@ -51,7 +51,7 @@ jobs:
       # example:
       # zig-0.13.0/
       # └── microzig-0.1.0/
-      #     ├── bsp/
+      #     ├── port/
       #     ├── build/
       #     ├── tools/
       #     └── examples/
@@ -63,7 +63,7 @@ jobs:
           mkdir "./output/zig-${{ inputs.zig-version }}/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/"
           echo "path=./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/" >> $GITHUB_OUTPUT
-          mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/bsp/"
+          mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/port/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/build/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/examples/"
           mkdir "./output/zig-${{ inputs.zig-version }}/microzig-${{ inputs.microzig-version }}/tools/"
@@ -81,7 +81,7 @@ jobs:
       # Example:
       # zig-0.13.0/
       # └── microzig-0.1.0/
-      #     ├── bsp/
+      #     ├── port/
       #     ├── build/
       #     │   └── definitions.tar.gz
       #     ├── tools/
@@ -99,18 +99,18 @@ jobs:
       # Move over all of the files of which are similar. These still need to be
       # renamed (this and the next step could be combined, but I have them
       # separated to help with mental overhead).
-      - name: Move examples, bsp, tools
+      - name: Move examples, port, tools
         shell: bash
         run: |
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/tools/*.tar.gz "${{ steps.base-folders.outputs.path }}/tools"
-          mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/bsp/*/*.tar.gz "${{ steps.base-folders.outputs.path }}/bsp/"
+          mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/port/*/*.tar.gz "${{ steps.base-folders.outputs.path }}/port/"
           mv ${{ steps.get-glob-paths.outputs.source-path }}/microzig-*/examples/*/*.tar.gz "${{ steps.base-folders.outputs.path }}/examples/"
       # Rename all the files to remove the version information from the filename.
-      - name: Rename examples, bsp, tools
+      - name: Rename examples, port, tools
         shell: bash
         run: |
           find "${{ steps.base-folders.outputs.path }}/examples" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/-examples.tar.gz/g")"' \;
-          find "${{ steps.base-folders.outputs.path }}/bsp" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/-bsp.tar.gz/g")"' \;
+          find "${{ steps.base-folders.outputs.path }}/port" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/-port.tar.gz/g")"' \;
           find "${{ steps.base-folders.outputs.path }}/tools" -type f -exec sh -c 'mv "{}" "$(dirname -- "{}")/$(basename -- "{}" | sed "s/-.*\.tar\.gz/.tar.gz/g")"' \;
       # Upload everything to the new artifact
       - name: Upload Artifacts

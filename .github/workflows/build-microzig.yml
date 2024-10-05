@@ -8,7 +8,7 @@ on:
       - build.zig*
       - tools/**
       - core/**
-      - bsp/**
+      - port/**
       - examples/**
   pull_request:
     branches: [main]
@@ -16,7 +16,7 @@ on:
       - build.zig*
       - tools/**
       - core/**
-      - bsp/**
+      - port/**
       - examples/**
 
 jobs:
