@@ -47,8 +47,8 @@ jobs:
       github-artifact-name: microzig-alt
       source-path: /
     secrets:
-      target-path: ${{ secrets.DEPLOY_MZ_ROOT_DATA_PATH }}
-      ssh-key: ${{ secrets.DEPLOY_MZ_PRIVATE_KEY }}
-      host: ${{ secrets.DEPLOY_MZ_HOST }}
-      port: ${{ secrets.DEPLOY_MZ_PORT }}
-      user: ${{ secrets.DEPLOY_MZ_USER }}
+      target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
+      ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+      host: ${{ secrets.DEPLOY_HOST }}
+      port: ${{ secrets.DEPLOY_PORT }}
+      user: ${{ secrets.DEPLOY_USER }}
