@@ -1,12 +1,13 @@
 //!
+//! The driver framework provides device-independent drivers for peripherials supported by MicroZig.
+//!
 
 pub const display = struct {
     pub const ssd1306 = @import("display/ssd1306.zig");
-    pub const ili9488 = @import("display/ili9488.zig");
     pub const st77xx = @import("display/st77xx.zig");
 
     // Export generic drivers:
-    pub const SSD1306 = ssd1306.SSD1306;
+    pub const SSD1306_I2C = ssd1306.SSD1306_I2C;
     pub const ST7735 = st77xx.ST7735;
     pub const ST7789 = st77xx.ST7789;
 
@@ -26,12 +27,12 @@ pub const input = struct {
     pub const RotaryEncoder = rotary_encoder.RotaryEncoder;
 
     pub const touch = struct {
-        const xpt2046 = @import("input/touch/xpt2046.zig");
+        // const xpt2046 = @import("input/touch/xpt2046.zig");
     };
 };
 
 pub const wireless = struct {
-    pub const sx1278 = @import("wireless/sx1278.zig");
+    // pub const sx1278 = @import("wireless/sx1278.zig");
 };
 
 pub const base = struct {
@@ -42,16 +43,11 @@ pub const base = struct {
 
 test {
     _ = display.ssd1306;
-    _ = display.ili9488;
     _ = display.st77xx;
 
     _ = input.keyboard_matrix;
     _ = input.debounced_button;
     _ = input.rotary_encoder;
-
-    _ = input.touch.xpt2046;
-
-    _ = wireless.sx1278;
 
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
