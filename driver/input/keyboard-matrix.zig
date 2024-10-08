@@ -27,7 +27,7 @@ pub const Key = enum(u16) {
 ///
 /// Will use `cols` as matrix drivers (outputs) and `rows` as matrix readers (inputs).
 pub fn KeyboardMatrix(comptime col_count: usize, comptime row_count: usize) type {
-    return KeyboardMatrix_Generic(mdf.base.DigitalIO, col_count, row_count);
+    return KeyboardMatrix_Generic(mdf.base.Digital_IO, col_count, row_count);
 }
 
 pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime col_count: usize, comptime row_count: usize) type {
@@ -116,7 +116,7 @@ pub fn KeyboardMatrix_Generic(comptime Pin: type, comptime col_count: usize, com
             return result;
         }
 
-        fn set_all_to(matrix: Matrix, value: mdf.base.DigitalIO.State) !void {
+        fn set_all_to(matrix: Matrix, value: mdf.base.Digital_IO.State) !void {
             for (matrix.cols) |c| {
                 try c.write(value);
             }
@@ -133,17 +133,17 @@ inline fn busyloop(comptime N: comptime_int) void {
 }
 
 test KeyboardMatrix {
-    var matrix_pins = [_]mdf.base.DigitalIO.TestDevice{
-        mdf.base.DigitalIO.TestDevice.init(.output, .high),
-        mdf.base.DigitalIO.TestDevice.init(.output, .high),
-        mdf.base.DigitalIO.TestDevice.init(.output, .high),
-        mdf.base.DigitalIO.TestDevice.init(.output, .high),
+    var matrix_pins = [_]mdf.base.Digital_IO.TestDevice{
+        mdf.base.Digital_IO.TestDevice.init(.output, .high),
+        mdf.base.Digital_IO.TestDevice.init(.output, .high),
+        mdf.base.Digital_IO.TestDevice.init(.output, .high),
+        mdf.base.Digital_IO.TestDevice.init(.output, .high),
     };
-    const rows = [_]mdf.base.DigitalIO{
+    const rows = [_]mdf.base.Digital_IO{
         matrix_pins[0].digital_io(),
         matrix_pins[1].digital_io(),
     };
-    const cols = [_]mdf.base.DigitalIO{
+    const cols = [_]mdf.base.Digital_IO{
         matrix_pins[2].digital_io(),
         matrix_pins[3].digital_io(),
     };

@@ -16,7 +16,7 @@ pub const Event = enum(i2) {
     @"error" = -2,
 };
 
-pub const RotaryEncoder = RotaryEncoder_Generic(mdf.base.DigitalIO);
+pub const RotaryEncoder = RotaryEncoder_Generic(mdf.base.Digital_IO);
 
 pub fn RotaryEncoder_Generic(comptime DigitalIO: type) type {
     return struct {
@@ -25,13 +25,13 @@ pub fn RotaryEncoder_Generic(comptime DigitalIO: type) type {
         a: DigitalIO,
         b: DigitalIO,
 
-        last_a: mdf.base.DigitalIO.State,
-        last_b: mdf.base.DigitalIO.State,
+        last_a: mdf.base.Digital_IO.State,
+        last_b: mdf.base.Digital_IO.State,
 
         pub fn init(
             a: DigitalIO,
             b: DigitalIO,
-            idle_state: mdf.base.DigitalIO.State,
+            idle_state: mdf.base.Digital_IO.State,
         ) !Encoder {
             try a.set_direction(.input);
             try a.set_direction(.input);
@@ -67,8 +67,8 @@ pub fn RotaryEncoder_Generic(comptime DigitalIO: type) type {
 }
 
 test RotaryEncoder {
-    var a = mdf.base.DigitalIO.TestDevice.init(.output, .high);
-    var b = mdf.base.DigitalIO.TestDevice.init(.output, .high);
+    var a = mdf.base.Digital_IO.TestDevice.init(.output, .high);
+    var b = mdf.base.Digital_IO.TestDevice.init(.output, .high);
 
     var encoder = try RotaryEncoder.init(a.digital_io(), b.digital_io(), .high);
 

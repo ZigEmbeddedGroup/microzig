@@ -10,55 +10,48 @@
 //!
 const std = @import("std");
 const mdf = @import("../framework.zig");
-const DigitalIO = mdf.base.DigitalIO;
-const Color = mdf.display.RGB565;
+const Color = mdf.display.colors.RGB565;
 
-pub const Device = enum {
-    st7735,
-    st7789,
+pub const ST7735 = ST77xx_Generic(.{
+    .device = .st7735,
+});
+
+pub const ST7789 = ST77xx_Generic(.{
+    .device = .st7789,
+});
+
+pub const ST77xx_Options = struct {
+    /// Which SST77xx device does the driver target?
+    device: Device,
+
+    /// Which datagram device interface should be used.
+    Datagram_Device: type = mdf.base.Datagram_Device,
+
+    /// Which digital i/o interface should be used.
+    Digital_IO: type = mdf.base.Digital_IO,
 };
 
-pub const Resolution = struct {
-    width: u16,
-    height: u16,
-};
-
-pub const Rotation = enum(u2) {
-    normal,
-    left90,
-    right90,
-    upside_down,
-};
-
-pub const ST7735 = ST77xx_Generic(mdf.base.DatagramDevice, .st7735);
-pub fn ST7735_Generic(comptime DatagramDevice: type) type {
-    return ST77xx_Generic(DatagramDevice, .st7735);
-}
-
-pub const ST7789 = ST77xx_Generic(mdf.base.DatagramDevice, .st7789);
-pub fn ST7789_Generic(comptime DatagramDevice: type) type {
-    return ST77xx_Generic(DatagramDevice, .st7789);
-}
-
-pub fn ST77xx_Generic(comptime DatagramDevice: type, comptime device: Device) type {
+pub fn ST77xx_Generic(comptime options: ST77xx_Options) type {
     return struct {
         const Driver = @This();
+        const Datagram_Device = options.Datagram_Device;
+        const Digital_IO = options.Digital_IO;
 
-        const dev = switch (device) {
+        const dev = switch (options.device) {
             .st7735 => ST7735_Device,
             .st7789 => ST7789_Device,
         };
 
-        dd: DatagramDevice,
-        dev_rst: DigitalIO,
-        dev_datcmd: DigitalIO,
+        dd: Datagram_Device,
+        dev_rst: Digital_IO,
+        dev_datcmd: Digital_IO,
 
         resolution: Resolution,
 
         pub fn init(
-            channel: DatagramDevice,
-            rst: DigitalIO,
-            data_cmd: DigitalIO,
+            channel: Datagram_Device,
+            rst: Digital_IO,
+            data_cmd: Digital_IO,
             resolution: Resolution,
         ) !Driver {
             const dri = Driver{
@@ -455,17 +448,34 @@ pub fn ST77xx_Generic(comptime DatagramDevice: type, comptime device: Device) ty
     };
 }
 
+pub const Device = enum {
+    st7735,
+    st7789,
+};
+
+pub const Resolution = struct {
+    width: u16,
+    height: u16,
+};
+
+pub const Rotation = enum(u2) {
+    normal,
+    left90,
+    right90,
+    upside_down,
+};
+
 test {
     _ = ST7735;
     _ = ST7789;
 }
 
 test {
-    var channel = mdf.base.DatagramDevice.TestDevice.init_receiver_only();
+    var channel = mdf.base.Datagram_Device.Test_Device.init_receiver_only();
     defer channel.deinit();
 
-    var rst_pin = mdf.base.DigitalIO.TestDevice.init(.output, .high);
-    var dat_pin = mdf.base.DigitalIO.TestDevice.init(.output, .high);
+    var rst_pin = mdf.base.Digital_IO.TestDevice.init(.output, .high);
+    var dat_pin = mdf.base.Digital_IO.TestDevice.init(.output, .high);
 
     var dri = try ST7735.init(
         channel.datagram_device(),

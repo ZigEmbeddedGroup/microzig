@@ -1,11 +1,21 @@
+//!
+//! This file provides common color types found on the supported displays.
+//!
+
+/// A color type encoding only black and white.
+pub const BlackWhite = enum(u1) {
+    black = 0,
+    white = 1,
+};
+
 pub const RGB565 = packed struct(u16) {
-    pub usingnamespace makeDefaultColors(@This());
+    pub usingnamespace DefaultColors(@This());
 
     r: u5,
     g: u6,
     b: u5,
 
-    pub fn fromRgb(r: u8, g: u8, b: u8) RGB565 {
+    pub fn from_rgb(r: u8, g: u8, b: u8) RGB565 {
         return RGB565{
             .r = @truncate(r >> 3),
             .g = @truncate(g >> 2),
@@ -15,27 +25,27 @@ pub const RGB565 = packed struct(u16) {
 };
 
 pub const RGB888 = extern struct {
-    pub usingnamespace makeDefaultColors(@This());
+    pub usingnamespace DefaultColors(@This());
 
     r: u8,
     g: u8,
     b: u8,
 
-    pub fn fromRgb(r: u8, g: u8, b: u8) RGB888 {
+    pub fn from_rgb(r: u8, g: u8, b: u8) RGB888 {
         return RGB888{ .r = r, .g = g, .b = b };
     }
 };
 
-fn makeDefaultColors(comptime Color: type) type {
+/// Provides a namespace with the default colors for the given `Color` type.
+pub fn DefaultColors(comptime Color: type) type {
     return struct {
-        pub const black = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const white = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const red = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const green = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const blue = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const cyan = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const magenta = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const yellow = Color.fromRgb(0x00, 0x00, 0x00);
-        pub const orange = Color.fromRgb(0x00, 0x00, 0x00);
+        pub const black = Color.from_rgb(0x00, 0x00, 0x00);
+        pub const white = Color.from_rgb(0xFF, 0xFF, 0xFF);
+        pub const red = Color.from_rgb(0xFF, 0x00, 0x00);
+        pub const green = Color.from_rgb(0x00, 0xFF, 0x00);
+        pub const blue = Color.from_rgb(0x00, 0x00, 0xFF);
+        pub const cyan = Color.from_rgb(0x00, 0xFF, 0xFF);
+        pub const magenta = Color.from_rgb(0xFF, 0x00, 0xFF);
+        pub const yellow = Color.from_rgb(0xFF, 0xFF, 0x00);
     };
 }

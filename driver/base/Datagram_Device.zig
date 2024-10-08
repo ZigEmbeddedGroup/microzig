@@ -8,7 +8,13 @@
 
 const std = @import("std");
 
-const DatagramDevice = @This();
+const Datagram_Device = @This();
+
+/// Pointer to the object implementing the driver.
+object: ?*anyopaque,
+
+/// Virtual table for the datagram device functions.
+vtable: *const VTable,
 
 const BaseError = error{ IoError, Timeout };
 
@@ -16,15 +22,15 @@ pub const ConnectError = BaseError || error{DeviceBusy};
 
 /// Establishes a connection to the device (like activating a chip-select lane or similar).
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
-pub fn connect(dd: DatagramDevice) ConnectError!void {
-    if (dd.vtable.connectFn) |connectFn| {
+pub fn connect(dd: Datagram_Device) ConnectError!void {
+    if (dd.vtable.connect_fn) |connectFn| {
         return connectFn(dd.object);
     }
 }
 
 /// Releases a device from the connection.
-pub fn disconnect(dd: DatagramDevice) void {
-    if (dd.vtable.disconnectFn) |disconnectFn| {
+pub fn disconnect(dd: Datagram_Device) void {
+    if (dd.vtable.disconnect_fn) |disconnectFn| {
         return disconnectFn(dd.object);
     }
 }
@@ -32,8 +38,8 @@ pub fn disconnect(dd: DatagramDevice) void {
 pub const WriteError = BaseError || error{ Unsupported, NotConnected };
 
 /// Writes a single `datagram` to the device.
-pub fn write(dd: DatagramDevice, datagram: []const u8) WriteError!void {
-    if (dd.vtable.writeFn) |writeFn| {
+pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
+    if (dd.vtable.write_fn) |writeFn| {
         return writeFn(dd.object, datagram);
     } else {
         return error.Unsupported;
@@ -43,26 +49,23 @@ pub fn write(dd: DatagramDevice, datagram: []const u8) WriteError!void {
 pub const ReadError = BaseError || error{ Unsupported, NotConnected };
 
 /// Reads a single `datagram` from the device.
-pub fn read(dd: DatagramDevice, datagram: []u8) ReadError!void {
-    if (dd.vtable.readFn) |readFn| {
+pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!void {
+    if (dd.vtable.read_fn) |readFn| {
         return readFn(dd.object, datagram);
     } else {
         return error.Unsupported;
     }
 }
 
-object: ?*anyopaque,
-vtable: *const VTable,
-
 pub const VTable = struct {
-    connectFn: ?*const fn (?*anyopaque) ConnectError!void,
-    disconnectFn: ?*const fn (?*anyopaque) void,
-    writeFn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!void,
-    readFn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!void,
+    connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
+    disconnect_fn: ?*const fn (?*anyopaque) void,
+    write_fn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!void,
+    read_fn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!void,
 };
 
-/// A device implementation that can be used to write unit tests.
-pub const TestDevice = struct {
+/// A device implementation that can be used to write unit tests for datagram devices.
+pub const Test_Device = struct {
     arena: std.heap.ArenaAllocator,
     packets: std.ArrayList([]u8),
 
@@ -73,16 +76,16 @@ pub const TestDevice = struct {
 
     connected: bool,
 
-    pub fn init_receiver_only() TestDevice {
+    pub fn init_receiver_only() Test_Device {
         return init(null, true);
     }
 
-    pub fn init_sender_only(input: []const []const u8) TestDevice {
+    pub fn init_sender_only(input: []const []const u8) Test_Device {
         return init(input, false);
     }
 
-    pub fn init(input: ?[]const []const u8, write_enabled: bool) TestDevice {
-        return TestDevice{
+    pub fn init(input: ?[]const []const u8, write_enabled: bool) Test_Device {
+        return Test_Device{
             .arena = std.heap.ArenaAllocator.init(std.testing.allocator),
             .packets = std.ArrayList([]u8).init(std.testing.allocator),
 
@@ -95,13 +98,13 @@ pub const TestDevice = struct {
         };
     }
 
-    pub fn deinit(td: *TestDevice) void {
+    pub fn deinit(td: *Test_Device) void {
         td.arena.deinit();
         td.packets.deinit();
         td.* = undefined;
     }
 
-    pub fn expect_sent(td: TestDevice, expected_datagrams: []const []const u8) !void {
+    pub fn expect_sent(td: Test_Device, expected_datagrams: []const []const u8) !void {
         const actual_datagrams = td.packets.items;
 
         try std.testing.expectEqual(expected_datagrams.len, actual_datagrams.len);
@@ -110,30 +113,30 @@ pub const TestDevice = struct {
         }
     }
 
-    pub fn datagram_device(td: *TestDevice) DatagramDevice {
-        return DatagramDevice{
+    pub fn datagram_device(td: *Test_Device) Datagram_Device {
+        return Datagram_Device{
             .object = td,
             .vtable = &vtable,
         };
     }
 
-    fn connectFn(ctx: ?*anyopaque) ConnectError!void {
-        const td: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn connect(ctx: ?*anyopaque) ConnectError!void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
         if (td.connected)
             return error.DeviceBusy;
         td.connected = true;
     }
 
-    fn disconnectFn(ctx: ?*anyopaque) void {
-        const td: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn disconnect(ctx: ?*anyopaque) void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
         if (!td.connected) {
             std.log.err("disconnect when test device was not connected!", .{});
         }
         td.connected = false;
     }
 
-    fn writeFn(ctx: ?*anyopaque, datagram: []const u8) WriteError!void {
-        const td: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn write(ctx: ?*anyopaque, datagram: []const u8) WriteError!void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
 
         if (!td.connected) {
             return error.NotConnected;
@@ -149,8 +152,8 @@ pub const TestDevice = struct {
         td.packets.append(dg) catch return error.IoError;
     }
 
-    fn readFn(ctx: ?*anyopaque, datagram: []u8) ReadError!void {
-        const td: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn read(ctx: ?*anyopaque, datagram: []u8) ReadError!void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
 
         if (!td.connected) {
             return error.NotConnected;
@@ -172,9 +175,9 @@ pub const TestDevice = struct {
     }
 
     const vtable = VTable{
-        .connectFn = connectFn,
-        .disconnectFn = disconnectFn,
-        .writeFn = writeFn,
-        .readFn = readFn,
+        .connect_fn = Test_Device.connect,
+        .disconnect_fn = Test_Device.disconnect,
+        .write_fn = Test_Device.write,
+        .read_fn = Test_Device.read,
     };
 };

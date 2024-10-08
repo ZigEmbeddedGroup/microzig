@@ -6,16 +6,20 @@
 
 const std = @import("std");
 
-const DigitalIO = @This();
-const BaseError = error{ IoError, Timeout };
+const Digital_IO = @This();
 
+/// Pointer to the object implementing the driver.
 object: ?*anyopaque,
+
+/// Virtual table for the digital i/o functions.
 vtable: *const VTable,
 
-pub const SetDirError = error{Unsupported};
-pub const SetBiasError = error{Unsupported};
-pub const WriteError = error{Unsupported};
-pub const ReadError = error{Unsupported};
+const BaseError = error{ IoError, Timeout };
+
+pub const SetDirError = BaseError || error{Unsupported};
+pub const SetBiasError = BaseError || error{Unsupported};
+pub const WriteError = BaseError || error{Unsupported};
+pub const ReadError = BaseError || error{Unsupported};
 
 pub const State = enum(u1) {
     low = 0,
@@ -32,23 +36,23 @@ pub const State = enum(u1) {
 pub const Direction = enum { input, output };
 
 /// Sets the direction of the pin.
-pub fn set_direction(dio: DigitalIO, dir: Direction) SetDirError!void {
+pub fn set_direction(dio: Digital_IO, dir: Direction) SetDirError!void {
     return dio.vtable.set_direction_fn(dio.object, dir);
 }
 
 /// Sets if the pin has a bias towards either `low` or `high` or no bias at all.
 /// Bias is usually implemented with pull-ups and pull-downs.
-pub fn set_bias(dio: DigitalIO, bias: ?State) SetBiasError!void {
+pub fn set_bias(dio: Digital_IO, bias: ?State) SetBiasError!void {
     return dio.vtable.set_bias_fn(dio.object, bias);
 }
 
 /// Changes the state of the pin.
-pub fn write(dio: DigitalIO, state: State) WriteError!void {
+pub fn write(dio: Digital_IO, state: State) WriteError!void {
     return dio.vtable.write_fn(dio.object, state);
 }
 
 /// Reads the state state of the pin.
-pub fn read(dio: DigitalIO) ReadError!State {
+pub fn read(dio: Digital_IO) ReadError!State {
     return dio.vtable.read_fn(dio.object);
 }
 
@@ -70,40 +74,40 @@ pub const TestDevice = struct {
         };
     }
 
-    pub fn digital_io(dev: *TestDevice) DigitalIO {
-        return DigitalIO{
+    pub fn digital_io(dev: *TestDevice) Digital_IO {
+        return Digital_IO{
             .object = dev,
             .vtable = &vtable,
         };
     }
 
-    fn set_direction_fn(ctx: ?*anyopaque, dir: Direction) SetDirError!void {
+    fn set_direction(ctx: ?*anyopaque, dir: Direction) SetDirError!void {
         const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
         dev.dir = dir;
     }
 
-    fn set_bias_fn(ctx: ?*anyopaque, bias: ?State) SetBiasError!void {
+    fn set_bias(ctx: ?*anyopaque, bias: ?State) SetBiasError!void {
         const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
         _ = dev;
         _ = bias;
     }
 
-    fn write_fn(ctx: ?*anyopaque, state: State) WriteError!void {
+    fn write(ctx: ?*anyopaque, state: State) WriteError!void {
         const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
         if (dev.dir != .output)
             return error.Unsupported;
         dev.state = state;
     }
 
-    fn read_fn(ctx: ?*anyopaque) State {
+    fn read(ctx: ?*anyopaque) State {
         const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
         return dev.state;
     }
 
     const vtable = VTable{
-        .set_direction_fn = set_direction_fn,
-        .set_bias_fn = set_bias_fn,
-        .write_fn = write_fn,
-        .read_fn = read_fn,
+        .set_direction_fn = TestDevice.set_direction,
+        .set_bias_fn = TestDevice.set_bias,
+        .write_fn = TestDevice.write,
+        .read_fn = TestDevice.read,
     };
 };

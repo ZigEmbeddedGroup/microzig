@@ -11,12 +11,7 @@ pub const display = struct {
     pub const ST7789 = st77xx.ST7789;
 
     // Export color types:
-    const colors_ns = @import("display/colors.zig");
-
-    pub const BlackAndWhite = enum(u1) { black = 0, white = 1 };
-
-    pub const RGB565 = colors_ns.RGB565;
-    pub const RGB888 = colors_ns.RGB888;
+    pub const colors = @import("display/colors.zig");
 };
 
 pub const input = struct {
@@ -40,9 +35,9 @@ pub const wireless = struct {
 };
 
 pub const base = struct {
-    pub const DatagramDevice = @import("base/DatagramDevice.zig");
-    pub const StreamDevice = @import("base/StreamDevice.zig");
-    pub const DigitalIO = @import("base/DigitalIO.zig");
+    pub const Datagram_Device = @import("base/Datagram_Device.zig");
+    pub const Stream_Device = @import("base/Stream_Device.zig");
+    pub const Digital_IO = @import("base/Digital_IO.zig");
 };
 
 test {
@@ -58,7 +53,7 @@ test {
 
     _ = wireless.sx1278;
 
-    _ = base.DatagramDevice;
-    _ = base.StreamDevice;
-    _ = base.DigitalIO;
+    _ = base.Datagram_Device;
+    _ = base.Stream_Device;
+    _ = base.Digital_IO;
 }
