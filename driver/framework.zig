@@ -24,7 +24,7 @@ pub const input = struct {
     pub const Key = keyboard_matrix.Key;
     pub const Keyboard_Matrix = keyboard_matrix.Keyboard_Matrix;
     pub const Debounced_Button = debounced_button.Debounced_Button;
-    pub const RotaryEncoder = rotary_encoder.RotaryEncoder;
+    pub const Rotary_Encoder = rotary_encoder.Rotary_Encoder;
 
     pub const touch = struct {
         // const xpt2046 = @import("input/touch/xpt2046.zig");
