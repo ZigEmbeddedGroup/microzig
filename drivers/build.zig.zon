@@ -1,0 +1,13 @@
+.{
+    .name = "MicroZig driver framework",
+    .version = "0.0.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "framework.zig",
+        "base",
+        "display",
+        "input",
+    },
+}
