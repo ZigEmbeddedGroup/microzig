@@ -164,7 +164,7 @@ inline fn busyloop(comptime N: comptime_int) void {
     }
 }
 
-test KeyboardMatrix {
+test Keyboard_Matrix {
     const key_tl = Key.new(0, 0);
     const key_tr = Key.new(0, 1);
     const key_bl = Key.new(1, 0);

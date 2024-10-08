@@ -23,7 +23,7 @@ pub const input = struct {
     // Export generic drivers:
     pub const Key = keyboard_matrix.Key;
     pub const Keyboard_Matrix = keyboard_matrix.Keyboard_Matrix;
-    pub const DebouncedButton = debounced_button.DebouncedButton;
+    pub const Debounced_Button = debounced_button.Debounced_Button;
     pub const RotaryEncoder = rotary_encoder.RotaryEncoder;
 
     pub const touch = struct {
