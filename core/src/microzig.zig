@@ -35,6 +35,7 @@ pub const mmio = @import("mmio.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
 pub const drivers = @import("drivers.zig");
+pub const utilities = @import("utilities.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
@@ -68,4 +69,8 @@ pub fn hang() noreturn {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: "memory");
     }
+}
+
+test {
+    _ = utilities;
 }
