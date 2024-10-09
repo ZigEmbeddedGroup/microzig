@@ -385,7 +385,7 @@ pub const I2C = enum(u1) {
             return TransactionError.TargetAddressReserved;
 
         const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
-        if (write_vec.len() == 0)
+        if (write_vec.size() == 0)
             return TransactionError.NoData;
 
         var deadline = time.Deadline.init_relative(timeout);
@@ -535,7 +535,7 @@ pub const I2C = enum(u1) {
         const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
         const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
 
-        if (write_vec.len() == 0)
+        if (write_vec.size() == 0)
             return TransactionError.NoData;
 
         const deadline = time.Deadline.init_relative(timeout);
