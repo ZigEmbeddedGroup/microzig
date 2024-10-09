@@ -98,7 +98,7 @@ pub const Deadline = struct {
     pub fn init_absolute(abs: ?Absolute) Deadline {
         if (abs) |a|
             std.debug.assert(a != disabled_sentinel);
-        return .{ .timeout = abs or disabled_sentinel };
+        return .{ .timeout = abs orelse disabled_sentinel };
     }
 
     /// Create a new deadline with a certain duration from now on.

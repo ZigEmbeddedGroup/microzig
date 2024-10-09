@@ -222,7 +222,7 @@ pub const UART = enum(u1) {
     /// Note that this does NOT disable reception while this is happening,
     /// so if this takes too long the RX FIFO can potentially overflow.
     pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?time.Duration) TransmitError!void {
-        uart.writev_blocking(&.{payload}, timeout);
+        return try uart.writev_blocking(&.{payload}, timeout);
     }
 
     /// Write bytes to uart TX line and block until transaction is complete.
