@@ -179,20 +179,22 @@ pub const SPI = enum(u1) {
 
     /// Disable SPI, pre-fill the TX FIFO as much as possible, and then re-enable to start transmission.
     /// Leads to performance gains in thoroughput. Returns how many bytes were consumed from src.
-    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src: []const PacketType) usize {
+    fn prime_tx_fifo(spi: SPI, comptime PacketType: type, src_iter: *microzig.utilities.Slice_Vector([]const PacketType).Iterator) usize {
         const spi_regs = spi.get_regs();
         spi_regs.SSPCR1.modify(.{
             .SSE = 0,
         });
-        var tx_remaining = src.len;
-        while (tx_remaining > 0 and spi.is_writable()) {
-            spi_regs.SSPDR.write_raw(src[src.len - tx_remaining]);
-            tx_remaining -= 1;
+
+        var count: usize = 0;
+        while (spi.is_writable()) {
+            const element = src_iter.next_element() orelse break;
+            spi_regs.SSPDR.write_raw(element.value);
+            count += 1;
         }
         spi_regs.SSPCR1.modify(.{
             .SSE = 1,
         });
-        return src.len - tx_remaining;
+        return count;
     }
 
     /// Same as prime_tx_fifo but for a repeated byte.
@@ -218,23 +220,47 @@ pub const SPI = enum(u1) {
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
     pub fn transceive_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType, dst: []PacketType) void {
+        return spi.transceive_vecs_blocking(PacketType, &.{src}, &.{dst});
+    }
+
+    /// Write and read a number of packets. src and dst must be the same length.
+    ///
+    /// PacketType specifies the bit width of each packet using any of
+    /// the types u4, u5, ..., u16. Data truncation is possible if this
+    /// doesn't match the peripheral's configured bit width.
+    ///
+    /// NOTE: This function is a vectored version of `transceive_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    pub fn transceive_vecs_blocking(spi: SPI, comptime PacketType: type, src_vecs: []const []const PacketType, dst_vecs: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        const spi_regs = spi.get_regs();
-        std.debug.assert(src.len == dst.len);
-        var rx_remaining = dst.len;
-        var tx_remaining = src.len;
+        const src_data = microzig.utilities.Slice_Vector([]const PacketType).init(src_vecs);
+        const dst_data = microzig.utilities.Slice_Vector([]PacketType).init(dst_vecs);
 
-        tx_remaining -= spi.prime_tx_fifo(PacketType, src);
+        var rx_remaining = src_data.size();
+        var tx_remaining = dst_data.size();
+        std.debug.assert(rx_remaining == tx_remaining);
+
+        const spi_regs = spi.get_regs();
+
+        var src_iter = src_data.iterator();
+        var dst_iter = dst_data.iterator();
+
+        tx_remaining -= spi.prime_tx_fifo(PacketType, &src_iter);
 
         while (rx_remaining > 0 or tx_remaining > 0) {
             if (tx_remaining > 0 and spi.is_writable() and rx_remaining < tx_remaining + fifo_depth) {
-                spi_regs.SSPDR.write_raw(src[src.len - tx_remaining]);
+                const element = src_iter.next_element() orelse unreachable;
+                spi_regs.SSPDR.write_raw(element.value);
                 tx_remaining -= 1;
             }
             if (rx_remaining > 0 and spi.is_readable()) {
+                const element = dst_iter.next_element_ptr() orelse unreachable;
                 const value: u16 = spi_regs.SSPDR.read().DATA;
-                dst[dst.len - rx_remaining] = @truncate(value);
+                element.value_ptr.* = @truncate(value);
                 rx_remaining -= 1;
             }
         }
@@ -246,22 +272,36 @@ pub const SPI = enum(u1) {
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
     pub fn write_blocking(spi: SPI, comptime PacketType: type, src: []const PacketType) void {
+        return spi.writev_blocking(PacketType, &.{src});
+    }
+
+    /// Write a number of packets and discard any data received back.
+    ///
+    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    /// PacketType specifies the bit width of each packet using any of
+    /// the types u4, u5, ..., u16. Data truncation is possible if this
+    /// doesn't match the peripheral's configured bit width.
+    pub fn writev_blocking(spi: SPI, comptime PacketType: type, src_vec: []const []const PacketType) void {
         comptime validate_bitwidth(PacketType);
 
-        var tx_remaining = src.len;
-        tx_remaining -= spi.prime_tx_fifo(PacketType, src);
+        var src_iter = microzig.utilities.Slice_Vector([]const u8).init(src_vec).iterator();
+
+        _ = spi.prime_tx_fifo(PacketType, &src_iter);
 
         const spi_regs = spi.get_regs();
 
         // Write to TX FIFO whilst ignoring RX, then clean up afterward. When RX
         // is full, PL022 inhibits RX pushes, and sets a sticky flag on
         // push-on-full, but continues shifting. Safe if SSPIMSC_RORIM is not set.
-        while (tx_remaining > 0) {
+        while (src_iter.next_element()) |element| {
             while (!spi.is_writable()) {
                 hw.tight_loop_contents();
             }
-            spi_regs.SSPDR.write_raw(src[src.len - tx_remaining]);
-            tx_remaining -= 1;
+            spi_regs.SSPDR.write_raw(element.value);
         }
 
         // Drain RX FIFO, then wait for shifting to finish (which may be *after*
@@ -288,11 +328,32 @@ pub const SPI = enum(u1) {
     /// the types u4, u5, ..., u16. Data truncation is possible if this
     /// doesn't match the peripheral's configured bit width.
     pub fn read_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst: []PacketType) void {
+        return spi.readv_blocking(PacketType, repeated_tx_data, &.{dst});
+    }
+
+    /// Read a number of packets while repeatedly sending the data
+    /// packet specified by "repeated_tx_data". Generally this can
+    /// be 0, but some devices require a specific value here,
+    /// e.g. SD cards expect 0xff
+    ///
+    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    /// PacketType specifies the bit width of each packet using any of
+    /// the types u4, u5, ..., u16. Data truncation is possible if this
+    /// doesn't match the peripheral's configured bit width.
+    pub fn readv_blocking(spi: SPI, comptime PacketType: type, repeated_tx_data: PacketType, dst_vec: []const []PacketType) void {
         comptime validate_bitwidth(PacketType);
 
+        const dst_data = microzig.utilities.Slice_Vector([]PacketType).init(dst_vec);
+
         const spi_regs = spi.get_regs();
-        var rx_remaining = dst.len;
-        var tx_remaining = dst.len;
+        var rx_remaining = dst_data.size();
+        var tx_remaining = rx_remaining;
+
+        var dst_iter = dst_data.iterator();
 
         tx_remaining -= spi.prime_tx_fifo_repeated(PacketType, repeated_tx_data, tx_remaining);
         while (rx_remaining > 0 or tx_remaining > 0) {
@@ -302,7 +363,9 @@ pub const SPI = enum(u1) {
             }
             if (rx_remaining > 0 and spi.is_readable()) {
                 const value: u16 = spi_regs.SSPDR.read().DATA;
-                dst[dst.len - rx_remaining] = @truncate(value);
+                const dst = dst_iter.next_element_ptr() orelse unreachable;
+
+                dst.value_ptr.* = @truncate(value);
                 rx_remaining -= 1;
             }
         }
