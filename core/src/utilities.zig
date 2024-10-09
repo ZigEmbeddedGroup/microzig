@@ -131,14 +131,44 @@ pub fn Slice_Vector(comptime Slice: type) type {
                     iter.slice_offset = 0;
                     iter.slice_index += 1;
 
-                    if (iter.slice_index < iter.slices.len) {
-                        current_slice = iter.slices[iter.slice_index];
-                    } else {
+                    if (iter.slice_index >= iter.slices.len) {
                         break;
                     }
+                    current_slice = iter.slices[iter.slice_index];
                 }
 
                 return element;
+            }
+
+            /// Returns the next available chunk of data.
+            ///
+            /// If `max_length` is given, that chunk never exceeds `max_length` elements.
+            pub fn next_chunk(iter: *Iterator, max_length: ?usize) ?Slice {
+                if (iter.slice_index >= iter.slices.len)
+                    return null;
+
+                var current_slice = iter.slices[iter.slice_index];
+                std.debug.assert(iter.slice_offset < current_slice.len);
+
+                const rest = current_slice[iter.slice_offset..];
+
+                const chunk: Slice = if (max_length) |limit|
+                    rest[0..@min(rest.len, limit)]
+                else
+                    rest;
+
+                iter.slice_offset += chunk.len;
+                std.debug.assert(iter.slice_offset <= current_slice.len);
+
+                while (iter.slice_offset == current_slice.len) {
+                    iter.slice_offset = 0;
+                    iter.slice_index += 1;
+                    if (iter.slice_index >= iter.slices.len)
+                        break;
+                    current_slice = iter.slices[iter.slice_index];
+                }
+
+                return chunk;
             }
 
             pub const Element = struct {
@@ -283,4 +313,53 @@ test "Slice_Vector.iterator (mutable)" {
     }
 
     try std.testing.expectEqualStrings(expected, &buffer);
+}
+
+test "Slice_Vector.Iterator.next_chunk" {
+    const vec = Slice_Vector([]const u8).init(&.{
+        &.{},
+        &.{},
+        "Hello,",
+        &.{},
+        "0123456789",
+        &.{},
+        " ",
+        &.{},
+        "World!",
+        &.{},
+        &.{},
+    });
+
+    // Unlimited:
+    {
+        const expected = [_][]const u8{
+            "Hello,",
+            "0123456789",
+            " ",
+            "World!",
+        };
+        var index: usize = 0;
+        var iter = vec.iterator();
+        while (iter.next_chunk(null)) |chunk| : (index += 1) {
+            try std.testing.expectEqualStrings(expected[index], chunk);
+        }
+    }
+
+    // Limited:
+    {
+        const expected = [_][]const u8{
+            "Hello",
+            ",",
+            "01234",
+            "56789",
+            " ",
+            "World",
+            "!",
+        };
+        var index: usize = 0;
+        var iter = vec.iterator();
+        while (iter.next_chunk(5)) |chunk| : (index += 1) {
+            try std.testing.expectEqualStrings(expected[index], chunk);
+        }
+    }
 }

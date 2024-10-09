@@ -238,7 +238,8 @@ pub const UART = enum(u1) {
         const uart_regs = uart.get_regs();
         const deadline = time.Deadline.init_relative(timeout);
 
-        for (payloads) |payload| {
+        var iter = microzig.utilities.Slice_Vector([]const u8).init(payloads).iterator();
+        while (iter.next_chunk(null)) |payload| {
             var offset: usize = uart.prime_tx_fifo(payload);
             while (offset < payload.len) {
                 while (!uart.is_writeable()) {
@@ -331,7 +332,8 @@ pub const UART = enum(u1) {
     pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?time.Duration) ReceiveError!void {
         const deadline = time.Deadline.init_relative(timeout);
 
-        for (buffers) |buffer| {
+        var iter = microzig.utilities.Slice_Vector([]u8).init(buffers).iterator();
+        while (iter.next_chunk(null)) |buffer| {
             for (buffer) |*byte| {
                 while (!uart.is_readable()) {
                     try deadline.check();
