@@ -384,14 +384,8 @@ pub const I2C = enum(u1) {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
-        const total_len = blk: {
-            var len: usize = 0;
-            for (chunks) |chunk| {
-                len += chunk.len;
-            }
-            break :blk len;
-        };
-        if (total_len == 0)
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        if (write_vec.len() == 0)
             return TransactionError.NoData;
 
         var deadline = time.Deadline.init_relative(timeout);
@@ -402,34 +396,33 @@ pub const I2C = enum(u1) {
         defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
-        for (chunks, 0..) |chunk, chunk_index| {
-            for (chunk, 0..) |byte, i| {
-                const last = (chunk_index == (chunks.len - 1)) and (i == (chunk.len - 1));
-                regs.IC_DATA_CMD.write(.{
-                    .RESTART = .{ .raw = 0 },
-                    .STOP = .{ .raw = @intFromBool(last) },
-                    .CMD = .{ .value = .WRITE },
-                    .DAT = byte,
 
-                    .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
-                    .padding = 0,
-                });
-                // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
-                // are ignored. If things work as expected, the TX FIFO gets drained naturally.
-                // This makes it okay to poll on this and check for an abort after.
-                // Note that this WILL loop infinitely if called when I2C is uninitialized and no
-                // timeout is supplied!
-                while (i2c.tx_fifo_available_spaces() == 0) {
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
-                    hw.tight_loop_contents();
-                }
-                try i2c.check_and_clear_abort();
-                if (timed_out)
+        var iter = write_vec.iterator();
+        while (iter.next_element()) |element| {
+            regs.IC_DATA_CMD.write(.{
+                .RESTART = .{ .raw = 0 },
+                .STOP = .{ .raw = @intFromBool(element.last) },
+                .CMD = .{ .value = .WRITE },
+                .DAT = element.value,
+
+                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .padding = 0,
+            });
+            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // are ignored. If things work as expected, the TX FIFO gets drained naturally.
+            // This makes it okay to poll on this and check for an abort after.
+            // Note that this WILL loop infinitely if called when I2C is uninitialized and no
+            // timeout is supplied!
+            while (i2c.tx_fifo_available_spaces() == 0) {
+                if (deadline.is_reached()) {
+                    timed_out = true;
                     break;
+                }
+                hw.tight_loop_contents();
             }
+            try i2c.check_and_clear_abort();
+            if (timed_out)
+                break;
         }
 
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
@@ -467,15 +460,11 @@ pub const I2C = enum(u1) {
     ///       in a separate memory.
     ///
     pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
-        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
-        const total_len = blk: {
-            var len: usize = 0;
-            for (chunks) |chunk| {
-                len += chunk.len;
-            }
-            break :blk len;
-        };
-        if (total_len == 0)
+        if (addr.is_reserved())
+            return TransactionError.TargetAddressReserved;
+
+        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        if (read_vec.size() == 0)
             return TransactionError.NoData;
 
         const deadline = time.Deadline.init_relative(timeout);
@@ -486,33 +475,32 @@ pub const I2C = enum(u1) {
         defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
-        for (chunks, 0..) |chunk, chunk_index| {
-            for (chunk, 0..) |*byte, i| {
-                const last = (chunk_index == (chunks.len - 1)) and (i == (chunk.len - 1));
-                regs.IC_DATA_CMD.write(.{
-                    .RESTART = .{ .raw = 0 },
-                    .STOP = .{ .raw = @intFromBool(last) },
-                    .CMD = .{ .value = .READ },
-                    .DAT = 0,
 
-                    .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
-                    .padding = 0,
-                });
+        var iter = read_vec.iterator();
+        while (iter.next_element_ptr()) |element| {
+            regs.IC_DATA_CMD.write(.{
+                .RESTART = .{ .raw = 0 },
+                .STOP = .{ .raw = @intFromBool(element.last) },
+                .CMD = .{ .value = .READ },
+                .DAT = 0,
 
-                while (true) {
-                    try i2c.check_and_clear_abort();
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
-                    if (i2c.rx_fifo_bytes_ready() != 0) break;
+                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .padding = 0,
+            });
+
+            while (true) {
+                try i2c.check_and_clear_abort();
+                if (deadline.is_reached()) {
+                    timed_out = true;
+                    break;
                 }
-
-                if (timed_out)
-                    return TransactionError.Timeout;
-
-                byte.* = regs.IC_DATA_CMD.read().DAT;
+                if (i2c.rx_fifo_bytes_ready() != 0) break;
             }
+
+            if (timed_out)
+                return TransactionError.Timeout;
+
+            element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
         }
     }
 
@@ -540,18 +528,14 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, src_chunks: []const []const u8, dst_chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
-        const total_src_len = blk: {
-            var len: usize = 0;
-            for (src_chunks) |chunk| {
-                len += chunk.len;
-            }
-            break :blk len;
-        };
-        if (total_src_len == 0)
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
+        const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
+
+        if (write_vec.len() == 0)
             return TransactionError.NoData;
 
         const deadline = time.Deadline.init_relative(timeout);
@@ -564,67 +548,65 @@ pub const I2C = enum(u1) {
         var timed_out = false;
 
         // Write provided bytes to device
-        for (src_chunks) |chunk| {
-            for (chunk) |byte| {
-                regs.IC_DATA_CMD.write(.{
-                    .RESTART = .{ .raw = 0 },
-                    .STOP = .{ .raw = 0 },
-                    .CMD = .{ .value = .WRITE },
-                    .DAT = byte,
+        var write_iter = write_vec.iterator();
+        send_loop: while (write_iter.next_element()) |element| {
+            regs.IC_DATA_CMD.write(.{
+                .RESTART = .{ .raw = 0 },
+                .STOP = .{ .raw = 0 },
+                .CMD = .{ .value = .WRITE },
+                .DAT = element.value,
 
-                    .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
-                    .padding = 0,
-                });
-                // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
-                // are ignored. If things work as expected, the TX FIFO gets drained naturally.
-                // This makes it okay to poll on this and check for an abort after.
-                // Note that this WILL loop infinitely if called when I2C is uninitialized and no
-                // timeout is supplied!
-                while (i2c.tx_fifo_available_spaces() == 0) {
-                    hw.tight_loop_contents();
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
+                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .padding = 0,
+            });
+            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // are ignored. If things work as expected, the TX FIFO gets drained naturally.
+            // This makes it okay to poll on this and check for an abort after.
+            // Note that this WILL loop infinitely if called when I2C is uninitialized and no
+            // timeout is supplied!
+            while (i2c.tx_fifo_available_spaces() == 0) {
+                hw.tight_loop_contents();
+                if (deadline.is_reached()) {
+                    timed_out = true;
+                    break;
                 }
+            }
+            try i2c.check_and_clear_abort();
+            if (timed_out)
+                break :send_loop;
+        }
+
+        if (timed_out)
+            return TransactionError.Timeout;
+
+        // Read back requested bytes immediately following a repeated start
+        var read_iter = read_vec.iterator();
+        recv_loop: while (read_iter.next_element_ptr()) |element| {
+            regs.IC_DATA_CMD.write(.{
+                .RESTART = .{ .raw = @intFromBool(element.first) },
+                .STOP = .{ .raw = @intFromBool(element.last) },
+                .CMD = .{ .value = .READ },
+                .DAT = 0,
+
+                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .padding = 0,
+            });
+
+            while (true) {
                 try i2c.check_and_clear_abort();
-                if (timed_out)
+                if (deadline.is_reached()) {
+                    timed_out = true;
+                    break :recv_loop;
+                }
+
+                if (i2c.rx_fifo_bytes_ready() != 0)
                     break;
             }
+
+            element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
         }
 
-        for (dst_chunks, 0..) |chunk, chunk_index| {
-
-            // Read back requested bytes immediately following a repeated start
-            for (chunk, 0..) |*byte, i| {
-                const first = (chunk_index == 0) and (i == 0);
-                const last = (chunk_index == (dst_chunks.len - 1)) and (i == (chunk.len - 1));
-                regs.IC_DATA_CMD.write(.{
-                    .RESTART = .{ .raw = @intFromBool(first) },
-                    .STOP = .{ .raw = @intFromBool(last) },
-                    .CMD = .{ .value = .READ },
-                    .DAT = 0,
-
-                    .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
-                    .padding = 0,
-                });
-
-                while (true) {
-                    try i2c.check_and_clear_abort();
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
-
-                    if (i2c.rx_fifo_bytes_ready() != 0)
-                        break;
-                }
-
-                if (timed_out)
-                    return TransactionError.Timeout;
-
-                byte.* = regs.IC_DATA_CMD.read().DAT;
-            }
-        }
+        if (timed_out)
+            return TransactionError.Timeout;
     }
 };
