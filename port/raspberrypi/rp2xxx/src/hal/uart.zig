@@ -222,21 +222,35 @@ pub const UART = enum(u1) {
     /// Note that this does NOT disable reception while this is happening,
     /// so if this takes too long the RX FIFO can potentially overflow.
     pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?time.Duration) TransmitError!void {
-        var tx_remaining = payload.len - uart.prime_tx_fifo(payload);
+        uart.writev_blocking(&.{payload}, timeout);
+    }
+
+    /// Write bytes to uart TX line and block until transaction is complete.
+    ///
+    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    /// Note that this does NOT disable reception while this is happening,
+    /// so if this takes too long the RX FIFO can potentially overflow.
+    pub fn writev_blocking(uart: UART, payloads: []const []const u8, timeout: ?time.Duration) TransmitError!void {
         const uart_regs = uart.get_regs();
+        const deadline = time.Deadline.init_relative(timeout);
 
-        const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
-
-        while (tx_remaining > 0) {
-            while (!uart.is_writeable()) {
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransmitError.Timeout;
+        for (payloads) |payload| {
+            var offset: usize = uart.prime_tx_fifo(payload);
+            while (offset < payload.len) {
+                while (!uart.is_writeable()) {
+                    try deadline.check();
+                }
+                uart_regs.UARTDR.write_raw(payload[offset]);
+                offset += 1;
             }
-            uart_regs.UARTDR.write_raw(payload[payload.len - tx_remaining]);
-            tx_remaining -= 1;
         }
 
         while (uart.is_busy()) {
-            if (deadline_maybe) |deadline| if (deadline.is_reached()) return TransmitError.Timeout;
+            try deadline.check();
         }
     }
 
@@ -301,12 +315,29 @@ pub const UART = enum(u1) {
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
     pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?time.Duration) ReceiveError!void {
-        const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
-        for (buffer) |*byte| {
-            while (!uart.is_readable()) {
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) return ReceiveError.Timeout;
+        return uart.readv_blocking(&.{buffer}, timeout);
+    }
+
+    /// Read bytes from uart RX line and block until transaction is complete.
+    ///
+    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    /// Returns a transaction error immediately if it occurs and doesn't
+    /// complete the transaction. Errors are preserved for further inspection,
+    /// so must be cleared with clear_errors() before another transaction is attempted.
+    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?time.Duration) ReceiveError!void {
+        const deadline = time.Deadline.init_relative(timeout);
+
+        for (buffers) |buffer| {
+            for (buffer) |*byte| {
+                while (!uart.is_readable()) {
+                    try deadline.check();
+                }
+                byte.* = try uart.read_rx_fifo_with_error_check();
             }
-            byte.* = try uart.read_rx_fifo_with_error_check();
         }
     }
 
