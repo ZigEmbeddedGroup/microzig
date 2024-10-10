@@ -17,6 +17,7 @@ const Core = enum {
     @"ARM Cortex-M0",
     @"ARM Cortex-M0+",
     @"ARM Cortex-M3",
+    @"ARM Cortex-M33",
     @"ARM Cortex-M4",
 };
 
@@ -26,6 +27,7 @@ const core: type = blk: {
         .@"ARM Cortex-M0" => @import("cortex_m/m0"),
         .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
         .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
+        .@"ARM Cortex-M33" => @import("cortex_m/m33.zig"),
         .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
     };
 };

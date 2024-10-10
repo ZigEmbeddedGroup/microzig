@@ -16,7 +16,7 @@
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32" },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32" },
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp" },
-        .@"port/raspberrypi/rp2040" = .{ .path = "port/raspberrypi/rp2040" },
+        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx" },
 
         // examples so that we can build them all in one go
         .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
@@ -26,7 +26,7 @@
         .@"examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
         .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
         .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
-        .@"examples/raspberrypi/rp2040" = .{ .path = "examples/raspberrypi/rp2040" },
+        .@"examples/raspberrypi/rp2xxx" = .{ .path = "examples/raspberrypi/rp2xxx" },
 
         // used for creating package tarballs
         .boxzer = .{

@@ -60,6 +60,17 @@ pub const cpus = struct {
         },
     };
 
+    pub const cortex_m33 = MicroZig.Cpu{
+        .name = "ARM Cortex-M33",
+        .root_source_file = .{ .cwd_relative = build_root ++ "/src/cpus/cortex_m.zig" },
+        .target = std.Target.Query{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+    };
+
     pub const cortex_m4 = MicroZig.Cpu{
         .name = "ARM Cortex-M4",
         .root_source_file = .{ .cwd_relative = build_root ++ "/src/cpus/cortex_m.zig" },
@@ -89,17 +100,6 @@ pub const cpus = struct {
         .target = std.zig.CrossTarget{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
-            .os_tag = .freestanding,
-            .abi = .eabihf,
-        },
-    };
-
-    pub const cortex_m33 = MicroZig.Cpu{
-        .name = "ARM Cortex-M7",
-        .root_source_file = .{ .cwd_relative = build_root ++ "/src/cpus/cortex_m.zig" },
-        .target = std.zig.CrossTarget{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
             .os_tag = .freestanding,
             .abi = .eabihf,
         },
