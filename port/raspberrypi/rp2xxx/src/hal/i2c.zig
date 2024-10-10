@@ -1,3 +1,9 @@
+//!
+//! This file implements the I²C driver for the RP2 chip family.
+//!
+//! Useful links:
+//!     (Unofficial) I²C Reference: https://www.i2c-bus.org/
+//!
 const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -18,7 +24,13 @@ pub const Config = struct {
     baud_rate: u32 = 100_000,
 };
 
+///
+/// 7-bit I²C address, without the read/write bit.
+///
 pub const Address = enum(u7) {
+    /// The general call addresses all devices on the bus using the I²C address 0.
+    pub const general_call: Address = @enumFromInt(0x00);
+
     _,
 
     pub fn new(addr: u7) Address {
@@ -27,14 +39,21 @@ pub const Address = enum(u7) {
         return a;
     }
 
+    ///
+    /// Returns `true` if the Address is a reserved I²C address.
+    ///
+    /// Reserved addresses are ones that match `0b0000XXX` or `0b1111XXX`.
+    ///
+    /// See more here: https://www.i2c-bus.org/addressing/
     pub fn is_reserved(addr: Address) bool {
-        return ((@intFromEnum(addr) & 0x78) == 0) or ((@intFromEnum(addr) & 0x78) == 0x78);
+        const value: u7 = @intFromEnum(addr);
+        return ((value & 0x78) == 0) or ((value & 0x78) == 0x78);
     }
 
     pub fn format(addr: Address, fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
-        try writer.print("I2C(0x{X:0>2}", .{@intFromEnum(addr)});
+        try writer.print("I2C(0x{X:0>2})", .{@intFromEnum(addr)});
     }
 };
 
@@ -321,46 +340,70 @@ pub const I2C = enum(u1) {
         }
     }
 
+    /// Independent of successful write or abort, always ensure
+    /// the STOP condition is generated and transaction is concluded before
+    /// returning. The one exception is if timeout is hit, then return,
+    /// potentially still leaving the I2C block in an "active" state.
+    /// However, this avoids an infinite loop.
+    fn ensure_stop_condition(i2c: I2C, deadline: time.Deadline) void {
+        const regs = i2c.get_regs();
+
+        // From pico-sdk:
+        //     TODO Could there be an abort while waiting for the STOP
+        //     condition here? If so, additional code would be needed here
+        //     to take care of the abort.
+        // As far as I can tell from the datasheet, no, this is not possible.
+        while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+            hw.tight_loop_contents();
+            if (deadline.is_reached())
+                break;
+        }
+        _ = regs.IC_CLR_STOP_DET.read();
+    }
+
     /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:
     /// - Bytes have been transmitted successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: I2C, addr: Address, src: []const u8, timeout: ?time.Duration) TransactionError!void {
-        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
-        if (src.len == 0) return TransactionError.NoData;
+    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?time.Duration) TransactionError!void {
+        return i2c.writev_blocking(addr, &.{data}, timeout);
+    }
 
-        const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
+    /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:
+    /// - Bytes have been transmitted successfully
+    /// - An error occurs and the transaction is aborted
+    /// - The transaction times out (a null for timeout blocks indefinitely)
+    ///
+    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?time.Duration) TransactionError!void {
+        if (addr.is_reserved())
+            return TransactionError.TargetAddressReserved;
+
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        if (write_vec.size() == 0)
+            return TransactionError.NoData;
+
+        var deadline = time.Deadline.init_relative(timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
 
-        // Independent of successful write or abort, always ensure
-        // the STOP condition is generated and transaction is concluded before
-        // returning. The one exception is if timeout is hit, then return,
-        // potentially still leaving the I2C block in an "active" state.
-        // However, this avoids an infinite loop.
-        defer {
-            // From pico-sdk:
-            //     TODO Could there be an abort while waiting for the STOP
-            //     condition here? If so, additional code would be needed here
-            //     to take care of the abort.
-            // As far as I can tell from the datasheet, no, this is not possible.
-            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
-                hw.tight_loop_contents();
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
-            }
-            _ = regs.IC_CLR_STOP_DET.read();
-        }
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
-        for (src, 0..) |byte, i| {
-            const last = (i == (src.len - 1));
+
+        var iter = write_vec.iterator();
+        while (iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
-                .STOP = .{ .raw = @intFromBool(last) },
+                .STOP = .{ .raw = @intFromBool(element.last) },
                 .CMD = .{ .value = .WRITE },
-                .DAT = byte,
+                .DAT = element.value,
 
                 .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
                 .padding = 0,
@@ -371,26 +414,23 @@ pub const I2C = enum(u1) {
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
             // timeout is supplied!
             while (i2c.tx_fifo_available_spaces() == 0) {
-                if (deadline_maybe) |deadline| {
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
+                if (deadline.is_reached()) {
+                    timed_out = true;
+                    break;
                 }
                 hw.tight_loop_contents();
             }
             try i2c.check_and_clear_abort();
-            if (timed_out) break;
+            if (timed_out)
+                break;
         }
 
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
         // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
         while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
-            if (deadline_maybe) |deadline| {
-                if (deadline.is_reached()) {
-                    timed_out = true;
-                    break;
-                }
+            if (deadline.is_reached()) {
+                timed_out = true;
+                break;
             }
             hw.tight_loop_contents();
         }
@@ -406,38 +446,41 @@ pub const I2C = enum(u1) {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
-        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
-        if (dst.len == 0) return TransactionError.NoData;
+        return try i2c.readv_blocking(addr, &.{dst}, timeout);
+    }
 
-        const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
+    /// Attempts to read number of bytes in provided slice from target device and blocks until one of the following occurs:
+    /// - Bytes have been read successfully
+    /// - An error occurs and the transaction is aborted
+    /// - The transaction times out (a null for timeout blocks indefinitely)
+    ///
+    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
+        if (addr.is_reserved())
+            return TransactionError.TargetAddressReserved;
+
+        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
+        if (read_vec.size() == 0)
+            return TransactionError.NoData;
+
+        const deadline = time.Deadline.init_relative(timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
 
-        // Independent of successful read or abort, always ensure
-        // the STOP condition is generated and transaction is concluded before
-        // returning. The one exception is if timeout is hit, then return,
-        // potentially still leaving the I2C block in an "active" state.
-        // However, this avoid an infinite loop.
-        defer {
-            // From pico-sdk:
-            //     TODO Could there be an abort while waiting for the STOP
-            //     condition here? If so, additional code would be needed here
-            //     to take care of the abort.
-            // As far as I can tell from the datasheet, no, this is not possible.
-            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
-                hw.tight_loop_contents();
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
-            }
-            _ = regs.IC_CLR_STOP_DET.read();
-        }
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
-        for (dst, 0..) |*byte, i| {
-            const last = (i == (dst.len - 1));
+
+        var iter = read_vec.iterator();
+        while (iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
-                .STOP = .{ .raw = @intFromBool(last) },
+                .STOP = .{ .raw = @intFromBool(element.last) },
                 .CMD = .{ .value = .READ },
                 .DAT = 0,
 
@@ -447,17 +490,17 @@ pub const I2C = enum(u1) {
 
             while (true) {
                 try i2c.check_and_clear_abort();
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) {
+                if (deadline.is_reached()) {
                     timed_out = true;
                     break;
-                };
+                }
                 if (i2c.rx_fifo_bytes_ready() != 0) break;
             }
 
             if (timed_out)
                 return TransactionError.Timeout;
 
-            byte.* = regs.IC_DATA_CMD.read().DAT;
+            element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
         }
     }
 
@@ -469,41 +512,49 @@ pub const I2C = enum(u1) {
     ///
     /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
     pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
-        if (addr.is_reserved()) return TransactionError.TargetAddressReserved;
-        if (src.len == 0) return TransactionError.NoData;
+        return i2c.writev_then_readv_blocking(addr, &.{src}, &.{dst}, timeout);
+    }
 
-        const deadline_maybe: ?time.Absolute = if (timeout) |v| time.make_timeout_us(v.to_us()) else null;
+    /// Attempts to write number of bytes provided to target device and then immediately read bytes following a repeated
+    /// start command (or Start + Stop if repeated start is disabled). Blocks until one of the following occurs:
+    /// - Bytes have been transmitted and read successfully
+    /// - An error occurs and the transaction is aborted
+    /// - The transaction times out (a null for timeout blocks indefinitely)
+    ///
+    /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
+    ///
+    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
+    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
+    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
+    ///       in a separate memory.
+    ///
+    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
+        if (addr.is_reserved())
+            return TransactionError.TargetAddressReserved;
+
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
+        const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
+
+        if (write_vec.size() == 0)
+            return TransactionError.NoData;
+
+        const deadline = time.Deadline.init_relative(timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
 
-        // Independent of successful write or abort, always ensure
-        // the STOP condition is generated and transaction is concluded before
-        // returning. The one exception is if timeout is hit, then return,
-        // potentially still leaving the I2C block in an "active" state.
-        // However, this avoids an infinite loop.
-        defer {
-            // From pico-sdk:
-            //     TODO Could there be an abort while waiting for the STOP
-            //     condition here? If so, additional code would be needed here
-            //     to take care of the abort.
-            // As far as I can tell from the datasheet, no, this is not possible.
-            while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
-                hw.tight_loop_contents();
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) break;
-            }
-            _ = regs.IC_CLR_STOP_DET.read();
-        }
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         // Write provided bytes to device
-        for (src) |byte| {
+        var write_iter = write_vec.iterator();
+        send_loop: while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
                 .RESTART = .{ .raw = 0 },
                 .STOP = .{ .raw = 0 },
                 .CMD = .{ .value = .WRITE },
-                .DAT = byte,
+                .DAT = element.value,
 
                 .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
                 .padding = 0,
@@ -515,24 +566,25 @@ pub const I2C = enum(u1) {
             // timeout is supplied!
             while (i2c.tx_fifo_available_spaces() == 0) {
                 hw.tight_loop_contents();
-                if (deadline_maybe) |deadline| {
-                    if (deadline.is_reached()) {
-                        timed_out = true;
-                        break;
-                    }
+                if (deadline.is_reached()) {
+                    timed_out = true;
+                    break;
                 }
             }
             try i2c.check_and_clear_abort();
-            if (timed_out) break;
+            if (timed_out)
+                break :send_loop;
         }
 
+        if (timed_out)
+            return TransactionError.Timeout;
+
         // Read back requested bytes immediately following a repeated start
-        for (dst, 0..) |*byte, i| {
-            const first = (i == 0);
-            const last = (i == (dst.len - 1));
+        var read_iter = read_vec.iterator();
+        recv_loop: while (read_iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = .{ .raw = @intFromBool(first) },
-                .STOP = .{ .raw = @intFromBool(last) },
+                .RESTART = .{ .raw = @intFromBool(element.first) },
+                .STOP = .{ .raw = @intFromBool(element.last) },
                 .CMD = .{ .value = .READ },
                 .DAT = 0,
 
@@ -542,18 +594,19 @@ pub const I2C = enum(u1) {
 
             while (true) {
                 try i2c.check_and_clear_abort();
-                if (deadline_maybe) |deadline| if (deadline.is_reached()) {
+                if (deadline.is_reached()) {
                     timed_out = true;
-                    break;
-                };
+                    break :recv_loop;
+                }
 
-                if (i2c.rx_fifo_bytes_ready() != 0) break;
+                if (i2c.rx_fifo_bytes_ready() != 0)
+                    break;
             }
 
-            if (timed_out)
-                return TransactionError.Timeout;
-
-            byte.* = regs.IC_DATA_CMD.read().DAT;
+            element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
         }
+
+        if (timed_out)
+            return TransactionError.Timeout;
     }
 };
