@@ -429,12 +429,40 @@ fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(Chip
         \\    return comptime (std.fs.path.dirname(@src().file) orelse ".");
         \\}
         \\const build_root = root();
-        \\const register_definition_path = build_root ++ "/chips/all.zig";
+        \\pub const register_definition_path = build_root ++ "/chips/all.zig";
         \\
     );
 
     for (chip_files) |json| {
         const chip_file = json.value;
+        const core = chip_file.cores[0];
+        var microzig_core_name = core_to_microzig_cpu.get(chip_file.cores[0].name) orelse {
+            std.log.err("Unhandled core name: '{s}'", .{core.name});
+            return error.UnhandledCoreName;
+        };
+        for (core.interrupts) |item| {
+            if (std.mem.indexOf(u8, item.name, "FPU")) |_| {
+                const Case = enum { cm4, cm7, cm33, none };
+                const case = std.meta.stringToEnum(Case, core.name) orelse defaultblk: {
+                    std.log.warn("Found core with FPU interrupt, but don't have a target with FPU", .{});
+                    break :defaultblk .none;
+                };
+                switch (case) {
+                    .cm4 => {
+                        microzig_core_name = "cortex_m4f";
+                    },
+                    .cm7 => {
+                        microzig_core_name = "cortex_m7f";
+                    },
+                    .cm33 => {
+                        microzig_core_name = "cortex_m33f";
+                    },
+                    else => {},
+                }
+                break;
+            }
+        }
+
         try writer.print(
             \\
             \\pub const {} = MicroZig.Target{{
@@ -447,10 +475,7 @@ fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(Chip
         , .{
             std.zig.fmtId(chip_file.name),
             chip_file.name,
-            core_to_microzig_cpu.get(chip_file.cores[0].name) orelse {
-                std.log.err("Unhandled core name: '{s}'", .{chip_file.cores[0].name});
-                return error.UnhandledCoreName;
-            },
+            microzig_core_name,
         });
 
         for (chip_file.memory) |memory| {
