@@ -30,8 +30,6 @@ pub const Driver_Mode = enum {
 };
 
 pub const SSD1306_Options = struct {
-    buffer_size: u32 = 64,
-
     /// Defines the operation of the SSD1306 driver.
     mode: Driver_Mode,
 
@@ -46,21 +44,54 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
     if (options.mode != .i2c)
         @compileError("Non-I²C operation is not supported yet!");
 
+    // TODO(philippwendel) Add doc comments for functions
+    // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
     return struct {
-        const Datagram_Device = options.Datagram_Device;
-        const buffer_size = options.buffer_size;
-
-        const white_line: [128]u8 = .{0xFF} ** 128;
-        const black_line: [128]u8 = .{0x00} ** 128;
-
         const Self = @This();
+
+        const Datagram_Device = options.Datagram_Device;
+        const Digital_IO = switch (options.mode) {
+            // 4-wire SPI mode uses a dedicated command/data control pin:
+            .spi_4wire => options.Digital_IO,
+
+            // The other two modes don't use that, so we use a `void` pin here to save
+            // memory:
+            .i2c, .spi_3wire => void,
+        };
+
         dd: Datagram_Device,
+        dc_pin: Digital_IO,
 
-        // TODO(philippwendel) Add doc comments for functions
-        // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
-        pub fn init(dev: Datagram_Device) !Self {
-            var self = Self{ .dd = dev };
+        /// Initializes the device and sets up sane defaults.
+        pub const init = switch (options.mode) {
+            .i2c, .spi_3wire => init_without_io,
+            .spi_4wire => init_with_io,
+        };
 
+        /// Creates an instance with only a datagram device.
+        /// `init` will be an alias to this if the init requires no D/C pin.
+        fn init_without_io(dev: Datagram_Device) !Self {
+            var self = Self{
+                .dd = dev,
+                .dc_pin = {},
+            };
+            try self.execute_init_sequence();
+            return self;
+        }
+
+        /// Creates an instance with a datagram device and the D/C pin.
+        /// `init` will be an alias to this if the init requires a D/C pin.
+        fn init_with_io(dev: Datagram_Device, data_cmd_pin: Digital_IO) !Self {
+            var self = Self{
+                .dd = dev,
+                .dc_pin = data_cmd_pin,
+            };
+            try self.execute_init_sequence();
+            return self;
+        }
+
+        /// Executes the device initialization sequence and sets up sane defaults.
+        fn execute_init_sequence(self: Self) !void {
             try self.set_display(.off);
 
             try self.deactivate_scroll();
@@ -81,8 +112,6 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             try self.entire_display_on(.resumeToRam);
 
             try self.set_display(.on);
-
-            return self;
         }
 
         pub fn write_full_display(self: Self, data: *const [128 * 8]u8) !void {
@@ -271,24 +300,46 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         // Utilities:
 
+        const command_preamble: []const u8 = switch (options.mode) {
+            .i2c => &.{I2C_ControlByte.command},
+            .spi_3wire, .spi_4wire => "",
+        };
+
+        const data_preamble: []const u8 = switch (options.mode) {
+            .i2c => &.{I2C_ControlByte.data_stream},
+            .spi_3wire, .spi_4wire => "",
+        };
+
+        /// Sends command data to the SSD1306 controller.
         fn execute_command(self: Self, cmd: u8, argv: []const u8) !void {
+            try self.set_dc_pin(.command);
+
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.writev(&.{
-                &.{I2C_ControlByte.command}, // TODO: Make prefix replacable
-                &.{cmd},
-                argv,
-            });
+            try self.dd.writev(&.{ command_preamble, &.{cmd}, argv });
         }
 
+        /// Sends gdram data to the SSD1306 controller.
         fn write_data(self: Self, data: []const u8) !void {
+            try self.set_dc_pin(.data);
+
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            try self.dd.writev(&.{
-                &.{I2C_ControlByte.data_stream}, // TODO: Make prefix replacable
-                data,
+            try self.dd.writev(&.{ data_preamble, data });
+        }
+
+        /// If present, sets the D/C pin to the required mode.
+        /// NOTE: This function must be called *before* activating the device
+        ///       via chip select, so before calling `dd.connect`!
+        fn set_dc_pin(self: Self, mode: enum { command, data }) !void {
+            if (Digital_IO == void)
+                return;
+
+            self.dc_pin.write(switch (mode) {
+                .command => .low,
+                .data => .high,
             });
         }
 
