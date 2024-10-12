@@ -63,7 +63,7 @@ pub const VTable = struct {
     set_direction_fn: *const fn (*anyopaque, dir: Direction) SetDirError!void,
     set_bias_fn: *const fn (*anyopaque, bias: ?State) SetBiasError!void,
     write_fn: *const fn (*anyopaque, state: State) WriteError!void,
-    read_fn: *const fn (*anyopaque) State,
+    read_fn: *const fn (*anyopaque) ReadError!State,
 };
 
 pub const Test_Device = struct {
@@ -102,7 +102,7 @@ pub const Test_Device = struct {
         dev.state = state;
     }
 
-    fn read(ctx: *anyopaque) State {
+    fn read(ctx: *anyopaque) ReadError!State {
         const dev: *Test_Device = @ptrCast(@alignCast(ctx));
         return dev.state;
     }
