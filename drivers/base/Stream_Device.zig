@@ -54,7 +54,7 @@ pub fn read(sd: Stream_Device, bytes: []u8) ReadError!usize {
 
 /// Reads some `bytes` to the device and returns the number of bytes read.
 pub fn readv(sd: Stream_Device, bytes_vec: []const []u8) ReadError!usize {
-    const readv_fn = sd.vtable.readv_fn orelse error.Unsupported;
+    const readv_fn = sd.vtable.readv_fn orelse return error.Unsupported;
     return readv_fn(sd.object, bytes_vec);
 }
 

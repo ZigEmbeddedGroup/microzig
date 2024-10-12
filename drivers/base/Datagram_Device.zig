@@ -44,34 +44,38 @@ pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
 
 /// Writes a single `datagram` to the device.
 pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
-    if (dd.vtable.writev_fn) |writev_fn| {
-        return writev_fn(dd.object, datagrams);
-    } else {
-        return error.Unsupported;
-    }
+    const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
+    return writev_fn(dd.object, datagrams);
 }
 
-pub const ReadError = BaseError || error{ Unsupported, NotConnected };
+pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
 
 /// Reads a single `datagram` from the device.
-pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!void {
+/// Function returns the number of bytes written in `datagram`.
+///
+/// If `error.BufferOverrun` is returned, the `datagram` will stilled be fully filled
+/// with the data that was received up till the overrun. The rest of the datagram
+/// will be discarded.
+pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
     return try dd.readv(&.{datagram});
 }
 
 /// Reads a single `datagram` from the device.
-pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!void {
-    if (dd.vtable.readv_fn) |readv_fn| {
-        return readv_fn(dd.object, datagrams);
-    } else {
-        return error.Unsupported;
-    }
+/// Function returns the number of bytes written in `datagrams`.
+///
+/// If `error.BufferOverrun` is returned, the `datagrams` will stilled be fully filled
+/// with the data that was received up till the overrun. The rest of the datagram
+/// will be discarded.
+pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
+    const readv_fn = dd.vtable.readv_fn orelse return error.Unsupported;
+    return readv_fn(dd.object, datagrams);
 }
 
 pub const VTable = struct {
     connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
     disconnect_fn: ?*const fn (?*anyopaque) void,
     writev_fn: ?*const fn (?*anyopaque, datagrams: []const []const u8) WriteError!void,
-    readv_fn: ?*const fn (?*anyopaque, datagrams: []const []u8) ReadError!void,
+    readv_fn: ?*const fn (?*anyopaque, datagrams: []const []u8) ReadError!usize,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
@@ -79,6 +83,8 @@ pub const Test_Device = struct {
     arena: std.heap.ArenaAllocator,
     packets: std.ArrayList([]u8),
 
+    // If empty, reads are supported, but don't yield data.
+    // If `null`, reads are not supported.
     input_sequence: ?[]const []const u8,
     input_sequence_pos: usize,
 
@@ -179,7 +185,7 @@ pub const Test_Device = struct {
         td.packets.append(dg) catch return error.IoError;
     }
 
-    fn readv(ctx: ?*anyopaque, datagrams: []const []u8) ReadError!void {
+    fn readv(ctx: ?*anyopaque, datagrams: []const []u8) ReadError!usize {
         const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
 
         if (!td.connected) {
@@ -203,17 +209,24 @@ pub const Test_Device = struct {
             break :blk len;
         };
 
-        if (packet.len != total_len)
-            return error.IoError;
+        const written = @min(packet.len, total_len);
 
         {
             var offset: usize = 0;
             for (datagrams) |datagram| {
-                @memcpy(datagram, packet[offset..][0..datagram.len]);
-                offset += datagram.len;
+                const amount = @min(datagram.len, written - offset);
+                @memcpy(datagram[0..amount], packet[offset..][0..amount]);
+                offset += amount;
+                if (amount < datagram.len)
+                    break;
             }
-            std.debug.assert(offset == total_len);
+            std.debug.assert(offset == written);
         }
+
+        if (packet.len > total_len)
+            return error.BufferOverrun;
+
+        return written;
     }
 
     const vtable = VTable{
@@ -223,3 +236,70 @@ pub const Test_Device = struct {
         .readv_fn = Test_Device.readv,
     };
 };
+
+test Test_Device {
+    var td = Test_Device.init(&.{
+        "first datagram",
+        "second datagram",
+        "the very third datagram which overruns the buffer",
+    }, true);
+    defer td.deinit();
+
+    var buffer: [16]u8 = undefined;
+
+    const dd = td.datagram_device();
+
+    // As long as we're not connected, the test device will handle
+    // this case and yield an error:
+    try std.testing.expectError(error.NotConnected, dd.write("not connected"));
+
+    {
+        // The first connect call must succeed ...
+        try dd.connect();
+
+        // ... while the second call must fail:
+        try std.testing.expectError(error.DeviceBusy, dd.connect());
+
+        // After a disconnect...
+        dd.disconnect();
+
+        // ... the connect must succeed again:
+        try dd.connect();
+
+        // We'll keep the device connected for the rest of the test to
+        // ease handling.
+    }
+
+    {
+        // The first input datagram will be received here:
+        const recv_len = try dd.read(&buffer);
+        try std.testing.expectEqualStrings("first datagram", buffer[0..recv_len]);
+    }
+
+    {
+        // The second one here:
+        const recv_len = try dd.read(&buffer);
+        try std.testing.expectEqualStrings("second datagram", buffer[0..recv_len]);
+    }
+
+    {
+        // The third datagram will overrun our buffer, so we're receiving an error
+        // which tells us that the whole buffer is filled, but there's data that
+        // was discarded:
+        try std.testing.expectError(error.BufferOverrun, dd.read(&buffer));
+        try std.testing.expectEqualStrings("the very third d", &buffer);
+    }
+
+    // As there's no fourth datagram available, the test device will yield
+    // an `IoError` for when no datagrams are available anymore:
+    try std.testing.expectError(error.IoError, dd.read(&buffer));
+
+    try dd.write("Hello, World!");
+    try dd.writev(&.{ "See", " you ", "soon!" });
+
+    // Check if we had exactly these datagrams:
+    try td.expect_sent(&.{
+        "Hello, World!",
+        "See you soon!",
+    });
+}
