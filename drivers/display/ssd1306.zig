@@ -41,8 +41,10 @@ pub const SSD1306_Options = struct {
 };
 
 pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
-    if (options.mode != .i2c)
-        @compileError("Non-I²C operation is not supported yet!");
+    switch (options.mode) {
+        .i2c, .spi_4wire => {},
+        .spi_3wire => @compileError("3-wire SPI operation is not supported yet!"),
+    }
 
     // TODO(philippwendel) Add doc comments for functions
     // TODO(philippwendel) Find out why using 'inline if' in writeAll(&[_]u8{ControlByte.command, if(cond) val1 else val2 }); hangs code on atmega328p, since tests work fine
@@ -86,7 +88,12 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
                 .dd = dev,
                 .dc_pin = data_cmd_pin,
             };
+
+            // The DC pin must be an output:
+            try data_cmd_pin.set_direction(.output);
+
             try self.execute_init_sequence();
+
             return self;
         }
 
@@ -337,7 +344,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             if (Digital_IO == void)
                 return;
 
-            self.dc_pin.write(switch (mode) {
+            try self.dc_pin.write(switch (mode) {
                 .command => .low,
                 .data => .high,
             });
