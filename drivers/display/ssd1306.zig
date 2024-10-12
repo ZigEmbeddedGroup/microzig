@@ -27,6 +27,10 @@ pub const Driver_Mode = enum {
     /// The driver operates in the 4-wire SPI mode, which requires an 8 bit datagram device
     /// as well as a command/data digital i/o.
     spi_4wire,
+
+    /// The driver can be initialized with one of the other options and receives
+    /// the mode with initialization.
+    dynamic,
 };
 
 pub const SSD1306_Options = struct {
@@ -42,7 +46,7 @@ pub const SSD1306_Options = struct {
 
 pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
     switch (options.mode) {
-        .i2c, .spi_4wire => {},
+        .i2c, .spi_4wire, .dynamic => {},
         .spi_3wire => @compileError("3-wire SPI operation is not supported yet!"),
     }
 
@@ -54,20 +58,38 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         const Datagram_Device = options.Datagram_Device;
         const Digital_IO = switch (options.mode) {
             // 4-wire SPI mode uses a dedicated command/data control pin:
-            .spi_4wire => options.Digital_IO,
+            .spi_4wire, .dynamic => options.Digital_IO,
 
             // The other two modes don't use that, so we use a `void` pin here to save
             // memory:
             .i2c, .spi_3wire => void,
         };
 
+        pub const Driver_Init_Mode = union(enum) {
+            i2c: struct {
+                device: Datagram_Device,
+            },
+            spi_3wire: noreturn,
+            spi_4wire: struct {
+                device: Datagram_Device,
+                dc_pin: Digital_IO,
+            },
+        };
+
+        const Mode = switch (options.mode) {
+            .dynamic => Driver_Mode,
+            else => void,
+        };
+
         dd: Datagram_Device,
+        mode: Mode,
         dc_pin: Digital_IO,
 
         /// Initializes the device and sets up sane defaults.
         pub const init = switch (options.mode) {
             .i2c, .spi_3wire => init_without_io,
             .spi_4wire => init_with_io,
+            .dynamic => init_with_mode,
         };
 
         /// Creates an instance with only a datagram device.
@@ -76,6 +98,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             var self = Self{
                 .dd = dev,
                 .dc_pin = {},
+                .mode = {},
             };
             try self.execute_init_sequence();
             return self;
@@ -87,10 +110,40 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             var self = Self{
                 .dd = dev,
                 .dc_pin = data_cmd_pin,
+                .mode = {},
             };
 
             // The DC pin must be an output:
             try data_cmd_pin.set_direction(.output);
+
+            try self.execute_init_sequence();
+
+            return self;
+        }
+
+        fn init_with_mode(mode: Driver_Init_Mode) !Self {
+            var self = Self{
+                .dd = switch (mode) {
+                    .i2c => |opt| opt.device,
+                    .spi_3wire => @compileError("TODO"),
+                    .spi_4wire => |opt| opt.device,
+                },
+                .dc_pin = switch (mode) {
+                    .i2c => undefined,
+                    .spi_3wire => @compileError("TODO"),
+                    .spi_4wire => |opt| opt.dc_pin,
+                },
+                .mode = switch (mode) {
+                    .i2c => .i2c,
+                    .spi_3wire => .spi_3wire,
+                    .spi_4wire => .spi_4wire,
+                },
+            };
+
+            if (self.mode == .spi_4wire) {
+                // The DC pin must be an output:
+                try self.dc_pin.set_direction(.output);
+            }
 
             try self.execute_init_sequence();
 
@@ -307,15 +360,8 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         // Utilities:
 
-        const command_preamble: []const u8 = switch (options.mode) {
-            .i2c => &.{I2C_ControlByte.command},
-            .spi_3wire, .spi_4wire => "",
-        };
-
-        const data_preamble: []const u8 = switch (options.mode) {
-            .i2c => &.{I2C_ControlByte.data_stream},
-            .spi_3wire, .spi_4wire => "",
-        };
+        const i2c_command_preamble: []const u8 = &.{I2C_ControlByte.command};
+        const i2c_data_preamble: []const u8 = &.{I2C_ControlByte.data_stream};
 
         /// Sends command data to the SSD1306 controller.
         fn execute_command(self: Self, cmd: u8, argv: []const u8) !void {
@@ -323,6 +369,16 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
             try self.dd.connect();
             defer self.dd.disconnect();
+
+            const command_preamble: []const u8 = switch (options.mode) {
+                .spi_3wire, .spi_4wire => "",
+                .i2c => i2c_command_preamble,
+                .dynamic => switch (self.mode) {
+                    .i2c => i2c_command_preamble,
+                    .spi_3wire, .spi_4wire => "",
+                    .dynamic => unreachable,
+                },
+            };
 
             try self.dd.writev(&.{ command_preamble, &.{cmd}, argv });
         }
@@ -334,6 +390,16 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             try self.dd.connect();
             defer self.dd.disconnect();
 
+            const data_preamble: []const u8 = switch (options.mode) {
+                .spi_3wire, .spi_4wire => "",
+                .i2c => i2c_data_preamble,
+                .dynamic => switch (self.mode) {
+                    .i2c => i2c_data_preamble,
+                    .spi_3wire, .spi_4wire => "",
+                    .dynamic => unreachable,
+                },
+            };
+
             try self.dd.writev(&.{ data_preamble, data });
         }
 
@@ -341,8 +407,12 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         /// NOTE: This function must be called *before* activating the device
         ///       via chip select, so before calling `dd.connect`!
         fn set_dc_pin(self: Self, mode: enum { command, data }) !void {
-            if (Digital_IO == void)
-                return;
+            switch (options.mode) {
+                .i2c, .spi_3wire => return,
+                .spi_4wire => {},
+                .dynamic => if (self.mode != .spi_4wire)
+                    return,
+            }
 
             try self.dc_pin.write(switch (mode) {
                 .command => .low,
@@ -901,4 +971,16 @@ pub const InputError = error{InvalidEntry};
 test {
     _ = SSD1306_I2C;
     _ = Framebuffer;
+
+    _ = SSD1306_Generic(.{
+        .mode = .i2c,
+    });
+
+    _ = SSD1306_Generic(.{
+        .mode = .spi_4wire,
+    });
+
+    _ = SSD1306_Generic(.{
+        .mode = .dynamic,
+    });
 }
