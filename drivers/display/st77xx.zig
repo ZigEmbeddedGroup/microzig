@@ -474,8 +474,8 @@ test {
     var channel = mdf.base.Datagram_Device.Test_Device.init_receiver_only();
     defer channel.deinit();
 
-    var rst_pin = mdf.base.Digital_IO.TestDevice.init(.output, .high);
-    var dat_pin = mdf.base.Digital_IO.TestDevice.init(.output, .high);
+    var rst_pin = mdf.base.Digital_IO.Test_Device.init(.output, .high);
+    var dat_pin = mdf.base.Digital_IO.Test_Device.init(.output, .high);
 
     var dri = try ST7735.init(
         channel.datagram_device(),

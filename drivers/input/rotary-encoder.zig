@@ -73,8 +73,8 @@ pub const Event = enum(i2) {
 };
 
 test Rotary_Encoder {
-    var a = mdf.base.Digital_IO.TestDevice.init(.output, .high);
-    var b = mdf.base.Digital_IO.TestDevice.init(.output, .high);
+    var a = mdf.base.Digital_IO.Test_Device.init(.output, .high);
+    var b = mdf.base.Digital_IO.Test_Device.init(.output, .high);
 
     var encoder = try Rotary_Encoder(.{}).init(
         a.digital_io(),

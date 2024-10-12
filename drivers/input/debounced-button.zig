@@ -93,7 +93,7 @@ test Debounced_Button {
         .filter_depth = 4,
     });
 
-    var button_input = mdf.base.Digital_IO.TestDevice.init(.input, .high);
+    var button_input = mdf.base.Digital_IO.Test_Device.init(.input, .high);
 
     var button = try Button.init(button_input.digital_io());
 

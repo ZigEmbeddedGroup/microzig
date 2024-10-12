@@ -172,16 +172,16 @@ test Keyboard_Matrix {
 
     // Those are "drivers", so we initialize them inverse
     // to what we'd expect them to be
-    var col_pins = [_]mdf.base.Digital_IO.TestDevice{
-        mdf.base.Digital_IO.TestDevice.init(.input, .low),
-        mdf.base.Digital_IO.TestDevice.init(.input, .low),
+    var col_pins = [_]mdf.base.Digital_IO.Test_Device{
+        mdf.base.Digital_IO.Test_Device.init(.input, .low),
+        mdf.base.Digital_IO.Test_Device.init(.input, .low),
     };
 
     // Those are "inputs", so we have to check the
     // direction init, but not the state change:
-    var row_pins = [_]mdf.base.Digital_IO.TestDevice{
-        mdf.base.Digital_IO.TestDevice.init(.output, .high),
-        mdf.base.Digital_IO.TestDevice.init(.output, .high),
+    var row_pins = [_]mdf.base.Digital_IO.Test_Device{
+        mdf.base.Digital_IO.Test_Device.init(.output, .high),
+        mdf.base.Digital_IO.Test_Device.init(.output, .high),
     };
 
     const row_drivers = [_]mdf.base.Digital_IO{

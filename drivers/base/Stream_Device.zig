@@ -10,7 +10,10 @@ const std = @import("std");
 const Stream_Device = @This();
 
 /// Pointer to the object implementing the driver.
-object: ?*anyopaque,
+///
+/// If the implementation requires no `object` pointer,
+/// you can safely use `undefined` here.
+object: *anyopaque,
 
 /// Virtual table for the stream device functions.
 vtable: *const VTable,
@@ -75,10 +78,10 @@ fn writer_write(sd: Stream_Device, buf: []const u8) WriteError!usize {
 }
 
 pub const VTable = struct {
-    connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
-    disconnect_fn: ?*const fn (?*anyopaque) void,
-    writev_fn: ?*const fn (?*anyopaque, datagram: []const []const u8) WriteError!usize,
-    readv_fn: ?*const fn (?*anyopaque, datagram: []const []u8) ReadError!usize,
+    connect_fn: ?*const fn (*anyopaque) ConnectError!void,
+    disconnect_fn: ?*const fn (*anyopaque) void,
+    writev_fn: ?*const fn (*anyopaque, datagram: []const []const u8) WriteError!usize,
+    readv_fn: ?*const fn (*anyopaque, datagram: []const []u8) ReadError!usize,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
@@ -146,23 +149,23 @@ pub const Test_Device = struct {
         .readv_fn = Test_Device.readv,
     };
 
-    fn connect(ctx: ?*anyopaque) ConnectError!void {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
+    fn connect(ctx: *anyopaque) ConnectError!void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx));
         if (td.connected)
             return error.DeviceBusy;
         td.connected = true;
     }
 
-    fn disconnect(ctx: ?*anyopaque) void {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
+    fn disconnect(ctx: *anyopaque) void {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx));
         if (!td.connected) {
             std.log.err("disconnect when test device was not connected!", .{});
         }
         td.connected = false;
     }
 
-    fn writev(ctx: ?*anyopaque, bytes_vec: []const []const u8) WriteError!usize {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
+    fn writev(ctx: *anyopaque, bytes_vec: []const []const u8) WriteError!usize {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx));
         if (!td.connected) {
             return error.NotConnected;
         }
@@ -177,8 +180,8 @@ pub const Test_Device = struct {
         return total_len;
     }
 
-    fn readv(ctx: ?*anyopaque, bytes_vec: []const []u8) ReadError!usize {
-        const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
+    fn readv(ctx: *anyopaque, bytes_vec: []const []u8) ReadError!usize {
+        const td: *Test_Device = @ptrCast(@alignCast(ctx));
         if (!td.connected) {
             return error.NotConnected;
         }

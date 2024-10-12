@@ -9,7 +9,10 @@ const std = @import("std");
 const Digital_IO = @This();
 
 /// Pointer to the object implementing the driver.
-object: ?*anyopaque,
+///
+/// If the implementation requires no `object` pointer,
+/// you can safely use `undefined` here.
+object: *anyopaque,
 
 /// Virtual table for the digital i/o functions.
 vtable: *const VTable,
@@ -57,57 +60,89 @@ pub fn read(dio: Digital_IO) ReadError!State {
 }
 
 pub const VTable = struct {
-    set_direction_fn: *const fn (?*anyopaque, dir: Direction) SetDirError!void,
-    set_bias_fn: *const fn (?*anyopaque, bias: ?State) SetBiasError!void,
-    write_fn: *const fn (?*anyopaque, state: State) WriteError!void,
-    read_fn: *const fn (?*anyopaque) State,
+    set_direction_fn: *const fn (*anyopaque, dir: Direction) SetDirError!void,
+    set_bias_fn: *const fn (*anyopaque, bias: ?State) SetBiasError!void,
+    write_fn: *const fn (*anyopaque, state: State) WriteError!void,
+    read_fn: *const fn (*anyopaque) State,
 };
 
-pub const TestDevice = struct {
+pub const Test_Device = struct {
     state: State,
     dir: Direction,
 
-    pub fn init(initial_dir: Direction, initial_state: State) TestDevice {
-        return TestDevice{
+    pub fn init(initial_dir: Direction, initial_state: State) Test_Device {
+        return Test_Device{
             .dir = initial_dir,
             .state = initial_state,
         };
     }
 
-    pub fn digital_io(dev: *TestDevice) Digital_IO {
+    pub fn digital_io(dev: *Test_Device) Digital_IO {
         return Digital_IO{
             .object = dev,
             .vtable = &vtable,
         };
     }
 
-    fn set_direction(ctx: ?*anyopaque, dir: Direction) SetDirError!void {
-        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn set_direction(ctx: *anyopaque, dir: Direction) SetDirError!void {
+        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
         dev.dir = dir;
     }
 
-    fn set_bias(ctx: ?*anyopaque, bias: ?State) SetBiasError!void {
-        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn set_bias(ctx: *anyopaque, bias: ?State) SetBiasError!void {
+        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
         _ = dev;
         _ = bias;
     }
 
-    fn write(ctx: ?*anyopaque, state: State) WriteError!void {
-        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn write(ctx: *anyopaque, state: State) WriteError!void {
+        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
         if (dev.dir != .output)
             return error.Unsupported;
         dev.state = state;
     }
 
-    fn read(ctx: ?*anyopaque) State {
-        const dev: *TestDevice = @ptrCast(@alignCast(ctx.?));
+    fn read(ctx: *anyopaque) State {
+        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
         return dev.state;
     }
 
     const vtable = VTable{
-        .set_direction_fn = TestDevice.set_direction,
-        .set_bias_fn = TestDevice.set_bias,
-        .write_fn = TestDevice.write,
-        .read_fn = TestDevice.read,
+        .set_direction_fn = Test_Device.set_direction,
+        .set_bias_fn = Test_Device.set_bias,
+        .write_fn = Test_Device.write,
+        .read_fn = Test_Device.read,
     };
 };
+
+test Test_Device {
+    var td = Test_Device.init(.input, .high);
+
+    const io = td.digital_io();
+
+    // Check if the initial state is correct:
+    try std.testing.expectEqual(.high, try io.read());
+
+    // Check if we can change the state
+    td.state = .low;
+    try std.testing.expectEqual(.low, try io.read());
+
+    // Check if we can change the state
+    td.state = .high;
+    try std.testing.expectEqual(.high, try io.read());
+
+    // We're currently in "input" state, so we can't write the pin level:
+    try std.testing.expectError(error.Unsupported, io.write(.low));
+
+    try io.set_direction(.output);
+    try std.testing.expectEqual(.output, td.dir);
+
+    // Changing direction should not change the current level:
+    try std.testing.expectEqual(.high, try io.read());
+
+    try io.write(.low);
+    try std.testing.expectEqual(.low, td.state);
+
+    try io.write(.high);
+    try std.testing.expectEqual(.high, td.state);
+}
