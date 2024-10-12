@@ -38,20 +38,24 @@ pub fn disconnect(sd: Stream_Device) void {
 
 /// Writes some `bytes` to the device and returns the number of bytes written.
 pub fn write(sd: Stream_Device, bytes: []const u8) WriteError!usize {
-    if (sd.vtable.writeFn) |writeFn| {
-        return writeFn(sd.object, bytes);
-    } else {
-        return error.Unsupported;
-    }
+    return sd.writev(&.{bytes});
+}
+
+/// Writes some `bytes` to the device and returns the number of bytes written.
+pub fn writev(sd: Stream_Device, bytes_vec: []const []const u8) WriteError!usize {
+    const writev_fn = sd.vtable.writev_fn orelse return error.Unsupported;
+    return writev_fn(sd.object, bytes_vec);
 }
 
 /// Reads some `bytes` to the device and returns the number of bytes read.
 pub fn read(sd: Stream_Device, bytes: []u8) ReadError!usize {
-    if (sd.vtable.readFn) |readFn| {
-        return readFn(sd.object, bytes);
-    } else {
-        return error.Unsupported;
-    }
+    return sd.readv(&.{bytes});
+}
+
+/// Reads some `bytes` to the device and returns the number of bytes read.
+pub fn readv(sd: Stream_Device, bytes_vec: []const []u8) ReadError!usize {
+    const readv_fn = sd.vtable.readv_fn orelse error.Unsupported;
+    return readv_fn(sd.object, bytes_vec);
 }
 
 pub const Reader = std.io.Reader(Stream_Device, ReadError, reader_read);
@@ -75,6 +79,6 @@ fn writer_write(sd: Stream_Device, buf: []const u8) WriteError!usize {
 pub const VTable = struct {
     connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
     disconnect_fn: ?*const fn (?*anyopaque) void,
-    write_fn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!usize,
-    read_fn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!usize,
+    writev_fn: ?*const fn (?*anyopaque, datagram: []const []const u8) WriteError!usize,
+    readv_fn: ?*const fn (?*anyopaque, datagram: []const []u8) ReadError!usize,
 };
