@@ -39,8 +39,13 @@ pub const WriteError = BaseError || error{ Unsupported, NotConnected };
 
 /// Writes a single `datagram` to the device.
 pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
-    if (dd.vtable.write_fn) |writeFn| {
-        return writeFn(dd.object, datagram);
+    return try dd.writev(&.{datagram});
+}
+
+/// Writes a single `datagram` to the device.
+pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
+    if (dd.vtable.writev_fn) |writev_fn| {
+        return writev_fn(dd.object, datagrams);
     } else {
         return error.Unsupported;
     }
@@ -50,8 +55,13 @@ pub const ReadError = BaseError || error{ Unsupported, NotConnected };
 
 /// Reads a single `datagram` from the device.
 pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!void {
-    if (dd.vtable.read_fn) |readFn| {
-        return readFn(dd.object, datagram);
+    return try dd.readv(&.{datagram});
+}
+
+/// Reads a single `datagram` from the device.
+pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!void {
+    if (dd.vtable.readv_fn) |readv_fn| {
+        return readv_fn(dd.object, datagrams);
     } else {
         return error.Unsupported;
     }
@@ -60,8 +70,8 @@ pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!void {
 pub const VTable = struct {
     connect_fn: ?*const fn (?*anyopaque) ConnectError!void,
     disconnect_fn: ?*const fn (?*anyopaque) void,
-    write_fn: ?*const fn (?*anyopaque, datagram: []const u8) WriteError!void,
-    read_fn: ?*const fn (?*anyopaque, datagram: []u8) ReadError!void,
+    writev_fn: ?*const fn (?*anyopaque, datagrams: []const []const u8) WriteError!void,
+    readv_fn: ?*const fn (?*anyopaque, datagrams: []const []u8) ReadError!void,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
@@ -135,7 +145,7 @@ pub const Test_Device = struct {
         td.connected = false;
     }
 
-    fn write(ctx: ?*anyopaque, datagram: []const u8) WriteError!void {
+    fn writev(ctx: ?*anyopaque, datagrams: []const []const u8) WriteError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
 
         if (!td.connected) {
@@ -146,13 +156,30 @@ pub const Test_Device = struct {
             return error.Unsupported;
         }
 
-        const dg = td.arena.allocator().dupe(u8, datagram) catch return error.IoError;
+        const total_len = blk: {
+            var len: usize = 0;
+            for (datagrams) |dg| {
+                len += dg.len;
+            }
+            break :blk len;
+        };
+
+        const dg = td.arena.allocator().alloc(u8, total_len) catch return error.IoError;
         errdefer td.arena.allocator().free(dg);
+
+        {
+            var offset: usize = 0;
+            for (datagrams) |datagram| {
+                @memcpy(dg[offset..][0..datagram.len], datagram);
+                offset += datagram.len;
+            }
+            std.debug.assert(offset == total_len);
+        }
 
         td.packets.append(dg) catch return error.IoError;
     }
 
-    fn read(ctx: ?*anyopaque, datagram: []u8) ReadError!void {
+    fn readv(ctx: ?*anyopaque, datagrams: []const []u8) ReadError!void {
         const td: *Test_Device = @ptrCast(@alignCast(ctx.?));
 
         if (!td.connected) {
@@ -168,16 +195,31 @@ pub const Test_Device = struct {
         const packet = inputs[td.input_sequence_pos];
         td.input_sequence_pos += 1;
 
-        if (packet.len != datagram.len)
+        const total_len = blk: {
+            var len: usize = 0;
+            for (datagrams) |dg| {
+                len += dg.len;
+            }
+            break :blk len;
+        };
+
+        if (packet.len != total_len)
             return error.IoError;
 
-        @memcpy(datagram, packet);
+        {
+            var offset: usize = 0;
+            for (datagrams) |datagram| {
+                @memcpy(datagram, packet[offset..][0..datagram.len]);
+                offset += datagram.len;
+            }
+            std.debug.assert(offset == total_len);
+        }
     }
 
     const vtable = VTable{
         .connect_fn = Test_Device.connect,
         .disconnect_fn = Test_Device.disconnect,
-        .write_fn = Test_Device.write,
-        .read_fn = Test_Device.read,
+        .writev_fn = Test_Device.writev,
+        .readv_fn = Test_Device.readv,
     };
 };

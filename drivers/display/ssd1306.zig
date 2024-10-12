@@ -94,39 +94,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         pub fn write_gdram(self: Self, data: []const u8) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            const use_safe_and_slow_impl = false;
-
-            if (use_safe_and_slow_impl) {
-                for (data) |byte| {
-                    try self.dd.write(&.{ I2C_ControlByte.data_byte, byte });
-                }
-            } else {
-                var buffer: [buffer_size]u8 = undefined;
-                buffer[0x00] = I2C_ControlByte.data_stream;
-
-                // std.log.info("start {} bytes", .{data.len});
-
-                var offset: usize = 0;
-
-                while (offset < data.len) {
-                    const chunk_size: usize = @min(buffer.len - 1, data.len - offset);
-
-                    const chunk = data[offset..][0..chunk_size];
-                    @memcpy(buffer[1..][0..chunk_size], chunk);
-
-                    // std.log.info("transfer {} bytes at offset {}", .{ chunk_size, offset });
-                    const cmd_seq = buffer[0 .. chunk_size + 1];
-                    // std.log.info("{}", .{std.fmt.fmtSliceHexLower(cmd_seq)});
-                    try self.dd.write(cmd_seq);
-
-                    offset += chunk_size;
-                }
-
-                // std.log.info("end {} bytes", .{data.len});
-            }
+            try self.write_data(data);
         }
 
         pub fn clear_screen(self: Self, white: bool) !void {
@@ -134,13 +102,15 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             try self.set_column_address(0, 127);
             try self.set_page_address(0, 7);
             {
-                try self.dd.connect();
-                defer self.dd.disconnect();
-
                 const color: u8 = if (white) 0xFF else 0x00;
 
-                for (0..128 * 8) |_| {
-                    try self.dd.write(&.{ I2C_ControlByte.data_byte, color });
+                const chunk_size = 16;
+
+                const chunk: [chunk_size]u8 = .{color} ** chunk_size;
+
+                const count = comptime @divExact(128 * 8, chunk.len);
+                for (0..count) |_| {
+                    try self.write_data(&chunk);
                 }
             }
             try self.entire_display_on(.resumeToRam);
@@ -149,42 +119,27 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         // Fundamental Commands
         pub fn set_contrast(self: Self, contrast: u8) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x81, contrast });
+            try self.execute_command(0x81, &.{contrast});
         }
 
         pub fn entire_display_on(self: Self, mode: DisplayOnMode) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, @intFromEnum(mode) });
+            try self.execute_command(@intFromEnum(mode), &.{});
         }
 
         pub fn set_normal_or_inverse_display(self: Self, mode: NormalOrInverseDisplay) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, @intFromEnum(mode) });
+            try self.execute_command(@intFromEnum(mode), &.{});
         }
 
         pub fn set_display(self: Self, mode: DisplayMode) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, @intFromEnum(mode) });
+            try self.execute_command(@intFromEnum(mode), &.{});
         }
 
         // Scrolling Commands
         pub fn continuous_horizontal_scroll_setup(self: Self, direction: HorizontalScrollDirection, start_page: u3, end_page: u3, frame_frequency: u3) !void {
-            if (end_page < start_page) return PageError.EndPageIsSmallerThanStartPage;
+            if (end_page < start_page)
+                return PageError.EndPageIsSmallerThanStartPage;
 
-            try self.dd.connect();
-            defer self.dd.disconnect();
-            try self.dd.write(&[_]u8{
-                I2C_ControlByte.command,
-                @intFromEnum(direction),
+            try self.execute_command(@intFromEnum(direction), &.{
                 0x00, // Dummy byte
                 @as(u8, start_page),
                 @as(u8, frame_frequency),
@@ -195,11 +150,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         pub fn continuous_vertical_and_horizontal_scroll_setup(self: Self, direction: VerticalAndHorizontalScrollDirection, start_page: u3, end_page: u3, frame_frequency: u3, vertical_scrolling_offset: u6) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-            try self.dd.write(&[_]u8{
-                I2C_ControlByte.command,
-                @intFromEnum(direction),
+            try self.execute_command(@intFromEnum(direction), &.{
                 0x00, // Dummy byte
                 @as(u8, start_page),
                 @as(u8, frame_frequency),
@@ -209,163 +160,136 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
         }
 
         pub fn deactivate_scroll(self: Self) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x2E });
+            try self.execute_command(0x2E, &.{});
         }
 
         pub fn activate_scroll(self: Self) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x2F });
+            try self.execute_command(0x2F, &.{});
         }
 
         pub fn set_vertical_scroll_area(self: Self, start_row: u6, num_of_rows: u7) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xA3, @as(u8, start_row), @as(u8, num_of_rows) });
+            try self.execute_command(0xA3, &.{ @as(u8, start_row), @as(u8, num_of_rows) });
         }
 
         // Addressing Setting Commands
         pub fn set_column_start_address_for_page_addressing_mode(self: Self, column: Column, address: u4) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
+            const cmd = (@as(u8, @intFromEnum(column)) << 4) | @as(u8, address);
 
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, (@as(u8, @intFromEnum(column)) << 4) | @as(u8, address) });
+            try self.execute_command(cmd, &.{});
         }
 
         pub fn set_memory_addressing_mode(self: Self, mode: MemoryAddressingMode) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x20, @as(u8, @intFromEnum(mode)) });
+            try self.execute_command(0x20, &.{@as(u8, @intFromEnum(mode))});
         }
 
         pub fn set_column_address(self: Self, start: u7, end: u7) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x21, @as(u8, start), @as(u8, end) });
+            try self.execute_command(0x21, &.{ @as(u8, start), @as(u8, end) });
         }
 
         pub fn set_page_address(self: Self, start: u3, end: u3) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x22, @as(u8, start), @as(u8, end) });
+            try self.execute_command(0x22, &.{ @as(u8, start), @as(u8, end) });
         }
 
         pub fn set_page_start_address(self: Self, address: u3) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
+            const cmd: u8 = 0xB0 | @as(u8, address);
 
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xB0 | @as(u8, address) });
+            try self.execute_command(cmd, &.{});
         }
 
         // Hardware Configuration Commands
         pub fn set_display_start_line(self: Self, line: u6) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
+            const cmd: u8 = 0x40 | @as(u8, line);
 
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x40 | @as(u8, line) });
+            try self.execute_command(cmd, &.{});
         }
 
         // false: column address 0 is mapped to SEG0
         // true: column address 127 is mapped to SEG0
         pub fn set_segment_remap(self: Self, remap: bool) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
             if (remap) {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xA1 });
+                try self.execute_command(0xA1, &.{});
             } else {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xA0 });
+                try self.execute_command(0xA0, &.{});
             }
         }
 
         pub fn set_multiplex_ratio(self: Self, ratio: u6) !void {
             if (ratio <= 14) return InputError.InvalidEntry;
 
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xA8, @as(u8, ratio) });
+            try self.execute_command(0xA8, &.{@as(u8, ratio)});
         }
 
         /// false: normal (COM0 to COMn)
         /// true: remapped
         pub fn set_com_ouput_scan_direction(self: Self, remap: bool) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
             if (remap) {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xC8 });
+                try self.execute_command(0xC8, &.{});
             } else {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xC0 });
+                try self.execute_command(0xC0, &.{});
             }
         }
 
         pub fn set_display_offset(self: Self, vertical_shift: u6) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xD3, @as(u8, vertical_shift) });
+            try self.execute_command(0xD3, &.{@as(u8, vertical_shift)});
         }
 
         // TODO(philippwendel) Make config to enum
         pub fn set_com_pins_hardware_configuration(self: Self, config: u2) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xDA, @as(u8, config) << 4 | 0x02 });
+            try self.execute_command(0xDA, &.{@as(u8, config) << 4 | 0x02});
         }
 
         // Timing & Driving Scheme Setting Commands
         // TODO(philippwendel) Split in two funktions
         pub fn set_display_clock_divide_ratio_and_oscillator_frequency(self: Self, divide_ratio: u4, freq: u4) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xD5, (@as(u8, freq) << 4) | @as(u8, divide_ratio) });
+            try self.execute_command(0xD5, &.{(@as(u8, freq) << 4) | @as(u8, divide_ratio)});
         }
 
         pub fn set_precharge_period(self: Self, phase1: u4, phase2: u4) !void {
             if (phase1 == 0 or phase2 == 0) return InputError.InvalidEntry;
 
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xD9, @as(u8, phase2) << 4 | @as(u8, phase1) });
+            try self.execute_command(0xD9, &.{@as(u8, phase2) << 4 | @as(u8, phase1)});
         }
 
         // TODO(philippwendel) Make level to enum
         pub fn set_v_comh_deselect_level(self: Self, level: u3) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xDB, @as(u8, level) << 4 });
+            try self.execute_command(0xDB, &.{@as(u8, level) << 4});
         }
 
         pub fn nop(self: Self) !void {
-            try self.dd.connect();
-            defer self.dd.disconnect();
-
-            try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0xE3 });
+            try self.execute_command(0xE3, &.{});
         }
 
         // Charge Pump Commands
         pub fn charge_pump_setting(self: Self, enable: bool) !void {
+            const arg: u8 = if (enable)
+                0x14
+            else
+                0x10;
+
+            try self.execute_command(0x8D, &.{arg});
+        }
+
+        // Utilities:
+
+        fn execute_command(self: Self, cmd: u8, argv: []const u8) !void {
             try self.dd.connect();
             defer self.dd.disconnect();
 
-            if (enable) {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x8D, 0x14 });
-            } else {
-                try self.dd.write(&[_]u8{ I2C_ControlByte.command, 0x8D, 0x10 });
-            }
+            try self.dd.writev(&.{
+                &.{I2C_ControlByte.command}, // TODO: Make prefix replacable
+                &.{cmd},
+                argv,
+            });
+        }
+
+        fn write_data(self: Self, data: []const u8) !void {
+            try self.dd.connect();
+            defer self.dd.disconnect();
+
+            try self.dd.writev(&.{
+                &.{I2C_ControlByte.data_stream}, // TODO: Make prefix replacable
+                data,
+            });
         }
 
         // Tests
