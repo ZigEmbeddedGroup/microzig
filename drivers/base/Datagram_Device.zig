@@ -252,6 +252,7 @@ test Test_Device {
     // As long as we're not connected, the test device will handle
     // this case and yield an error:
     try std.testing.expectError(error.NotConnected, dd.write("not connected"));
+    try std.testing.expectError(error.NotConnected, dd.read(&buffer));
 
     {
         // The first connect call must succeed ...
