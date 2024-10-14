@@ -7,7 +7,7 @@ pub const SystemControlBlock = extern struct {
         DISMCYCINT: u1,
         DISDEFWBUF: u1,
         DISFOLD: u1,
-        _reserved0: u5 = 0,
+        _reserved0: u6 = 0,
         DISFPCA: u1,
         DISOOFP: u1,
         _reserved1: u21 = 0,
