@@ -29,7 +29,7 @@ pub const SystemControlBlock = extern struct {
         _reserved1: u1 = 0,
         UNALIGN_TRP: u1,
         DIV_0_TRP: u1,
-        _reserved2: u2 = 0,
+        _reserved2: u3 = 0,
         BFHFNMIGN: u1,
         _reserved3: u1 = 0,
         STKOFHFNMIGN: u1,
@@ -37,7 +37,7 @@ pub const SystemControlBlock = extern struct {
         DC: u1,
         IC: u1,
         BP: u1,
-        _reserved5: u12 = 0,
+        _reserved5: u13 = 0,
     }),
     /// System Handler Priority Registers
     SHPR: [12]u8,
