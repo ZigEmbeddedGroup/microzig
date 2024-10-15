@@ -22,6 +22,7 @@ const Arguments = struct {
     input_path: ?[]const u8 = null,
     output_path: ?[]const u8 = null,
     output_json: bool = false,
+    standalone: bool = false,
     help: bool = false,
 
     fn deinit(args: *Arguments) void {
@@ -37,6 +38,7 @@ fn print_usage(writer: anytype) !void {
         \\  --schema <str>        Explicitly set schema type, one of: svd, atdf, json
         \\  --output_path <str>   Write to a file
         \\  --json                Write output as JSON
+        \\  --standalone          Write standalone output with no microzig dependencies
         \\<str>
         \\
     );
@@ -73,6 +75,8 @@ fn parse_args(allocator: Allocator) !Arguments {
             ret.output_path = try allocator.dupe(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--json")) {
             ret.output_json = true;
+        } else if (std.mem.eql(u8, args[i], "--standalone")) {
+            ret.standalone = true;
         } else if (std.mem.startsWith(u8, args[i], "-")) {
             std.log.err("Unknown argument '{s}'", .{args[i]});
             try print_usage(std.io.getStdErr().writer());
@@ -156,7 +160,7 @@ fn main_impl() anyerror!void {
             buffered.writer(),
         )
     else
-        try db.to_zig(buffered.writer());
+        try db.to_zig(buffered.writer(), args.standalone);
 
     try buffered.flush();
 }

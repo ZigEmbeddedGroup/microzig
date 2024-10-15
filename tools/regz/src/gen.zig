@@ -27,17 +27,24 @@ const EntityWithOffset = struct {
     }
 };
 
-pub fn to_zig(db: Database, out_writer: anytype) !void {
+pub fn to_zig(db: Database, out_writer: anytype, standalone: bool) !void {
     var buffer = std.ArrayList(u8).init(db.arena.allocator());
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    try writer.writeAll(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
-        \\
-    );
-    try write_devices(db, writer);
+
+    if (standalone) {
+        const mmio_content = @embedFile("mmio_file");
+        try writer.writeAll(mmio_content);
+    } else {
+        try writer.writeAll(
+            \\const micro = @import("microzig");
+            \\const mmio = micro.mmio;
+            \\
+        );
+    }
+
+    try write_devices(db, writer, standalone);
     try write_types(db, writer);
     try writer.writeByte(0);
 
@@ -65,7 +72,7 @@ pub fn to_zig(db: Database, out_writer: anytype) !void {
     try out_writer.writeAll(text);
 }
 
-fn write_devices(db: Database, writer: anytype) !void {
+fn write_devices(db: Database, writer: anytype, standalone: bool) !void {
     if (db.instances.devices.count() == 0)
         return;
 
@@ -77,7 +84,7 @@ fn write_devices(db: Database, writer: anytype) !void {
 
     // TODO: order devices alphabetically
     for (db.instances.devices.keys()) |device_id| {
-        write_device(db, device_id, writer) catch |err| {
+        write_device(db, device_id, writer, standalone) catch |err| {
             log.warn("failed to write device: {}", .{err});
         };
     }
@@ -119,7 +126,7 @@ fn write_string(str: []const u8, writer: anytype) !void {
     }
 }
 
-fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
+fn write_device(db: Database, device_id: EntityId, out_writer: anytype, standalone: bool) !void {
     assert(db.entity_is("instance.device", device_id));
     const name = db.attrs.name.get(device_id) orelse return error.MissingDeviceName;
 
@@ -153,8 +160,10 @@ fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
         try writer.writeAll("};\n\n");
     }
 
-    write_vector_table(db, device_id, writer) catch |err|
-        log.warn("failed to write vector table: {}", .{err});
+    if (!standalone) {
+        write_vector_table(db, device_id, writer) catch |err|
+            log.warn("failed to write vector table: {}", .{err});
+    }
 
     if (db.children.peripherals.get(device_id)) |peripheral_set| {
         var list = std.ArrayList(EntityWithOffset).init(db.gpa);

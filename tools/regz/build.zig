@@ -20,6 +20,16 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
+    const assets = [_]struct { []const u8, []const u8 }{
+        .{ "src/mmio.zig", "mmio_file" },
+    };
+
+    for (assets) |asset| {
+        const path, const name = asset;
+        regz.root_module.addAnonymousImport(name, .{ .root_source_file = b.path(path) });
+    }
+
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
     b.installArtifact(regz);
 

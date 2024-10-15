@@ -985,8 +985,8 @@ pub fn format(
     _ = writer;
 }
 
-pub fn to_zig(db: Database, out_writer: anytype) !void {
-    try gen.to_zig(db, out_writer);
+pub fn to_zig(db: Database, out_writer: anytype, standalone: bool) !void {
+    try gen.to_zig(db, out_writer, standalone);
 }
 
 test "all" {
