@@ -14,16 +14,16 @@ pub fn build(b: *Build) !void {
         .iconv = false,
     });
 
+    const assets = [_]struct { []const u8, []const u8 }{
+        .{ "../../core/src/mmio.zig", "mmio_file" },
+    };
+
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-
-    const assets = [_]struct { []const u8, []const u8 }{
-        .{ "../../core/src/mmio.zig", "mmio_file" },
-    };
 
     for (assets) |asset| {
         const path, const name = asset;
@@ -75,6 +75,12 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
+    for (assets) |asset| {
+        const path, const name = asset;
+        tests.root_module.addAnonymousImport(name, .{ .root_source_file = b.path(path) });
+    }
+
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
