@@ -1,46 +1,15 @@
 .{
     .name = "microzig",
-    .version = "0.13.0",
-    .minimum_zig_version = "0.13.0",
+    .version = "0.0.0",
     .dependencies = .{
-        // packages within the monorepo so that others can reach them
-        .build = .{ .path = "build" },
-        .@"build/definitions" = .{ .path = "build/definitions" },
-        .core = .{ .path = "core" },
-        .@"tools/regz" = .{ .path = "tools/regz" },
-        .@"tools/uf2" = .{ .path = "tools/uf2" },
-        .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x" },
-        .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc" },
-        .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam" },
-        .@"port/microchip/avr" = .{ .path = "port/microchip/avr" },
-        .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32" },
-        .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32" },
-        .@"port/espressif/esp" = .{ .path = "port/espressif/esp" },
-        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx" },
-
-        // examples so that we can build them all in one go
-        .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
-        .@"examples/nxp/lpc" = .{ .path = "examples/nxp/lpc" },
-        .@"examples/microchip/atsam" = .{ .path = "examples/microchip/atsam" },
-        .@"examples/microchip/avr" = .{ .path = "examples/microchip/avr" },
-        .@"examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
-        .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
-        .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
-        .@"examples/raspberrypi/rp2xxx" = .{ .path = "examples/raspberrypi/rp2xxx" },
-
-        // used for creating package tarballs
-        .boxzer = .{
-            .url = "https://github.com/mattnite/boxzer/archive/6bd6636d780f626af1c40a27be2680e223965c8a.tar.gz",
-            .hash = "1220432ca3323f0a7033fd84df6d0f2d66aecf4c5301b3ac70c96cca8b0938164f17",
-        },
+        .@"microzig/build-internals" = .{ .path = "build-internals" },
+        .@"microzig/tools/regz" = .{ .path = "tools/regz" },
+        .@"microzig/tools/uf2" = .{ .path = "tools/uf2" },
+        .@"microzig/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
     },
-
     .paths = .{
-        "README.md",
         "build.zig",
         "build.zig.zon",
-        "LICENSE",
-        "design",
-        "docs",
+        "src",
     },
 }

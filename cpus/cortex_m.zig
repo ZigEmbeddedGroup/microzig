@@ -100,6 +100,7 @@ pub const startup_logic = struct {
     extern var microzig_data_end: u8;
     extern var microzig_bss_start: u8;
     extern var microzig_bss_end: u8;
+    extern const microzig_stack_end: u8;
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.C) noreturn {
@@ -133,18 +134,12 @@ pub fn export_startup_logic() void {
     });
 }
 
-fn is_valid_field(field_name: []const u8) bool {
-    return !std.mem.startsWith(u8, field_name, "reserved") and
-        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
-        !std.mem.eql(u8, field_name, "reset");
-}
-
 const VectorTable = microzig.chip.VectorTable;
 
 // will be imported by microzig.zig to allow system startup.
 pub const vector_table: VectorTable = blk: {
     var tmp: VectorTable = .{
-        .initial_stack_pointer = microzig.config.end_of_stack,
+        .initial_stack_pointer = &microzig.cpu.startup_logic.microzig_stack_end,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
 

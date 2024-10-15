@@ -1,0 +1,75 @@
+const std = @import("std");
+const Build = std.Build;
+const LazyPath = Build.LazyPath;
+const Module = Build.Module;
+
+const TargetRegistry = std.StringHashMap(Target);
+
+var target_registry: TargetRegistry = TargetRegistry.init(std.heap.page_allocator);
+
+pub fn build(_: *Build) void {}
+
+pub fn get_target(name: []const u8) ?Target {
+    return target_registry.get(name);
+}
+
+pub fn submit_target(name: []const u8, target: Target) void {
+    const entry = target_registry.getOrPut(name) catch @panic("out of memory");
+    if (entry.found_existing) @panic("target submitted twice");
+    entry.value_ptr.* = target;
+}
+
+/// MicroZig target definition.
+pub const Target = struct {
+    cpu: CpuKind,
+
+    linker_script: LazyPath,
+
+    chip: struct {
+        name: []const u8,
+        module: ModuleDeclaration,
+    },
+
+    hal: ?ModuleDeclaration = null,
+
+    board: ?ModuleDeclaration = null,
+};
+
+pub const ModuleDeclaration = struct {
+    b: *Build,
+    root_source_file: LazyPath,
+    imports: []const Module.Import,
+
+    pub fn init(b: *Build, options: struct {
+        root_source_file: LazyPath,
+        imports: []const Module.Import = &.{},
+    }) ModuleDeclaration {
+        const allocated_imports = b.allocator.dupe(Module.Import, options.imports) catch @panic("out of memory");
+        return .{
+            .b = b,
+            .root_source_file = options.root_source_file,
+            .imports = allocated_imports,
+        };
+    }
+
+    pub fn create_module(decl: ModuleDeclaration) *Module {
+        return decl.b.createModule(.{
+            .root_source_file = decl.root_source_file,
+            .imports = decl.imports,
+        });
+    }
+};
+
+/// Cpu variants supported by MicroZig.
+// TODO: riscv extensions support (solution: maybe make this a tagged union?)
+pub const CpuKind = enum {
+    avr5,
+    cortex_m0,
+    cortex_m0plus,
+    cortex_m3,
+    cortex_m33,
+    cortex_m4,
+    cortex_m4f,
+    cortex_m7,
+    riscv32_imac,
+};

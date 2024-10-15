@@ -1,5 +1,5 @@
 const std = @import("std");
-const defs = @import("microzig/build/definitions");
+const defs = @import("microzig/build-internals/definitions");
 const MemoryRegion = defs.MemoryRegion;
 
 pub const Args = struct {

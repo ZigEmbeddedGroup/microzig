@@ -1,8 +1,8 @@
 .{
-    .name = "build/definitions",
+    .name = "microzig-build-internals",
     .version = "0.0.0",
+    .dependencies = .{},
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
     },

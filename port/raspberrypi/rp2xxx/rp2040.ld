@@ -56,4 +56,5 @@ SECTIONS
   } > ram0
 
   microzig_data_load_start = LOADADDR(.data);
+  microzig_stack_end = ORIGIN(ram0) + LENGTH(ram0);
 }
