@@ -1,7 +1,9 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 pub const mmio = struct {
-    pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
+    pub fn Mmio(comptime PackedT: type) type {
+        const size = @bitSizeOf(PackedT);
         if ((size % 8) != 0)
             @compileError("size must be divisible by 8!");
 
@@ -21,14 +23,18 @@ pub const mmio = struct {
             pub const underlying_type = PackedT;
 
             pub inline fn read(addr: *volatile Self) PackedT {
-                return @as(PackedT, @bitCast(addr.raw));
+                return @bitCast(addr.raw);
             }
 
             pub inline fn write(addr: *volatile Self, val: PackedT) void {
-                // This is a workaround for a compiler bug related to miscompilation
-                // If the tmp var is not used, result location will fuck things up
-                var tmp = @as(IntT, @bitCast(val));
-                addr.raw = tmp;
+                comptime {
+                    assert(@bitSizeOf(PackedT) == @bitSizeOf(IntT));
+                }
+                addr.write_raw(@bitCast(val));
+            }
+
+            pub fn write_raw(addr: *volatile Self, val: IntT) void {
+                addr.raw = val;
             }
 
             pub inline fn modify(addr: *volatile Self, fields: anytype) void {
