@@ -22,7 +22,7 @@ pub fn build(b: *Build) !void {
     });
 
     const assets = [_]struct { []const u8, []const u8 }{
-        .{ "src/mmio.zig", "mmio_file" },
+        .{ "../../core/src/mmio.zig", "mmio_file" },
     };
 
     for (assets) |asset| {

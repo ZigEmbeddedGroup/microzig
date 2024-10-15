@@ -35,7 +35,9 @@ pub fn to_zig(db: Database, out_writer: anytype, standalone: bool) !void {
 
     if (standalone) {
         const mmio_content = @embedFile("mmio_file");
+        try writer.writeAll("pub const mmio = struct {");
         try writer.writeAll(mmio_content);
+        try writer.writeAll("};");
     } else {
         try writer.writeAll(
             \\const micro = @import("microzig");
