@@ -2,6 +2,7 @@
 host_build: *Build,
 self: *Build.Dependency,
 microzig_core: *Build.Dependency,
+drivers_dep: *Build.Dependency,
 generate_linkerscript: *Build.Step.Compile,
 
 const std = @import("std");
@@ -48,12 +49,14 @@ pub fn init(b: *Build, opts: struct {
 }) *MicroZig {
     const mz_dep = b.dependency(opts.dependency_name, .{});
     const core_dep = mz_dep.builder.dependency("microzig/core", .{});
+    const drivers_dep = mz_dep.builder.dependency("microzig/drivers", .{});
     const ret = b.allocator.create(MicroZig) catch @panic("OOM");
     ret.* =
         MicroZig{
         .host_build = b,
         .self = mz_dep,
         .microzig_core = core_dep,
+        .drivers_dep = drivers_dep,
         .generate_linkerscript = mz_dep.builder.addExecutable(.{
             .name = "generate-linkerscript",
             .root_source_file = .{ .cwd_relative = comptime root() ++ "/src/generate_linkerscript.zig" },
@@ -145,6 +148,10 @@ pub fn add_firmware(
                     .{
                         .name = "config",
                         .module = micro_build.createModule(.{ .root_source_file = config.getSource() }),
+                    },
+                    .{
+                        .name = "drivers",
+                        .module = mz.drivers_dep.module("drivers"),
                     },
                 },
             }),
