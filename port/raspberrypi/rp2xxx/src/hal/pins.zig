@@ -185,6 +185,32 @@ pub const Function = enum {
         };
     }
 
+    pub fn is_spi(function: Function) bool {
+        return switch (function) {
+            .SPI0_RX,
+            .SPI0_CSn,
+            .SPI0_SCK,
+            .SPI0_TX,
+            .SPI1_RX,
+            .SPI1_CSn,
+            .SPI1_SCK,
+            .SPI1_TX,
+            => true,
+            else => false,
+        };
+    }
+
+    pub fn is_i2c(function: Function) bool {
+        return switch (function) {
+            .I2C0_SDA,
+            .I2C0_SCL,
+            .I2C1_SDA,
+            .I2C1_SCL,
+            => true,
+            else => false
+        };
+    }
+
     pub fn pwm_slice(comptime function: Function) u32 {
         return switch (function) {
             .PWM0_A, .PWM0_B => 0,
@@ -502,6 +528,10 @@ pub const GlobalConfiguration = struct {
                     pin.set_function(.disabled);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
                     pin.set_function(.uart);
+                } else if (comptime func.is_spi()) {
+                    pin.set_function(.spi);
+                } else if (comptime func.is_i2c()) {
+                    pin.set_function(.i2c);
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
