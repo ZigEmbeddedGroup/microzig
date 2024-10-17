@@ -1,8 +1,17 @@
 const std = @import("std");
 const Build = std.Build;
 const internals = @import("microzig/build-internals");
+const TargetAlias = internals.TargetAlias;
 const ModuleDeclaration = internals.ModuleDeclaration;
 const regz = @import("microzig/regz");
+
+pub const chips = struct {
+    pub const rp2040 = &TargetAlias.init("rp2040");
+};
+
+pub const boards = struct {
+    pub const pico = &TargetAlias.init("pico");
+};
 
 pub fn build(b: *Build) !void {
     const rp2040_bootrom = get_bootrom(b);
@@ -21,14 +30,13 @@ pub fn build(b: *Build) !void {
         .root_source_file = b.path("src/hal.zig"),
     });
 
-    const rp2040_target = .{
+    internals.submit_target(chips.rp2040, .{
         .cpu = .cortex_m0plus,
         .linker_script = b.path("rp2040.ld"),
         .chip = rp2040_chip,
         .hal = rp2040_hal,
-    };
-
-    const pico_target = .{
+    });
+    internals.submit_target(boards.pico, .{
         .cpu = .cortex_m0plus,
         .linker_script = b.path("rp2040.ld"),
         .chip = rp2040_chip,
@@ -39,10 +47,7 @@ pub fn build(b: *Build) !void {
                 .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = rp2040_bootrom }) },
             },
         }),
-    };
-
-    internals.submit_target("rp2040", rp2040_target);
-    internals.submit_target("pico", pico_target);
+    });
 }
 
 fn get_bootrom(b: *Build) Build.LazyPath {

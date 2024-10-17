@@ -3,18 +3,18 @@ const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 
-const TargetRegistry = std.StringHashMap(Target);
+const TargetRegistry = std.AutoHashMap(*const TargetAlias, Target);
 
 var target_registry: TargetRegistry = TargetRegistry.init(std.heap.page_allocator);
 
 pub fn build(_: *Build) void {}
 
-pub fn get_target(name: []const u8) ?Target {
-    return target_registry.get(name);
+pub fn get_target(alias: *const TargetAlias) ?Target {
+    return target_registry.get(alias);
 }
 
-pub fn submit_target(name: []const u8, target: Target) void {
-    const entry = target_registry.getOrPut(name) catch @panic("out of memory");
+pub fn submit_target(alias: *const TargetAlias, target: Target) void {
+    const entry = target_registry.getOrPut(alias) catch @panic("out of memory");
     if (entry.found_existing) @panic("target submitted twice");
     entry.value_ptr.* = target;
 }
@@ -33,6 +33,14 @@ pub const Target = struct {
     hal: ?ModuleDeclaration = null,
 
     board: ?ModuleDeclaration = null,
+};
+
+pub const TargetAlias = struct {
+    name: []const u8,
+
+    pub fn init(name: []const u8) TargetAlias {
+        return .{ .name = name };
+    }
 };
 
 pub const ModuleDeclaration = struct {

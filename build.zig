@@ -12,17 +12,7 @@ b: *Build,
 dep: *Build.Dependency,
 cpu_map: CpuMap,
 
-pub fn build(b: *Build) void {
-    _ = b.dependency("microzig/build-internals", .{});
-
-    const rp2xxx_enable = b.option(bool, "rp2xxx", "Use the RaspberryPi rp2xxx port") orelse false;
-
-    if (rp2xxx_enable) {
-        if (b.lazyDependency("microzig/raspberrypi/rp2xxx", .{})) |rp2xxx_dep| {
-            _ = rp2xxx_dep;
-        }
-    }
-}
+pub fn build(_: *Build) void {}
 
 pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
@@ -36,6 +26,41 @@ pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
 
     return mz;
 }
+
+pub const PortSelect = struct {
+    rp2xxx: bool,
+};
+
+pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
+    // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
+    var should_quit = false;
+    should_quit = should_quit or
+        if (port_select.rp2xxx) mz.dep.builder.lazyDependency("microzig/port/raspberrypi/rp2xxx", .{}) == null else false;
+    if (should_quit) {
+        std.process.exit(0);
+    }
+
+    const rp2xxx_port = if (port_select.rp2xxx)
+        mz.dep.builder.lazyImport(@This(), "microzig/port/raspberrypi/rp2xxx").?
+    else
+        struct {};
+
+    return struct {
+        pub const rp2xxx = rp2xxx_port;
+    };
+}
+
+pub fn get_target(_: *MicroZig, alias: *const internals.TargetAlias) internals.Target {
+    return internals.get_target(alias) orelse @panic("target not found");
+}
+
+pub const CreateFirmwareOptions = struct {
+    name: []const u8,
+    target: internals.Target,
+    optimize: std.builtin.OptimizeMode,
+    root_source_file: Build.LazyPath,
+    imports: []const Build.Module.Import = &.{},
+};
 
 pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Build.Step.Compile {
     const target = options.target;
@@ -104,6 +129,10 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Build.Step.C
     return artifact;
 }
 
+pub const InstallFirmwareOptions = struct {
+    format: BinaryFormat,
+};
+
 pub fn install_firmware(mz: *MicroZig, artifact: *Build.Step.Compile, options: InstallFirmwareOptions) void {
     const install_step = mz.add_install_firmware(artifact, options);
     mz.b.getInstallStep().dependOn(&install_step.step);
@@ -156,22 +185,6 @@ pub fn add_install_firmware(mz: *MicroZig, artifact: *Build.Step.Compile, option
 
     return mz.b.addInstallFileWithDir(output_file, .{ .custom = "firmware" }, basename);
 }
-
-pub fn get_target(tag: @TypeOf(.enum_literal)) internals.Target {
-    return internals.get_target(@tagName(tag)) orelse @panic("target not found");
-}
-
-pub const CreateFirmwareOptions = struct {
-    name: []const u8,
-    target: internals.Target,
-    optimize: std.builtin.OptimizeMode,
-    root_source_file: Build.LazyPath,
-    imports: []const Build.Module.Import = &.{},
-};
-
-pub const InstallFirmwareOptions = struct {
-    format: BinaryFormat,
-};
 
 // TODO: should be revisited.. maybe we can leave installing on the user and just provide tools (uf2).
 pub const BinaryFormat = union(enum) {
