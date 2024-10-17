@@ -1,33 +1,22 @@
 const std = @import("std");
-const Dependency = std.Build.Dependency;
-const CompileStep = std.Build.CompileStep;
-const FileSource = std.Build.FileSource;
+const Build = std.Build;
 
 const uf2 = @import("src/uf2.zig");
 
 pub const FamilyId = uf2.FamilyId;
 
-pub fn from_elf(dep: *Dependency, exe: *CompileStep, opts: uf2.Options) FileSource {
-    std.debug.assert(!opts.bundle_source); // TODO: bundle source in UF2 File
-    const b = dep.builder;
+pub fn from_elf(b: *Build, dep: *Build.Dependency, elf: Build.LazyPath, family_id: uf2.FamilyId) Build.LazyPath {
     const elf2uf2 = dep.artifact("elf2uf2");
     const run = b.addRunArtifact(elf2uf2);
 
-    // family id
-    if (opts.family_id) |family_id| {
-        inline for (@typeInfo(uf2.FamilyId).Enum.fields) |field| {
-            if (@field(uf2.FamilyId, field.name) == family_id) {
-                run.addArgs(&.{ "--family-id", field.name });
-            }
-        }
-    }
+    run.addArg("--family-id");
+    run.addArg(b.fmt("0x{X:0>4}", .{@intFromEnum(family_id)}));
 
-    // elf file
     run.addArg("--elf-path");
-    run.addArtifactArg(exe);
+    run.addFileArg(elf);
 
-    // output file
-    return run.addPrefixedOutputFileArg("--output-path", "test.uf2");
+    run.addArg("--output-path");
+    return run.addOutputFileArg("test.uf2");
 }
 
 pub fn build(b: *std.Build) void {
