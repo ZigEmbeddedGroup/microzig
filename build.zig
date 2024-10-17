@@ -56,7 +56,24 @@ pub const CreateFirmwareOptions = struct {
     imports: []const Build.Module.Import = &.{},
 };
 
-pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Build.Step.Compile {
+pub const Firmware = struct {
+    artifact: *Build.Step.Compile,
+    target: internals.Target,
+    emitted_elf: ?Build.LazyPath = null,
+
+    pub fn get_emitted_elf(fw: *Firmware) Build.LazyPath {
+        if (fw.emitted_elf == null) {
+            const raw_elf = fw.artifact.getEmittedBin();
+            fw.emitted_elf = if (fw.target.post_process) |post_process|
+                post_process(raw_elf)
+            else
+                raw_elf;
+        }
+        return fw.emitted_elf.?;
+    }
+};
+
+pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     const target = options.target;
     const zig_target = mz.dep.builder.resolveTargetQuery(target.cpu);
     const cpu = Cpu.init(zig_target.result);
@@ -105,24 +122,30 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Build.Step.C
     });
     app_mod.addImport("microzig", core_mod);
 
-    const artifact = mz.b.addExecutable(.{
-        .name = options.name,
-        .target = zig_target,
-        .optimize = options.optimize,
-        .root_source_file = mz.dep.path("core/start.zig"),
-    });
+    const fw = mz.b.allocator.create(Firmware) catch @panic("out of memory");
 
-    artifact.root_module.addImport("microzig", core_mod);
-    artifact.root_module.addImport("app", app_mod);
+    fw.* = .{
+        .artifact = mz.b.addExecutable(.{
+            .name = options.name,
+            .target = zig_target,
+            .optimize = options.optimize,
+            .root_source_file = mz.dep.path("core/start.zig"),
+        }),
+        .target = target,
+    };
+
+    fw.artifact.root_module.addImport("microzig", core_mod);
+    fw.artifact.root_module.addImport("app", app_mod);
 
     // If not specified then generate the linker script
-    artifact.setLinkerScript(target.linker_script);
+    fw.artifact.setLinkerScript(target.linker_script);
 
-    return artifact;
+    return fw;
 }
 
-pub fn install_firmware(mz: *MicroZig, artifact: *Build.Step.Compile) void {
-    mz.b.installArtifact(artifact);
+pub fn install_firmware(mz: *MicroZig, fw: *Firmware) void {
+    _ = fw; // autofix
+    _ = mz; // autofix
 }
 
 const Cpu = enum {

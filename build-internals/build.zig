@@ -33,6 +33,8 @@ pub const Target = struct {
     hal: ?ModuleDeclaration = null,
 
     board: ?ModuleDeclaration = null,
+
+    post_process: ?*fn (LazyPath) LazyPath = null,
 };
 
 pub const TargetAlias = struct {
