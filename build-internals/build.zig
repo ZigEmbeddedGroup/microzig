@@ -21,7 +21,7 @@ pub fn submit_target(alias: *const TargetAlias, target: Target) void {
 
 /// MicroZig target definition.
 pub const Target = struct {
-    cpu: CpuKind,
+    cpu: std.Target.Query,
 
     linker_script: LazyPath,
 
@@ -66,18 +66,4 @@ pub const ModuleDeclaration = struct {
             .imports = decl.imports,
         });
     }
-};
-
-/// Cpu variants supported by MicroZig.
-// TODO: riscv extensions support (solution: maybe make this a tagged union?)
-pub const CpuKind = enum {
-    avr5,
-    cortex_m0,
-    cortex_m0plus,
-    cortex_m3,
-    cortex_m33,
-    cortex_m4,
-    cortex_m4f,
-    cortex_m7,
-    riscv32_imac,
 };

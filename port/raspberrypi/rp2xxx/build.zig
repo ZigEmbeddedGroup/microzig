@@ -16,6 +16,13 @@ pub const boards = struct {
 pub fn build(b: *Build) !void {
     const rp2040_bootrom = get_bootrom(b);
 
+    const rp2040_cpu = std.Target.Query{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+        .os_tag = .freestanding,
+        .abi = .eabi,
+    };
+
     const regz_dep = b.dependency("microzig/regz", .{});
     const rp2040_chip_source = regz.generate(regz_dep, b.path("src/chips/rp2040.svd"), .svd);
 
@@ -31,13 +38,13 @@ pub fn build(b: *Build) !void {
     });
 
     internals.submit_target(chips.rp2040, .{
-        .cpu = .cortex_m0plus,
+        .cpu = rp2040_cpu,
         .linker_script = b.path("rp2040.ld"),
         .chip = rp2040_chip,
         .hal = rp2040_hal,
     });
     internals.submit_target(boards.pico, .{
-        .cpu = .cortex_m0plus,
+        .cpu = rp2040_cpu,
         .linker_script = b.path("rp2040.ld"),
         .chip = rp2040_chip,
         .hal = rp2040_hal,
