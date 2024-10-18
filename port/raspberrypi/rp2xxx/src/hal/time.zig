@@ -1,4 +1,6 @@
+const std = @import("std");
 const microzig = @import("microzig");
+
 const get_cpu = @import("compatibility.zig").get_cpu;
 const TIMER = @field(
     microzig.chip.peripherals,
@@ -8,8 +10,12 @@ const TIMER = @field(
     },
 );
 
-/// Using an enum to make it a distinct type, the underlying number is
-/// time since boot in microseconds.
+///
+/// An absolute point in time since the startup of the device.
+///
+/// NOTE: Using an enum to make it a distinct type, the underlying number is
+///       time since boot in microseconds.
+///
 pub const Absolute = enum(u64) {
     _,
 
@@ -39,6 +45,12 @@ pub const Absolute = enum(u64) {
     }
 };
 
+///
+/// A duration with microsecond precision.
+///
+/// NOTE: Using an `enum` type here prevents type confusion with other
+///       related or unrelated integer-like types.
+///
 pub const Duration = enum(u64) {
     _,
 
@@ -67,6 +79,53 @@ pub const Duration = enum(u64) {
     }
 };
 
+///
+/// The deadline construct is a construct to create optional timeouts.
+///
+/// NOTE: Deadlines use maximum possible `Absolute` time for
+///       marking the deadline as "unreachable", as this would mean the device
+///       would ever reach an uptime of over 500.000 years.
+///
+pub const Deadline = struct {
+    const disabled_sentinel = Absolute.from_us(std.math.maxInt(u64));
+
+    timeout: Absolute,
+
+    /// Create a new deadline with an absolute end point.
+    ///
+    /// NOTE: `abs` must not point to the absolute maximum time stamp, as this is
+    ///       used as a sentinel for "unset" deadlines.
+    pub fn init_absolute(abs: ?Absolute) Deadline {
+        if (abs) |a|
+            std.debug.assert(a != disabled_sentinel);
+        return .{ .timeout = abs orelse disabled_sentinel };
+    }
+
+    /// Create a new deadline with a certain duration from now on.
+    pub fn init_relative(dur: ?Duration) Deadline {
+        return init_absolute(if (dur) |d|
+            make_timeout(d)
+        else
+            null);
+    }
+
+    /// Returns `true` if the deadline can be reached.
+    pub fn can_be_reached(deadline: Deadline) bool {
+        return (deadline.timeout != disabled_sentinel);
+    }
+
+    /// Returns `true` if the deadline is reached.
+    pub fn is_reached(deadline: Deadline) bool {
+        return deadline.can_be_reached() and deadline.timeout.is_reached();
+    }
+
+    /// Checks if the deadline is reached and returns an error if so,
+    pub fn check(deadline: Deadline) error{Timeout}!void {
+        if (deadline.is_reached())
+            return error.Timeout;
+    }
+};
+
 pub fn get_time_since_boot() Absolute {
     var high_word = TIMER.TIMERAWH;
 
@@ -78,6 +137,10 @@ pub fn get_time_since_boot() Absolute {
 
         high_word = next_high_word;
     } else unreachable;
+}
+
+pub fn make_timeout(timeout: Duration) Absolute {
+    return @as(Absolute, @enumFromInt(get_time_since_boot().to_us() + timeout.to_us()));
 }
 
 pub fn make_timeout_us(timeout_us: u64) Absolute {

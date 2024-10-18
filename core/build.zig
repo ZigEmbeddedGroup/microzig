@@ -12,7 +12,15 @@ const build_root = root();
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.Build) !void {
-    _ = b;
+    const unit_tests = b.addTest(.{
+        // We're not using the `start.zig` entrypoint as it overrides too much
+        // configuration
+        .root_source_file = b.path("src/microzig.zig"),
+    });
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+
+    b.getInstallStep().dependOn(&run_unit_tests.step);
 }
 
 pub const cpus = struct {
