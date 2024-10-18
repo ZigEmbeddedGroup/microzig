@@ -1,7 +1,9 @@
 .{
     .name = "microzig-build-internals",
     .version = "0.0.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .@"microzig/tools/uf2" = .{ .path = "../tools/uf2" },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

@@ -42,6 +42,7 @@ pub fn build(b: *Build) !void {
         .linker_script = b.path("rp2040.ld"),
         .chip = rp2040_chip,
         .hal = rp2040_hal,
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
     });
     internals.submit_target(boards.pico, .{
         .cpu = rp2040_cpu,
@@ -54,6 +55,7 @@ pub fn build(b: *Build) !void {
                 .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = rp2040_bootrom }) },
             },
         }),
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
     });
 }
 

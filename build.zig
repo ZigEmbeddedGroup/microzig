@@ -51,6 +51,7 @@ pub fn get_target(_: *MicroZig, alias: *const internals.TargetAlias) internals.T
     return internals.get_target(alias) orelse @panic("target not found");
 }
 
+/// Configuration options for firmware creation.
 pub const CreateFirmwareOptions = struct {
     name: []const u8,
     target: internals.Target,
@@ -59,23 +60,101 @@ pub const CreateFirmwareOptions = struct {
     imports: []const Build.Module.Import = &.{},
 };
 
+/// Declaration of a firmware build.
 pub const Firmware = struct {
-    artifact: *Build.Step.Compile,
-    target: internals.Target,
-    emitted_elf: ?Build.LazyPath = null,
+    pub const EmittedFiles = std.AutoHashMap(internals.BinaryFormat, Build.LazyPath);
 
+    mz: *MicroZig,
+
+    /// The artifact that is built by Zig.
+    artifact: *Build.Step.Compile,
+
+    /// The target to which the firmware is built.
+    target: internals.Target,
+
+    emitted_elf: ?Build.LazyPath = null,
+    emitted_files: EmittedFiles,
+
+    /// Returns the emitted ELF file for this firmware. This is useful if you need debug information
+    /// or want to use a debugger like Segger, ST-Link or similar.
+    ///
+    /// **NOTE:** This is similar, but not equivalent to `std.Build.Step.Compile.getEmittedBin`. The call on the compile step does
+    ///           not include post processing of the ELF files necessary by certain targets.
     pub fn get_emitted_elf(fw: *Firmware) Build.LazyPath {
         if (fw.emitted_elf == null) {
             const raw_elf = fw.artifact.getEmittedBin();
-            fw.emitted_elf = if (fw.target.post_process) |post_process|
-                post_process(raw_elf)
+            fw.emitted_elf = if (fw.target.patch_elf) |patch_elf|
+                patch_elf(raw_elf)
             else
                 raw_elf;
         }
         return fw.emitted_elf.?;
     }
+
+    /// Returns the emitted binary for this firmware. The file is either in the preferred file format for
+    /// the target or in `format` if not null.
+    ///
+    /// **NOTE:** The file returned here is the same file that will be installed.
+    pub fn get_emitted_bin(firmware: *Firmware, format: ?internals.BinaryFormat) Build.LazyPath {
+        const resolved_format = format orelse firmware.target.preferred_binary_format orelse .elf;
+
+        const result = firmware.emitted_files.getOrPut(resolved_format) catch @panic("out of memory");
+        if (!result.found_existing) {
+            const elf_file = firmware.get_emitted_elf();
+
+            const basename = firmware.mz.b.fmt("{s}{s}", .{
+                firmware.artifact.name,
+                resolved_format.get_extension(),
+            });
+
+            result.value_ptr.* = switch (resolved_format) {
+                .elf => elf_file,
+
+                .bin => blk: {
+                    const objcopy = firmware.mz.b.addObjCopy(elf_file, .{
+                        .basename = basename,
+                        .format = .bin,
+                    });
+
+                    break :blk objcopy.getOutput();
+                },
+
+                .hex => blk: {
+                    const objcopy = firmware.mz.b.addObjCopy(elf_file, .{
+                        .basename = basename,
+                        .format = .hex,
+                    });
+
+                    break :blk objcopy.getOutput();
+                },
+
+                .uf2 => |family_id| blk: {
+                    const uf2_exe = firmware.mz.dep.builder.dependency("microzig/tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
+
+                    const convert = firmware.mz.b.addRunArtifact(uf2_exe);
+
+                    convert.addArg("--family-id");
+                    convert.addArg(firmware.mz.b.fmt("0x{X:0>4}", .{@intFromEnum(family_id)}));
+
+                    convert.addArg("--elf-path");
+                    convert.addFileArg(elf_file);
+
+                    convert.addArg("--output-path");
+                    break :blk convert.addOutputFileArg(basename);
+                },
+
+                .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
+                .esp => @panic("ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!"),
+
+                .custom => |generator| generator.convert(generator, elf_file),
+            };
+        }
+
+        return result.value_ptr.*;
+    }
 };
 
+/// Creates a new firmware.
 pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     const target = options.target;
     const zig_target = mz.dep.builder.resolveTargetQuery(target.cpu);
@@ -128,6 +207,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     const fw = mz.b.allocator.create(Firmware) catch @panic("out of memory");
 
     fw.* = .{
+        .mz = mz,
         .artifact = mz.b.addExecutable(.{
             .name = options.name,
             .target = zig_target,
@@ -135,6 +215,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
             .root_source_file = mz.dep.path("core/start.zig"),
         }),
         .target = target,
+        .emitted_files = Firmware.EmittedFiles.init(mz.b.allocator),
     };
 
     fw.artifact.root_module.addImport("microzig", core_mod);
@@ -146,9 +227,34 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     return fw;
 }
 
-pub fn install_firmware(mz: *MicroZig, fw: *Firmware) void {
-    _ = fw; // autofix
-    _ = mz; // autofix
+/// Configuration options for firmware installation.
+pub const InstallFirmwareOptions = struct {
+    format: ?internals.BinaryFormat = null,
+};
+
+/// Adds a new dependency to the `install` step that will install the `firmware` into the folder `$prefix/firmware`.
+pub fn install_firmware(mz: *MicroZig, firmware: *Firmware, options: InstallFirmwareOptions) void {
+    std.debug.assert(mz == firmware.mz);
+
+    const install_step = add_install_firmware(mz, firmware, options);
+    mz.b.getInstallStep().dependOn(&install_step.step);
+}
+
+/// Creates a new `std.Build.Step.InstallFile` instance that will install the given firmware to `$prefix/firmware`.
+///
+/// **NOTE:** This does not actually install the firmware yet. You have to add the returned step as a dependency to another step.
+///           If you want to just install the firmware, use `installFirmware` instead!
+pub fn add_install_firmware(mz: *MicroZig, firmware: *Firmware, options: InstallFirmwareOptions) *Build.Step.InstallFile {
+    std.debug.assert(mz == firmware.mz);
+
+    const format = options.format orelse firmware.target.preferred_binary_format orelse .elf;
+
+    const basename = mz.b.fmt("{s}{s}", .{
+        firmware.artifact.name,
+        format.get_extension(),
+    });
+
+    return mz.b.addInstallFileWithDir(firmware.get_emitted_bin(format), .{ .custom = "firmware" }, basename);
 }
 
 const Cpu = enum {
@@ -156,7 +262,9 @@ const Cpu = enum {
     cortex_m,
     riscv32,
 
+    // TODO: add here the remaining cpus
     pub fn init(target: std.Target) Cpu {
+        // TODO: not sure this is right tho
         if (target.cpu.arch.isThumb()) {
             return .cortex_m;
         }
