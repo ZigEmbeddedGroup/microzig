@@ -9,10 +9,12 @@ var target_registry: TargetRegistry = TargetRegistry.init(std.heap.page_allocato
 
 pub fn build(_: *Build) void {}
 
+/// Get a MicroZig target based on its alias.
 pub fn get_target(alias: *const TargetAlias) ?Target {
     return target_registry.get(alias);
 }
 
+/// Register a MicroZig target based on its alias.
 pub fn submit_target(alias: *const TargetAlias, target: Target) void {
     const entry = target_registry.getOrPut(alias) catch @panic("out of memory");
     if (entry.found_existing) @panic("target submitted twice");
@@ -37,6 +39,7 @@ pub const Target = struct {
     post_process: ?*fn (LazyPath) LazyPath = null,
 };
 
+/// MicroZig target alias. Used to get the actual target definition.
 pub const TargetAlias = struct {
     name: []const u8,
 
@@ -45,6 +48,7 @@ pub const TargetAlias = struct {
     }
 };
 
+/// Helper struct that provides info for module creation by MicroZig.
 pub const ModuleDeclaration = struct {
     b: *Build,
     root_source_file: LazyPath,

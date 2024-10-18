@@ -11,20 +11,22 @@ dep: *Build.Dependency,
 
 pub fn build(_: *Build) void {}
 
+/// Initialize MicroZig.
 pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
     mz.* = .{
         .b = b,
         .dep = dep,
     };
-
     return mz;
 }
 
+/// Options to select which port to include.
 pub const PortSelect = struct {
     rp2xxx: bool = false,
 };
 
+/// Load the specified ports and return a struct including all the targets aliases exposed.
 pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
     // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
     var should_quit = false;
@@ -44,6 +46,7 @@ pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
     };
 }
 
+/// Get a MicroZig target based on its alias.
 pub fn get_target(_: *MicroZig, alias: *const internals.TargetAlias) internals.Target {
     return internals.get_target(alias) orelse @panic("target not found");
 }
