@@ -1,6 +1,5 @@
 const std = @import("std");
-const defs = @import("microzig/build/definitions");
-const MemoryRegion = defs.MemoryRegion;
+const MemoryRegion = @import("microzig/build-internals").MemoryRegion;
 
 pub const Args = struct {
     cpu_name: []const u8,

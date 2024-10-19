@@ -2,8 +2,8 @@
     .name = "port/raspberrypi/rp2xxx",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{
-            .path = "../../../build",
+        .@"microzig/build-internals" = .{
+            .path = "../../../build-internals",
         },
     },
     .paths = .{
