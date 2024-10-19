@@ -30,43 +30,19 @@ pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     return mz;
 }
 
-const ports = [_]struct {
-    name: [:0]const u8,
-    dep_name: [:0]const u8,
-}{
-    .{ .name = "rp2xxx", .dep_name = "microzig/port/raspberrypi/rp2xxx" },
-    .{ .name = "lpc", .dep_name = "microzig/port/nxp/lpc" },
-};
-
-pub const PortSelect = blk: {
-    var fields: [ports.len]std.builtin.Type.StructField = undefined;
-    for (&fields, ports) |*field, port| {
-        field.* = .{
-            .name = port.name,
-            .type = bool,
-            .default_value = @as(*const anyopaque, &false),
-            .is_comptime = false,
-            .alignment = 0,
-        };
-    }
-    break :blk @Type(std.builtin.Type{
-        .Struct = .{
-            .layout = .auto,
-            .decls = &.{},
-            .fields = &fields,
-            .is_tuple = false,
-        },
-    });
-};
-
+// TODO: make a comptime system for this so as to allow specifying a list of ports instead of manually coding all the logic when
+// adding a new one
 /// Loads the specified ports and return a struct including all the targets aliases exposed.
-pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
+pub inline fn load_ports(mz: *MicroZig, comptime port_select: struct {
+    rp2xxx: bool = false,
+    lpc: bool = false,
+}) type {
     // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
     var should_quit = false;
-    inline for (ports) |port| {
-        should_quit = should_quit or
-            if (@field(port_select, port.name)) mz.dep.builder.lazyDependency(port.dep_name, .{}) == null else false;
-    }
+    should_quit = should_quit or
+        if (port_select.rp2xxx) mz.dep.builder.lazyDependency("microzig/port/raspberrypi/rp2xxx", .{}) == null else false;
+    should_quit = should_quit or
+        if (port_select.lpc) mz.dep.builder.lazyDependency("microzig/port/nxp/lpc", .{}) == null else false;
     if (should_quit) {
         std.process.exit(0);
     }
