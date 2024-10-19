@@ -30,17 +30,43 @@ pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     return mz;
 }
 
+const ports = [_]struct {
+    name: [:0]const u8,
+    dep_name: [:0]const u8,
+}{
+    .{ .name = "rp2xxx", .dep_name = "microzig/port/raspberrypi/rp2xxx" },
+    .{ .name = "lpc", .dep_name = "microzig/port/nxp/lpc" },
+};
+
+pub const PortSelect = blk: {
+    var fields: [ports.len]std.builtin.Type.StructField = undefined;
+    for (&fields, ports) |*field, port| {
+        field.* = .{
+            .name = port.name,
+            .type = bool,
+            .default_value = @as(*const anyopaque, &false),
+            .is_comptime = false,
+            .alignment = 0,
+        };
+    }
+    break :blk @Type(std.builtin.Type{
+        .Struct = .{
+            .layout = .auto,
+            .decls = &.{},
+            .fields = &fields,
+            .is_tuple = false,
+        },
+    });
+};
+
 /// Loads the specified ports and return a struct including all the targets aliases exposed.
-pub inline fn load_ports(mz: *MicroZig, comptime port_select: struct {
-    rp2xxx: bool = false,
-    lpc: bool = false,
-}) type {
+pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
     // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
     var should_quit = false;
-    should_quit = should_quit or
-        if (port_select.rp2xxx) mz.dep.builder.lazyDependency("microzig/port/raspberrypi/rp2xxx", .{}) == null else false;
-    should_quit = should_quit or
-        if (port_select.lpc) mz.dep.builder.lazyDependency("microzig/port/nxp/lpc", .{}) == null else false;
+    inline for (ports) |port| {
+        should_quit = should_quit or
+            if (@field(port_select, port.name)) mz.dep.builder.lazyDependency(port.dep_name, .{}) == null else false;
+    }
     if (should_quit) {
         std.process.exit(0);
     }
@@ -48,16 +74,23 @@ pub inline fn load_ports(mz: *MicroZig, comptime port_select: struct {
     const rp2xxx_port = if (port_select.rp2xxx)
         mz.dep.builder.lazyImport(@This(), "microzig/port/raspberrypi/rp2xxx").?
     else
-        @compileError("Please provide `.rp2xxx = true` to enable the port.");
+        struct {};
 
     const lpc_port = if (port_select.lpc)
         mz.dep.builder.lazyImport(@This(), "microzig/port/nxp/lpc").?
     else
-        @compileError("Please provide `.lpc = true` to enable the port.");
+        struct {};
 
     return struct {
-        pub const rp2xxx = rp2xxx_port;
-        pub const lpc = lpc_port;
+        pub const rp2xxx = if (port_select.rp2xxx)
+            rp2xxx_port
+        else
+            @compileError("Please provide `.rp2xxx = true` to enable the port.");
+
+        pub const lpc = if (port_select.lpc)
+            lpc_port
+        else
+            @compileError("Please provide `.lpc = true` to enable the port.");
     };
 }
 
