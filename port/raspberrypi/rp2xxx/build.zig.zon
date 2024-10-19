@@ -5,9 +5,6 @@
         .@"microzig/build-internals" = .{
             .path = "../../../build-internals",
         },
-        .@"microzig/regz" = .{
-            .path = "../../../tools/regz",
-        },
     },
     .paths = .{
         "LICENSE",

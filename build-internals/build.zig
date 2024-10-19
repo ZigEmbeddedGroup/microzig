@@ -4,18 +4,24 @@ const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 const uf2 = @import("microzig/tools/uf2");
 
+pub const MemoryRegion = @import("src/shared.zig").MemoryRegion;
+
 const TargetRegistry = std.AutoHashMap(*const TargetAlias, Target);
 
 var target_registry: TargetRegistry = TargetRegistry.init(std.heap.page_allocator);
 
-pub fn build(_: *Build) void {}
+pub fn build(b: *Build) void {
+    _ = b.addModule("shared", .{
+        .root_source_file = b.path("src/shared.zig"),
+    });
+}
 
-/// Get a MicroZig target based on its alias.
+/// Gets a MicroZig target based on its alias.
 pub fn get_target(alias: *const TargetAlias) ?Target {
     return target_registry.get(alias);
 }
 
-/// Register a MicroZig target based on its alias.
+/// Registers a MicroZig target based on its alias.
 pub fn submit_target(alias: *const TargetAlias, target: Target) void {
     const entry = target_registry.getOrPut(alias) catch @panic("out of memory");
     if (entry.found_existing) @panic("target submitted twice");
@@ -24,20 +30,18 @@ pub fn submit_target(alias: *const TargetAlias, target: Target) void {
 
 /// MicroZig target definition.
 pub const Target = struct {
-    cpu: std.Target.Query,
-
-    linker_script: LazyPath,
-
-    chip: struct {
-        name: []const u8,
-        module: ModuleDeclaration,
-    },
+    chip: Chip,
 
     hal: ?ModuleDeclaration = null,
 
     board: ?ModuleDeclaration = null,
 
-    patch_elf: ?*const fn (LazyPath) LazyPath = null,
+    linker_script: ?LazyPath = null,
+
+    patch_elf: ?struct {
+        b: *Build,
+        func: *const fn (*Build, LazyPath) LazyPath,
+    } = null,
 
     preferred_binary_format: ?BinaryFormat = null,
 };
@@ -48,6 +52,54 @@ pub const TargetAlias = struct {
 
     pub fn init(name: []const u8) TargetAlias {
         return .{ .name = name };
+    }
+};
+
+pub const Chip = struct {
+    b: *Build,
+
+    name: []const u8,
+
+    cpu: std.Target.Query,
+
+    register_definition: union(enum) {
+        /// Use `regz` to create a zig file from a JSON schema.
+        json: LazyPath,
+
+        /// Use `regz` to create a json file from a SVD schema.
+        svd: LazyPath,
+
+        /// Use `regz` to create a zig file from an ATDF schema.
+        atdf: LazyPath,
+
+        /// Use the provided file directly as the chip file.
+        zig: LazyPath,
+    },
+
+    memory_regions: []const MemoryRegion,
+
+    pub fn create_module(chip: Chip, regz_exe: *Build.Step.Compile) *Module {
+        const chip_source = switch (chip.register_definition) {
+            .json, .atdf, .svd => |file| blk: {
+                const regz_run = chip.b.addRunArtifact(regz_exe);
+
+                regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+                regz_run.addArg(@tagName(chip.register_definition));
+
+                regz_run.addArg("--output_path"); // Write to a file
+                const zig_file = regz_run.addOutputFileArg("chip.zig");
+
+                regz_run.addFileArg(file);
+
+                break :blk zig_file;
+            },
+
+            .zig => |src| src,
+        };
+
+        return chip.b.createModule(.{
+            .root_source_file = chip_source,
+        });
     }
 };
 

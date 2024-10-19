@@ -2,7 +2,7 @@
     .name = "port/nxp/lpc",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
     },
     .paths = .{
         "LICENSE",

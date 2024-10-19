@@ -100,7 +100,6 @@ pub const startup_logic = struct {
     extern var microzig_data_end: u8;
     extern var microzig_bss_start: u8;
     extern var microzig_bss_end: u8;
-    extern const microzig_stack_end: u8;
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.C) noreturn {
@@ -139,7 +138,7 @@ const VectorTable = microzig.chip.VectorTable;
 // will be imported by microzig.zig to allow system startup.
 pub const vector_table: VectorTable = blk: {
     var tmp: VectorTable = .{
-        .initial_stack_pointer = &microzig.cpu.startup_logic.microzig_stack_end,
+        .initial_stack_pointer = microzig.config.end_of_stack,
         .Reset = .{ .C = microzig.cpu.startup_logic._start },
     };
 

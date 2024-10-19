@@ -9,9 +9,18 @@ const MicroZig = @This();
 b: *Build,
 dep: *Build.Dependency,
 
-pub fn build(_: *Build) void {}
+pub fn build(b: *Build) void {
+    const build_internals_dep = b.dependency("microzig/build-internals", .{});
+    const generate_linker_script = b.addExecutable(.{
+        .name = "generate_linker_script",
+        .root_source_file = b.path("tools/generate_linker_script.zig"),
+        .target = b.host,
+    });
+    generate_linker_script.root_module.addImport("microzig/build-internals", build_internals_dep.module("shared"));
+    b.installArtifact(generate_linker_script);
+}
 
-/// Initialize MicroZig.
+/// Initializes MicroZig.
 pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
     mz.* = .{
@@ -21,17 +30,17 @@ pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     return mz;
 }
 
-/// Options to select which port to include.
-pub const PortSelect = struct {
+/// Loads the specified ports and return a struct including all the targets aliases exposed.
+pub inline fn load_ports(mz: *MicroZig, comptime port_select: struct {
     rp2xxx: bool = false,
-};
-
-/// Load the specified ports and return a struct including all the targets aliases exposed.
-pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
+    lpc: bool = false,
+}) type {
     // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
     var should_quit = false;
     should_quit = should_quit or
         if (port_select.rp2xxx) mz.dep.builder.lazyDependency("microzig/port/raspberrypi/rp2xxx", .{}) == null else false;
+    should_quit = should_quit or
+        if (port_select.lpc) mz.dep.builder.lazyDependency("microzig/port/nxp/lpc", .{}) == null else false;
     if (should_quit) {
         std.process.exit(0);
     }
@@ -41,12 +50,18 @@ pub inline fn load_ports(mz: *MicroZig, comptime port_select: PortSelect) type {
     else
         @compileError("Please provide `.rp2xxx = true` to enable the port.");
 
+    const lpc_port = if (port_select.lpc)
+        mz.dep.builder.lazyImport(@This(), "microzig/port/nxp/lpc").?
+    else
+        @compileError("Please provide `.lpc = true` to enable the port.");
+
     return struct {
         pub const rp2xxx = rp2xxx_port;
+        pub const lpc = lpc_port;
     };
 }
 
-/// Get a MicroZig target based on its alias.
+/// Gets a MicroZig target based on its alias.
 pub fn get_target(_: *MicroZig, alias: *const internals.TargetAlias) internals.Target {
     return internals.get_target(alias) orelse @panic("target not found");
 }
@@ -84,7 +99,7 @@ pub const Firmware = struct {
         if (fw.emitted_elf == null) {
             const raw_elf = fw.artifact.getEmittedBin();
             fw.emitted_elf = if (fw.target.patch_elf) |patch_elf|
-                patch_elf(raw_elf)
+                patch_elf.func(patch_elf.b, raw_elf)
             else
                 raw_elf;
         }
@@ -156,9 +171,19 @@ pub const Firmware = struct {
 
 /// Creates a new firmware.
 pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
+    const b = mz.dep.builder;
     const target = options.target;
-    const zig_target = mz.dep.builder.resolveTargetQuery(target.cpu);
+    const zig_target = mz.dep.builder.resolveTargetQuery(target.chip.cpu);
     const cpu = Cpu.init(zig_target.result);
+
+    // TODO: let the user override which ram section to use the stack on,
+    // for now just using the first ram section in the memory region list
+    const first_ram = blk: {
+        for (target.chip.memory_regions) |region| {
+            if (region.kind == .ram)
+                break :blk region;
+        } else @panic("no ram memory region found for setting the end-of-stack address");
+    };
 
     const config = mz.dep.builder.addOptions();
     config.addOption(bool, "has_hal", target.hal != null);
@@ -166,10 +191,11 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
     config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
     config.addOption([]const u8, "chip_name", target.chip.name);
+    config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
 
     // NOTE: should you pass optimize? the same for all
-    const core_mod = mz.dep.builder.createModule(.{
-        .root_source_file = mz.dep.path("core/microzig.zig"),
+    const core_mod = b.createModule(.{
+        .root_source_file = b.path("core/microzig.zig"),
         .imports = &.{
             .{
                 .name = "config",
@@ -178,11 +204,12 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
         },
     });
 
-    const cpu_mod = cpu.create_module(mz.dep.builder);
+    const cpu_mod = cpu.create_module(b);
     cpu_mod.addImport("microzig", core_mod);
     core_mod.addImport("cpu", cpu_mod);
 
-    const chip_mod = target.chip.module.create_module();
+    const regz_exe = b.dependency("microzig/tools/regz", .{}).artifact("regz");
+    const chip_mod = target.chip.create_module(regz_exe);
     chip_mod.addImport("microzig", core_mod);
     core_mod.addImport("chip", chip_mod);
 
@@ -222,7 +249,29 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     fw.artifact.root_module.addImport("app", app_mod);
 
     // If not specified then generate the linker script
-    fw.artifact.setLinkerScript(target.linker_script);
+    const linker_script = target.linker_script orelse blk: {
+        const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
+
+        const generate_linker_script_exe = mz.dep.artifact("generate_linker_script");
+
+        const generate_linker_script_args = GenerateLinkerScriptArgs{
+            .cpu_name = zig_target.result.cpu.model.name,
+            .cpu_arch = zig_target.result.cpu.arch,
+            .chip_name = target.chip.name,
+            .memory_regions = target.chip.memory_regions,
+        };
+
+        const args_str = std.json.stringifyAlloc(
+            b.allocator,
+            generate_linker_script_args,
+            .{},
+        ) catch @panic("out of memory");
+
+        const generate_linker_script_run = b.addRunArtifact(generate_linker_script_exe);
+        generate_linker_script_run.addArg(args_str);
+        break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+    };
+    fw.artifact.setLinkerScript(linker_script);
 
     return fw;
 }

@@ -99,7 +99,7 @@ pub fn write_interrupt_vector(
         \\    const Handler = micro.interrupt.Handler;
         \\    const unhandled = micro.interrupt.unhandled;
         \\
-        \\    initial_stack_pointer: *const u8,
+        \\    initial_stack_pointer: u32,
         \\    Reset: Handler,
         \\
     );

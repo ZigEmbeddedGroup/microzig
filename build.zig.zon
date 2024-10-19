@@ -3,8 +3,10 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "build-internals" },
+        .@"microzig/tools/regz" = .{ .path = "tools/regz" },
         .@"microzig/tools/uf2" = .{ .path = "tools/uf2" },
         .@"microzig/port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
+        .@"microzig/port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
     },
     .paths = .{
         "build.zig",
