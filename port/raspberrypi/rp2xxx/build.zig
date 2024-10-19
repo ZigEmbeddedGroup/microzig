@@ -4,7 +4,6 @@ const internals = @import("microzig/build-internals");
 const TargetAlias = internals.TargetAlias;
 const Chip = internals.Chip;
 const ModuleDeclaration = internals.ModuleDeclaration;
-const regz = @import("microzig/regz");
 
 pub const chips = struct {
     pub const rp2040 = &TargetAlias.init("rp2040");
@@ -58,7 +57,8 @@ pub fn build(b: *Build) !void {
     });
 }
 
-// TODO: better bootrom system
+// TODO: better bootrom system. maybe make bootrom a separate package so as to allow the user
+// to use it in case he creates a custom board
 fn get_bootrom(b: *Build) Build.LazyPath {
     const rom_exe = b.addExecutable(.{
         .name = "stage2-w25q080",

@@ -14,7 +14,7 @@ pub const boards = struct {
 };
 
 pub fn build(b: *std.Build) void {
-    const lpc176x5x_chip = .{
+    const lpc176x5x_chip: Chip = .{
         .b = b,
         .name = "LPC176x5x",
         .cpu = .{
