@@ -1,24 +1,6 @@
 const std = @import("std");
 const Build = std.Build;
 
-const uf2 = @import("src/uf2.zig");
-
-pub const FamilyId = uf2.FamilyId;
-
-pub fn from_elf(b: *Build, dep: *Build.Dependency, elf: Build.LazyPath, family_id: uf2.FamilyId) Build.LazyPath {
-    const elf2uf2 = dep.artifact("elf2uf2");
-    const run = b.addRunArtifact(elf2uf2);
-
-    run.addArg("--family-id");
-    run.addArg(b.fmt("0x{X:0>4}", .{@intFromEnum(family_id)}));
-
-    run.addArg("--elf-path");
-    run.addFileArg(elf);
-
-    run.addArg("--output-path");
-    return run.addOutputFileArg("test.uf2");
-}
-
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});

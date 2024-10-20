@@ -1,22 +1,6 @@
 const std = @import("std");
 const Build = std.Build;
 
-pub const Schema = @import("src/Database.zig").Schema;
-
-pub fn generate(dep: *Build.Dependency, file: Build.LazyPath, schema: Schema) Build.LazyPath {
-    const regz_run = dep.builder.addRunArtifact(dep.artifact("regz"));
-
-    regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
-    regz_run.addArg(@tagName(schema));
-
-    regz_run.addArg("--output_path"); // Write to a file
-    const zig_file = regz_run.addOutputFileArg("chip.zig");
-
-    regz_run.addFileArg(file);
-
-    return zig_file;
-}
-
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});

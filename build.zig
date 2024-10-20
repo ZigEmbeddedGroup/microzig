@@ -1,4 +1,3 @@
-const builtin = @import("builtin");
 const std = @import("std");
 const Build = std.Build;
 
@@ -10,13 +9,11 @@ b: *Build,
 dep: *Build.Dependency,
 
 pub fn build(b: *Build) void {
-    const build_internals_dep = b.dependency("microzig/build-internals", .{});
     const generate_linker_script = b.addExecutable(.{
         .name = "generate_linker_script",
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.host,
     });
-    generate_linker_script.root_module.addImport("microzig/build-internals", build_internals_dep.module("shared"));
     b.installArtifact(generate_linker_script);
 }
 
@@ -158,7 +155,7 @@ pub const Firmware = struct {
                     const convert = firmware.mz.b.addRunArtifact(uf2_exe);
 
                     convert.addArg("--family-id");
-                    convert.addArg(firmware.mz.b.fmt("0x{X:0>4}", .{@intFromEnum(family_id)}));
+                    convert.addArg(@tagName(family_id));
 
                     convert.addArg("--elf-path");
                     convert.addFileArg(elf_file);
@@ -219,6 +216,8 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
     const regz_exe = b.dependency("microzig/tools/regz", .{}).artifact("regz");
     const chip_mod = target.chip.create_module(regz_exe);
+    const chip_step = mz.b.addInstallFile(chip_mod.root_source_file.?, "firmware/chip.zig");
+    mz.b.getInstallStep().dependOn(&chip_step.step);
     chip_mod.addImport("microzig", core_mod);
     core_mod.addImport("chip", chip_mod);
 

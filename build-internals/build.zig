@@ -2,9 +2,6 @@ const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Module = Build.Module;
-const uf2 = @import("microzig/tools/uf2");
-
-pub const MemoryRegion = @import("src/shared.zig").MemoryRegion;
 
 const TargetRegistry = std.AutoHashMap(*const TargetAlias, Target);
 
@@ -147,7 +144,54 @@ pub const BinaryFormat = union(enum) {
     dfu,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
-    uf2: uf2.FamilyId,
+    uf2: enum {
+        ATMEGA32,
+        SAML21,
+        NRF52,
+        ESP32,
+        STM32L1,
+        STM32L0,
+        STM32WL,
+        LPC55,
+        STM32G0,
+        GD32F350,
+        STM32L5,
+        STM32G4,
+        MIMXRT10XX,
+        STM32F7,
+        SAMD51,
+        STM32F4,
+        FX2,
+        STM32F2,
+        STM32F1,
+        NRF52833,
+        STM32F0,
+        SAMD21,
+        STM32F3,
+        STM32F407,
+        STM32H7,
+        STM32WB,
+        ESP8266,
+        KL32L2,
+        STM32F407VG,
+        NRF52840,
+        ESP32S2,
+        ESP32S3,
+        ESP32C3,
+        ESP32C2,
+        ESP32H2,
+        RP2040,
+        RP2XXX_ABSOLUTE,
+        RP2XXX_DATA,
+        RP2350_ARM_S,
+        RP2350_RISC_V,
+        RP2350_ARM_NS,
+        STM32L4,
+        GD32VF103,
+        CSK4,
+        CSK6,
+        M0SENSE,
+    },
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
     esp,
@@ -178,5 +222,44 @@ pub const BinaryFormat = union(enum) {
         /// The `*Custom` format is passed so contextual information can be obtained by using
         /// `@fieldParentPtr` to provide access to tooling.
         convert: *const fn (*Custom, elf: Build.LazyPath) Build.LazyPath,
+    };
+};
+
+/// A descriptor for memory regions in a microcontroller.
+pub const MemoryRegion = struct {
+    /// The type of the memory region for generating a proper linker script.
+    kind: Kind,
+    offset: u64,
+    length: u64,
+
+    pub const Kind = union(enum) {
+        /// This is a (normally) immutable memory region where the code is stored.
+        flash,
+
+        /// This is a mutable memory region for data storage.
+        ram,
+
+        /// This is a memory region that maps MMIO devices.
+        io,
+
+        /// This is a memory region that exists, but is reserved and must not be used.
+        reserved,
+
+        /// This is a memory region used for internal linking tasks required by the board support package.
+        private: PrivateRegion,
+    };
+
+    pub const PrivateRegion = struct {
+        /// The name of the memory region. Will not have an automatic numeric counter and must be unique.
+        name: []const u8,
+
+        /// Is the memory region executable?
+        executable: bool,
+
+        /// Is the memory region readable?
+        readable: bool,
+
+        /// Is the memory region writable?
+        writeable: bool,
     };
 };
