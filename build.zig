@@ -97,6 +97,9 @@ fn generate_parts_db(b: *Build) !Build.LazyPath {
     inline for (ports) |port| {
         const chips_start_idx = chips.items.len;
         inline for (@typeInfo(@field(port[1], "chips")).Struct.decls) |decl| {
+            if (@typeInfo(@TypeOf(@field(@field(port[1], "chips"), decl.name))) != .Struct)
+                continue;
+
             const target = @field(@field(port[1], "chips"), decl.name);
             try chips.append(.{
                 .identifier = decl.name,
