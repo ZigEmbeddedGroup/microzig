@@ -1,11 +1,11 @@
-zig-out/
-zig-cache/
-.zig-cache/
-microzig-deploy/
+__pycache__/
+.direnv/
 .DS_Store
 .gdbinit
 .lldbinit
-.direnv/
-__pycache__/
 .venv
+.zig-cache/
 boxzer-out
+microzig-deploy/
+zig-cache/
+zig-out/

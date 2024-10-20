@@ -31,10 +31,12 @@ pub const hal = if (config.has_hal) @import("hal") else void;
 /// Provides access to board features or is `void` when no board is present.
 pub const board = if (config.has_board) @import("board") else void;
 
+/// Contains device-independent drivers for peripherial devices.
+pub const drivers = @import("drivers");
+
 pub const mmio = @import("mmio.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
-pub const drivers = @import("drivers.zig");
 pub const utilities = @import("utilities.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
