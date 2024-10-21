@@ -126,18 +126,36 @@ pub const Deadline = struct {
     }
 };
 
-pub fn get_time_since_boot() Absolute {
-    var high_word = TIMER.TIMERAWH;
+pub const get_time_since_boot = switch (@import("compatibility.zig").get_cpu()) {
+    .RP2040 => struct {
+        pub fn f() Absolute {
+            var high_word = TIMER.TIMERAWH;
 
-    return while (true) {
-        const low_word = TIMER.TIMERAWL;
-        const next_high_word = TIMER.TIMERAWH;
-        if (next_high_word == high_word)
-            break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
+            return while (true) {
+                const low_word = TIMER.TIMERAWL;
+                const next_high_word = TIMER.TIMERAWH;
+                if (next_high_word == high_word)
+                    break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
 
-        high_word = next_high_word;
-    } else unreachable;
-}
+                high_word = next_high_word;
+            } else unreachable;
+        }
+    },
+    .RP2350 => struct {
+        pub fn f() Absolute {
+            var high_word = TIMER.TIMERAWH.read().TIMERAWH;
+
+            return while (true) {
+                const low_word = TIMER.TIMERAWL.read().TIMERAWL;
+                const next_high_word = TIMER.TIMERAWH.read().TIMERAWH;
+                if (next_high_word == high_word)
+                    break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
+
+                high_word = next_high_word;
+            } else unreachable;
+        }
+    },
+}.f;
 
 pub fn make_timeout(timeout: Duration) Absolute {
     return @as(Absolute, @enumFromInt(get_time_since_boot().to_us() + timeout.to_us()));
