@@ -411,7 +411,9 @@ pub const Pin = enum(u6) {
                     switch (value) {
                         0 => SIO.GPIO_OUT_CLR.raw = gpio.mask(),
                         // TODO: regz inconsistencies
-                        1 => SIO.GPIO_OUT_SET = gpio.mask(),
+                        1 => {
+                            SIO.GPIO_OUT_SET.raw = gpio.mask();
+                        },
                     }
                 }
             },

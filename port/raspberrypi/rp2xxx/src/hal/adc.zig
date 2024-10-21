@@ -39,26 +39,47 @@ const Config = struct {
 /// CS.EN = 1. The global clock configuration is not needed to configure the
 /// sample rate because the ADC hardware block requires a 48MHz clock.
 pub fn apply(config: Config) void {
-    ADC.CS.write(.{
-        .EN = 0,
-        .TS_EN = @intFromBool(config.temp_sensor_enabled),
-        .START_ONCE = 0,
-        .START_MANY = 0,
-        .READY = 0,
+    switch (comptime @import("compatibility.zig").get_cpu()) {
+        .RP2040 => ADC.CS.write(.{
+            .EN = 0,
+            .TS_EN = @intFromBool(config.temp_sensor_enabled),
+            .START_ONCE = 0,
+            .START_MANY = 0,
+            .READY = 0,
 
-        .ERR = 0,
-        .ERR_STICKY = 0,
-        .AINSEL = 0,
-        .RROBIN = if (config.round_robin) |rr|
-            @as(u5, @bitCast(rr))
-        else
-            0,
+            .ERR = 0,
+            .ERR_STICKY = 0,
+            .AINSEL = 0,
+            .RROBIN = if (config.round_robin) |rr|
+                @as(u5, @bitCast(rr))
+            else
+                0,
 
-        .reserved8 = 0,
-        .reserved12 = 0,
-        .reserved16 = 0,
-        .padding = 0,
-    });
+            .reserved8 = 0,
+            .reserved12 = 0,
+            .reserved16 = 0,
+            .padding = 0,
+        }),
+        .RP2350 => ADC.CS.write(.{
+            .EN = 0,
+            .TS_EN = @intFromBool(config.temp_sensor_enabled),
+            .START_ONCE = 0,
+            .START_MANY = 0,
+            .READY = 0,
+
+            .ERR = 0,
+            .ERR_STICKY = 0,
+            .AINSEL = 0,
+            .RROBIN = if (config.round_robin) |rr|
+                @as(u5, @bitCast(rr))
+            else
+                0,
+
+            .reserved8 = 0,
+            .reserved12 = 0,
+            .padding = 0,
+        }),
+    }
 
     if (config.sample_frequency) |sample_frequency| {
         const cycles = (48_000_000 * 256) / @as(u64, sample_frequency);
