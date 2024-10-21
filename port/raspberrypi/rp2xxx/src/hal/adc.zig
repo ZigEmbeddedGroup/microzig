@@ -8,6 +8,7 @@ const ADC = microzig.chip.peripherals.ADC;
 const gpio = @import("gpio.zig");
 const resets = @import("resets.zig");
 const clocks = @import("clocks.zig");
+const cpu = @import("compatibility.zig").cpu;
 
 pub const Error = error{
     /// ADC conversion failed, one such reason is that the controller failed to
@@ -39,7 +40,7 @@ const Config = struct {
 /// CS.EN = 1. The global clock configuration is not needed to configure the
 /// sample rate because the ADC hardware block requires a 48MHz clock.
 pub fn apply(config: Config) void {
-    switch (comptime @import("compatibility.zig").get_cpu()) {
+    switch (cpu) {
         .RP2040 => ADC.CS.write(.{
             .EN = 0,
             .TS_EN = @intFromBool(config.temp_sensor_enabled),

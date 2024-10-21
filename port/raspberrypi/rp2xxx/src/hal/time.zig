@@ -1,10 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const get_cpu = @import("compatibility.zig").get_cpu;
+const cpu = @import("compatibility.zig").cpu;
 const TIMER = @field(
     microzig.chip.peripherals,
-    switch (get_cpu()) {
+    switch (cpu) {
         .RP2040 => "TIMER",
         .RP2350 => "TIMER0",
     },

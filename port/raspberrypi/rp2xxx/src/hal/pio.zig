@@ -12,7 +12,7 @@ const resets = @import("resets.zig");
 const hw = @import("hw.zig");
 pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");
-const get_cpu = @import("compatibility.zig").get_cpu;
+const cpu = @import("compatibility.zig").cpu;
 
 // global state for keeping track of used things
 var used_instruction_space: [2]u32 = [_]u32{ 0, 0 };
@@ -276,7 +276,7 @@ pub const Pio = enum(u1) {
 
     pub fn sm_set_shift_options(self: Pio, sm: StateMachine, options: ShiftOptions) void {
         const sm_regs = self.get_sm_regs(sm);
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => sm_regs.shiftctrl.write(.{
                 .AUTOPUSH = @intFromBool(options.autopush),
                 .AUTOPULL = @intFromBool(options.autopull),
@@ -503,7 +503,7 @@ pub const Pio = enum(u1) {
     pub fn sm_clear_fifos(self: Pio, sm: StateMachine) void {
         const sm_regs = self.get_sm_regs(sm);
         const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = switch (comptime get_cpu()) {
+        const mask = switch (cpu) {
             .RP2040 => .{
                 .FJOIN_TX = 1,
                 .FJOIN_RX = 1,
