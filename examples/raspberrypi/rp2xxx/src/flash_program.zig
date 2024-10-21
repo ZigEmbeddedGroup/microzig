@@ -6,7 +6,7 @@ const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
-const get_cpu = rp2xxx.compatibility.get_cpu;
+const cpu = rp2xxx.compatibility.cpu;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -33,7 +33,7 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    switch (comptime get_cpu()) {
+    switch (cpu) {
         .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
             pin.set_function(.uart);
         },

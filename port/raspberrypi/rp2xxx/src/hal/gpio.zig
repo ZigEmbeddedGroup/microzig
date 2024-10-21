@@ -7,14 +7,14 @@ const SIO = peripherals.SIO;
 const PADS_BANK0 = peripherals.PADS_BANK0;
 const IO_BANK0 = peripherals.IO_BANK0;
 
-const get_cpu = @import("compatibility.zig").get_cpu;
+const cpu = @import("compatibility.zig").cpu;
 
 const resets = @import("resets.zig");
 
 const log = std.log.scoped(.gpio);
 
 pub const Function =
-    switch (get_cpu()) {
+    switch (cpu) {
     .RP2040 => enum(u5) {
         xip = 0,
         spi,
@@ -91,7 +91,7 @@ pub const Pull = enum {
 };
 
 pub fn num(n: u6) Pin {
-    switch (comptime get_cpu()) {
+    switch (cpu) {
         .RP2040 => {
             if (n > 29)
                 @panic("the RP2040 only has GPIO 0-29");
@@ -105,7 +105,7 @@ pub fn num(n: u6) Pin {
     return @as(Pin, @enumFromInt(n));
 }
 
-pub const mask = switch (get_cpu()) {
+pub const mask = switch (cpu) {
     .RP2040 => struct {
         pub fn mask(m: u30) Mask {
             return @as(Mask, @enumFromInt(m));
@@ -119,7 +119,7 @@ pub const mask = switch (get_cpu()) {
 };
 
 pub const Mask =
-    switch (get_cpu()) {
+    switch (cpu) {
     .RP2040 => enum(u30) {
         _,
 
@@ -260,7 +260,7 @@ pub const Pin = enum(u6) {
     _,
 
     pub const Regs =
-        switch (get_cpu()) {
+        switch (cpu) {
         .RP2040 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
@@ -321,13 +321,13 @@ pub const Pin = enum(u6) {
         },
     };
 
-    pub const RegsArray = switch (get_cpu()) {
+    pub const RegsArray = switch (cpu) {
         .RP2040 => *volatile [30]Regs,
         .RP2350 => *volatile [48]Regs,
     };
 
     pub const PadsReg = @TypeOf(PADS_BANK0.GPIO0);
-    pub const PadsRegArray = switch (get_cpu()) {
+    pub const PadsRegArray = switch (cpu) {
         .RP2040 => *volatile [30]PadsReg,
         .RP2350 => *volatile [48]PadsReg,
     };
@@ -348,7 +348,7 @@ pub const Pin = enum(u6) {
     }
 
     pub fn mask(gpio: Pin) u32 {
-        const bitshift_val: u5 = switch (comptime get_cpu()) {
+        const bitshift_val: u5 = switch (cpu) {
             .RP2040 => @intCast(@intFromEnum(gpio)),
             .RP2350 =>
             // There are seperate copies of registers for GPIO32->47 on RP2350,
@@ -369,7 +369,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn set_direction(gpio: Pin, direction: Direction) void {
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => {
                 switch (direction) {
                     .in => SIO.GPIO_OE_CLR.raw = gpio.mask(),
@@ -394,7 +394,7 @@ pub const Pin = enum(u6) {
 
     /// Drive a single GPIO high/low
     pub inline fn put(gpio: Pin, value: u1) void {
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => {
                 switch (value) {
                     0 => SIO.GPIO_OUT_CLR.raw = gpio.mask(),
@@ -421,7 +421,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn toggle(gpio: Pin) void {
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => {
                 SIO.GPIO_OUT_XOR.raw = gpio.mask();
             },
@@ -436,7 +436,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn read(gpio: Pin) u1 {
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => {
                 return if ((SIO.GPIO_IN.raw & gpio.mask()) != 0)
                     1
@@ -481,7 +481,7 @@ pub const Pin = enum(u6) {
             .OEOVER = .{ .value = .normal },
         });
 
-        switch (comptime get_cpu()) {
+        switch (cpu) {
             .RP2040 => {},
             .RP2350 => {
                 // RP2350 added pad isolation that must be removed to actually connect the GPIO
