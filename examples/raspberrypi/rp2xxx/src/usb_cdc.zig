@@ -72,7 +72,7 @@ pub fn main() !void {
             pin.set_function(.uart);
         },
         .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart_second);
+            pin.set_function(.uart_first);
         },
     }
 
