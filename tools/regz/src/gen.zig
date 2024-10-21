@@ -839,7 +839,7 @@ fn write_fields(
                     next.size,
                 });
                 try write_enum_fields(db, enum_id, writer);
-                try writer.writeAll("},\n},\n");
+                try writer.writeAll("},\n");
             }
         } else {
             try writer.print("{}: u{},\n", .{ std.zig.fmtId(name), next.size });
