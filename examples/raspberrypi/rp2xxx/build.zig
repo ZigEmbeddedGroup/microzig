@@ -13,20 +13,7 @@ pub fn build(b: *std.Build) void {
 
     const rp2040_only_examples: []const Example = &.{
         // RaspberryPi Boards:
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/rp2040_only/adc.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/rp2040_only/i2c_bus_scan.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/rp2040_only/pwm.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/rp2040_only/spi_host.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_squarewave", .file = "src/rp2040_only/squarewave.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-echo", .file = "src/rp2040_only/uart_echo.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-log", .file = "src/rp2040_only/uart_log.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/rp2040_only/usb_cdc.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_ws2812", .file = "src/rp2040_only/ws2812.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
@@ -40,10 +27,23 @@ pub fn build(b: *std.Build) void {
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
+        .{ .name = "pico_adc", .file = "src/adc.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
+        .{ .name = "pico_pwm", .file = "src/pwm.zig" },
+        .{ .name = "pico_random", .file = "src/random.zig" },
+        .{ .name = "pico_spi-host", .file = "src/spi_host.zig" },
+        .{ .name = "pico_i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
+        .{ .name = "pico_squarewave", .file = "src/squarewave.zig" },
+        .{ .name = "pico_flash-program", .file = "src/flash_program.zig" },
+        .{ .name = "pico_uart-echo", .file = "src/uart_echo.zig" },
+        .{ .name = "pico_uart-log", .file = "src/uart_log.zig" },
+        .{ .name = "pico_usb-hid", .file = "src/usb_hid.zig" },
+        .{ .name = "pico_usb-cdc", .file = "src/usb_cdc.zig" },
+        .{ .name = "pico_ws2812", .file = "src/ws2812.zig" },
+        .{ .name = "pico_multicore", .file = "src/blinky_core1.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);

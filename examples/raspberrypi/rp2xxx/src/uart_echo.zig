@@ -1,11 +1,12 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const rp2040 = microzig.hal;
-const uart = rp2040.uart;
-const gpio = rp2040.gpio;
-const time = rp2040.time;
-const clocks = rp2040.clocks;
+const rp2xxx = microzig.hal;
+const uart = rp2xxx.uart;
+const gpio = rp2xxx.gpio;
+const time = rp2xxx.time;
+const clocks = rp2xxx.clocks;
+const cpu = rp2xxx.compatibility.cpu;
 
 const echo_uart = uart.instance.num(0);
 const baud_rate = 115200;
@@ -13,13 +14,18 @@ const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
 pub fn main() !void {
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
+    switch (cpu) {
+        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart);
+        },
+        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart_second);
+        },
     }
 
     echo_uart.apply(.{
         .baud_rate = baud_rate,
-        .clock_config = rp2040.clock_config,
+        .clock_config = rp2xxx.clock_config,
         //.parity = .none,
         //.stop_bits = .one,
         //.flow_control = .none
