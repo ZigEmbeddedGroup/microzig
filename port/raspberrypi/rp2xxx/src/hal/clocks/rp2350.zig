@@ -478,16 +478,16 @@ pub fn start_ticks(comptime tick_period_us: u32, comptime clk_ref_freq: u32) voi
 
     const cycle_count = comptime @as(u9, @intCast((clk_ref_freq / 1_000_000) * tick_period_us));
 
-    peripherals.TICKS.PROC0_CYCLES = cycle_count;
+    peripherals.TICKS.PROC0_CYCLES.modify(.{ .PROC0_CYCLES = cycle_count });
     peripherals.TICKS.PROC0_CTRL.modify(.{ .ENABLE = 1 });
 
-    peripherals.TICKS.PROC1_CYCLES = cycle_count;
+    peripherals.TICKS.PROC1_CYCLES.modify(.{ .PROC1_CYCLES = cycle_count });
     peripherals.TICKS.PROC1_CTRL.modify(.{ .ENABLE = 1 });
 
-    peripherals.TICKS.TIMER0_CYCLES = cycle_count;
+    peripherals.TICKS.TIMER0_CYCLES.modify(.{ .TIMER0_CYCLES = cycle_count });
     peripherals.TICKS.TIMER0_CTRL.modify(.{ .ENABLE = 1 });
 
-    peripherals.TICKS.TIMER1_CYCLES = cycle_count;
+    peripherals.TICKS.TIMER1_CYCLES.modify(.{ .TIMER1_CYCLES = cycle_count });
     peripherals.TICKS.TIMER1_CTRL.modify(.{ .ENABLE = 1 });
 
     peripherals.TICKS.WATCHDOG_CYCLES.modify(.{
@@ -495,6 +495,6 @@ pub fn start_ticks(comptime tick_period_us: u32, comptime clk_ref_freq: u32) voi
     });
     peripherals.TICKS.WATCHDOG_CTRL.modify(.{ .ENABLE = 1 });
 
-    peripherals.TICKS.RISCV_CYCLES = cycle_count;
+    peripherals.TICKS.RISCV_CYCLES.modify(.{ .RISCV_CYCLES = cycle_count });
     peripherals.TICKS.RISCV_CTRL.modify(.{ .ENABLE = 1 });
 }

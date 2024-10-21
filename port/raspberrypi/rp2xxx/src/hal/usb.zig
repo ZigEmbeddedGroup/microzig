@@ -6,6 +6,7 @@ const std = @import("std");
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const get_cpu = @import("compatibility.zig").get_cpu;
 
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
@@ -21,6 +22,9 @@ const resets = @import("resets.zig");
 
 pub const EP0_OUT_IDX = 0;
 pub const EP0_IN_IDX = 1;
+
+const DPRAM = peripherals.USB_DPRAM;
+const REGS = peripherals.USB;
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // User Interface
@@ -148,76 +152,76 @@ pub const F = struct {
 
         // Clear the control portion of DPRAM. This may not be necessary -- the
         // datasheet is ambiguous -- but the C examples do it, and so do we.
-        peripherals.USBCTRL_DPRAM.SETUP_PACKET_LOW.write_raw(0);
-        peripherals.USBCTRL_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
+        DPRAM.SETUP_PACKET_LOW.write_raw(0);
+        DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
-        peripherals.USBCTRL_DPRAM.EP1_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP1_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP2_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP2_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP3_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP3_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP4_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP4_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP5_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP5_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP6_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP6_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP7_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP7_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP8_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP8_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP9_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP9_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP10_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP10_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP11_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP11_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP12_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP12_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP13_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP13_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP14_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP14_OUT_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP15_IN_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP15_OUT_CONTROL.write_raw(0);
+        DPRAM.EP1_IN_CONTROL.write_raw(0);
+        DPRAM.EP1_OUT_CONTROL.write_raw(0);
+        DPRAM.EP2_IN_CONTROL.write_raw(0);
+        DPRAM.EP2_OUT_CONTROL.write_raw(0);
+        DPRAM.EP3_IN_CONTROL.write_raw(0);
+        DPRAM.EP3_OUT_CONTROL.write_raw(0);
+        DPRAM.EP4_IN_CONTROL.write_raw(0);
+        DPRAM.EP4_OUT_CONTROL.write_raw(0);
+        DPRAM.EP5_IN_CONTROL.write_raw(0);
+        DPRAM.EP5_OUT_CONTROL.write_raw(0);
+        DPRAM.EP6_IN_CONTROL.write_raw(0);
+        DPRAM.EP6_OUT_CONTROL.write_raw(0);
+        DPRAM.EP7_IN_CONTROL.write_raw(0);
+        DPRAM.EP7_OUT_CONTROL.write_raw(0);
+        DPRAM.EP8_IN_CONTROL.write_raw(0);
+        DPRAM.EP8_OUT_CONTROL.write_raw(0);
+        DPRAM.EP9_IN_CONTROL.write_raw(0);
+        DPRAM.EP9_OUT_CONTROL.write_raw(0);
+        DPRAM.EP10_IN_CONTROL.write_raw(0);
+        DPRAM.EP10_OUT_CONTROL.write_raw(0);
+        DPRAM.EP11_IN_CONTROL.write_raw(0);
+        DPRAM.EP11_OUT_CONTROL.write_raw(0);
+        DPRAM.EP12_IN_CONTROL.write_raw(0);
+        DPRAM.EP12_OUT_CONTROL.write_raw(0);
+        DPRAM.EP13_IN_CONTROL.write_raw(0);
+        DPRAM.EP13_OUT_CONTROL.write_raw(0);
+        DPRAM.EP14_IN_CONTROL.write_raw(0);
+        DPRAM.EP14_OUT_CONTROL.write_raw(0);
+        DPRAM.EP15_IN_CONTROL.write_raw(0);
+        DPRAM.EP15_OUT_CONTROL.write_raw(0);
 
-        peripherals.USBCTRL_DPRAM.EP0_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP0_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP1_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP1_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP2_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP2_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP3_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP3_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP4_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP4_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP5_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP5_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP6_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP6_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP7_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP7_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP8_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP8_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP9_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP9_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP10_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP10_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP11_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP11_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP12_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP12_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP13_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP13_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP14_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP14_OUT_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP15_IN_BUFFER_CONTROL.write_raw(0);
-        peripherals.USBCTRL_DPRAM.EP15_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP0_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP0_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP1_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP1_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP2_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP2_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP3_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP3_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP4_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP4_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP5_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP5_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP6_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP6_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP7_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP7_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP8_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP8_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP9_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP9_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP10_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP10_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP11_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP11_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP12_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP12_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP13_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP13_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP14_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP14_OUT_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP15_IN_BUFFER_CONTROL.write_raw(0);
+        DPRAM.EP15_OUT_BUFFER_CONTROL.write_raw(0);
 
         // Mux the controller to the onboard USB PHY. I was surprised that there are
         // alternatives to this, but, there are.
-        peripherals.USBCTRL_REGS.USB_MUXING.modify(.{
+        REGS.USB_MUXING.modify(.{
             .TO_PHY = 1,
             // This bit is also set in the SDK example, without any discussion. It's
             // undocumented (being named does not count as being documented).
@@ -228,26 +232,26 @@ pub const F = struct {
         // let us detect being plugged into a host (the Pi Pico, to its credit,
         // does). For maximum compatibility, we'll set the hardware to always
         // pretend VBUS has been detected.
-        peripherals.USBCTRL_REGS.USB_PWR.modify(.{
+        REGS.USB_PWR.modify(.{
             .VBUS_DETECT = 1,
             .VBUS_DETECT_OVERRIDE_EN = 1,
         });
 
         // Enable controller in device mode.
-        peripherals.USBCTRL_REGS.MAIN_CTRL.modify(.{
+        REGS.MAIN_CTRL.modify(.{
             .CONTROLLER_EN = 1,
             .HOST_NDEVICE = 0,
         });
 
         // Request to have an interrupt (which really just means setting a bit in
         // the `buff_status` register) every time a buffer moves through EP0.
-        peripherals.USBCTRL_REGS.SIE_CTRL.modify(.{
+        REGS.SIE_CTRL.modify(.{
             .EP0_INT_1BUF = 1,
         });
 
         // Enable interrupts (bits set in the `ints` register) for other conditions
         // we use:
-        peripherals.USBCTRL_REGS.INTE.modify(.{
+        REGS.INTE.modify(.{
             // A buffer is done
             .BUFF_STATUS = 1,
             // The host has reset us
@@ -262,7 +266,7 @@ pub const F = struct {
 
         // Present full-speed device by enabling pullup on DP. This is the point
         // where the host will notice our presence.
-        peripherals.USBCTRL_REGS.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
+        REGS.SIE_CTRL.modify(.{ .PULLUP_EN = 1 });
     }
 
     /// Configures a given endpoint to send data (device-to-host, IN) when the host
@@ -346,7 +350,7 @@ pub const F = struct {
 
     /// Check which interrupt flags are set
     pub fn get_interrupts() usb.InterruptStatus {
-        const ints = peripherals.USBCTRL_REGS.INTS.read();
+        const ints = REGS.INTS.read();
 
         return .{
             .BuffStatus = if (ints.BUFF_STATUS == 1) true else false,
@@ -366,7 +370,7 @@ pub const F = struct {
     /// setup request falg is set.
     pub fn get_setup_packet() usb.types.SetupPacket {
         // Clear the status flag (write-one-to-clear)
-        peripherals.USBCTRL_REGS.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
+        REGS.SIE_STATUS.modify(.{ .SETUP_REC = 1 });
 
         // This assumes that the setup packet is arriving on EP0, our
         // control endpoint. Which it should be. We don't have any other
@@ -378,8 +382,8 @@ pub const F = struct {
         // we can't just treat it as bytes. Instead, copy it out to a byte
         // array.
         var setup_packet: [8]u8 = .{0} ** 8;
-        const spl: u32 = peripherals.USBCTRL_DPRAM.SETUP_PACKET_LOW.raw;
-        const sph: u32 = peripherals.USBCTRL_DPRAM.SETUP_PACKET_HIGH.raw;
+        const spl: u32 = DPRAM.SETUP_PACKET_LOW.raw;
+        const sph: u32 = DPRAM.SETUP_PACKET_HIGH.raw;
         _ = rom.memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
         _ = rom.memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
         // Reinterpret as setup packet
@@ -389,12 +393,12 @@ pub const F = struct {
     /// Called on a bus reset interrupt
     pub fn bus_reset() void {
         // Acknowledge by writing the write-one-to-clear status bit.
-        peripherals.USBCTRL_REGS.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
-        peripherals.USBCTRL_REGS.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
+        REGS.SIE_STATUS.modify(.{ .BUS_RESET = 1 });
+        REGS.ADDR_ENDP.modify(.{ .ADDRESS = 0 });
     }
 
     pub fn set_address(addr: u7) void {
-        peripherals.USBCTRL_REGS.ADDR_ENDP.modify(.{ .ADDRESS = addr });
+        REGS.ADDR_ENDP.modify(.{ .ADDRESS = addr });
     }
 
     pub fn reset_ep0() void {
@@ -404,7 +408,7 @@ pub const F = struct {
 
     pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
         return .{
-            .bufbits = peripherals.USBCTRL_REGS.BUFF_STATUS.raw,
+            .bufbits = REGS.BUFF_STATUS.raw,
             .device_config = dc,
             .next = next,
         };
@@ -433,14 +437,14 @@ pub const F = struct {
         if (ep_num == 0) {
             ep.endpoint_control_index = 0;
         } else {
-            ep.endpoint_control_index = 2*ep_num - ep_dir.as_number();
+            ep.endpoint_control_index = 2 * ep_num - ep_dir.as_number();
             endpoint_alloc(ep, transfer_type);
         }
     }
 
     fn endpoint_alloc(ep: *HardwareEndpoint, transfer_type: TransferType) void {
         const buf_base = @intFromPtr(buffers.B.get(ep.data_buffer_index));
-        const dpram_base = @intFromPtr(peripherals.USBCTRL_DPRAM);
+        const dpram_base = @intFromPtr(DPRAM);
         // The offset _should_ fit in a u16, but if we've gotten something
         // wrong in the past few lines, a common symptom will be integer
         // overflow producing a Very Large Number,
@@ -470,38 +474,38 @@ pub fn modify_buffer_control(
 ) void {
     // haven't found a better way to handle this
     switch (i) {
-        0 => peripherals.USBCTRL_DPRAM.EP0_IN_BUFFER_CONTROL.modify(fields),
-        1 => peripherals.USBCTRL_DPRAM.EP0_OUT_BUFFER_CONTROL.modify(fields),
-        2 => peripherals.USBCTRL_DPRAM.EP1_IN_BUFFER_CONTROL.modify(fields),
-        3 => peripherals.USBCTRL_DPRAM.EP1_OUT_BUFFER_CONTROL.modify(fields),
-        4 => peripherals.USBCTRL_DPRAM.EP2_IN_BUFFER_CONTROL.modify(fields),
-        5 => peripherals.USBCTRL_DPRAM.EP2_OUT_BUFFER_CONTROL.modify(fields),
-        6 => peripherals.USBCTRL_DPRAM.EP3_IN_BUFFER_CONTROL.modify(fields),
-        7 => peripherals.USBCTRL_DPRAM.EP3_OUT_BUFFER_CONTROL.modify(fields),
-        8 => peripherals.USBCTRL_DPRAM.EP4_IN_BUFFER_CONTROL.modify(fields),
-        9 => peripherals.USBCTRL_DPRAM.EP4_OUT_BUFFER_CONTROL.modify(fields),
-        10 => peripherals.USBCTRL_DPRAM.EP5_IN_BUFFER_CONTROL.modify(fields),
-        11 => peripherals.USBCTRL_DPRAM.EP5_OUT_BUFFER_CONTROL.modify(fields),
-        12 => peripherals.USBCTRL_DPRAM.EP6_IN_BUFFER_CONTROL.modify(fields),
-        13 => peripherals.USBCTRL_DPRAM.EP6_OUT_BUFFER_CONTROL.modify(fields),
-        14 => peripherals.USBCTRL_DPRAM.EP7_IN_BUFFER_CONTROL.modify(fields),
-        15 => peripherals.USBCTRL_DPRAM.EP7_OUT_BUFFER_CONTROL.modify(fields),
-        16 => peripherals.USBCTRL_DPRAM.EP8_IN_BUFFER_CONTROL.modify(fields),
-        17 => peripherals.USBCTRL_DPRAM.EP8_OUT_BUFFER_CONTROL.modify(fields),
-        18 => peripherals.USBCTRL_DPRAM.EP9_IN_BUFFER_CONTROL.modify(fields),
-        19 => peripherals.USBCTRL_DPRAM.EP9_OUT_BUFFER_CONTROL.modify(fields),
-        20 => peripherals.USBCTRL_DPRAM.EP10_IN_BUFFER_CONTROL.modify(fields),
-        21 => peripherals.USBCTRL_DPRAM.EP10_OUT_BUFFER_CONTROL.modify(fields),
-        22 => peripherals.USBCTRL_DPRAM.EP11_IN_BUFFER_CONTROL.modify(fields),
-        23 => peripherals.USBCTRL_DPRAM.EP11_OUT_BUFFER_CONTROL.modify(fields),
-        24 => peripherals.USBCTRL_DPRAM.EP12_IN_BUFFER_CONTROL.modify(fields),
-        25 => peripherals.USBCTRL_DPRAM.EP12_OUT_BUFFER_CONTROL.modify(fields),
-        26 => peripherals.USBCTRL_DPRAM.EP13_IN_BUFFER_CONTROL.modify(fields),
-        27 => peripherals.USBCTRL_DPRAM.EP13_OUT_BUFFER_CONTROL.modify(fields),
-        28 => peripherals.USBCTRL_DPRAM.EP14_IN_BUFFER_CONTROL.modify(fields),
-        29 => peripherals.USBCTRL_DPRAM.EP14_OUT_BUFFER_CONTROL.modify(fields),
-        30 => peripherals.USBCTRL_DPRAM.EP15_IN_BUFFER_CONTROL.modify(fields),
-        31 => peripherals.USBCTRL_DPRAM.EP15_OUT_BUFFER_CONTROL.modify(fields),
+        0 => DPRAM.EP0_IN_BUFFER_CONTROL.modify(fields),
+        1 => DPRAM.EP0_OUT_BUFFER_CONTROL.modify(fields),
+        2 => DPRAM.EP1_IN_BUFFER_CONTROL.modify(fields),
+        3 => DPRAM.EP1_OUT_BUFFER_CONTROL.modify(fields),
+        4 => DPRAM.EP2_IN_BUFFER_CONTROL.modify(fields),
+        5 => DPRAM.EP2_OUT_BUFFER_CONTROL.modify(fields),
+        6 => DPRAM.EP3_IN_BUFFER_CONTROL.modify(fields),
+        7 => DPRAM.EP3_OUT_BUFFER_CONTROL.modify(fields),
+        8 => DPRAM.EP4_IN_BUFFER_CONTROL.modify(fields),
+        9 => DPRAM.EP4_OUT_BUFFER_CONTROL.modify(fields),
+        10 => DPRAM.EP5_IN_BUFFER_CONTROL.modify(fields),
+        11 => DPRAM.EP5_OUT_BUFFER_CONTROL.modify(fields),
+        12 => DPRAM.EP6_IN_BUFFER_CONTROL.modify(fields),
+        13 => DPRAM.EP6_OUT_BUFFER_CONTROL.modify(fields),
+        14 => DPRAM.EP7_IN_BUFFER_CONTROL.modify(fields),
+        15 => DPRAM.EP7_OUT_BUFFER_CONTROL.modify(fields),
+        16 => DPRAM.EP8_IN_BUFFER_CONTROL.modify(fields),
+        17 => DPRAM.EP8_OUT_BUFFER_CONTROL.modify(fields),
+        18 => DPRAM.EP9_IN_BUFFER_CONTROL.modify(fields),
+        19 => DPRAM.EP9_OUT_BUFFER_CONTROL.modify(fields),
+        20 => DPRAM.EP10_IN_BUFFER_CONTROL.modify(fields),
+        21 => DPRAM.EP10_OUT_BUFFER_CONTROL.modify(fields),
+        22 => DPRAM.EP11_IN_BUFFER_CONTROL.modify(fields),
+        23 => DPRAM.EP11_OUT_BUFFER_CONTROL.modify(fields),
+        24 => DPRAM.EP12_IN_BUFFER_CONTROL.modify(fields),
+        25 => DPRAM.EP12_OUT_BUFFER_CONTROL.modify(fields),
+        26 => DPRAM.EP13_IN_BUFFER_CONTROL.modify(fields),
+        27 => DPRAM.EP13_OUT_BUFFER_CONTROL.modify(fields),
+        28 => DPRAM.EP14_IN_BUFFER_CONTROL.modify(fields),
+        29 => DPRAM.EP14_OUT_BUFFER_CONTROL.modify(fields),
+        30 => DPRAM.EP15_IN_BUFFER_CONTROL.modify(fields),
+        31 => DPRAM.EP15_OUT_BUFFER_CONTROL.modify(fields),
         else => {}, // TODO: We'll just ignore it for now
     }
 }
@@ -511,38 +515,38 @@ pub fn read_raw_buffer_control(
 ) u32 {
     // haven't found a better way to handle this
     return switch (i) {
-        0 => peripherals.USBCTRL_DPRAM.EP0_IN_BUFFER_CONTROL.raw,
-        1 => peripherals.USBCTRL_DPRAM.EP0_OUT_BUFFER_CONTROL.raw,
-        2 => peripherals.USBCTRL_DPRAM.EP1_IN_BUFFER_CONTROL.raw,
-        3 => peripherals.USBCTRL_DPRAM.EP1_OUT_BUFFER_CONTROL.raw,
-        4 => peripherals.USBCTRL_DPRAM.EP2_IN_BUFFER_CONTROL.raw,
-        5 => peripherals.USBCTRL_DPRAM.EP2_OUT_BUFFER_CONTROL.raw,
-        6 => peripherals.USBCTRL_DPRAM.EP3_IN_BUFFER_CONTROL.raw,
-        7 => peripherals.USBCTRL_DPRAM.EP3_OUT_BUFFER_CONTROL.raw,
-        8 => peripherals.USBCTRL_DPRAM.EP4_IN_BUFFER_CONTROL.raw,
-        9 => peripherals.USBCTRL_DPRAM.EP4_OUT_BUFFER_CONTROL.raw,
-        10 => peripherals.USBCTRL_DPRAM.EP5_IN_BUFFER_CONTROL.raw,
-        11 => peripherals.USBCTRL_DPRAM.EP5_OUT_BUFFER_CONTROL.raw,
-        12 => peripherals.USBCTRL_DPRAM.EP6_IN_BUFFER_CONTROL.raw,
-        13 => peripherals.USBCTRL_DPRAM.EP6_OUT_BUFFER_CONTROL.raw,
-        14 => peripherals.USBCTRL_DPRAM.EP7_IN_BUFFER_CONTROL.raw,
-        15 => peripherals.USBCTRL_DPRAM.EP7_OUT_BUFFER_CONTROL.raw,
-        16 => peripherals.USBCTRL_DPRAM.EP8_IN_BUFFER_CONTROL.raw,
-        17 => peripherals.USBCTRL_DPRAM.EP8_OUT_BUFFER_CONTROL.raw,
-        18 => peripherals.USBCTRL_DPRAM.EP9_IN_BUFFER_CONTROL.raw,
-        19 => peripherals.USBCTRL_DPRAM.EP9_OUT_BUFFER_CONTROL.raw,
-        20 => peripherals.USBCTRL_DPRAM.EP10_IN_BUFFER_CONTROL.raw,
-        21 => peripherals.USBCTRL_DPRAM.EP10_OUT_BUFFER_CONTROL.raw,
-        22 => peripherals.USBCTRL_DPRAM.EP11_IN_BUFFER_CONTROL.raw,
-        23 => peripherals.USBCTRL_DPRAM.EP11_OUT_BUFFER_CONTROL.raw,
-        24 => peripherals.USBCTRL_DPRAM.EP12_IN_BUFFER_CONTROL.raw,
-        25 => peripherals.USBCTRL_DPRAM.EP12_OUT_BUFFER_CONTROL.raw,
-        26 => peripherals.USBCTRL_DPRAM.EP13_IN_BUFFER_CONTROL.raw,
-        27 => peripherals.USBCTRL_DPRAM.EP13_OUT_BUFFER_CONTROL.raw,
-        28 => peripherals.USBCTRL_DPRAM.EP14_IN_BUFFER_CONTROL.raw,
-        29 => peripherals.USBCTRL_DPRAM.EP14_OUT_BUFFER_CONTROL.raw,
-        30 => peripherals.USBCTRL_DPRAM.EP15_IN_BUFFER_CONTROL.raw,
-        31 => peripherals.USBCTRL_DPRAM.EP15_OUT_BUFFER_CONTROL.raw,
+        0 => DPRAM.EP0_IN_BUFFER_CONTROL.raw,
+        1 => DPRAM.EP0_OUT_BUFFER_CONTROL.raw,
+        2 => DPRAM.EP1_IN_BUFFER_CONTROL.raw,
+        3 => DPRAM.EP1_OUT_BUFFER_CONTROL.raw,
+        4 => DPRAM.EP2_IN_BUFFER_CONTROL.raw,
+        5 => DPRAM.EP2_OUT_BUFFER_CONTROL.raw,
+        6 => DPRAM.EP3_IN_BUFFER_CONTROL.raw,
+        7 => DPRAM.EP3_OUT_BUFFER_CONTROL.raw,
+        8 => DPRAM.EP4_IN_BUFFER_CONTROL.raw,
+        9 => DPRAM.EP4_OUT_BUFFER_CONTROL.raw,
+        10 => DPRAM.EP5_IN_BUFFER_CONTROL.raw,
+        11 => DPRAM.EP5_OUT_BUFFER_CONTROL.raw,
+        12 => DPRAM.EP6_IN_BUFFER_CONTROL.raw,
+        13 => DPRAM.EP6_OUT_BUFFER_CONTROL.raw,
+        14 => DPRAM.EP7_IN_BUFFER_CONTROL.raw,
+        15 => DPRAM.EP7_OUT_BUFFER_CONTROL.raw,
+        16 => DPRAM.EP8_IN_BUFFER_CONTROL.raw,
+        17 => DPRAM.EP8_OUT_BUFFER_CONTROL.raw,
+        18 => DPRAM.EP9_IN_BUFFER_CONTROL.raw,
+        19 => DPRAM.EP9_OUT_BUFFER_CONTROL.raw,
+        20 => DPRAM.EP10_IN_BUFFER_CONTROL.raw,
+        21 => DPRAM.EP10_OUT_BUFFER_CONTROL.raw,
+        22 => DPRAM.EP11_IN_BUFFER_CONTROL.raw,
+        23 => DPRAM.EP11_OUT_BUFFER_CONTROL.raw,
+        24 => DPRAM.EP12_IN_BUFFER_CONTROL.raw,
+        25 => DPRAM.EP12_OUT_BUFFER_CONTROL.raw,
+        26 => DPRAM.EP13_IN_BUFFER_CONTROL.raw,
+        27 => DPRAM.EP13_OUT_BUFFER_CONTROL.raw,
+        28 => DPRAM.EP14_IN_BUFFER_CONTROL.raw,
+        29 => DPRAM.EP14_OUT_BUFFER_CONTROL.raw,
+        30 => DPRAM.EP15_IN_BUFFER_CONTROL.raw,
+        31 => DPRAM.EP15_OUT_BUFFER_CONTROL.raw,
         else => 0, // TODO: We'll just return 0 for now
     };
 }
@@ -553,36 +557,36 @@ pub fn modify_endpoint_control(
 ) void {
     // haven't found a better way to handle this
     switch (epci) {
-        1 => peripherals.USBCTRL_DPRAM.EP1_IN_CONTROL.modify(fields),
-        2 => peripherals.USBCTRL_DPRAM.EP1_OUT_CONTROL.modify(fields),
-        3 => peripherals.USBCTRL_DPRAM.EP2_IN_CONTROL.modify(fields),
-        4 => peripherals.USBCTRL_DPRAM.EP2_OUT_CONTROL.modify(fields),
-        5 => peripherals.USBCTRL_DPRAM.EP3_IN_CONTROL.modify(fields),
-        6 => peripherals.USBCTRL_DPRAM.EP3_OUT_CONTROL.modify(fields),
-        7 => peripherals.USBCTRL_DPRAM.EP4_IN_CONTROL.modify(fields),
-        8 => peripherals.USBCTRL_DPRAM.EP4_OUT_CONTROL.modify(fields),
-        9 => peripherals.USBCTRL_DPRAM.EP5_IN_CONTROL.modify(fields),
-        10 => peripherals.USBCTRL_DPRAM.EP5_OUT_CONTROL.modify(fields),
-        11 => peripherals.USBCTRL_DPRAM.EP6_IN_CONTROL.modify(fields),
-        12 => peripherals.USBCTRL_DPRAM.EP6_OUT_CONTROL.modify(fields),
-        13 => peripherals.USBCTRL_DPRAM.EP7_IN_CONTROL.modify(fields),
-        14 => peripherals.USBCTRL_DPRAM.EP7_OUT_CONTROL.modify(fields),
-        15 => peripherals.USBCTRL_DPRAM.EP8_IN_CONTROL.modify(fields),
-        16 => peripherals.USBCTRL_DPRAM.EP8_OUT_CONTROL.modify(fields),
-        17 => peripherals.USBCTRL_DPRAM.EP9_IN_CONTROL.modify(fields),
-        18 => peripherals.USBCTRL_DPRAM.EP9_OUT_CONTROL.modify(fields),
-        19 => peripherals.USBCTRL_DPRAM.EP10_IN_CONTROL.modify(fields),
-        20 => peripherals.USBCTRL_DPRAM.EP10_OUT_CONTROL.modify(fields),
-        21 => peripherals.USBCTRL_DPRAM.EP11_IN_CONTROL.modify(fields),
-        22 => peripherals.USBCTRL_DPRAM.EP11_OUT_CONTROL.modify(fields),
-        23 => peripherals.USBCTRL_DPRAM.EP12_IN_CONTROL.modify(fields),
-        24 => peripherals.USBCTRL_DPRAM.EP12_OUT_CONTROL.modify(fields),
-        25 => peripherals.USBCTRL_DPRAM.EP13_IN_CONTROL.modify(fields),
-        26 => peripherals.USBCTRL_DPRAM.EP13_OUT_CONTROL.modify(fields),
-        27 => peripherals.USBCTRL_DPRAM.EP14_IN_CONTROL.modify(fields),
-        28 => peripherals.USBCTRL_DPRAM.EP14_OUT_CONTROL.modify(fields),
-        29 => peripherals.USBCTRL_DPRAM.EP15_IN_CONTROL.modify(fields),
-        30 => peripherals.USBCTRL_DPRAM.EP15_OUT_CONTROL.modify(fields),
+        1 => DPRAM.EP1_IN_CONTROL.modify(fields),
+        2 => DPRAM.EP1_OUT_CONTROL.modify(fields),
+        3 => DPRAM.EP2_IN_CONTROL.modify(fields),
+        4 => DPRAM.EP2_OUT_CONTROL.modify(fields),
+        5 => DPRAM.EP3_IN_CONTROL.modify(fields),
+        6 => DPRAM.EP3_OUT_CONTROL.modify(fields),
+        7 => DPRAM.EP4_IN_CONTROL.modify(fields),
+        8 => DPRAM.EP4_OUT_CONTROL.modify(fields),
+        9 => DPRAM.EP5_IN_CONTROL.modify(fields),
+        10 => DPRAM.EP5_OUT_CONTROL.modify(fields),
+        11 => DPRAM.EP6_IN_CONTROL.modify(fields),
+        12 => DPRAM.EP6_OUT_CONTROL.modify(fields),
+        13 => DPRAM.EP7_IN_CONTROL.modify(fields),
+        14 => DPRAM.EP7_OUT_CONTROL.modify(fields),
+        15 => DPRAM.EP8_IN_CONTROL.modify(fields),
+        16 => DPRAM.EP8_OUT_CONTROL.modify(fields),
+        17 => DPRAM.EP9_IN_CONTROL.modify(fields),
+        18 => DPRAM.EP9_OUT_CONTROL.modify(fields),
+        19 => DPRAM.EP10_IN_CONTROL.modify(fields),
+        20 => DPRAM.EP10_OUT_CONTROL.modify(fields),
+        21 => DPRAM.EP11_IN_CONTROL.modify(fields),
+        22 => DPRAM.EP11_OUT_CONTROL.modify(fields),
+        23 => DPRAM.EP12_IN_CONTROL.modify(fields),
+        24 => DPRAM.EP12_OUT_CONTROL.modify(fields),
+        25 => DPRAM.EP13_IN_CONTROL.modify(fields),
+        26 => DPRAM.EP13_OUT_CONTROL.modify(fields),
+        27 => DPRAM.EP14_IN_CONTROL.modify(fields),
+        28 => DPRAM.EP14_OUT_CONTROL.modify(fields),
+        29 => DPRAM.EP15_IN_CONTROL.modify(fields),
+        30 => DPRAM.EP15_OUT_CONTROL.modify(fields),
         else => {}, // TODO: We'll just ignore it for now
     }
 }
@@ -592,7 +596,7 @@ pub fn modify_endpoint_control(
 pub fn next(self: *usb.EPBIter) ?usb.EPB {
     if (self.last_bit) |lb| {
         // Acknowledge the last handled buffer
-        peripherals.USBCTRL_REGS.BUFF_STATUS.write_raw(lb);
+        REGS.BUFF_STATUS.write_raw(lb);
         self.last_bit = null;
     }
     // All input buffers handled?

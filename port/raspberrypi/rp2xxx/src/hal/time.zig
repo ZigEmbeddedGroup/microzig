@@ -127,11 +127,11 @@ pub const Deadline = struct {
 };
 
 pub fn get_time_since_boot() Absolute {
-    var high_word = TIMER.TIMERAWH;
+    var high_word = TIMER.TIMERAWH.read().TIMERAWH;
 
     return while (true) {
-        const low_word = TIMER.TIMERAWL;
-        const next_high_word = TIMER.TIMERAWH;
+        const low_word = TIMER.TIMERAWL.read().TIMERAWL;
+        const next_high_word = TIMER.TIMERAWH.read().TIMERAWH;
         if (next_high_word == high_word)
             break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
 
