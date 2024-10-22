@@ -119,8 +119,12 @@ pub const F = struct {
         // already moved over to the 12MHz XOSC. We just need to make it x4 that
         // clock.
         //
+        // Creates a bitmask for the pll_usb bit
+        const bit_offset = @bitOffsetOf(resets.Mask, "pll_usb");
+        const raw_mask: u32 = 0 << bit_offset;
+        const mask: resets.Mask = @bitCast(raw_mask);
         // PLL_USB out of reset
-        resets.reset(.{ .pll_usb = true });
+        resets.reset(mask);
         // Configure it:
         //
         // RFDIV = 1
@@ -143,8 +147,12 @@ pub const F = struct {
     }
 
     pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
+        // Creates a bitmask for the usbctrl bit
+        const bit_offset = @bitOffsetOf(resets.Mask, "usbctrl");
+        const raw_mask: u32 = 0 << bit_offset;
+        const mask: resets.Mask = @bitCast(raw_mask);
         // Bring USB out of reset
-        resets.reset(.{ .usbctrl = true });
+        resets.reset(mask);
 
         // Clear the control portion of DPRAM. This may not be necessary -- the
         // datasheet is ambiguous -- but the C examples do it, and so do we.
