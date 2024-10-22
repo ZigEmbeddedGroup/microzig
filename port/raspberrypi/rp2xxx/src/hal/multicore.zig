@@ -19,7 +19,7 @@ pub const fifo = struct {
         if (!is_read_ready())
             return null;
 
-        return SIO.FIFO_RD;
+        return SIO.FIFO_RD.read().FIFO_RD;
     }
 
     /// Read from the FIFO, waiting for data if there is none.
@@ -43,7 +43,7 @@ pub const fifo = struct {
     /// Write to the FIFO
     /// You must check if there is space by calling is_write_ready
     pub fn write(value: u32) void {
-        SIO.FIFO_WR = value;
+        SIO.FIFO_WR.write(.{ .FIFO_WR = value });
         microzig.cpu.sev();
     }
 
@@ -75,9 +75,9 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
     }.wrapper;
 
     // reset the second core
-    PSM.FRCE_OFF.modify(.{ .proc1 = 1 });
-    while (PSM.FRCE_OFF.read().proc1 != 1) microzig.cpu.nop();
-    PSM.FRCE_OFF.modify(.{ .proc1 = 0 });
+    PSM.FRCE_OFF.modify(.{ .PROC1 = 1 });
+    while (PSM.FRCE_OFF.read().PROC1 != 1) microzig.cpu.nop();
+    PSM.FRCE_OFF.modify(.{ .PROC1 = 0 });
 
     stack[stack.len - 2] = @intFromPtr(entrypoint);
     stack[stack.len - 1] = @intFromPtr(stack.ptr);

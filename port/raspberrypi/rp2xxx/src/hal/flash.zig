@@ -5,7 +5,7 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
 const IO_QSPI = peripherals.IO_QSPI;
-const XIP_SSI = peripherals.XIP_SSI;
+const XIP_SSI = peripherals.SSI;
 
 pub const Command = enum(u8) {
     block_erase = 0xd8,

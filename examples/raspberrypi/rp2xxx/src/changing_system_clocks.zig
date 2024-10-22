@@ -9,12 +9,12 @@ const Pin = rp2xxx.gpio.Pin;
 
 /// The HAL provides a convenvience function for detecting which of the RP2XXX
 /// family you're currently compiling for.
-const get_cpu = rp2xxx.compatibility.get_cpu;
+const cpu = rp2xxx.compatibility.cpu;
 
 // Use the system() preset helper to change the SYS and REF clock frequencies from default
 const system_clock_cfg = clocks.config.preset.system(
     // Reduce the system clock by a factor of 4 (different default clock speeds for RP2350/RP2040)
-    switch (get_cpu()) {
+    switch (cpu) {
         .RP2040 => 125_000_000 / 4,
         .RP2350 => 150_000_000 / 4,
     },

@@ -3,20 +3,8 @@ const MicroZig = @import("microzig/build");
 const rp2xxx = @import("microzig/port/raspberrypi/rp2xxx");
 
 const rp2040_only_examples = [_]Example{
-    // RaspberryPi Boards:
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/rp2040_only/adc.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
     .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/rp2040_only/i2c_bus_scan.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/rp2040_only/pwm.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/rp2040_only/spi_host.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_squarewave", .file = "src/rp2040_only/squarewave.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_uart", .file = "src/rp2040_only/uart.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/rp2040_only/usb_cdc.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_ws2812", .file = "src/rp2040_only/ws2812.zig" },
-    .{ .target = rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
+    // RaspberryPi Boards:
 
     // WaveShare Boards:
     .{ .target = rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
@@ -30,6 +18,19 @@ const rp2350_only_examples = [_]Example{
 };
 
 const chip_agnostic_examples = [_]ChipAgnosticExample{
+    .{ .name = "adc", .file = "src/adc.zig" },
+    .{ .name = "flash-program", .file = "src/flash_program.zig" },
+    .{ .name = "i2c-bus-scan", .file = "src/i2c_bus_scan.zig" },
+    .{ .name = "pwm", .file = "src/pwm.zig" },
+    .{ .name = "random", .file = "src/random.zig" },
+    .{ .name = "spi-host", .file = "src/spi_host.zig" },
+    .{ .name = "squarewave", .file = "src/squarewave.zig" },
+    .{ .name = "uart", .file = "src/uart.zig" },
+    .{ .name = "usb-hid", .file = "src/usb_hid.zig" },
+    .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
+    .{ .name = "ws2812", .file = "src/ws2812.zig" },
+    .{ .name = "multicore", .file = "src/blinky_core1.zig" },
+
     .{ .name = "blinky", .file = "src/blinky.zig" },
     .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
     .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },

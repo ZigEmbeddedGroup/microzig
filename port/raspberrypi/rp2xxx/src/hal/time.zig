@@ -1,10 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const get_cpu = @import("compatibility.zig").get_cpu;
+const cpu = @import("compatibility.zig").cpu;
 const TIMER = @field(
     microzig.chip.peripherals,
-    switch (get_cpu()) {
+    switch (cpu) {
         .RP2040 => "TIMER",
         .RP2350 => "TIMER0",
     },
@@ -127,11 +127,11 @@ pub const Deadline = struct {
 };
 
 pub fn get_time_since_boot() Absolute {
-    var high_word = TIMER.TIMERAWH;
+    var high_word = TIMER.TIMERAWH.read().TIMERAWH;
 
     return while (true) {
-        const low_word = TIMER.TIMERAWL;
-        const next_high_word = TIMER.TIMERAWH;
+        const low_word = TIMER.TIMERAWL.read().TIMERAWL;
+        const next_high_word = TIMER.TIMERAWH.read().TIMERAWH;
         if (next_high_word == high_word)
             break @as(Absolute, @enumFromInt(@as(u64, @intCast(high_word)) << 32 | low_word));
 
