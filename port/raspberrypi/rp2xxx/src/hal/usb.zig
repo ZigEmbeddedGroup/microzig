@@ -119,8 +119,6 @@ pub const F = struct {
         // already moved over to the 12MHz XOSC. We just need to make it x4 that
         // clock.
         //
-        // PLL_USB out of reset
-        resets.reset(.{ .pll_usb = true });
         // Configure it:
         //
         // RFDIV = 1
@@ -143,9 +141,6 @@ pub const F = struct {
     }
 
     pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
-        // Bring USB out of reset
-        resets.reset(.{ .usbctrl = true });
-
         // Clear the control portion of DPRAM. This may not be necessary -- the
         // datasheet is ambiguous -- but the C examples do it, and so do we.
         peripherals.USBCTRL_DPRAM.SETUP_PACKET_LOW.write_raw(0);
