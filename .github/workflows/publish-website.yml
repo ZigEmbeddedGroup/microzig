@@ -1,0 +1,40 @@
+name: Deploy Website
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/**
+      - website/**
+
+jobs:
+  # Build the project to ensure it works. Also to get the binaries.
+  build-website:
+    uses: ./.github/workflows/build-base.yml
+    with:
+      zig-version: ${{ vars.WS_TARGET_ZIG_VERSION }}
+      get-submodules: true
+      target-os: Linux
+      github-artifact-name: website-build
+      artifact-output-path: website/zig-out
+      working-directory: website
+  # Publish microzig
+  publish-website:
+    uses: ./.github/workflows/publish-base.yml
+    needs: build-website
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    with:
+      github-artifact-name: website-build
+      source-path: /
+    secrets:
+      target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
+      ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+      host: ${{ secrets.DEPLOY_HOST }}
+      port: ${{ secrets.DEPLOY_PORT }}
+      user: ${{ secrets.DEPLOY_USER }}

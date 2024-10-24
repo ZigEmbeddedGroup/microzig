@@ -5,7 +5,6 @@
         .@"microzig/build" = .{ .path = "../../../build" },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig",
         "build.zig.zon",
@@ -13,4 +12,3 @@
         "test",
     },
 }
-
