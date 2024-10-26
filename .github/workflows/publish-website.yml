@@ -10,6 +10,12 @@ on:
     paths:
       - .github/**
       - website/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/**
+      - website/**
 
 jobs:
   # Build the project to ensure it works. Also to get the binaries.
@@ -33,8 +39,20 @@ jobs:
       github-artifact-name: website-build
       source-path: /
     secrets:
-      target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
+      target-path: ${{ github.event_name == 'pull_request' && format('{0}/staging/pulls/{1}', secrets.DEPLOY_ROOT_DATA_PATH, github.event.number) || secrets.DEPLOY_ROOT_DATA_PATH }}
       ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
       host: ${{ secrets.DEPLOY_HOST }}
       port: ${{ secrets.DEPLOY_PORT }}
       user: ${{ secrets.DEPLOY_USER }}
+  pr-comment:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    needs: publish-website
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            Heya!
+            You can check out a preview of your PR at [${{ vars.WEBSITE_STAGING_HOST }}/pulls/${{ github.event.number }}/](${{ vars.WEBSITE_STAGING_HOST }}/pulls/${{ github.event.number }}/)!
