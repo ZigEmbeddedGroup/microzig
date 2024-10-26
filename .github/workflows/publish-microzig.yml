@@ -26,15 +26,6 @@ jobs:
       ref: ${{ github.ref_name }}
     secrets:
       downloads-url: ${{ secrets.BOXZER_DOWNLOADS_URL }}
-  # Alters the boxzer output to match what we desire
-  alter-microzig-artifact:
-    uses: ./.github/workflows/alter-microzig-artifact.yml
-    needs: build-microzig
-    with:
-      in-gh-artifact-name: microzig-build
-      out-gh-artifact-name: microzig-alt
-      zig-version: ${{ vars.MZ_TARGET_ZIG_VERSION }}
-      microzig-version: ${{ needs.build-microzig.outputs.version }}
   # Publish microzig
   publish-microzig:
     uses: ./.github/workflows/publish-base.yml
@@ -44,7 +35,7 @@ jobs:
       cancel-in-progress: false
     with:
       tag: ${{ github.ref_name }}
-      github-artifact-name: microzig-alt
+      github-artifact-name: microzig-build
       source-path: /
     secrets:
       target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
