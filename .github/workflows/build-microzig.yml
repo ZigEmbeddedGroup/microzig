@@ -3,21 +3,8 @@ name: Build Microzig
 on:
   push:
     branches: [main]
-    paths:
-      - .github/**
-      - build.zig*
-      - tools/**
-      - core/**
-      - port/**
-      - examples/**
   pull_request:
     branches: [main]
-    paths:
-      - build.zig*
-      - tools/**
-      - core/**
-      - port/**
-      - examples/**
 
 jobs:
   build-microzig:

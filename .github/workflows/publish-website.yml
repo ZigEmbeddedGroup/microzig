@@ -7,15 +7,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/**
-      - website/**
   pull_request:
     branches:
       - main
-    paths:
-      - .github/**
-      - website/**
 
 jobs:
   # Build the project to ensure it works. Also to get the binaries.
