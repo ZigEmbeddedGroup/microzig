@@ -1,23 +1,26 @@
 const std = @import("std");
 const Build = std.Build;
 const internals = @import("microzig/build-internals");
-const TargetAlias = internals.TargetAlias;
 const Chip = internals.Chip;
+const Target = internals.Target;
 const ModuleDeclaration = internals.ModuleDeclaration;
 
-pub const chips = struct {
-    pub const rp2040 = &TargetAlias.init("rp2040");
-};
+const Self = @This();
 
-pub const boards = struct {
-    pub const pico = &TargetAlias.init("pico");
-};
+chips: struct {
+    rp2040: Target,
+},
 
-pub fn build(b: *Build) !void {
+boards: struct {
+    pico: Target,
+},
+
+pub fn init(dep: *Build.Dependency) Self {
+    const b = dep.builder;
+
     const rp2040_bootrom = get_bootrom(b);
 
     const rp2040_chip: Chip = .{
-        .b = b,
         .name = "RP2040",
         .cpu = std.Target.Query{
             .cpu_arch = .thumb,
@@ -37,13 +40,16 @@ pub fn build(b: *Build) !void {
         .root_source_file = b.path("src/hal.zig"),
     });
 
-    internals.submit_target(chips.rp2040, .{
+    const rp2040_target = .{
+        .dep = dep,
         .chip = rp2040_chip,
         .hal = rp2040_hal,
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
-    });
-    internals.submit_target(boards.pico, .{
+    };
+
+    const pico_target = .{
+        .dep = dep,
         .chip = rp2040_chip,
         .hal = rp2040_hal,
         .board = ModuleDeclaration.init(b, .{
@@ -54,11 +60,22 @@ pub fn build(b: *Build) !void {
         }),
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
-    });
+    };
+
+    return .{
+        .chips = .{
+            .rp2040 = rp2040_target,
+        },
+        .boards = .{
+            .pico = pico_target,
+        },
+    };
 }
 
-// TODO: better bootrom system. maybe make bootrom a separate package so as to allow the user
-// to use it in case he creates a custom board
+pub fn build(_: *Build) !void {
+
+}
+
 fn get_bootrom(b: *Build) Build.LazyPath {
     const rom_exe = b.addExecutable(.{
         .name = "stage2-w25q080",

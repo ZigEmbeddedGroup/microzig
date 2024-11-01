@@ -5,71 +5,105 @@ const internals = @import("microzig/build-internals");
 
 const MicroZig = @This();
 
+const ports_list = [_]struct {
+    name: [:0]const u8,
+    dep_name: [:0]const u8,
+}{
+    .{ .name = "rp2xxx", .dep_name = "microzig/port/raspberrypi/rp2xxx" },
+    .{ .name = "lpc", .dep_name = "microzig/port/nxp/lpc" },
+};
+
+pub const PortSelect = blk: {
+    var fields: []const std.builtin.Type.StructField = &.{};
+    for (ports_list) |port| {
+        fields = fields ++ [_]std.builtin.Type.StructField{.{
+            .name = port.name,
+            .type = bool,
+            .default_value = @as(*const anyopaque, @ptrCast(&false)),
+            .is_comptime = false,
+            .alignment = @alignOf(bool),
+        }};
+    }
+    break :blk @Type(.{
+        .Struct = .{
+            .layout = .auto,
+            .fields = fields,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
+};
+
+const port_select: PortSelect = blk: {
+    const build_runner = @import("root");
+    const root = build_runner.root;
+    break :blk if (@hasDecl(root, "port_select")) root.port_select else .{};
+};
+
+const Ports = blk: {
+    var fields: []const std.builtin.Type.StructField = &.{};
+
+    for (ports_list) |port| {
+        if (@field(port_select, port.name)) {
+            const typ = customLazyImport(@This(), port.dep_name) orelse struct {};
+            fields = fields ++ [_]std.builtin.Type.StructField{.{
+                .name = port.name,
+                .type = typ,
+                .default_value = null,
+                .is_comptime = false,
+                .alignment = @alignOf(typ),
+            }};
+        }
+    }
+
+    break :blk @Type(.{
+        .Struct = .{
+            .layout = .auto,
+            .fields = fields,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
+};
+
 b: *Build,
 dep: *Build.Dependency,
+ports: Ports,
 
 pub fn build(b: *Build) void {
-    const generate_linker_script = b.addExecutable(.{
+    const generate_linker_script_exe = b.addExecutable(.{
         .name = "generate_linker_script",
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.host,
     });
-    b.installArtifact(generate_linker_script);
+    b.installArtifact(generate_linker_script_exe);
 }
 
 /// Initializes MicroZig.
 pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
-    const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
-    mz.* = .{
-        .b = b,
-        .dep = dep,
-    };
-    return mz;
-}
-
-// TODO: make a comptime system for this so as to allow specifying a list of ports instead of manually coding all the logic when
-// adding a new one
-/// Loads the specified ports and return a struct including all the targets aliases exposed.
-pub inline fn load_ports(mz: *MicroZig, comptime port_select: struct {
-    rp2xxx: bool = false,
-    lpc: bool = false,
-}) type {
-    // This should ensure that lazyImport never fails. Kind of a hacky way to do things, but it should work
+    var ports: Ports = undefined;
     var should_quit = false;
-    should_quit = should_quit or
-        if (port_select.rp2xxx) mz.dep.builder.lazyDependency("microzig/port/raspberrypi/rp2xxx", .{}) == null else false;
-    should_quit = should_quit or
-        if (port_select.lpc) mz.dep.builder.lazyDependency("microzig/port/nxp/lpc", .{}) == null else false;
+    inline for (ports_list) |port| {
+        if (@field(port_select, port.name)) {
+            if (dep.builder.lazyDependency(port.dep_name, .{})) |port_dep| {
+                @field(ports, port.name) = dep.builder.lazyImport(@This(), port.dep_name).?.init(port_dep);
+            } else {
+                should_quit = true;
+            }
+        }
+    }
     if (should_quit) {
         std.process.exit(0);
     }
 
-    const rp2xxx_port = if (port_select.rp2xxx)
-        mz.dep.builder.lazyImport(@This(), "microzig/port/raspberrypi/rp2xxx").?
-    else
-        struct {};
-
-    const lpc_port = if (port_select.lpc)
-        mz.dep.builder.lazyImport(@This(), "microzig/port/nxp/lpc").?
-    else
-        struct {};
-
-    return struct {
-        pub const rp2xxx = if (port_select.rp2xxx)
-            rp2xxx_port
-        else
-            @compileError("Please provide `.rp2xxx = true` to enable the port.");
-
-        pub const lpc = if (port_select.lpc)
-            lpc_port
-        else
-            @compileError("Please provide `.lpc = true` to enable the port.");
+    const mz = b.allocator.create(MicroZig) catch @panic("out of memory");
+    mz.* = .{
+        .b = b,
+        .dep = dep,
+        .ports = ports,
     };
-}
 
-/// Gets a MicroZig target based on its alias.
-pub fn get_target(_: *MicroZig, alias: *const internals.TargetAlias) internals.Target {
-    return internals.get_target(alias) orelse @panic("target not found");
+    return mz;
 }
 
 /// Configuration options for firmware creation.
@@ -105,7 +139,7 @@ pub const Firmware = struct {
         if (fw.emitted_elf == null) {
             const raw_elf = fw.artifact.getEmittedBin();
             fw.emitted_elf = if (fw.target.patch_elf) |patch_elf|
-                patch_elf.func(patch_elf.b, raw_elf)
+                patch_elf(fw.target.dep, raw_elf)
             else
                 raw_elf;
         }
@@ -167,7 +201,7 @@ pub const Firmware = struct {
                 .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
                 .esp => @panic("ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!"),
 
-                .custom => |generator| generator.convert(generator, elf_file),
+                .custom => |generator| generator.convert(firmware.target.dep, elf_file),
             };
         }
 
@@ -215,20 +249,44 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     core_mod.addImport("cpu", cpu_mod);
 
     const regz_exe = b.dependency("microzig/tools/regz", .{}).artifact("regz");
-    const chip_mod = target.chip.create_module(regz_exe);
-    const chip_step = mz.b.addInstallFile(chip_mod.root_source_file.?, "firmware/chip.zig");
-    mz.b.getInstallStep().dependOn(&chip_step.step);
+    const chip_source = switch (target.chip.register_definition) {
+        .json, .atdf, .svd => |file| blk: {
+            const regz_run = b.addRunArtifact(regz_exe);
+
+            regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+            regz_run.addArg(@tagName(target.chip.register_definition));
+
+            regz_run.addArg("--output_path"); // Write to a file
+            const zig_file = regz_run.addOutputFileArg("chip.zig");
+
+            regz_run.addFileArg(file);
+
+            break :blk zig_file;
+        },
+
+        .zig => |src| src,
+    };
+    const chip_mod = b.createModule(.{
+        .root_source_file = chip_source,
+    });
+
     chip_mod.addImport("microzig", core_mod);
     core_mod.addImport("chip", chip_mod);
 
     if (target.hal) |hal| {
-        const hal_mod = hal.create_module();
+        const hal_mod = b.createModule(.{
+            .root_source_file = hal.root_source_file,
+            .imports = hal.imports,
+        });
         hal_mod.addImport("microzig", core_mod);
         core_mod.addImport("hal", hal_mod);
     }
 
     if (target.board) |board| {
-        const board_mod = board.create_module();
+        const board_mod = b.createModule(.{
+            .root_source_file = board.root_source_file,
+            .imports = board.imports,
+        });
         board_mod.addImport("microzig", core_mod);
         core_mod.addImport("board", board_mod);
     }
@@ -258,7 +316,12 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
     // If not specified then generate the linker script
     const linker_script = target.linker_script orelse blk: {
-        const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
+        const GenerateLinkerScriptArgs = struct {
+            cpu_name: []const u8,
+            cpu_arch: std.Target.Cpu.Arch,
+            chip_name: []const u8,
+            memory_regions: []const internals.MemoryRegion,
+        };
 
         const generate_linker_script_exe = mz.dep.artifact("generate_linker_script");
 
@@ -339,6 +402,48 @@ const Cpu = enum {
         });
     }
 };
+
+pub inline fn customLazyImport(
+    comptime asking_build_zig: type,
+    comptime dep_name: []const u8,
+) ?type {
+    const build_runner = @import("root");
+    const deps = build_runner.dependencies;
+    const pkg_hash = customFindImportPkgHashOrFatal(asking_build_zig, dep_name);
+
+    inline for (@typeInfo(deps.packages).Struct.decls) |decl| {
+        if (comptime std.mem.eql(u8, decl.name, pkg_hash)) {
+            const pkg = @field(deps.packages, decl.name);
+            const available = !@hasDecl(pkg, "available") or pkg.available;
+            if (!available) {
+                return null;
+            }
+            return if (@hasDecl(pkg, "build_zig"))
+                pkg.build_zig
+            else
+                @compileError("dependency '" ++ dep_name ++ "' does not have a build.zig");
+        }
+    }
+
+    comptime unreachable; // Bad @dependencies source
+}
+
+inline fn customFindImportPkgHashOrFatal(comptime asking_build_zig: type, comptime dep_name: []const u8) []const u8 {
+    const build_runner = @import("root");
+    const deps = build_runner.dependencies;
+
+    const pkg_deps = comptime for (@typeInfo(deps.packages).Struct.decls) |decl| {
+        const pkg_hash = decl.name;
+        const pkg = @field(deps.packages, pkg_hash);
+        if (@hasDecl(pkg, "build_zig") and pkg.build_zig == asking_build_zig) break pkg.deps;
+    } else deps.root_deps;
+
+    comptime for (pkg_deps) |dep| {
+        if (std.mem.eql(u8, dep[0], dep_name)) return dep[1];
+    };
+
+    @panic("dependency not found");
+}
 
 // fn init_cpu_map(mz: *MicroZig) void {
 //     mz.cpu_map.put(.avr5, .{

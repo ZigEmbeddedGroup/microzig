@@ -3,30 +3,12 @@ const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 
-const TargetRegistry = std.AutoHashMap(*const TargetAlias, Target);
-
-var target_registry: TargetRegistry = TargetRegistry.init(std.heap.page_allocator);
-
-pub fn build(b: *Build) void {
-    _ = b.addModule("shared", .{
-        .root_source_file = b.path("src/shared.zig"),
-    });
-}
-
-/// Gets a MicroZig target based on its alias.
-pub fn get_target(alias: *const TargetAlias) ?Target {
-    return target_registry.get(alias);
-}
-
-/// Registers a MicroZig target based on its alias.
-pub fn submit_target(alias: *const TargetAlias, target: Target) void {
-    const entry = target_registry.getOrPut(alias) catch @panic("out of memory");
-    if (entry.found_existing) @panic("target submitted twice");
-    entry.value_ptr.* = target;
-}
+pub fn build(_: *Build) void {}
 
 /// MicroZig target definition.
 pub const Target = struct {
+    dep: *Build.Dependency,
+
     chip: Chip,
 
     hal: ?ModuleDeclaration = null,
@@ -35,26 +17,12 @@ pub const Target = struct {
 
     linker_script: ?LazyPath = null,
 
-    patch_elf: ?struct {
-        b: *Build,
-        func: *const fn (*Build, LazyPath) LazyPath,
-    } = null,
+    patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
 
     preferred_binary_format: ?BinaryFormat = null,
 };
 
-/// MicroZig target alias. Used to get the actual target definition.
-pub const TargetAlias = struct {
-    name: []const u8,
-
-    pub fn init(name: []const u8) TargetAlias {
-        return .{ .name = name };
-    }
-};
-
 pub const Chip = struct {
-    b: *Build,
-
     name: []const u8,
 
     cpu: std.Target.Query,
@@ -74,35 +42,10 @@ pub const Chip = struct {
     },
 
     memory_regions: []const MemoryRegion,
-
-    pub fn create_module(chip: Chip, regz_exe: *Build.Step.Compile) *Module {
-        const chip_source = switch (chip.register_definition) {
-            .json, .atdf, .svd => |file| blk: {
-                const regz_run = chip.b.addRunArtifact(regz_exe);
-
-                regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
-                regz_run.addArg(@tagName(chip.register_definition));
-
-                regz_run.addArg("--output_path"); // Write to a file
-                const zig_file = regz_run.addOutputFileArg("chip.zig");
-
-                regz_run.addFileArg(file);
-
-                break :blk zig_file;
-            },
-
-            .zig => |src| src,
-        };
-
-        return chip.b.createModule(.{
-            .root_source_file = chip_source,
-        });
-    }
 };
 
 /// Helper struct that provides info for module creation by MicroZig.
 pub const ModuleDeclaration = struct {
-    b: *Build,
     root_source_file: LazyPath,
     imports: []const Module.Import,
 
@@ -112,17 +55,9 @@ pub const ModuleDeclaration = struct {
     }) ModuleDeclaration {
         const allocated_imports = b.allocator.dupe(Module.Import, options.imports) catch @panic("out of memory");
         return .{
-            .b = b,
             .root_source_file = options.root_source_file,
             .imports = allocated_imports,
         };
-    }
-
-    pub fn create_module(decl: ModuleDeclaration) *Module {
-        return decl.b.createModule(.{
-            .root_source_file = decl.root_source_file,
-            .imports = decl.imports,
-        });
     }
 };
 
@@ -221,7 +156,7 @@ pub const BinaryFormat = union(enum) {
         ///
         /// The `*Custom` format is passed so contextual information can be obtained by using
         /// `@fieldParentPtr` to provide access to tooling.
-        convert: *const fn (*Custom, elf: Build.LazyPath) Build.LazyPath,
+        convert: *const fn (*Build.Dependency, elf: Build.LazyPath) Build.LazyPath,
     };
 };
 

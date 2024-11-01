@@ -1,21 +1,24 @@
 const std = @import("std");
+const Build = std.Build;
 const internals = @import("microzig/build-internals");
-const TargetAlias = internals.TargetAlias;
 const Chip = internals.Chip;
+const Target = internals.Target;
 const ModuleDeclaration = internals.ModuleDeclaration;
-const regz = @import("microzig/tools/regz");
 
-pub const chips = struct {
-    pub const lpc176x5x = &TargetAlias.init("lpc176x5x");
-};
+const Self = @This();
 
-pub const boards = struct {
-    pub const mbed = &TargetAlias.init("mbed");
-};
+chips: struct {
+    lpc176x5x: Target,
+},
 
-pub fn build(b: *std.Build) void {
+boards: struct {
+    mbed: Target,
+},
+
+pub fn init(dep: *Build.Dependency) Self {
+    const b = dep.builder;
+
     const lpc176x5x_chip: Chip = .{
-        .b = b,
         .name = "LPC176x5x",
         .cpu = .{
             .cpu_arch = .thumb,
@@ -35,38 +38,48 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/hals/LPC176x5x.zig"),
     });
 
-    internals.submit_target(chips.lpc176x5x, .{
+    const lpc176x5x_target: Target = .{
+        .dep = dep,
         .chip = lpc176x5x_chip,
         .hal = lpc176x5x_hal,
         .preferred_binary_format = .elf,
-        .patch_elf = .{
-            .b = b,
-            .func = patch_elf,
-        },
-    });
-    internals.submit_target(boards.mbed, .{
+        .patch_elf = lpc176x5x_patch_elf,
+    };
+
+    const mbed_target: Target = .{
+        .dep = dep,
         .chip = lpc176x5x_chip,
         .hal = lpc176x5x_hal,
         .board = ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
         }),
-        .patch_elf = .{
-            .b = b,
-            .func = patch_elf,
+        .patch_elf = lpc176x5x_patch_elf,
+    };
+
+    return .{
+        .chips = .{
+            .lpc176x5x = lpc176x5x_target,
         },
-    });
+        .boards = .{
+            .mbed = mbed_target,
+        },
+    };
 }
 
-/// Patch an ELF file to add a checksum over the first 8 words so the
-/// cpu will properly boot.
-fn patch_elf(b: *std.Build, input: std.Build.LazyPath) std.Build.LazyPath {
-    const patchelf = b.addExecutable(.{
+pub fn build(b: *Build) void {
+    const lpc176x5x_patch_elf_exe = b.addExecutable(.{
         .name = "lpc176x5x-patchelf",
         .root_source_file = b.path("src/tools/patchelf.zig"),
         .target = b.host,
     });
+    b.installArtifact(lpc176x5x_patch_elf_exe);
+}
 
-    const patch = b.addRunArtifact(patchelf);
-    patch.addFileArg(input);
-    return patch.addOutputFileArg("output.elf");
+/// Patch an ELF file to add a checksum over the first 8 words so the
+/// cpu will properly boot.
+fn lpc176x5x_patch_elf(dep: *Build.Dependency, input: std.Build.LazyPath) std.Build.LazyPath {
+    const patch_elf_exe = dep.artifact("lpc176x5x-patchelf");
+    const run = dep.builder.addRunArtifact(patch_elf_exe);
+    run.addFileArg(input);
+    return run.addOutputFileArg("output.elf");
 }
