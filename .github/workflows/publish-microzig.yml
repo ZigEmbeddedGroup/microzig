@@ -29,7 +29,7 @@ jobs:
   # Publish microzig
   publish-microzig:
     uses: ./.github/workflows/publish-base.yml
-    needs: alter-microzig-artifact
+    needs: build-microzig
     concurrency:
       group: publish
       cancel-in-progress: false
@@ -37,6 +37,7 @@ jobs:
       tag: ${{ github.ref_name }}
       github-artifact-name: microzig-build
       source-path: /
+      is-prerelease: ${{ needs.build-microzig.outputs.prerelease != "" }}
     secrets:
       target-path: ${{ secrets.DEPLOY_ROOT_DATA_PATH }}
       ssh-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}

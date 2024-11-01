@@ -11,6 +11,11 @@ on:
         type: string
         default: ""
         description: The version tag to publish
+      is-prerelease:
+        required: false
+        type: boolean
+        default: false
+        description: Whether or not the publish is a prerelease
       github-artifact-name:
         required: true
         type: string
@@ -103,4 +108,4 @@ jobs:
           draft: true
           generateReleaseNotes: true
           tag: ${{ inputs.tag }}
-          prerelease: ${{ contains(inputs.tag, '-beta') || contains(inputs.tag, '-alpha') || contains(inputs.tag, '-rc') }}
+          prerelease: ${{ inputs.is-prerelease }}
