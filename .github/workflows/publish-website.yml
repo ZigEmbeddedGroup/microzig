@@ -16,7 +16,7 @@ jobs:
   build-website:
     uses: ./.github/workflows/build-base.yml
     with:
-      zig-version: ${{ vars.WS_TARGET_ZIG_VERSION }}
+      zig-version: ${{ vars.TARGET_ZIG_VERSION }}
       get-submodules: true
       target-os: Linux
       github-artifact-name: website-build

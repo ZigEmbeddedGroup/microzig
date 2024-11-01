@@ -16,7 +16,7 @@ jobs:
     name: Build
     uses: ./.github/workflows/build-base.yml
     with:
-      zig-version: ${{ vars.MZ_TARGET_ZIG_VERSION }}
+      zig-version: ${{ vars.TARGET_ZIG_VERSION }}
       get-submodules: true
       is-packaged: true
       zig-args: -Doptimize=ReleaseSmall

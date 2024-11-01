@@ -17,7 +17,7 @@ jobs:
       group: build
       cancel-in-progress: true
     with:
-      zig-version: ${{ vars.MZ_TARGET_ZIG_VERSION }}
+      zig-version: ${{ vars.TARGET_ZIG_VERSION }}
       get-submodules: true
       is-packaged: true
       target-os: macOS
