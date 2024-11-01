@@ -33,6 +33,10 @@ jobs:
       - name: Unit Test Ports
         run: zig build run-port-tests -Doptimize=ReleaseSmall
 
+      - name: Build Website
+        run: zig build
+        working-directory: website
+
       - name: Dry run packaging
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
