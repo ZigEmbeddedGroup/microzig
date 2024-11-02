@@ -22,6 +22,7 @@ pub const Target = struct {
     preferred_binary_format: ?BinaryFormat = null,
 };
 
+/// MicroZig chip definition.
 pub const Chip = struct {
     name: []const u8,
 

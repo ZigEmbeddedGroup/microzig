@@ -18,8 +18,6 @@ boards: struct {
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const rp2040_bootrom = get_bootrom(b);
-
     const rp2040_chip: Chip = .{
         .name = "RP2040",
         .cpu = std.Target.Query{
@@ -35,6 +33,8 @@ pub fn init(dep: *Build.Dependency) Self {
             .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
         },
     };
+
+    const rp2040_bootrom = get_bootrom(b, rp2040_chip, .w25q080);
 
     const rp2040_hal = ModuleDeclaration.init(b, .{
         .root_source_file = b.path("src/hal.zig"),
@@ -73,28 +73,38 @@ pub fn init(dep: *Build.Dependency) Self {
 }
 
 pub fn build(_: *Build) !void {
-
+    // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
 }
 
-fn get_bootrom(b: *Build) Build.LazyPath {
+const BootROM = union(enum) {
+    at25sf128a,
+    generic_03h,
+    is25lp080,
+    w25q080,
+    w25x10cl,
+
+    // Use the old stage2 bootloader vendored with MicroZig till 2023-09-13
+    legacy,
+};
+
+fn get_bootrom(b: *Build, chip: Chip, rom: BootROM) Build.LazyPath {
+    var target = chip.cpu;
+    target.abi = .eabi;
+
     const rom_exe = b.addExecutable(.{
-        .name = "stage2-w25q080",
+        .name = b.fmt("stage2-{s}", .{@tagName(rom)}),
         .optimize = .ReleaseSmall,
-        .target = b.resolveTargetQuery(std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        }),
+        .target = b.resolveTargetQuery(target),
         .root_source_file = null,
     });
+
     //rom_exe.linkage = .static;
-    rom_exe.setLinkerScript(b.path("src/bootroms/RP2040/shared/stage2.ld"));
-    rom_exe.addAssemblyFile(b.path("src/bootroms/RP2040/w25q080.S"));
+    rom_exe.setLinkerScript(b.path(b.fmt("src/bootroms/{s}/shared/stage2.ld", .{chip.name})));
+    rom_exe.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ chip.name, @tagName(rom) })));
     rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
 
     const rom_objcopy = b.addObjCopy(rom_exe.getEmittedBin(), .{
-        .basename = "w25q080.bin",
+        .basename = b.fmt("{s}.bin", .{@tagName(rom)}),
         .format = .bin,
     });
 

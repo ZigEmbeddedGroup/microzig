@@ -34,17 +34,21 @@ pub const PortSelect = blk: {
     });
 };
 
-const port_select: PortSelect = blk: {
+pub const Options = struct {
+    enable_ports: PortSelect = .{},
+};
+
+const microzig_options: Options = blk: {
     const build_runner = @import("root");
     const root = build_runner.root;
-    break :blk if (@hasDecl(root, "port_select")) root.port_select else .{};
+    break :blk if (@hasDecl(root, "microzig_options")) root.microzig_options else .{};
 };
 
 const Ports = blk: {
     var fields: []const std.builtin.Type.StructField = &.{};
 
     for (ports_list) |port| {
-        if (@field(port_select, port.name)) {
+        if (@field(microzig_options.enable_ports, port.name)) {
             const typ = customLazyImport(@This(), port.dep_name) orelse struct {};
             fields = fields ++ [_]std.builtin.Type.StructField{.{
                 .name = port.name,
@@ -79,12 +83,12 @@ pub fn build(b: *Build) void {
     b.installArtifact(generate_linker_script_exe);
 }
 
-/// Initializes MicroZig.
+/// Initializes an instance of MicroZig.
 pub fn init(b: *Build, dep: *Build.Dependency) *MicroZig {
     var ports: Ports = undefined;
     var should_quit = false;
     inline for (ports_list) |port| {
-        if (@field(port_select, port.name)) {
+        if (@field(microzig_options.enable_ports, port.name)) {
             if (dep.builder.lazyDependency(port.dep_name, .{})) |port_dep| {
                 @field(ports, port.name) = dep.builder.lazyImport(@This(), port.dep_name).?.init(port_dep);
             } else {
@@ -209,7 +213,7 @@ pub const Firmware = struct {
     }
 };
 
-/// Creates a new firmware.
+/// Creates a new firmware for a given target.
 pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     const b = mz.dep.builder;
     const target = options.target;
@@ -303,9 +307,10 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
         .mz = mz,
         .artifact = mz.b.addExecutable(.{
             .name = options.name,
+            .root_source_file = mz.dep.path("core/start.zig"),
             .target = zig_target,
             .optimize = options.optimize,
-            .root_source_file = mz.dep.path("core/start.zig"),
+            .linkage = .static,
         }),
         .target = target,
         .emitted_files = Firmware.EmittedFiles.init(mz.b.allocator),
@@ -325,7 +330,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
         const generate_linker_script_exe = mz.dep.artifact("generate_linker_script");
 
-        const generate_linker_script_args = GenerateLinkerScriptArgs{
+        const generate_linker_script_args: GenerateLinkerScriptArgs = .{
             .cpu_name = zig_target.result.cpu.model.name,
             .cpu_arch = zig_target.result.cpu.arch,
             .chip_name = target.chip.name,
