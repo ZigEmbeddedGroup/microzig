@@ -1,5 +1,6 @@
 name: Publish Github Pages
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -16,13 +17,14 @@ jobs:
           version: 0.13.0
 
       - name: Build
+        working-directory: website
         run: zig build
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact
         id: deployment
         with:
-          path: zig-out/www
+          path: website/zig-out/www
 
 
   # Deploy job
