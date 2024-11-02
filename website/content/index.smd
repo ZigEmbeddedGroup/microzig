@@ -1,9 +1,22 @@
 ---
 .title = "Home",
 .date = @date("2020-07-06T00:00:00"),
-.author = "Felix Queißner",
+.author = "Matthew Knight",
 .draft = false,
 .layout = "index.shtml",
+.description = "MicroZig Homepage",
 .tags = []
 ---
-Dummy, full text is implemented in the HTML file for now.
+
+# MicroZig
+
+[Repository](https://github.com/ZigEmbeddedGroup/microzig)
+
+## Goals
+
+- Provide documents on how to get started with embedded programming (for absolute newbies)
+- Provide example snippets for common operations on certain architectures (LPC, STM32, AVR, ...)
+- Provide example worked through embedded mini-projects
+- Create register definition libraries
+- Create a common interface/HAL over several architectures
+- Create a performant common set of drivers for external platforms
