@@ -8,17 +8,27 @@ const ModuleDeclaration = internals.ModuleDeclaration;
 const Self = @This();
 
 chips: struct {
-    rp2040: Target,
+    rp2040: *Target,
+    rp2350_arm: *Target,
 },
 
 boards: struct {
-    pico: Target,
+    raspberrypi: struct {
+        pico: *Target,
+        pico2_arm: *Target,
+    },
+    waveshare: struct {
+        rp2040_plus_4m: *Target,
+        rp2040_plus_16m: *Target,
+        rp2040_eth: *Target,
+        rp2040_matrix: *Target,
+    },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const rp2040_chip: Chip = .{
+    const chip_rp2040: Chip = .{
         .name = "RP2040",
         .cpu = std.Target.Query{
             .cpu_arch = .thumb,
@@ -34,42 +44,136 @@ pub fn init(dep: *Build.Dependency) Self {
         },
     };
 
-    const rp2040_bootrom = get_bootrom(b, rp2040_chip, .w25q080);
+    const bootrom_rp2040 = get_bootrom(b, chip_rp2040, .w25q080);
 
-    const rp2040_hal = ModuleDeclaration.init(b, .{
+    const chip_rp2350_arm: Chip = .{
+        .name = "RP2350",
+        .cpu = std.Target.Query{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+        .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+        .memory_regions = &.{
+            .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+            .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+            .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+        },
+    };
+
+    const hal = ModuleDeclaration.init(b, .{
         .root_source_file = b.path("src/hal.zig"),
     });
 
-    const rp2040_target = .{
+    var ret: Self = undefined;
+
+    ret.chips.rp2040 = b.allocator.create(Target) catch @panic("out of memory");
+    ret.chips.rp2040.* = .{
         .dep = dep,
-        .chip = rp2040_chip,
-        .hal = rp2040_hal,
+        .chip = chip_rp2040,
+        .hal = hal,
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
     };
 
-    const pico_target = .{
+    ret.chips.rp2350_arm = b.allocator.create(Target) catch @panic("out of memory");
+    ret.chips.rp2350_arm.* = .{
         .dep = dep,
-        .chip = rp2040_chip,
-        .hal = rp2040_hal,
+        .chip = chip_rp2350_arm,
+        .hal = hal,
+        .linker_script = b.path("rp2350.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
+    };
+
+    ret.boards.raspberrypi.pico = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.raspberrypi.pico.* = .{
+        .dep = dep,
+        .chip = chip_rp2040,
+        .hal = hal,
         .board = ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
             .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = rp2040_bootrom }) },
+                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
             },
         }),
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
     };
 
-    return .{
-        .chips = .{
-            .rp2040 = rp2040_target,
-        },
-        .boards = .{
-            .pico = pico_target,
-        },
+    ret.boards.raspberrypi.pico2_arm = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.raspberrypi.pico2_arm.* = .{
+        .dep = dep,
+        .chip = chip_rp2350_arm,
+        .hal = hal,
+        .board = ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+        }),
+        .linker_script = b.path("rp2350.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
     };
+
+    ret.boards.waveshare.rp2040_plus_4m = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.waveshare.rp2040_plus_4m.* = .{
+        .dep = dep,
+        .chip = chip_rp2040,
+        .hal = hal,
+        .board = ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/boards/waveshare_rp2040_plus_4m.zig"),
+            .imports = &.{
+                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+            },
+        }),
+        .linker_script = b.path("rp2040.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
+    };
+
+    ret.boards.waveshare.rp2040_plus_16m = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.waveshare.rp2040_plus_16m.* = .{
+        .dep = dep,
+        .chip = chip_rp2040,
+        .hal = hal,
+        .board = ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/boards/waveshare_rp2040_plus_16m.zig"),
+            .imports = &.{
+                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+            },
+        }),
+        .linker_script = b.path("rp2040.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
+    };
+
+    ret.boards.waveshare.rp2040_eth = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.waveshare.rp2040_eth.* = .{
+        .dep = dep,
+        .chip = chip_rp2040,
+        .hal = hal,
+        .board = ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/boards/waveshare_rp2040_eth.zig"),
+            .imports = &.{
+                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+            },
+        }),
+        .linker_script = b.path("rp2040.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
+    };
+
+    ret.boards.waveshare.rp2040_matrix = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.waveshare.rp2040_matrix.* = .{
+        .dep = dep,
+        .chip = chip_rp2040,
+        .hal = hal,
+        .board = ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
+            .imports = &.{
+                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+            },
+        }),
+        .linker_script = b.path("rp2040.ld"),
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
+    };
+
+    return ret;
 }
 
 pub fn build(_: *Build) !void {

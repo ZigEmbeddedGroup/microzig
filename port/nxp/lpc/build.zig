@@ -8,11 +8,13 @@ const ModuleDeclaration = internals.ModuleDeclaration;
 const Self = @This();
 
 chips: struct {
-    lpc176x5x: Target,
+    lpc176x5x: *Target,
 },
 
 boards: struct {
-    mbed: Target,
+    mbed: struct {
+        lpc1768: *Target,
+    },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
@@ -38,7 +40,10 @@ pub fn init(dep: *Build.Dependency) Self {
         .root_source_file = b.path("src/hals/LPC176x5x.zig"),
     });
 
-    const lpc176x5x_target: Target = .{
+    var ret: Self = undefined;
+
+    ret.chips.lpc176x5x = b.allocator.create(Target) catch @panic("out of memory");
+    ret.chips.lpc176x5x.* = .{
         .dep = dep,
         .chip = lpc176x5x_chip,
         .hal = lpc176x5x_hal,
@@ -46,7 +51,8 @@ pub fn init(dep: *Build.Dependency) Self {
         .patch_elf = lpc176x5x_patch_elf,
     };
 
-    const mbed_target: Target = .{
+    ret.boards.mbed.lpc1768 = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.mbed.lpc1768.* = .{
         .dep = dep,
         .chip = lpc176x5x_chip,
         .hal = lpc176x5x_hal,
@@ -56,14 +62,7 @@ pub fn init(dep: *Build.Dependency) Self {
         .patch_elf = lpc176x5x_patch_elf,
     };
 
-    return .{
-        .chips = .{
-            .lpc176x5x = lpc176x5x_target,
-        },
-        .boards = .{
-            .mbed = mbed_target,
-        },
-    };
+    return ret;
 }
 
 pub fn build(b: *Build) void {

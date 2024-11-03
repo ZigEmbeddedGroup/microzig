@@ -2,10 +2,8 @@
     .name = "examples/raspberrypi/rp2xxx",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/raspberrypi/rp2xxx" = .{ .path = "../../../port/raspberrypi/rp2xxx" },
+        .microzig = .{ .path = "../../../" },
     },
-
     .paths = .{
         "LICENSE",
         "README.md",

@@ -2,10 +2,8 @@
     .name = "examples/nxp/lpc",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/nxp/lpc" = .{ .path = "../../../port/nxp/lpc" },
+        .microzig = .{ .path = "../../../" },
     },
-
     .paths = .{
         "LICENSE",
         "README.md",
