@@ -338,95 +338,6 @@ const function_table = [@typeInfo(Function).Enum.fields.len][30]u1{
     single(29), // ADC3
 };
 
-pub fn GPIO(comptime num: u5, comptime direction: gpio.Direction) type {
-    return switch (direction) {
-        .in => struct {
-            const pin = gpio.num(num);
-
-            pub inline fn read(self: @This()) u1 {
-                _ = self;
-                return pin.read();
-            }
-        },
-        .out => struct {
-            const pin = gpio.num(num);
-
-            pub inline fn put(self: @This(), value: u1) void {
-                _ = self;
-                pin.put(value);
-            }
-
-            pub inline fn toggle(self: @This()) void {
-                _ = self;
-                pin.toggle();
-            }
-        },
-    };
-}
-
-pub fn Pins(comptime config: GlobalConfiguration) type {
-    comptime {
-        var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
-            if (@field(config, field.name)) |pin_config| {
-                var pin_field = StructField{
-                    .is_comptime = false,
-                    .default_value = null,
-
-                    // initialized below:
-                    .name = undefined,
-                    .type = undefined,
-                    .alignment = undefined,
-                };
-
-                if (pin_config.function == .SIO) {
-                    pin_field.name = pin_config.name orelse field.name;
-                    pin_field.type = GPIO(@intFromEnum(@field(Pin, field.name)), pin_config.direction orelse .in);
-                } else if (pin_config.function.is_pwm()) {
-                    pin_field.name = pin_config.name orelse @tagName(pin_config.function);
-                    pin_field.type = pwm.Pwm(pin_config.function.pwm_slice(), pin_config.function.pwm_channel());
-                } else if (pin_config.function.is_adc()) {
-                    pin_field.name = pin_config.name orelse @tagName(pin_config.function);
-                    pin_field.type = adc.Input;
-                    pin_field.default_value = @as(?*const anyopaque, @ptrCast(switch (pin_config.function) {
-                        .ADC0 => &adc.Input.ain0,
-                        .ADC1 => &adc.Input.ain1,
-                        .ADC2 => &adc.Input.ain2,
-                        .ADC3 => &adc.Input.ain3,
-                        else => unreachable,
-                    }));
-                } else {
-                    continue;
-                }
-
-                // if (pin_field.default_value == null) {
-                //     if (@sizeOf(pin_field.field_type) > 0) {
-                //         pin_field.default_value = @ptrCast(?*const anyopaque, &pin_field.field_type{});
-                //     } else {
-                //         const Struct = struct {
-                //             magic_field: pin_field.field_type = .{},
-                //         };
-                //         pin_field.default_value = @typeInfo(Struct).Struct.fields[0].default_value;
-                //     }
-                // }
-
-                pin_field.alignment = @alignOf(field.type);
-
-                fields = fields ++ &[_]StructField{pin_field};
-            }
-        }
-
-        return @Type(.{
-            .Struct = .{
-                .layout = .auto,
-                .is_tuple = false,
-                .fields = fields,
-                .decls = &.{},
-            },
-        });
-    }
-}
-
 pub const GlobalConfiguration = struct {
     GPIO0: ?Pin.Configuration = null,
     GPIO1: ?Pin.Configuration = null,
@@ -466,7 +377,77 @@ pub const GlobalConfiguration = struct {
             @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
     }
 
-    pub fn apply(comptime config: GlobalConfiguration) Pins(config) {
+    pub fn PinsType(self: GlobalConfiguration) type {
+        var fields: []const StructField = &.{};
+        for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
+            if (@field(self, field.name)) |pin_config| {
+                var pin_field = StructField{
+                    .is_comptime = false,
+                    .default_value = null,
+
+                    // initialized below:
+                    .name = undefined,
+                    .type = undefined,
+                    .alignment = undefined,
+                };
+
+                pin_field.name = pin_config.name orelse field.name;
+                if (pin_config.function == .SIO) {
+                    pin_field.type = gpio.Pin;
+                } else if (pin_config.function.is_pwm()) {
+                    pin_field.type = pwm.RuntimePwm;
+                } else if (pin_config.function.is_adc()) {
+                    // TODO
+                    // pin_field.type = adc.Input;
+                } else {
+                    continue;
+                }
+
+                pin_field.alignment = @alignOf(field.type);
+
+                fields = fields ++ &[_]StructField{pin_field};
+            }
+        }
+
+        return @Type(.{
+            .Struct = .{
+                .layout = .auto,
+                .is_tuple = false,
+                .fields = fields,
+                .decls = &.{},
+            },
+        });
+    }
+
+    // Can be called at comptime or runtime
+    pub fn pins(comptime self: GlobalConfiguration) self.PinsType() {
+        var ret: self.PinsType() = undefined;
+        inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
+            if (@field(self, field.name)) |pin_config| {
+                if (pin_config.function == .SIO) {
+                    @field(ret, pin_config.name orelse field.name) = gpio.num(@intFromEnum(@field(Pin, field.name)));
+                } else if (pin_config.function.is_pwm()) {
+                    @field(ret, pin_config.name orelse field.name) = pwm.RuntimePwm {
+                        .slice_number = pin_config.function.pwm_slice(),
+                        .channel = pin_config.function.pwm_channel(),
+                    };
+                }
+
+                // TODO
+                // } else if (pin_config.function.is_adc()) {
+                //     switch (pin_config.function) {
+                //         .ADC0 => &adc.Input.ain0,
+                //         .ADC1 => &adc.Input.ain1,
+                //         .ADC2 => &adc.Input.ain2,
+                //         .ADC3 => &adc.Input.ain3,
+                //         else => unreachable,
+            }
+        }
+
+        return ret;
+    }
+
+    pub fn apply(comptime config: GlobalConfiguration) void {
         comptime var input_gpios: u32 = 0;
         comptime var output_gpios: u32 = 0;
         comptime var has_adc = false;
@@ -560,18 +541,5 @@ pub const GlobalConfiguration = struct {
             adc.init();
         }
 
-        // fields in the Pins(config) type should be zero sized, so we just
-        // default build them all (wasn't sure how to do that cleanly in
-        // `Pins()`
-        var ret: Pins(config) = undefined;
-        inline for (@typeInfo(Pins(config)).Struct.fields) |field| {
-            if (field.default_value) |default_value| {
-                @field(ret, field.name) = @as(*const field.field_type, @ptrCast(default_value)).*;
-            } else {
-                @field(ret, field.name) = .{};
-            }
-        }
-
-        return ret;
     }
 };
