@@ -10,9 +10,15 @@ all:
 	@echo "disassemble $< to $@"
 	riscv64-unknown-elf-objdump --disassemble-all  "$<" > "$@"
 
+clean:
+	rm -rf zig-out
+
+clean-all:
+	rm -rf zig-out .zig-cache
+
 disassemble: $(S_FILES)
 
-wch-isp:
+flash:
 	@if [ "$(suffix $(BIN_FILE))" = ".bin" ]; then \
 		echo "write $(BIN_FILE) by wch-isp"; \
 		wch-isp -pr flash $(BIN_FILE); \
@@ -25,4 +31,4 @@ wch-isp:
 %:
 	@:
 
-.PHONY: all disassemble
+.PHONY: all disassemble flash clean clean-all

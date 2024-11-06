@@ -8,6 +8,20 @@ all: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
+clean:
+	@for dir in $(SUBDIRS); do \
+		if [ -f "$$dir/Makefile" ]; then \
+			$(MAKE) -C "$$dir" clean; \
+		fi \
+	done
+
+clean-all:
+	@for dir in $(SUBDIRS); do \
+		if [ -f "$$dir/Makefile" ]; then \
+			$(MAKE) -C "$$dir" clean-all; \
+		fi \
+	done
+
 # %.s: %.elf
 # 	@echo "disassemble $< to $@"
 # 	riscv64-unknown-elf-objdump --disassemble-all  "$<" > "$@"
@@ -20,17 +34,8 @@ disassemble:
 		fi \
 	done
 
-wch-isp:
-	@if [ "$(suffix $(BIN_FILE))" = ".bin" ]; then \
-		echo "write $(BIN_FILE) by wch-isp"; \
-		wch-isp -pr flash $(BIN_FILE); \
-	else \
-		echo "Error: $(BIN_FILE) is not a .bin file"; \
-		exit 1; \
-	fi
-
 # ignore args
 %:
 	@:
 
-.PHONY: all $(SUBDIRS) disassemble wch-isp
+.PHONY: all $(SUBDIRS) disassemble clean clean-all

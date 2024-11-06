@@ -20,8 +20,8 @@ disassemble: $(S_FILES)
 
 flash:
 	@if [ "$(suffix $(BIN_FILE))" = ".bin" ]; then \
-		echo "write $(BIN_FILE) by wch-isp"; \
-		wch-isp -pr flash $(BIN_FILE); \
+		echo "write $(BIN_FILE) by wlink"; \
+		wlink flash --address 0x08000000 $(BIN_FILE); \
 	else \
 		echo "Error: $(BIN_FILE) is not a .bin file"; \
 		exit 1; \
