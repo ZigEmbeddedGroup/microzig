@@ -1,0 +1,14 @@
+---
+.title = "Community",
+.date = @date("2024-11-02T00:00:00"),
+.author = "Matthew Knight",
+.draft = false,
+.layout = "index.shtml",
+.description = "MicroZig: Community",
+.tags = []
+---
+
+# Community
+
+- [ZEG Discord](https://discord.gg/Hpps2zStQ5)
+- MicroZig IRC: irc://irc.libera.chat/microzig
