@@ -30,10 +30,10 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        microzig.install_firmware(b, firmware, .{});
+        microzig.install_firmware(b, firmware, .{ .format = .bin });
 
         // For debugging, we also always install the firmware as an ELF file
-        microzig.install_firmware(b, firmware, .{ .format = .bin });
+        microzig.install_firmware(b, firmware, .{});
     }
 }
 
