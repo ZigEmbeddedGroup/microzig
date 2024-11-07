@@ -31,9 +31,11 @@ jobs:
         working-directory: website
         run: zig build
 
-      - name: List, download, and unpack artifacts
-        working-directory: website
+      - name: List, download, unpack, and generate metadata
         run: |
+          # Create an array to store releases with the artifact
+          releases_with_artifact=()
+
           # Fetch all releases and iterate over them
           releases=$(gh release list --limit 100 --repo ${{ github.repository }} | awk '{print $1}')
 
@@ -50,12 +52,18 @@ jobs:
             if [ -f "boxzer-out.tar.gz" ]; then
               echo "Unpacking boxzer-out.tar.gz for release: $release"
               tar -xzvf boxzer-out.tar.gz -C zig-out/www/downloads/microzig
-              # Remove the tarball after unpacking
               rm boxzer-out.tar.gz
+
+              # Add the release to the metadata array
+              releases_with_artifact+=("\"$release\"")
             else
               echo "Artifact 'boxzer-out.tar.gz' not found for release: $release"
             fi
           done
+
+          # Generate metadata.json file
+          echo "Generating metadata.json"
+          echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > zig-out/www/downloads/microzig/metadata.json
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
