@@ -6,7 +6,7 @@ permissions:
 on:
   push:
     tags:
-      - "microzig-*.*.*"
+      - "*.*.*"
 
 jobs:
   deploy-packages:
