@@ -1,179 +1,137 @@
 const std = @import("std");
 const Build = std.Build;
-const internals = @import("microzig/build-internals");
-const Chip = internals.Chip;
-const Target = internals.Target;
-const ModuleDeclaration = internals.ModuleDeclaration;
+const MicroZig = @import("microzig/build-internals");
 
 const Self = @This();
 
 chips: struct {
-    rp2040: *Target,
-    rp2350_arm: *Target,
+    rp2040: *MicroZig.Target,
+    rp2350_arm: *MicroZig.Target,
 },
 
 boards: struct {
     raspberrypi: struct {
-        pico: *Target,
-        pico2_arm: *Target,
+        pico: *MicroZig.Target,
+        pico2_arm: *MicroZig.Target,
     },
     waveshare: struct {
-        rp2040_plus_4m: *Target,
-        rp2040_plus_16m: *Target,
-        rp2040_eth: *Target,
-        rp2040_matrix: *Target,
+        rp2040_plus_4m: *MicroZig.Target,
+        rp2040_plus_16m: *MicroZig.Target,
+        rp2040_eth: *MicroZig.Target,
+        rp2040_matrix: *MicroZig.Target,
     },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const chip_rp2040: Chip = .{
-        .name = "RP2040",
-        .cpu = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .register_definition = .{ .svd = b.path("src/chips/rp2040.svd") },
-        .memory_regions = &.{
-            .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
-            .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
-            .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
-        },
-    };
-
-    const bootrom_rp2040 = get_bootrom(b, chip_rp2040, .w25q080);
-
-    const chip_rp2350_arm: Chip = .{
-        .name = "RP2350",
-        .cpu = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
-        .memory_regions = &.{
-            .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
-            .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
-            .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
-        },
-    };
-
-    const hal = ModuleDeclaration.init(b, .{
-        .root_source_file = b.path("src/hal.zig"),
-    });
-
-    var ret: Self = undefined;
-
-    ret.chips.rp2040 = b.allocator.create(Target) catch @panic("out of memory");
-    ret.chips.rp2040.* = .{
+    const rp2040: MicroZig.Target = .{
         .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
-    };
-
-    ret.chips.rp2350_arm = b.allocator.create(Target) catch @panic("out of memory");
-    ret.chips.rp2350_arm.* = .{
-        .dep = dep,
-        .chip = chip_rp2350_arm,
-        .hal = hal,
-        .linker_script = b.path("rp2350.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
-    };
-
-    ret.boards.raspberrypi.pico = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.raspberrypi.pico.* = .{
-        .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
-            .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+        .chip = .{
+            .name = "RP2040",
+            .cpu = std.Target.Query{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
             },
+            .register_definition = .{ .svd = b.path("src/chips/rp2040.svd") },
+            .memory_regions = &.{
+                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+            },
+        },
+        .hal = MicroZig.ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/hal.zig"),
         }),
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
     };
 
-    ret.boards.raspberrypi.pico2_arm = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.raspberrypi.pico2_arm.* = .{
+    const rp2350: MicroZig.Target = .{
         .dep = dep,
-        .chip = chip_rp2350_arm,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+        .chip = .{
+            .name = "RP2350",
+            .cpu = std.Target.Query{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
+            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .memory_regions = &.{
+                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+            },
+        },
+        .hal = MicroZig.ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/hal.zig"),
         }),
         .linker_script = b.path("rp2350.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
     };
 
-    ret.boards.waveshare.rp2040_plus_4m = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.waveshare.rp2040_plus_4m.* = .{
-        .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/waveshare_rp2040_plus_4m.zig"),
-            .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-            },
-        }),
-        .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
-    };
+    const bootrom_rp2040 = get_bootrom(b, rp2040.chip, .w25q080);
 
-    ret.boards.waveshare.rp2040_plus_16m = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.waveshare.rp2040_plus_16m.* = .{
-        .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/waveshare_rp2040_plus_16m.zig"),
-            .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+    return .{
+        .chips = .{
+            .rp2040 = rp2040.derive(.{}),
+            .rp2350_arm = rp2350.derive(.{}),
+        },
+        .boards = .{
+            .raspberrypi = .{
+                .pico = rp2040.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
+                        .imports = &.{
+                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+                        },
+                    }),
+                }),
+                .pico2_arm = rp2350.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+                    }),
+                }),
             },
-        }),
-        .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
-    };
-
-    ret.boards.waveshare.rp2040_eth = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.waveshare.rp2040_eth.* = .{
-        .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/waveshare_rp2040_eth.zig"),
-            .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+            .waveshare = .{
+                .rp2040_plus_4m = rp2040.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/waveshare_rp2040_plus_4m.zig"),
+                        .imports = &.{
+                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+                        },
+                    }),
+                }),
+                .rp2040_plus_16m = rp2040.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/waveshare_rp2040_plus_16m.zig"),
+                        .imports = &.{
+                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+                        },
+                    }),
+                }),
+                .rp2040_eth = rp2040.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/waveshare_rp2040_eth.zig"),
+                        .imports = &.{
+                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+                        },
+                    }),
+                }),
+                .rp2040_matrix = rp2040.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
+                        .imports = &.{
+                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+                        },
+                    }),
+                }),
             },
-        }),
-        .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
+        },
     };
-
-    ret.boards.waveshare.rp2040_matrix = b.allocator.create(Target) catch @panic("out of memory");
-    ret.boards.waveshare.rp2040_matrix.* = .{
-        .dep = dep,
-        .chip = chip_rp2040,
-        .hal = hal,
-        .board = ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
-            .imports = &.{
-                .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-            },
-        }),
-        .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
-    };
-
-    return ret;
 }
 
 pub fn build(_: *Build) !void {
@@ -191,7 +149,7 @@ const BootROM = union(enum) {
     legacy,
 };
 
-fn get_bootrom(b: *Build, chip: Chip, rom: BootROM) Build.LazyPath {
+fn get_bootrom(b: *Build, chip: MicroZig.Chip, rom: BootROM) Build.LazyPath {
     var target = chip.cpu;
     target.abi = .eabi;
 

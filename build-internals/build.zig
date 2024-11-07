@@ -20,6 +20,29 @@ pub const Target = struct {
     patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
 
     preferred_binary_format: ?BinaryFormat = null,
+
+    pub const DeriveOptions = struct {
+        chip: ?Chip = null,
+        hal: ?ModuleDeclaration = null,
+        board: ?ModuleDeclaration = null,
+        linker_script: ?LazyPath = null,
+        patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
+        preferred_binary_format: ?BinaryFormat = null,
+    };
+
+    pub fn derive(from: Target, options: DeriveOptions) *Target {
+        const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
+        ret.* = .{
+            .dep = from.dep,
+            .chip = options.chip orelse from.chip,
+            .hal = options.hal orelse from.hal,
+            .board = options.board orelse from.board,
+            .linker_script = options.linker_script orelse from.linker_script,
+            .patch_elf = options.patch_elf orelse from.patch_elf,
+            .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
+        };
+        return ret;
+    }
 };
 
 /// MicroZig chip definition.

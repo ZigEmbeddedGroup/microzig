@@ -1,0 +1,19 @@
+.{
+    .name = "microzig/examples",
+    .version = "0.0.0",
+    .dependencies = .{
+        // examples
+        // .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
+        // .@"examples/nxp/lpc" = .{ .path = "examples/nxp/lpc" },
+        // .@"examples/microchip/atsam" = .{ .path = "examples/microchip/atsam" },
+        // .@"examples/microchip/avr" = .{ .path = "examples/microchip/avr" },
+        // .@"examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
+        // .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
+        // .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
+        // .@"examples/raspberrypi/rp2xxx" = .{ .path = "examples/raspberrypi/rp2xxx" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

@@ -2,7 +2,7 @@
     .name = "port/stmicro/stm32",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
         .@"stm32-data-generated" = .{
             .url = "git+https://github.com/embassy-rs/stm32-data-generated.git#5198a6e36b24f6d79c4ac91af5e61e8d54667d88",

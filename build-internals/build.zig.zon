@@ -1,5 +1,5 @@
 .{
-    .name = "microzig-build-internals",
+    .name = "microzig/build-internals",
     .version = "0.0.0",
     .dependencies = .{},
     .paths = .{

@@ -357,7 +357,7 @@ pub fn main() !void {
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
             // TODO
-            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_microzig_cpu.get(core.name).?).?,
+            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_cpu.get(core.name).?).?,
         });
 
         try regz.arm.load_system_interrupts(&db, device_id);
@@ -397,10 +397,10 @@ pub fn main() !void {
         }
     }
 
-    const chips_file = try std.fs.cwd().createFile("src/chips.zig", .{});
+    const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
     defer chips_file.close();
 
-    try generate_chips_file(chips_file.writer(), chip_files.items);
+    try generate_chips_file(allocator, chips_file.writer(), chip_files.items);
 
     const out_file = try std.fs.cwd().createFile("src/chips/all.zig", .{});
     defer out_file.close();
@@ -411,7 +411,7 @@ pub fn main() !void {
     };
 }
 
-const core_to_microzig_cpu = std.StaticStringMap([]const u8).initComptime(&.{
+const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm0", "cortex_m0" },
     .{ "cm0p", "cortex_m0plus" },
     .{ "cm3", "cortex_m3" },
@@ -420,74 +420,190 @@ const core_to_microzig_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm33", "cortex_m33" },
 });
 
-fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
+fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
     try writer.writeAll(
         \\const std = @import("std");
-        \\const MicroZig = @import("microzig/build");
+        \\const MicroZig = @import("microzig/build-internals");
         \\
-        \\fn root() []const u8 {
-        \\    return comptime (std.fs.path.dirname(@src().file) orelse ".");
-        \\}
-        \\const build_root = root();
-        \\const register_definition_path = build_root ++ "/chips/all.zig";
+        \\const Self = @This();
+        \\
+        \\
+    );
+
+    for (chip_files) |json| {
+        const chip_file = json.value;
+        try writer.print("{}: *MicroZig.Target,\n", .{std.zig.fmtId(chip_file.name)});
+    }
+
+    try writer.writeAll(
+        \\
+        \\pub fn init(dep: *std.Build.Dependency) Self {
+        \\    const b = dep.builder;
+        \\    const register_definition_path = b.path("src/chips/all.zig");
+        \\
+        \\    const cpus = .{
+        \\        .cortex_m0 = std.Target.Query{
+        \\           .cpu_arch = .thumb,
+        \\           .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+        \\           .os_tag = .freestanding,
+        \\           .abi = .eabi,
+        \\        },
+        \\        .cortex_m0plus = std.Target.Query{
+        \\            .cpu_arch = .thumb,
+        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+        \\            .os_tag = .freestanding,
+        \\            .abi = .eabi,
+        \\        },
+        \\        .cortex_m3 = std.Target.Query{
+        \\            .cpu_arch = .thumb,
+        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+        \\            .os_tag = .freestanding,
+        \\            .abi = .eabi,
+        \\        },
+        \\        .cortex_m4 = std.Target.Query{
+        \\            .cpu_arch = .thumb,
+        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+        \\            .os_tag = .freestanding,
+        \\            .abi = .eabi,
+        \\        },
+        \\        .cortex_m7 = std.Target.Query{
+        \\            .cpu_arch = .thumb,
+        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+        \\            .os_tag = .freestanding,
+        \\            .abi = .eabihf,
+        \\        },
+        \\        .cortex_m33 = std.Target.Query{
+        \\            .cpu_arch = .thumb,
+        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+        \\            .os_tag = .freestanding,
+        \\            .abi = .eabi,
+        \\        },
+        \\    };
+        \\
+        \\    var ret: Self = undefined;
+        \\
         \\
     );
 
     for (chip_files) |json| {
         const chip_file = json.value;
         try writer.print(
-            \\
-            \\pub const {} = MicroZig.Target{{
-            \\    .preferred_format = .elf,
-            \\    .chip = .{{
-            \\        .name = "{s}",
-            \\        .cpu = MicroZig.cpus.{s},
-            \\        .memory_regions = &.{{
+            \\    ret.{} = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+            \\    ret.{}.* = .{{
+            \\        .dep = dep,
+            \\        .chip = .{{
+            \\            .name = "{s}",
+            \\            .cpu = cpus.{s},
+            \\            .memory_regions = &.{{
             \\
         , .{
             std.zig.fmtId(chip_file.name),
+            std.zig.fmtId(chip_file.name),
             chip_file.name,
-            core_to_microzig_cpu.get(chip_file.cores[0].name) orelse {
+            core_to_cpu.get(chip_file.cores[0].name) orelse {
                 std.log.err("Unhandled core name: '{s}'", .{chip_file.cores[0].name});
                 return error.UnhandledCoreName;
             },
         });
 
-        for (chip_file.memory) |memory| {
-            try writer.print(
-                \\            .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
-                \\
-            , .{ memory.address, memory.size, switch (memory.kind) {
-                .flash => "flash",
-                .ram => "ram",
-            } });
+        {
+            var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
+            defer chip_memory.deinit();
+
+            // Some flash bank regions are not merged so we better do that.
+            // Flash memory names are formated as: BANK_{id}_REGION_{id}.
+
+            if (chip_file.memory.len == 0) break;
+
+            var flash_bank: ?ChipFile.Memory = null;
+            for (chip_file.memory) |memory| {
+                if (memory.kind == .flash) {
+                    var part_iter = std.mem.splitBackwards(u8, memory.name, "_");
+
+                    // Ignore the region id.
+                    _ = part_iter.next() orelse return error.InvalidMemoryName;
+
+                    // Ignore 'REGION'.
+                    _ = part_iter.next() orelse return error.InvalidMemoryName;
+
+                    if (part_iter.rest().len > 0) {
+                        // If there are two underscores then a bank is split into regions.
+                        // The rest is equal to BANK_{id}.
+                        const core_ident = part_iter.rest();
+
+                        if (flash_bank) |*bank| {
+                            // Are we in the same bank? Then make it bigger.
+                            if (std.mem.startsWith(u8, bank.name, core_ident)) {
+                                // Assert regions are adjacent.
+                                std.debug.assert(bank.address + bank.size == memory.address);
+                                bank.size += memory.size;
+
+                                continue;
+                            }
+                        } else {
+                            // This is the beggining of a bank with regions.
+                            flash_bank = memory;
+                            flash_bank.?.name = core_ident;
+
+                            continue;
+                        }
+                    }
+                }
+
+                if (flash_bank) |bank| {
+                    chip_memory.appendAssumeCapacity(bank);
+                    flash_bank = null;
+                } else {
+                    chip_memory.appendAssumeCapacity(memory);
+                }
+            }
+
+            if (flash_bank) |bank| {
+                chip_memory.appendAssumeCapacity(bank);
+            }
+
+            for (chip_memory.items) |memory| {
+                try writer.print(
+                    \\                .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
+                    \\
+                , .{ memory.address, memory.size, switch (memory.kind) {
+                    .flash => "flash",
+                    .ram => "ram",
+                } });
+            }
         }
 
         try writer.writeAll(
+            \\            },
+            \\            .register_definition = .{
+            \\                .zig = register_definition_path,
+            \\            },
             \\        },
-            \\        .register_definition = .{
-            \\            .zig = .{ .cwd_relative = register_definition_path },
-            \\        },
-            \\    },
             \\
         );
 
-        // For now
+        // TODO: Better system to detect if hal is present.
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
-                \\    .hal = .{
-                \\        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
-                \\    },
+                \\        .hal = MicroZig.ModuleDeclaration.init(b, .{
+                \\            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+                \\        }),
                 \\
-                ,
             );
         }
 
         try writer.writeAll(
-            \\};
+            \\    };
+            \\
             \\
         );
     }
+
+    try writer.writeAll(
+        \\    return ret;
+        \\}
+        \\
+    );
 }
 
 fn chip_file_less_than(_: void, lhs: std.json.Parsed(ChipFile), rhs: std.json.Parsed(ChipFile)) bool {

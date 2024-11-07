@@ -23,6 +23,7 @@ const port_list: []const struct {
 } = &.{
     .{ .name = "rp2xxx", .dep_name = "microzig/port/raspberrypi/rp2xxx" },
     .{ .name = "lpc", .dep_name = "microzig/port/nxp/lpc" },
+    .{ .name = "stm32", .dep_name = "microzig/port/stmicro/stm32" },
 };
 
 pub const PortSelect = blk: {
@@ -88,7 +89,7 @@ b: *Build,
 dep: *Build.Dependency,
 ports: Ports,
 
-pub const InitReturnType = blk: {
+const InitReturnType = blk: {
     var ok = true;
     for (port_list) |port| {
         if (@field(microzig_options.enable_ports, port.name)) {
@@ -137,6 +138,7 @@ pub const CreateFirmwareOptions = struct {
     optimize: std.builtin.OptimizeMode,
     root_source_file: Build.LazyPath,
     imports: []const Build.Module.Import = &.{},
+    linker_script: ?Build.LazyPath = null,
 };
 
 /// Creates a new firmware for a given target.
@@ -246,7 +248,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
     fw.artifact.root_module.addImport("app", app_mod);
 
     // If not specified then generate the linker script
-    const linker_script = target.linker_script orelse blk: {
+    const linker_script = options.linker_script orelse target.linker_script orelse blk: {
         const GenerateLinkerScriptArgs = struct {
             cpu_name: []const u8,
             cpu_arch: std.Target.Cpu.Arch,

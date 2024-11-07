@@ -1,26 +1,23 @@
 const std = @import("std");
 const Build = std.Build;
-const internals = @import("microzig/build-internals");
-const Chip = internals.Chip;
-const Target = internals.Target;
-const ModuleDeclaration = internals.ModuleDeclaration;
+const MicroZig = @import("microzig/build-internals");
 
 const Self = @This();
 
 chips: struct {
-    lpc176x5x: *Target,
+    lpc176x5x: *MicroZig.Target,
 },
 
 boards: struct {
     mbed: struct {
-        lpc1768: *Target,
+        lpc1768: *MicroZig.Target,
     },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const lpc176x5x_chip: Chip = .{
+    const lpc176x5x_chip: MicroZig.Chip = .{
         .name = "LPC176x5x",
         .cpu = .{
             .cpu_arch = .thumb,
@@ -36,13 +33,13 @@ pub fn init(dep: *Build.Dependency) Self {
         },
     };
 
-    const lpc176x5x_hal = ModuleDeclaration.init(b, .{
+    const lpc176x5x_hal = MicroZig.ModuleDeclaration.init(b, .{
         .root_source_file = b.path("src/hals/LPC176x5x.zig"),
     });
 
     var ret: Self = undefined;
 
-    ret.chips.lpc176x5x = b.allocator.create(Target) catch @panic("out of memory");
+    ret.chips.lpc176x5x = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
     ret.chips.lpc176x5x.* = .{
         .dep = dep,
         .chip = lpc176x5x_chip,
@@ -51,12 +48,12 @@ pub fn init(dep: *Build.Dependency) Self {
         .patch_elf = lpc176x5x_patch_elf,
     };
 
-    ret.boards.mbed.lpc1768 = b.allocator.create(Target) catch @panic("out of memory");
+    ret.boards.mbed.lpc1768 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
     ret.boards.mbed.lpc1768.* = .{
         .dep = dep,
         .chip = lpc176x5x_chip,
         .hal = lpc176x5x_hal,
-        .board = ModuleDeclaration.init(b, .{
+        .board = MicroZig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
         }),
         .patch_elf = lpc176x5x_patch_elf,

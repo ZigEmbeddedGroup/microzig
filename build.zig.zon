@@ -8,19 +8,10 @@
         .@"microzig/tools/regz" = .{ .path = "tools/regz" },
         .@"microzig/tools/uf2" = .{ .path = "tools/uf2" },
 
-        // examples
-        // .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
-        // .@"examples/nxp/lpc" = .{ .path = "examples/nxp/lpc" },
-        // .@"examples/microchip/atsam" = .{ .path = "examples/microchip/atsam" },
-        // .@"examples/microchip/avr" = .{ .path = "examples/microchip/avr" },
-        // .@"examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
-        // .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
-        // .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
-        // .@"examples/raspberrypi/rp2xxx" = .{ .path = "examples/raspberrypi/rp2xxx" },
-
         // ports
         .@"microzig/port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"microzig/port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"microzig/port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
 
         // used for creating package tarballs
         .boxzer = .{
