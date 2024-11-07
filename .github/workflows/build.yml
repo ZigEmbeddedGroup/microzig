@@ -38,7 +38,7 @@ jobs:
         working-directory: website
 
       - name: Dry run packaging
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         shell: bash
         run: |
           MICROZIG_VERSION=$(zig build package -- get-version)
