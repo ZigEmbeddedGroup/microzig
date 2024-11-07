@@ -29,7 +29,7 @@ jobs:
         run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
 
       - name: Assemble Packages
-        run: zig build package -- "${{ secrets.DOWNLOADS_URL }}"
+        run: zig build package -- https://microzig.tech/downloads/microzig
 
       - name: Create Release Draft
         uses: ncipollo/release-action@v1
