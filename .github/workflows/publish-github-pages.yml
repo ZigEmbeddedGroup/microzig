@@ -43,7 +43,7 @@ jobs:
             echo "Processing release: $release"
 
             # Create the target directory if it doesn't exist
-            mkdir -p zig-out/www/downloads/microzig
+            mkdir -p website/zig-out/www/downloads/microzig
 
             # Download the artifact 'boxzer-out.tar.gz' if it exists
             gh release download "$release" --pattern "boxzer-out.tar.gz" --repo ${{ github.repository }} --dir . || echo "Failed to download boxzer-out.tar.gz"
@@ -51,7 +51,7 @@ jobs:
             # Check if the tarball was downloaded and unpack it
             if [ -f "boxzer-out.tar.gz" ]; then
               echo "Unpacking boxzer-out.tar.gz for release: $release"
-              tar -xzvf boxzer-out.tar.gz -C zig-out/www/downloads/microzig
+              tar -xzvf boxzer-out.tar.gz -C website/zig-out/www/downloads/microzig
               rm boxzer-out.tar.gz
 
               # Add the release to the metadata array
@@ -63,7 +63,10 @@ jobs:
 
           # Generate metadata.json file
           echo "Generating metadata.json"
-          echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > zig-out/www/downloads/microzig/metadata.json
+          echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > website/zig-out/www/downloads/microzig/metadata.json
+
+          echo "List of files uploaded to github pages:"
+          tree website/zig-out/www
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
