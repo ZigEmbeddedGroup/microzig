@@ -3,6 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  release:
+    types:
+      - published
 
 jobs:
   # Build job
@@ -16,9 +19,43 @@ jobs:
         with:
           version: 0.13.0
 
+      - name: Download and install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Authenticate with GitHub CLI
+        run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Build
         working-directory: website
         run: zig build
+
+      - name: List, download, and unpack artifacts
+        working-directory: website
+        run: |
+          # Fetch all releases and iterate over them
+          releases=$(gh release list --limit 100 --repo ${{ github.repository }} | awk '{print $1}')
+
+          for release in $releases; do
+            echo "Processing release: $release"
+
+            # Create the target directory if it doesn't exist
+            mkdir -p zig-out/www/downloads/microzig
+
+            # Download the artifact 'boxzer-out.tar.gz' if it exists
+            gh release download "$release" --pattern "boxzer-out.tar.gz" --repo ${{ github.repository }} --dir .
+
+            # Check if the tarball was downloaded and unpack it
+            if [ -f "boxzer-out.tar.gz" ]; then
+              echo "Unpacking boxzer-out.tar.gz for release: $release"
+              tar -xzvf boxzer-out.tar.gz -C zig-out/www/downloads/microzig
+              # Remove the tarball after unpacking
+              rm boxzer-out.tar.gz
+            else
+              echo "Artifact 'boxzer-out.tar.gz' not found for release: $release"
+            fi
+          done
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
