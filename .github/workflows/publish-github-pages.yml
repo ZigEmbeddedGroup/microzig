@@ -46,9 +46,7 @@ jobs:
             mkdir -p zig-out/www/downloads/microzig
 
             # Download the artifact 'boxzer-out.tar.gz' if it exists
-            if ! gh release download "$release" --pattern "boxzer-out.tar.gz" --repo ${{ github.repository }} --dir . ; then
-              # Continue if it fails
-            fi
+            gh release download "$release" --pattern "boxzer-out.tar.gz" --repo ${{ github.repository }} --dir . || echo "Failed to download boxzer-out.tar.gz"
 
             # Check if the tarball was downloaded and unpack it
             if [ -f "boxzer-out.tar.gz" ]; then
