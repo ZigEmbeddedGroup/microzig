@@ -14,6 +14,8 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const usb_dev = rp2xxx.usb.Usb(.{});
+
 const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
 const usb_config_descriptor =
@@ -22,8 +24,6 @@ const usb_config_descriptor =
 
 var driver_hid = usb.hid.HidClassDriver{ .report_descriptor = &usb.hid.ReportDescriptorGenericInOut };
 var drivers = [_]usb.types.UsbClassDriver{driver_hid.driver()};
-
-const usb_dev = rp2xxx.usb.Usb(.{ .max_endpoints_count = 4 });
 
 // This is our device configuration
 pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
