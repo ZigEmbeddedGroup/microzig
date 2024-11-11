@@ -4418,7 +4418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4442,7 +4442,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4466,7 +4466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4490,7 +4490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4514,7 +4514,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4538,7 +4538,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4562,7 +4562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4586,7 +4586,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4610,7 +4610,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4634,7 +4634,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4658,7 +4658,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4683,7 +4683,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4708,7 +4708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4732,7 +4732,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4756,7 +4756,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4780,7 +4780,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4804,7 +4804,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4828,7 +4828,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4852,7 +4852,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4876,7 +4876,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4900,7 +4900,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4924,7 +4924,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4949,7 +4949,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4974,7 +4974,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -4998,7 +4998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -5022,7 +5022,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -5046,7 +5046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -5071,7 +5071,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
@@ -5096,7 +5096,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 

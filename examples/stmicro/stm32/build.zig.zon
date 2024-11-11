@@ -2,8 +2,7 @@
     .name = "examples/stmicro/stm32",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/stmicro/stm32" = .{ .path = "../../../port/stmicro/stm32" },
+        .microzig = .{ .path = "../../../" },
     },
 
     .paths = .{

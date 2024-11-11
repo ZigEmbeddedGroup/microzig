@@ -583,7 +583,7 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
                 \\        .hal = MicroZig.ModuleDeclaration.init(b, .{
-                \\            .root_source_file = b.path("hals/STM32F103/hal.zig"),
+                \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
                 \\        }),
                 \\
             );

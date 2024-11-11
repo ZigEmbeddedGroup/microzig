@@ -17,49 +17,44 @@ boards: struct {
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const lpc176x5x_chip: MicroZig.Chip = .{
-        .name = "LPC176x5x",
-        .cpu = .{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .register_definition = .{ .json = b.path("src/chips/LPC176x5x.json") },
-        .memory_regions = &.{
-            .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
-            .{ .offset = 0x10000000, .length = 32 * 1024, .kind = .ram },
-            .{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
-        },
-    };
-
-    const lpc176x5x_hal = MicroZig.ModuleDeclaration.init(b, .{
-        .root_source_file = b.path("src/hals/LPC176x5x.zig"),
-    });
-
-    var ret: Self = undefined;
-
-    ret.chips.lpc176x5x = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
-    ret.chips.lpc176x5x.* = .{
+    const chip_lpc176x5x: MicroZig.Target = .{
         .dep = dep,
-        .chip = lpc176x5x_chip,
-        .hal = lpc176x5x_hal,
+        .chip = .{
+            .name = "LPC176x5x",
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
+            .register_definition = .{ .json = b.path("src/chips/LPC176x5x.json") },
+            .memory_regions = &.{
+                .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 32 * 1024, .kind = .ram },
+                .{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
+            },
+        },
+        .hal = MicroZig.ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/hals/LPC176x5x.zig"),
+        }),
         .preferred_binary_format = .elf,
         .patch_elf = lpc176x5x_patch_elf,
     };
 
-    ret.boards.mbed.lpc1768 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
-    ret.boards.mbed.lpc1768.* = .{
-        .dep = dep,
-        .chip = lpc176x5x_chip,
-        .hal = lpc176x5x_hal,
-        .board = MicroZig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
-        }),
-        .patch_elf = lpc176x5x_patch_elf,
+    return .{
+        .chips = .{
+            .lpc176x5x = chip_lpc176x5x.derive(.{}),
+        },
+        .boards = .{
+            .mbed = .{
+                .lpc1768 = chip_lpc176x5x.derive(.{
+                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
+                    }),
+                }),
+            },
+        },
     };
-
-    return ret;
 }
 
 pub fn build(b: *Build) void {
