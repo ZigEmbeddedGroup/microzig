@@ -1,12 +1,21 @@
 const std = @import("std");
 const Build = std.Build;
-const internals = @import("microzig/build-internals");
 
+const internals = @import("build-internals");
 pub const Target = internals.Target;
 pub const Chip = internals.Chip;
 pub const ModuleDeclaration = internals.ModuleDeclaration;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const MemoryRegion = internals.MemoryRegion;
+
+const port_list: []const struct {
+    name: [:0]const u8,
+    dep_name: [:0]const u8,
+} = &.{
+    .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
+    .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
+    .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
+};
 
 pub fn build(b: *Build) void {
     const generate_linker_script_exe = b.addExecutable(.{
@@ -15,16 +24,16 @@ pub fn build(b: *Build) void {
         .target = b.host,
     });
     b.installArtifact(generate_linker_script_exe);
-}
 
-const port_list: []const struct {
-    name: [:0]const u8,
-    dep_name: [:0]const u8,
-} = &.{
-    .{ .name = "rp2xxx", .dep_name = "microzig/port/raspberrypi/rp2xxx" },
-    .{ .name = "lpc", .dep_name = "microzig/port/nxp/lpc" },
-    .{ .name = "stm32", .dep_name = "microzig/port/stmicro/stm32" },
-};
+    const boxzer_dep = b.dependency("boxzer", .{});
+    const boxzer_exe = boxzer_dep.artifact("boxzer");
+    const boxzer_run = b.addRunArtifact(boxzer_exe);
+    if (b.args) |args|
+        boxzer_run.addArgs(args);
+
+    const package_step = b.step("package", "Package monorepo using boxzer");
+    package_step.dependOn(&boxzer_run.step);
+}
 
 pub const PortSelect = blk: {
     var fields: []const std.builtin.Type.StructField = &.{};
@@ -62,7 +71,7 @@ const Ports = blk: {
 
     for (port_list) |port| {
         if (@field(microzig_options.enable_ports, port.name)) {
-            const typ = customLazyImport(port.dep_name) orelse struct {};
+            const typ = custom_lazy_import(port.dep_name) orelse struct {};
             fields = fields ++ [_]std.builtin.Type.StructField{.{
                 .name = port.name,
                 .type = typ,
@@ -87,13 +96,14 @@ const MicroZig = @This();
 
 b: *Build,
 dep: *Build.Dependency,
+core_dep: *Build.Dependency,
 ports: Ports,
 
 const InitReturnType = blk: {
     var ok = true;
     for (port_list) |port| {
         if (@field(microzig_options.enable_ports, port.name)) {
-            ok = ok and customLazyImport(port.dep_name) != null;
+            ok = ok and custom_lazy_import(port.dep_name) != null;
         }
     }
     if (ok) {
@@ -118,7 +128,7 @@ pub fn init(b: *Build, dep: *Build.Dependency) InitReturnType {
     inline for (port_list) |port| {
         if (@field(microzig_options.enable_ports, port.name)) {
             const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-            @field(ports, port.name) = customLazyImport(port.dep_name).?.init(port_dep);
+            @field(ports, port.name) = custom_lazy_import(port.dep_name).?.init(port_dep);
         }
     }
 
@@ -126,6 +136,7 @@ pub fn init(b: *Build, dep: *Build.Dependency) InitReturnType {
     mz.* = .{
         .b = b,
         .dep = dep,
+        .core_dep = dep.builder.dependency("core", .{}),
         .ports = ports,
     };
     return mz;
@@ -167,7 +178,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
     // NOTE: should you pass optimize? the same for all
     const core_mod = b.createModule(.{
-        .root_source_file = b.path("core/microzig.zig"),
+        .root_source_file = mz.core_dep.path("src/microzig.zig"),
         .imports = &.{
             .{
                 .name = "config",
@@ -176,11 +187,11 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
         },
     });
 
-    const cpu_mod = cpu.create_module(b);
+    const cpu_mod = cpu.create_module(b, mz.core_dep);
     cpu_mod.addImport("microzig", core_mod);
     core_mod.addImport("cpu", cpu_mod);
 
-    const regz_exe = b.dependency("microzig/tools/regz", .{}).artifact("regz");
+    const regz_exe = b.dependency("tools/regz", .{}).artifact("regz");
     const chip_source = switch (target.chip.register_definition) {
         .json, .atdf, .svd => |file| blk: {
             const regz_run = b.addRunArtifact(regz_exe);
@@ -235,7 +246,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
         .mz = mz,
         .artifact = mz.b.addExecutable(.{
             .name = options.name,
-            .root_source_file = mz.dep.path("core/start.zig"),
+            .root_source_file = mz.core_dep.path("src/start.zig"),
             .target = zig_target,
             .optimize = options.optimize,
             .linkage = .static,
@@ -379,7 +390,7 @@ pub const Firmware = struct {
                 },
 
                 .uf2 => |family_id| blk: {
-                    const uf2_exe = fw.mz.dep.builder.dependency("microzig/tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
+                    const uf2_exe = fw.mz.dep.builder.dependency("tools/uf2", .{ .optimize = .ReleaseSafe }).artifact("elf2uf2");
 
                     const convert = fw.mz.b.addRunArtifact(uf2_exe);
 
@@ -419,23 +430,23 @@ const Cpu = enum {
         @panic("unrecognized cpu configuration");
     }
 
-    pub fn create_module(cpu: Cpu, b: *Build) *Build.Module {
+    pub fn create_module(cpu: Cpu, b: *Build, core_dep: *Build.Dependency) *Build.Module {
         return b.createModule(.{
             .root_source_file = switch (cpu) {
-                .avr5 => b.path("cpus/avr5.zig"),
-                .cortex_m => b.path("cpus/cortex_m.zig"),
-                .riscv32 => b.path("cpus/riscv32.zig"),
+                .avr5 => core_dep.path("src/cpus/avr5.zig"),
+                .cortex_m => core_dep.path("src/cpus/cortex_m.zig"),
+                .riscv32 => core_dep.path("src/cpus/riscv32.zig"),
             },
         });
     }
 };
 
-pub inline fn customLazyImport(
+pub inline fn custom_lazy_import(
     comptime dep_name: []const u8,
 ) ?type {
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
-    const pkg_hash = customFindImportPkgHashOrFatal(dep_name);
+    const pkg_hash = custom_find_import_pkg_hash_or_fatal(dep_name);
 
     inline for (@typeInfo(deps.packages).Struct.decls) |decl| {
         if (comptime std.mem.eql(u8, decl.name, pkg_hash)) {
@@ -454,7 +465,7 @@ pub inline fn customLazyImport(
     comptime unreachable; // Bad @dependencies source
 }
 
-inline fn customFindImportPkgHashOrFatal(comptime dep_name: []const u8) []const u8 {
+inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []const u8 {
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 
@@ -470,97 +481,3 @@ inline fn customFindImportPkgHashOrFatal(comptime dep_name: []const u8) []const 
 
     @panic("dependency not found");
 }
-
-// fn init_cpu_map(mz: *MicroZig) void {
-//     mz.cpu_map.put(.avr5, .{
-//         .name = "avr5",
-//         .root_source_file = mz.dep.path("cpus/avr5.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .avr,
-//             .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m0, .{
-//         .name = "cortex_m0",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m0plus, .{
-//         .name = "cortex_m0plus",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m3, .{
-//         .name = "cortex_m3",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m33, .{
-//         .name = "cortex_m33",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m4, .{
-//         .name = "cortex_m4",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
-//             .os_tag = .freestanding,
-//             .abi = .eabi,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m4f, .{
-//         .name = "cortex_m4f",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.zig.CrossTarget{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
-//             .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
-//             .os_tag = .freestanding,
-//             .abi = .eabihf,
-//         },
-//     });
-//     mz.cpu_map.put(.cortex_m7, .{
-//         .name = "cortex_m7",
-//         .root_source_file = mz.dep.path("cpus/cortex_m.zig"),
-//         .target = std.zig.CrossTarget{
-//             .cpu_arch = .thumb,
-//             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
-//             .os_tag = .freestanding,
-//             .abi = .eabihf,
-//         },
-//     });
-//     mz.cpu_map.put(.riscv32_imac, .{
-//         .name = "riscv32_imac",
-//         .root_source_file = mz.dep.path("cpus/riscv32.zig"),
-//         .target = std.Target.Query{
-//             .cpu_arch = .riscv32,
-//             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
-//             .os_tag = .freestanding,
-//             .abi = .none,
-//         },
-//     });
-// }

@@ -22,7 +22,7 @@ const Core = enum {
 };
 
 const core: type = blk: {
-    const cortex_m = std.meta.stringToEnum(microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
     break :blk switch (cortex_m) {
         .@"ARM Cortex-M0" => @import("cortex_m/m0"),
         .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
@@ -131,6 +131,12 @@ pub fn export_startup_logic() void {
     @export(startup_logic._start, .{
         .name = "_start",
     });
+}
+
+fn is_valid_field(field_name: []const u8) bool {
+    return !std.mem.startsWith(u8, field_name, "reserved") and
+        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
+        !std.mem.eql(u8, field_name, "reset");
 }
 
 const VectorTable = microzig.chip.VectorTable;

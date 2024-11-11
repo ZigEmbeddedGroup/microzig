@@ -1,17 +1,19 @@
 .{
     .name = "microzig",
-    .version = "0.0.0",
+    .version = "0.13.0",
+    .minimum_zig_version = "0.13.0",
     .dependencies = .{
-        .@"microzig/build-internals" = .{ .path = "build-internals" },
+        .@"build-internals" = .{ .path = "build-internals" },
+        .@"core" = .{ .path = "core" },
 
         // tools
-        .@"microzig/tools/regz" = .{ .path = "tools/regz" },
-        .@"microzig/tools/uf2" = .{ .path = "tools/uf2" },
+        .@"tools/regz" = .{ .path = "tools/regz" },
+        .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // ports
-        .@"microzig/port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
-        .@"microzig/port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
-        .@"microzig/port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
+        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
+        .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
 
         // used for creating package tarballs
         .boxzer = .{
@@ -20,8 +22,12 @@
         },
     },
     .paths = .{
+        "README.md",
         "build.zig",
         "build.zig.zon",
-        "src",
+        "LICENSE",
+        "design",
+        "docs",
+        "tools/generate_linker_script.zig",
     },
 }
