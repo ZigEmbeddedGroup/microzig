@@ -23,6 +23,12 @@ pub fn build(b: *Build) void {
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.host,
     });
+
+    generate_linker_script_exe.root_module.addImport(
+        "build-internals",
+        b.dependency("build-internals", .{}).module("build-internals"),
+    );
+
     b.installArtifact(generate_linker_script_exe);
 
     const boxzer_dep = b.dependency("boxzer", .{});
@@ -260,12 +266,7 @@ pub fn add_firmware(mz: *MicroZig, options: CreateFirmwareOptions) *Firmware {
 
     // If not specified then generate the linker script
     const linker_script = options.linker_script orelse target.linker_script orelse blk: {
-        const GenerateLinkerScriptArgs = struct {
-            cpu_name: []const u8,
-            cpu_arch: std.Target.Cpu.Arch,
-            chip_name: []const u8,
-            memory_regions: []const MemoryRegion,
-        };
+        const GenerateLinkerScriptArgs = @import("tools/generate_linker_script.zig").Args;
 
         const generate_linker_script_exe = mz.dep.artifact("generate_linker_script");
 
