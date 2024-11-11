@@ -1,5 +1,34 @@
 const std = @import("std");
-const Build = std.Build;
+const Dependency = std.Build.Dependency;
+const CompileStep = std.Build.CompileStep;
+const FileSource = std.Build.FileSource;
+
+const uf2 = @import("src/uf2.zig");
+
+pub const FamilyId = uf2.FamilyId;
+
+pub fn from_elf(dep: *Dependency, exe: *CompileStep, opts: uf2.Options) FileSource {
+    std.debug.assert(!opts.bundle_source); // TODO: bundle source in UF2 File
+    const b = dep.builder;
+    const elf2uf2 = dep.artifact("elf2uf2");
+    const run = b.addRunArtifact(elf2uf2);
+
+    // family id
+    if (opts.family_id) |family_id| {
+        inline for (@typeInfo(uf2.FamilyId).Enum.fields) |field| {
+            if (@field(uf2.FamilyId, field.name) == family_id) {
+                run.addArgs(&.{ "--family-id", field.name });
+            }
+        }
+    }
+
+    // elf file
+    run.addArg("--elf-path");
+    run.addArtifactArg(exe);
+
+    // output file
+    return run.addPrefixedOutputFileArg("--output-path", "test.uf2");
+}
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
