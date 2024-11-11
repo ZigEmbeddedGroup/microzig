@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <title id="title"><super> - Zig Embedded Group</title>
-
+  <head>
+    <title id="title"><super>
+      - Zig Embedded Group</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <meta name="description" content="Zig Embedded Group: Bringing joy to the world of embedded development">
+    <meta name="description" content="$page.description">
     <meta name="twitter:card" content="summary">
-    <!--
-    <meta name="twitter:site" content="@croloris">
-    <meta name="twitter:author" content="@croloris">
-    -->
-    <meta name="twitter:description" content="Zig Embedded Group: Bringing joy to the world of embedded development">
+    <meta name="twitter:description" content="$page.description">
     <meta name="twitter:title" content="$page.title.suffix(' - Zig Embedded Group')">
     <meta property="og:title" content="$page.title">
     <meta property="og:type" content="website">
-
-    <link rel="stylesheet" href="/style.css">
-</head>
-
-<body>
-    <div id="content"><super></div>
-</body>
-
+    <link rel="stylesheet" href="$site.asset('style.css').link()">
+    <link rel="icon" href="$site.asset('favicon.ico').link()" type="image/x-icon">
+  </head>
+  <body>
+    <nav>
+      <ul class="navbar">
+        <li><a href="$site.page('index').link()">Home</a></li>
+        <li><a href="$site.page('about').link()">About</a></li>
+        <li><a href="$site.page('community').link()">Community</a></li>
+      </ul>
+    </nav>
+    <div id="main">
+      <super>
+    </div>
+    <footer>
+    </footer>
+  </body>
 </html>

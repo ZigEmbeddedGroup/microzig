@@ -441,45 +441,6 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         \\    const b = dep.builder;
         \\    const register_definition_path = b.path("src/chips/all.zig");
         \\
-        \\    const cpus = .{
-        \\        .cortex_m0 = std.Target.Query{
-        \\           .cpu_arch = .thumb,
-        \\           .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
-        \\           .os_tag = .freestanding,
-        \\           .abi = .eabi,
-        \\        },
-        \\        .cortex_m0plus = std.Target.Query{
-        \\            .cpu_arch = .thumb,
-        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
-        \\            .os_tag = .freestanding,
-        \\            .abi = .eabi,
-        \\        },
-        \\        .cortex_m3 = std.Target.Query{
-        \\            .cpu_arch = .thumb,
-        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-        \\            .os_tag = .freestanding,
-        \\            .abi = .eabi,
-        \\        },
-        \\        .cortex_m4 = std.Target.Query{
-        \\            .cpu_arch = .thumb,
-        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
-        \\            .os_tag = .freestanding,
-        \\            .abi = .eabi,
-        \\        },
-        \\        .cortex_m7 = std.Target.Query{
-        \\            .cpu_arch = .thumb,
-        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
-        \\            .os_tag = .freestanding,
-        \\            .abi = .eabihf,
-        \\        },
-        \\        .cortex_m33 = std.Target.Query{
-        \\            .cpu_arch = .thumb,
-        \\            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
-        \\            .os_tag = .freestanding,
-        \\            .abi = .eabi,
-        \\        },
-        \\    };
-        \\
         \\    var ret: Self = undefined;
         \\
         \\
@@ -487,24 +448,61 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
 
     for (chip_files) |json| {
         const chip_file = json.value;
+        const core = chip_file.cores[0];
+
+        const fpu_feature = std.StaticStringMap([]const u8).initComptime(&.{
+            .{ "cm4", "vfp4d16sp" },
+            .{ "cm7", "fp_armv8d16sp" },
+            .{ "cm33", "vfp4d16sp" },
+        });
+
+        var with_fpu = false;
+        for (core.interrupts) |item| {
+            if (std.mem.indexOf(u8, item.name, "FPU")) |_| {
+                with_fpu = true;
+                break;
+            }
+        }
+
         try writer.print(
             \\    ret.{} = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
             \\    ret.{}.* = .{{
             \\        .dep = dep,
             \\        .chip = .{{
             \\            .name = "{s}",
-            \\            .cpu = cpus.{s},
-            \\            .memory_regions = &.{{
+            \\            .cpu = .{{
+            \\                .cpu_arch = .thumb,
+            \\                .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
+            \\                .os_tag = .freestanding,
             \\
         , .{
             std.zig.fmtId(chip_file.name),
             std.zig.fmtId(chip_file.name),
             chip_file.name,
-            core_to_cpu.get(chip_file.cores[0].name) orelse {
-                std.log.err("Unhandled core name: '{s}'", .{chip_file.cores[0].name});
-                return error.UnhandledCoreName;
-            },
+            core_to_cpu.get(core.name).?,
         });
+
+        if (with_fpu) {
+            try writer.print(
+                \\                .cpu_features_add = std.Target.arm.featureSet(&.{{.{s}}}),
+                \\                .abi = .eabihf,
+                \\            }},
+                \\
+            , .{
+                fpu_feature.get(core.name).?,
+            });
+        } else {
+            try writer.writeAll(
+                \\                .abi = .eabi,
+                \\            },
+                \\
+            );
+        }
+
+        try writer.writeAll(
+            \\            .memory_regions = &.{
+            \\
+        );
 
         {
             var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
@@ -553,9 +551,8 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
                 if (flash_bank) |bank| {
                     chip_memory.appendAssumeCapacity(bank);
                     flash_bank = null;
-                } else {
-                    chip_memory.appendAssumeCapacity(memory);
                 }
+                chip_memory.appendAssumeCapacity(memory);
             }
 
             if (flash_bank) |bank| {

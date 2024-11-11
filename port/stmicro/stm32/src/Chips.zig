@@ -1408,45 +1408,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
     const register_definition_path = b.path("src/chips/all.zig");
 
-    const cpus = .{
-        .cortex_m0 = std.Target.Query{
-           .cpu_arch = .thumb,
-           .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
-           .os_tag = .freestanding,
-           .abi = .eabi,
-        },
-        .cortex_m0plus = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .cortex_m3 = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .cortex_m4 = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .cortex_m7 = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
-            .os_tag = .freestanding,
-            .abi = .eabihf,
-        },
-        .cortex_m33 = std.Target.Query{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-    };
-
     var ret: Self = undefined;
 
     ret.STM32C011D6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
@@ -1454,7 +1415,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C011D6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -1470,7 +1436,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C011F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -1486,7 +1457,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C011F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -1502,7 +1478,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C011J4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -1518,7 +1499,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C011J6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -1534,7 +1520,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031C4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1550,7 +1541,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1566,7 +1562,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1582,7 +1583,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1598,7 +1604,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031G4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1614,7 +1625,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1630,7 +1646,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1646,7 +1667,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32C031K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -1662,7 +1688,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1678,7 +1709,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030C8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -1694,7 +1730,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030CC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -1710,7 +1751,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030F4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1726,7 +1772,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030K6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1742,7 +1793,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030R8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -1758,7 +1814,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F030RC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -1774,7 +1835,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031C4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1790,7 +1856,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1806,7 +1877,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031E6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1822,7 +1898,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031F4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1838,7 +1919,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031F6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1854,7 +1940,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031G4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1870,7 +1961,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031G6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1886,7 +1982,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031K4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1902,7 +2003,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F031K6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1918,7 +2024,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F038C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1934,7 +2045,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F038E6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1950,7 +2066,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F038F6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1966,7 +2087,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F038G6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1982,7 +2108,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F038K6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -1998,7 +2129,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042C4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2014,7 +2150,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2030,7 +2171,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042F4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2046,7 +2192,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042F6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2062,7 +2213,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042G4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2078,7 +2234,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042G6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2094,7 +2255,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042K4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2110,7 +2276,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042K6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2126,7 +2297,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F042T6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2142,7 +2318,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F048C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2158,7 +2339,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F048G6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2174,7 +2360,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F048T6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2190,7 +2381,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051C4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2206,7 +2402,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2222,7 +2423,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051C8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2238,7 +2444,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051K4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2254,7 +2465,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051K6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2270,7 +2486,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051K8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2286,7 +2507,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051R4",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2302,7 +2528,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051R6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2318,7 +2549,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051R8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2334,7 +2570,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F051T8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2350,7 +2591,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F058C8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2366,7 +2612,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F058R8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2382,7 +2633,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F058T8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2398,7 +2654,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F070C6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2414,7 +2675,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F070CB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2430,7 +2696,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F070F6",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -2446,7 +2717,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F070RB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2462,7 +2738,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F071C8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2478,7 +2759,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F071CB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2494,7 +2780,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F071RB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2510,7 +2801,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F071V8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2526,7 +2822,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F071VB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2542,7 +2843,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072C8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2558,7 +2864,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072CB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2574,7 +2885,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072R8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2590,7 +2906,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072RB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2606,7 +2927,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072V8",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2622,7 +2948,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F072VB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2638,7 +2969,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F078CB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2654,7 +2990,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F078RB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2670,7 +3011,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F078VB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -2686,7 +3032,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091CB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2702,7 +3053,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091CC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2718,7 +3074,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091RB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2734,7 +3095,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091RC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2750,7 +3116,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091VB",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2766,7 +3137,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F091VC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2782,7 +3158,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F098CC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2798,7 +3179,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F098RC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2814,7 +3200,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F098VC",
-            .cpu = cpus.cortex_m0,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2830,7 +3221,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100C4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -2846,7 +3242,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -2862,7 +3263,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2878,7 +3284,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2894,7 +3305,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100R4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -2910,7 +3326,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -2926,7 +3347,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2942,7 +3368,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -2958,7 +3389,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -2974,7 +3410,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -2990,7 +3431,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3006,7 +3452,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -3022,7 +3473,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -3038,7 +3494,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -3054,7 +3515,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3070,7 +3536,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3086,7 +3557,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -3102,7 +3578,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3118,7 +3599,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F100ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3134,7 +3620,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101C4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -3150,7 +3641,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3166,7 +3662,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3182,7 +3683,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3198,7 +3704,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101R4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -3214,7 +3725,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3230,7 +3746,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3246,7 +3767,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3262,7 +3788,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3278,7 +3809,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3294,7 +3830,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3310,7 +3851,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -3327,7 +3873,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101RG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -3344,7 +3895,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101T4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -3360,7 +3916,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101T6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3376,7 +3937,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101T8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3392,7 +3958,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101TB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3408,7 +3979,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3424,7 +4000,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3440,7 +4021,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3456,7 +4042,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3472,7 +4063,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3488,7 +4084,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -3505,7 +4106,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -3522,7 +4128,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -3538,7 +4149,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3554,7 +4170,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3570,7 +4191,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101ZF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -3587,7 +4213,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F101ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -3604,7 +4235,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102C4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -3620,7 +4256,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3636,7 +4277,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3652,7 +4298,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3668,7 +4319,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102R4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -3684,7 +4340,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3700,7 +4361,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3716,7 +4382,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F102RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -3732,7 +4403,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103C4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3751,7 +4427,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3770,7 +4451,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -3789,7 +4475,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -3808,7 +4499,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103R4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -3827,7 +4523,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -3846,7 +4547,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -3865,7 +4571,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -3884,7 +4595,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -3903,7 +4619,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -3922,7 +4643,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -3941,7 +4667,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -3961,7 +4692,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103RG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -3981,7 +4717,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103T4",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1800, .kind = .ram },
@@ -4000,7 +4741,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103T6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -4019,7 +4765,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103T8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -4038,7 +4789,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103TB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -4057,7 +4813,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -4076,7 +4837,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -4095,7 +4861,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -4114,7 +4885,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4133,7 +4909,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4152,7 +4933,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -4172,7 +4958,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -4192,7 +4983,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
@@ -4211,7 +5007,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4230,7 +5031,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4249,7 +5055,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103ZF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x40000, .kind = .flash },
@@ -4269,7 +5080,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F103ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -4289,7 +5105,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4305,7 +5126,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4321,7 +5147,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4337,7 +5168,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4353,7 +5189,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4369,7 +5210,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F105VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4385,7 +5231,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F107RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4401,7 +5252,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F107RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4417,7 +5273,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F107VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4433,7 +5294,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F107VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -4449,9 +5315,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4465,9 +5337,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x14000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4481,9 +5359,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4497,9 +5381,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205RF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4513,9 +5403,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205RG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4529,9 +5425,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0xC000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4545,9 +5447,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x14000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4561,9 +5469,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4577,9 +5491,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205VF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4593,9 +5513,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4609,9 +5535,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x14000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4625,9 +5557,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4641,9 +5579,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205ZF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4657,9 +5601,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F205ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4673,9 +5623,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207IC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4689,9 +5645,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207IE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4705,9 +5667,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207IF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4721,9 +5689,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207IG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4737,9 +5711,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4753,9 +5733,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4769,9 +5755,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207VF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4785,9 +5777,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4801,9 +5799,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4817,9 +5821,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4833,9 +5843,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207ZF",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4849,9 +5865,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F207ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4865,9 +5887,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4881,9 +5909,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215RG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4897,9 +5931,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4913,9 +5953,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4929,9 +5975,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4945,9 +5997,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F215ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4961,9 +6019,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217IE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4977,9 +6041,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217IG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -4993,9 +6063,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -5009,9 +6085,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217VG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -5025,9 +6107,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -5041,9 +6129,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F217ZG",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
             .register_definition = .{
@@ -5057,7 +6151,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301C6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5073,7 +6173,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5089,7 +6195,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301K6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5105,7 +6217,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5121,7 +6239,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301R6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5137,7 +6261,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F301R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5153,7 +6283,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302C6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5169,7 +6305,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5185,7 +6327,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -5201,7 +6349,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -5217,7 +6371,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302K6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5233,7 +6393,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5249,7 +6415,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302R6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5265,7 +6437,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5281,7 +6459,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -5297,7 +6481,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -5313,7 +6503,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302RD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5329,7 +6525,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5345,7 +6547,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -5361,7 +6569,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -5377,7 +6591,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302VD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5393,7 +6613,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5409,7 +6635,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302ZD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5425,7 +6657,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F302ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -5441,7 +6679,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303C6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5458,7 +6702,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5475,7 +6725,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5492,7 +6748,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5509,7 +6771,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303K6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5526,7 +6794,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5543,7 +6817,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303R6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5560,7 +6840,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5577,7 +6863,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5594,7 +6886,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5611,7 +6909,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303RD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5628,7 +6932,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5645,7 +6955,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5662,7 +6978,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5679,7 +7001,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303VD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5696,7 +7024,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5713,7 +7047,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303ZD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5730,7 +7070,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F303ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -5747,7 +7093,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F318C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5763,7 +7115,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F318K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5779,7 +7137,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F328C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5796,7 +7160,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334C4",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5813,7 +7183,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334C6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5830,7 +7206,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5847,7 +7229,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334K4",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5864,7 +7252,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334K6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5881,7 +7275,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5898,7 +7298,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334R6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5915,7 +7321,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F334R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x1000, .kind = .ram },
@@ -5932,7 +7344,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F358CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5949,7 +7367,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F358RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5966,7 +7390,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F358VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -5983,7 +7413,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -5999,7 +7435,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -6015,7 +7457,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6031,7 +7479,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -6047,7 +7501,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -6063,7 +7523,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6079,7 +7545,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373V8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -6095,7 +7567,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -6111,7 +7589,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F373VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6127,7 +7611,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F378CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6143,7 +7633,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F378RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6159,7 +7655,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F378VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6175,7 +7677,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F398VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -6192,9 +7700,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6207,9 +7722,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6222,9 +7744,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401CD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6237,9 +7766,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6252,9 +7788,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6267,9 +7810,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6282,9 +7832,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401RD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6297,9 +7854,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6312,9 +7876,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6327,9 +7898,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6342,9 +7920,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401VD",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6357,9 +7942,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F401VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6372,9 +7964,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F405OE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6389,9 +7988,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F405OG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6406,9 +8012,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F405RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6423,9 +8036,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F405VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6440,9 +8060,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F405ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6457,9 +8084,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407IE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6474,9 +8108,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6491,9 +8132,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6508,9 +8156,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6525,9 +8180,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6542,9 +8204,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F407ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x1C000, .kind = .ram },
                 .{ .offset = 0x2001C000, .length = 0x4000, .kind = .ram },
             },
@@ -6559,7 +8228,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6575,9 +8250,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6590,7 +8272,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6606,9 +8294,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6621,7 +8316,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410T8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -6637,9 +8338,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F410TB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6652,9 +8360,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6667,9 +8382,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6682,9 +8404,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6697,9 +8426,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6712,9 +8448,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6727,9 +8470,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F411VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6742,9 +8492,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6757,9 +8514,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6772,9 +8536,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6787,9 +8558,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6802,9 +8580,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6817,9 +8602,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6832,9 +8624,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6847,9 +8646,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F412ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6862,9 +8668,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6877,9 +8690,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413CH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6892,9 +8712,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413MG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6907,9 +8734,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413MH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6922,9 +8756,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6937,9 +8778,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413RH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6952,9 +8800,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6967,9 +8822,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413VH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6982,9 +8844,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -6997,9 +8866,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F413ZH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7012,9 +8888,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F415OG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7028,9 +8911,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F415RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7044,9 +8934,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F415VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7060,9 +8957,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F415ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7076,9 +8980,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417IE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7092,9 +9003,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7108,9 +9026,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7124,9 +9049,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7140,9 +9072,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7156,9 +9095,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F417ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
@@ -7172,9 +9118,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F423CH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7187,9 +9140,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F423MH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7202,9 +9162,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F423RH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7217,9 +9184,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F423VH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7232,9 +9206,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F423ZH",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7247,9 +9228,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7263,10 +9251,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7280,9 +9276,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7296,10 +9299,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7313,9 +9324,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7329,10 +9347,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7346,9 +9372,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7362,10 +9395,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F427ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7379,9 +9420,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7395,10 +9443,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7412,9 +9468,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429BE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7428,9 +9491,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429BG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7444,10 +9514,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429BI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7461,9 +9539,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429IE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7477,9 +9562,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7493,10 +9585,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7510,9 +9610,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429NE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7526,9 +9633,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429NG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7542,10 +9656,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429NI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7559,9 +9681,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7575,9 +9704,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7591,10 +9727,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7608,9 +9752,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7624,9 +9775,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7640,10 +9798,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F429ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7657,10 +9823,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7674,9 +9848,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7690,10 +9871,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7707,9 +9896,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7723,10 +9919,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7740,9 +9944,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7756,10 +9967,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F437ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7773,10 +9992,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7790,9 +10017,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439BG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7806,10 +10040,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439BI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7823,9 +10065,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7839,10 +10088,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7856,9 +10113,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439NG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7872,10 +10136,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439NI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7889,9 +10161,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7905,10 +10184,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7922,9 +10209,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7938,10 +10232,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F439ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -7955,9 +10257,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446MC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7970,9 +10279,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -7985,9 +10301,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8000,9 +10323,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8015,9 +10345,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8030,9 +10367,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8045,9 +10389,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446ZC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8060,9 +10411,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F446ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
             },
             .register_definition = .{
                 .zig = register_definition_path,
@@ -8075,9 +10433,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469AE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8091,9 +10456,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8107,10 +10479,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8124,9 +10504,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469BE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8140,9 +10527,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469BG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8156,10 +10550,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469BI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8173,9 +10575,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469IE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8189,9 +10598,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8205,10 +10621,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8222,9 +10646,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469NE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8238,9 +10669,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469NG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8254,10 +10692,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469NI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8271,9 +10717,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8287,9 +10740,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8303,10 +10763,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8320,9 +10788,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8336,9 +10811,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8352,10 +10834,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F469ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8369,9 +10859,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8385,10 +10882,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8402,9 +10907,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479BG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8418,10 +10930,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479BI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8435,9 +10955,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479IG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8451,10 +10978,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479II",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8468,9 +11003,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479NG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8484,10 +11026,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479NI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8501,9 +11051,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8517,10 +11074,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8534,9 +11099,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8550,10 +11122,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F479ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x8100000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8110000, .length = 0xF0000, .kind = .flash },
+                .{ .offset = 0x10000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
             },
             .register_definition = .{
@@ -8567,9 +11147,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722IC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8583,9 +11170,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8599,9 +11193,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722RC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8615,9 +11216,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722RE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8631,9 +11239,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722VC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8647,9 +11262,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8663,9 +11285,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722ZC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8679,9 +11308,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F722ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8695,9 +11331,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723IC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8711,9 +11354,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8727,9 +11377,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723VC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8743,9 +11400,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8759,9 +11423,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723ZC",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8775,9 +11446,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F723ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8791,7 +11469,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F730I8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -8808,7 +11492,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F730R8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -8825,7 +11515,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F730V8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -8842,7 +11538,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F730Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -8859,9 +11561,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F732IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8875,9 +11584,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F732RE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8891,9 +11607,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F732VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8907,9 +11630,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F732ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8923,9 +11653,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F733IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8939,9 +11676,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F733VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8955,9 +11699,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F733ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x30000, .kind = .ram },
             },
             .register_definition = .{
@@ -8971,9 +11722,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -8987,9 +11745,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9003,9 +11768,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9019,9 +11791,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9035,9 +11814,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9051,9 +11837,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F745ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9067,9 +11860,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746BE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9083,9 +11883,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9099,9 +11906,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9115,9 +11929,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9131,9 +11952,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746NE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9147,9 +11975,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9163,9 +11998,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9179,9 +12021,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9195,9 +12044,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9211,9 +12067,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F746ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9227,7 +12090,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F750N8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -9244,7 +12113,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F750V8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -9261,7 +12136,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F750Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
@@ -9278,9 +12159,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F756BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9294,9 +12182,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F756IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9310,9 +12205,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F756NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9326,9 +12228,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F756VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9342,9 +12251,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F756ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x20010000, .length = 0x40000, .kind = .ram },
             },
             .register_definition = .{
@@ -9358,9 +12274,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9374,9 +12297,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9390,9 +12320,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9406,9 +12343,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9422,9 +12366,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9438,9 +12389,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9454,9 +12412,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9470,9 +12435,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9486,9 +12458,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9502,9 +12481,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F765ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9518,9 +12504,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9534,9 +12527,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9550,9 +12550,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9566,9 +12573,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9582,9 +12596,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9598,9 +12619,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9614,9 +12642,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9630,9 +12665,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9646,9 +12688,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9662,9 +12711,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F767ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9678,9 +12734,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F768AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9694,9 +12757,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9710,9 +12780,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9726,9 +12803,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9742,9 +12826,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9758,9 +12849,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9774,9 +12872,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9790,9 +12895,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9806,9 +12918,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F769NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9822,9 +12941,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F777BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9838,9 +12964,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F777II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9854,9 +12987,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F777NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9870,9 +13010,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F777VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9886,9 +13033,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F777ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9902,9 +13056,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F778AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9918,9 +13079,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F779AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9934,9 +13102,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F779BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9950,9 +13125,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F779II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9966,9 +13148,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32F779NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
                 .{ .offset = 0x20020000, .length = 0x60000, .kind = .ram },
             },
             .register_definition = .{
@@ -9982,7 +13171,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -9998,7 +13192,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10014,7 +13213,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10030,7 +13234,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030J6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10046,7 +13255,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10062,7 +13276,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G030K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10078,7 +13297,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031C4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10094,7 +13318,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10110,7 +13339,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10126,7 +13360,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10142,7 +13381,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10158,7 +13402,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031F8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10174,7 +13423,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031G4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10190,7 +13444,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10206,7 +13465,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10222,7 +13486,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031J4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10238,7 +13507,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031J6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10254,7 +13528,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10270,7 +13549,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10286,7 +13570,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10302,7 +13591,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G031Y8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10318,7 +13612,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10334,7 +13633,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10350,7 +13654,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10366,7 +13675,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041F8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10382,7 +13696,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10398,7 +13717,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10414,7 +13738,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041J6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10430,7 +13759,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10446,7 +13780,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10462,7 +13801,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G041Y8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -10478,7 +13822,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G050C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10494,7 +13843,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G050C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10510,7 +13864,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G050F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10526,7 +13885,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G050K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10542,7 +13906,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G050K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10558,7 +13927,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10574,7 +13948,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10590,7 +13969,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10606,7 +13990,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051F8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10622,7 +14011,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10638,7 +14032,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10654,7 +14053,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10670,7 +14074,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G051K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10686,7 +14095,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10702,7 +14116,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10718,7 +14137,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10734,7 +14158,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061F8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10750,7 +14179,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10766,7 +14200,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10782,7 +14221,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10798,7 +14242,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G061K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4800, .kind = .ram },
@@ -10814,7 +14263,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G070CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10830,7 +14284,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G070KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10846,7 +14305,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G070RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10862,7 +14326,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10878,7 +14347,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10894,7 +14368,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10910,7 +14389,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071EB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10926,7 +14410,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10942,7 +14431,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10958,7 +14452,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071GB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10974,7 +14473,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -10990,7 +14494,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11006,7 +14515,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11022,7 +14536,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071R6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11038,7 +14557,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11054,7 +14578,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G071RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11070,7 +14599,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G081CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11086,7 +14620,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G081EB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11102,7 +14641,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G081GB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11118,7 +14662,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G081KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11134,7 +14683,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G081RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x9000, .kind = .ram },
@@ -11150,7 +14704,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B0CE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11167,7 +14726,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B0KE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11184,7 +14748,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B0RE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11201,7 +14770,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B0VE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11218,7 +14792,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11234,7 +14813,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1CC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11250,7 +14834,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1CE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11267,7 +14856,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11283,7 +14877,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1KC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11299,7 +14898,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1KE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11316,7 +14920,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1MB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11332,7 +14941,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1MC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11348,7 +14962,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1ME",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11365,7 +14984,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1NE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11382,7 +15006,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11398,7 +15027,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1RC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11414,7 +15048,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1RE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11431,7 +15070,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1VB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11447,7 +15091,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1VC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11463,7 +15112,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0B1VE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11480,7 +15134,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1CC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11496,7 +15155,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1CE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11513,7 +15177,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1KC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11529,7 +15198,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1KE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11546,7 +15220,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1MC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11562,7 +15241,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1ME",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11579,7 +15263,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1NE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11596,7 +15285,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1RC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11612,7 +15306,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1RE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11629,7 +15328,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1VC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x24000, .kind = .ram },
@@ -11645,7 +15349,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G0C1VE",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -11662,7 +15371,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431C6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11681,7 +15396,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11700,7 +15421,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11719,7 +15446,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431K6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11738,7 +15471,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11757,7 +15496,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11776,7 +15521,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431M6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11795,7 +15546,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431M8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11814,7 +15571,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431MB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11833,7 +15596,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431R6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11852,7 +15621,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11871,7 +15646,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11890,7 +15671,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431V6",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11909,7 +15696,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431V8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11928,7 +15721,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G431VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11947,7 +15746,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G441CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11966,7 +15771,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G441KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -11985,7 +15796,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G441MB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -12004,7 +15821,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G441RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -12023,7 +15846,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G441VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2800, .kind = .ram },
@@ -12042,7 +15871,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12061,7 +15896,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12080,7 +15921,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471MC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12099,7 +15946,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12118,7 +15971,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471QC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12137,7 +15996,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12156,7 +16021,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12175,7 +16046,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12194,7 +16071,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12213,7 +16096,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G471VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12232,7 +16121,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12251,7 +16146,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12270,7 +16171,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12289,7 +16196,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473MB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12308,7 +16221,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473MC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12327,7 +16246,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12346,7 +16271,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473PB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12365,7 +16296,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473PC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12384,7 +16321,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473PE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12403,7 +16346,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473QB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12422,7 +16371,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473QC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12441,7 +16396,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12460,7 +16421,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12479,7 +16446,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12498,7 +16471,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12517,7 +16496,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12536,7 +16521,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12555,7 +16546,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G473VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12574,7 +16571,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12593,7 +16596,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12612,7 +16621,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12631,7 +16646,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474MB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12650,7 +16671,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474MC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12669,7 +16696,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12688,7 +16721,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474PB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12707,7 +16746,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474PC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12726,7 +16771,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474PE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12745,7 +16796,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474QB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12764,7 +16821,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474QC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12783,7 +16846,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12802,7 +16871,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12821,7 +16896,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12840,7 +16921,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12859,7 +16946,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474VB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12878,7 +16971,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12897,7 +16996,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G474VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12916,7 +17021,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12935,7 +17046,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12954,7 +17071,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483PE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12973,7 +17096,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -12992,7 +17121,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13011,7 +17146,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G483VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13030,7 +17171,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13049,7 +17196,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13068,7 +17221,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484PE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13087,7 +17246,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13106,7 +17271,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13125,7 +17296,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G484VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -13144,7 +17321,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13163,7 +17346,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13182,7 +17371,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491KC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13201,7 +17396,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491KE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13220,7 +17421,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491MC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13239,7 +17446,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13258,7 +17471,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13277,7 +17496,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13296,7 +17521,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13315,7 +17546,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G491VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13334,7 +17571,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G4A1CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13353,7 +17596,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G4A1KE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13372,7 +17621,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G4A1ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13391,7 +17646,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G4A1RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13410,7 +17671,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32G4A1VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -13429,7 +17696,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H503CB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -13447,7 +17720,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H503EB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -13465,7 +17744,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H503KB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -13483,7 +17768,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H503RB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -13501,7 +17792,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523CC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -13520,7 +17817,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13539,7 +17842,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523HE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13558,7 +17867,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523RC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -13577,7 +17892,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13596,7 +17917,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523VC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -13615,7 +17942,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13634,7 +17967,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523ZC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -13653,7 +17992,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H523ZE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13672,7 +18017,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H533CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13691,7 +18042,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H533HE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13710,7 +18067,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H533RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13729,7 +18092,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H533VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13748,7 +18117,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H533ZE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -13767,7 +18142,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562AG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13786,7 +18167,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13805,7 +18192,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562IG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13824,7 +18217,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562II",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13843,7 +18242,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562RG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13862,7 +18267,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13881,7 +18292,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562VG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13900,7 +18317,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13919,7 +18342,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562ZG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13938,7 +18367,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H562ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13957,7 +18392,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563AG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -13976,7 +18417,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -13995,7 +18442,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563IG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -14014,7 +18467,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563II",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14033,7 +18492,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563MI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14052,7 +18517,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563RG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -14071,7 +18542,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14090,7 +18567,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563VG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -14109,7 +18592,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14128,7 +18617,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563ZG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -14147,7 +18642,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H563ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14166,7 +18667,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14185,7 +18692,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573II",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14204,7 +18717,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573MI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14223,7 +18742,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14242,7 +18767,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14261,7 +18792,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H573ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -14280,7 +18817,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H723VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14300,7 +18843,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H723VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14320,7 +18869,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H723ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14340,7 +18895,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H723ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14360,7 +18921,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725AE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14380,7 +18947,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14400,7 +18973,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725IE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14420,7 +18999,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14440,7 +19025,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725RE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14460,7 +19051,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725RG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14480,7 +19077,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725VE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14500,7 +19103,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14520,7 +19129,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725ZE",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14540,7 +19155,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H725ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14560,7 +19181,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H730AB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14580,7 +19207,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H730IB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14600,7 +19233,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H730VB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14620,7 +19259,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H730ZB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14640,7 +19285,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H733VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14660,7 +19311,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H733ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14680,7 +19337,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H735AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14700,7 +19363,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H735IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14720,7 +19389,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H735RG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14740,7 +19415,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H735VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14760,7 +19441,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H735ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14780,7 +19467,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14802,7 +19495,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14824,7 +19523,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14846,7 +19551,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14868,7 +19579,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14890,7 +19607,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14912,7 +19635,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14934,7 +19663,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -14956,7 +19691,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742XG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -14978,7 +19719,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15000,7 +19747,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15022,7 +19775,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H742ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15044,7 +19803,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15065,7 +19830,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15086,7 +19857,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15107,7 +19884,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15128,7 +19911,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15149,7 +19938,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15170,7 +19965,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15191,7 +19992,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15212,7 +20019,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743XG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15233,7 +20046,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15254,7 +20073,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -15275,7 +20100,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H743ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15296,7 +20127,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15317,7 +20154,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15338,7 +20181,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15359,7 +20208,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15380,7 +20235,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745XG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15401,7 +20262,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15422,7 +20289,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15443,7 +20316,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H745ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15464,7 +20343,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15485,7 +20370,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15506,7 +20397,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747BG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15527,7 +20424,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15548,7 +20451,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15569,7 +20478,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15590,7 +20505,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747XG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15611,7 +20532,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15632,7 +20559,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H747ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15653,7 +20586,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H750IB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15673,7 +20612,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H750VB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15693,7 +20638,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H750XB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15713,7 +20664,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H750ZB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15733,7 +20690,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15754,7 +20717,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15775,7 +20744,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15796,7 +20771,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15817,7 +20798,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15838,7 +20825,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H753ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15859,7 +20852,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H755BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15880,7 +20879,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H755II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15901,7 +20906,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H755XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15922,7 +20933,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H755ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15943,7 +20960,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H757AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15964,7 +20987,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H757BI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -15985,7 +21014,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H757II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16006,7 +21041,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H757XI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16027,7 +21068,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H757ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16048,7 +21095,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3AG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16067,7 +21120,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16086,7 +21145,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3IG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16105,7 +21170,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16124,7 +21195,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3LG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16143,7 +21220,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3LI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16162,7 +21245,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3NG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16181,7 +21270,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16200,7 +21295,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3QI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16219,7 +21320,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3RG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16238,7 +21345,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3RI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16257,7 +21370,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3VG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16276,7 +21395,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16295,7 +21420,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3ZG",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16314,7 +21445,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7A3ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16333,7 +21470,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B0AB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16351,7 +21494,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B0IB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16369,7 +21518,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B0RB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16387,7 +21542,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B0VB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16405,7 +21566,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B0ZB",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16423,7 +21590,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3AI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16442,7 +21615,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3II",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16461,7 +21640,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3LI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16480,7 +21665,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3NI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16499,7 +21690,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3QI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16518,7 +21715,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3RI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16537,7 +21740,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3VI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16556,7 +21765,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7B3ZI",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -16575,7 +21790,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3A8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16598,7 +21819,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3I8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16621,7 +21848,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3L8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16644,7 +21877,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3R8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16667,7 +21906,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3V8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16690,7 +21935,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R3Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16713,7 +21964,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R7A8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16736,7 +21993,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R7I8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16759,7 +22022,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R7L8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16782,7 +22051,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7R7Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16805,7 +22080,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3A8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16828,7 +22109,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3I8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16851,7 +22138,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3L8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16874,7 +22167,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3R8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16897,7 +22196,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3V8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16920,7 +22225,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S3Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16943,7 +22254,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S7A8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16966,7 +22283,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S7I8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16989,7 +22312,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S7L8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -17012,7 +22341,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32H7S7Z8",
-            .cpu = cpus.cortex_m7,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m7 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.fp_armv8d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -17035,7 +22370,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17051,7 +22391,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17067,7 +22412,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17083,7 +22433,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17099,7 +22454,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17115,7 +22475,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L010RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -17131,7 +22496,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011D3",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17147,7 +22517,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011D4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17163,7 +22538,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011E3",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17179,7 +22559,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011E4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17195,7 +22580,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011F3",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17211,7 +22601,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17227,7 +22622,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011G3",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17243,7 +22643,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011G4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17259,7 +22664,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011K3",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17275,7 +22685,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L011K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17291,7 +22706,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L021D4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17307,7 +22727,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L021F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17323,7 +22748,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L021G4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17339,7 +22769,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L021K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x800, .kind = .ram },
@@ -17355,7 +22790,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031C4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17371,7 +22811,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17387,7 +22832,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031E4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17403,7 +22853,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031E6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17419,7 +22874,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17435,7 +22895,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17451,7 +22916,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031G4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17467,7 +22937,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17483,7 +22958,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17499,7 +22979,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L031K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17515,7 +23000,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041C4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17531,7 +23021,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17547,7 +23042,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041E6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17563,7 +23063,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17579,7 +23084,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17595,7 +23105,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L041K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17611,7 +23126,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17627,7 +23147,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17643,7 +23168,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17659,7 +23189,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17675,7 +23210,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051R6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17691,7 +23231,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17707,7 +23252,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051T6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17723,7 +23273,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L051T8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17739,7 +23294,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17755,7 +23315,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17771,7 +23336,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17787,7 +23357,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17803,7 +23378,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052R6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17819,7 +23399,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17835,7 +23420,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052T6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17851,7 +23441,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L052T8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17867,7 +23462,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L053C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17883,7 +23483,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L053C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17899,7 +23504,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L053R6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17915,7 +23525,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L053R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17931,7 +23546,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L062C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17947,7 +23567,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L062K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17963,7 +23588,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L063C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17979,7 +23609,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L063R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -17995,7 +23630,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18011,7 +23651,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18027,7 +23672,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18043,7 +23693,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18059,7 +23714,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18075,7 +23735,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071KZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18091,7 +23756,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18107,7 +23777,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071RZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18123,7 +23798,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071V8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18139,7 +23819,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071VB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18155,7 +23840,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L071VZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18171,7 +23861,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18187,7 +23882,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18203,7 +23903,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18219,7 +23924,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072KZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18235,7 +23945,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18251,7 +23966,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072RZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18267,7 +23987,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072V8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18283,7 +24008,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072VB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18299,7 +24029,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L072VZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18315,7 +24050,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18331,7 +24071,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18347,7 +24092,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18363,7 +24113,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073RZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18379,7 +24134,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073V8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18395,7 +24155,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073VB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18411,7 +24176,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L073VZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18427,7 +24197,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L081CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18443,7 +24218,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L081CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18459,7 +24239,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L081KZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18475,7 +24260,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L082CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18491,7 +24281,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L082KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18507,7 +24302,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L082KZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18523,7 +24323,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18539,7 +24344,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083CZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18555,7 +24365,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18571,7 +24386,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083RZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18587,7 +24407,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083V8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18603,7 +24428,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083VB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18619,7 +24449,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L083VZ",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x5000, .kind = .ram },
@@ -18635,7 +24470,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -18651,7 +24491,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100C6-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x1000, .kind = .ram },
@@ -18667,7 +24512,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -18683,7 +24533,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100R8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2000, .kind = .ram },
@@ -18699,7 +24554,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -18715,7 +24575,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100RB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18731,7 +24596,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L100RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18747,7 +24617,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -18763,7 +24638,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151C6-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18779,7 +24659,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -18795,7 +24680,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151C8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -18811,7 +24701,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18827,7 +24722,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151CB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -18843,7 +24743,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151CC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -18859,7 +24764,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151QC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -18875,7 +24785,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151QD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -18892,7 +24807,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151QE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -18909,7 +24829,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -18925,7 +24850,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151R6-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18941,7 +24871,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -18957,7 +24892,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151R8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -18973,7 +24913,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -18989,7 +24934,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19005,7 +24955,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19021,7 +24976,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19037,7 +24997,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19054,7 +25019,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19071,7 +25041,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151UC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19087,7 +25062,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19103,7 +25083,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151V8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19119,7 +25104,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19135,7 +25125,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19151,7 +25146,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19167,7 +25167,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19183,7 +25188,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19200,7 +25210,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VD-X",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19217,7 +25232,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19234,7 +25254,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19250,7 +25275,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19267,7 +25297,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L151ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19284,7 +25319,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152C6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19300,7 +25340,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152C6-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19316,7 +25361,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152C8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19332,7 +25382,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152C8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19348,7 +25403,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152CB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19364,7 +25424,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152CB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19380,7 +25445,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152CC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19396,7 +25466,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152QC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19412,7 +25487,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152QD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19429,7 +25509,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152QE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19446,7 +25531,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152R6",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19462,7 +25552,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152R6-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19478,7 +25573,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152R8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19494,7 +25594,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152R8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19510,7 +25615,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19526,7 +25636,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19542,7 +25657,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19558,7 +25678,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19574,7 +25699,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19591,7 +25721,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19608,7 +25743,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152UC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19624,7 +25764,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152V8",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -19640,7 +25785,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152V8-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19656,7 +25806,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VB",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x4000, .kind = .ram },
@@ -19672,7 +25827,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VB-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19688,7 +25848,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19704,7 +25869,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19720,7 +25890,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19737,7 +25912,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VD-X",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19754,7 +25934,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19771,7 +25956,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19787,7 +25977,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19804,7 +25999,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L152ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19821,7 +26021,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162QC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19837,7 +26042,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162QD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19854,7 +26064,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162RC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19870,7 +26085,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162RC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19886,7 +26106,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162RD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19903,7 +26128,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162RE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -19920,7 +26150,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162VC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19936,7 +26171,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162VC-A",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -19952,7 +26192,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162VD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19969,7 +26214,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162VD-X",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -19986,7 +26236,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162VE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20003,7 +26258,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162ZC",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -20019,7 +26279,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162ZD",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
                 .{ .offset = 0x8030000, .length = 0x30000, .kind = .flash },
@@ -20036,7 +26301,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L162ZE",
-            .cpu = cpus.cortex_m3,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20053,7 +26323,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20071,7 +26347,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20089,7 +26371,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412K8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20107,7 +26395,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20125,7 +26419,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412R8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20143,7 +26443,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20161,7 +26467,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412T8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20179,7 +26491,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L412TB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20197,7 +26515,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L422CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20215,7 +26539,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L422KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20233,7 +26563,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L422RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20251,7 +26587,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L422TB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x2000, .kind = .ram },
@@ -20269,7 +26611,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20287,7 +26635,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20305,7 +26659,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20323,7 +26683,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431KC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20341,7 +26707,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20359,7 +26731,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20377,7 +26755,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L431VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20395,7 +26779,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L432KB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20413,7 +26803,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L432KC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20431,7 +26827,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L433CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20449,7 +26851,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L433CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20467,7 +26875,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L433RB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20485,7 +26899,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L433RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20503,7 +26923,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L433VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20521,7 +26947,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L442KC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20539,7 +26971,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L443CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20557,7 +26995,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L443RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20575,7 +27019,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L443VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x4000, .kind = .ram },
@@ -20593,7 +27043,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20611,7 +27067,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20629,7 +27091,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20647,7 +27115,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20665,7 +27139,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20683,7 +27163,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L451VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20701,7 +27187,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20719,7 +27211,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20737,7 +27235,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20755,7 +27259,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20773,7 +27283,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20791,7 +27307,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L452VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20809,7 +27331,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L462CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20827,7 +27355,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L462RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20845,7 +27379,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L462VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -20863,7 +27403,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20881,7 +27427,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -20899,7 +27451,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20917,7 +27475,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -20935,7 +27499,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20953,7 +27523,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -20971,7 +27547,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -20989,7 +27571,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L471ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21007,7 +27595,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -21025,7 +27619,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21043,7 +27643,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21061,7 +27667,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -21079,7 +27691,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21097,7 +27715,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L475VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21115,7 +27739,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476JE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21133,7 +27763,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476JG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21151,7 +27787,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476ME",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21169,7 +27811,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476MG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21187,7 +27835,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21205,7 +27859,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21223,7 +27883,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -21241,7 +27907,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21259,7 +27931,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21277,7 +27955,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -21295,7 +27979,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21313,7 +28003,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21331,7 +28027,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21349,7 +28051,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L476ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21367,7 +28075,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L486JG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21385,7 +28099,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L486QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21403,7 +28123,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L486RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21421,7 +28147,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L486VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21439,7 +28171,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L486ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21457,7 +28195,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496AE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21476,7 +28220,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21495,7 +28245,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21514,7 +28270,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21533,7 +28295,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21552,7 +28320,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21571,7 +28345,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21590,7 +28370,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21609,7 +28395,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496WG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21628,7 +28420,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -21647,7 +28445,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L496ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21666,7 +28470,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4A6AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21685,7 +28495,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4A6QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21704,7 +28520,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4A6RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21723,7 +28545,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4A6VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21742,7 +28570,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4A6ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -21761,7 +28595,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5AE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21777,7 +28617,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21793,7 +28639,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21809,7 +28661,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21825,7 +28683,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5QE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21841,7 +28705,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21857,7 +28727,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21873,7 +28749,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21889,7 +28771,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21905,7 +28793,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21921,7 +28815,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5ZE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21937,7 +28837,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4P5ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21953,7 +28859,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21969,7 +28881,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -21985,7 +28903,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -22001,7 +28925,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -22017,7 +28947,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -22033,7 +28969,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4Q5ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x50000, .kind = .ram },
@@ -22049,7 +28991,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22065,7 +29013,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22081,7 +29035,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5QG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22097,7 +29057,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5QI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22113,7 +29079,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22129,7 +29101,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22145,7 +29123,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22161,7 +29145,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R5ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22177,7 +29167,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R7AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22193,7 +29189,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R7VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22209,7 +29211,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R7ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22225,7 +29233,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9AG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22241,7 +29255,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22257,7 +29277,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22273,7 +29299,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22289,7 +29321,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9ZG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22305,7 +29343,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4R9ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22321,7 +29365,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S5AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22337,7 +29387,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S5QI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22353,7 +29409,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S5VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22369,7 +29431,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S5ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22385,7 +29453,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S7AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22401,7 +29475,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S7VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22417,7 +29497,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S7ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22433,7 +29519,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S9AI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22449,7 +29541,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S9VI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22465,7 +29563,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L4S9ZI",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA0000, .kind = .ram },
@@ -22481,7 +29585,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552CC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22497,7 +29607,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22513,7 +29629,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552ME",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22529,7 +29651,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552QC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22545,7 +29673,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552QE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22561,7 +29695,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552RC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22577,7 +29717,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22593,7 +29739,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552VC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22609,7 +29761,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22625,7 +29783,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552ZC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22641,7 +29805,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L552ZE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22657,7 +29827,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22673,7 +29849,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562ME",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22689,7 +29871,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562QE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22705,7 +29893,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22721,7 +29915,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22737,7 +29937,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32L562ZE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x40000, .kind = .ram },
@@ -22753,7 +29959,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031C6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22769,7 +29980,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22785,7 +30001,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031F4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22801,7 +30022,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031F6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22817,7 +30043,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031F8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22833,7 +30064,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031G6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22849,7 +30085,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031G8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22865,7 +30106,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031K4",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22881,7 +30127,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031K6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22897,7 +30148,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22913,7 +30169,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031R6",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22929,7 +30190,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U031R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x3000, .kind = .ram },
@@ -22945,7 +30211,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073C8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -22961,7 +30232,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073CB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -22977,7 +30253,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073CC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -22993,7 +30274,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073H8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23009,7 +30295,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073HB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23025,7 +30316,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073HC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23041,7 +30337,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073K8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23057,7 +30358,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073KB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23073,7 +30379,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073KC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23089,7 +30400,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073M8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23105,7 +30421,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073MB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23121,7 +30442,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073MC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23137,7 +30463,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073R8",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23153,7 +30484,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073RB",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23169,7 +30505,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U073RC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23185,7 +30526,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U083CC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23201,7 +30547,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U083HC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23217,7 +30568,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U083KC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23233,7 +30589,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U083MC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23249,7 +30610,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U083RC",
-            .cpu = cpus.cortex_m0plus,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0xA000, .kind = .ram },
@@ -23265,7 +30631,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535CB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -23283,7 +30655,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535CC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -23301,7 +30679,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23319,7 +30703,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535JE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23337,7 +30727,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535NC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -23355,7 +30751,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535NE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23373,7 +30775,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535RB",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x8010000, .length = 0x10000, .kind = .flash },
@@ -23391,7 +30799,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535RC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -23409,7 +30823,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23427,7 +30847,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535VC",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x8020000, .length = 0x20000, .kind = .flash },
@@ -23445,7 +30871,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U535VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23463,7 +30895,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U545CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23481,7 +30919,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U545JE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23499,7 +30943,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U545NE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23517,7 +30967,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U545RE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23535,7 +30991,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U545VE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x8040000, .length = 0x40000, .kind = .flash },
@@ -23553,7 +31015,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575AG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23572,7 +31040,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23591,7 +31065,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575CG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23610,7 +31090,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575CI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23629,7 +31115,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575OG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23648,7 +31140,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575OI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23667,7 +31165,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575QG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23686,7 +31190,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575QI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23705,7 +31215,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575RG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23724,7 +31240,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23743,7 +31265,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575VG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23762,7 +31290,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23781,7 +31315,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575ZG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x8080000, .length = 0x80000, .kind = .flash },
@@ -23800,7 +31340,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U575ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23819,7 +31365,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23838,7 +31390,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585CI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23857,7 +31415,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585OI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23876,7 +31440,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585QI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23895,7 +31465,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23914,7 +31490,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23933,7 +31515,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U585ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23952,7 +31540,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595AI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -23972,7 +31566,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595AJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -23992,7 +31592,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595QI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24012,7 +31618,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595QJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24032,7 +31644,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595RI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24052,7 +31670,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595RJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24072,7 +31696,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24092,7 +31722,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24112,7 +31748,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24132,7 +31774,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U595ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24152,7 +31800,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599BJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24172,7 +31826,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599NI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24192,7 +31852,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599NJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24212,7 +31878,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24232,7 +31904,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24252,7 +31930,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24272,7 +31956,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U599ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24292,7 +31982,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5AJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24312,7 +32008,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5QI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8100000, .length = 0x100000, .kind = .flash },
@@ -24332,7 +32034,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5QJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24352,7 +32060,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5RJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24372,7 +32086,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24392,7 +32112,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A5ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24412,7 +32138,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A9BJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24432,7 +32164,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A9NJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24452,7 +32190,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A9VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24472,7 +32216,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5A9ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24492,7 +32242,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F7VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x100000, .kind = .flash },
@@ -24513,7 +32269,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F7VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24534,7 +32296,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9BJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24555,7 +32323,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9NJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24576,7 +32350,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9VI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x100000, .kind = .flash },
@@ -24597,7 +32377,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24618,7 +32404,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9ZI",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x100000, .kind = .flash },
@@ -24639,7 +32431,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5F9ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24660,7 +32458,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5G7VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24681,7 +32485,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5G9BJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24702,7 +32512,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5G9NJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24723,7 +32539,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5G9VJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24744,7 +32566,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32U5G9ZJ",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
                 .{ .offset = 0x8200000, .length = 0x200000, .kind = .flash },
@@ -24765,7 +32593,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB10CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x50000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24785,7 +32619,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB15CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x50000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24805,7 +32645,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB30CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24825,7 +32671,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB35CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24845,7 +32697,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB35CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24865,7 +32723,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB50CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24885,7 +32749,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24905,7 +32775,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55CE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24925,7 +32801,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55CG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24945,7 +32827,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55RC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24965,7 +32853,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55RE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -24985,7 +32879,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55RG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -25005,7 +32905,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55VC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -25025,7 +32931,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55VE",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -25045,7 +32957,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55VG",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -25065,7 +32983,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WB55VY",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xA0000, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 0x8000, .kind = .ram },
@@ -25085,7 +33009,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA50KE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25101,7 +33031,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA50KG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25117,7 +33053,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA52CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25133,7 +33075,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA52CG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25149,7 +33097,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA52KE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25165,7 +33119,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA52KG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25181,7 +33141,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA54CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25197,7 +33163,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA54CG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25213,7 +33185,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA54KE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25229,7 +33207,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA54KG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25245,7 +33229,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55CE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25261,7 +33251,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55CG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25277,7 +33273,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55HE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25293,7 +33295,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55HG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25309,7 +33317,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55UE",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x18000, .kind = .ram },
@@ -25325,7 +33339,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WBA55UG",
-            .cpu = cpus.cortex_m33,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+                .os_tag = .freestanding,
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .abi = .eabihf,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x20000, .kind = .ram },
@@ -25341,7 +33361,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WL54CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25358,7 +33383,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WL54JC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25375,7 +33405,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WL55CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25392,7 +33427,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WL55JC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25409,7 +33449,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -25426,7 +33471,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -25443,7 +33493,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25460,7 +33515,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4J8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -25477,7 +33537,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4JB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -25494,7 +33559,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE4JC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25511,7 +33581,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5C8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -25528,7 +33603,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5CB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -25545,7 +33625,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5CC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },
@@ -25562,7 +33647,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5J8",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x2800, .kind = .ram },
@@ -25579,7 +33669,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5JB",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x6000, .kind = .ram },
@@ -25596,7 +33691,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .dep = dep,
         .chip = .{
             .name = "STM32WLE5JC",
-            .cpu = cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 0x8000, .kind = .ram },

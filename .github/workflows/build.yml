@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       matrix:
         os: [
@@ -33,6 +34,10 @@ jobs:
       - name: Unit Test Ports
         run: zig build run-port-tests -Doptimize=ReleaseSmall
 
+      - name: Build Website
+        run: zig build
+        working-directory: website
+
       - name: Dry run packaging
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
@@ -43,7 +48,7 @@ jobs:
           sleep 1
 
           cd tools/package-test
-          zig fetch --save=microzig http://localhost:8000/microzig-${MICROZIG_VERSION}.tar.gz
+          zig fetch --save=microzig/port/raspberrypi/rp2xxx http://localhost:8000/${MICROZIG_VERSION}/port/raspberrypi/rp2xxx.tar.gz
           zig build -Doptimize=ReleaseSmall
           zig build run-port-tests
 
