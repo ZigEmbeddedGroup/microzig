@@ -34,7 +34,7 @@ pub const Target = struct {
         preferred_binary_format: ?BinaryFormat = null,
     };
 
-    pub fn derive(from: Target, options: DeriveOptions) *Target {
+    pub fn derive(from: *const Target, options: DeriveOptions) *Target {
         const ret = from.dep.builder.allocator.create(Target) catch @panic("out of memory");
         ret.* = .{
             .dep = from.dep,

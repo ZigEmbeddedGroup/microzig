@@ -3,7 +3,6 @@
 //! This means we need to use addExecutable() instead of using
 
 const std = @import("std");
-const MicroZig = @import("microzig/build/definitions");
 
 /// This build script validates usage patterns we expect from MicroZig
 pub fn build(b: *std.Build) !void {

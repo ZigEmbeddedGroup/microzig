@@ -423,7 +423,7 @@ const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
 fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
     try writer.writeAll(
         \\const std = @import("std");
-        \\const MicroZig = @import("microzig/build-internals");
+        \\const microzig = @import("microzig/build-internals");
         \\
         \\const Self = @This();
         \\
@@ -432,7 +432,7 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
 
     for (chip_files) |json| {
         const chip_file = json.value;
-        try writer.print("{}: *MicroZig.Target,\n", .{std.zig.fmtId(chip_file.name)});
+        try writer.print("{}: *microzig.Target,\n", .{std.zig.fmtId(chip_file.name)});
     }
 
     try writer.writeAll(
@@ -465,7 +465,7 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         }
 
         try writer.print(
-            \\    ret.{} = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+            \\    ret.{} = b.allocator.create(microzig.Target) catch @panic("out of memory");
             \\    ret.{}.* = .{{
             \\        .dep = dep,
             \\        .chip = .{{
@@ -582,7 +582,7 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         // TODO: Better system to detect if hal is present.
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
-                \\        .hal = MicroZig.ModuleDeclaration.init(b, .{
+                \\        .hal = microzig.ModuleDeclaration.init(b, .{
                 \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
                 \\        }),
                 \\

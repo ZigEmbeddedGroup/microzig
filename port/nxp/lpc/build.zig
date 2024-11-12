@@ -1,23 +1,23 @@
 const std = @import("std");
 const Build = std.Build;
-const MicroZig = @import("microzig/build-internals");
+const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
 chips: struct {
-    lpc176x5x: *MicroZig.Target,
+    lpc176x5x: *const microzig.Target,
 },
 
 boards: struct {
     mbed: struct {
-        lpc1768: *MicroZig.Target,
+        lpc1768: *const microzig.Target,
     },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const chip_lpc176x5x: MicroZig.Target = .{
+    const chip_lpc176x5x: microzig.Target = .{
         .dep = dep,
         .chip = .{
             .name = "LPC176x5x",
@@ -34,7 +34,7 @@ pub fn init(dep: *Build.Dependency) Self {
                 .{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/LPC176x5x.zig"),
         }),
         .preferred_binary_format = .elf,
@@ -48,7 +48,7 @@ pub fn init(dep: *Build.Dependency) Self {
         .boards = .{
             .mbed = .{
                 .lpc1768 = chip_lpc176x5x.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
                     }),
                 }),

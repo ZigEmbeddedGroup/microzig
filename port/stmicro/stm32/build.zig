@@ -1,16 +1,16 @@
 const std = @import("std");
 const Build = std.Build;
-const MicroZig = @import("microzig/build-internals");
+const microzig = @import("microzig/build-internals");
 const Chips = @import("src/Chips.zig");
 
 const Self = @This();
 
 chips: Chips,
 boards: struct {
-    stm32f3discovery: *MicroZig.Target,
-    stm32f4discovery: *MicroZig.Target,
-    stm3240geval: *MicroZig.Target,
-    stm32f429idiscovery: *MicroZig.Target,
+    stm32f3discovery: *const microzig.Target,
+    stm32f4discovery: *const microzig.Target,
+    stm3240geval: *const microzig.Target,
+    stm32f429idiscovery: *const microzig.Target,
 },
 
 pub fn init(dep: *Build.Dependency) Self {
@@ -21,22 +21,22 @@ pub fn init(dep: *Build.Dependency) Self {
         .chips = chips,
         .boards = .{
             .stm32f3discovery = chips.STM32F303VC.derive(.{
-                .board = MicroZig.ModuleDeclaration.init(b, .{
+                .board = microzig.ModuleDeclaration.init(b, .{
                     .root_source_file = b.path("src/boards/STM32F3DISCOVERY.zig"),
                 }),
             }),
             .stm32f4discovery = chips.STM32F407VG.derive(.{
-                .board = MicroZig.ModuleDeclaration.init(b, .{
+                .board = microzig.ModuleDeclaration.init(b, .{
                     .root_source_file = b.path("src/boards/STM32F4DISCOVERY.zig"),
                 }),
             }),
             .stm3240geval = chips.STM32F407VG.derive(.{
-                .board = MicroZig.ModuleDeclaration.init(b, .{
+                .board = microzig.ModuleDeclaration.init(b, .{
                     .root_source_file = b.path("src/boards/STM3240G_EVAL.zig"),
                 }),
             }),
             .stm32f429idiscovery = chips.STM32F429ZI.derive(.{
-                .board = MicroZig.ModuleDeclaration.init(b, .{
+                .board = microzig.ModuleDeclaration.init(b, .{
                     .root_source_file = b.path("src/boards/STM32F429IDISCOVERY.zig"),
                 }),
             }),

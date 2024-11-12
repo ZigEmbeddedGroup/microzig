@@ -1,1408 +1,1408 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build-internals");
+const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
-STM32C011D6: *MicroZig.Target,
-STM32C011F4: *MicroZig.Target,
-STM32C011F6: *MicroZig.Target,
-STM32C011J4: *MicroZig.Target,
-STM32C011J6: *MicroZig.Target,
-STM32C031C4: *MicroZig.Target,
-STM32C031C6: *MicroZig.Target,
-STM32C031F4: *MicroZig.Target,
-STM32C031F6: *MicroZig.Target,
-STM32C031G4: *MicroZig.Target,
-STM32C031G6: *MicroZig.Target,
-STM32C031K4: *MicroZig.Target,
-STM32C031K6: *MicroZig.Target,
-STM32F030C6: *MicroZig.Target,
-STM32F030C8: *MicroZig.Target,
-STM32F030CC: *MicroZig.Target,
-STM32F030F4: *MicroZig.Target,
-STM32F030K6: *MicroZig.Target,
-STM32F030R8: *MicroZig.Target,
-STM32F030RC: *MicroZig.Target,
-STM32F031C4: *MicroZig.Target,
-STM32F031C6: *MicroZig.Target,
-STM32F031E6: *MicroZig.Target,
-STM32F031F4: *MicroZig.Target,
-STM32F031F6: *MicroZig.Target,
-STM32F031G4: *MicroZig.Target,
-STM32F031G6: *MicroZig.Target,
-STM32F031K4: *MicroZig.Target,
-STM32F031K6: *MicroZig.Target,
-STM32F038C6: *MicroZig.Target,
-STM32F038E6: *MicroZig.Target,
-STM32F038F6: *MicroZig.Target,
-STM32F038G6: *MicroZig.Target,
-STM32F038K6: *MicroZig.Target,
-STM32F042C4: *MicroZig.Target,
-STM32F042C6: *MicroZig.Target,
-STM32F042F4: *MicroZig.Target,
-STM32F042F6: *MicroZig.Target,
-STM32F042G4: *MicroZig.Target,
-STM32F042G6: *MicroZig.Target,
-STM32F042K4: *MicroZig.Target,
-STM32F042K6: *MicroZig.Target,
-STM32F042T6: *MicroZig.Target,
-STM32F048C6: *MicroZig.Target,
-STM32F048G6: *MicroZig.Target,
-STM32F048T6: *MicroZig.Target,
-STM32F051C4: *MicroZig.Target,
-STM32F051C6: *MicroZig.Target,
-STM32F051C8: *MicroZig.Target,
-STM32F051K4: *MicroZig.Target,
-STM32F051K6: *MicroZig.Target,
-STM32F051K8: *MicroZig.Target,
-STM32F051R4: *MicroZig.Target,
-STM32F051R6: *MicroZig.Target,
-STM32F051R8: *MicroZig.Target,
-STM32F051T8: *MicroZig.Target,
-STM32F058C8: *MicroZig.Target,
-STM32F058R8: *MicroZig.Target,
-STM32F058T8: *MicroZig.Target,
-STM32F070C6: *MicroZig.Target,
-STM32F070CB: *MicroZig.Target,
-STM32F070F6: *MicroZig.Target,
-STM32F070RB: *MicroZig.Target,
-STM32F071C8: *MicroZig.Target,
-STM32F071CB: *MicroZig.Target,
-STM32F071RB: *MicroZig.Target,
-STM32F071V8: *MicroZig.Target,
-STM32F071VB: *MicroZig.Target,
-STM32F072C8: *MicroZig.Target,
-STM32F072CB: *MicroZig.Target,
-STM32F072R8: *MicroZig.Target,
-STM32F072RB: *MicroZig.Target,
-STM32F072V8: *MicroZig.Target,
-STM32F072VB: *MicroZig.Target,
-STM32F078CB: *MicroZig.Target,
-STM32F078RB: *MicroZig.Target,
-STM32F078VB: *MicroZig.Target,
-STM32F091CB: *MicroZig.Target,
-STM32F091CC: *MicroZig.Target,
-STM32F091RB: *MicroZig.Target,
-STM32F091RC: *MicroZig.Target,
-STM32F091VB: *MicroZig.Target,
-STM32F091VC: *MicroZig.Target,
-STM32F098CC: *MicroZig.Target,
-STM32F098RC: *MicroZig.Target,
-STM32F098VC: *MicroZig.Target,
-STM32F100C4: *MicroZig.Target,
-STM32F100C6: *MicroZig.Target,
-STM32F100C8: *MicroZig.Target,
-STM32F100CB: *MicroZig.Target,
-STM32F100R4: *MicroZig.Target,
-STM32F100R6: *MicroZig.Target,
-STM32F100R8: *MicroZig.Target,
-STM32F100RB: *MicroZig.Target,
-STM32F100RC: *MicroZig.Target,
-STM32F100RD: *MicroZig.Target,
-STM32F100RE: *MicroZig.Target,
-STM32F100V8: *MicroZig.Target,
-STM32F100VB: *MicroZig.Target,
-STM32F100VC: *MicroZig.Target,
-STM32F100VD: *MicroZig.Target,
-STM32F100VE: *MicroZig.Target,
-STM32F100ZC: *MicroZig.Target,
-STM32F100ZD: *MicroZig.Target,
-STM32F100ZE: *MicroZig.Target,
-STM32F101C4: *MicroZig.Target,
-STM32F101C6: *MicroZig.Target,
-STM32F101C8: *MicroZig.Target,
-STM32F101CB: *MicroZig.Target,
-STM32F101R4: *MicroZig.Target,
-STM32F101R6: *MicroZig.Target,
-STM32F101R8: *MicroZig.Target,
-STM32F101RB: *MicroZig.Target,
-STM32F101RC: *MicroZig.Target,
-STM32F101RD: *MicroZig.Target,
-STM32F101RE: *MicroZig.Target,
-STM32F101RF: *MicroZig.Target,
-STM32F101RG: *MicroZig.Target,
-STM32F101T4: *MicroZig.Target,
-STM32F101T6: *MicroZig.Target,
-STM32F101T8: *MicroZig.Target,
-STM32F101TB: *MicroZig.Target,
-STM32F101V8: *MicroZig.Target,
-STM32F101VB: *MicroZig.Target,
-STM32F101VC: *MicroZig.Target,
-STM32F101VD: *MicroZig.Target,
-STM32F101VE: *MicroZig.Target,
-STM32F101VF: *MicroZig.Target,
-STM32F101VG: *MicroZig.Target,
-STM32F101ZC: *MicroZig.Target,
-STM32F101ZD: *MicroZig.Target,
-STM32F101ZE: *MicroZig.Target,
-STM32F101ZF: *MicroZig.Target,
-STM32F101ZG: *MicroZig.Target,
-STM32F102C4: *MicroZig.Target,
-STM32F102C6: *MicroZig.Target,
-STM32F102C8: *MicroZig.Target,
-STM32F102CB: *MicroZig.Target,
-STM32F102R4: *MicroZig.Target,
-STM32F102R6: *MicroZig.Target,
-STM32F102R8: *MicroZig.Target,
-STM32F102RB: *MicroZig.Target,
-STM32F103C4: *MicroZig.Target,
-STM32F103C6: *MicroZig.Target,
-STM32F103C8: *MicroZig.Target,
-STM32F103CB: *MicroZig.Target,
-STM32F103R4: *MicroZig.Target,
-STM32F103R6: *MicroZig.Target,
-STM32F103R8: *MicroZig.Target,
-STM32F103RB: *MicroZig.Target,
-STM32F103RC: *MicroZig.Target,
-STM32F103RD: *MicroZig.Target,
-STM32F103RE: *MicroZig.Target,
-STM32F103RF: *MicroZig.Target,
-STM32F103RG: *MicroZig.Target,
-STM32F103T4: *MicroZig.Target,
-STM32F103T6: *MicroZig.Target,
-STM32F103T8: *MicroZig.Target,
-STM32F103TB: *MicroZig.Target,
-STM32F103V8: *MicroZig.Target,
-STM32F103VB: *MicroZig.Target,
-STM32F103VC: *MicroZig.Target,
-STM32F103VD: *MicroZig.Target,
-STM32F103VE: *MicroZig.Target,
-STM32F103VF: *MicroZig.Target,
-STM32F103VG: *MicroZig.Target,
-STM32F103ZC: *MicroZig.Target,
-STM32F103ZD: *MicroZig.Target,
-STM32F103ZE: *MicroZig.Target,
-STM32F103ZF: *MicroZig.Target,
-STM32F103ZG: *MicroZig.Target,
-STM32F105R8: *MicroZig.Target,
-STM32F105RB: *MicroZig.Target,
-STM32F105RC: *MicroZig.Target,
-STM32F105V8: *MicroZig.Target,
-STM32F105VB: *MicroZig.Target,
-STM32F105VC: *MicroZig.Target,
-STM32F107RB: *MicroZig.Target,
-STM32F107RC: *MicroZig.Target,
-STM32F107VB: *MicroZig.Target,
-STM32F107VC: *MicroZig.Target,
-STM32F205RB: *MicroZig.Target,
-STM32F205RC: *MicroZig.Target,
-STM32F205RE: *MicroZig.Target,
-STM32F205RF: *MicroZig.Target,
-STM32F205RG: *MicroZig.Target,
-STM32F205VB: *MicroZig.Target,
-STM32F205VC: *MicroZig.Target,
-STM32F205VE: *MicroZig.Target,
-STM32F205VF: *MicroZig.Target,
-STM32F205VG: *MicroZig.Target,
-STM32F205ZC: *MicroZig.Target,
-STM32F205ZE: *MicroZig.Target,
-STM32F205ZF: *MicroZig.Target,
-STM32F205ZG: *MicroZig.Target,
-STM32F207IC: *MicroZig.Target,
-STM32F207IE: *MicroZig.Target,
-STM32F207IF: *MicroZig.Target,
-STM32F207IG: *MicroZig.Target,
-STM32F207VC: *MicroZig.Target,
-STM32F207VE: *MicroZig.Target,
-STM32F207VF: *MicroZig.Target,
-STM32F207VG: *MicroZig.Target,
-STM32F207ZC: *MicroZig.Target,
-STM32F207ZE: *MicroZig.Target,
-STM32F207ZF: *MicroZig.Target,
-STM32F207ZG: *MicroZig.Target,
-STM32F215RE: *MicroZig.Target,
-STM32F215RG: *MicroZig.Target,
-STM32F215VE: *MicroZig.Target,
-STM32F215VG: *MicroZig.Target,
-STM32F215ZE: *MicroZig.Target,
-STM32F215ZG: *MicroZig.Target,
-STM32F217IE: *MicroZig.Target,
-STM32F217IG: *MicroZig.Target,
-STM32F217VE: *MicroZig.Target,
-STM32F217VG: *MicroZig.Target,
-STM32F217ZE: *MicroZig.Target,
-STM32F217ZG: *MicroZig.Target,
-STM32F301C6: *MicroZig.Target,
-STM32F301C8: *MicroZig.Target,
-STM32F301K6: *MicroZig.Target,
-STM32F301K8: *MicroZig.Target,
-STM32F301R6: *MicroZig.Target,
-STM32F301R8: *MicroZig.Target,
-STM32F302C6: *MicroZig.Target,
-STM32F302C8: *MicroZig.Target,
-STM32F302CB: *MicroZig.Target,
-STM32F302CC: *MicroZig.Target,
-STM32F302K6: *MicroZig.Target,
-STM32F302K8: *MicroZig.Target,
-STM32F302R6: *MicroZig.Target,
-STM32F302R8: *MicroZig.Target,
-STM32F302RB: *MicroZig.Target,
-STM32F302RC: *MicroZig.Target,
-STM32F302RD: *MicroZig.Target,
-STM32F302RE: *MicroZig.Target,
-STM32F302VB: *MicroZig.Target,
-STM32F302VC: *MicroZig.Target,
-STM32F302VD: *MicroZig.Target,
-STM32F302VE: *MicroZig.Target,
-STM32F302ZD: *MicroZig.Target,
-STM32F302ZE: *MicroZig.Target,
-STM32F303C6: *MicroZig.Target,
-STM32F303C8: *MicroZig.Target,
-STM32F303CB: *MicroZig.Target,
-STM32F303CC: *MicroZig.Target,
-STM32F303K6: *MicroZig.Target,
-STM32F303K8: *MicroZig.Target,
-STM32F303R6: *MicroZig.Target,
-STM32F303R8: *MicroZig.Target,
-STM32F303RB: *MicroZig.Target,
-STM32F303RC: *MicroZig.Target,
-STM32F303RD: *MicroZig.Target,
-STM32F303RE: *MicroZig.Target,
-STM32F303VB: *MicroZig.Target,
-STM32F303VC: *MicroZig.Target,
-STM32F303VD: *MicroZig.Target,
-STM32F303VE: *MicroZig.Target,
-STM32F303ZD: *MicroZig.Target,
-STM32F303ZE: *MicroZig.Target,
-STM32F318C8: *MicroZig.Target,
-STM32F318K8: *MicroZig.Target,
-STM32F328C8: *MicroZig.Target,
-STM32F334C4: *MicroZig.Target,
-STM32F334C6: *MicroZig.Target,
-STM32F334C8: *MicroZig.Target,
-STM32F334K4: *MicroZig.Target,
-STM32F334K6: *MicroZig.Target,
-STM32F334K8: *MicroZig.Target,
-STM32F334R6: *MicroZig.Target,
-STM32F334R8: *MicroZig.Target,
-STM32F358CC: *MicroZig.Target,
-STM32F358RC: *MicroZig.Target,
-STM32F358VC: *MicroZig.Target,
-STM32F373C8: *MicroZig.Target,
-STM32F373CB: *MicroZig.Target,
-STM32F373CC: *MicroZig.Target,
-STM32F373R8: *MicroZig.Target,
-STM32F373RB: *MicroZig.Target,
-STM32F373RC: *MicroZig.Target,
-STM32F373V8: *MicroZig.Target,
-STM32F373VB: *MicroZig.Target,
-STM32F373VC: *MicroZig.Target,
-STM32F378CC: *MicroZig.Target,
-STM32F378RC: *MicroZig.Target,
-STM32F378VC: *MicroZig.Target,
-STM32F398VE: *MicroZig.Target,
-STM32F401CB: *MicroZig.Target,
-STM32F401CC: *MicroZig.Target,
-STM32F401CD: *MicroZig.Target,
-STM32F401CE: *MicroZig.Target,
-STM32F401RB: *MicroZig.Target,
-STM32F401RC: *MicroZig.Target,
-STM32F401RD: *MicroZig.Target,
-STM32F401RE: *MicroZig.Target,
-STM32F401VB: *MicroZig.Target,
-STM32F401VC: *MicroZig.Target,
-STM32F401VD: *MicroZig.Target,
-STM32F401VE: *MicroZig.Target,
-STM32F405OE: *MicroZig.Target,
-STM32F405OG: *MicroZig.Target,
-STM32F405RG: *MicroZig.Target,
-STM32F405VG: *MicroZig.Target,
-STM32F405ZG: *MicroZig.Target,
-STM32F407IE: *MicroZig.Target,
-STM32F407IG: *MicroZig.Target,
-STM32F407VE: *MicroZig.Target,
-STM32F407VG: *MicroZig.Target,
-STM32F407ZE: *MicroZig.Target,
-STM32F407ZG: *MicroZig.Target,
-STM32F410C8: *MicroZig.Target,
-STM32F410CB: *MicroZig.Target,
-STM32F410R8: *MicroZig.Target,
-STM32F410RB: *MicroZig.Target,
-STM32F410T8: *MicroZig.Target,
-STM32F410TB: *MicroZig.Target,
-STM32F411CC: *MicroZig.Target,
-STM32F411CE: *MicroZig.Target,
-STM32F411RC: *MicroZig.Target,
-STM32F411RE: *MicroZig.Target,
-STM32F411VC: *MicroZig.Target,
-STM32F411VE: *MicroZig.Target,
-STM32F412CE: *MicroZig.Target,
-STM32F412CG: *MicroZig.Target,
-STM32F412RE: *MicroZig.Target,
-STM32F412RG: *MicroZig.Target,
-STM32F412VE: *MicroZig.Target,
-STM32F412VG: *MicroZig.Target,
-STM32F412ZE: *MicroZig.Target,
-STM32F412ZG: *MicroZig.Target,
-STM32F413CG: *MicroZig.Target,
-STM32F413CH: *MicroZig.Target,
-STM32F413MG: *MicroZig.Target,
-STM32F413MH: *MicroZig.Target,
-STM32F413RG: *MicroZig.Target,
-STM32F413RH: *MicroZig.Target,
-STM32F413VG: *MicroZig.Target,
-STM32F413VH: *MicroZig.Target,
-STM32F413ZG: *MicroZig.Target,
-STM32F413ZH: *MicroZig.Target,
-STM32F415OG: *MicroZig.Target,
-STM32F415RG: *MicroZig.Target,
-STM32F415VG: *MicroZig.Target,
-STM32F415ZG: *MicroZig.Target,
-STM32F417IE: *MicroZig.Target,
-STM32F417IG: *MicroZig.Target,
-STM32F417VE: *MicroZig.Target,
-STM32F417VG: *MicroZig.Target,
-STM32F417ZE: *MicroZig.Target,
-STM32F417ZG: *MicroZig.Target,
-STM32F423CH: *MicroZig.Target,
-STM32F423MH: *MicroZig.Target,
-STM32F423RH: *MicroZig.Target,
-STM32F423VH: *MicroZig.Target,
-STM32F423ZH: *MicroZig.Target,
-STM32F427AG: *MicroZig.Target,
-STM32F427AI: *MicroZig.Target,
-STM32F427IG: *MicroZig.Target,
-STM32F427II: *MicroZig.Target,
-STM32F427VG: *MicroZig.Target,
-STM32F427VI: *MicroZig.Target,
-STM32F427ZG: *MicroZig.Target,
-STM32F427ZI: *MicroZig.Target,
-STM32F429AG: *MicroZig.Target,
-STM32F429AI: *MicroZig.Target,
-STM32F429BE: *MicroZig.Target,
-STM32F429BG: *MicroZig.Target,
-STM32F429BI: *MicroZig.Target,
-STM32F429IE: *MicroZig.Target,
-STM32F429IG: *MicroZig.Target,
-STM32F429II: *MicroZig.Target,
-STM32F429NE: *MicroZig.Target,
-STM32F429NG: *MicroZig.Target,
-STM32F429NI: *MicroZig.Target,
-STM32F429VE: *MicroZig.Target,
-STM32F429VG: *MicroZig.Target,
-STM32F429VI: *MicroZig.Target,
-STM32F429ZE: *MicroZig.Target,
-STM32F429ZG: *MicroZig.Target,
-STM32F429ZI: *MicroZig.Target,
-STM32F437AI: *MicroZig.Target,
-STM32F437IG: *MicroZig.Target,
-STM32F437II: *MicroZig.Target,
-STM32F437VG: *MicroZig.Target,
-STM32F437VI: *MicroZig.Target,
-STM32F437ZG: *MicroZig.Target,
-STM32F437ZI: *MicroZig.Target,
-STM32F439AI: *MicroZig.Target,
-STM32F439BG: *MicroZig.Target,
-STM32F439BI: *MicroZig.Target,
-STM32F439IG: *MicroZig.Target,
-STM32F439II: *MicroZig.Target,
-STM32F439NG: *MicroZig.Target,
-STM32F439NI: *MicroZig.Target,
-STM32F439VG: *MicroZig.Target,
-STM32F439VI: *MicroZig.Target,
-STM32F439ZG: *MicroZig.Target,
-STM32F439ZI: *MicroZig.Target,
-STM32F446MC: *MicroZig.Target,
-STM32F446ME: *MicroZig.Target,
-STM32F446RC: *MicroZig.Target,
-STM32F446RE: *MicroZig.Target,
-STM32F446VC: *MicroZig.Target,
-STM32F446VE: *MicroZig.Target,
-STM32F446ZC: *MicroZig.Target,
-STM32F446ZE: *MicroZig.Target,
-STM32F469AE: *MicroZig.Target,
-STM32F469AG: *MicroZig.Target,
-STM32F469AI: *MicroZig.Target,
-STM32F469BE: *MicroZig.Target,
-STM32F469BG: *MicroZig.Target,
-STM32F469BI: *MicroZig.Target,
-STM32F469IE: *MicroZig.Target,
-STM32F469IG: *MicroZig.Target,
-STM32F469II: *MicroZig.Target,
-STM32F469NE: *MicroZig.Target,
-STM32F469NG: *MicroZig.Target,
-STM32F469NI: *MicroZig.Target,
-STM32F469VE: *MicroZig.Target,
-STM32F469VG: *MicroZig.Target,
-STM32F469VI: *MicroZig.Target,
-STM32F469ZE: *MicroZig.Target,
-STM32F469ZG: *MicroZig.Target,
-STM32F469ZI: *MicroZig.Target,
-STM32F479AG: *MicroZig.Target,
-STM32F479AI: *MicroZig.Target,
-STM32F479BG: *MicroZig.Target,
-STM32F479BI: *MicroZig.Target,
-STM32F479IG: *MicroZig.Target,
-STM32F479II: *MicroZig.Target,
-STM32F479NG: *MicroZig.Target,
-STM32F479NI: *MicroZig.Target,
-STM32F479VG: *MicroZig.Target,
-STM32F479VI: *MicroZig.Target,
-STM32F479ZG: *MicroZig.Target,
-STM32F479ZI: *MicroZig.Target,
-STM32F722IC: *MicroZig.Target,
-STM32F722IE: *MicroZig.Target,
-STM32F722RC: *MicroZig.Target,
-STM32F722RE: *MicroZig.Target,
-STM32F722VC: *MicroZig.Target,
-STM32F722VE: *MicroZig.Target,
-STM32F722ZC: *MicroZig.Target,
-STM32F722ZE: *MicroZig.Target,
-STM32F723IC: *MicroZig.Target,
-STM32F723IE: *MicroZig.Target,
-STM32F723VC: *MicroZig.Target,
-STM32F723VE: *MicroZig.Target,
-STM32F723ZC: *MicroZig.Target,
-STM32F723ZE: *MicroZig.Target,
-STM32F730I8: *MicroZig.Target,
-STM32F730R8: *MicroZig.Target,
-STM32F730V8: *MicroZig.Target,
-STM32F730Z8: *MicroZig.Target,
-STM32F732IE: *MicroZig.Target,
-STM32F732RE: *MicroZig.Target,
-STM32F732VE: *MicroZig.Target,
-STM32F732ZE: *MicroZig.Target,
-STM32F733IE: *MicroZig.Target,
-STM32F733VE: *MicroZig.Target,
-STM32F733ZE: *MicroZig.Target,
-STM32F745IE: *MicroZig.Target,
-STM32F745IG: *MicroZig.Target,
-STM32F745VE: *MicroZig.Target,
-STM32F745VG: *MicroZig.Target,
-STM32F745ZE: *MicroZig.Target,
-STM32F745ZG: *MicroZig.Target,
-STM32F746BE: *MicroZig.Target,
-STM32F746BG: *MicroZig.Target,
-STM32F746IE: *MicroZig.Target,
-STM32F746IG: *MicroZig.Target,
-STM32F746NE: *MicroZig.Target,
-STM32F746NG: *MicroZig.Target,
-STM32F746VE: *MicroZig.Target,
-STM32F746VG: *MicroZig.Target,
-STM32F746ZE: *MicroZig.Target,
-STM32F746ZG: *MicroZig.Target,
-STM32F750N8: *MicroZig.Target,
-STM32F750V8: *MicroZig.Target,
-STM32F750Z8: *MicroZig.Target,
-STM32F756BG: *MicroZig.Target,
-STM32F756IG: *MicroZig.Target,
-STM32F756NG: *MicroZig.Target,
-STM32F756VG: *MicroZig.Target,
-STM32F756ZG: *MicroZig.Target,
-STM32F765BG: *MicroZig.Target,
-STM32F765BI: *MicroZig.Target,
-STM32F765IG: *MicroZig.Target,
-STM32F765II: *MicroZig.Target,
-STM32F765NG: *MicroZig.Target,
-STM32F765NI: *MicroZig.Target,
-STM32F765VG: *MicroZig.Target,
-STM32F765VI: *MicroZig.Target,
-STM32F765ZG: *MicroZig.Target,
-STM32F765ZI: *MicroZig.Target,
-STM32F767BG: *MicroZig.Target,
-STM32F767BI: *MicroZig.Target,
-STM32F767IG: *MicroZig.Target,
-STM32F767II: *MicroZig.Target,
-STM32F767NG: *MicroZig.Target,
-STM32F767NI: *MicroZig.Target,
-STM32F767VG: *MicroZig.Target,
-STM32F767VI: *MicroZig.Target,
-STM32F767ZG: *MicroZig.Target,
-STM32F767ZI: *MicroZig.Target,
-STM32F768AI: *MicroZig.Target,
-STM32F769AG: *MicroZig.Target,
-STM32F769AI: *MicroZig.Target,
-STM32F769BG: *MicroZig.Target,
-STM32F769BI: *MicroZig.Target,
-STM32F769IG: *MicroZig.Target,
-STM32F769II: *MicroZig.Target,
-STM32F769NG: *MicroZig.Target,
-STM32F769NI: *MicroZig.Target,
-STM32F777BI: *MicroZig.Target,
-STM32F777II: *MicroZig.Target,
-STM32F777NI: *MicroZig.Target,
-STM32F777VI: *MicroZig.Target,
-STM32F777ZI: *MicroZig.Target,
-STM32F778AI: *MicroZig.Target,
-STM32F779AI: *MicroZig.Target,
-STM32F779BI: *MicroZig.Target,
-STM32F779II: *MicroZig.Target,
-STM32F779NI: *MicroZig.Target,
-STM32G030C6: *MicroZig.Target,
-STM32G030C8: *MicroZig.Target,
-STM32G030F6: *MicroZig.Target,
-STM32G030J6: *MicroZig.Target,
-STM32G030K6: *MicroZig.Target,
-STM32G030K8: *MicroZig.Target,
-STM32G031C4: *MicroZig.Target,
-STM32G031C6: *MicroZig.Target,
-STM32G031C8: *MicroZig.Target,
-STM32G031F4: *MicroZig.Target,
-STM32G031F6: *MicroZig.Target,
-STM32G031F8: *MicroZig.Target,
-STM32G031G4: *MicroZig.Target,
-STM32G031G6: *MicroZig.Target,
-STM32G031G8: *MicroZig.Target,
-STM32G031J4: *MicroZig.Target,
-STM32G031J6: *MicroZig.Target,
-STM32G031K4: *MicroZig.Target,
-STM32G031K6: *MicroZig.Target,
-STM32G031K8: *MicroZig.Target,
-STM32G031Y8: *MicroZig.Target,
-STM32G041C6: *MicroZig.Target,
-STM32G041C8: *MicroZig.Target,
-STM32G041F6: *MicroZig.Target,
-STM32G041F8: *MicroZig.Target,
-STM32G041G6: *MicroZig.Target,
-STM32G041G8: *MicroZig.Target,
-STM32G041J6: *MicroZig.Target,
-STM32G041K6: *MicroZig.Target,
-STM32G041K8: *MicroZig.Target,
-STM32G041Y8: *MicroZig.Target,
-STM32G050C6: *MicroZig.Target,
-STM32G050C8: *MicroZig.Target,
-STM32G050F6: *MicroZig.Target,
-STM32G050K6: *MicroZig.Target,
-STM32G050K8: *MicroZig.Target,
-STM32G051C6: *MicroZig.Target,
-STM32G051C8: *MicroZig.Target,
-STM32G051F6: *MicroZig.Target,
-STM32G051F8: *MicroZig.Target,
-STM32G051G6: *MicroZig.Target,
-STM32G051G8: *MicroZig.Target,
-STM32G051K6: *MicroZig.Target,
-STM32G051K8: *MicroZig.Target,
-STM32G061C6: *MicroZig.Target,
-STM32G061C8: *MicroZig.Target,
-STM32G061F6: *MicroZig.Target,
-STM32G061F8: *MicroZig.Target,
-STM32G061G6: *MicroZig.Target,
-STM32G061G8: *MicroZig.Target,
-STM32G061K6: *MicroZig.Target,
-STM32G061K8: *MicroZig.Target,
-STM32G070CB: *MicroZig.Target,
-STM32G070KB: *MicroZig.Target,
-STM32G070RB: *MicroZig.Target,
-STM32G071C6: *MicroZig.Target,
-STM32G071C8: *MicroZig.Target,
-STM32G071CB: *MicroZig.Target,
-STM32G071EB: *MicroZig.Target,
-STM32G071G6: *MicroZig.Target,
-STM32G071G8: *MicroZig.Target,
-STM32G071GB: *MicroZig.Target,
-STM32G071K6: *MicroZig.Target,
-STM32G071K8: *MicroZig.Target,
-STM32G071KB: *MicroZig.Target,
-STM32G071R6: *MicroZig.Target,
-STM32G071R8: *MicroZig.Target,
-STM32G071RB: *MicroZig.Target,
-STM32G081CB: *MicroZig.Target,
-STM32G081EB: *MicroZig.Target,
-STM32G081GB: *MicroZig.Target,
-STM32G081KB: *MicroZig.Target,
-STM32G081RB: *MicroZig.Target,
-STM32G0B0CE: *MicroZig.Target,
-STM32G0B0KE: *MicroZig.Target,
-STM32G0B0RE: *MicroZig.Target,
-STM32G0B0VE: *MicroZig.Target,
-STM32G0B1CB: *MicroZig.Target,
-STM32G0B1CC: *MicroZig.Target,
-STM32G0B1CE: *MicroZig.Target,
-STM32G0B1KB: *MicroZig.Target,
-STM32G0B1KC: *MicroZig.Target,
-STM32G0B1KE: *MicroZig.Target,
-STM32G0B1MB: *MicroZig.Target,
-STM32G0B1MC: *MicroZig.Target,
-STM32G0B1ME: *MicroZig.Target,
-STM32G0B1NE: *MicroZig.Target,
-STM32G0B1RB: *MicroZig.Target,
-STM32G0B1RC: *MicroZig.Target,
-STM32G0B1RE: *MicroZig.Target,
-STM32G0B1VB: *MicroZig.Target,
-STM32G0B1VC: *MicroZig.Target,
-STM32G0B1VE: *MicroZig.Target,
-STM32G0C1CC: *MicroZig.Target,
-STM32G0C1CE: *MicroZig.Target,
-STM32G0C1KC: *MicroZig.Target,
-STM32G0C1KE: *MicroZig.Target,
-STM32G0C1MC: *MicroZig.Target,
-STM32G0C1ME: *MicroZig.Target,
-STM32G0C1NE: *MicroZig.Target,
-STM32G0C1RC: *MicroZig.Target,
-STM32G0C1RE: *MicroZig.Target,
-STM32G0C1VC: *MicroZig.Target,
-STM32G0C1VE: *MicroZig.Target,
-STM32G431C6: *MicroZig.Target,
-STM32G431C8: *MicroZig.Target,
-STM32G431CB: *MicroZig.Target,
-STM32G431K6: *MicroZig.Target,
-STM32G431K8: *MicroZig.Target,
-STM32G431KB: *MicroZig.Target,
-STM32G431M6: *MicroZig.Target,
-STM32G431M8: *MicroZig.Target,
-STM32G431MB: *MicroZig.Target,
-STM32G431R6: *MicroZig.Target,
-STM32G431R8: *MicroZig.Target,
-STM32G431RB: *MicroZig.Target,
-STM32G431V6: *MicroZig.Target,
-STM32G431V8: *MicroZig.Target,
-STM32G431VB: *MicroZig.Target,
-STM32G441CB: *MicroZig.Target,
-STM32G441KB: *MicroZig.Target,
-STM32G441MB: *MicroZig.Target,
-STM32G441RB: *MicroZig.Target,
-STM32G441VB: *MicroZig.Target,
-STM32G471CC: *MicroZig.Target,
-STM32G471CE: *MicroZig.Target,
-STM32G471MC: *MicroZig.Target,
-STM32G471ME: *MicroZig.Target,
-STM32G471QC: *MicroZig.Target,
-STM32G471QE: *MicroZig.Target,
-STM32G471RC: *MicroZig.Target,
-STM32G471RE: *MicroZig.Target,
-STM32G471VC: *MicroZig.Target,
-STM32G471VE: *MicroZig.Target,
-STM32G473CB: *MicroZig.Target,
-STM32G473CC: *MicroZig.Target,
-STM32G473CE: *MicroZig.Target,
-STM32G473MB: *MicroZig.Target,
-STM32G473MC: *MicroZig.Target,
-STM32G473ME: *MicroZig.Target,
-STM32G473PB: *MicroZig.Target,
-STM32G473PC: *MicroZig.Target,
-STM32G473PE: *MicroZig.Target,
-STM32G473QB: *MicroZig.Target,
-STM32G473QC: *MicroZig.Target,
-STM32G473QE: *MicroZig.Target,
-STM32G473RB: *MicroZig.Target,
-STM32G473RC: *MicroZig.Target,
-STM32G473RE: *MicroZig.Target,
-STM32G473VB: *MicroZig.Target,
-STM32G473VC: *MicroZig.Target,
-STM32G473VE: *MicroZig.Target,
-STM32G474CB: *MicroZig.Target,
-STM32G474CC: *MicroZig.Target,
-STM32G474CE: *MicroZig.Target,
-STM32G474MB: *MicroZig.Target,
-STM32G474MC: *MicroZig.Target,
-STM32G474ME: *MicroZig.Target,
-STM32G474PB: *MicroZig.Target,
-STM32G474PC: *MicroZig.Target,
-STM32G474PE: *MicroZig.Target,
-STM32G474QB: *MicroZig.Target,
-STM32G474QC: *MicroZig.Target,
-STM32G474QE: *MicroZig.Target,
-STM32G474RB: *MicroZig.Target,
-STM32G474RC: *MicroZig.Target,
-STM32G474RE: *MicroZig.Target,
-STM32G474VB: *MicroZig.Target,
-STM32G474VC: *MicroZig.Target,
-STM32G474VE: *MicroZig.Target,
-STM32G483CE: *MicroZig.Target,
-STM32G483ME: *MicroZig.Target,
-STM32G483PE: *MicroZig.Target,
-STM32G483QE: *MicroZig.Target,
-STM32G483RE: *MicroZig.Target,
-STM32G483VE: *MicroZig.Target,
-STM32G484CE: *MicroZig.Target,
-STM32G484ME: *MicroZig.Target,
-STM32G484PE: *MicroZig.Target,
-STM32G484QE: *MicroZig.Target,
-STM32G484RE: *MicroZig.Target,
-STM32G484VE: *MicroZig.Target,
-STM32G491CC: *MicroZig.Target,
-STM32G491CE: *MicroZig.Target,
-STM32G491KC: *MicroZig.Target,
-STM32G491KE: *MicroZig.Target,
-STM32G491MC: *MicroZig.Target,
-STM32G491ME: *MicroZig.Target,
-STM32G491RC: *MicroZig.Target,
-STM32G491RE: *MicroZig.Target,
-STM32G491VC: *MicroZig.Target,
-STM32G491VE: *MicroZig.Target,
-STM32G4A1CE: *MicroZig.Target,
-STM32G4A1KE: *MicroZig.Target,
-STM32G4A1ME: *MicroZig.Target,
-STM32G4A1RE: *MicroZig.Target,
-STM32G4A1VE: *MicroZig.Target,
-STM32H503CB: *MicroZig.Target,
-STM32H503EB: *MicroZig.Target,
-STM32H503KB: *MicroZig.Target,
-STM32H503RB: *MicroZig.Target,
-STM32H523CC: *MicroZig.Target,
-STM32H523CE: *MicroZig.Target,
-STM32H523HE: *MicroZig.Target,
-STM32H523RC: *MicroZig.Target,
-STM32H523RE: *MicroZig.Target,
-STM32H523VC: *MicroZig.Target,
-STM32H523VE: *MicroZig.Target,
-STM32H523ZC: *MicroZig.Target,
-STM32H523ZE: *MicroZig.Target,
-STM32H533CE: *MicroZig.Target,
-STM32H533HE: *MicroZig.Target,
-STM32H533RE: *MicroZig.Target,
-STM32H533VE: *MicroZig.Target,
-STM32H533ZE: *MicroZig.Target,
-STM32H562AG: *MicroZig.Target,
-STM32H562AI: *MicroZig.Target,
-STM32H562IG: *MicroZig.Target,
-STM32H562II: *MicroZig.Target,
-STM32H562RG: *MicroZig.Target,
-STM32H562RI: *MicroZig.Target,
-STM32H562VG: *MicroZig.Target,
-STM32H562VI: *MicroZig.Target,
-STM32H562ZG: *MicroZig.Target,
-STM32H562ZI: *MicroZig.Target,
-STM32H563AG: *MicroZig.Target,
-STM32H563AI: *MicroZig.Target,
-STM32H563IG: *MicroZig.Target,
-STM32H563II: *MicroZig.Target,
-STM32H563MI: *MicroZig.Target,
-STM32H563RG: *MicroZig.Target,
-STM32H563RI: *MicroZig.Target,
-STM32H563VG: *MicroZig.Target,
-STM32H563VI: *MicroZig.Target,
-STM32H563ZG: *MicroZig.Target,
-STM32H563ZI: *MicroZig.Target,
-STM32H573AI: *MicroZig.Target,
-STM32H573II: *MicroZig.Target,
-STM32H573MI: *MicroZig.Target,
-STM32H573RI: *MicroZig.Target,
-STM32H573VI: *MicroZig.Target,
-STM32H573ZI: *MicroZig.Target,
-STM32H723VE: *MicroZig.Target,
-STM32H723VG: *MicroZig.Target,
-STM32H723ZE: *MicroZig.Target,
-STM32H723ZG: *MicroZig.Target,
-STM32H725AE: *MicroZig.Target,
-STM32H725AG: *MicroZig.Target,
-STM32H725IE: *MicroZig.Target,
-STM32H725IG: *MicroZig.Target,
-STM32H725RE: *MicroZig.Target,
-STM32H725RG: *MicroZig.Target,
-STM32H725VE: *MicroZig.Target,
-STM32H725VG: *MicroZig.Target,
-STM32H725ZE: *MicroZig.Target,
-STM32H725ZG: *MicroZig.Target,
-STM32H730AB: *MicroZig.Target,
-STM32H730IB: *MicroZig.Target,
-STM32H730VB: *MicroZig.Target,
-STM32H730ZB: *MicroZig.Target,
-STM32H733VG: *MicroZig.Target,
-STM32H733ZG: *MicroZig.Target,
-STM32H735AG: *MicroZig.Target,
-STM32H735IG: *MicroZig.Target,
-STM32H735RG: *MicroZig.Target,
-STM32H735VG: *MicroZig.Target,
-STM32H735ZG: *MicroZig.Target,
-STM32H742AG: *MicroZig.Target,
-STM32H742AI: *MicroZig.Target,
-STM32H742BG: *MicroZig.Target,
-STM32H742BI: *MicroZig.Target,
-STM32H742IG: *MicroZig.Target,
-STM32H742II: *MicroZig.Target,
-STM32H742VG: *MicroZig.Target,
-STM32H742VI: *MicroZig.Target,
-STM32H742XG: *MicroZig.Target,
-STM32H742XI: *MicroZig.Target,
-STM32H742ZG: *MicroZig.Target,
-STM32H742ZI: *MicroZig.Target,
-STM32H743AG: *MicroZig.Target,
-STM32H743AI: *MicroZig.Target,
-STM32H743BG: *MicroZig.Target,
-STM32H743BI: *MicroZig.Target,
-STM32H743IG: *MicroZig.Target,
-STM32H743II: *MicroZig.Target,
-STM32H743VG: *MicroZig.Target,
-STM32H743VI: *MicroZig.Target,
-STM32H743XG: *MicroZig.Target,
-STM32H743XI: *MicroZig.Target,
-STM32H743ZG: *MicroZig.Target,
-STM32H743ZI: *MicroZig.Target,
-STM32H745BG: *MicroZig.Target,
-STM32H745BI: *MicroZig.Target,
-STM32H745IG: *MicroZig.Target,
-STM32H745II: *MicroZig.Target,
-STM32H745XG: *MicroZig.Target,
-STM32H745XI: *MicroZig.Target,
-STM32H745ZG: *MicroZig.Target,
-STM32H745ZI: *MicroZig.Target,
-STM32H747AG: *MicroZig.Target,
-STM32H747AI: *MicroZig.Target,
-STM32H747BG: *MicroZig.Target,
-STM32H747BI: *MicroZig.Target,
-STM32H747IG: *MicroZig.Target,
-STM32H747II: *MicroZig.Target,
-STM32H747XG: *MicroZig.Target,
-STM32H747XI: *MicroZig.Target,
-STM32H747ZI: *MicroZig.Target,
-STM32H750IB: *MicroZig.Target,
-STM32H750VB: *MicroZig.Target,
-STM32H750XB: *MicroZig.Target,
-STM32H750ZB: *MicroZig.Target,
-STM32H753AI: *MicroZig.Target,
-STM32H753BI: *MicroZig.Target,
-STM32H753II: *MicroZig.Target,
-STM32H753VI: *MicroZig.Target,
-STM32H753XI: *MicroZig.Target,
-STM32H753ZI: *MicroZig.Target,
-STM32H755BI: *MicroZig.Target,
-STM32H755II: *MicroZig.Target,
-STM32H755XI: *MicroZig.Target,
-STM32H755ZI: *MicroZig.Target,
-STM32H757AI: *MicroZig.Target,
-STM32H757BI: *MicroZig.Target,
-STM32H757II: *MicroZig.Target,
-STM32H757XI: *MicroZig.Target,
-STM32H757ZI: *MicroZig.Target,
-STM32H7A3AG: *MicroZig.Target,
-STM32H7A3AI: *MicroZig.Target,
-STM32H7A3IG: *MicroZig.Target,
-STM32H7A3II: *MicroZig.Target,
-STM32H7A3LG: *MicroZig.Target,
-STM32H7A3LI: *MicroZig.Target,
-STM32H7A3NG: *MicroZig.Target,
-STM32H7A3NI: *MicroZig.Target,
-STM32H7A3QI: *MicroZig.Target,
-STM32H7A3RG: *MicroZig.Target,
-STM32H7A3RI: *MicroZig.Target,
-STM32H7A3VG: *MicroZig.Target,
-STM32H7A3VI: *MicroZig.Target,
-STM32H7A3ZG: *MicroZig.Target,
-STM32H7A3ZI: *MicroZig.Target,
-STM32H7B0AB: *MicroZig.Target,
-STM32H7B0IB: *MicroZig.Target,
-STM32H7B0RB: *MicroZig.Target,
-STM32H7B0VB: *MicroZig.Target,
-STM32H7B0ZB: *MicroZig.Target,
-STM32H7B3AI: *MicroZig.Target,
-STM32H7B3II: *MicroZig.Target,
-STM32H7B3LI: *MicroZig.Target,
-STM32H7B3NI: *MicroZig.Target,
-STM32H7B3QI: *MicroZig.Target,
-STM32H7B3RI: *MicroZig.Target,
-STM32H7B3VI: *MicroZig.Target,
-STM32H7B3ZI: *MicroZig.Target,
-STM32H7R3A8: *MicroZig.Target,
-STM32H7R3I8: *MicroZig.Target,
-STM32H7R3L8: *MicroZig.Target,
-STM32H7R3R8: *MicroZig.Target,
-STM32H7R3V8: *MicroZig.Target,
-STM32H7R3Z8: *MicroZig.Target,
-STM32H7R7A8: *MicroZig.Target,
-STM32H7R7I8: *MicroZig.Target,
-STM32H7R7L8: *MicroZig.Target,
-STM32H7R7Z8: *MicroZig.Target,
-STM32H7S3A8: *MicroZig.Target,
-STM32H7S3I8: *MicroZig.Target,
-STM32H7S3L8: *MicroZig.Target,
-STM32H7S3R8: *MicroZig.Target,
-STM32H7S3V8: *MicroZig.Target,
-STM32H7S3Z8: *MicroZig.Target,
-STM32H7S7A8: *MicroZig.Target,
-STM32H7S7I8: *MicroZig.Target,
-STM32H7S7L8: *MicroZig.Target,
-STM32H7S7Z8: *MicroZig.Target,
-STM32L010C6: *MicroZig.Target,
-STM32L010F4: *MicroZig.Target,
-STM32L010K4: *MicroZig.Target,
-STM32L010K8: *MicroZig.Target,
-STM32L010R8: *MicroZig.Target,
-STM32L010RB: *MicroZig.Target,
-STM32L011D3: *MicroZig.Target,
-STM32L011D4: *MicroZig.Target,
-STM32L011E3: *MicroZig.Target,
-STM32L011E4: *MicroZig.Target,
-STM32L011F3: *MicroZig.Target,
-STM32L011F4: *MicroZig.Target,
-STM32L011G3: *MicroZig.Target,
-STM32L011G4: *MicroZig.Target,
-STM32L011K3: *MicroZig.Target,
-STM32L011K4: *MicroZig.Target,
-STM32L021D4: *MicroZig.Target,
-STM32L021F4: *MicroZig.Target,
-STM32L021G4: *MicroZig.Target,
-STM32L021K4: *MicroZig.Target,
-STM32L031C4: *MicroZig.Target,
-STM32L031C6: *MicroZig.Target,
-STM32L031E4: *MicroZig.Target,
-STM32L031E6: *MicroZig.Target,
-STM32L031F4: *MicroZig.Target,
-STM32L031F6: *MicroZig.Target,
-STM32L031G4: *MicroZig.Target,
-STM32L031G6: *MicroZig.Target,
-STM32L031K4: *MicroZig.Target,
-STM32L031K6: *MicroZig.Target,
-STM32L041C4: *MicroZig.Target,
-STM32L041C6: *MicroZig.Target,
-STM32L041E6: *MicroZig.Target,
-STM32L041F6: *MicroZig.Target,
-STM32L041G6: *MicroZig.Target,
-STM32L041K6: *MicroZig.Target,
-STM32L051C6: *MicroZig.Target,
-STM32L051C8: *MicroZig.Target,
-STM32L051K6: *MicroZig.Target,
-STM32L051K8: *MicroZig.Target,
-STM32L051R6: *MicroZig.Target,
-STM32L051R8: *MicroZig.Target,
-STM32L051T6: *MicroZig.Target,
-STM32L051T8: *MicroZig.Target,
-STM32L052C6: *MicroZig.Target,
-STM32L052C8: *MicroZig.Target,
-STM32L052K6: *MicroZig.Target,
-STM32L052K8: *MicroZig.Target,
-STM32L052R6: *MicroZig.Target,
-STM32L052R8: *MicroZig.Target,
-STM32L052T6: *MicroZig.Target,
-STM32L052T8: *MicroZig.Target,
-STM32L053C6: *MicroZig.Target,
-STM32L053C8: *MicroZig.Target,
-STM32L053R6: *MicroZig.Target,
-STM32L053R8: *MicroZig.Target,
-STM32L062C8: *MicroZig.Target,
-STM32L062K8: *MicroZig.Target,
-STM32L063C8: *MicroZig.Target,
-STM32L063R8: *MicroZig.Target,
-STM32L071C8: *MicroZig.Target,
-STM32L071CB: *MicroZig.Target,
-STM32L071CZ: *MicroZig.Target,
-STM32L071K8: *MicroZig.Target,
-STM32L071KB: *MicroZig.Target,
-STM32L071KZ: *MicroZig.Target,
-STM32L071RB: *MicroZig.Target,
-STM32L071RZ: *MicroZig.Target,
-STM32L071V8: *MicroZig.Target,
-STM32L071VB: *MicroZig.Target,
-STM32L071VZ: *MicroZig.Target,
-STM32L072CB: *MicroZig.Target,
-STM32L072CZ: *MicroZig.Target,
-STM32L072KB: *MicroZig.Target,
-STM32L072KZ: *MicroZig.Target,
-STM32L072RB: *MicroZig.Target,
-STM32L072RZ: *MicroZig.Target,
-STM32L072V8: *MicroZig.Target,
-STM32L072VB: *MicroZig.Target,
-STM32L072VZ: *MicroZig.Target,
-STM32L073CB: *MicroZig.Target,
-STM32L073CZ: *MicroZig.Target,
-STM32L073RB: *MicroZig.Target,
-STM32L073RZ: *MicroZig.Target,
-STM32L073V8: *MicroZig.Target,
-STM32L073VB: *MicroZig.Target,
-STM32L073VZ: *MicroZig.Target,
-STM32L081CB: *MicroZig.Target,
-STM32L081CZ: *MicroZig.Target,
-STM32L081KZ: *MicroZig.Target,
-STM32L082CZ: *MicroZig.Target,
-STM32L082KB: *MicroZig.Target,
-STM32L082KZ: *MicroZig.Target,
-STM32L083CB: *MicroZig.Target,
-STM32L083CZ: *MicroZig.Target,
-STM32L083RB: *MicroZig.Target,
-STM32L083RZ: *MicroZig.Target,
-STM32L083V8: *MicroZig.Target,
-STM32L083VB: *MicroZig.Target,
-STM32L083VZ: *MicroZig.Target,
-STM32L100C6: *MicroZig.Target,
-@"STM32L100C6-A": *MicroZig.Target,
-STM32L100R8: *MicroZig.Target,
-@"STM32L100R8-A": *MicroZig.Target,
-STM32L100RB: *MicroZig.Target,
-@"STM32L100RB-A": *MicroZig.Target,
-STM32L100RC: *MicroZig.Target,
-STM32L151C6: *MicroZig.Target,
-@"STM32L151C6-A": *MicroZig.Target,
-STM32L151C8: *MicroZig.Target,
-@"STM32L151C8-A": *MicroZig.Target,
-STM32L151CB: *MicroZig.Target,
-@"STM32L151CB-A": *MicroZig.Target,
-STM32L151CC: *MicroZig.Target,
-STM32L151QC: *MicroZig.Target,
-STM32L151QD: *MicroZig.Target,
-STM32L151QE: *MicroZig.Target,
-STM32L151R6: *MicroZig.Target,
-@"STM32L151R6-A": *MicroZig.Target,
-STM32L151R8: *MicroZig.Target,
-@"STM32L151R8-A": *MicroZig.Target,
-STM32L151RB: *MicroZig.Target,
-@"STM32L151RB-A": *MicroZig.Target,
-STM32L151RC: *MicroZig.Target,
-@"STM32L151RC-A": *MicroZig.Target,
-STM32L151RD: *MicroZig.Target,
-STM32L151RE: *MicroZig.Target,
-STM32L151UC: *MicroZig.Target,
-STM32L151V8: *MicroZig.Target,
-@"STM32L151V8-A": *MicroZig.Target,
-STM32L151VB: *MicroZig.Target,
-@"STM32L151VB-A": *MicroZig.Target,
-STM32L151VC: *MicroZig.Target,
-@"STM32L151VC-A": *MicroZig.Target,
-STM32L151VD: *MicroZig.Target,
-@"STM32L151VD-X": *MicroZig.Target,
-STM32L151VE: *MicroZig.Target,
-STM32L151ZC: *MicroZig.Target,
-STM32L151ZD: *MicroZig.Target,
-STM32L151ZE: *MicroZig.Target,
-STM32L152C6: *MicroZig.Target,
-@"STM32L152C6-A": *MicroZig.Target,
-STM32L152C8: *MicroZig.Target,
-@"STM32L152C8-A": *MicroZig.Target,
-STM32L152CB: *MicroZig.Target,
-@"STM32L152CB-A": *MicroZig.Target,
-STM32L152CC: *MicroZig.Target,
-STM32L152QC: *MicroZig.Target,
-STM32L152QD: *MicroZig.Target,
-STM32L152QE: *MicroZig.Target,
-STM32L152R6: *MicroZig.Target,
-@"STM32L152R6-A": *MicroZig.Target,
-STM32L152R8: *MicroZig.Target,
-@"STM32L152R8-A": *MicroZig.Target,
-STM32L152RB: *MicroZig.Target,
-@"STM32L152RB-A": *MicroZig.Target,
-STM32L152RC: *MicroZig.Target,
-@"STM32L152RC-A": *MicroZig.Target,
-STM32L152RD: *MicroZig.Target,
-STM32L152RE: *MicroZig.Target,
-STM32L152UC: *MicroZig.Target,
-STM32L152V8: *MicroZig.Target,
-@"STM32L152V8-A": *MicroZig.Target,
-STM32L152VB: *MicroZig.Target,
-@"STM32L152VB-A": *MicroZig.Target,
-STM32L152VC: *MicroZig.Target,
-@"STM32L152VC-A": *MicroZig.Target,
-STM32L152VD: *MicroZig.Target,
-@"STM32L152VD-X": *MicroZig.Target,
-STM32L152VE: *MicroZig.Target,
-STM32L152ZC: *MicroZig.Target,
-STM32L152ZD: *MicroZig.Target,
-STM32L152ZE: *MicroZig.Target,
-STM32L162QC: *MicroZig.Target,
-STM32L162QD: *MicroZig.Target,
-STM32L162RC: *MicroZig.Target,
-@"STM32L162RC-A": *MicroZig.Target,
-STM32L162RD: *MicroZig.Target,
-STM32L162RE: *MicroZig.Target,
-STM32L162VC: *MicroZig.Target,
-@"STM32L162VC-A": *MicroZig.Target,
-STM32L162VD: *MicroZig.Target,
-@"STM32L162VD-X": *MicroZig.Target,
-STM32L162VE: *MicroZig.Target,
-STM32L162ZC: *MicroZig.Target,
-STM32L162ZD: *MicroZig.Target,
-STM32L162ZE: *MicroZig.Target,
-STM32L412C8: *MicroZig.Target,
-STM32L412CB: *MicroZig.Target,
-STM32L412K8: *MicroZig.Target,
-STM32L412KB: *MicroZig.Target,
-STM32L412R8: *MicroZig.Target,
-STM32L412RB: *MicroZig.Target,
-STM32L412T8: *MicroZig.Target,
-STM32L412TB: *MicroZig.Target,
-STM32L422CB: *MicroZig.Target,
-STM32L422KB: *MicroZig.Target,
-STM32L422RB: *MicroZig.Target,
-STM32L422TB: *MicroZig.Target,
-STM32L431CB: *MicroZig.Target,
-STM32L431CC: *MicroZig.Target,
-STM32L431KB: *MicroZig.Target,
-STM32L431KC: *MicroZig.Target,
-STM32L431RB: *MicroZig.Target,
-STM32L431RC: *MicroZig.Target,
-STM32L431VC: *MicroZig.Target,
-STM32L432KB: *MicroZig.Target,
-STM32L432KC: *MicroZig.Target,
-STM32L433CB: *MicroZig.Target,
-STM32L433CC: *MicroZig.Target,
-STM32L433RB: *MicroZig.Target,
-STM32L433RC: *MicroZig.Target,
-STM32L433VC: *MicroZig.Target,
-STM32L442KC: *MicroZig.Target,
-STM32L443CC: *MicroZig.Target,
-STM32L443RC: *MicroZig.Target,
-STM32L443VC: *MicroZig.Target,
-STM32L451CC: *MicroZig.Target,
-STM32L451CE: *MicroZig.Target,
-STM32L451RC: *MicroZig.Target,
-STM32L451RE: *MicroZig.Target,
-STM32L451VC: *MicroZig.Target,
-STM32L451VE: *MicroZig.Target,
-STM32L452CC: *MicroZig.Target,
-STM32L452CE: *MicroZig.Target,
-STM32L452RC: *MicroZig.Target,
-STM32L452RE: *MicroZig.Target,
-STM32L452VC: *MicroZig.Target,
-STM32L452VE: *MicroZig.Target,
-STM32L462CE: *MicroZig.Target,
-STM32L462RE: *MicroZig.Target,
-STM32L462VE: *MicroZig.Target,
-STM32L471QE: *MicroZig.Target,
-STM32L471QG: *MicroZig.Target,
-STM32L471RE: *MicroZig.Target,
-STM32L471RG: *MicroZig.Target,
-STM32L471VE: *MicroZig.Target,
-STM32L471VG: *MicroZig.Target,
-STM32L471ZE: *MicroZig.Target,
-STM32L471ZG: *MicroZig.Target,
-STM32L475RC: *MicroZig.Target,
-STM32L475RE: *MicroZig.Target,
-STM32L475RG: *MicroZig.Target,
-STM32L475VC: *MicroZig.Target,
-STM32L475VE: *MicroZig.Target,
-STM32L475VG: *MicroZig.Target,
-STM32L476JE: *MicroZig.Target,
-STM32L476JG: *MicroZig.Target,
-STM32L476ME: *MicroZig.Target,
-STM32L476MG: *MicroZig.Target,
-STM32L476QE: *MicroZig.Target,
-STM32L476QG: *MicroZig.Target,
-STM32L476RC: *MicroZig.Target,
-STM32L476RE: *MicroZig.Target,
-STM32L476RG: *MicroZig.Target,
-STM32L476VC: *MicroZig.Target,
-STM32L476VE: *MicroZig.Target,
-STM32L476VG: *MicroZig.Target,
-STM32L476ZE: *MicroZig.Target,
-STM32L476ZG: *MicroZig.Target,
-STM32L486JG: *MicroZig.Target,
-STM32L486QG: *MicroZig.Target,
-STM32L486RG: *MicroZig.Target,
-STM32L486VG: *MicroZig.Target,
-STM32L486ZG: *MicroZig.Target,
-STM32L496AE: *MicroZig.Target,
-STM32L496AG: *MicroZig.Target,
-STM32L496QE: *MicroZig.Target,
-STM32L496QG: *MicroZig.Target,
-STM32L496RE: *MicroZig.Target,
-STM32L496RG: *MicroZig.Target,
-STM32L496VE: *MicroZig.Target,
-STM32L496VG: *MicroZig.Target,
-STM32L496WG: *MicroZig.Target,
-STM32L496ZE: *MicroZig.Target,
-STM32L496ZG: *MicroZig.Target,
-STM32L4A6AG: *MicroZig.Target,
-STM32L4A6QG: *MicroZig.Target,
-STM32L4A6RG: *MicroZig.Target,
-STM32L4A6VG: *MicroZig.Target,
-STM32L4A6ZG: *MicroZig.Target,
-STM32L4P5AE: *MicroZig.Target,
-STM32L4P5AG: *MicroZig.Target,
-STM32L4P5CE: *MicroZig.Target,
-STM32L4P5CG: *MicroZig.Target,
-STM32L4P5QE: *MicroZig.Target,
-STM32L4P5QG: *MicroZig.Target,
-STM32L4P5RE: *MicroZig.Target,
-STM32L4P5RG: *MicroZig.Target,
-STM32L4P5VE: *MicroZig.Target,
-STM32L4P5VG: *MicroZig.Target,
-STM32L4P5ZE: *MicroZig.Target,
-STM32L4P5ZG: *MicroZig.Target,
-STM32L4Q5AG: *MicroZig.Target,
-STM32L4Q5CG: *MicroZig.Target,
-STM32L4Q5QG: *MicroZig.Target,
-STM32L4Q5RG: *MicroZig.Target,
-STM32L4Q5VG: *MicroZig.Target,
-STM32L4Q5ZG: *MicroZig.Target,
-STM32L4R5AG: *MicroZig.Target,
-STM32L4R5AI: *MicroZig.Target,
-STM32L4R5QG: *MicroZig.Target,
-STM32L4R5QI: *MicroZig.Target,
-STM32L4R5VG: *MicroZig.Target,
-STM32L4R5VI: *MicroZig.Target,
-STM32L4R5ZG: *MicroZig.Target,
-STM32L4R5ZI: *MicroZig.Target,
-STM32L4R7AI: *MicroZig.Target,
-STM32L4R7VI: *MicroZig.Target,
-STM32L4R7ZI: *MicroZig.Target,
-STM32L4R9AG: *MicroZig.Target,
-STM32L4R9AI: *MicroZig.Target,
-STM32L4R9VG: *MicroZig.Target,
-STM32L4R9VI: *MicroZig.Target,
-STM32L4R9ZG: *MicroZig.Target,
-STM32L4R9ZI: *MicroZig.Target,
-STM32L4S5AI: *MicroZig.Target,
-STM32L4S5QI: *MicroZig.Target,
-STM32L4S5VI: *MicroZig.Target,
-STM32L4S5ZI: *MicroZig.Target,
-STM32L4S7AI: *MicroZig.Target,
-STM32L4S7VI: *MicroZig.Target,
-STM32L4S7ZI: *MicroZig.Target,
-STM32L4S9AI: *MicroZig.Target,
-STM32L4S9VI: *MicroZig.Target,
-STM32L4S9ZI: *MicroZig.Target,
-STM32L552CC: *MicroZig.Target,
-STM32L552CE: *MicroZig.Target,
-STM32L552ME: *MicroZig.Target,
-STM32L552QC: *MicroZig.Target,
-STM32L552QE: *MicroZig.Target,
-STM32L552RC: *MicroZig.Target,
-STM32L552RE: *MicroZig.Target,
-STM32L552VC: *MicroZig.Target,
-STM32L552VE: *MicroZig.Target,
-STM32L552ZC: *MicroZig.Target,
-STM32L552ZE: *MicroZig.Target,
-STM32L562CE: *MicroZig.Target,
-STM32L562ME: *MicroZig.Target,
-STM32L562QE: *MicroZig.Target,
-STM32L562RE: *MicroZig.Target,
-STM32L562VE: *MicroZig.Target,
-STM32L562ZE: *MicroZig.Target,
-STM32U031C6: *MicroZig.Target,
-STM32U031C8: *MicroZig.Target,
-STM32U031F4: *MicroZig.Target,
-STM32U031F6: *MicroZig.Target,
-STM32U031F8: *MicroZig.Target,
-STM32U031G6: *MicroZig.Target,
-STM32U031G8: *MicroZig.Target,
-STM32U031K4: *MicroZig.Target,
-STM32U031K6: *MicroZig.Target,
-STM32U031K8: *MicroZig.Target,
-STM32U031R6: *MicroZig.Target,
-STM32U031R8: *MicroZig.Target,
-STM32U073C8: *MicroZig.Target,
-STM32U073CB: *MicroZig.Target,
-STM32U073CC: *MicroZig.Target,
-STM32U073H8: *MicroZig.Target,
-STM32U073HB: *MicroZig.Target,
-STM32U073HC: *MicroZig.Target,
-STM32U073K8: *MicroZig.Target,
-STM32U073KB: *MicroZig.Target,
-STM32U073KC: *MicroZig.Target,
-STM32U073M8: *MicroZig.Target,
-STM32U073MB: *MicroZig.Target,
-STM32U073MC: *MicroZig.Target,
-STM32U073R8: *MicroZig.Target,
-STM32U073RB: *MicroZig.Target,
-STM32U073RC: *MicroZig.Target,
-STM32U083CC: *MicroZig.Target,
-STM32U083HC: *MicroZig.Target,
-STM32U083KC: *MicroZig.Target,
-STM32U083MC: *MicroZig.Target,
-STM32U083RC: *MicroZig.Target,
-STM32U535CB: *MicroZig.Target,
-STM32U535CC: *MicroZig.Target,
-STM32U535CE: *MicroZig.Target,
-STM32U535JE: *MicroZig.Target,
-STM32U535NC: *MicroZig.Target,
-STM32U535NE: *MicroZig.Target,
-STM32U535RB: *MicroZig.Target,
-STM32U535RC: *MicroZig.Target,
-STM32U535RE: *MicroZig.Target,
-STM32U535VC: *MicroZig.Target,
-STM32U535VE: *MicroZig.Target,
-STM32U545CE: *MicroZig.Target,
-STM32U545JE: *MicroZig.Target,
-STM32U545NE: *MicroZig.Target,
-STM32U545RE: *MicroZig.Target,
-STM32U545VE: *MicroZig.Target,
-STM32U575AG: *MicroZig.Target,
-STM32U575AI: *MicroZig.Target,
-STM32U575CG: *MicroZig.Target,
-STM32U575CI: *MicroZig.Target,
-STM32U575OG: *MicroZig.Target,
-STM32U575OI: *MicroZig.Target,
-STM32U575QG: *MicroZig.Target,
-STM32U575QI: *MicroZig.Target,
-STM32U575RG: *MicroZig.Target,
-STM32U575RI: *MicroZig.Target,
-STM32U575VG: *MicroZig.Target,
-STM32U575VI: *MicroZig.Target,
-STM32U575ZG: *MicroZig.Target,
-STM32U575ZI: *MicroZig.Target,
-STM32U585AI: *MicroZig.Target,
-STM32U585CI: *MicroZig.Target,
-STM32U585OI: *MicroZig.Target,
-STM32U585QI: *MicroZig.Target,
-STM32U585RI: *MicroZig.Target,
-STM32U585VI: *MicroZig.Target,
-STM32U585ZI: *MicroZig.Target,
-STM32U595AI: *MicroZig.Target,
-STM32U595AJ: *MicroZig.Target,
-STM32U595QI: *MicroZig.Target,
-STM32U595QJ: *MicroZig.Target,
-STM32U595RI: *MicroZig.Target,
-STM32U595RJ: *MicroZig.Target,
-STM32U595VI: *MicroZig.Target,
-STM32U595VJ: *MicroZig.Target,
-STM32U595ZI: *MicroZig.Target,
-STM32U595ZJ: *MicroZig.Target,
-STM32U599BJ: *MicroZig.Target,
-STM32U599NI: *MicroZig.Target,
-STM32U599NJ: *MicroZig.Target,
-STM32U599VI: *MicroZig.Target,
-STM32U599VJ: *MicroZig.Target,
-STM32U599ZI: *MicroZig.Target,
-STM32U599ZJ: *MicroZig.Target,
-STM32U5A5AJ: *MicroZig.Target,
-STM32U5A5QI: *MicroZig.Target,
-STM32U5A5QJ: *MicroZig.Target,
-STM32U5A5RJ: *MicroZig.Target,
-STM32U5A5VJ: *MicroZig.Target,
-STM32U5A5ZJ: *MicroZig.Target,
-STM32U5A9BJ: *MicroZig.Target,
-STM32U5A9NJ: *MicroZig.Target,
-STM32U5A9VJ: *MicroZig.Target,
-STM32U5A9ZJ: *MicroZig.Target,
-STM32U5F7VI: *MicroZig.Target,
-STM32U5F7VJ: *MicroZig.Target,
-STM32U5F9BJ: *MicroZig.Target,
-STM32U5F9NJ: *MicroZig.Target,
-STM32U5F9VI: *MicroZig.Target,
-STM32U5F9VJ: *MicroZig.Target,
-STM32U5F9ZI: *MicroZig.Target,
-STM32U5F9ZJ: *MicroZig.Target,
-STM32U5G7VJ: *MicroZig.Target,
-STM32U5G9BJ: *MicroZig.Target,
-STM32U5G9NJ: *MicroZig.Target,
-STM32U5G9VJ: *MicroZig.Target,
-STM32U5G9ZJ: *MicroZig.Target,
-STM32WB10CC: *MicroZig.Target,
-STM32WB15CC: *MicroZig.Target,
-STM32WB30CE: *MicroZig.Target,
-STM32WB35CC: *MicroZig.Target,
-STM32WB35CE: *MicroZig.Target,
-STM32WB50CG: *MicroZig.Target,
-STM32WB55CC: *MicroZig.Target,
-STM32WB55CE: *MicroZig.Target,
-STM32WB55CG: *MicroZig.Target,
-STM32WB55RC: *MicroZig.Target,
-STM32WB55RE: *MicroZig.Target,
-STM32WB55RG: *MicroZig.Target,
-STM32WB55VC: *MicroZig.Target,
-STM32WB55VE: *MicroZig.Target,
-STM32WB55VG: *MicroZig.Target,
-STM32WB55VY: *MicroZig.Target,
-STM32WBA50KE: *MicroZig.Target,
-STM32WBA50KG: *MicroZig.Target,
-STM32WBA52CE: *MicroZig.Target,
-STM32WBA52CG: *MicroZig.Target,
-STM32WBA52KE: *MicroZig.Target,
-STM32WBA52KG: *MicroZig.Target,
-STM32WBA54CE: *MicroZig.Target,
-STM32WBA54CG: *MicroZig.Target,
-STM32WBA54KE: *MicroZig.Target,
-STM32WBA54KG: *MicroZig.Target,
-STM32WBA55CE: *MicroZig.Target,
-STM32WBA55CG: *MicroZig.Target,
-STM32WBA55HE: *MicroZig.Target,
-STM32WBA55HG: *MicroZig.Target,
-STM32WBA55UE: *MicroZig.Target,
-STM32WBA55UG: *MicroZig.Target,
-STM32WL54CC: *MicroZig.Target,
-STM32WL54JC: *MicroZig.Target,
-STM32WL55CC: *MicroZig.Target,
-STM32WL55JC: *MicroZig.Target,
-STM32WLE4C8: *MicroZig.Target,
-STM32WLE4CB: *MicroZig.Target,
-STM32WLE4CC: *MicroZig.Target,
-STM32WLE4J8: *MicroZig.Target,
-STM32WLE4JB: *MicroZig.Target,
-STM32WLE4JC: *MicroZig.Target,
-STM32WLE5C8: *MicroZig.Target,
-STM32WLE5CB: *MicroZig.Target,
-STM32WLE5CC: *MicroZig.Target,
-STM32WLE5J8: *MicroZig.Target,
-STM32WLE5JB: *MicroZig.Target,
-STM32WLE5JC: *MicroZig.Target,
+STM32C011D6: *microzig.Target,
+STM32C011F4: *microzig.Target,
+STM32C011F6: *microzig.Target,
+STM32C011J4: *microzig.Target,
+STM32C011J6: *microzig.Target,
+STM32C031C4: *microzig.Target,
+STM32C031C6: *microzig.Target,
+STM32C031F4: *microzig.Target,
+STM32C031F6: *microzig.Target,
+STM32C031G4: *microzig.Target,
+STM32C031G6: *microzig.Target,
+STM32C031K4: *microzig.Target,
+STM32C031K6: *microzig.Target,
+STM32F030C6: *microzig.Target,
+STM32F030C8: *microzig.Target,
+STM32F030CC: *microzig.Target,
+STM32F030F4: *microzig.Target,
+STM32F030K6: *microzig.Target,
+STM32F030R8: *microzig.Target,
+STM32F030RC: *microzig.Target,
+STM32F031C4: *microzig.Target,
+STM32F031C6: *microzig.Target,
+STM32F031E6: *microzig.Target,
+STM32F031F4: *microzig.Target,
+STM32F031F6: *microzig.Target,
+STM32F031G4: *microzig.Target,
+STM32F031G6: *microzig.Target,
+STM32F031K4: *microzig.Target,
+STM32F031K6: *microzig.Target,
+STM32F038C6: *microzig.Target,
+STM32F038E6: *microzig.Target,
+STM32F038F6: *microzig.Target,
+STM32F038G6: *microzig.Target,
+STM32F038K6: *microzig.Target,
+STM32F042C4: *microzig.Target,
+STM32F042C6: *microzig.Target,
+STM32F042F4: *microzig.Target,
+STM32F042F6: *microzig.Target,
+STM32F042G4: *microzig.Target,
+STM32F042G6: *microzig.Target,
+STM32F042K4: *microzig.Target,
+STM32F042K6: *microzig.Target,
+STM32F042T6: *microzig.Target,
+STM32F048C6: *microzig.Target,
+STM32F048G6: *microzig.Target,
+STM32F048T6: *microzig.Target,
+STM32F051C4: *microzig.Target,
+STM32F051C6: *microzig.Target,
+STM32F051C8: *microzig.Target,
+STM32F051K4: *microzig.Target,
+STM32F051K6: *microzig.Target,
+STM32F051K8: *microzig.Target,
+STM32F051R4: *microzig.Target,
+STM32F051R6: *microzig.Target,
+STM32F051R8: *microzig.Target,
+STM32F051T8: *microzig.Target,
+STM32F058C8: *microzig.Target,
+STM32F058R8: *microzig.Target,
+STM32F058T8: *microzig.Target,
+STM32F070C6: *microzig.Target,
+STM32F070CB: *microzig.Target,
+STM32F070F6: *microzig.Target,
+STM32F070RB: *microzig.Target,
+STM32F071C8: *microzig.Target,
+STM32F071CB: *microzig.Target,
+STM32F071RB: *microzig.Target,
+STM32F071V8: *microzig.Target,
+STM32F071VB: *microzig.Target,
+STM32F072C8: *microzig.Target,
+STM32F072CB: *microzig.Target,
+STM32F072R8: *microzig.Target,
+STM32F072RB: *microzig.Target,
+STM32F072V8: *microzig.Target,
+STM32F072VB: *microzig.Target,
+STM32F078CB: *microzig.Target,
+STM32F078RB: *microzig.Target,
+STM32F078VB: *microzig.Target,
+STM32F091CB: *microzig.Target,
+STM32F091CC: *microzig.Target,
+STM32F091RB: *microzig.Target,
+STM32F091RC: *microzig.Target,
+STM32F091VB: *microzig.Target,
+STM32F091VC: *microzig.Target,
+STM32F098CC: *microzig.Target,
+STM32F098RC: *microzig.Target,
+STM32F098VC: *microzig.Target,
+STM32F100C4: *microzig.Target,
+STM32F100C6: *microzig.Target,
+STM32F100C8: *microzig.Target,
+STM32F100CB: *microzig.Target,
+STM32F100R4: *microzig.Target,
+STM32F100R6: *microzig.Target,
+STM32F100R8: *microzig.Target,
+STM32F100RB: *microzig.Target,
+STM32F100RC: *microzig.Target,
+STM32F100RD: *microzig.Target,
+STM32F100RE: *microzig.Target,
+STM32F100V8: *microzig.Target,
+STM32F100VB: *microzig.Target,
+STM32F100VC: *microzig.Target,
+STM32F100VD: *microzig.Target,
+STM32F100VE: *microzig.Target,
+STM32F100ZC: *microzig.Target,
+STM32F100ZD: *microzig.Target,
+STM32F100ZE: *microzig.Target,
+STM32F101C4: *microzig.Target,
+STM32F101C6: *microzig.Target,
+STM32F101C8: *microzig.Target,
+STM32F101CB: *microzig.Target,
+STM32F101R4: *microzig.Target,
+STM32F101R6: *microzig.Target,
+STM32F101R8: *microzig.Target,
+STM32F101RB: *microzig.Target,
+STM32F101RC: *microzig.Target,
+STM32F101RD: *microzig.Target,
+STM32F101RE: *microzig.Target,
+STM32F101RF: *microzig.Target,
+STM32F101RG: *microzig.Target,
+STM32F101T4: *microzig.Target,
+STM32F101T6: *microzig.Target,
+STM32F101T8: *microzig.Target,
+STM32F101TB: *microzig.Target,
+STM32F101V8: *microzig.Target,
+STM32F101VB: *microzig.Target,
+STM32F101VC: *microzig.Target,
+STM32F101VD: *microzig.Target,
+STM32F101VE: *microzig.Target,
+STM32F101VF: *microzig.Target,
+STM32F101VG: *microzig.Target,
+STM32F101ZC: *microzig.Target,
+STM32F101ZD: *microzig.Target,
+STM32F101ZE: *microzig.Target,
+STM32F101ZF: *microzig.Target,
+STM32F101ZG: *microzig.Target,
+STM32F102C4: *microzig.Target,
+STM32F102C6: *microzig.Target,
+STM32F102C8: *microzig.Target,
+STM32F102CB: *microzig.Target,
+STM32F102R4: *microzig.Target,
+STM32F102R6: *microzig.Target,
+STM32F102R8: *microzig.Target,
+STM32F102RB: *microzig.Target,
+STM32F103C4: *microzig.Target,
+STM32F103C6: *microzig.Target,
+STM32F103C8: *microzig.Target,
+STM32F103CB: *microzig.Target,
+STM32F103R4: *microzig.Target,
+STM32F103R6: *microzig.Target,
+STM32F103R8: *microzig.Target,
+STM32F103RB: *microzig.Target,
+STM32F103RC: *microzig.Target,
+STM32F103RD: *microzig.Target,
+STM32F103RE: *microzig.Target,
+STM32F103RF: *microzig.Target,
+STM32F103RG: *microzig.Target,
+STM32F103T4: *microzig.Target,
+STM32F103T6: *microzig.Target,
+STM32F103T8: *microzig.Target,
+STM32F103TB: *microzig.Target,
+STM32F103V8: *microzig.Target,
+STM32F103VB: *microzig.Target,
+STM32F103VC: *microzig.Target,
+STM32F103VD: *microzig.Target,
+STM32F103VE: *microzig.Target,
+STM32F103VF: *microzig.Target,
+STM32F103VG: *microzig.Target,
+STM32F103ZC: *microzig.Target,
+STM32F103ZD: *microzig.Target,
+STM32F103ZE: *microzig.Target,
+STM32F103ZF: *microzig.Target,
+STM32F103ZG: *microzig.Target,
+STM32F105R8: *microzig.Target,
+STM32F105RB: *microzig.Target,
+STM32F105RC: *microzig.Target,
+STM32F105V8: *microzig.Target,
+STM32F105VB: *microzig.Target,
+STM32F105VC: *microzig.Target,
+STM32F107RB: *microzig.Target,
+STM32F107RC: *microzig.Target,
+STM32F107VB: *microzig.Target,
+STM32F107VC: *microzig.Target,
+STM32F205RB: *microzig.Target,
+STM32F205RC: *microzig.Target,
+STM32F205RE: *microzig.Target,
+STM32F205RF: *microzig.Target,
+STM32F205RG: *microzig.Target,
+STM32F205VB: *microzig.Target,
+STM32F205VC: *microzig.Target,
+STM32F205VE: *microzig.Target,
+STM32F205VF: *microzig.Target,
+STM32F205VG: *microzig.Target,
+STM32F205ZC: *microzig.Target,
+STM32F205ZE: *microzig.Target,
+STM32F205ZF: *microzig.Target,
+STM32F205ZG: *microzig.Target,
+STM32F207IC: *microzig.Target,
+STM32F207IE: *microzig.Target,
+STM32F207IF: *microzig.Target,
+STM32F207IG: *microzig.Target,
+STM32F207VC: *microzig.Target,
+STM32F207VE: *microzig.Target,
+STM32F207VF: *microzig.Target,
+STM32F207VG: *microzig.Target,
+STM32F207ZC: *microzig.Target,
+STM32F207ZE: *microzig.Target,
+STM32F207ZF: *microzig.Target,
+STM32F207ZG: *microzig.Target,
+STM32F215RE: *microzig.Target,
+STM32F215RG: *microzig.Target,
+STM32F215VE: *microzig.Target,
+STM32F215VG: *microzig.Target,
+STM32F215ZE: *microzig.Target,
+STM32F215ZG: *microzig.Target,
+STM32F217IE: *microzig.Target,
+STM32F217IG: *microzig.Target,
+STM32F217VE: *microzig.Target,
+STM32F217VG: *microzig.Target,
+STM32F217ZE: *microzig.Target,
+STM32F217ZG: *microzig.Target,
+STM32F301C6: *microzig.Target,
+STM32F301C8: *microzig.Target,
+STM32F301K6: *microzig.Target,
+STM32F301K8: *microzig.Target,
+STM32F301R6: *microzig.Target,
+STM32F301R8: *microzig.Target,
+STM32F302C6: *microzig.Target,
+STM32F302C8: *microzig.Target,
+STM32F302CB: *microzig.Target,
+STM32F302CC: *microzig.Target,
+STM32F302K6: *microzig.Target,
+STM32F302K8: *microzig.Target,
+STM32F302R6: *microzig.Target,
+STM32F302R8: *microzig.Target,
+STM32F302RB: *microzig.Target,
+STM32F302RC: *microzig.Target,
+STM32F302RD: *microzig.Target,
+STM32F302RE: *microzig.Target,
+STM32F302VB: *microzig.Target,
+STM32F302VC: *microzig.Target,
+STM32F302VD: *microzig.Target,
+STM32F302VE: *microzig.Target,
+STM32F302ZD: *microzig.Target,
+STM32F302ZE: *microzig.Target,
+STM32F303C6: *microzig.Target,
+STM32F303C8: *microzig.Target,
+STM32F303CB: *microzig.Target,
+STM32F303CC: *microzig.Target,
+STM32F303K6: *microzig.Target,
+STM32F303K8: *microzig.Target,
+STM32F303R6: *microzig.Target,
+STM32F303R8: *microzig.Target,
+STM32F303RB: *microzig.Target,
+STM32F303RC: *microzig.Target,
+STM32F303RD: *microzig.Target,
+STM32F303RE: *microzig.Target,
+STM32F303VB: *microzig.Target,
+STM32F303VC: *microzig.Target,
+STM32F303VD: *microzig.Target,
+STM32F303VE: *microzig.Target,
+STM32F303ZD: *microzig.Target,
+STM32F303ZE: *microzig.Target,
+STM32F318C8: *microzig.Target,
+STM32F318K8: *microzig.Target,
+STM32F328C8: *microzig.Target,
+STM32F334C4: *microzig.Target,
+STM32F334C6: *microzig.Target,
+STM32F334C8: *microzig.Target,
+STM32F334K4: *microzig.Target,
+STM32F334K6: *microzig.Target,
+STM32F334K8: *microzig.Target,
+STM32F334R6: *microzig.Target,
+STM32F334R8: *microzig.Target,
+STM32F358CC: *microzig.Target,
+STM32F358RC: *microzig.Target,
+STM32F358VC: *microzig.Target,
+STM32F373C8: *microzig.Target,
+STM32F373CB: *microzig.Target,
+STM32F373CC: *microzig.Target,
+STM32F373R8: *microzig.Target,
+STM32F373RB: *microzig.Target,
+STM32F373RC: *microzig.Target,
+STM32F373V8: *microzig.Target,
+STM32F373VB: *microzig.Target,
+STM32F373VC: *microzig.Target,
+STM32F378CC: *microzig.Target,
+STM32F378RC: *microzig.Target,
+STM32F378VC: *microzig.Target,
+STM32F398VE: *microzig.Target,
+STM32F401CB: *microzig.Target,
+STM32F401CC: *microzig.Target,
+STM32F401CD: *microzig.Target,
+STM32F401CE: *microzig.Target,
+STM32F401RB: *microzig.Target,
+STM32F401RC: *microzig.Target,
+STM32F401RD: *microzig.Target,
+STM32F401RE: *microzig.Target,
+STM32F401VB: *microzig.Target,
+STM32F401VC: *microzig.Target,
+STM32F401VD: *microzig.Target,
+STM32F401VE: *microzig.Target,
+STM32F405OE: *microzig.Target,
+STM32F405OG: *microzig.Target,
+STM32F405RG: *microzig.Target,
+STM32F405VG: *microzig.Target,
+STM32F405ZG: *microzig.Target,
+STM32F407IE: *microzig.Target,
+STM32F407IG: *microzig.Target,
+STM32F407VE: *microzig.Target,
+STM32F407VG: *microzig.Target,
+STM32F407ZE: *microzig.Target,
+STM32F407ZG: *microzig.Target,
+STM32F410C8: *microzig.Target,
+STM32F410CB: *microzig.Target,
+STM32F410R8: *microzig.Target,
+STM32F410RB: *microzig.Target,
+STM32F410T8: *microzig.Target,
+STM32F410TB: *microzig.Target,
+STM32F411CC: *microzig.Target,
+STM32F411CE: *microzig.Target,
+STM32F411RC: *microzig.Target,
+STM32F411RE: *microzig.Target,
+STM32F411VC: *microzig.Target,
+STM32F411VE: *microzig.Target,
+STM32F412CE: *microzig.Target,
+STM32F412CG: *microzig.Target,
+STM32F412RE: *microzig.Target,
+STM32F412RG: *microzig.Target,
+STM32F412VE: *microzig.Target,
+STM32F412VG: *microzig.Target,
+STM32F412ZE: *microzig.Target,
+STM32F412ZG: *microzig.Target,
+STM32F413CG: *microzig.Target,
+STM32F413CH: *microzig.Target,
+STM32F413MG: *microzig.Target,
+STM32F413MH: *microzig.Target,
+STM32F413RG: *microzig.Target,
+STM32F413RH: *microzig.Target,
+STM32F413VG: *microzig.Target,
+STM32F413VH: *microzig.Target,
+STM32F413ZG: *microzig.Target,
+STM32F413ZH: *microzig.Target,
+STM32F415OG: *microzig.Target,
+STM32F415RG: *microzig.Target,
+STM32F415VG: *microzig.Target,
+STM32F415ZG: *microzig.Target,
+STM32F417IE: *microzig.Target,
+STM32F417IG: *microzig.Target,
+STM32F417VE: *microzig.Target,
+STM32F417VG: *microzig.Target,
+STM32F417ZE: *microzig.Target,
+STM32F417ZG: *microzig.Target,
+STM32F423CH: *microzig.Target,
+STM32F423MH: *microzig.Target,
+STM32F423RH: *microzig.Target,
+STM32F423VH: *microzig.Target,
+STM32F423ZH: *microzig.Target,
+STM32F427AG: *microzig.Target,
+STM32F427AI: *microzig.Target,
+STM32F427IG: *microzig.Target,
+STM32F427II: *microzig.Target,
+STM32F427VG: *microzig.Target,
+STM32F427VI: *microzig.Target,
+STM32F427ZG: *microzig.Target,
+STM32F427ZI: *microzig.Target,
+STM32F429AG: *microzig.Target,
+STM32F429AI: *microzig.Target,
+STM32F429BE: *microzig.Target,
+STM32F429BG: *microzig.Target,
+STM32F429BI: *microzig.Target,
+STM32F429IE: *microzig.Target,
+STM32F429IG: *microzig.Target,
+STM32F429II: *microzig.Target,
+STM32F429NE: *microzig.Target,
+STM32F429NG: *microzig.Target,
+STM32F429NI: *microzig.Target,
+STM32F429VE: *microzig.Target,
+STM32F429VG: *microzig.Target,
+STM32F429VI: *microzig.Target,
+STM32F429ZE: *microzig.Target,
+STM32F429ZG: *microzig.Target,
+STM32F429ZI: *microzig.Target,
+STM32F437AI: *microzig.Target,
+STM32F437IG: *microzig.Target,
+STM32F437II: *microzig.Target,
+STM32F437VG: *microzig.Target,
+STM32F437VI: *microzig.Target,
+STM32F437ZG: *microzig.Target,
+STM32F437ZI: *microzig.Target,
+STM32F439AI: *microzig.Target,
+STM32F439BG: *microzig.Target,
+STM32F439BI: *microzig.Target,
+STM32F439IG: *microzig.Target,
+STM32F439II: *microzig.Target,
+STM32F439NG: *microzig.Target,
+STM32F439NI: *microzig.Target,
+STM32F439VG: *microzig.Target,
+STM32F439VI: *microzig.Target,
+STM32F439ZG: *microzig.Target,
+STM32F439ZI: *microzig.Target,
+STM32F446MC: *microzig.Target,
+STM32F446ME: *microzig.Target,
+STM32F446RC: *microzig.Target,
+STM32F446RE: *microzig.Target,
+STM32F446VC: *microzig.Target,
+STM32F446VE: *microzig.Target,
+STM32F446ZC: *microzig.Target,
+STM32F446ZE: *microzig.Target,
+STM32F469AE: *microzig.Target,
+STM32F469AG: *microzig.Target,
+STM32F469AI: *microzig.Target,
+STM32F469BE: *microzig.Target,
+STM32F469BG: *microzig.Target,
+STM32F469BI: *microzig.Target,
+STM32F469IE: *microzig.Target,
+STM32F469IG: *microzig.Target,
+STM32F469II: *microzig.Target,
+STM32F469NE: *microzig.Target,
+STM32F469NG: *microzig.Target,
+STM32F469NI: *microzig.Target,
+STM32F469VE: *microzig.Target,
+STM32F469VG: *microzig.Target,
+STM32F469VI: *microzig.Target,
+STM32F469ZE: *microzig.Target,
+STM32F469ZG: *microzig.Target,
+STM32F469ZI: *microzig.Target,
+STM32F479AG: *microzig.Target,
+STM32F479AI: *microzig.Target,
+STM32F479BG: *microzig.Target,
+STM32F479BI: *microzig.Target,
+STM32F479IG: *microzig.Target,
+STM32F479II: *microzig.Target,
+STM32F479NG: *microzig.Target,
+STM32F479NI: *microzig.Target,
+STM32F479VG: *microzig.Target,
+STM32F479VI: *microzig.Target,
+STM32F479ZG: *microzig.Target,
+STM32F479ZI: *microzig.Target,
+STM32F722IC: *microzig.Target,
+STM32F722IE: *microzig.Target,
+STM32F722RC: *microzig.Target,
+STM32F722RE: *microzig.Target,
+STM32F722VC: *microzig.Target,
+STM32F722VE: *microzig.Target,
+STM32F722ZC: *microzig.Target,
+STM32F722ZE: *microzig.Target,
+STM32F723IC: *microzig.Target,
+STM32F723IE: *microzig.Target,
+STM32F723VC: *microzig.Target,
+STM32F723VE: *microzig.Target,
+STM32F723ZC: *microzig.Target,
+STM32F723ZE: *microzig.Target,
+STM32F730I8: *microzig.Target,
+STM32F730R8: *microzig.Target,
+STM32F730V8: *microzig.Target,
+STM32F730Z8: *microzig.Target,
+STM32F732IE: *microzig.Target,
+STM32F732RE: *microzig.Target,
+STM32F732VE: *microzig.Target,
+STM32F732ZE: *microzig.Target,
+STM32F733IE: *microzig.Target,
+STM32F733VE: *microzig.Target,
+STM32F733ZE: *microzig.Target,
+STM32F745IE: *microzig.Target,
+STM32F745IG: *microzig.Target,
+STM32F745VE: *microzig.Target,
+STM32F745VG: *microzig.Target,
+STM32F745ZE: *microzig.Target,
+STM32F745ZG: *microzig.Target,
+STM32F746BE: *microzig.Target,
+STM32F746BG: *microzig.Target,
+STM32F746IE: *microzig.Target,
+STM32F746IG: *microzig.Target,
+STM32F746NE: *microzig.Target,
+STM32F746NG: *microzig.Target,
+STM32F746VE: *microzig.Target,
+STM32F746VG: *microzig.Target,
+STM32F746ZE: *microzig.Target,
+STM32F746ZG: *microzig.Target,
+STM32F750N8: *microzig.Target,
+STM32F750V8: *microzig.Target,
+STM32F750Z8: *microzig.Target,
+STM32F756BG: *microzig.Target,
+STM32F756IG: *microzig.Target,
+STM32F756NG: *microzig.Target,
+STM32F756VG: *microzig.Target,
+STM32F756ZG: *microzig.Target,
+STM32F765BG: *microzig.Target,
+STM32F765BI: *microzig.Target,
+STM32F765IG: *microzig.Target,
+STM32F765II: *microzig.Target,
+STM32F765NG: *microzig.Target,
+STM32F765NI: *microzig.Target,
+STM32F765VG: *microzig.Target,
+STM32F765VI: *microzig.Target,
+STM32F765ZG: *microzig.Target,
+STM32F765ZI: *microzig.Target,
+STM32F767BG: *microzig.Target,
+STM32F767BI: *microzig.Target,
+STM32F767IG: *microzig.Target,
+STM32F767II: *microzig.Target,
+STM32F767NG: *microzig.Target,
+STM32F767NI: *microzig.Target,
+STM32F767VG: *microzig.Target,
+STM32F767VI: *microzig.Target,
+STM32F767ZG: *microzig.Target,
+STM32F767ZI: *microzig.Target,
+STM32F768AI: *microzig.Target,
+STM32F769AG: *microzig.Target,
+STM32F769AI: *microzig.Target,
+STM32F769BG: *microzig.Target,
+STM32F769BI: *microzig.Target,
+STM32F769IG: *microzig.Target,
+STM32F769II: *microzig.Target,
+STM32F769NG: *microzig.Target,
+STM32F769NI: *microzig.Target,
+STM32F777BI: *microzig.Target,
+STM32F777II: *microzig.Target,
+STM32F777NI: *microzig.Target,
+STM32F777VI: *microzig.Target,
+STM32F777ZI: *microzig.Target,
+STM32F778AI: *microzig.Target,
+STM32F779AI: *microzig.Target,
+STM32F779BI: *microzig.Target,
+STM32F779II: *microzig.Target,
+STM32F779NI: *microzig.Target,
+STM32G030C6: *microzig.Target,
+STM32G030C8: *microzig.Target,
+STM32G030F6: *microzig.Target,
+STM32G030J6: *microzig.Target,
+STM32G030K6: *microzig.Target,
+STM32G030K8: *microzig.Target,
+STM32G031C4: *microzig.Target,
+STM32G031C6: *microzig.Target,
+STM32G031C8: *microzig.Target,
+STM32G031F4: *microzig.Target,
+STM32G031F6: *microzig.Target,
+STM32G031F8: *microzig.Target,
+STM32G031G4: *microzig.Target,
+STM32G031G6: *microzig.Target,
+STM32G031G8: *microzig.Target,
+STM32G031J4: *microzig.Target,
+STM32G031J6: *microzig.Target,
+STM32G031K4: *microzig.Target,
+STM32G031K6: *microzig.Target,
+STM32G031K8: *microzig.Target,
+STM32G031Y8: *microzig.Target,
+STM32G041C6: *microzig.Target,
+STM32G041C8: *microzig.Target,
+STM32G041F6: *microzig.Target,
+STM32G041F8: *microzig.Target,
+STM32G041G6: *microzig.Target,
+STM32G041G8: *microzig.Target,
+STM32G041J6: *microzig.Target,
+STM32G041K6: *microzig.Target,
+STM32G041K8: *microzig.Target,
+STM32G041Y8: *microzig.Target,
+STM32G050C6: *microzig.Target,
+STM32G050C8: *microzig.Target,
+STM32G050F6: *microzig.Target,
+STM32G050K6: *microzig.Target,
+STM32G050K8: *microzig.Target,
+STM32G051C6: *microzig.Target,
+STM32G051C8: *microzig.Target,
+STM32G051F6: *microzig.Target,
+STM32G051F8: *microzig.Target,
+STM32G051G6: *microzig.Target,
+STM32G051G8: *microzig.Target,
+STM32G051K6: *microzig.Target,
+STM32G051K8: *microzig.Target,
+STM32G061C6: *microzig.Target,
+STM32G061C8: *microzig.Target,
+STM32G061F6: *microzig.Target,
+STM32G061F8: *microzig.Target,
+STM32G061G6: *microzig.Target,
+STM32G061G8: *microzig.Target,
+STM32G061K6: *microzig.Target,
+STM32G061K8: *microzig.Target,
+STM32G070CB: *microzig.Target,
+STM32G070KB: *microzig.Target,
+STM32G070RB: *microzig.Target,
+STM32G071C6: *microzig.Target,
+STM32G071C8: *microzig.Target,
+STM32G071CB: *microzig.Target,
+STM32G071EB: *microzig.Target,
+STM32G071G6: *microzig.Target,
+STM32G071G8: *microzig.Target,
+STM32G071GB: *microzig.Target,
+STM32G071K6: *microzig.Target,
+STM32G071K8: *microzig.Target,
+STM32G071KB: *microzig.Target,
+STM32G071R6: *microzig.Target,
+STM32G071R8: *microzig.Target,
+STM32G071RB: *microzig.Target,
+STM32G081CB: *microzig.Target,
+STM32G081EB: *microzig.Target,
+STM32G081GB: *microzig.Target,
+STM32G081KB: *microzig.Target,
+STM32G081RB: *microzig.Target,
+STM32G0B0CE: *microzig.Target,
+STM32G0B0KE: *microzig.Target,
+STM32G0B0RE: *microzig.Target,
+STM32G0B0VE: *microzig.Target,
+STM32G0B1CB: *microzig.Target,
+STM32G0B1CC: *microzig.Target,
+STM32G0B1CE: *microzig.Target,
+STM32G0B1KB: *microzig.Target,
+STM32G0B1KC: *microzig.Target,
+STM32G0B1KE: *microzig.Target,
+STM32G0B1MB: *microzig.Target,
+STM32G0B1MC: *microzig.Target,
+STM32G0B1ME: *microzig.Target,
+STM32G0B1NE: *microzig.Target,
+STM32G0B1RB: *microzig.Target,
+STM32G0B1RC: *microzig.Target,
+STM32G0B1RE: *microzig.Target,
+STM32G0B1VB: *microzig.Target,
+STM32G0B1VC: *microzig.Target,
+STM32G0B1VE: *microzig.Target,
+STM32G0C1CC: *microzig.Target,
+STM32G0C1CE: *microzig.Target,
+STM32G0C1KC: *microzig.Target,
+STM32G0C1KE: *microzig.Target,
+STM32G0C1MC: *microzig.Target,
+STM32G0C1ME: *microzig.Target,
+STM32G0C1NE: *microzig.Target,
+STM32G0C1RC: *microzig.Target,
+STM32G0C1RE: *microzig.Target,
+STM32G0C1VC: *microzig.Target,
+STM32G0C1VE: *microzig.Target,
+STM32G431C6: *microzig.Target,
+STM32G431C8: *microzig.Target,
+STM32G431CB: *microzig.Target,
+STM32G431K6: *microzig.Target,
+STM32G431K8: *microzig.Target,
+STM32G431KB: *microzig.Target,
+STM32G431M6: *microzig.Target,
+STM32G431M8: *microzig.Target,
+STM32G431MB: *microzig.Target,
+STM32G431R6: *microzig.Target,
+STM32G431R8: *microzig.Target,
+STM32G431RB: *microzig.Target,
+STM32G431V6: *microzig.Target,
+STM32G431V8: *microzig.Target,
+STM32G431VB: *microzig.Target,
+STM32G441CB: *microzig.Target,
+STM32G441KB: *microzig.Target,
+STM32G441MB: *microzig.Target,
+STM32G441RB: *microzig.Target,
+STM32G441VB: *microzig.Target,
+STM32G471CC: *microzig.Target,
+STM32G471CE: *microzig.Target,
+STM32G471MC: *microzig.Target,
+STM32G471ME: *microzig.Target,
+STM32G471QC: *microzig.Target,
+STM32G471QE: *microzig.Target,
+STM32G471RC: *microzig.Target,
+STM32G471RE: *microzig.Target,
+STM32G471VC: *microzig.Target,
+STM32G471VE: *microzig.Target,
+STM32G473CB: *microzig.Target,
+STM32G473CC: *microzig.Target,
+STM32G473CE: *microzig.Target,
+STM32G473MB: *microzig.Target,
+STM32G473MC: *microzig.Target,
+STM32G473ME: *microzig.Target,
+STM32G473PB: *microzig.Target,
+STM32G473PC: *microzig.Target,
+STM32G473PE: *microzig.Target,
+STM32G473QB: *microzig.Target,
+STM32G473QC: *microzig.Target,
+STM32G473QE: *microzig.Target,
+STM32G473RB: *microzig.Target,
+STM32G473RC: *microzig.Target,
+STM32G473RE: *microzig.Target,
+STM32G473VB: *microzig.Target,
+STM32G473VC: *microzig.Target,
+STM32G473VE: *microzig.Target,
+STM32G474CB: *microzig.Target,
+STM32G474CC: *microzig.Target,
+STM32G474CE: *microzig.Target,
+STM32G474MB: *microzig.Target,
+STM32G474MC: *microzig.Target,
+STM32G474ME: *microzig.Target,
+STM32G474PB: *microzig.Target,
+STM32G474PC: *microzig.Target,
+STM32G474PE: *microzig.Target,
+STM32G474QB: *microzig.Target,
+STM32G474QC: *microzig.Target,
+STM32G474QE: *microzig.Target,
+STM32G474RB: *microzig.Target,
+STM32G474RC: *microzig.Target,
+STM32G474RE: *microzig.Target,
+STM32G474VB: *microzig.Target,
+STM32G474VC: *microzig.Target,
+STM32G474VE: *microzig.Target,
+STM32G483CE: *microzig.Target,
+STM32G483ME: *microzig.Target,
+STM32G483PE: *microzig.Target,
+STM32G483QE: *microzig.Target,
+STM32G483RE: *microzig.Target,
+STM32G483VE: *microzig.Target,
+STM32G484CE: *microzig.Target,
+STM32G484ME: *microzig.Target,
+STM32G484PE: *microzig.Target,
+STM32G484QE: *microzig.Target,
+STM32G484RE: *microzig.Target,
+STM32G484VE: *microzig.Target,
+STM32G491CC: *microzig.Target,
+STM32G491CE: *microzig.Target,
+STM32G491KC: *microzig.Target,
+STM32G491KE: *microzig.Target,
+STM32G491MC: *microzig.Target,
+STM32G491ME: *microzig.Target,
+STM32G491RC: *microzig.Target,
+STM32G491RE: *microzig.Target,
+STM32G491VC: *microzig.Target,
+STM32G491VE: *microzig.Target,
+STM32G4A1CE: *microzig.Target,
+STM32G4A1KE: *microzig.Target,
+STM32G4A1ME: *microzig.Target,
+STM32G4A1RE: *microzig.Target,
+STM32G4A1VE: *microzig.Target,
+STM32H503CB: *microzig.Target,
+STM32H503EB: *microzig.Target,
+STM32H503KB: *microzig.Target,
+STM32H503RB: *microzig.Target,
+STM32H523CC: *microzig.Target,
+STM32H523CE: *microzig.Target,
+STM32H523HE: *microzig.Target,
+STM32H523RC: *microzig.Target,
+STM32H523RE: *microzig.Target,
+STM32H523VC: *microzig.Target,
+STM32H523VE: *microzig.Target,
+STM32H523ZC: *microzig.Target,
+STM32H523ZE: *microzig.Target,
+STM32H533CE: *microzig.Target,
+STM32H533HE: *microzig.Target,
+STM32H533RE: *microzig.Target,
+STM32H533VE: *microzig.Target,
+STM32H533ZE: *microzig.Target,
+STM32H562AG: *microzig.Target,
+STM32H562AI: *microzig.Target,
+STM32H562IG: *microzig.Target,
+STM32H562II: *microzig.Target,
+STM32H562RG: *microzig.Target,
+STM32H562RI: *microzig.Target,
+STM32H562VG: *microzig.Target,
+STM32H562VI: *microzig.Target,
+STM32H562ZG: *microzig.Target,
+STM32H562ZI: *microzig.Target,
+STM32H563AG: *microzig.Target,
+STM32H563AI: *microzig.Target,
+STM32H563IG: *microzig.Target,
+STM32H563II: *microzig.Target,
+STM32H563MI: *microzig.Target,
+STM32H563RG: *microzig.Target,
+STM32H563RI: *microzig.Target,
+STM32H563VG: *microzig.Target,
+STM32H563VI: *microzig.Target,
+STM32H563ZG: *microzig.Target,
+STM32H563ZI: *microzig.Target,
+STM32H573AI: *microzig.Target,
+STM32H573II: *microzig.Target,
+STM32H573MI: *microzig.Target,
+STM32H573RI: *microzig.Target,
+STM32H573VI: *microzig.Target,
+STM32H573ZI: *microzig.Target,
+STM32H723VE: *microzig.Target,
+STM32H723VG: *microzig.Target,
+STM32H723ZE: *microzig.Target,
+STM32H723ZG: *microzig.Target,
+STM32H725AE: *microzig.Target,
+STM32H725AG: *microzig.Target,
+STM32H725IE: *microzig.Target,
+STM32H725IG: *microzig.Target,
+STM32H725RE: *microzig.Target,
+STM32H725RG: *microzig.Target,
+STM32H725VE: *microzig.Target,
+STM32H725VG: *microzig.Target,
+STM32H725ZE: *microzig.Target,
+STM32H725ZG: *microzig.Target,
+STM32H730AB: *microzig.Target,
+STM32H730IB: *microzig.Target,
+STM32H730VB: *microzig.Target,
+STM32H730ZB: *microzig.Target,
+STM32H733VG: *microzig.Target,
+STM32H733ZG: *microzig.Target,
+STM32H735AG: *microzig.Target,
+STM32H735IG: *microzig.Target,
+STM32H735RG: *microzig.Target,
+STM32H735VG: *microzig.Target,
+STM32H735ZG: *microzig.Target,
+STM32H742AG: *microzig.Target,
+STM32H742AI: *microzig.Target,
+STM32H742BG: *microzig.Target,
+STM32H742BI: *microzig.Target,
+STM32H742IG: *microzig.Target,
+STM32H742II: *microzig.Target,
+STM32H742VG: *microzig.Target,
+STM32H742VI: *microzig.Target,
+STM32H742XG: *microzig.Target,
+STM32H742XI: *microzig.Target,
+STM32H742ZG: *microzig.Target,
+STM32H742ZI: *microzig.Target,
+STM32H743AG: *microzig.Target,
+STM32H743AI: *microzig.Target,
+STM32H743BG: *microzig.Target,
+STM32H743BI: *microzig.Target,
+STM32H743IG: *microzig.Target,
+STM32H743II: *microzig.Target,
+STM32H743VG: *microzig.Target,
+STM32H743VI: *microzig.Target,
+STM32H743XG: *microzig.Target,
+STM32H743XI: *microzig.Target,
+STM32H743ZG: *microzig.Target,
+STM32H743ZI: *microzig.Target,
+STM32H745BG: *microzig.Target,
+STM32H745BI: *microzig.Target,
+STM32H745IG: *microzig.Target,
+STM32H745II: *microzig.Target,
+STM32H745XG: *microzig.Target,
+STM32H745XI: *microzig.Target,
+STM32H745ZG: *microzig.Target,
+STM32H745ZI: *microzig.Target,
+STM32H747AG: *microzig.Target,
+STM32H747AI: *microzig.Target,
+STM32H747BG: *microzig.Target,
+STM32H747BI: *microzig.Target,
+STM32H747IG: *microzig.Target,
+STM32H747II: *microzig.Target,
+STM32H747XG: *microzig.Target,
+STM32H747XI: *microzig.Target,
+STM32H747ZI: *microzig.Target,
+STM32H750IB: *microzig.Target,
+STM32H750VB: *microzig.Target,
+STM32H750XB: *microzig.Target,
+STM32H750ZB: *microzig.Target,
+STM32H753AI: *microzig.Target,
+STM32H753BI: *microzig.Target,
+STM32H753II: *microzig.Target,
+STM32H753VI: *microzig.Target,
+STM32H753XI: *microzig.Target,
+STM32H753ZI: *microzig.Target,
+STM32H755BI: *microzig.Target,
+STM32H755II: *microzig.Target,
+STM32H755XI: *microzig.Target,
+STM32H755ZI: *microzig.Target,
+STM32H757AI: *microzig.Target,
+STM32H757BI: *microzig.Target,
+STM32H757II: *microzig.Target,
+STM32H757XI: *microzig.Target,
+STM32H757ZI: *microzig.Target,
+STM32H7A3AG: *microzig.Target,
+STM32H7A3AI: *microzig.Target,
+STM32H7A3IG: *microzig.Target,
+STM32H7A3II: *microzig.Target,
+STM32H7A3LG: *microzig.Target,
+STM32H7A3LI: *microzig.Target,
+STM32H7A3NG: *microzig.Target,
+STM32H7A3NI: *microzig.Target,
+STM32H7A3QI: *microzig.Target,
+STM32H7A3RG: *microzig.Target,
+STM32H7A3RI: *microzig.Target,
+STM32H7A3VG: *microzig.Target,
+STM32H7A3VI: *microzig.Target,
+STM32H7A3ZG: *microzig.Target,
+STM32H7A3ZI: *microzig.Target,
+STM32H7B0AB: *microzig.Target,
+STM32H7B0IB: *microzig.Target,
+STM32H7B0RB: *microzig.Target,
+STM32H7B0VB: *microzig.Target,
+STM32H7B0ZB: *microzig.Target,
+STM32H7B3AI: *microzig.Target,
+STM32H7B3II: *microzig.Target,
+STM32H7B3LI: *microzig.Target,
+STM32H7B3NI: *microzig.Target,
+STM32H7B3QI: *microzig.Target,
+STM32H7B3RI: *microzig.Target,
+STM32H7B3VI: *microzig.Target,
+STM32H7B3ZI: *microzig.Target,
+STM32H7R3A8: *microzig.Target,
+STM32H7R3I8: *microzig.Target,
+STM32H7R3L8: *microzig.Target,
+STM32H7R3R8: *microzig.Target,
+STM32H7R3V8: *microzig.Target,
+STM32H7R3Z8: *microzig.Target,
+STM32H7R7A8: *microzig.Target,
+STM32H7R7I8: *microzig.Target,
+STM32H7R7L8: *microzig.Target,
+STM32H7R7Z8: *microzig.Target,
+STM32H7S3A8: *microzig.Target,
+STM32H7S3I8: *microzig.Target,
+STM32H7S3L8: *microzig.Target,
+STM32H7S3R8: *microzig.Target,
+STM32H7S3V8: *microzig.Target,
+STM32H7S3Z8: *microzig.Target,
+STM32H7S7A8: *microzig.Target,
+STM32H7S7I8: *microzig.Target,
+STM32H7S7L8: *microzig.Target,
+STM32H7S7Z8: *microzig.Target,
+STM32L010C6: *microzig.Target,
+STM32L010F4: *microzig.Target,
+STM32L010K4: *microzig.Target,
+STM32L010K8: *microzig.Target,
+STM32L010R8: *microzig.Target,
+STM32L010RB: *microzig.Target,
+STM32L011D3: *microzig.Target,
+STM32L011D4: *microzig.Target,
+STM32L011E3: *microzig.Target,
+STM32L011E4: *microzig.Target,
+STM32L011F3: *microzig.Target,
+STM32L011F4: *microzig.Target,
+STM32L011G3: *microzig.Target,
+STM32L011G4: *microzig.Target,
+STM32L011K3: *microzig.Target,
+STM32L011K4: *microzig.Target,
+STM32L021D4: *microzig.Target,
+STM32L021F4: *microzig.Target,
+STM32L021G4: *microzig.Target,
+STM32L021K4: *microzig.Target,
+STM32L031C4: *microzig.Target,
+STM32L031C6: *microzig.Target,
+STM32L031E4: *microzig.Target,
+STM32L031E6: *microzig.Target,
+STM32L031F4: *microzig.Target,
+STM32L031F6: *microzig.Target,
+STM32L031G4: *microzig.Target,
+STM32L031G6: *microzig.Target,
+STM32L031K4: *microzig.Target,
+STM32L031K6: *microzig.Target,
+STM32L041C4: *microzig.Target,
+STM32L041C6: *microzig.Target,
+STM32L041E6: *microzig.Target,
+STM32L041F6: *microzig.Target,
+STM32L041G6: *microzig.Target,
+STM32L041K6: *microzig.Target,
+STM32L051C6: *microzig.Target,
+STM32L051C8: *microzig.Target,
+STM32L051K6: *microzig.Target,
+STM32L051K8: *microzig.Target,
+STM32L051R6: *microzig.Target,
+STM32L051R8: *microzig.Target,
+STM32L051T6: *microzig.Target,
+STM32L051T8: *microzig.Target,
+STM32L052C6: *microzig.Target,
+STM32L052C8: *microzig.Target,
+STM32L052K6: *microzig.Target,
+STM32L052K8: *microzig.Target,
+STM32L052R6: *microzig.Target,
+STM32L052R8: *microzig.Target,
+STM32L052T6: *microzig.Target,
+STM32L052T8: *microzig.Target,
+STM32L053C6: *microzig.Target,
+STM32L053C8: *microzig.Target,
+STM32L053R6: *microzig.Target,
+STM32L053R8: *microzig.Target,
+STM32L062C8: *microzig.Target,
+STM32L062K8: *microzig.Target,
+STM32L063C8: *microzig.Target,
+STM32L063R8: *microzig.Target,
+STM32L071C8: *microzig.Target,
+STM32L071CB: *microzig.Target,
+STM32L071CZ: *microzig.Target,
+STM32L071K8: *microzig.Target,
+STM32L071KB: *microzig.Target,
+STM32L071KZ: *microzig.Target,
+STM32L071RB: *microzig.Target,
+STM32L071RZ: *microzig.Target,
+STM32L071V8: *microzig.Target,
+STM32L071VB: *microzig.Target,
+STM32L071VZ: *microzig.Target,
+STM32L072CB: *microzig.Target,
+STM32L072CZ: *microzig.Target,
+STM32L072KB: *microzig.Target,
+STM32L072KZ: *microzig.Target,
+STM32L072RB: *microzig.Target,
+STM32L072RZ: *microzig.Target,
+STM32L072V8: *microzig.Target,
+STM32L072VB: *microzig.Target,
+STM32L072VZ: *microzig.Target,
+STM32L073CB: *microzig.Target,
+STM32L073CZ: *microzig.Target,
+STM32L073RB: *microzig.Target,
+STM32L073RZ: *microzig.Target,
+STM32L073V8: *microzig.Target,
+STM32L073VB: *microzig.Target,
+STM32L073VZ: *microzig.Target,
+STM32L081CB: *microzig.Target,
+STM32L081CZ: *microzig.Target,
+STM32L081KZ: *microzig.Target,
+STM32L082CZ: *microzig.Target,
+STM32L082KB: *microzig.Target,
+STM32L082KZ: *microzig.Target,
+STM32L083CB: *microzig.Target,
+STM32L083CZ: *microzig.Target,
+STM32L083RB: *microzig.Target,
+STM32L083RZ: *microzig.Target,
+STM32L083V8: *microzig.Target,
+STM32L083VB: *microzig.Target,
+STM32L083VZ: *microzig.Target,
+STM32L100C6: *microzig.Target,
+@"STM32L100C6-A": *microzig.Target,
+STM32L100R8: *microzig.Target,
+@"STM32L100R8-A": *microzig.Target,
+STM32L100RB: *microzig.Target,
+@"STM32L100RB-A": *microzig.Target,
+STM32L100RC: *microzig.Target,
+STM32L151C6: *microzig.Target,
+@"STM32L151C6-A": *microzig.Target,
+STM32L151C8: *microzig.Target,
+@"STM32L151C8-A": *microzig.Target,
+STM32L151CB: *microzig.Target,
+@"STM32L151CB-A": *microzig.Target,
+STM32L151CC: *microzig.Target,
+STM32L151QC: *microzig.Target,
+STM32L151QD: *microzig.Target,
+STM32L151QE: *microzig.Target,
+STM32L151R6: *microzig.Target,
+@"STM32L151R6-A": *microzig.Target,
+STM32L151R8: *microzig.Target,
+@"STM32L151R8-A": *microzig.Target,
+STM32L151RB: *microzig.Target,
+@"STM32L151RB-A": *microzig.Target,
+STM32L151RC: *microzig.Target,
+@"STM32L151RC-A": *microzig.Target,
+STM32L151RD: *microzig.Target,
+STM32L151RE: *microzig.Target,
+STM32L151UC: *microzig.Target,
+STM32L151V8: *microzig.Target,
+@"STM32L151V8-A": *microzig.Target,
+STM32L151VB: *microzig.Target,
+@"STM32L151VB-A": *microzig.Target,
+STM32L151VC: *microzig.Target,
+@"STM32L151VC-A": *microzig.Target,
+STM32L151VD: *microzig.Target,
+@"STM32L151VD-X": *microzig.Target,
+STM32L151VE: *microzig.Target,
+STM32L151ZC: *microzig.Target,
+STM32L151ZD: *microzig.Target,
+STM32L151ZE: *microzig.Target,
+STM32L152C6: *microzig.Target,
+@"STM32L152C6-A": *microzig.Target,
+STM32L152C8: *microzig.Target,
+@"STM32L152C8-A": *microzig.Target,
+STM32L152CB: *microzig.Target,
+@"STM32L152CB-A": *microzig.Target,
+STM32L152CC: *microzig.Target,
+STM32L152QC: *microzig.Target,
+STM32L152QD: *microzig.Target,
+STM32L152QE: *microzig.Target,
+STM32L152R6: *microzig.Target,
+@"STM32L152R6-A": *microzig.Target,
+STM32L152R8: *microzig.Target,
+@"STM32L152R8-A": *microzig.Target,
+STM32L152RB: *microzig.Target,
+@"STM32L152RB-A": *microzig.Target,
+STM32L152RC: *microzig.Target,
+@"STM32L152RC-A": *microzig.Target,
+STM32L152RD: *microzig.Target,
+STM32L152RE: *microzig.Target,
+STM32L152UC: *microzig.Target,
+STM32L152V8: *microzig.Target,
+@"STM32L152V8-A": *microzig.Target,
+STM32L152VB: *microzig.Target,
+@"STM32L152VB-A": *microzig.Target,
+STM32L152VC: *microzig.Target,
+@"STM32L152VC-A": *microzig.Target,
+STM32L152VD: *microzig.Target,
+@"STM32L152VD-X": *microzig.Target,
+STM32L152VE: *microzig.Target,
+STM32L152ZC: *microzig.Target,
+STM32L152ZD: *microzig.Target,
+STM32L152ZE: *microzig.Target,
+STM32L162QC: *microzig.Target,
+STM32L162QD: *microzig.Target,
+STM32L162RC: *microzig.Target,
+@"STM32L162RC-A": *microzig.Target,
+STM32L162RD: *microzig.Target,
+STM32L162RE: *microzig.Target,
+STM32L162VC: *microzig.Target,
+@"STM32L162VC-A": *microzig.Target,
+STM32L162VD: *microzig.Target,
+@"STM32L162VD-X": *microzig.Target,
+STM32L162VE: *microzig.Target,
+STM32L162ZC: *microzig.Target,
+STM32L162ZD: *microzig.Target,
+STM32L162ZE: *microzig.Target,
+STM32L412C8: *microzig.Target,
+STM32L412CB: *microzig.Target,
+STM32L412K8: *microzig.Target,
+STM32L412KB: *microzig.Target,
+STM32L412R8: *microzig.Target,
+STM32L412RB: *microzig.Target,
+STM32L412T8: *microzig.Target,
+STM32L412TB: *microzig.Target,
+STM32L422CB: *microzig.Target,
+STM32L422KB: *microzig.Target,
+STM32L422RB: *microzig.Target,
+STM32L422TB: *microzig.Target,
+STM32L431CB: *microzig.Target,
+STM32L431CC: *microzig.Target,
+STM32L431KB: *microzig.Target,
+STM32L431KC: *microzig.Target,
+STM32L431RB: *microzig.Target,
+STM32L431RC: *microzig.Target,
+STM32L431VC: *microzig.Target,
+STM32L432KB: *microzig.Target,
+STM32L432KC: *microzig.Target,
+STM32L433CB: *microzig.Target,
+STM32L433CC: *microzig.Target,
+STM32L433RB: *microzig.Target,
+STM32L433RC: *microzig.Target,
+STM32L433VC: *microzig.Target,
+STM32L442KC: *microzig.Target,
+STM32L443CC: *microzig.Target,
+STM32L443RC: *microzig.Target,
+STM32L443VC: *microzig.Target,
+STM32L451CC: *microzig.Target,
+STM32L451CE: *microzig.Target,
+STM32L451RC: *microzig.Target,
+STM32L451RE: *microzig.Target,
+STM32L451VC: *microzig.Target,
+STM32L451VE: *microzig.Target,
+STM32L452CC: *microzig.Target,
+STM32L452CE: *microzig.Target,
+STM32L452RC: *microzig.Target,
+STM32L452RE: *microzig.Target,
+STM32L452VC: *microzig.Target,
+STM32L452VE: *microzig.Target,
+STM32L462CE: *microzig.Target,
+STM32L462RE: *microzig.Target,
+STM32L462VE: *microzig.Target,
+STM32L471QE: *microzig.Target,
+STM32L471QG: *microzig.Target,
+STM32L471RE: *microzig.Target,
+STM32L471RG: *microzig.Target,
+STM32L471VE: *microzig.Target,
+STM32L471VG: *microzig.Target,
+STM32L471ZE: *microzig.Target,
+STM32L471ZG: *microzig.Target,
+STM32L475RC: *microzig.Target,
+STM32L475RE: *microzig.Target,
+STM32L475RG: *microzig.Target,
+STM32L475VC: *microzig.Target,
+STM32L475VE: *microzig.Target,
+STM32L475VG: *microzig.Target,
+STM32L476JE: *microzig.Target,
+STM32L476JG: *microzig.Target,
+STM32L476ME: *microzig.Target,
+STM32L476MG: *microzig.Target,
+STM32L476QE: *microzig.Target,
+STM32L476QG: *microzig.Target,
+STM32L476RC: *microzig.Target,
+STM32L476RE: *microzig.Target,
+STM32L476RG: *microzig.Target,
+STM32L476VC: *microzig.Target,
+STM32L476VE: *microzig.Target,
+STM32L476VG: *microzig.Target,
+STM32L476ZE: *microzig.Target,
+STM32L476ZG: *microzig.Target,
+STM32L486JG: *microzig.Target,
+STM32L486QG: *microzig.Target,
+STM32L486RG: *microzig.Target,
+STM32L486VG: *microzig.Target,
+STM32L486ZG: *microzig.Target,
+STM32L496AE: *microzig.Target,
+STM32L496AG: *microzig.Target,
+STM32L496QE: *microzig.Target,
+STM32L496QG: *microzig.Target,
+STM32L496RE: *microzig.Target,
+STM32L496RG: *microzig.Target,
+STM32L496VE: *microzig.Target,
+STM32L496VG: *microzig.Target,
+STM32L496WG: *microzig.Target,
+STM32L496ZE: *microzig.Target,
+STM32L496ZG: *microzig.Target,
+STM32L4A6AG: *microzig.Target,
+STM32L4A6QG: *microzig.Target,
+STM32L4A6RG: *microzig.Target,
+STM32L4A6VG: *microzig.Target,
+STM32L4A6ZG: *microzig.Target,
+STM32L4P5AE: *microzig.Target,
+STM32L4P5AG: *microzig.Target,
+STM32L4P5CE: *microzig.Target,
+STM32L4P5CG: *microzig.Target,
+STM32L4P5QE: *microzig.Target,
+STM32L4P5QG: *microzig.Target,
+STM32L4P5RE: *microzig.Target,
+STM32L4P5RG: *microzig.Target,
+STM32L4P5VE: *microzig.Target,
+STM32L4P5VG: *microzig.Target,
+STM32L4P5ZE: *microzig.Target,
+STM32L4P5ZG: *microzig.Target,
+STM32L4Q5AG: *microzig.Target,
+STM32L4Q5CG: *microzig.Target,
+STM32L4Q5QG: *microzig.Target,
+STM32L4Q5RG: *microzig.Target,
+STM32L4Q5VG: *microzig.Target,
+STM32L4Q5ZG: *microzig.Target,
+STM32L4R5AG: *microzig.Target,
+STM32L4R5AI: *microzig.Target,
+STM32L4R5QG: *microzig.Target,
+STM32L4R5QI: *microzig.Target,
+STM32L4R5VG: *microzig.Target,
+STM32L4R5VI: *microzig.Target,
+STM32L4R5ZG: *microzig.Target,
+STM32L4R5ZI: *microzig.Target,
+STM32L4R7AI: *microzig.Target,
+STM32L4R7VI: *microzig.Target,
+STM32L4R7ZI: *microzig.Target,
+STM32L4R9AG: *microzig.Target,
+STM32L4R9AI: *microzig.Target,
+STM32L4R9VG: *microzig.Target,
+STM32L4R9VI: *microzig.Target,
+STM32L4R9ZG: *microzig.Target,
+STM32L4R9ZI: *microzig.Target,
+STM32L4S5AI: *microzig.Target,
+STM32L4S5QI: *microzig.Target,
+STM32L4S5VI: *microzig.Target,
+STM32L4S5ZI: *microzig.Target,
+STM32L4S7AI: *microzig.Target,
+STM32L4S7VI: *microzig.Target,
+STM32L4S7ZI: *microzig.Target,
+STM32L4S9AI: *microzig.Target,
+STM32L4S9VI: *microzig.Target,
+STM32L4S9ZI: *microzig.Target,
+STM32L552CC: *microzig.Target,
+STM32L552CE: *microzig.Target,
+STM32L552ME: *microzig.Target,
+STM32L552QC: *microzig.Target,
+STM32L552QE: *microzig.Target,
+STM32L552RC: *microzig.Target,
+STM32L552RE: *microzig.Target,
+STM32L552VC: *microzig.Target,
+STM32L552VE: *microzig.Target,
+STM32L552ZC: *microzig.Target,
+STM32L552ZE: *microzig.Target,
+STM32L562CE: *microzig.Target,
+STM32L562ME: *microzig.Target,
+STM32L562QE: *microzig.Target,
+STM32L562RE: *microzig.Target,
+STM32L562VE: *microzig.Target,
+STM32L562ZE: *microzig.Target,
+STM32U031C6: *microzig.Target,
+STM32U031C8: *microzig.Target,
+STM32U031F4: *microzig.Target,
+STM32U031F6: *microzig.Target,
+STM32U031F8: *microzig.Target,
+STM32U031G6: *microzig.Target,
+STM32U031G8: *microzig.Target,
+STM32U031K4: *microzig.Target,
+STM32U031K6: *microzig.Target,
+STM32U031K8: *microzig.Target,
+STM32U031R6: *microzig.Target,
+STM32U031R8: *microzig.Target,
+STM32U073C8: *microzig.Target,
+STM32U073CB: *microzig.Target,
+STM32U073CC: *microzig.Target,
+STM32U073H8: *microzig.Target,
+STM32U073HB: *microzig.Target,
+STM32U073HC: *microzig.Target,
+STM32U073K8: *microzig.Target,
+STM32U073KB: *microzig.Target,
+STM32U073KC: *microzig.Target,
+STM32U073M8: *microzig.Target,
+STM32U073MB: *microzig.Target,
+STM32U073MC: *microzig.Target,
+STM32U073R8: *microzig.Target,
+STM32U073RB: *microzig.Target,
+STM32U073RC: *microzig.Target,
+STM32U083CC: *microzig.Target,
+STM32U083HC: *microzig.Target,
+STM32U083KC: *microzig.Target,
+STM32U083MC: *microzig.Target,
+STM32U083RC: *microzig.Target,
+STM32U535CB: *microzig.Target,
+STM32U535CC: *microzig.Target,
+STM32U535CE: *microzig.Target,
+STM32U535JE: *microzig.Target,
+STM32U535NC: *microzig.Target,
+STM32U535NE: *microzig.Target,
+STM32U535RB: *microzig.Target,
+STM32U535RC: *microzig.Target,
+STM32U535RE: *microzig.Target,
+STM32U535VC: *microzig.Target,
+STM32U535VE: *microzig.Target,
+STM32U545CE: *microzig.Target,
+STM32U545JE: *microzig.Target,
+STM32U545NE: *microzig.Target,
+STM32U545RE: *microzig.Target,
+STM32U545VE: *microzig.Target,
+STM32U575AG: *microzig.Target,
+STM32U575AI: *microzig.Target,
+STM32U575CG: *microzig.Target,
+STM32U575CI: *microzig.Target,
+STM32U575OG: *microzig.Target,
+STM32U575OI: *microzig.Target,
+STM32U575QG: *microzig.Target,
+STM32U575QI: *microzig.Target,
+STM32U575RG: *microzig.Target,
+STM32U575RI: *microzig.Target,
+STM32U575VG: *microzig.Target,
+STM32U575VI: *microzig.Target,
+STM32U575ZG: *microzig.Target,
+STM32U575ZI: *microzig.Target,
+STM32U585AI: *microzig.Target,
+STM32U585CI: *microzig.Target,
+STM32U585OI: *microzig.Target,
+STM32U585QI: *microzig.Target,
+STM32U585RI: *microzig.Target,
+STM32U585VI: *microzig.Target,
+STM32U585ZI: *microzig.Target,
+STM32U595AI: *microzig.Target,
+STM32U595AJ: *microzig.Target,
+STM32U595QI: *microzig.Target,
+STM32U595QJ: *microzig.Target,
+STM32U595RI: *microzig.Target,
+STM32U595RJ: *microzig.Target,
+STM32U595VI: *microzig.Target,
+STM32U595VJ: *microzig.Target,
+STM32U595ZI: *microzig.Target,
+STM32U595ZJ: *microzig.Target,
+STM32U599BJ: *microzig.Target,
+STM32U599NI: *microzig.Target,
+STM32U599NJ: *microzig.Target,
+STM32U599VI: *microzig.Target,
+STM32U599VJ: *microzig.Target,
+STM32U599ZI: *microzig.Target,
+STM32U599ZJ: *microzig.Target,
+STM32U5A5AJ: *microzig.Target,
+STM32U5A5QI: *microzig.Target,
+STM32U5A5QJ: *microzig.Target,
+STM32U5A5RJ: *microzig.Target,
+STM32U5A5VJ: *microzig.Target,
+STM32U5A5ZJ: *microzig.Target,
+STM32U5A9BJ: *microzig.Target,
+STM32U5A9NJ: *microzig.Target,
+STM32U5A9VJ: *microzig.Target,
+STM32U5A9ZJ: *microzig.Target,
+STM32U5F7VI: *microzig.Target,
+STM32U5F7VJ: *microzig.Target,
+STM32U5F9BJ: *microzig.Target,
+STM32U5F9NJ: *microzig.Target,
+STM32U5F9VI: *microzig.Target,
+STM32U5F9VJ: *microzig.Target,
+STM32U5F9ZI: *microzig.Target,
+STM32U5F9ZJ: *microzig.Target,
+STM32U5G7VJ: *microzig.Target,
+STM32U5G9BJ: *microzig.Target,
+STM32U5G9NJ: *microzig.Target,
+STM32U5G9VJ: *microzig.Target,
+STM32U5G9ZJ: *microzig.Target,
+STM32WB10CC: *microzig.Target,
+STM32WB15CC: *microzig.Target,
+STM32WB30CE: *microzig.Target,
+STM32WB35CC: *microzig.Target,
+STM32WB35CE: *microzig.Target,
+STM32WB50CG: *microzig.Target,
+STM32WB55CC: *microzig.Target,
+STM32WB55CE: *microzig.Target,
+STM32WB55CG: *microzig.Target,
+STM32WB55RC: *microzig.Target,
+STM32WB55RE: *microzig.Target,
+STM32WB55RG: *microzig.Target,
+STM32WB55VC: *microzig.Target,
+STM32WB55VE: *microzig.Target,
+STM32WB55VG: *microzig.Target,
+STM32WB55VY: *microzig.Target,
+STM32WBA50KE: *microzig.Target,
+STM32WBA50KG: *microzig.Target,
+STM32WBA52CE: *microzig.Target,
+STM32WBA52CG: *microzig.Target,
+STM32WBA52KE: *microzig.Target,
+STM32WBA52KG: *microzig.Target,
+STM32WBA54CE: *microzig.Target,
+STM32WBA54CG: *microzig.Target,
+STM32WBA54KE: *microzig.Target,
+STM32WBA54KG: *microzig.Target,
+STM32WBA55CE: *microzig.Target,
+STM32WBA55CG: *microzig.Target,
+STM32WBA55HE: *microzig.Target,
+STM32WBA55HG: *microzig.Target,
+STM32WBA55UE: *microzig.Target,
+STM32WBA55UG: *microzig.Target,
+STM32WL54CC: *microzig.Target,
+STM32WL54JC: *microzig.Target,
+STM32WL55CC: *microzig.Target,
+STM32WL55JC: *microzig.Target,
+STM32WLE4C8: *microzig.Target,
+STM32WLE4CB: *microzig.Target,
+STM32WLE4CC: *microzig.Target,
+STM32WLE4J8: *microzig.Target,
+STM32WLE4JB: *microzig.Target,
+STM32WLE4JC: *microzig.Target,
+STM32WLE5C8: *microzig.Target,
+STM32WLE5CB: *microzig.Target,
+STM32WLE5CC: *microzig.Target,
+STM32WLE5J8: *microzig.Target,
+STM32WLE5JB: *microzig.Target,
+STM32WLE5JC: *microzig.Target,
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
@@ -1410,7 +1410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     var ret: Self = undefined;
 
-    ret.STM32C011D6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C011D6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C011D6.* = .{
         .dep = dep,
         .chip = .{
@@ -1431,7 +1431,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C011F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C011F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C011F4.* = .{
         .dep = dep,
         .chip = .{
@@ -1452,7 +1452,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C011F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C011F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C011F6.* = .{
         .dep = dep,
         .chip = .{
@@ -1473,7 +1473,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C011J4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C011J4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C011J4.* = .{
         .dep = dep,
         .chip = .{
@@ -1494,7 +1494,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C011J6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C011J6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C011J6.* = .{
         .dep = dep,
         .chip = .{
@@ -1515,7 +1515,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031C4.* = .{
         .dep = dep,
         .chip = .{
@@ -1536,7 +1536,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031C6.* = .{
         .dep = dep,
         .chip = .{
@@ -1557,7 +1557,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031F4.* = .{
         .dep = dep,
         .chip = .{
@@ -1578,7 +1578,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031F6.* = .{
         .dep = dep,
         .chip = .{
@@ -1599,7 +1599,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031G4.* = .{
         .dep = dep,
         .chip = .{
@@ -1620,7 +1620,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031G6.* = .{
         .dep = dep,
         .chip = .{
@@ -1641,7 +1641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031K4.* = .{
         .dep = dep,
         .chip = .{
@@ -1662,7 +1662,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32C031K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32C031K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32C031K6.* = .{
         .dep = dep,
         .chip = .{
@@ -1683,7 +1683,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030C6.* = .{
         .dep = dep,
         .chip = .{
@@ -1704,7 +1704,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030C8.* = .{
         .dep = dep,
         .chip = .{
@@ -1725,7 +1725,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030CC.* = .{
         .dep = dep,
         .chip = .{
@@ -1746,7 +1746,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030F4.* = .{
         .dep = dep,
         .chip = .{
@@ -1767,7 +1767,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030K6.* = .{
         .dep = dep,
         .chip = .{
@@ -1788,7 +1788,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030R8.* = .{
         .dep = dep,
         .chip = .{
@@ -1809,7 +1809,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F030RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F030RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F030RC.* = .{
         .dep = dep,
         .chip = .{
@@ -1830,7 +1830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031C4.* = .{
         .dep = dep,
         .chip = .{
@@ -1851,7 +1851,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031C6.* = .{
         .dep = dep,
         .chip = .{
@@ -1872,7 +1872,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031E6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031E6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031E6.* = .{
         .dep = dep,
         .chip = .{
@@ -1893,7 +1893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031F4.* = .{
         .dep = dep,
         .chip = .{
@@ -1914,7 +1914,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031F6.* = .{
         .dep = dep,
         .chip = .{
@@ -1935,7 +1935,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031G4.* = .{
         .dep = dep,
         .chip = .{
@@ -1956,7 +1956,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031G6.* = .{
         .dep = dep,
         .chip = .{
@@ -1977,7 +1977,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031K4.* = .{
         .dep = dep,
         .chip = .{
@@ -1998,7 +1998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F031K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F031K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F031K6.* = .{
         .dep = dep,
         .chip = .{
@@ -2019,7 +2019,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F038C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F038C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F038C6.* = .{
         .dep = dep,
         .chip = .{
@@ -2040,7 +2040,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F038E6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F038E6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F038E6.* = .{
         .dep = dep,
         .chip = .{
@@ -2061,7 +2061,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F038F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F038F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F038F6.* = .{
         .dep = dep,
         .chip = .{
@@ -2082,7 +2082,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F038G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F038G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F038G6.* = .{
         .dep = dep,
         .chip = .{
@@ -2103,7 +2103,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F038K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F038K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F038K6.* = .{
         .dep = dep,
         .chip = .{
@@ -2124,7 +2124,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042C4.* = .{
         .dep = dep,
         .chip = .{
@@ -2145,7 +2145,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042C6.* = .{
         .dep = dep,
         .chip = .{
@@ -2166,7 +2166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042F4.* = .{
         .dep = dep,
         .chip = .{
@@ -2187,7 +2187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042F6.* = .{
         .dep = dep,
         .chip = .{
@@ -2208,7 +2208,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042G4.* = .{
         .dep = dep,
         .chip = .{
@@ -2229,7 +2229,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042G6.* = .{
         .dep = dep,
         .chip = .{
@@ -2250,7 +2250,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042K4.* = .{
         .dep = dep,
         .chip = .{
@@ -2271,7 +2271,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042K6.* = .{
         .dep = dep,
         .chip = .{
@@ -2292,7 +2292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F042T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F042T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F042T6.* = .{
         .dep = dep,
         .chip = .{
@@ -2313,7 +2313,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F048C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F048C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F048C6.* = .{
         .dep = dep,
         .chip = .{
@@ -2334,7 +2334,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F048G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F048G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F048G6.* = .{
         .dep = dep,
         .chip = .{
@@ -2355,7 +2355,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F048T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F048T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F048T6.* = .{
         .dep = dep,
         .chip = .{
@@ -2376,7 +2376,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051C4.* = .{
         .dep = dep,
         .chip = .{
@@ -2397,7 +2397,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051C6.* = .{
         .dep = dep,
         .chip = .{
@@ -2418,7 +2418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051C8.* = .{
         .dep = dep,
         .chip = .{
@@ -2439,7 +2439,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051K4.* = .{
         .dep = dep,
         .chip = .{
@@ -2460,7 +2460,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051K6.* = .{
         .dep = dep,
         .chip = .{
@@ -2481,7 +2481,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051K8.* = .{
         .dep = dep,
         .chip = .{
@@ -2502,7 +2502,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051R4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051R4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051R4.* = .{
         .dep = dep,
         .chip = .{
@@ -2523,7 +2523,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051R6.* = .{
         .dep = dep,
         .chip = .{
@@ -2544,7 +2544,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051R8.* = .{
         .dep = dep,
         .chip = .{
@@ -2565,7 +2565,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F051T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F051T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F051T8.* = .{
         .dep = dep,
         .chip = .{
@@ -2586,7 +2586,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F058C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F058C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F058C8.* = .{
         .dep = dep,
         .chip = .{
@@ -2607,7 +2607,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F058R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F058R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F058R8.* = .{
         .dep = dep,
         .chip = .{
@@ -2628,7 +2628,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F058T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F058T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F058T8.* = .{
         .dep = dep,
         .chip = .{
@@ -2649,7 +2649,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F070C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F070C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F070C6.* = .{
         .dep = dep,
         .chip = .{
@@ -2670,7 +2670,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F070CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F070CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F070CB.* = .{
         .dep = dep,
         .chip = .{
@@ -2691,7 +2691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F070F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F070F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F070F6.* = .{
         .dep = dep,
         .chip = .{
@@ -2712,7 +2712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F070RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F070RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F070RB.* = .{
         .dep = dep,
         .chip = .{
@@ -2733,7 +2733,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F071C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F071C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F071C8.* = .{
         .dep = dep,
         .chip = .{
@@ -2754,7 +2754,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F071CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F071CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F071CB.* = .{
         .dep = dep,
         .chip = .{
@@ -2775,7 +2775,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F071RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F071RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F071RB.* = .{
         .dep = dep,
         .chip = .{
@@ -2796,7 +2796,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F071V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F071V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F071V8.* = .{
         .dep = dep,
         .chip = .{
@@ -2817,7 +2817,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F071VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F071VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F071VB.* = .{
         .dep = dep,
         .chip = .{
@@ -2838,7 +2838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072C8.* = .{
         .dep = dep,
         .chip = .{
@@ -2859,7 +2859,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072CB.* = .{
         .dep = dep,
         .chip = .{
@@ -2880,7 +2880,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072R8.* = .{
         .dep = dep,
         .chip = .{
@@ -2901,7 +2901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072RB.* = .{
         .dep = dep,
         .chip = .{
@@ -2922,7 +2922,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072V8.* = .{
         .dep = dep,
         .chip = .{
@@ -2943,7 +2943,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F072VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F072VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F072VB.* = .{
         .dep = dep,
         .chip = .{
@@ -2964,7 +2964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F078CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F078CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F078CB.* = .{
         .dep = dep,
         .chip = .{
@@ -2985,7 +2985,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F078RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F078RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F078RB.* = .{
         .dep = dep,
         .chip = .{
@@ -3006,7 +3006,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F078VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F078VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F078VB.* = .{
         .dep = dep,
         .chip = .{
@@ -3027,7 +3027,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091CB.* = .{
         .dep = dep,
         .chip = .{
@@ -3048,7 +3048,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091CC.* = .{
         .dep = dep,
         .chip = .{
@@ -3069,7 +3069,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091RB.* = .{
         .dep = dep,
         .chip = .{
@@ -3090,7 +3090,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091RC.* = .{
         .dep = dep,
         .chip = .{
@@ -3111,7 +3111,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091VB.* = .{
         .dep = dep,
         .chip = .{
@@ -3132,7 +3132,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F091VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F091VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F091VC.* = .{
         .dep = dep,
         .chip = .{
@@ -3153,7 +3153,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F098CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F098CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F098CC.* = .{
         .dep = dep,
         .chip = .{
@@ -3174,7 +3174,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F098RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F098RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F098RC.* = .{
         .dep = dep,
         .chip = .{
@@ -3195,7 +3195,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F098VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F098VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F098VC.* = .{
         .dep = dep,
         .chip = .{
@@ -3216,7 +3216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100C4.* = .{
         .dep = dep,
         .chip = .{
@@ -3237,7 +3237,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100C6.* = .{
         .dep = dep,
         .chip = .{
@@ -3258,7 +3258,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100C8.* = .{
         .dep = dep,
         .chip = .{
@@ -3279,7 +3279,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100CB.* = .{
         .dep = dep,
         .chip = .{
@@ -3300,7 +3300,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100R4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100R4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100R4.* = .{
         .dep = dep,
         .chip = .{
@@ -3321,7 +3321,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100R6.* = .{
         .dep = dep,
         .chip = .{
@@ -3342,7 +3342,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100R8.* = .{
         .dep = dep,
         .chip = .{
@@ -3363,7 +3363,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100RB.* = .{
         .dep = dep,
         .chip = .{
@@ -3384,7 +3384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100RC.* = .{
         .dep = dep,
         .chip = .{
@@ -3405,7 +3405,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100RD.* = .{
         .dep = dep,
         .chip = .{
@@ -3426,7 +3426,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100RE.* = .{
         .dep = dep,
         .chip = .{
@@ -3447,7 +3447,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100V8.* = .{
         .dep = dep,
         .chip = .{
@@ -3468,7 +3468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100VB.* = .{
         .dep = dep,
         .chip = .{
@@ -3489,7 +3489,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100VC.* = .{
         .dep = dep,
         .chip = .{
@@ -3510,7 +3510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100VD.* = .{
         .dep = dep,
         .chip = .{
@@ -3531,7 +3531,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100VE.* = .{
         .dep = dep,
         .chip = .{
@@ -3552,7 +3552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -3573,7 +3573,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -3594,7 +3594,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F100ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F100ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F100ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -3615,7 +3615,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101C4.* = .{
         .dep = dep,
         .chip = .{
@@ -3636,7 +3636,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101C6.* = .{
         .dep = dep,
         .chip = .{
@@ -3657,7 +3657,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101C8.* = .{
         .dep = dep,
         .chip = .{
@@ -3678,7 +3678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101CB.* = .{
         .dep = dep,
         .chip = .{
@@ -3699,7 +3699,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101R4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101R4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101R4.* = .{
         .dep = dep,
         .chip = .{
@@ -3720,7 +3720,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101R6.* = .{
         .dep = dep,
         .chip = .{
@@ -3741,7 +3741,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101R8.* = .{
         .dep = dep,
         .chip = .{
@@ -3762,7 +3762,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RB.* = .{
         .dep = dep,
         .chip = .{
@@ -3783,7 +3783,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RC.* = .{
         .dep = dep,
         .chip = .{
@@ -3804,7 +3804,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RD.* = .{
         .dep = dep,
         .chip = .{
@@ -3825,7 +3825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RE.* = .{
         .dep = dep,
         .chip = .{
@@ -3846,7 +3846,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RF.* = .{
         .dep = dep,
         .chip = .{
@@ -3868,7 +3868,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101RG.* = .{
         .dep = dep,
         .chip = .{
@@ -3890,7 +3890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101T4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101T4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101T4.* = .{
         .dep = dep,
         .chip = .{
@@ -3911,7 +3911,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101T6.* = .{
         .dep = dep,
         .chip = .{
@@ -3932,7 +3932,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101T8.* = .{
         .dep = dep,
         .chip = .{
@@ -3953,7 +3953,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101TB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101TB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101TB.* = .{
         .dep = dep,
         .chip = .{
@@ -3974,7 +3974,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101V8.* = .{
         .dep = dep,
         .chip = .{
@@ -3995,7 +3995,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VB.* = .{
         .dep = dep,
         .chip = .{
@@ -4016,7 +4016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VC.* = .{
         .dep = dep,
         .chip = .{
@@ -4037,7 +4037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VD.* = .{
         .dep = dep,
         .chip = .{
@@ -4058,7 +4058,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VE.* = .{
         .dep = dep,
         .chip = .{
@@ -4079,7 +4079,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VF.* = .{
         .dep = dep,
         .chip = .{
@@ -4101,7 +4101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101VG.* = .{
         .dep = dep,
         .chip = .{
@@ -4123,7 +4123,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -4144,7 +4144,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -4165,7 +4165,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -4186,7 +4186,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101ZF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101ZF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101ZF.* = .{
         .dep = dep,
         .chip = .{
@@ -4208,7 +4208,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F101ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F101ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F101ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -4230,7 +4230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102C4.* = .{
         .dep = dep,
         .chip = .{
@@ -4251,7 +4251,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102C6.* = .{
         .dep = dep,
         .chip = .{
@@ -4272,7 +4272,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102C8.* = .{
         .dep = dep,
         .chip = .{
@@ -4293,7 +4293,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102CB.* = .{
         .dep = dep,
         .chip = .{
@@ -4314,7 +4314,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102R4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102R4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102R4.* = .{
         .dep = dep,
         .chip = .{
@@ -4335,7 +4335,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102R6.* = .{
         .dep = dep,
         .chip = .{
@@ -4356,7 +4356,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102R8.* = .{
         .dep = dep,
         .chip = .{
@@ -4377,7 +4377,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F102RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F102RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F102RB.* = .{
         .dep = dep,
         .chip = .{
@@ -4398,7 +4398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F103C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103C4.* = .{
         .dep = dep,
         .chip = .{
@@ -4417,12 +4417,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103C6.* = .{
         .dep = dep,
         .chip = .{
@@ -4441,12 +4441,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103C8.* = .{
         .dep = dep,
         .chip = .{
@@ -4465,12 +4465,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103CB.* = .{
         .dep = dep,
         .chip = .{
@@ -4489,12 +4489,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103R4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103R4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103R4.* = .{
         .dep = dep,
         .chip = .{
@@ -4513,12 +4513,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103R6.* = .{
         .dep = dep,
         .chip = .{
@@ -4537,12 +4537,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103R8.* = .{
         .dep = dep,
         .chip = .{
@@ -4561,12 +4561,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RB.* = .{
         .dep = dep,
         .chip = .{
@@ -4585,12 +4585,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RC.* = .{
         .dep = dep,
         .chip = .{
@@ -4609,12 +4609,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RD.* = .{
         .dep = dep,
         .chip = .{
@@ -4633,12 +4633,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RE.* = .{
         .dep = dep,
         .chip = .{
@@ -4657,12 +4657,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RF.* = .{
         .dep = dep,
         .chip = .{
@@ -4682,12 +4682,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103RG.* = .{
         .dep = dep,
         .chip = .{
@@ -4707,12 +4707,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103T4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103T4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103T4.* = .{
         .dep = dep,
         .chip = .{
@@ -4731,12 +4731,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103T6.* = .{
         .dep = dep,
         .chip = .{
@@ -4755,12 +4755,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103T8.* = .{
         .dep = dep,
         .chip = .{
@@ -4779,12 +4779,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103TB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103TB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103TB.* = .{
         .dep = dep,
         .chip = .{
@@ -4803,12 +4803,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103V8.* = .{
         .dep = dep,
         .chip = .{
@@ -4827,12 +4827,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VB.* = .{
         .dep = dep,
         .chip = .{
@@ -4851,12 +4851,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VC.* = .{
         .dep = dep,
         .chip = .{
@@ -4875,12 +4875,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VD.* = .{
         .dep = dep,
         .chip = .{
@@ -4899,12 +4899,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VE.* = .{
         .dep = dep,
         .chip = .{
@@ -4923,12 +4923,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VF.* = .{
         .dep = dep,
         .chip = .{
@@ -4948,12 +4948,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103VG.* = .{
         .dep = dep,
         .chip = .{
@@ -4973,12 +4973,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -4997,12 +4997,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -5021,12 +5021,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -5045,12 +5045,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103ZF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103ZF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103ZF.* = .{
         .dep = dep,
         .chip = .{
@@ -5070,12 +5070,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F103ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F103ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F103ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -5095,12 +5095,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .zig = register_definition_path,
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
         }),
     };
 
-    ret.STM32F105R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105R8.* = .{
         .dep = dep,
         .chip = .{
@@ -5121,7 +5121,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F105RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105RB.* = .{
         .dep = dep,
         .chip = .{
@@ -5142,7 +5142,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F105RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105RC.* = .{
         .dep = dep,
         .chip = .{
@@ -5163,7 +5163,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F105V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105V8.* = .{
         .dep = dep,
         .chip = .{
@@ -5184,7 +5184,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F105VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105VB.* = .{
         .dep = dep,
         .chip = .{
@@ -5205,7 +5205,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F105VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F105VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F105VC.* = .{
         .dep = dep,
         .chip = .{
@@ -5226,7 +5226,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F107RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F107RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F107RB.* = .{
         .dep = dep,
         .chip = .{
@@ -5247,7 +5247,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F107RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F107RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F107RC.* = .{
         .dep = dep,
         .chip = .{
@@ -5268,7 +5268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F107VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F107VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F107VB.* = .{
         .dep = dep,
         .chip = .{
@@ -5289,7 +5289,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F107VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F107VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F107VC.* = .{
         .dep = dep,
         .chip = .{
@@ -5310,7 +5310,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205RB.* = .{
         .dep = dep,
         .chip = .{
@@ -5332,7 +5332,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205RC.* = .{
         .dep = dep,
         .chip = .{
@@ -5354,7 +5354,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205RE.* = .{
         .dep = dep,
         .chip = .{
@@ -5376,7 +5376,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205RF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205RF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205RF.* = .{
         .dep = dep,
         .chip = .{
@@ -5398,7 +5398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205RG.* = .{
         .dep = dep,
         .chip = .{
@@ -5420,7 +5420,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205VB.* = .{
         .dep = dep,
         .chip = .{
@@ -5442,7 +5442,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205VC.* = .{
         .dep = dep,
         .chip = .{
@@ -5464,7 +5464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205VE.* = .{
         .dep = dep,
         .chip = .{
@@ -5486,7 +5486,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205VF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205VF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205VF.* = .{
         .dep = dep,
         .chip = .{
@@ -5508,7 +5508,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205VG.* = .{
         .dep = dep,
         .chip = .{
@@ -5530,7 +5530,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -5552,7 +5552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -5574,7 +5574,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205ZF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205ZF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205ZF.* = .{
         .dep = dep,
         .chip = .{
@@ -5596,7 +5596,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F205ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F205ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F205ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -5618,7 +5618,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207IC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207IC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207IC.* = .{
         .dep = dep,
         .chip = .{
@@ -5640,7 +5640,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207IE.* = .{
         .dep = dep,
         .chip = .{
@@ -5662,7 +5662,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207IF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207IF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207IF.* = .{
         .dep = dep,
         .chip = .{
@@ -5684,7 +5684,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207IG.* = .{
         .dep = dep,
         .chip = .{
@@ -5706,7 +5706,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207VC.* = .{
         .dep = dep,
         .chip = .{
@@ -5728,7 +5728,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207VE.* = .{
         .dep = dep,
         .chip = .{
@@ -5750,7 +5750,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207VF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207VF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207VF.* = .{
         .dep = dep,
         .chip = .{
@@ -5772,7 +5772,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207VG.* = .{
         .dep = dep,
         .chip = .{
@@ -5794,7 +5794,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -5816,7 +5816,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -5838,7 +5838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207ZF = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207ZF = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207ZF.* = .{
         .dep = dep,
         .chip = .{
@@ -5860,7 +5860,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F207ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F207ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F207ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -5882,7 +5882,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215RE.* = .{
         .dep = dep,
         .chip = .{
@@ -5904,7 +5904,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215RG.* = .{
         .dep = dep,
         .chip = .{
@@ -5926,7 +5926,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215VE.* = .{
         .dep = dep,
         .chip = .{
@@ -5948,7 +5948,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215VG.* = .{
         .dep = dep,
         .chip = .{
@@ -5970,7 +5970,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -5992,7 +5992,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F215ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F215ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F215ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -6014,7 +6014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217IE.* = .{
         .dep = dep,
         .chip = .{
@@ -6036,7 +6036,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217IG.* = .{
         .dep = dep,
         .chip = .{
@@ -6058,7 +6058,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217VE.* = .{
         .dep = dep,
         .chip = .{
@@ -6080,7 +6080,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217VG.* = .{
         .dep = dep,
         .chip = .{
@@ -6102,7 +6102,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -6124,7 +6124,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F217ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F217ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F217ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -6146,7 +6146,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301C6.* = .{
         .dep = dep,
         .chip = .{
@@ -6168,7 +6168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301C8.* = .{
         .dep = dep,
         .chip = .{
@@ -6190,7 +6190,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301K6.* = .{
         .dep = dep,
         .chip = .{
@@ -6212,7 +6212,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301K8.* = .{
         .dep = dep,
         .chip = .{
@@ -6234,7 +6234,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301R6.* = .{
         .dep = dep,
         .chip = .{
@@ -6256,7 +6256,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F301R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F301R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F301R8.* = .{
         .dep = dep,
         .chip = .{
@@ -6278,7 +6278,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302C6.* = .{
         .dep = dep,
         .chip = .{
@@ -6300,7 +6300,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302C8.* = .{
         .dep = dep,
         .chip = .{
@@ -6322,7 +6322,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302CB.* = .{
         .dep = dep,
         .chip = .{
@@ -6344,7 +6344,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302CC.* = .{
         .dep = dep,
         .chip = .{
@@ -6366,7 +6366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302K6.* = .{
         .dep = dep,
         .chip = .{
@@ -6388,7 +6388,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302K8.* = .{
         .dep = dep,
         .chip = .{
@@ -6410,7 +6410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302R6.* = .{
         .dep = dep,
         .chip = .{
@@ -6432,7 +6432,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302R8.* = .{
         .dep = dep,
         .chip = .{
@@ -6454,7 +6454,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302RB.* = .{
         .dep = dep,
         .chip = .{
@@ -6476,7 +6476,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302RC.* = .{
         .dep = dep,
         .chip = .{
@@ -6498,7 +6498,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302RD.* = .{
         .dep = dep,
         .chip = .{
@@ -6520,7 +6520,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302RE.* = .{
         .dep = dep,
         .chip = .{
@@ -6542,7 +6542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302VB.* = .{
         .dep = dep,
         .chip = .{
@@ -6564,7 +6564,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302VC.* = .{
         .dep = dep,
         .chip = .{
@@ -6586,7 +6586,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302VD.* = .{
         .dep = dep,
         .chip = .{
@@ -6608,7 +6608,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302VE.* = .{
         .dep = dep,
         .chip = .{
@@ -6630,7 +6630,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -6652,7 +6652,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F302ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F302ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F302ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -6674,7 +6674,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303C6.* = .{
         .dep = dep,
         .chip = .{
@@ -6697,7 +6697,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303C8.* = .{
         .dep = dep,
         .chip = .{
@@ -6720,7 +6720,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303CB.* = .{
         .dep = dep,
         .chip = .{
@@ -6743,7 +6743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303CC.* = .{
         .dep = dep,
         .chip = .{
@@ -6766,7 +6766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303K6.* = .{
         .dep = dep,
         .chip = .{
@@ -6789,7 +6789,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303K8.* = .{
         .dep = dep,
         .chip = .{
@@ -6812,7 +6812,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303R6.* = .{
         .dep = dep,
         .chip = .{
@@ -6835,7 +6835,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303R8.* = .{
         .dep = dep,
         .chip = .{
@@ -6858,7 +6858,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303RB.* = .{
         .dep = dep,
         .chip = .{
@@ -6881,7 +6881,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303RC.* = .{
         .dep = dep,
         .chip = .{
@@ -6904,7 +6904,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303RD.* = .{
         .dep = dep,
         .chip = .{
@@ -6927,7 +6927,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303RE.* = .{
         .dep = dep,
         .chip = .{
@@ -6950,7 +6950,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303VB.* = .{
         .dep = dep,
         .chip = .{
@@ -6973,7 +6973,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303VC.* = .{
         .dep = dep,
         .chip = .{
@@ -6996,7 +6996,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303VD.* = .{
         .dep = dep,
         .chip = .{
@@ -7019,7 +7019,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303VE.* = .{
         .dep = dep,
         .chip = .{
@@ -7042,7 +7042,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -7065,7 +7065,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F303ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F303ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F303ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -7088,7 +7088,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F318C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F318C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F318C8.* = .{
         .dep = dep,
         .chip = .{
@@ -7110,7 +7110,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F318K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F318K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F318K8.* = .{
         .dep = dep,
         .chip = .{
@@ -7132,7 +7132,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F328C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F328C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F328C8.* = .{
         .dep = dep,
         .chip = .{
@@ -7155,7 +7155,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334C4.* = .{
         .dep = dep,
         .chip = .{
@@ -7178,7 +7178,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334C6.* = .{
         .dep = dep,
         .chip = .{
@@ -7201,7 +7201,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334C8.* = .{
         .dep = dep,
         .chip = .{
@@ -7224,7 +7224,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334K4.* = .{
         .dep = dep,
         .chip = .{
@@ -7247,7 +7247,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334K6.* = .{
         .dep = dep,
         .chip = .{
@@ -7270,7 +7270,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334K8.* = .{
         .dep = dep,
         .chip = .{
@@ -7293,7 +7293,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334R6.* = .{
         .dep = dep,
         .chip = .{
@@ -7316,7 +7316,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F334R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F334R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F334R8.* = .{
         .dep = dep,
         .chip = .{
@@ -7339,7 +7339,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F358CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F358CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F358CC.* = .{
         .dep = dep,
         .chip = .{
@@ -7362,7 +7362,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F358RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F358RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F358RC.* = .{
         .dep = dep,
         .chip = .{
@@ -7385,7 +7385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F358VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F358VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F358VC.* = .{
         .dep = dep,
         .chip = .{
@@ -7408,7 +7408,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373C8.* = .{
         .dep = dep,
         .chip = .{
@@ -7430,7 +7430,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373CB.* = .{
         .dep = dep,
         .chip = .{
@@ -7452,7 +7452,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373CC.* = .{
         .dep = dep,
         .chip = .{
@@ -7474,7 +7474,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373R8.* = .{
         .dep = dep,
         .chip = .{
@@ -7496,7 +7496,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373RB.* = .{
         .dep = dep,
         .chip = .{
@@ -7518,7 +7518,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373RC.* = .{
         .dep = dep,
         .chip = .{
@@ -7540,7 +7540,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373V8.* = .{
         .dep = dep,
         .chip = .{
@@ -7562,7 +7562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373VB.* = .{
         .dep = dep,
         .chip = .{
@@ -7584,7 +7584,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F373VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F373VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F373VC.* = .{
         .dep = dep,
         .chip = .{
@@ -7606,7 +7606,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F378CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F378CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F378CC.* = .{
         .dep = dep,
         .chip = .{
@@ -7628,7 +7628,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F378RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F378RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F378RC.* = .{
         .dep = dep,
         .chip = .{
@@ -7650,7 +7650,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F378VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F378VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F378VC.* = .{
         .dep = dep,
         .chip = .{
@@ -7672,7 +7672,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F398VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F398VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F398VE.* = .{
         .dep = dep,
         .chip = .{
@@ -7695,7 +7695,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401CB.* = .{
         .dep = dep,
         .chip = .{
@@ -7717,7 +7717,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401CC.* = .{
         .dep = dep,
         .chip = .{
@@ -7739,7 +7739,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401CD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401CD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401CD.* = .{
         .dep = dep,
         .chip = .{
@@ -7761,7 +7761,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401CE.* = .{
         .dep = dep,
         .chip = .{
@@ -7783,7 +7783,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401RB.* = .{
         .dep = dep,
         .chip = .{
@@ -7805,7 +7805,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401RC.* = .{
         .dep = dep,
         .chip = .{
@@ -7827,7 +7827,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401RD.* = .{
         .dep = dep,
         .chip = .{
@@ -7849,7 +7849,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401RE.* = .{
         .dep = dep,
         .chip = .{
@@ -7871,7 +7871,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401VB.* = .{
         .dep = dep,
         .chip = .{
@@ -7893,7 +7893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401VC.* = .{
         .dep = dep,
         .chip = .{
@@ -7915,7 +7915,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401VD.* = .{
         .dep = dep,
         .chip = .{
@@ -7937,7 +7937,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F401VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F401VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F401VE.* = .{
         .dep = dep,
         .chip = .{
@@ -7959,7 +7959,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F405OE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F405OE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F405OE.* = .{
         .dep = dep,
         .chip = .{
@@ -7983,7 +7983,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F405OG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F405OG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F405OG.* = .{
         .dep = dep,
         .chip = .{
@@ -8007,7 +8007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F405RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F405RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F405RG.* = .{
         .dep = dep,
         .chip = .{
@@ -8031,7 +8031,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F405VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F405VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F405VG.* = .{
         .dep = dep,
         .chip = .{
@@ -8055,7 +8055,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F405ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F405ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F405ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -8079,7 +8079,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407IE.* = .{
         .dep = dep,
         .chip = .{
@@ -8103,7 +8103,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407IG.* = .{
         .dep = dep,
         .chip = .{
@@ -8127,7 +8127,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407VE.* = .{
         .dep = dep,
         .chip = .{
@@ -8151,7 +8151,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407VG.* = .{
         .dep = dep,
         .chip = .{
@@ -8175,7 +8175,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -8199,7 +8199,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F407ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F407ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F407ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -8223,7 +8223,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410C8.* = .{
         .dep = dep,
         .chip = .{
@@ -8245,7 +8245,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410CB.* = .{
         .dep = dep,
         .chip = .{
@@ -8267,7 +8267,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410R8.* = .{
         .dep = dep,
         .chip = .{
@@ -8289,7 +8289,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410RB.* = .{
         .dep = dep,
         .chip = .{
@@ -8311,7 +8311,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410T8.* = .{
         .dep = dep,
         .chip = .{
@@ -8333,7 +8333,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F410TB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F410TB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F410TB.* = .{
         .dep = dep,
         .chip = .{
@@ -8355,7 +8355,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411CC.* = .{
         .dep = dep,
         .chip = .{
@@ -8377,7 +8377,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411CE.* = .{
         .dep = dep,
         .chip = .{
@@ -8399,7 +8399,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411RC.* = .{
         .dep = dep,
         .chip = .{
@@ -8421,7 +8421,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411RE.* = .{
         .dep = dep,
         .chip = .{
@@ -8443,7 +8443,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411VC.* = .{
         .dep = dep,
         .chip = .{
@@ -8465,7 +8465,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F411VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F411VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F411VE.* = .{
         .dep = dep,
         .chip = .{
@@ -8487,7 +8487,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412CE.* = .{
         .dep = dep,
         .chip = .{
@@ -8509,7 +8509,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412CG.* = .{
         .dep = dep,
         .chip = .{
@@ -8531,7 +8531,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412RE.* = .{
         .dep = dep,
         .chip = .{
@@ -8553,7 +8553,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412RG.* = .{
         .dep = dep,
         .chip = .{
@@ -8575,7 +8575,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412VE.* = .{
         .dep = dep,
         .chip = .{
@@ -8597,7 +8597,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412VG.* = .{
         .dep = dep,
         .chip = .{
@@ -8619,7 +8619,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -8641,7 +8641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F412ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F412ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F412ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -8663,7 +8663,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413CG.* = .{
         .dep = dep,
         .chip = .{
@@ -8685,7 +8685,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413CH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413CH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413CH.* = .{
         .dep = dep,
         .chip = .{
@@ -8707,7 +8707,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413MG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413MG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413MG.* = .{
         .dep = dep,
         .chip = .{
@@ -8729,7 +8729,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413MH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413MH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413MH.* = .{
         .dep = dep,
         .chip = .{
@@ -8751,7 +8751,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413RG.* = .{
         .dep = dep,
         .chip = .{
@@ -8773,7 +8773,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413RH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413RH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413RH.* = .{
         .dep = dep,
         .chip = .{
@@ -8795,7 +8795,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413VG.* = .{
         .dep = dep,
         .chip = .{
@@ -8817,7 +8817,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413VH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413VH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413VH.* = .{
         .dep = dep,
         .chip = .{
@@ -8839,7 +8839,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -8861,7 +8861,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F413ZH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F413ZH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F413ZH.* = .{
         .dep = dep,
         .chip = .{
@@ -8883,7 +8883,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F415OG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F415OG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F415OG.* = .{
         .dep = dep,
         .chip = .{
@@ -8906,7 +8906,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F415RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F415RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F415RG.* = .{
         .dep = dep,
         .chip = .{
@@ -8929,7 +8929,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F415VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F415VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F415VG.* = .{
         .dep = dep,
         .chip = .{
@@ -8952,7 +8952,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F415ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F415ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F415ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -8975,7 +8975,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417IE.* = .{
         .dep = dep,
         .chip = .{
@@ -8998,7 +8998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417IG.* = .{
         .dep = dep,
         .chip = .{
@@ -9021,7 +9021,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417VE.* = .{
         .dep = dep,
         .chip = .{
@@ -9044,7 +9044,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417VG.* = .{
         .dep = dep,
         .chip = .{
@@ -9067,7 +9067,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -9090,7 +9090,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F417ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F417ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F417ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -9113,7 +9113,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F423CH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F423CH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F423CH.* = .{
         .dep = dep,
         .chip = .{
@@ -9135,7 +9135,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F423MH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F423MH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F423MH.* = .{
         .dep = dep,
         .chip = .{
@@ -9157,7 +9157,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F423RH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F423RH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F423RH.* = .{
         .dep = dep,
         .chip = .{
@@ -9179,7 +9179,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F423VH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F423VH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F423VH.* = .{
         .dep = dep,
         .chip = .{
@@ -9201,7 +9201,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F423ZH = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F423ZH = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F423ZH.* = .{
         .dep = dep,
         .chip = .{
@@ -9223,7 +9223,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427AG.* = .{
         .dep = dep,
         .chip = .{
@@ -9246,7 +9246,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427AI.* = .{
         .dep = dep,
         .chip = .{
@@ -9271,7 +9271,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427IG.* = .{
         .dep = dep,
         .chip = .{
@@ -9294,7 +9294,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427II.* = .{
         .dep = dep,
         .chip = .{
@@ -9319,7 +9319,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427VG.* = .{
         .dep = dep,
         .chip = .{
@@ -9342,7 +9342,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427VI.* = .{
         .dep = dep,
         .chip = .{
@@ -9367,7 +9367,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -9390,7 +9390,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F427ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F427ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F427ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -9415,7 +9415,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429AG.* = .{
         .dep = dep,
         .chip = .{
@@ -9438,7 +9438,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429AI.* = .{
         .dep = dep,
         .chip = .{
@@ -9463,7 +9463,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429BE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429BE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429BE.* = .{
         .dep = dep,
         .chip = .{
@@ -9486,7 +9486,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429BG.* = .{
         .dep = dep,
         .chip = .{
@@ -9509,7 +9509,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429BI.* = .{
         .dep = dep,
         .chip = .{
@@ -9534,7 +9534,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429IE.* = .{
         .dep = dep,
         .chip = .{
@@ -9557,7 +9557,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429IG.* = .{
         .dep = dep,
         .chip = .{
@@ -9580,7 +9580,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429II.* = .{
         .dep = dep,
         .chip = .{
@@ -9605,7 +9605,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429NE.* = .{
         .dep = dep,
         .chip = .{
@@ -9628,7 +9628,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429NG.* = .{
         .dep = dep,
         .chip = .{
@@ -9651,7 +9651,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429NI.* = .{
         .dep = dep,
         .chip = .{
@@ -9676,7 +9676,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429VE.* = .{
         .dep = dep,
         .chip = .{
@@ -9699,7 +9699,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429VG.* = .{
         .dep = dep,
         .chip = .{
@@ -9722,7 +9722,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429VI.* = .{
         .dep = dep,
         .chip = .{
@@ -9747,7 +9747,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -9770,7 +9770,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -9793,7 +9793,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F429ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F429ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F429ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -9818,7 +9818,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437AI.* = .{
         .dep = dep,
         .chip = .{
@@ -9843,7 +9843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437IG.* = .{
         .dep = dep,
         .chip = .{
@@ -9866,7 +9866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437II.* = .{
         .dep = dep,
         .chip = .{
@@ -9891,7 +9891,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437VG.* = .{
         .dep = dep,
         .chip = .{
@@ -9914,7 +9914,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437VI.* = .{
         .dep = dep,
         .chip = .{
@@ -9939,7 +9939,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -9962,7 +9962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F437ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F437ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F437ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -9987,7 +9987,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439AI.* = .{
         .dep = dep,
         .chip = .{
@@ -10012,7 +10012,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439BG.* = .{
         .dep = dep,
         .chip = .{
@@ -10035,7 +10035,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439BI.* = .{
         .dep = dep,
         .chip = .{
@@ -10060,7 +10060,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439IG.* = .{
         .dep = dep,
         .chip = .{
@@ -10083,7 +10083,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439II.* = .{
         .dep = dep,
         .chip = .{
@@ -10108,7 +10108,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439NG.* = .{
         .dep = dep,
         .chip = .{
@@ -10131,7 +10131,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439NI.* = .{
         .dep = dep,
         .chip = .{
@@ -10156,7 +10156,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439VG.* = .{
         .dep = dep,
         .chip = .{
@@ -10179,7 +10179,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439VI.* = .{
         .dep = dep,
         .chip = .{
@@ -10204,7 +10204,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -10227,7 +10227,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F439ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F439ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F439ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -10252,7 +10252,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446MC.* = .{
         .dep = dep,
         .chip = .{
@@ -10274,7 +10274,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446ME.* = .{
         .dep = dep,
         .chip = .{
@@ -10296,7 +10296,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446RC.* = .{
         .dep = dep,
         .chip = .{
@@ -10318,7 +10318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446RE.* = .{
         .dep = dep,
         .chip = .{
@@ -10340,7 +10340,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446VC.* = .{
         .dep = dep,
         .chip = .{
@@ -10362,7 +10362,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446VE.* = .{
         .dep = dep,
         .chip = .{
@@ -10384,7 +10384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -10406,7 +10406,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F446ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F446ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F446ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -10428,7 +10428,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469AE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469AE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469AE.* = .{
         .dep = dep,
         .chip = .{
@@ -10451,7 +10451,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469AG.* = .{
         .dep = dep,
         .chip = .{
@@ -10474,7 +10474,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469AI.* = .{
         .dep = dep,
         .chip = .{
@@ -10499,7 +10499,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469BE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469BE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469BE.* = .{
         .dep = dep,
         .chip = .{
@@ -10522,7 +10522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469BG.* = .{
         .dep = dep,
         .chip = .{
@@ -10545,7 +10545,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469BI.* = .{
         .dep = dep,
         .chip = .{
@@ -10570,7 +10570,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469IE.* = .{
         .dep = dep,
         .chip = .{
@@ -10593,7 +10593,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469IG.* = .{
         .dep = dep,
         .chip = .{
@@ -10616,7 +10616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469II.* = .{
         .dep = dep,
         .chip = .{
@@ -10641,7 +10641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469NE.* = .{
         .dep = dep,
         .chip = .{
@@ -10664,7 +10664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469NG.* = .{
         .dep = dep,
         .chip = .{
@@ -10687,7 +10687,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469NI.* = .{
         .dep = dep,
         .chip = .{
@@ -10712,7 +10712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469VE.* = .{
         .dep = dep,
         .chip = .{
@@ -10735,7 +10735,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469VG.* = .{
         .dep = dep,
         .chip = .{
@@ -10758,7 +10758,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469VI.* = .{
         .dep = dep,
         .chip = .{
@@ -10783,7 +10783,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -10806,7 +10806,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -10829,7 +10829,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F469ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F469ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F469ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -10854,7 +10854,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479AG.* = .{
         .dep = dep,
         .chip = .{
@@ -10877,7 +10877,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479AI.* = .{
         .dep = dep,
         .chip = .{
@@ -10902,7 +10902,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479BG.* = .{
         .dep = dep,
         .chip = .{
@@ -10925,7 +10925,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479BI.* = .{
         .dep = dep,
         .chip = .{
@@ -10950,7 +10950,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479IG.* = .{
         .dep = dep,
         .chip = .{
@@ -10973,7 +10973,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479II.* = .{
         .dep = dep,
         .chip = .{
@@ -10998,7 +10998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479NG.* = .{
         .dep = dep,
         .chip = .{
@@ -11021,7 +11021,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479NI.* = .{
         .dep = dep,
         .chip = .{
@@ -11046,7 +11046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479VG.* = .{
         .dep = dep,
         .chip = .{
@@ -11069,7 +11069,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479VI.* = .{
         .dep = dep,
         .chip = .{
@@ -11094,7 +11094,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -11117,7 +11117,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F479ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F479ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F479ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -11142,7 +11142,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722IC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722IC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722IC.* = .{
         .dep = dep,
         .chip = .{
@@ -11165,7 +11165,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11188,7 +11188,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722RC.* = .{
         .dep = dep,
         .chip = .{
@@ -11211,7 +11211,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722RE.* = .{
         .dep = dep,
         .chip = .{
@@ -11234,7 +11234,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722VC.* = .{
         .dep = dep,
         .chip = .{
@@ -11257,7 +11257,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722VE.* = .{
         .dep = dep,
         .chip = .{
@@ -11280,7 +11280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -11303,7 +11303,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F722ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F722ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F722ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -11326,7 +11326,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723IC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723IC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723IC.* = .{
         .dep = dep,
         .chip = .{
@@ -11349,7 +11349,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11372,7 +11372,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723VC.* = .{
         .dep = dep,
         .chip = .{
@@ -11395,7 +11395,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723VE.* = .{
         .dep = dep,
         .chip = .{
@@ -11418,7 +11418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -11441,7 +11441,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F723ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F723ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F723ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -11464,7 +11464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F730I8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F730I8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F730I8.* = .{
         .dep = dep,
         .chip = .{
@@ -11487,7 +11487,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F730R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F730R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F730R8.* = .{
         .dep = dep,
         .chip = .{
@@ -11510,7 +11510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F730V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F730V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F730V8.* = .{
         .dep = dep,
         .chip = .{
@@ -11533,7 +11533,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F730Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F730Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F730Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -11556,7 +11556,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F732IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F732IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F732IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11579,7 +11579,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F732RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F732RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F732RE.* = .{
         .dep = dep,
         .chip = .{
@@ -11602,7 +11602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F732VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F732VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F732VE.* = .{
         .dep = dep,
         .chip = .{
@@ -11625,7 +11625,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F732ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F732ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F732ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -11648,7 +11648,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F733IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F733IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F733IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11671,7 +11671,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F733VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F733VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F733VE.* = .{
         .dep = dep,
         .chip = .{
@@ -11694,7 +11694,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F733ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F733ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F733ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -11717,7 +11717,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11740,7 +11740,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745IG.* = .{
         .dep = dep,
         .chip = .{
@@ -11763,7 +11763,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745VE.* = .{
         .dep = dep,
         .chip = .{
@@ -11786,7 +11786,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745VG.* = .{
         .dep = dep,
         .chip = .{
@@ -11809,7 +11809,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -11832,7 +11832,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F745ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F745ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F745ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -11855,7 +11855,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746BE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746BE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746BE.* = .{
         .dep = dep,
         .chip = .{
@@ -11878,7 +11878,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746BG.* = .{
         .dep = dep,
         .chip = .{
@@ -11901,7 +11901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746IE.* = .{
         .dep = dep,
         .chip = .{
@@ -11924,7 +11924,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746IG.* = .{
         .dep = dep,
         .chip = .{
@@ -11947,7 +11947,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746NE.* = .{
         .dep = dep,
         .chip = .{
@@ -11970,7 +11970,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746NG.* = .{
         .dep = dep,
         .chip = .{
@@ -11993,7 +11993,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746VE.* = .{
         .dep = dep,
         .chip = .{
@@ -12016,7 +12016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746VG.* = .{
         .dep = dep,
         .chip = .{
@@ -12039,7 +12039,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -12062,7 +12062,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F746ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F746ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F746ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -12085,7 +12085,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F750N8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F750N8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F750N8.* = .{
         .dep = dep,
         .chip = .{
@@ -12108,7 +12108,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F750V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F750V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F750V8.* = .{
         .dep = dep,
         .chip = .{
@@ -12131,7 +12131,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F750Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F750Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F750Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -12154,7 +12154,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F756BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F756BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F756BG.* = .{
         .dep = dep,
         .chip = .{
@@ -12177,7 +12177,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F756IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F756IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F756IG.* = .{
         .dep = dep,
         .chip = .{
@@ -12200,7 +12200,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F756NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F756NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F756NG.* = .{
         .dep = dep,
         .chip = .{
@@ -12223,7 +12223,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F756VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F756VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F756VG.* = .{
         .dep = dep,
         .chip = .{
@@ -12246,7 +12246,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F756ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F756ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F756ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -12269,7 +12269,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765BG.* = .{
         .dep = dep,
         .chip = .{
@@ -12292,7 +12292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765BI.* = .{
         .dep = dep,
         .chip = .{
@@ -12315,7 +12315,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765IG.* = .{
         .dep = dep,
         .chip = .{
@@ -12338,7 +12338,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765II.* = .{
         .dep = dep,
         .chip = .{
@@ -12361,7 +12361,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765NG.* = .{
         .dep = dep,
         .chip = .{
@@ -12384,7 +12384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765NI.* = .{
         .dep = dep,
         .chip = .{
@@ -12407,7 +12407,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765VG.* = .{
         .dep = dep,
         .chip = .{
@@ -12430,7 +12430,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765VI.* = .{
         .dep = dep,
         .chip = .{
@@ -12453,7 +12453,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -12476,7 +12476,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F765ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F765ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F765ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -12499,7 +12499,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767BG.* = .{
         .dep = dep,
         .chip = .{
@@ -12522,7 +12522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767BI.* = .{
         .dep = dep,
         .chip = .{
@@ -12545,7 +12545,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767IG.* = .{
         .dep = dep,
         .chip = .{
@@ -12568,7 +12568,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767II.* = .{
         .dep = dep,
         .chip = .{
@@ -12591,7 +12591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767NG.* = .{
         .dep = dep,
         .chip = .{
@@ -12614,7 +12614,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767NI.* = .{
         .dep = dep,
         .chip = .{
@@ -12637,7 +12637,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767VG.* = .{
         .dep = dep,
         .chip = .{
@@ -12660,7 +12660,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767VI.* = .{
         .dep = dep,
         .chip = .{
@@ -12683,7 +12683,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -12706,7 +12706,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F767ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F767ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F767ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -12729,7 +12729,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F768AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F768AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F768AI.* = .{
         .dep = dep,
         .chip = .{
@@ -12752,7 +12752,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769AG.* = .{
         .dep = dep,
         .chip = .{
@@ -12775,7 +12775,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769AI.* = .{
         .dep = dep,
         .chip = .{
@@ -12798,7 +12798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769BG.* = .{
         .dep = dep,
         .chip = .{
@@ -12821,7 +12821,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769BI.* = .{
         .dep = dep,
         .chip = .{
@@ -12844,7 +12844,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769IG.* = .{
         .dep = dep,
         .chip = .{
@@ -12867,7 +12867,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769II.* = .{
         .dep = dep,
         .chip = .{
@@ -12890,7 +12890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769NG.* = .{
         .dep = dep,
         .chip = .{
@@ -12913,7 +12913,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F769NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F769NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F769NI.* = .{
         .dep = dep,
         .chip = .{
@@ -12936,7 +12936,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F777BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F777BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F777BI.* = .{
         .dep = dep,
         .chip = .{
@@ -12959,7 +12959,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F777II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F777II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F777II.* = .{
         .dep = dep,
         .chip = .{
@@ -12982,7 +12982,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F777NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F777NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F777NI.* = .{
         .dep = dep,
         .chip = .{
@@ -13005,7 +13005,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F777VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F777VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F777VI.* = .{
         .dep = dep,
         .chip = .{
@@ -13028,7 +13028,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F777ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F777ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F777ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -13051,7 +13051,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F778AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F778AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F778AI.* = .{
         .dep = dep,
         .chip = .{
@@ -13074,7 +13074,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F779AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F779AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F779AI.* = .{
         .dep = dep,
         .chip = .{
@@ -13097,7 +13097,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F779BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F779BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F779BI.* = .{
         .dep = dep,
         .chip = .{
@@ -13120,7 +13120,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F779II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F779II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F779II.* = .{
         .dep = dep,
         .chip = .{
@@ -13143,7 +13143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32F779NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32F779NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32F779NI.* = .{
         .dep = dep,
         .chip = .{
@@ -13166,7 +13166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030C6.* = .{
         .dep = dep,
         .chip = .{
@@ -13187,7 +13187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030C8.* = .{
         .dep = dep,
         .chip = .{
@@ -13208,7 +13208,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030F6.* = .{
         .dep = dep,
         .chip = .{
@@ -13229,7 +13229,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030J6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030J6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030J6.* = .{
         .dep = dep,
         .chip = .{
@@ -13250,7 +13250,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030K6.* = .{
         .dep = dep,
         .chip = .{
@@ -13271,7 +13271,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G030K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G030K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G030K8.* = .{
         .dep = dep,
         .chip = .{
@@ -13292,7 +13292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031C4.* = .{
         .dep = dep,
         .chip = .{
@@ -13313,7 +13313,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031C6.* = .{
         .dep = dep,
         .chip = .{
@@ -13334,7 +13334,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031C8.* = .{
         .dep = dep,
         .chip = .{
@@ -13355,7 +13355,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031F4.* = .{
         .dep = dep,
         .chip = .{
@@ -13376,7 +13376,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031F6.* = .{
         .dep = dep,
         .chip = .{
@@ -13397,7 +13397,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031F8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031F8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031F8.* = .{
         .dep = dep,
         .chip = .{
@@ -13418,7 +13418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031G4.* = .{
         .dep = dep,
         .chip = .{
@@ -13439,7 +13439,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031G6.* = .{
         .dep = dep,
         .chip = .{
@@ -13460,7 +13460,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031G8.* = .{
         .dep = dep,
         .chip = .{
@@ -13481,7 +13481,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031J4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031J4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031J4.* = .{
         .dep = dep,
         .chip = .{
@@ -13502,7 +13502,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031J6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031J6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031J6.* = .{
         .dep = dep,
         .chip = .{
@@ -13523,7 +13523,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031K4.* = .{
         .dep = dep,
         .chip = .{
@@ -13544,7 +13544,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031K6.* = .{
         .dep = dep,
         .chip = .{
@@ -13565,7 +13565,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031K8.* = .{
         .dep = dep,
         .chip = .{
@@ -13586,7 +13586,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G031Y8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G031Y8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G031Y8.* = .{
         .dep = dep,
         .chip = .{
@@ -13607,7 +13607,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041C6.* = .{
         .dep = dep,
         .chip = .{
@@ -13628,7 +13628,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041C8.* = .{
         .dep = dep,
         .chip = .{
@@ -13649,7 +13649,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041F6.* = .{
         .dep = dep,
         .chip = .{
@@ -13670,7 +13670,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041F8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041F8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041F8.* = .{
         .dep = dep,
         .chip = .{
@@ -13691,7 +13691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041G6.* = .{
         .dep = dep,
         .chip = .{
@@ -13712,7 +13712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041G8.* = .{
         .dep = dep,
         .chip = .{
@@ -13733,7 +13733,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041J6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041J6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041J6.* = .{
         .dep = dep,
         .chip = .{
@@ -13754,7 +13754,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041K6.* = .{
         .dep = dep,
         .chip = .{
@@ -13775,7 +13775,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041K8.* = .{
         .dep = dep,
         .chip = .{
@@ -13796,7 +13796,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G041Y8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G041Y8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G041Y8.* = .{
         .dep = dep,
         .chip = .{
@@ -13817,7 +13817,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G050C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G050C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G050C6.* = .{
         .dep = dep,
         .chip = .{
@@ -13838,7 +13838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G050C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G050C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G050C8.* = .{
         .dep = dep,
         .chip = .{
@@ -13859,7 +13859,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G050F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G050F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G050F6.* = .{
         .dep = dep,
         .chip = .{
@@ -13880,7 +13880,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G050K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G050K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G050K6.* = .{
         .dep = dep,
         .chip = .{
@@ -13901,7 +13901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G050K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G050K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G050K8.* = .{
         .dep = dep,
         .chip = .{
@@ -13922,7 +13922,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051C6.* = .{
         .dep = dep,
         .chip = .{
@@ -13943,7 +13943,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051C8.* = .{
         .dep = dep,
         .chip = .{
@@ -13964,7 +13964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051F6.* = .{
         .dep = dep,
         .chip = .{
@@ -13985,7 +13985,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051F8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051F8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051F8.* = .{
         .dep = dep,
         .chip = .{
@@ -14006,7 +14006,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051G6.* = .{
         .dep = dep,
         .chip = .{
@@ -14027,7 +14027,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051G8.* = .{
         .dep = dep,
         .chip = .{
@@ -14048,7 +14048,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051K6.* = .{
         .dep = dep,
         .chip = .{
@@ -14069,7 +14069,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G051K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G051K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G051K8.* = .{
         .dep = dep,
         .chip = .{
@@ -14090,7 +14090,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061C6.* = .{
         .dep = dep,
         .chip = .{
@@ -14111,7 +14111,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061C8.* = .{
         .dep = dep,
         .chip = .{
@@ -14132,7 +14132,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061F6.* = .{
         .dep = dep,
         .chip = .{
@@ -14153,7 +14153,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061F8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061F8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061F8.* = .{
         .dep = dep,
         .chip = .{
@@ -14174,7 +14174,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061G6.* = .{
         .dep = dep,
         .chip = .{
@@ -14195,7 +14195,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061G8.* = .{
         .dep = dep,
         .chip = .{
@@ -14216,7 +14216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061K6.* = .{
         .dep = dep,
         .chip = .{
@@ -14237,7 +14237,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G061K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G061K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G061K8.* = .{
         .dep = dep,
         .chip = .{
@@ -14258,7 +14258,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G070CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G070CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G070CB.* = .{
         .dep = dep,
         .chip = .{
@@ -14279,7 +14279,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G070KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G070KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G070KB.* = .{
         .dep = dep,
         .chip = .{
@@ -14300,7 +14300,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G070RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G070RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G070RB.* = .{
         .dep = dep,
         .chip = .{
@@ -14321,7 +14321,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071C6.* = .{
         .dep = dep,
         .chip = .{
@@ -14342,7 +14342,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071C8.* = .{
         .dep = dep,
         .chip = .{
@@ -14363,7 +14363,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071CB.* = .{
         .dep = dep,
         .chip = .{
@@ -14384,7 +14384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071EB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071EB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071EB.* = .{
         .dep = dep,
         .chip = .{
@@ -14405,7 +14405,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071G6.* = .{
         .dep = dep,
         .chip = .{
@@ -14426,7 +14426,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071G8.* = .{
         .dep = dep,
         .chip = .{
@@ -14447,7 +14447,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071GB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071GB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071GB.* = .{
         .dep = dep,
         .chip = .{
@@ -14468,7 +14468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071K6.* = .{
         .dep = dep,
         .chip = .{
@@ -14489,7 +14489,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071K8.* = .{
         .dep = dep,
         .chip = .{
@@ -14510,7 +14510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071KB.* = .{
         .dep = dep,
         .chip = .{
@@ -14531,7 +14531,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071R6.* = .{
         .dep = dep,
         .chip = .{
@@ -14552,7 +14552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071R8.* = .{
         .dep = dep,
         .chip = .{
@@ -14573,7 +14573,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G071RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G071RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G071RB.* = .{
         .dep = dep,
         .chip = .{
@@ -14594,7 +14594,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G081CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G081CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G081CB.* = .{
         .dep = dep,
         .chip = .{
@@ -14615,7 +14615,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G081EB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G081EB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G081EB.* = .{
         .dep = dep,
         .chip = .{
@@ -14636,7 +14636,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G081GB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G081GB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G081GB.* = .{
         .dep = dep,
         .chip = .{
@@ -14657,7 +14657,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G081KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G081KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G081KB.* = .{
         .dep = dep,
         .chip = .{
@@ -14678,7 +14678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G081RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G081RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G081RB.* = .{
         .dep = dep,
         .chip = .{
@@ -14699,7 +14699,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B0CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B0CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B0CE.* = .{
         .dep = dep,
         .chip = .{
@@ -14721,7 +14721,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B0KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B0KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B0KE.* = .{
         .dep = dep,
         .chip = .{
@@ -14743,7 +14743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B0RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B0RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B0RE.* = .{
         .dep = dep,
         .chip = .{
@@ -14765,7 +14765,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B0VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B0VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B0VE.* = .{
         .dep = dep,
         .chip = .{
@@ -14787,7 +14787,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1CB.* = .{
         .dep = dep,
         .chip = .{
@@ -14808,7 +14808,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1CC.* = .{
         .dep = dep,
         .chip = .{
@@ -14829,7 +14829,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1CE.* = .{
         .dep = dep,
         .chip = .{
@@ -14851,7 +14851,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1KB.* = .{
         .dep = dep,
         .chip = .{
@@ -14872,7 +14872,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1KC.* = .{
         .dep = dep,
         .chip = .{
@@ -14893,7 +14893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1KE.* = .{
         .dep = dep,
         .chip = .{
@@ -14915,7 +14915,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1MB.* = .{
         .dep = dep,
         .chip = .{
@@ -14936,7 +14936,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1MC.* = .{
         .dep = dep,
         .chip = .{
@@ -14957,7 +14957,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1ME.* = .{
         .dep = dep,
         .chip = .{
@@ -14979,7 +14979,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1NE.* = .{
         .dep = dep,
         .chip = .{
@@ -15001,7 +15001,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1RB.* = .{
         .dep = dep,
         .chip = .{
@@ -15022,7 +15022,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1RC.* = .{
         .dep = dep,
         .chip = .{
@@ -15043,7 +15043,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1RE.* = .{
         .dep = dep,
         .chip = .{
@@ -15065,7 +15065,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1VB.* = .{
         .dep = dep,
         .chip = .{
@@ -15086,7 +15086,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1VC.* = .{
         .dep = dep,
         .chip = .{
@@ -15107,7 +15107,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0B1VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0B1VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0B1VE.* = .{
         .dep = dep,
         .chip = .{
@@ -15129,7 +15129,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1CC.* = .{
         .dep = dep,
         .chip = .{
@@ -15150,7 +15150,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1CE.* = .{
         .dep = dep,
         .chip = .{
@@ -15172,7 +15172,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1KC.* = .{
         .dep = dep,
         .chip = .{
@@ -15193,7 +15193,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1KE.* = .{
         .dep = dep,
         .chip = .{
@@ -15215,7 +15215,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1MC.* = .{
         .dep = dep,
         .chip = .{
@@ -15236,7 +15236,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1ME.* = .{
         .dep = dep,
         .chip = .{
@@ -15258,7 +15258,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1NE.* = .{
         .dep = dep,
         .chip = .{
@@ -15280,7 +15280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1RC.* = .{
         .dep = dep,
         .chip = .{
@@ -15301,7 +15301,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1RE.* = .{
         .dep = dep,
         .chip = .{
@@ -15323,7 +15323,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1VC.* = .{
         .dep = dep,
         .chip = .{
@@ -15344,7 +15344,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G0C1VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G0C1VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G0C1VE.* = .{
         .dep = dep,
         .chip = .{
@@ -15366,7 +15366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431C6.* = .{
         .dep = dep,
         .chip = .{
@@ -15391,7 +15391,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431C8.* = .{
         .dep = dep,
         .chip = .{
@@ -15416,7 +15416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431CB.* = .{
         .dep = dep,
         .chip = .{
@@ -15441,7 +15441,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431K6.* = .{
         .dep = dep,
         .chip = .{
@@ -15466,7 +15466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431K8.* = .{
         .dep = dep,
         .chip = .{
@@ -15491,7 +15491,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431KB.* = .{
         .dep = dep,
         .chip = .{
@@ -15516,7 +15516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431M6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431M6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431M6.* = .{
         .dep = dep,
         .chip = .{
@@ -15541,7 +15541,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431M8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431M8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431M8.* = .{
         .dep = dep,
         .chip = .{
@@ -15566,7 +15566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431MB.* = .{
         .dep = dep,
         .chip = .{
@@ -15591,7 +15591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431R6.* = .{
         .dep = dep,
         .chip = .{
@@ -15616,7 +15616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431R8.* = .{
         .dep = dep,
         .chip = .{
@@ -15641,7 +15641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431RB.* = .{
         .dep = dep,
         .chip = .{
@@ -15666,7 +15666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431V6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431V6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431V6.* = .{
         .dep = dep,
         .chip = .{
@@ -15691,7 +15691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431V8.* = .{
         .dep = dep,
         .chip = .{
@@ -15716,7 +15716,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G431VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G431VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G431VB.* = .{
         .dep = dep,
         .chip = .{
@@ -15741,7 +15741,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G441CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G441CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G441CB.* = .{
         .dep = dep,
         .chip = .{
@@ -15766,7 +15766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G441KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G441KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G441KB.* = .{
         .dep = dep,
         .chip = .{
@@ -15791,7 +15791,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G441MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G441MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G441MB.* = .{
         .dep = dep,
         .chip = .{
@@ -15816,7 +15816,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G441RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G441RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G441RB.* = .{
         .dep = dep,
         .chip = .{
@@ -15841,7 +15841,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G441VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G441VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G441VB.* = .{
         .dep = dep,
         .chip = .{
@@ -15866,7 +15866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471CC.* = .{
         .dep = dep,
         .chip = .{
@@ -15891,7 +15891,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471CE.* = .{
         .dep = dep,
         .chip = .{
@@ -15916,7 +15916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471MC.* = .{
         .dep = dep,
         .chip = .{
@@ -15941,7 +15941,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471ME.* = .{
         .dep = dep,
         .chip = .{
@@ -15966,7 +15966,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471QC.* = .{
         .dep = dep,
         .chip = .{
@@ -15991,7 +15991,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471QE.* = .{
         .dep = dep,
         .chip = .{
@@ -16016,7 +16016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471RC.* = .{
         .dep = dep,
         .chip = .{
@@ -16041,7 +16041,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471RE.* = .{
         .dep = dep,
         .chip = .{
@@ -16066,7 +16066,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471VC.* = .{
         .dep = dep,
         .chip = .{
@@ -16091,7 +16091,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G471VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G471VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G471VE.* = .{
         .dep = dep,
         .chip = .{
@@ -16116,7 +16116,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473CB.* = .{
         .dep = dep,
         .chip = .{
@@ -16141,7 +16141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473CC.* = .{
         .dep = dep,
         .chip = .{
@@ -16166,7 +16166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473CE.* = .{
         .dep = dep,
         .chip = .{
@@ -16191,7 +16191,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473MB.* = .{
         .dep = dep,
         .chip = .{
@@ -16216,7 +16216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473MC.* = .{
         .dep = dep,
         .chip = .{
@@ -16241,7 +16241,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473ME.* = .{
         .dep = dep,
         .chip = .{
@@ -16266,7 +16266,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473PB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473PB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473PB.* = .{
         .dep = dep,
         .chip = .{
@@ -16291,7 +16291,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473PC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473PC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473PC.* = .{
         .dep = dep,
         .chip = .{
@@ -16316,7 +16316,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473PE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473PE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473PE.* = .{
         .dep = dep,
         .chip = .{
@@ -16341,7 +16341,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473QB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473QB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473QB.* = .{
         .dep = dep,
         .chip = .{
@@ -16366,7 +16366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473QC.* = .{
         .dep = dep,
         .chip = .{
@@ -16391,7 +16391,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473QE.* = .{
         .dep = dep,
         .chip = .{
@@ -16416,7 +16416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473RB.* = .{
         .dep = dep,
         .chip = .{
@@ -16441,7 +16441,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473RC.* = .{
         .dep = dep,
         .chip = .{
@@ -16466,7 +16466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473RE.* = .{
         .dep = dep,
         .chip = .{
@@ -16491,7 +16491,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473VB.* = .{
         .dep = dep,
         .chip = .{
@@ -16516,7 +16516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473VC.* = .{
         .dep = dep,
         .chip = .{
@@ -16541,7 +16541,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G473VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G473VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G473VE.* = .{
         .dep = dep,
         .chip = .{
@@ -16566,7 +16566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474CB.* = .{
         .dep = dep,
         .chip = .{
@@ -16591,7 +16591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474CC.* = .{
         .dep = dep,
         .chip = .{
@@ -16616,7 +16616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474CE.* = .{
         .dep = dep,
         .chip = .{
@@ -16641,7 +16641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474MB.* = .{
         .dep = dep,
         .chip = .{
@@ -16666,7 +16666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474MC.* = .{
         .dep = dep,
         .chip = .{
@@ -16691,7 +16691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474ME.* = .{
         .dep = dep,
         .chip = .{
@@ -16716,7 +16716,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474PB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474PB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474PB.* = .{
         .dep = dep,
         .chip = .{
@@ -16741,7 +16741,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474PC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474PC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474PC.* = .{
         .dep = dep,
         .chip = .{
@@ -16766,7 +16766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474PE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474PE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474PE.* = .{
         .dep = dep,
         .chip = .{
@@ -16791,7 +16791,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474QB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474QB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474QB.* = .{
         .dep = dep,
         .chip = .{
@@ -16816,7 +16816,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474QC.* = .{
         .dep = dep,
         .chip = .{
@@ -16841,7 +16841,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474QE.* = .{
         .dep = dep,
         .chip = .{
@@ -16866,7 +16866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474RB.* = .{
         .dep = dep,
         .chip = .{
@@ -16891,7 +16891,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474RC.* = .{
         .dep = dep,
         .chip = .{
@@ -16916,7 +16916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474RE.* = .{
         .dep = dep,
         .chip = .{
@@ -16941,7 +16941,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474VB.* = .{
         .dep = dep,
         .chip = .{
@@ -16966,7 +16966,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474VC.* = .{
         .dep = dep,
         .chip = .{
@@ -16991,7 +16991,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G474VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G474VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G474VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17016,7 +17016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483CE.* = .{
         .dep = dep,
         .chip = .{
@@ -17041,7 +17041,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483ME.* = .{
         .dep = dep,
         .chip = .{
@@ -17066,7 +17066,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483PE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483PE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483PE.* = .{
         .dep = dep,
         .chip = .{
@@ -17091,7 +17091,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483QE.* = .{
         .dep = dep,
         .chip = .{
@@ -17116,7 +17116,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483RE.* = .{
         .dep = dep,
         .chip = .{
@@ -17141,7 +17141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G483VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G483VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G483VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17166,7 +17166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484CE.* = .{
         .dep = dep,
         .chip = .{
@@ -17191,7 +17191,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484ME.* = .{
         .dep = dep,
         .chip = .{
@@ -17216,7 +17216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484PE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484PE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484PE.* = .{
         .dep = dep,
         .chip = .{
@@ -17241,7 +17241,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484QE.* = .{
         .dep = dep,
         .chip = .{
@@ -17266,7 +17266,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484RE.* = .{
         .dep = dep,
         .chip = .{
@@ -17291,7 +17291,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G484VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G484VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G484VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17316,7 +17316,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491CC.* = .{
         .dep = dep,
         .chip = .{
@@ -17341,7 +17341,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491CE.* = .{
         .dep = dep,
         .chip = .{
@@ -17366,7 +17366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491KC.* = .{
         .dep = dep,
         .chip = .{
@@ -17391,7 +17391,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491KE.* = .{
         .dep = dep,
         .chip = .{
@@ -17416,7 +17416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491MC.* = .{
         .dep = dep,
         .chip = .{
@@ -17441,7 +17441,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491ME.* = .{
         .dep = dep,
         .chip = .{
@@ -17466,7 +17466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491RC.* = .{
         .dep = dep,
         .chip = .{
@@ -17491,7 +17491,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491RE.* = .{
         .dep = dep,
         .chip = .{
@@ -17516,7 +17516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491VC.* = .{
         .dep = dep,
         .chip = .{
@@ -17541,7 +17541,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G491VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G491VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G491VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17566,7 +17566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G4A1CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G4A1CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G4A1CE.* = .{
         .dep = dep,
         .chip = .{
@@ -17591,7 +17591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G4A1KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G4A1KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G4A1KE.* = .{
         .dep = dep,
         .chip = .{
@@ -17616,7 +17616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G4A1ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G4A1ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G4A1ME.* = .{
         .dep = dep,
         .chip = .{
@@ -17641,7 +17641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G4A1RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G4A1RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G4A1RE.* = .{
         .dep = dep,
         .chip = .{
@@ -17666,7 +17666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32G4A1VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32G4A1VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32G4A1VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17691,7 +17691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H503CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H503CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H503CB.* = .{
         .dep = dep,
         .chip = .{
@@ -17715,7 +17715,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H503EB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H503EB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H503EB.* = .{
         .dep = dep,
         .chip = .{
@@ -17739,7 +17739,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H503KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H503KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H503KB.* = .{
         .dep = dep,
         .chip = .{
@@ -17763,7 +17763,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H503RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H503RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H503RB.* = .{
         .dep = dep,
         .chip = .{
@@ -17787,7 +17787,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523CC.* = .{
         .dep = dep,
         .chip = .{
@@ -17812,7 +17812,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523CE.* = .{
         .dep = dep,
         .chip = .{
@@ -17837,7 +17837,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523HE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523HE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523HE.* = .{
         .dep = dep,
         .chip = .{
@@ -17862,7 +17862,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523RC.* = .{
         .dep = dep,
         .chip = .{
@@ -17887,7 +17887,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523RE.* = .{
         .dep = dep,
         .chip = .{
@@ -17912,7 +17912,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523VC.* = .{
         .dep = dep,
         .chip = .{
@@ -17937,7 +17937,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523VE.* = .{
         .dep = dep,
         .chip = .{
@@ -17962,7 +17962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -17987,7 +17987,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H523ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H523ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H523ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -18012,7 +18012,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H533CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H533CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H533CE.* = .{
         .dep = dep,
         .chip = .{
@@ -18037,7 +18037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H533HE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H533HE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H533HE.* = .{
         .dep = dep,
         .chip = .{
@@ -18062,7 +18062,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H533RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H533RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H533RE.* = .{
         .dep = dep,
         .chip = .{
@@ -18087,7 +18087,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H533VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H533VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H533VE.* = .{
         .dep = dep,
         .chip = .{
@@ -18112,7 +18112,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H533ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H533ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H533ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -18137,7 +18137,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562AG.* = .{
         .dep = dep,
         .chip = .{
@@ -18162,7 +18162,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562AI.* = .{
         .dep = dep,
         .chip = .{
@@ -18187,7 +18187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562IG.* = .{
         .dep = dep,
         .chip = .{
@@ -18212,7 +18212,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562II.* = .{
         .dep = dep,
         .chip = .{
@@ -18237,7 +18237,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562RG.* = .{
         .dep = dep,
         .chip = .{
@@ -18262,7 +18262,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562RI.* = .{
         .dep = dep,
         .chip = .{
@@ -18287,7 +18287,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562VG.* = .{
         .dep = dep,
         .chip = .{
@@ -18312,7 +18312,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562VI.* = .{
         .dep = dep,
         .chip = .{
@@ -18337,7 +18337,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -18362,7 +18362,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H562ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H562ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H562ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -18387,7 +18387,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563AG.* = .{
         .dep = dep,
         .chip = .{
@@ -18412,7 +18412,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563AI.* = .{
         .dep = dep,
         .chip = .{
@@ -18437,7 +18437,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563IG.* = .{
         .dep = dep,
         .chip = .{
@@ -18462,7 +18462,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563II.* = .{
         .dep = dep,
         .chip = .{
@@ -18487,7 +18487,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563MI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563MI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563MI.* = .{
         .dep = dep,
         .chip = .{
@@ -18512,7 +18512,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563RG.* = .{
         .dep = dep,
         .chip = .{
@@ -18537,7 +18537,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563RI.* = .{
         .dep = dep,
         .chip = .{
@@ -18562,7 +18562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563VG.* = .{
         .dep = dep,
         .chip = .{
@@ -18587,7 +18587,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563VI.* = .{
         .dep = dep,
         .chip = .{
@@ -18612,7 +18612,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -18637,7 +18637,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H563ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H563ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H563ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -18662,7 +18662,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573AI.* = .{
         .dep = dep,
         .chip = .{
@@ -18687,7 +18687,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573II.* = .{
         .dep = dep,
         .chip = .{
@@ -18712,7 +18712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573MI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573MI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573MI.* = .{
         .dep = dep,
         .chip = .{
@@ -18737,7 +18737,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573RI.* = .{
         .dep = dep,
         .chip = .{
@@ -18762,7 +18762,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573VI.* = .{
         .dep = dep,
         .chip = .{
@@ -18787,7 +18787,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H573ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H573ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H573ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -18812,7 +18812,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H723VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H723VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H723VE.* = .{
         .dep = dep,
         .chip = .{
@@ -18838,7 +18838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H723VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H723VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H723VG.* = .{
         .dep = dep,
         .chip = .{
@@ -18864,7 +18864,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H723ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H723ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H723ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -18890,7 +18890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H723ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H723ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H723ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -18916,7 +18916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725AE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725AE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725AE.* = .{
         .dep = dep,
         .chip = .{
@@ -18942,7 +18942,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725AG.* = .{
         .dep = dep,
         .chip = .{
@@ -18968,7 +18968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725IE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725IE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725IE.* = .{
         .dep = dep,
         .chip = .{
@@ -18994,7 +18994,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725IG.* = .{
         .dep = dep,
         .chip = .{
@@ -19020,7 +19020,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725RE.* = .{
         .dep = dep,
         .chip = .{
@@ -19046,7 +19046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725RG.* = .{
         .dep = dep,
         .chip = .{
@@ -19072,7 +19072,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725VE.* = .{
         .dep = dep,
         .chip = .{
@@ -19098,7 +19098,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725VG.* = .{
         .dep = dep,
         .chip = .{
@@ -19124,7 +19124,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -19150,7 +19150,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H725ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H725ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H725ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -19176,7 +19176,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H730AB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H730AB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H730AB.* = .{
         .dep = dep,
         .chip = .{
@@ -19202,7 +19202,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H730IB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H730IB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H730IB.* = .{
         .dep = dep,
         .chip = .{
@@ -19228,7 +19228,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H730VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H730VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H730VB.* = .{
         .dep = dep,
         .chip = .{
@@ -19254,7 +19254,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H730ZB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H730ZB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H730ZB.* = .{
         .dep = dep,
         .chip = .{
@@ -19280,7 +19280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H733VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H733VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H733VG.* = .{
         .dep = dep,
         .chip = .{
@@ -19306,7 +19306,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H733ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H733ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H733ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -19332,7 +19332,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H735AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H735AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H735AG.* = .{
         .dep = dep,
         .chip = .{
@@ -19358,7 +19358,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H735IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H735IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H735IG.* = .{
         .dep = dep,
         .chip = .{
@@ -19384,7 +19384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H735RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H735RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H735RG.* = .{
         .dep = dep,
         .chip = .{
@@ -19410,7 +19410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H735VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H735VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H735VG.* = .{
         .dep = dep,
         .chip = .{
@@ -19436,7 +19436,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H735ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H735ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H735ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -19462,7 +19462,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742AG.* = .{
         .dep = dep,
         .chip = .{
@@ -19490,7 +19490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742AI.* = .{
         .dep = dep,
         .chip = .{
@@ -19518,7 +19518,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742BG.* = .{
         .dep = dep,
         .chip = .{
@@ -19546,7 +19546,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742BI.* = .{
         .dep = dep,
         .chip = .{
@@ -19574,7 +19574,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742IG.* = .{
         .dep = dep,
         .chip = .{
@@ -19602,7 +19602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742II.* = .{
         .dep = dep,
         .chip = .{
@@ -19630,7 +19630,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742VG.* = .{
         .dep = dep,
         .chip = .{
@@ -19658,7 +19658,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742VI.* = .{
         .dep = dep,
         .chip = .{
@@ -19686,7 +19686,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742XG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742XG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742XG.* = .{
         .dep = dep,
         .chip = .{
@@ -19714,7 +19714,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742XI.* = .{
         .dep = dep,
         .chip = .{
@@ -19742,7 +19742,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -19770,7 +19770,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H742ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H742ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H742ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -19798,7 +19798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743AG.* = .{
         .dep = dep,
         .chip = .{
@@ -19825,7 +19825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743AI.* = .{
         .dep = dep,
         .chip = .{
@@ -19852,7 +19852,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743BG.* = .{
         .dep = dep,
         .chip = .{
@@ -19879,7 +19879,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743BI.* = .{
         .dep = dep,
         .chip = .{
@@ -19906,7 +19906,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743IG.* = .{
         .dep = dep,
         .chip = .{
@@ -19933,7 +19933,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743II.* = .{
         .dep = dep,
         .chip = .{
@@ -19960,7 +19960,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743VG.* = .{
         .dep = dep,
         .chip = .{
@@ -19987,7 +19987,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743VI.* = .{
         .dep = dep,
         .chip = .{
@@ -20014,7 +20014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743XG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743XG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743XG.* = .{
         .dep = dep,
         .chip = .{
@@ -20041,7 +20041,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743XI.* = .{
         .dep = dep,
         .chip = .{
@@ -20068,7 +20068,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -20095,7 +20095,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H743ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H743ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H743ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -20122,7 +20122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745BG.* = .{
         .dep = dep,
         .chip = .{
@@ -20149,7 +20149,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745BI.* = .{
         .dep = dep,
         .chip = .{
@@ -20176,7 +20176,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745IG.* = .{
         .dep = dep,
         .chip = .{
@@ -20203,7 +20203,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745II.* = .{
         .dep = dep,
         .chip = .{
@@ -20230,7 +20230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745XG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745XG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745XG.* = .{
         .dep = dep,
         .chip = .{
@@ -20257,7 +20257,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745XI.* = .{
         .dep = dep,
         .chip = .{
@@ -20284,7 +20284,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -20311,7 +20311,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H745ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H745ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H745ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -20338,7 +20338,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747AG.* = .{
         .dep = dep,
         .chip = .{
@@ -20365,7 +20365,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747AI.* = .{
         .dep = dep,
         .chip = .{
@@ -20392,7 +20392,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747BG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747BG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747BG.* = .{
         .dep = dep,
         .chip = .{
@@ -20419,7 +20419,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747BI.* = .{
         .dep = dep,
         .chip = .{
@@ -20446,7 +20446,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747IG.* = .{
         .dep = dep,
         .chip = .{
@@ -20473,7 +20473,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747II.* = .{
         .dep = dep,
         .chip = .{
@@ -20500,7 +20500,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747XG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747XG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747XG.* = .{
         .dep = dep,
         .chip = .{
@@ -20527,7 +20527,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747XI.* = .{
         .dep = dep,
         .chip = .{
@@ -20554,7 +20554,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H747ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H747ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H747ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -20581,7 +20581,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H750IB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H750IB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H750IB.* = .{
         .dep = dep,
         .chip = .{
@@ -20607,7 +20607,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H750VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H750VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H750VB.* = .{
         .dep = dep,
         .chip = .{
@@ -20633,7 +20633,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H750XB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H750XB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H750XB.* = .{
         .dep = dep,
         .chip = .{
@@ -20659,7 +20659,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H750ZB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H750ZB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H750ZB.* = .{
         .dep = dep,
         .chip = .{
@@ -20685,7 +20685,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753AI.* = .{
         .dep = dep,
         .chip = .{
@@ -20712,7 +20712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753BI.* = .{
         .dep = dep,
         .chip = .{
@@ -20739,7 +20739,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753II.* = .{
         .dep = dep,
         .chip = .{
@@ -20766,7 +20766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753VI.* = .{
         .dep = dep,
         .chip = .{
@@ -20793,7 +20793,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753XI.* = .{
         .dep = dep,
         .chip = .{
@@ -20820,7 +20820,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H753ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H753ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H753ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -20847,7 +20847,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H755BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H755BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H755BI.* = .{
         .dep = dep,
         .chip = .{
@@ -20874,7 +20874,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H755II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H755II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H755II.* = .{
         .dep = dep,
         .chip = .{
@@ -20901,7 +20901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H755XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H755XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H755XI.* = .{
         .dep = dep,
         .chip = .{
@@ -20928,7 +20928,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H755ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H755ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H755ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -20955,7 +20955,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H757AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H757AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H757AI.* = .{
         .dep = dep,
         .chip = .{
@@ -20982,7 +20982,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H757BI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H757BI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H757BI.* = .{
         .dep = dep,
         .chip = .{
@@ -21009,7 +21009,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H757II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H757II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H757II.* = .{
         .dep = dep,
         .chip = .{
@@ -21036,7 +21036,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H757XI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H757XI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H757XI.* = .{
         .dep = dep,
         .chip = .{
@@ -21063,7 +21063,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H757ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H757ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H757ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -21090,7 +21090,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3AG.* = .{
         .dep = dep,
         .chip = .{
@@ -21115,7 +21115,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3AI.* = .{
         .dep = dep,
         .chip = .{
@@ -21140,7 +21140,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3IG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3IG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3IG.* = .{
         .dep = dep,
         .chip = .{
@@ -21165,7 +21165,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3II.* = .{
         .dep = dep,
         .chip = .{
@@ -21190,7 +21190,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3LG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3LG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3LG.* = .{
         .dep = dep,
         .chip = .{
@@ -21215,7 +21215,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3LI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3LI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3LI.* = .{
         .dep = dep,
         .chip = .{
@@ -21240,7 +21240,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3NG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3NG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3NG.* = .{
         .dep = dep,
         .chip = .{
@@ -21265,7 +21265,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3NI.* = .{
         .dep = dep,
         .chip = .{
@@ -21290,7 +21290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3QI.* = .{
         .dep = dep,
         .chip = .{
@@ -21315,7 +21315,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3RG.* = .{
         .dep = dep,
         .chip = .{
@@ -21340,7 +21340,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3RI.* = .{
         .dep = dep,
         .chip = .{
@@ -21365,7 +21365,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3VG.* = .{
         .dep = dep,
         .chip = .{
@@ -21390,7 +21390,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3VI.* = .{
         .dep = dep,
         .chip = .{
@@ -21415,7 +21415,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -21440,7 +21440,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7A3ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7A3ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7A3ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -21465,7 +21465,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B0AB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B0AB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B0AB.* = .{
         .dep = dep,
         .chip = .{
@@ -21489,7 +21489,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B0IB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B0IB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B0IB.* = .{
         .dep = dep,
         .chip = .{
@@ -21513,7 +21513,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B0RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B0RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B0RB.* = .{
         .dep = dep,
         .chip = .{
@@ -21537,7 +21537,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B0VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B0VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B0VB.* = .{
         .dep = dep,
         .chip = .{
@@ -21561,7 +21561,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B0ZB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B0ZB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B0ZB.* = .{
         .dep = dep,
         .chip = .{
@@ -21585,7 +21585,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3AI.* = .{
         .dep = dep,
         .chip = .{
@@ -21610,7 +21610,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3II = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3II = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3II.* = .{
         .dep = dep,
         .chip = .{
@@ -21635,7 +21635,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3LI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3LI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3LI.* = .{
         .dep = dep,
         .chip = .{
@@ -21660,7 +21660,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3NI.* = .{
         .dep = dep,
         .chip = .{
@@ -21685,7 +21685,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3QI.* = .{
         .dep = dep,
         .chip = .{
@@ -21710,7 +21710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3RI.* = .{
         .dep = dep,
         .chip = .{
@@ -21735,7 +21735,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3VI.* = .{
         .dep = dep,
         .chip = .{
@@ -21760,7 +21760,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7B3ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7B3ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7B3ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -21785,7 +21785,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3A8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3A8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3A8.* = .{
         .dep = dep,
         .chip = .{
@@ -21814,7 +21814,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3I8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3I8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3I8.* = .{
         .dep = dep,
         .chip = .{
@@ -21843,7 +21843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3L8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3L8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3L8.* = .{
         .dep = dep,
         .chip = .{
@@ -21872,7 +21872,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3R8.* = .{
         .dep = dep,
         .chip = .{
@@ -21901,7 +21901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3V8.* = .{
         .dep = dep,
         .chip = .{
@@ -21930,7 +21930,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R3Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R3Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R3Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -21959,7 +21959,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R7A8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R7A8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R7A8.* = .{
         .dep = dep,
         .chip = .{
@@ -21988,7 +21988,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R7I8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R7I8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R7I8.* = .{
         .dep = dep,
         .chip = .{
@@ -22017,7 +22017,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R7L8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R7L8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R7L8.* = .{
         .dep = dep,
         .chip = .{
@@ -22046,7 +22046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7R7Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7R7Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7R7Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -22075,7 +22075,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3A8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3A8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3A8.* = .{
         .dep = dep,
         .chip = .{
@@ -22104,7 +22104,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3I8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3I8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3I8.* = .{
         .dep = dep,
         .chip = .{
@@ -22133,7 +22133,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3L8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3L8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3L8.* = .{
         .dep = dep,
         .chip = .{
@@ -22162,7 +22162,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3R8.* = .{
         .dep = dep,
         .chip = .{
@@ -22191,7 +22191,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3V8.* = .{
         .dep = dep,
         .chip = .{
@@ -22220,7 +22220,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S3Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S3Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S3Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -22249,7 +22249,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S7A8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S7A8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S7A8.* = .{
         .dep = dep,
         .chip = .{
@@ -22278,7 +22278,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S7I8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S7I8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S7I8.* = .{
         .dep = dep,
         .chip = .{
@@ -22307,7 +22307,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S7L8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S7L8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S7L8.* = .{
         .dep = dep,
         .chip = .{
@@ -22336,7 +22336,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32H7S7Z8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32H7S7Z8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32H7S7Z8.* = .{
         .dep = dep,
         .chip = .{
@@ -22365,7 +22365,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010C6.* = .{
         .dep = dep,
         .chip = .{
@@ -22386,7 +22386,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010F4.* = .{
         .dep = dep,
         .chip = .{
@@ -22407,7 +22407,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010K4.* = .{
         .dep = dep,
         .chip = .{
@@ -22428,7 +22428,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010K8.* = .{
         .dep = dep,
         .chip = .{
@@ -22449,7 +22449,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010R8.* = .{
         .dep = dep,
         .chip = .{
@@ -22470,7 +22470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L010RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L010RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L010RB.* = .{
         .dep = dep,
         .chip = .{
@@ -22491,7 +22491,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011D3 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011D3 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011D3.* = .{
         .dep = dep,
         .chip = .{
@@ -22512,7 +22512,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011D4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011D4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011D4.* = .{
         .dep = dep,
         .chip = .{
@@ -22533,7 +22533,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011E3 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011E3 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011E3.* = .{
         .dep = dep,
         .chip = .{
@@ -22554,7 +22554,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011E4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011E4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011E4.* = .{
         .dep = dep,
         .chip = .{
@@ -22575,7 +22575,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011F3 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011F3 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011F3.* = .{
         .dep = dep,
         .chip = .{
@@ -22596,7 +22596,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011F4.* = .{
         .dep = dep,
         .chip = .{
@@ -22617,7 +22617,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011G3 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011G3 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011G3.* = .{
         .dep = dep,
         .chip = .{
@@ -22638,7 +22638,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011G4.* = .{
         .dep = dep,
         .chip = .{
@@ -22659,7 +22659,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011K3 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011K3 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011K3.* = .{
         .dep = dep,
         .chip = .{
@@ -22680,7 +22680,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L011K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L011K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L011K4.* = .{
         .dep = dep,
         .chip = .{
@@ -22701,7 +22701,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L021D4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L021D4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L021D4.* = .{
         .dep = dep,
         .chip = .{
@@ -22722,7 +22722,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L021F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L021F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L021F4.* = .{
         .dep = dep,
         .chip = .{
@@ -22743,7 +22743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L021G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L021G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L021G4.* = .{
         .dep = dep,
         .chip = .{
@@ -22764,7 +22764,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L021K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L021K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L021K4.* = .{
         .dep = dep,
         .chip = .{
@@ -22785,7 +22785,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031C4.* = .{
         .dep = dep,
         .chip = .{
@@ -22806,7 +22806,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031C6.* = .{
         .dep = dep,
         .chip = .{
@@ -22827,7 +22827,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031E4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031E4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031E4.* = .{
         .dep = dep,
         .chip = .{
@@ -22848,7 +22848,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031E6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031E6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031E6.* = .{
         .dep = dep,
         .chip = .{
@@ -22869,7 +22869,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031F4.* = .{
         .dep = dep,
         .chip = .{
@@ -22890,7 +22890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031F6.* = .{
         .dep = dep,
         .chip = .{
@@ -22911,7 +22911,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031G4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031G4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031G4.* = .{
         .dep = dep,
         .chip = .{
@@ -22932,7 +22932,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031G6.* = .{
         .dep = dep,
         .chip = .{
@@ -22953,7 +22953,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031K4.* = .{
         .dep = dep,
         .chip = .{
@@ -22974,7 +22974,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L031K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L031K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L031K6.* = .{
         .dep = dep,
         .chip = .{
@@ -22995,7 +22995,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041C4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041C4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041C4.* = .{
         .dep = dep,
         .chip = .{
@@ -23016,7 +23016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041C6.* = .{
         .dep = dep,
         .chip = .{
@@ -23037,7 +23037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041E6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041E6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041E6.* = .{
         .dep = dep,
         .chip = .{
@@ -23058,7 +23058,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041F6.* = .{
         .dep = dep,
         .chip = .{
@@ -23079,7 +23079,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041G6.* = .{
         .dep = dep,
         .chip = .{
@@ -23100,7 +23100,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L041K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L041K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L041K6.* = .{
         .dep = dep,
         .chip = .{
@@ -23121,7 +23121,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051C6.* = .{
         .dep = dep,
         .chip = .{
@@ -23142,7 +23142,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23163,7 +23163,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051K6.* = .{
         .dep = dep,
         .chip = .{
@@ -23184,7 +23184,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051K8.* = .{
         .dep = dep,
         .chip = .{
@@ -23205,7 +23205,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051R6.* = .{
         .dep = dep,
         .chip = .{
@@ -23226,7 +23226,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051R8.* = .{
         .dep = dep,
         .chip = .{
@@ -23247,7 +23247,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051T6.* = .{
         .dep = dep,
         .chip = .{
@@ -23268,7 +23268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L051T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L051T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L051T8.* = .{
         .dep = dep,
         .chip = .{
@@ -23289,7 +23289,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052C6.* = .{
         .dep = dep,
         .chip = .{
@@ -23310,7 +23310,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23331,7 +23331,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052K6.* = .{
         .dep = dep,
         .chip = .{
@@ -23352,7 +23352,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052K8.* = .{
         .dep = dep,
         .chip = .{
@@ -23373,7 +23373,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052R6.* = .{
         .dep = dep,
         .chip = .{
@@ -23394,7 +23394,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052R8.* = .{
         .dep = dep,
         .chip = .{
@@ -23415,7 +23415,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052T6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052T6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052T6.* = .{
         .dep = dep,
         .chip = .{
@@ -23436,7 +23436,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L052T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L052T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L052T8.* = .{
         .dep = dep,
         .chip = .{
@@ -23457,7 +23457,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L053C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L053C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L053C6.* = .{
         .dep = dep,
         .chip = .{
@@ -23478,7 +23478,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L053C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L053C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L053C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23499,7 +23499,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L053R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L053R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L053R6.* = .{
         .dep = dep,
         .chip = .{
@@ -23520,7 +23520,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L053R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L053R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L053R8.* = .{
         .dep = dep,
         .chip = .{
@@ -23541,7 +23541,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L062C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L062C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L062C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23562,7 +23562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L062K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L062K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L062K8.* = .{
         .dep = dep,
         .chip = .{
@@ -23583,7 +23583,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L063C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L063C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L063C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23604,7 +23604,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L063R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L063R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L063R8.* = .{
         .dep = dep,
         .chip = .{
@@ -23625,7 +23625,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071C8.* = .{
         .dep = dep,
         .chip = .{
@@ -23646,7 +23646,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071CB.* = .{
         .dep = dep,
         .chip = .{
@@ -23667,7 +23667,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23688,7 +23688,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071K8.* = .{
         .dep = dep,
         .chip = .{
@@ -23709,7 +23709,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071KB.* = .{
         .dep = dep,
         .chip = .{
@@ -23730,7 +23730,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071KZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071KZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071KZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23751,7 +23751,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071RB.* = .{
         .dep = dep,
         .chip = .{
@@ -23772,7 +23772,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071RZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071RZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071RZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23793,7 +23793,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071V8.* = .{
         .dep = dep,
         .chip = .{
@@ -23814,7 +23814,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071VB.* = .{
         .dep = dep,
         .chip = .{
@@ -23835,7 +23835,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L071VZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L071VZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L071VZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23856,7 +23856,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072CB.* = .{
         .dep = dep,
         .chip = .{
@@ -23877,7 +23877,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23898,7 +23898,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072KB.* = .{
         .dep = dep,
         .chip = .{
@@ -23919,7 +23919,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072KZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072KZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072KZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23940,7 +23940,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072RB.* = .{
         .dep = dep,
         .chip = .{
@@ -23961,7 +23961,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072RZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072RZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072RZ.* = .{
         .dep = dep,
         .chip = .{
@@ -23982,7 +23982,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072V8.* = .{
         .dep = dep,
         .chip = .{
@@ -24003,7 +24003,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072VB.* = .{
         .dep = dep,
         .chip = .{
@@ -24024,7 +24024,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L072VZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L072VZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L072VZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24045,7 +24045,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073CB.* = .{
         .dep = dep,
         .chip = .{
@@ -24066,7 +24066,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24087,7 +24087,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073RB.* = .{
         .dep = dep,
         .chip = .{
@@ -24108,7 +24108,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073RZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073RZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073RZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24129,7 +24129,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073V8.* = .{
         .dep = dep,
         .chip = .{
@@ -24150,7 +24150,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073VB.* = .{
         .dep = dep,
         .chip = .{
@@ -24171,7 +24171,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L073VZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L073VZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L073VZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24192,7 +24192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L081CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L081CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L081CB.* = .{
         .dep = dep,
         .chip = .{
@@ -24213,7 +24213,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L081CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L081CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L081CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24234,7 +24234,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L081KZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L081KZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L081KZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24255,7 +24255,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L082CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L082CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L082CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24276,7 +24276,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L082KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L082KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L082KB.* = .{
         .dep = dep,
         .chip = .{
@@ -24297,7 +24297,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L082KZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L082KZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L082KZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24318,7 +24318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083CB.* = .{
         .dep = dep,
         .chip = .{
@@ -24339,7 +24339,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083CZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083CZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083CZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24360,7 +24360,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083RB.* = .{
         .dep = dep,
         .chip = .{
@@ -24381,7 +24381,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083RZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083RZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083RZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24402,7 +24402,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083V8.* = .{
         .dep = dep,
         .chip = .{
@@ -24423,7 +24423,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083VB.* = .{
         .dep = dep,
         .chip = .{
@@ -24444,7 +24444,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L083VZ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L083VZ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L083VZ.* = .{
         .dep = dep,
         .chip = .{
@@ -24465,7 +24465,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L100C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L100C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L100C6.* = .{
         .dep = dep,
         .chip = .{
@@ -24486,7 +24486,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L100C6-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L100C6-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L100C6-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24507,7 +24507,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L100R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L100R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L100R8.* = .{
         .dep = dep,
         .chip = .{
@@ -24528,7 +24528,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L100R8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L100R8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L100R8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24549,7 +24549,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L100RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L100RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L100RB.* = .{
         .dep = dep,
         .chip = .{
@@ -24570,7 +24570,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L100RB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L100RB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L100RB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24591,7 +24591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L100RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L100RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L100RC.* = .{
         .dep = dep,
         .chip = .{
@@ -24612,7 +24612,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151C6.* = .{
         .dep = dep,
         .chip = .{
@@ -24633,7 +24633,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151C6-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151C6-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151C6-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24654,7 +24654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151C8.* = .{
         .dep = dep,
         .chip = .{
@@ -24675,7 +24675,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151C8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151C8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151C8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24696,7 +24696,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151CB.* = .{
         .dep = dep,
         .chip = .{
@@ -24717,7 +24717,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151CB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151CB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151CB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24738,7 +24738,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151CC.* = .{
         .dep = dep,
         .chip = .{
@@ -24759,7 +24759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151QC.* = .{
         .dep = dep,
         .chip = .{
@@ -24780,7 +24780,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151QD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151QD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151QD.* = .{
         .dep = dep,
         .chip = .{
@@ -24802,7 +24802,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151QE.* = .{
         .dep = dep,
         .chip = .{
@@ -24824,7 +24824,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151R6.* = .{
         .dep = dep,
         .chip = .{
@@ -24845,7 +24845,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151R6-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151R6-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151R6-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24866,7 +24866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151R8.* = .{
         .dep = dep,
         .chip = .{
@@ -24887,7 +24887,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151R8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151R8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151R8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24908,7 +24908,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151RB.* = .{
         .dep = dep,
         .chip = .{
@@ -24929,7 +24929,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151RB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151RB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151RB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24950,7 +24950,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151RC.* = .{
         .dep = dep,
         .chip = .{
@@ -24971,7 +24971,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151RC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151RC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151RC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -24992,7 +24992,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151RD.* = .{
         .dep = dep,
         .chip = .{
@@ -25014,7 +25014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151RE.* = .{
         .dep = dep,
         .chip = .{
@@ -25036,7 +25036,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151UC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151UC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151UC.* = .{
         .dep = dep,
         .chip = .{
@@ -25057,7 +25057,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151V8.* = .{
         .dep = dep,
         .chip = .{
@@ -25078,7 +25078,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151V8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151V8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151V8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25099,7 +25099,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151VB.* = .{
         .dep = dep,
         .chip = .{
@@ -25120,7 +25120,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151VB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151VB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151VB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25141,7 +25141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151VC.* = .{
         .dep = dep,
         .chip = .{
@@ -25162,7 +25162,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151VC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151VC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151VC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25183,7 +25183,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151VD.* = .{
         .dep = dep,
         .chip = .{
@@ -25205,7 +25205,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L151VD-X" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L151VD-X" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L151VD-X".* = .{
         .dep = dep,
         .chip = .{
@@ -25227,7 +25227,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151VE.* = .{
         .dep = dep,
         .chip = .{
@@ -25249,7 +25249,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -25270,7 +25270,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -25292,7 +25292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L151ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L151ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L151ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -25314,7 +25314,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152C6.* = .{
         .dep = dep,
         .chip = .{
@@ -25335,7 +25335,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152C6-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152C6-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152C6-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25356,7 +25356,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152C8.* = .{
         .dep = dep,
         .chip = .{
@@ -25377,7 +25377,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152C8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152C8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152C8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25398,7 +25398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152CB.* = .{
         .dep = dep,
         .chip = .{
@@ -25419,7 +25419,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152CB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152CB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152CB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25440,7 +25440,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152CC.* = .{
         .dep = dep,
         .chip = .{
@@ -25461,7 +25461,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152QC.* = .{
         .dep = dep,
         .chip = .{
@@ -25482,7 +25482,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152QD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152QD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152QD.* = .{
         .dep = dep,
         .chip = .{
@@ -25504,7 +25504,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152QE.* = .{
         .dep = dep,
         .chip = .{
@@ -25526,7 +25526,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152R6.* = .{
         .dep = dep,
         .chip = .{
@@ -25547,7 +25547,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152R6-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152R6-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152R6-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25568,7 +25568,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152R8.* = .{
         .dep = dep,
         .chip = .{
@@ -25589,7 +25589,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152R8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152R8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152R8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25610,7 +25610,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152RB.* = .{
         .dep = dep,
         .chip = .{
@@ -25631,7 +25631,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152RB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152RB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152RB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25652,7 +25652,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152RC.* = .{
         .dep = dep,
         .chip = .{
@@ -25673,7 +25673,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152RC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152RC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152RC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25694,7 +25694,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152RD.* = .{
         .dep = dep,
         .chip = .{
@@ -25716,7 +25716,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152RE.* = .{
         .dep = dep,
         .chip = .{
@@ -25738,7 +25738,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152UC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152UC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152UC.* = .{
         .dep = dep,
         .chip = .{
@@ -25759,7 +25759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152V8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152V8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152V8.* = .{
         .dep = dep,
         .chip = .{
@@ -25780,7 +25780,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152V8-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152V8-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152V8-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25801,7 +25801,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152VB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152VB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152VB.* = .{
         .dep = dep,
         .chip = .{
@@ -25822,7 +25822,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152VB-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152VB-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152VB-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25843,7 +25843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152VC.* = .{
         .dep = dep,
         .chip = .{
@@ -25864,7 +25864,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152VC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152VC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152VC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -25885,7 +25885,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152VD.* = .{
         .dep = dep,
         .chip = .{
@@ -25907,7 +25907,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L152VD-X" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L152VD-X" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L152VD-X".* = .{
         .dep = dep,
         .chip = .{
@@ -25929,7 +25929,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152VE.* = .{
         .dep = dep,
         .chip = .{
@@ -25951,7 +25951,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -25972,7 +25972,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -25994,7 +25994,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L152ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L152ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L152ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -26016,7 +26016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162QC.* = .{
         .dep = dep,
         .chip = .{
@@ -26037,7 +26037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162QD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162QD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162QD.* = .{
         .dep = dep,
         .chip = .{
@@ -26059,7 +26059,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162RC.* = .{
         .dep = dep,
         .chip = .{
@@ -26080,7 +26080,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L162RC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L162RC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L162RC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -26101,7 +26101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162RD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162RD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162RD.* = .{
         .dep = dep,
         .chip = .{
@@ -26123,7 +26123,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162RE.* = .{
         .dep = dep,
         .chip = .{
@@ -26145,7 +26145,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162VC.* = .{
         .dep = dep,
         .chip = .{
@@ -26166,7 +26166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L162VC-A" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L162VC-A" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L162VC-A".* = .{
         .dep = dep,
         .chip = .{
@@ -26187,7 +26187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162VD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162VD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162VD.* = .{
         .dep = dep,
         .chip = .{
@@ -26209,7 +26209,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.@"STM32L162VD-X" = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.@"STM32L162VD-X" = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.@"STM32L162VD-X".* = .{
         .dep = dep,
         .chip = .{
@@ -26231,7 +26231,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162VE.* = .{
         .dep = dep,
         .chip = .{
@@ -26253,7 +26253,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -26274,7 +26274,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162ZD = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162ZD = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162ZD.* = .{
         .dep = dep,
         .chip = .{
@@ -26296,7 +26296,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L162ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L162ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L162ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -26318,7 +26318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412C8.* = .{
         .dep = dep,
         .chip = .{
@@ -26342,7 +26342,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412CB.* = .{
         .dep = dep,
         .chip = .{
@@ -26366,7 +26366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412K8.* = .{
         .dep = dep,
         .chip = .{
@@ -26390,7 +26390,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412KB.* = .{
         .dep = dep,
         .chip = .{
@@ -26414,7 +26414,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412R8.* = .{
         .dep = dep,
         .chip = .{
@@ -26438,7 +26438,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412RB.* = .{
         .dep = dep,
         .chip = .{
@@ -26462,7 +26462,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412T8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412T8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412T8.* = .{
         .dep = dep,
         .chip = .{
@@ -26486,7 +26486,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L412TB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L412TB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L412TB.* = .{
         .dep = dep,
         .chip = .{
@@ -26510,7 +26510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L422CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L422CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L422CB.* = .{
         .dep = dep,
         .chip = .{
@@ -26534,7 +26534,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L422KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L422KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L422KB.* = .{
         .dep = dep,
         .chip = .{
@@ -26558,7 +26558,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L422RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L422RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L422RB.* = .{
         .dep = dep,
         .chip = .{
@@ -26582,7 +26582,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L422TB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L422TB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L422TB.* = .{
         .dep = dep,
         .chip = .{
@@ -26606,7 +26606,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431CB.* = .{
         .dep = dep,
         .chip = .{
@@ -26630,7 +26630,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431CC.* = .{
         .dep = dep,
         .chip = .{
@@ -26654,7 +26654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431KB.* = .{
         .dep = dep,
         .chip = .{
@@ -26678,7 +26678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431KC.* = .{
         .dep = dep,
         .chip = .{
@@ -26702,7 +26702,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431RB.* = .{
         .dep = dep,
         .chip = .{
@@ -26726,7 +26726,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431RC.* = .{
         .dep = dep,
         .chip = .{
@@ -26750,7 +26750,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L431VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L431VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L431VC.* = .{
         .dep = dep,
         .chip = .{
@@ -26774,7 +26774,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L432KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L432KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L432KB.* = .{
         .dep = dep,
         .chip = .{
@@ -26798,7 +26798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L432KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L432KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L432KC.* = .{
         .dep = dep,
         .chip = .{
@@ -26822,7 +26822,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L433CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L433CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L433CB.* = .{
         .dep = dep,
         .chip = .{
@@ -26846,7 +26846,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L433CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L433CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L433CC.* = .{
         .dep = dep,
         .chip = .{
@@ -26870,7 +26870,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L433RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L433RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L433RB.* = .{
         .dep = dep,
         .chip = .{
@@ -26894,7 +26894,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L433RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L433RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L433RC.* = .{
         .dep = dep,
         .chip = .{
@@ -26918,7 +26918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L433VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L433VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L433VC.* = .{
         .dep = dep,
         .chip = .{
@@ -26942,7 +26942,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L442KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L442KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L442KC.* = .{
         .dep = dep,
         .chip = .{
@@ -26966,7 +26966,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L443CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L443CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L443CC.* = .{
         .dep = dep,
         .chip = .{
@@ -26990,7 +26990,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L443RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L443RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L443RC.* = .{
         .dep = dep,
         .chip = .{
@@ -27014,7 +27014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L443VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L443VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L443VC.* = .{
         .dep = dep,
         .chip = .{
@@ -27038,7 +27038,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451CC.* = .{
         .dep = dep,
         .chip = .{
@@ -27062,7 +27062,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451CE.* = .{
         .dep = dep,
         .chip = .{
@@ -27086,7 +27086,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451RC.* = .{
         .dep = dep,
         .chip = .{
@@ -27110,7 +27110,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27134,7 +27134,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451VC.* = .{
         .dep = dep,
         .chip = .{
@@ -27158,7 +27158,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L451VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L451VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L451VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27182,7 +27182,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452CC.* = .{
         .dep = dep,
         .chip = .{
@@ -27206,7 +27206,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452CE.* = .{
         .dep = dep,
         .chip = .{
@@ -27230,7 +27230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452RC.* = .{
         .dep = dep,
         .chip = .{
@@ -27254,7 +27254,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27278,7 +27278,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452VC.* = .{
         .dep = dep,
         .chip = .{
@@ -27302,7 +27302,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L452VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L452VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L452VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27326,7 +27326,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L462CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L462CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L462CE.* = .{
         .dep = dep,
         .chip = .{
@@ -27350,7 +27350,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L462RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L462RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L462RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27374,7 +27374,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L462VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L462VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L462VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27398,7 +27398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471QE.* = .{
         .dep = dep,
         .chip = .{
@@ -27422,7 +27422,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471QG.* = .{
         .dep = dep,
         .chip = .{
@@ -27446,7 +27446,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27470,7 +27470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471RG.* = .{
         .dep = dep,
         .chip = .{
@@ -27494,7 +27494,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27518,7 +27518,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471VG.* = .{
         .dep = dep,
         .chip = .{
@@ -27542,7 +27542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -27566,7 +27566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L471ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L471ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L471ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -27590,7 +27590,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475RC.* = .{
         .dep = dep,
         .chip = .{
@@ -27614,7 +27614,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27638,7 +27638,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475RG.* = .{
         .dep = dep,
         .chip = .{
@@ -27662,7 +27662,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475VC.* = .{
         .dep = dep,
         .chip = .{
@@ -27686,7 +27686,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27710,7 +27710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L475VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L475VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L475VG.* = .{
         .dep = dep,
         .chip = .{
@@ -27734,7 +27734,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476JE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476JE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476JE.* = .{
         .dep = dep,
         .chip = .{
@@ -27758,7 +27758,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476JG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476JG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476JG.* = .{
         .dep = dep,
         .chip = .{
@@ -27782,7 +27782,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476ME.* = .{
         .dep = dep,
         .chip = .{
@@ -27806,7 +27806,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476MG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476MG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476MG.* = .{
         .dep = dep,
         .chip = .{
@@ -27830,7 +27830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476QE.* = .{
         .dep = dep,
         .chip = .{
@@ -27854,7 +27854,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476QG.* = .{
         .dep = dep,
         .chip = .{
@@ -27878,7 +27878,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476RC.* = .{
         .dep = dep,
         .chip = .{
@@ -27902,7 +27902,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476RE.* = .{
         .dep = dep,
         .chip = .{
@@ -27926,7 +27926,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476RG.* = .{
         .dep = dep,
         .chip = .{
@@ -27950,7 +27950,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476VC.* = .{
         .dep = dep,
         .chip = .{
@@ -27974,7 +27974,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476VE.* = .{
         .dep = dep,
         .chip = .{
@@ -27998,7 +27998,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28022,7 +28022,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -28046,7 +28046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L476ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L476ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L476ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28070,7 +28070,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L486JG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L486JG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L486JG.* = .{
         .dep = dep,
         .chip = .{
@@ -28094,7 +28094,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L486QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L486QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L486QG.* = .{
         .dep = dep,
         .chip = .{
@@ -28118,7 +28118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L486RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L486RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L486RG.* = .{
         .dep = dep,
         .chip = .{
@@ -28142,7 +28142,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L486VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L486VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L486VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28166,7 +28166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L486ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L486ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L486ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28190,7 +28190,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496AE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496AE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496AE.* = .{
         .dep = dep,
         .chip = .{
@@ -28215,7 +28215,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496AG.* = .{
         .dep = dep,
         .chip = .{
@@ -28240,7 +28240,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496QE.* = .{
         .dep = dep,
         .chip = .{
@@ -28265,7 +28265,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496QG.* = .{
         .dep = dep,
         .chip = .{
@@ -28290,7 +28290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496RE.* = .{
         .dep = dep,
         .chip = .{
@@ -28315,7 +28315,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496RG.* = .{
         .dep = dep,
         .chip = .{
@@ -28340,7 +28340,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496VE.* = .{
         .dep = dep,
         .chip = .{
@@ -28365,7 +28365,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28390,7 +28390,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496WG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496WG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496WG.* = .{
         .dep = dep,
         .chip = .{
@@ -28415,7 +28415,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -28440,7 +28440,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L496ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L496ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L496ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28465,7 +28465,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4A6AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4A6AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4A6AG.* = .{
         .dep = dep,
         .chip = .{
@@ -28490,7 +28490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4A6QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4A6QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4A6QG.* = .{
         .dep = dep,
         .chip = .{
@@ -28515,7 +28515,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4A6RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4A6RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4A6RG.* = .{
         .dep = dep,
         .chip = .{
@@ -28540,7 +28540,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4A6VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4A6VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4A6VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28565,7 +28565,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4A6ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4A6ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4A6ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28590,7 +28590,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5AE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5AE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5AE.* = .{
         .dep = dep,
         .chip = .{
@@ -28612,7 +28612,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5AG.* = .{
         .dep = dep,
         .chip = .{
@@ -28634,7 +28634,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5CE.* = .{
         .dep = dep,
         .chip = .{
@@ -28656,7 +28656,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5CG.* = .{
         .dep = dep,
         .chip = .{
@@ -28678,7 +28678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5QE.* = .{
         .dep = dep,
         .chip = .{
@@ -28700,7 +28700,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5QG.* = .{
         .dep = dep,
         .chip = .{
@@ -28722,7 +28722,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5RE.* = .{
         .dep = dep,
         .chip = .{
@@ -28744,7 +28744,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5RG.* = .{
         .dep = dep,
         .chip = .{
@@ -28766,7 +28766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5VE.* = .{
         .dep = dep,
         .chip = .{
@@ -28788,7 +28788,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28810,7 +28810,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -28832,7 +28832,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4P5ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4P5ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4P5ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28854,7 +28854,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5AG.* = .{
         .dep = dep,
         .chip = .{
@@ -28876,7 +28876,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5CG.* = .{
         .dep = dep,
         .chip = .{
@@ -28898,7 +28898,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5QG.* = .{
         .dep = dep,
         .chip = .{
@@ -28920,7 +28920,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5RG.* = .{
         .dep = dep,
         .chip = .{
@@ -28942,7 +28942,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5VG.* = .{
         .dep = dep,
         .chip = .{
@@ -28964,7 +28964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4Q5ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4Q5ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4Q5ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -28986,7 +28986,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5AG.* = .{
         .dep = dep,
         .chip = .{
@@ -29008,7 +29008,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29030,7 +29030,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5QG.* = .{
         .dep = dep,
         .chip = .{
@@ -29052,7 +29052,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5QI.* = .{
         .dep = dep,
         .chip = .{
@@ -29074,7 +29074,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5VG.* = .{
         .dep = dep,
         .chip = .{
@@ -29096,7 +29096,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29118,7 +29118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -29140,7 +29140,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R5ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R5ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R5ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29162,7 +29162,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R7AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R7AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R7AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29184,7 +29184,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R7VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R7VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R7VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29206,7 +29206,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R7ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R7ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R7ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29228,7 +29228,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9AG.* = .{
         .dep = dep,
         .chip = .{
@@ -29250,7 +29250,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29272,7 +29272,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9VG.* = .{
         .dep = dep,
         .chip = .{
@@ -29294,7 +29294,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29316,7 +29316,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -29338,7 +29338,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4R9ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4R9ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4R9ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29360,7 +29360,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S5AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S5AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S5AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29382,7 +29382,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S5QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S5QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S5QI.* = .{
         .dep = dep,
         .chip = .{
@@ -29404,7 +29404,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S5VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S5VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S5VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29426,7 +29426,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S5ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S5ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S5ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29448,7 +29448,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S7AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S7AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S7AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29470,7 +29470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S7VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S7VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S7VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29492,7 +29492,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S7ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S7ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S7ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29514,7 +29514,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S9AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S9AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S9AI.* = .{
         .dep = dep,
         .chip = .{
@@ -29536,7 +29536,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S9VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S9VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S9VI.* = .{
         .dep = dep,
         .chip = .{
@@ -29558,7 +29558,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L4S9ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L4S9ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L4S9ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -29580,7 +29580,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552CC.* = .{
         .dep = dep,
         .chip = .{
@@ -29602,7 +29602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552CE.* = .{
         .dep = dep,
         .chip = .{
@@ -29624,7 +29624,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552ME.* = .{
         .dep = dep,
         .chip = .{
@@ -29646,7 +29646,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552QC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552QC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552QC.* = .{
         .dep = dep,
         .chip = .{
@@ -29668,7 +29668,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552QE.* = .{
         .dep = dep,
         .chip = .{
@@ -29690,7 +29690,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552RC.* = .{
         .dep = dep,
         .chip = .{
@@ -29712,7 +29712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552RE.* = .{
         .dep = dep,
         .chip = .{
@@ -29734,7 +29734,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552VC.* = .{
         .dep = dep,
         .chip = .{
@@ -29756,7 +29756,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552VE.* = .{
         .dep = dep,
         .chip = .{
@@ -29778,7 +29778,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552ZC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552ZC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552ZC.* = .{
         .dep = dep,
         .chip = .{
@@ -29800,7 +29800,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L552ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L552ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L552ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -29822,7 +29822,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562CE.* = .{
         .dep = dep,
         .chip = .{
@@ -29844,7 +29844,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562ME = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562ME = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562ME.* = .{
         .dep = dep,
         .chip = .{
@@ -29866,7 +29866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562QE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562QE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562QE.* = .{
         .dep = dep,
         .chip = .{
@@ -29888,7 +29888,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562RE.* = .{
         .dep = dep,
         .chip = .{
@@ -29910,7 +29910,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562VE.* = .{
         .dep = dep,
         .chip = .{
@@ -29932,7 +29932,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32L562ZE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32L562ZE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32L562ZE.* = .{
         .dep = dep,
         .chip = .{
@@ -29954,7 +29954,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031C6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031C6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031C6.* = .{
         .dep = dep,
         .chip = .{
@@ -29975,7 +29975,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031C8.* = .{
         .dep = dep,
         .chip = .{
@@ -29996,7 +29996,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031F4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031F4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031F4.* = .{
         .dep = dep,
         .chip = .{
@@ -30017,7 +30017,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031F6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031F6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031F6.* = .{
         .dep = dep,
         .chip = .{
@@ -30038,7 +30038,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031F8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031F8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031F8.* = .{
         .dep = dep,
         .chip = .{
@@ -30059,7 +30059,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031G6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031G6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031G6.* = .{
         .dep = dep,
         .chip = .{
@@ -30080,7 +30080,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031G8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031G8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031G8.* = .{
         .dep = dep,
         .chip = .{
@@ -30101,7 +30101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031K4 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031K4 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031K4.* = .{
         .dep = dep,
         .chip = .{
@@ -30122,7 +30122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031K6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031K6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031K6.* = .{
         .dep = dep,
         .chip = .{
@@ -30143,7 +30143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031K8.* = .{
         .dep = dep,
         .chip = .{
@@ -30164,7 +30164,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031R6 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031R6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031R6.* = .{
         .dep = dep,
         .chip = .{
@@ -30185,7 +30185,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U031R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U031R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U031R8.* = .{
         .dep = dep,
         .chip = .{
@@ -30206,7 +30206,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073C8.* = .{
         .dep = dep,
         .chip = .{
@@ -30227,7 +30227,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073CB.* = .{
         .dep = dep,
         .chip = .{
@@ -30248,7 +30248,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073CC.* = .{
         .dep = dep,
         .chip = .{
@@ -30269,7 +30269,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073H8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073H8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073H8.* = .{
         .dep = dep,
         .chip = .{
@@ -30290,7 +30290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073HB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073HB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073HB.* = .{
         .dep = dep,
         .chip = .{
@@ -30311,7 +30311,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073HC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073HC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073HC.* = .{
         .dep = dep,
         .chip = .{
@@ -30332,7 +30332,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073K8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073K8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073K8.* = .{
         .dep = dep,
         .chip = .{
@@ -30353,7 +30353,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073KB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073KB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073KB.* = .{
         .dep = dep,
         .chip = .{
@@ -30374,7 +30374,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073KC.* = .{
         .dep = dep,
         .chip = .{
@@ -30395,7 +30395,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073M8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073M8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073M8.* = .{
         .dep = dep,
         .chip = .{
@@ -30416,7 +30416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073MB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073MB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073MB.* = .{
         .dep = dep,
         .chip = .{
@@ -30437,7 +30437,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073MC.* = .{
         .dep = dep,
         .chip = .{
@@ -30458,7 +30458,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073R8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073R8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073R8.* = .{
         .dep = dep,
         .chip = .{
@@ -30479,7 +30479,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073RB.* = .{
         .dep = dep,
         .chip = .{
@@ -30500,7 +30500,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U073RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U073RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U073RC.* = .{
         .dep = dep,
         .chip = .{
@@ -30521,7 +30521,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U083CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U083CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U083CC.* = .{
         .dep = dep,
         .chip = .{
@@ -30542,7 +30542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U083HC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U083HC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U083HC.* = .{
         .dep = dep,
         .chip = .{
@@ -30563,7 +30563,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U083KC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U083KC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U083KC.* = .{
         .dep = dep,
         .chip = .{
@@ -30584,7 +30584,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U083MC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U083MC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U083MC.* = .{
         .dep = dep,
         .chip = .{
@@ -30605,7 +30605,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U083RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U083RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U083RC.* = .{
         .dep = dep,
         .chip = .{
@@ -30626,7 +30626,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535CB.* = .{
         .dep = dep,
         .chip = .{
@@ -30650,7 +30650,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535CC.* = .{
         .dep = dep,
         .chip = .{
@@ -30674,7 +30674,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535CE.* = .{
         .dep = dep,
         .chip = .{
@@ -30698,7 +30698,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535JE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535JE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535JE.* = .{
         .dep = dep,
         .chip = .{
@@ -30722,7 +30722,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535NC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535NC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535NC.* = .{
         .dep = dep,
         .chip = .{
@@ -30746,7 +30746,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535NE.* = .{
         .dep = dep,
         .chip = .{
@@ -30770,7 +30770,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535RB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535RB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535RB.* = .{
         .dep = dep,
         .chip = .{
@@ -30794,7 +30794,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535RC.* = .{
         .dep = dep,
         .chip = .{
@@ -30818,7 +30818,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535RE.* = .{
         .dep = dep,
         .chip = .{
@@ -30842,7 +30842,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535VC.* = .{
         .dep = dep,
         .chip = .{
@@ -30866,7 +30866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U535VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U535VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U535VE.* = .{
         .dep = dep,
         .chip = .{
@@ -30890,7 +30890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U545CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U545CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U545CE.* = .{
         .dep = dep,
         .chip = .{
@@ -30914,7 +30914,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U545JE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U545JE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U545JE.* = .{
         .dep = dep,
         .chip = .{
@@ -30938,7 +30938,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U545NE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U545NE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U545NE.* = .{
         .dep = dep,
         .chip = .{
@@ -30962,7 +30962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U545RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U545RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U545RE.* = .{
         .dep = dep,
         .chip = .{
@@ -30986,7 +30986,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U545VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U545VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U545VE.* = .{
         .dep = dep,
         .chip = .{
@@ -31010,7 +31010,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575AG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575AG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575AG.* = .{
         .dep = dep,
         .chip = .{
@@ -31035,7 +31035,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575AI.* = .{
         .dep = dep,
         .chip = .{
@@ -31060,7 +31060,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575CG.* = .{
         .dep = dep,
         .chip = .{
@@ -31085,7 +31085,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575CI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575CI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575CI.* = .{
         .dep = dep,
         .chip = .{
@@ -31110,7 +31110,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575OG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575OG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575OG.* = .{
         .dep = dep,
         .chip = .{
@@ -31135,7 +31135,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575OI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575OI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575OI.* = .{
         .dep = dep,
         .chip = .{
@@ -31160,7 +31160,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575QG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575QG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575QG.* = .{
         .dep = dep,
         .chip = .{
@@ -31185,7 +31185,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575QI.* = .{
         .dep = dep,
         .chip = .{
@@ -31210,7 +31210,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575RG.* = .{
         .dep = dep,
         .chip = .{
@@ -31235,7 +31235,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575RI.* = .{
         .dep = dep,
         .chip = .{
@@ -31260,7 +31260,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575VG.* = .{
         .dep = dep,
         .chip = .{
@@ -31285,7 +31285,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575VI.* = .{
         .dep = dep,
         .chip = .{
@@ -31310,7 +31310,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575ZG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575ZG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575ZG.* = .{
         .dep = dep,
         .chip = .{
@@ -31335,7 +31335,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U575ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U575ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U575ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -31360,7 +31360,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585AI.* = .{
         .dep = dep,
         .chip = .{
@@ -31385,7 +31385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585CI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585CI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585CI.* = .{
         .dep = dep,
         .chip = .{
@@ -31410,7 +31410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585OI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585OI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585OI.* = .{
         .dep = dep,
         .chip = .{
@@ -31435,7 +31435,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585QI.* = .{
         .dep = dep,
         .chip = .{
@@ -31460,7 +31460,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585RI.* = .{
         .dep = dep,
         .chip = .{
@@ -31485,7 +31485,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585VI.* = .{
         .dep = dep,
         .chip = .{
@@ -31510,7 +31510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U585ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U585ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U585ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -31535,7 +31535,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595AI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595AI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595AI.* = .{
         .dep = dep,
         .chip = .{
@@ -31561,7 +31561,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595AJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595AJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595AJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31587,7 +31587,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595QI.* = .{
         .dep = dep,
         .chip = .{
@@ -31613,7 +31613,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595QJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595QJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595QJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31639,7 +31639,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595RI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595RI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595RI.* = .{
         .dep = dep,
         .chip = .{
@@ -31665,7 +31665,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595RJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595RJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595RJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31691,7 +31691,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595VI.* = .{
         .dep = dep,
         .chip = .{
@@ -31717,7 +31717,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31743,7 +31743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -31769,7 +31769,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U595ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U595ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U595ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31795,7 +31795,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599BJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599BJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599BJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31821,7 +31821,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599NI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599NI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599NI.* = .{
         .dep = dep,
         .chip = .{
@@ -31847,7 +31847,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599NJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599NJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599NJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31873,7 +31873,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599VI.* = .{
         .dep = dep,
         .chip = .{
@@ -31899,7 +31899,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31925,7 +31925,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -31951,7 +31951,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U599ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U599ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U599ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -31977,7 +31977,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5AJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5AJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5AJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32003,7 +32003,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5QI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5QI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5QI.* = .{
         .dep = dep,
         .chip = .{
@@ -32029,7 +32029,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5QJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5QJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5QJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32055,7 +32055,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5RJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5RJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5RJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32081,7 +32081,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32107,7 +32107,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A5ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A5ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A5ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32133,7 +32133,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A9BJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A9BJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A9BJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32159,7 +32159,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A9NJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A9NJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A9NJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32185,7 +32185,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A9VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A9VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A9VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32211,7 +32211,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5A9ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5A9ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5A9ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32237,7 +32237,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F7VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F7VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F7VI.* = .{
         .dep = dep,
         .chip = .{
@@ -32264,7 +32264,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F7VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F7VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F7VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32291,7 +32291,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9BJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9BJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9BJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32318,7 +32318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9NJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9NJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9NJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32345,7 +32345,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9VI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9VI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9VI.* = .{
         .dep = dep,
         .chip = .{
@@ -32372,7 +32372,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32399,7 +32399,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9ZI = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9ZI = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9ZI.* = .{
         .dep = dep,
         .chip = .{
@@ -32426,7 +32426,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5F9ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5F9ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5F9ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32453,7 +32453,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5G7VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5G7VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5G7VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32480,7 +32480,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5G9BJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5G9BJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5G9BJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32507,7 +32507,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5G9NJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5G9NJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5G9NJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32534,7 +32534,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5G9VJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5G9VJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5G9VJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32561,7 +32561,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32U5G9ZJ = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32U5G9ZJ = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32U5G9ZJ.* = .{
         .dep = dep,
         .chip = .{
@@ -32588,7 +32588,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB10CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB10CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB10CC.* = .{
         .dep = dep,
         .chip = .{
@@ -32614,7 +32614,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB15CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB15CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB15CC.* = .{
         .dep = dep,
         .chip = .{
@@ -32640,7 +32640,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB30CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB30CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB30CE.* = .{
         .dep = dep,
         .chip = .{
@@ -32666,7 +32666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB35CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB35CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB35CC.* = .{
         .dep = dep,
         .chip = .{
@@ -32692,7 +32692,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB35CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB35CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB35CE.* = .{
         .dep = dep,
         .chip = .{
@@ -32718,7 +32718,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB50CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB50CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB50CG.* = .{
         .dep = dep,
         .chip = .{
@@ -32744,7 +32744,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55CC.* = .{
         .dep = dep,
         .chip = .{
@@ -32770,7 +32770,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55CE.* = .{
         .dep = dep,
         .chip = .{
@@ -32796,7 +32796,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55CG.* = .{
         .dep = dep,
         .chip = .{
@@ -32822,7 +32822,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55RC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55RC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55RC.* = .{
         .dep = dep,
         .chip = .{
@@ -32848,7 +32848,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55RE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55RE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55RE.* = .{
         .dep = dep,
         .chip = .{
@@ -32874,7 +32874,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55RG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55RG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55RG.* = .{
         .dep = dep,
         .chip = .{
@@ -32900,7 +32900,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55VC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55VC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55VC.* = .{
         .dep = dep,
         .chip = .{
@@ -32926,7 +32926,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55VE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55VE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55VE.* = .{
         .dep = dep,
         .chip = .{
@@ -32952,7 +32952,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55VG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55VG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55VG.* = .{
         .dep = dep,
         .chip = .{
@@ -32978,7 +32978,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WB55VY = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WB55VY = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WB55VY.* = .{
         .dep = dep,
         .chip = .{
@@ -33004,7 +33004,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA50KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA50KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA50KE.* = .{
         .dep = dep,
         .chip = .{
@@ -33026,7 +33026,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA50KG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA50KG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA50KG.* = .{
         .dep = dep,
         .chip = .{
@@ -33048,7 +33048,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA52CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA52CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA52CE.* = .{
         .dep = dep,
         .chip = .{
@@ -33070,7 +33070,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA52CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA52CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA52CG.* = .{
         .dep = dep,
         .chip = .{
@@ -33092,7 +33092,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA52KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA52KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA52KE.* = .{
         .dep = dep,
         .chip = .{
@@ -33114,7 +33114,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA52KG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA52KG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA52KG.* = .{
         .dep = dep,
         .chip = .{
@@ -33136,7 +33136,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA54CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA54CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA54CE.* = .{
         .dep = dep,
         .chip = .{
@@ -33158,7 +33158,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA54CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA54CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA54CG.* = .{
         .dep = dep,
         .chip = .{
@@ -33180,7 +33180,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA54KE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA54KE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA54KE.* = .{
         .dep = dep,
         .chip = .{
@@ -33202,7 +33202,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA54KG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA54KG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA54KG.* = .{
         .dep = dep,
         .chip = .{
@@ -33224,7 +33224,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55CE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55CE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55CE.* = .{
         .dep = dep,
         .chip = .{
@@ -33246,7 +33246,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55CG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55CG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55CG.* = .{
         .dep = dep,
         .chip = .{
@@ -33268,7 +33268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55HE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55HE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55HE.* = .{
         .dep = dep,
         .chip = .{
@@ -33290,7 +33290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55HG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55HG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55HG.* = .{
         .dep = dep,
         .chip = .{
@@ -33312,7 +33312,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55UE = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55UE = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55UE.* = .{
         .dep = dep,
         .chip = .{
@@ -33334,7 +33334,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WBA55UG = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WBA55UG = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WBA55UG.* = .{
         .dep = dep,
         .chip = .{
@@ -33356,7 +33356,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WL54CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WL54CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WL54CC.* = .{
         .dep = dep,
         .chip = .{
@@ -33378,7 +33378,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WL54JC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WL54JC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WL54JC.* = .{
         .dep = dep,
         .chip = .{
@@ -33400,7 +33400,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WL55CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WL55CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WL55CC.* = .{
         .dep = dep,
         .chip = .{
@@ -33422,7 +33422,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WL55JC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WL55JC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WL55JC.* = .{
         .dep = dep,
         .chip = .{
@@ -33444,7 +33444,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4C8.* = .{
         .dep = dep,
         .chip = .{
@@ -33466,7 +33466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4CB.* = .{
         .dep = dep,
         .chip = .{
@@ -33488,7 +33488,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4CC.* = .{
         .dep = dep,
         .chip = .{
@@ -33510,7 +33510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4J8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4J8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4J8.* = .{
         .dep = dep,
         .chip = .{
@@ -33532,7 +33532,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4JB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4JB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4JB.* = .{
         .dep = dep,
         .chip = .{
@@ -33554,7 +33554,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE4JC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE4JC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE4JC.* = .{
         .dep = dep,
         .chip = .{
@@ -33576,7 +33576,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5C8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5C8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5C8.* = .{
         .dep = dep,
         .chip = .{
@@ -33598,7 +33598,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5CB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5CB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5CB.* = .{
         .dep = dep,
         .chip = .{
@@ -33620,7 +33620,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5CC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5CC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5CC.* = .{
         .dep = dep,
         .chip = .{
@@ -33642,7 +33642,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5J8 = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5J8 = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5J8.* = .{
         .dep = dep,
         .chip = .{
@@ -33664,7 +33664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5JB = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5JB = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5JB.* = .{
         .dep = dep,
         .chip = .{
@@ -33686,7 +33686,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     };
 
-    ret.STM32WLE5JC = b.allocator.create(MicroZig.Target) catch @panic("out of memory");
+    ret.STM32WLE5JC = b.allocator.create(microzig.Target) catch @panic("out of memory");
     ret.STM32WLE5JC.* = .{
         .dep = dep,
         .chip = .{

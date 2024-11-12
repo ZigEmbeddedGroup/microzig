@@ -1,31 +1,31 @@
 const std = @import("std");
 const Build = std.Build;
-const MicroZig = @import("microzig/build-internals");
+const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
 chips: struct {
-    rp2040: *MicroZig.Target,
-    rp2350_arm: *MicroZig.Target,
+    rp2040: *const microzig.Target,
+    rp2350_arm: *const microzig.Target,
 },
 
 boards: struct {
     raspberrypi: struct {
-        pico: *MicroZig.Target,
-        pico2_arm: *MicroZig.Target,
+        pico: *const microzig.Target,
+        pico2_arm: *const microzig.Target,
     },
     waveshare: struct {
-        rp2040_plus_4m: *MicroZig.Target,
-        rp2040_plus_16m: *MicroZig.Target,
-        rp2040_eth: *MicroZig.Target,
-        rp2040_matrix: *MicroZig.Target,
+        rp2040_plus_4m: *const microzig.Target,
+        rp2040_plus_16m: *const microzig.Target,
+        rp2040_eth: *const microzig.Target,
+        rp2040_matrix: *const microzig.Target,
     },
 },
 
 pub fn init(dep: *Build.Dependency) Self {
     const b = dep.builder;
 
-    const chip_rp2040: MicroZig.Target = .{
+    const chip_rp2040: microzig.Target = .{
         .dep = dep,
         .chip = .{
             .name = "RP2040",
@@ -42,14 +42,14 @@ pub fn init(dep: *Build.Dependency) Self {
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hal.zig"),
         }),
         .linker_script = b.path("rp2040.ld"),
         .preferred_binary_format = .{ .uf2 = .RP2040 },
     };
 
-    const chip_rp2350: MicroZig.Target = .{
+    const chip_rp2350: microzig.Target = .{
         .dep = dep,
         .chip = .{
             .name = "RP2350",
@@ -66,7 +66,7 @@ pub fn init(dep: *Build.Dependency) Self {
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
-        .hal = MicroZig.ModuleDeclaration.init(b, .{
+        .hal = microzig.ModuleDeclaration.init(b, .{
             .root_source_file = b.path("src/hal.zig"),
         }),
         .linker_script = b.path("rp2350.ld"),
@@ -83,7 +83,7 @@ pub fn init(dep: *Build.Dependency) Self {
         .boards = .{
             .raspberrypi = .{
                 .pico = chip_rp2040.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
                         .imports = &.{
                             .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -91,14 +91,14 @@ pub fn init(dep: *Build.Dependency) Self {
                     }),
                 }),
                 .pico2_arm = chip_rp2350.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                     }),
                 }),
             },
             .waveshare = .{
                 .rp2040_plus_4m = chip_rp2040.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/waveshare_rp2040_plus_4m.zig"),
                         .imports = &.{
                             .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -106,7 +106,7 @@ pub fn init(dep: *Build.Dependency) Self {
                     }),
                 }),
                 .rp2040_plus_16m = chip_rp2040.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/waveshare_rp2040_plus_16m.zig"),
                         .imports = &.{
                             .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -114,7 +114,7 @@ pub fn init(dep: *Build.Dependency) Self {
                     }),
                 }),
                 .rp2040_eth = chip_rp2040.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/waveshare_rp2040_eth.zig"),
                         .imports = &.{
                             .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -122,7 +122,7 @@ pub fn init(dep: *Build.Dependency) Self {
                     }),
                 }),
                 .rp2040_matrix = chip_rp2040.derive(.{
-                    .board = MicroZig.ModuleDeclaration.init(b, .{
+                    .board = microzig.ModuleDeclaration.init(b, .{
                         .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
                         .imports = &.{
                             .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -149,7 +149,7 @@ const BootROM = union(enum) {
     legacy,
 };
 
-fn get_bootrom(b: *Build, chip: MicroZig.Chip, rom: BootROM) Build.LazyPath {
+fn get_bootrom(b: *Build, chip: microzig.Chip, rom: BootROM) Build.LazyPath {
     var target = chip.cpu;
     target.abi = .eabi;
 
