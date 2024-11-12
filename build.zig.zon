@@ -4,7 +4,7 @@
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
-        .@"core" = .{ .path = "core" },
+        .core = .{ .path = "core" },
 
         // tools
         .@"tools/regz" = .{ .path = "tools/regz" },

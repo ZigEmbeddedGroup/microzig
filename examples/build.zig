@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
         });
 
         const example_dep_install_step = example_dep.builder.getInstallStep();
+        example_dep.builder.install_path = b.install_path; // HACK: install in the current directory
         b.getInstallStep().dependOn(example_dep_install_step);
     }
 }

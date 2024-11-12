@@ -9,14 +9,8 @@ pub const BinaryFormat = internals.BinaryFormat;
 pub const MemoryRegion = internals.MemoryRegion;
 
 const port_list: []const struct {
-    const Self = @This();
-
     name: [:0]const u8,
     dep_name: [:0]const u8,
-
-    pub fn import(self: Self) ?type {
-        return custom_lazy_import(self.dep_name);
-    }
 } = &.{
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
@@ -73,7 +67,7 @@ pub const PortSelect = blk: {
 pub const PortCache = blk: {
     var fields: []const std.builtin.Type.StructField = &.{};
     for (port_list) |port| {
-        const typ = ?(port.import() orelse struct {});
+        const typ = ?(custom_lazy_import(port.dep_name) orelse struct {});
         fields = fields ++ [_]std.builtin.Type.StructField{.{
             .name = port.name,
             .type = typ,
@@ -101,7 +95,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    const typ = port.import() orelse struct {};
+                    const typ = custom_lazy_import(port.dep_name) orelse struct {};
                     fields = fields ++ [_]std.builtin.Type.StructField{.{
                         .name = port.name,
                         .type = typ,
@@ -133,7 +127,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             var ok = true;
             for (port_list) |port| {
                 if (@field(port_select, port.name)) {
-                    ok = ok and port.import() != null;
+                    ok = ok and custom_lazy_import(port.dep_name) != null;
                 }
             }
             if (ok) {
@@ -160,7 +154,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 if (@field(port_select, port.name)) {
                     @field(ports, port.name) = if (@field(port_cache, port.name)) |cached_port| cached_port else blk: {
                         const port_dep = dep.builder.lazyDependency(port.dep_name, .{}).?;
-                        const instance = port.import().?.init(port_dep);
+                        const instance = custom_lazy_import(port.dep_name).?.init(port_dep);
                         @field(port_cache, port.name) = instance;
                         break :blk instance;
                     };
@@ -328,10 +322,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
         };
 
         /// Adds a new dependency to the `install` step that will install the `firmware` into the folder `$prefix/firmware`.
-        pub fn install_firmware(mb: *Self, firmware: *Firmware, options: InstallFirmwareOptions) void {
-            std.debug.assert(mb == firmware.mb);
+        pub fn install_firmware(mb: *Self, fw: *Firmware, options: InstallFirmwareOptions) void {
+            std.debug.assert(mb == fw.mb);
 
-            const install_step = add_install_firmware(mb, firmware, options);
+            const install_step = add_install_firmware(mb, fw, options);
             mb.builder.getInstallStep().dependOn(&install_step.step);
         }
 
@@ -339,17 +333,17 @@ pub fn MicroBuild(port_select: PortSelect) type {
         ///
         /// **NOTE:** This does not actually install the firmware yet. You have to add the returned step as a dependency to another step.
         ///           If you want to just install the firmware, use `installFirmware` instead!
-        pub fn add_install_firmware(mb: *Self, firmware: *Firmware, options: InstallFirmwareOptions) *Build.Step.InstallFile {
-            std.debug.assert(mb == firmware.mb);
+        pub fn add_install_firmware(mb: *Self, fw: *Firmware, options: InstallFirmwareOptions) *Build.Step.InstallFile {
+            std.debug.assert(mb == fw.mb);
 
-            const format = options.format orelse firmware.target.preferred_binary_format orelse .elf;
+            const format = options.format orelse fw.target.preferred_binary_format orelse .elf;
 
             const basename = mb.builder.fmt("{s}{s}", .{
-                firmware.artifact.name,
+                fw.artifact.name,
                 format.get_extension(),
             });
 
-            return mb.builder.addInstallFileWithDir(firmware.get_emitted_bin(format), .{ .custom = "firmware" }, basename);
+            return mb.builder.addInstallFileWithDir(fw.get_emitted_bin(format), .{ .custom = "firmware" }, basename);
         }
 
         /// Declaration of a firmware build.
