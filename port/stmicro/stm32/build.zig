@@ -1,5 +1,4 @@
 const std = @import("std");
-const Build = std.Build;
 const microzig = @import("microzig/build-internals");
 const Chips = @import("src/Chips.zig");
 
@@ -13,7 +12,7 @@ boards: struct {
     stm32f429idiscovery: *const microzig.Target,
 },
 
-pub fn init(dep: *Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
     const chips = Chips.init(dep);
 

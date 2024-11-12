@@ -1,5 +1,4 @@
 const std = @import("std");
-const Build = std.Build;
 const microzig = @import("microzig/build-internals");
 
 const Self = @This();
@@ -22,7 +21,7 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const chip_rp2040: microzig.Target = .{
@@ -134,7 +133,7 @@ pub fn init(dep: *Build.Dependency) Self {
     };
 }
 
-pub fn build(_: *Build) !void {
+pub fn build(_: *std.Build) !void {
     // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
 }
 
@@ -149,7 +148,7 @@ const BootROM = union(enum) {
     legacy,
 };
 
-fn get_bootrom(b: *Build, chip: microzig.Chip, rom: BootROM) Build.LazyPath {
+fn get_bootrom(b: *std.Build, chip: microzig.Chip, rom: BootROM) std.Build.LazyPath {
     var target = chip.cpu;
     target.abi = .eabi;
 

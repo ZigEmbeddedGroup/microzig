@@ -1,5 +1,4 @@
 const std = @import("std");
-const Build = std.Build;
 const microzig = @import("microzig/build-internals");
 
 const Self = @This();
@@ -14,7 +13,7 @@ boards: struct {
     },
 },
 
-pub fn init(dep: *Build.Dependency) Self {
+pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const chip_lpc176x5x: microzig.Target = .{
@@ -57,7 +56,7 @@ pub fn init(dep: *Build.Dependency) Self {
     };
 }
 
-pub fn build(b: *Build) void {
+pub fn build(b: *std.Build) void {
     const lpc176x5x_patch_elf_exe = b.addExecutable(.{
         .name = "lpc176x5x-patchelf",
         .root_source_file = b.path("src/tools/patchelf.zig"),
@@ -68,7 +67,7 @@ pub fn build(b: *Build) void {
 
 /// Patch an ELF file to add a checksum over the first 8 words so the
 /// cpu will properly boot.
-fn lpc176x5x_patch_elf(dep: *Build.Dependency, input: std.Build.LazyPath) std.Build.LazyPath {
+fn lpc176x5x_patch_elf(dep: *std.Build.Dependency, input: std.Build.LazyPath) std.Build.LazyPath {
     const patch_elf_exe = dep.artifact("lpc176x5x-patchelf");
     const run = dep.builder.addRunArtifact(patch_elf_exe);
     run.addFileArg(input);

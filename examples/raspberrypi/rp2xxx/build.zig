@@ -1,8 +1,7 @@
 const std = @import("std");
-const Build = std.Build;
 const microzig = @import("microzig");
 
-pub fn build(b: *Build) void {
+pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
