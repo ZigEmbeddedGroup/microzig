@@ -30,6 +30,13 @@ pub const Parity = enum {
     odd,
 };
 
+pub const FlowControl = enum {
+    none,
+    CTS,
+    RTS,
+    CTS_RTS,
+};
+
 pub const ConfigError = error{
     UnsupportedBaudRate,
 };
@@ -40,6 +47,7 @@ pub const Config = struct {
     word_bits: WordBits = .eight,
     stop_bits: StopBits = .one,
     parity: Parity = .none,
+    flow_control: FlowControl = .none,
 };
 
 pub const TransmitError = error{
@@ -156,6 +164,7 @@ pub const UART = enum(u1) {
         const peri_freq = config.clock_config.peri.?.frequency();
         uart.set_baudrate(config.baud_rate, peri_freq);
         uart.set_format(config.word_bits, config.stop_bits, config.parity);
+        uart.set_flow_control(config.flow_control);
         uart_regs.UARTLCR_H.modify(.{ .FEN = 1 });
 
         // always enable DREQ signals -- no harm if dma isn't listening
@@ -404,6 +413,25 @@ pub const UART = enum(u1) {
         // PL011 needs a (dummy) LCR_H write to latch in the divisors.
         // We don't want to actually change LCR_H contents here.
         uart_regs.UARTLCR_H.modify(.{});
+    }
+
+    pub fn set_flow_control(uart: UART, hw_fc: FlowControl) void {
+        const uart_regs = uart.get_regs();
+        var cts_bit: u1 = 0;
+        var rts_bit: u1 = 0;
+        switch (hw_fc) {
+            .none => {},
+            .CTS => cts_bit = 1,
+            .RTS => rts_bit = 1,
+            .CTS_RTS => {
+                cts_bit = 1;
+                rts_bit = 1;
+            },
+        }
+        uart_regs.UARTCR.modify(.{
+            .CTSEN = cts_bit,
+            .RTSEN = rts_bit,
+        });
     }
 };
 

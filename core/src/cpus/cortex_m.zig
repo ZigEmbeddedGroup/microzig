@@ -22,7 +22,7 @@ const Core = enum {
 };
 
 const core: type = blk: {
-    const cortex_m = std.meta.stringToEnum(microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
     break :blk switch (cortex_m) {
         .@"ARM Cortex-M0" => @import("cortex_m/m0"),
         .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
