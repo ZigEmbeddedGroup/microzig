@@ -3,10 +3,22 @@ const MicroZig = @import("microzig/build");
 const wch = @import("microzig/port/wch/ch32v");
 
 const available_examples = [_]Example{
-    .{ .target = wch.chips.ch32v103x8, .name = "empty", .file = "src/empty.zig" },
-    .{ .target = wch.chips.ch32v103x8, .name = "blinky", .file = "src/blinky.zig" },
+    // CH32V003
+    .{ .target = wch.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
+    .{ .target = wch.chips.ch32v003x4, .name = "blinky_ch32v003", .file = "src/blinky_ch32v003.zig" },
+    // .{ .target = wch.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_empty", .file = "src/empty.zig" },
+    // .{ .target = wch.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_blinky", .file = "src/blinky.zig" },
+
+    // CH32V103
+    .{ .target = wch.chips.ch32v103x8, .name = "empty_ch32v103", .file = "src/empty.zig" },
+    .{ .target = wch.chips.ch32v103x8, .name = "blinky_ch32v103", .file = "src/blinky.zig" },
     // .{ .target = wch.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_empty", .file = "src/empty.zig" },
     // .{ .target = wch.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_blinky", .file = "src/blinky.zig" },
+
+    // CH32V203
+    .{ .target = wch.chips.ch32v203x8, .name = "empty_ch32v203", .file = "src/empty.zig" },
+    .{ .target = wch.chips.ch32v203x8, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
+    .{ .target = wch.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
 };
 
 pub fn build(b: *std.Build) void {
