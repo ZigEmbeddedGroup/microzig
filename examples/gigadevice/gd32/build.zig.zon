@@ -2,8 +2,7 @@
     .name = "examples/gigadevice/gd32",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/gigadevice/gd32" = .{ .path = "../../../port/gigadevice/gd32" },
+        .microzig = .{ .path = "../../../" },
     },
 
     .paths = .{

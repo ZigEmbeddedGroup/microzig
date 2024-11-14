@@ -12,10 +12,13 @@ const port_list: []const struct {
     name: [:0]const u8,
     dep_name: [:0]const u8,
 } = &.{
+    .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
+    .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
+    .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
+    .{ .name = "avr", .dep_name = "port/microchip/avr" },
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
-    .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
 };
 
 pub fn build(b: *Build) void {
@@ -448,11 +451,20 @@ const Cpu = enum {
     cortex_m,
     riscv32,
 
-    // TODO: add here the remaining cpus
+    // TODO: to be rewritten
     pub fn init(target: std.Target) Cpu {
-        // TODO: not sure this is right tho
+        // TODO: not sure this are right tho
+
+        if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
+            return .avr5;
+        }
+
         if (target.cpu.arch.isThumb()) {
             return .cortex_m;
+        }
+
+        if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
+            return .riscv32;
         }
 
         @panic("unrecognized cpu configuration");

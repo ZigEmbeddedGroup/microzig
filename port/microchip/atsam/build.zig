@@ -1,25 +1,30 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig");
 
-pub fn build(b: *std.Build) void {
-    _ = b.step("test", "Run platform agnostic unit tests");
-}
+const Self = @This();
 
-fn root() []const u8 {
-    return comptime (std.fs.path.dirname(@src().file) orelse ".");
-}
+chips: struct {
+    atsamd51j19: *const microzig.Target,
+},
 
-const build_root = root();
+boards: struct {},
 
-pub const chips = struct {
-    pub const atsamd51j19 = MicroZig.Target{
-        .preferred_format = .elf,
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+
+    const chip_atsamd51j19: microzig.Target = .{
+        .dep = dep,
         .chip = .{
             .name = "ATSAMD51J19A",
-            .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
-            .cpu = MicroZig.cpus.cortex_m4f,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .cpu_features_add = std.Target.arm.featureSet(&.{.vfp4d16sp}),
+                .os_tag = .freestanding,
+                .abi = .eabihf,
+            },
             .register_definition = .{
-                .atdf = .{ .cwd_relative = build_root ++ "/src/chips/ATSAMD51J19A.atdf" },
+                .atdf = b.path("src/chips/ATSAMD51J19A.atdf"),
             },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x00000000, .length = 512 * 1024 }, // Embedded Flash
@@ -29,8 +34,15 @@ pub const chips = struct {
             },
         },
     };
-};
 
-pub const boards = struct {
-    // empty right now
-};
+    return .{
+        .chips = .{
+            .atsamd51j19 = chip_atsamd51j19.derive(.{}),
+        },
+        .boards = .{},
+    };
+}
+
+pub fn build(b: *std.Build) void {
+    _ = b.step("test", "Run platform agnostic unit tests");
+}

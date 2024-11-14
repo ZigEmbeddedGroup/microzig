@@ -1,93 +1,103 @@
 const std = @import("std");
-const Build = std.Build;
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig/build-internals");
 
-fn path(comptime suffix: []const u8) Build.LazyPath {
-    return .{
-        .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
-    };
-}
+const Self = @This();
 
-const hal = .{
-    .root_source_file = path("/src/hals/ATmega328P.zig"),
-};
-const hal32u4 = .{
-    .root_source_file = path("/src/hals/ATmega32U4.zig"),
-};
+chips: struct {
+    atmega328p: *const microzig.Target,
+    atmega32u4: *const microzig.Target,
+},
 
-pub const chips = struct {
-    pub const atmega328p = MicroZig.Target{
-        .preferred_format = .hex,
+boards: struct {
+    arduino: struct {
+        nano: *const microzig.Target,
+        uno_rev3: *const microzig.Target,
+    },
+    adafruit: struct {
+        itsybitsy_32u4: *const microzig.Target,
+    },
+},
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+
+    const chip_atmega328p: microzig.Target = .{
+        .dep = dep,
         .chip = .{
             .name = "ATmega328P",
-            .url = "https://www.microchip.com/en-us/product/atmega328p",
-            .cpu = MicroZig.cpus.avr5,
+            .cpu = .{
+                .cpu_arch = .avr,
+                .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .register_definition = .{
-                .json = path("/src/chips/ATmega328P.json"),
+                .json = b.path("src/chips/ATmega328P.json"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
                 .{ .offset = 0x800100, .length = 2048, .kind = .ram },
             },
         },
-        .hal = hal,
+        .hal = microzig.ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/hals/ATmega328P.zig"),
+        }),
+        .preferred_binary_format = .hex,
     };
-    pub const atmega32u4 = MicroZig.Target{
-        .preferred_format = .hex,
+
+    const chip_atmega32u4: microzig.Target = .{
+        .dep = dep,
         .chip = .{
             .name = "ATmega32U4",
-            .url = "https://www.microchip.com/en-us/product/ATmega32U4",
-            .cpu = MicroZig.cpus.avr5,
+            .cpu = .{
+                .cpu_arch = .avr,
+                .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .register_definition = .{
-                .json = path("/src/chips/ATmega32U4.json"),
+                .json = b.path("src/chips/ATmega32U4.json"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
                 .{ .offset = 0x800100, .length = 2560, .kind = .ram },
             },
         },
-        .hal = hal32u4,
+        .hal = microzig.ModuleDeclaration.init(b, .{
+            .root_source_file = b.path("src/hals/ATmega32U4.zig"),
+        }),
+        .preferred_binary_format = .hex,
     };
-};
 
-pub const boards = struct {
-    pub const arduino = struct {
-        pub const nano = MicroZig.Target{
-            .preferred_format = .hex,
-            .chip = chips.atmega328p.chip,
-            .hal = hal,
-            .board = .{
-                .name = "Arduino Nano",
-                .url = "https://docs.arduino.cc/hardware/nano",
-                .root_source_file = path("/src/boards/arduino_nano.zig"),
+    return .{
+        .chips = .{
+            .atmega328p = chip_atmega328p.derive(.{}),
+            .atmega32u4 = chip_atmega32u4.derive(.{}),
+        },
+        .boards = .{
+            .arduino = .{
+                .nano = chip_atmega328p.derive(.{
+                    .board = microzig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/arduino_nano.zig"),
+                    }),
+                }),
+                .uno_rev3 = chip_atmega328p.derive(.{
+                    .board = microzig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/arduino_uno.zig"),
+                    }),
+                }),
             },
-        };
-
-        pub const uno_rev3 = MicroZig.Target{
-            .preferred_format = .hex,
-            .chip = chips.atmega328p.chip,
-            .hal = hal,
-            .board = .{
-                .name = "Arduino Uno",
-                .url = "https://docs.arduino.cc/hardware/uno-rev3",
-                .root_source_file = path("/src/boards/arduino_uno.zig"),
+            .adafruit = .{
+                .itsybitsy_32u4 = chip_atmega32u4.derive(.{
+                    .board = microzig.ModuleDeclaration.init(b, .{
+                        .root_source_file = b.path("src/boards/itsybitsy_32u4.zig"),
+                    }),
+                }),
             },
-        };
+        },
     };
-    pub const adafruit = struct {
-        pub const itsybitsy_32u4 = MicroZig.Target{
-            .preferred_format = .hex,
-            .chip = chips.atmega32u4.chip,
-            .hal = hal32u4,
-            .board = .{
-                .name = "Adafruit ItsyBitsy 32u4",
-                .url = "https://cdn-learn.adafruit.com/downloads/pdf/introducting-itsy-bitsy-32u4.pdf",
-                .root_source_file = path("/src/boards/itsybitsy_32u4.zig"),
-            },
-        };
-    };
-};
+}
 
-pub fn build(b: *Build) void {
+pub fn build(b: *std.Build) void {
     _ = b.step("test", "Run platform agnostic unit tests");
 }

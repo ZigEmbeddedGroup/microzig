@@ -2,8 +2,7 @@
     .name = "examples/microchip/atsam",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/microchip/atsam" = .{ .path = "../../../port/microchip/atsam" },
+        .microzig = .{ .path = "../../../" },
     },
 
     .paths = .{

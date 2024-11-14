@@ -5,9 +5,9 @@
         // examples
         .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
         .@"nxp/lpc" = .{ .path = "nxp/lpc" },
-        // .@"microchip/atsam" = .{ .path = "microchip/atsam" },
-        // .@"microchip/avr" = .{ .path = "microchip/avr" },
-        // .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
+        .@"microchip/atsam" = .{ .path = "microchip/atsam" },
+        .@"microchip/avr" = .{ .path = "microchip/avr" },
+        .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
         .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
         // .@"espressif/esp" = .{ .path = "espressif/esp" },
         .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
