@@ -1,13 +1,15 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+const MicroBuild = microzig.MicroBuild(.{
+    .rp2xxx = true,
+});
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = microzig.MicroBuild(.{
-        .rp2xxx = true,
-    }).init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep);
 
     const rp2040_only_examples: []const Example = &.{
         // RaspberryPi Boards:
@@ -69,9 +71,9 @@ pub fn build(b: *std.Build) void {
         // cpu and potentially the board as well.
         const firmware = mb.add_firmware(.{
             .name = example.name,
-            .root_source_file = b.path(example.file),
-            .optimize = optimize,
             .target = example.target,
+            .optimize = optimize,
+            .root_source_file = b.path(example.file),
         });
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`

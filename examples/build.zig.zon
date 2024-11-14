@@ -3,13 +3,13 @@
     .version = "0.0.0",
     .dependencies = .{
         // examples
-        // .@"nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
+        .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
         .@"nxp/lpc" = .{ .path = "nxp/lpc" },
-        // .@"microchip/atsam" = .{ .path = "examples/microchip/atsam" },
-        // .@"microchip/avr" = .{ .path = "examples/microchip/avr" },
-        // .@"gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
+        // .@"microchip/atsam" = .{ .path = "microchip/atsam" },
+        // .@"microchip/avr" = .{ .path = "microchip/avr" },
+        // .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
         .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
-        // .@"espressif/esp" = .{ .path = "examples/espressif/esp" },
+        // .@"espressif/esp" = .{ .path = "espressif/esp" },
         .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
     },
     .paths = .{

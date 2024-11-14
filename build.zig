@@ -15,6 +15,7 @@ const port_list: []const struct {
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
+    .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
 };
 
 pub fn build(b: *Build) void {

@@ -1,13 +1,15 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+const MicroBuild = microzig.MicroBuild(.{
+    .stm32 = true,
+});
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = microzig.MicroBuild(.{
-        .stm32 = true,
-    }).init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep);
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },

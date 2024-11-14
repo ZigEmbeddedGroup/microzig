@@ -1,13 +1,15 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+const MicroBuild = microzig.MicroBuild(.{
+    .lpc = true,
+});
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = microzig.MicroBuild(.{
-        .lpc = true,
-    }).init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep);
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.lpc.boards.mbed.lpc1768, .name = "mbed-lpc1768_blinky", .file = "src/blinky.zig" },
@@ -21,9 +23,9 @@ pub fn build(b: *std.Build) void {
         // cpu and potentially the board as well.
         const fw = mb.add_firmware(.{
             .name = example.name,
-            .root_source_file = b.path(example.file),
-            .optimize = optimize,
             .target = example.target,
+            .optimize = optimize,
+            .root_source_file = b.path(example.file),
         });
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
