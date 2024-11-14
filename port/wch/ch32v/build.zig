@@ -81,7 +81,6 @@ pub const chips = struct {
             },
             .register_definition = .{
                 .svd = path("/src/chips/ch32v003.svd"),
-                // .zig = path("/src/chips/ch32v003.zig"),
             },
         },
         .hal = hal_ch32v003,
@@ -99,7 +98,6 @@ pub const chips = struct {
             },
             .register_definition = .{
                 .svd = path("/src/chips/ch32v103.svd"),
-                // .zig = path("/src/chips/ch32v103.zig"),
             },
         },
         .hal = hal_ch32v103,
@@ -117,7 +115,6 @@ pub const chips = struct {
             },
             .register_definition = .{
                 .svd = path("/src/chips/ch32v103.svd"),
-                // .zig = path("/src/chips/ch32v103.zig"),
             },
         },
         .hal = hal_ch32v103,
@@ -135,7 +132,6 @@ pub const chips = struct {
             },
             .register_definition = .{
                 .svd = path("/src/chips/ch32v20x.svd"),
-                // .zig = path("/src/chips/ch32v20x.zig"),
             },
         },
         .hal = hal_ch32v203,
@@ -153,7 +149,6 @@ pub const chips = struct {
             },
             .register_definition = .{
                 .svd = path("/src/chips/ch32v20x.svd"),
-                // .zig = path("/src/chips/ch32v20x.zig"),
             },
         },
         .hal = hal_ch32v203,
