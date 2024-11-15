@@ -18,6 +18,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_lpc176x5x: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "LPC176x5x",
             .cpu = .{
@@ -33,10 +34,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .offset = 0x2007C000, .length = 32 * 1024, .kind = .ram },
             },
         },
-        .hal = microzig.ModuleDeclaration.init(b, .{
+        .hal = .{
             .root_source_file = b.path("src/hals/LPC176x5x.zig"),
-        }),
-        .preferred_binary_format = .elf,
+        },
         .patch_elf = lpc176x5x_patch_elf,
     };
 
@@ -47,9 +47,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .mbed = .{
                 .lpc1768 = chip_lpc176x5x.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "mbed LPC1768",
+                        .url = "https://os.mbed.com/platforms/mbed-LPC1768/",
                         .root_source_file = b.path("src/boards/mbed_LPC1768.zig"),
-                    }),
+                    },
                 }),
             },
         },

@@ -1,14 +1,14 @@
 const std = @import("std");
 
 const example_dep_names: []const []const u8 = &.{
-    "nordic/nrf5x",
-    "nxp/lpc",
+    //"espressif/esp",
+    "gigadevice/gd32",
     "microchip/atsam",
     "microchip/avr",
-    "gigadevice/gd32",
-    "stmicro/stm32",
-    //"espressif/esp",
+    "nordic/nrf5x",
+    "nxp/lpc",
     "raspberrypi/rp2xxx",
+    "stmicro/stm32",
 };
 
 pub fn build(b: *std.Build) void {

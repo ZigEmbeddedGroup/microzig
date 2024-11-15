@@ -14,8 +14,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_atsamd51j19: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "ATSAMD51J19A",
+            .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
             .cpu = .{
                 .cpu_arch = .thumb,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },

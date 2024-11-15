@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("microzig");
+const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
@@ -17,12 +17,13 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
-    const hal_f103 = microzig.ModuleDeclaration.init(b, .{
+    const hal_f103: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hals/GD32VF103/hal.zig"),
-    });
+    };
 
     const chip_gd32vf103xb: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "GD32VF103",
             .cpu = .{
@@ -44,6 +45,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_gd32vf103x8: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "GD32VF103",
             .cpu = .{
@@ -52,12 +54,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .none,
             },
+            .register_definition = .{
+                .json = b.path("src/chips/GD32VF103.json"),
+            },
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
-            },
-            .register_definition = .{
-                .json = b.path("src/chips/GD32VF103.json"),
             },
         },
         .hal = hal_f103,
@@ -71,9 +73,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .sipeed = .{
                 .longan_nano = chip_gd32vf103xb.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Longan Nano",
+                        .url = "https://longan.sipeed.com/en/",
                         .root_source_file = b.path("src/boards/longan_nano.zig"),
-                    }),
+                    },
                 }),
             },
         },

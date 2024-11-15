@@ -3,14 +3,14 @@
     .version = "0.0.0",
     .dependencies = .{
         // examples
-        .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
-        .@"nxp/lpc" = .{ .path = "nxp/lpc" },
+        // .@"espressif/esp" = .{ .path = "espressif/esp" },
+        .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
         .@"microchip/atsam" = .{ .path = "microchip/atsam" },
         .@"microchip/avr" = .{ .path = "microchip/avr" },
-        .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
-        .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
-        // .@"espressif/esp" = .{ .path = "espressif/esp" },
+        .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
+        .@"nxp/lpc" = .{ .path = "nxp/lpc" },
         .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
+        .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
     },
     .paths = .{
         "build.zig",

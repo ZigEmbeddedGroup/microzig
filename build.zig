@@ -1,10 +1,12 @@
 const std = @import("std");
 const Build = std.Build;
+const LazyPath = Build.LazyPath;
 
 const internals = @import("build-internals");
 pub const Target = internals.Target;
 pub const Chip = internals.Chip;
-pub const ModuleDeclaration = internals.ModuleDeclaration;
+pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
+pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const MemoryRegion = internals.MemoryRegion;
 
@@ -12,12 +14,13 @@ const port_list: []const struct {
     name: [:0]const u8,
     dep_name: [:0]const u8,
 } = &.{
-    .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
+    // .{ .name = "esp", .dep_name = "port/espressif/esp" },
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
     .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
-    .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
+    .{ .name = "nrf5x", .dep_name = "port/nordic/nrf5x" },
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
+    .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
 };
 
@@ -92,6 +95,7 @@ pub const PortCache = blk: {
 
 var port_cache: PortCache = .{};
 
+/// The MicroZig build system.
 pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
         const SelectedPorts = blk: {
@@ -125,6 +129,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
         builder: *Build,
         dep: *Build.Dependency,
         core_dep: *Build.Dependency,
+
+        /// Contains all the ports you selected.
         ports: SelectedPorts,
 
         const InitReturnType = blk: {
@@ -175,14 +181,48 @@ pub fn MicroBuild(port_select: PortSelect) type {
             return mb;
         }
 
-        /// Options for firmware creation.
+        /// Configuration options for the `add_firmware` function.
         pub const CreateFirmwareOptions = struct {
+            /// The name of the firmware file.
             name: []const u8,
+
+            /// The MicroZig target that the firmware is built for. Either a board or a chip.
             target: *const Target,
+
+            /// The optimization level that should be used. Usually `ReleaseSmall` or `Debug` is a good choice.
+            /// Also using `std.Build.standardOptimizeOption` is a good idea.
             optimize: std.builtin.OptimizeMode,
-            root_source_file: Build.LazyPath,
+
+            /// The root source file for the application. This is your `src/main.zig` file.
+            root_source_file: LazyPath,
+
+            /// Imports for the application.
             imports: []const Build.Module.Import = &.{},
-            linker_script: ?Build.LazyPath = null,
+
+            /// If set, overrides the `single_threaded` property of the target.
+            single_threaded: ?bool = null,
+
+            /// If set, overrides the `bundle_compiler_rt` property of the target.
+            bundle_compiler_rt: ?bool = null,
+
+            /// If set, overrides the `hal` module.
+            hal: ?*Build.Module = null,
+
+            /// If set, overrides the `board` module.
+            board: ?*Build.Module = null,
+
+            /// If set, overrides the `linker_script` property of the target.
+            linker_script: ?LazyPath = null,
+
+            /// Strips stack trace info from final executable.
+            strip: bool = false,
+
+            /// Enables the following build options for the firmware executable
+            /// to support stripping unused symbols in all modes (not just Release):
+            ///     exe.link_gc_sections = true;
+            ///     exe.link_data_sections = true;
+            ///     exe.link_function_sections = true;
+            strip_unused_symbols: bool = true,
         };
 
         /// Creates a new firmware for a given target.
@@ -203,8 +243,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             };
 
             const config = mb.dep.builder.addOptions();
-            config.addOption(bool, "has_hal", target.hal != null);
-            config.addOption(bool, "has_board", target.board != null);
+            config.addOption(bool, "has_hal", options.hal != null or target.hal != null);
+            config.addOption(bool, "has_board", options.board != null or target.board != null);
 
             config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
@@ -251,7 +291,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             core_mod.addImport("chip", chip_mod);
 
             if (target.hal) |hal| {
-                const hal_mod = b.createModule(.{
+                const hal_mod = options.hal orelse b.createModule(.{
                     .root_source_file = hal.root_source_file,
                     .imports = hal.imports,
                 });
@@ -260,7 +300,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             }
 
             if (target.board) |board| {
-                const board_mod = b.createModule(.{
+                const board_mod = options.board orelse b.createModule(.{
                     .root_source_file = board.root_source_file,
                     .imports = board.imports,
                 });
@@ -275,19 +315,26 @@ pub fn MicroBuild(port_select: PortSelect) type {
             app_mod.addImport("microzig", core_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
-
             fw.* = .{
                 .mb = mb,
                 .artifact = mb.builder.addExecutable(.{
                     .name = options.name,
-                    .root_source_file = mb.core_dep.path("src/start.zig"),
-                    .target = zig_target,
                     .optimize = options.optimize,
+                    .target = zig_target,
                     .linkage = .static,
+                    .root_source_file = mb.core_dep.path("src/start.zig"),
+                    .strip = options.strip,
                 }),
+                .app_mod = app_mod,
                 .target = target,
                 .emitted_files = Firmware.EmittedFiles.init(mb.builder.allocator),
             };
+
+            fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
+
+            fw.artifact.link_gc_sections = options.strip_unused_symbols;
+            fw.artifact.link_function_sections = options.strip_unused_symbols;
+            fw.artifact.link_data_sections = options.strip_unused_symbols;
 
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);
@@ -320,7 +367,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             return fw;
         }
 
-        /// Options for firmware installation.
+        /// Configuration options for firmware installation.
         pub const InstallFirmwareOptions = struct {
             format: ?BinaryFormat = null,
         };
@@ -352,17 +399,20 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
         /// Declaration of a firmware build.
         pub const Firmware = struct {
-            pub const EmittedFiles = std.AutoHashMap(BinaryFormat, Build.LazyPath);
+            pub const EmittedFiles = std.AutoHashMap(BinaryFormat, LazyPath);
 
             mb: *Self,
 
-            /// The artifact that is built by Zig.
+            /// The artifact that is built by MicroZig.
             artifact: *Build.Step.Compile,
+
+            /// The app module that is built by Zig.
+            app_mod: *Build.Module,
 
             /// The target to which the firmware is built.
             target: *const Target,
 
-            emitted_elf: ?Build.LazyPath = null,
+            emitted_elf: ?LazyPath = null,
             emitted_files: EmittedFiles,
 
             /// Returns the emitted ELF file for this firmware. This is useful if you need debug information
@@ -370,7 +420,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             ///
             /// **NOTE:** This is similar, but not equivalent to `std.Build.Step.Compile.getEmittedBin`. The call on the compile step does
             ///           not include post processing of the ELF files necessary by certain targets.
-            pub fn get_emitted_elf(fw: *Firmware) Build.LazyPath {
+            pub fn get_emitted_elf(fw: *Firmware) LazyPath {
                 if (fw.emitted_elf == null) {
                     const raw_elf = fw.artifact.getEmittedBin();
                     fw.emitted_elf = if (fw.target.patch_elf) |patch_elf|
@@ -385,7 +435,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// the target or in `format` if not null.
             ///
             /// **NOTE:** The file returned here is the same file that will be installed.
-            pub fn get_emitted_bin(fw: *Firmware, format: ?BinaryFormat) Build.LazyPath {
+            pub fn get_emitted_bin(fw: *Firmware, format: ?BinaryFormat) LazyPath {
                 const resolved_format = format orelse fw.target.preferred_binary_format orelse .elf;
 
                 const result = fw.emitted_files.getOrPut(resolved_format) catch @panic("out of memory");
@@ -442,6 +492,44 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                 return result.value_ptr.*;
             }
+
+            /// Configuration options for the `add_app_import` function.
+            pub const AppDependencyOptions = struct {
+                depend_on_microzig: bool = false,
+            };
+
+            /// Adds an import to your application.
+            pub fn add_app_import(fw: *Firmware, name: []const u8, module: *Build.Module, options: AppDependencyOptions) void {
+                if (options.depend_on_microzig) {
+                    module.addImport("microzig", fw.modules.microzig);
+                }
+                fw.app_mod.addImport(name, module);
+            }
+
+            /// Adds an include path to the firmware.
+            pub fn add_include_path(fw: *Firmware, path: LazyPath) void {
+                fw.artifact.addIncludePath(path);
+            }
+
+            /// Adds a system include path to the firmware.
+            pub fn add_system_include_path(fw: *Firmware, path: LazyPath) void {
+                fw.artifact.addSystemIncludePath(path);
+            }
+
+            /// Adds a c source file to the firmware.
+            pub fn add_c_source_file(fw: *Firmware, source: Build.Module.CSourceFile) void {
+                fw.artifact.addCSourceFile(source);
+            }
+
+            /// Adds options to your application.
+            pub fn add_options(fw: *Firmware, module_name: []const u8, options: *Build.Step.Options) void {
+                fw.app_mod.addOptions(module_name, options);
+            }
+
+            /// Adds an object file to the firmware.
+            pub fn add_object_file(fw: *Firmware, source: LazyPath) void {
+                fw.artifact.addObjectFile(source);
+            }
         };
     };
 }
@@ -451,19 +539,13 @@ const Cpu = enum {
     cortex_m,
     riscv32,
 
-    // TODO: to be rewritten
+    // TODO: to be verified
     pub fn init(target: std.Target) Cpu {
-        // TODO: not sure this are right tho
-
         if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
             return .avr5;
-        }
-
-        if (target.cpu.arch.isThumb()) {
+        } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
             return .cortex_m;
-        }
-
-        if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
+        } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
             return .riscv32;
         }
 

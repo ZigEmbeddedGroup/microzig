@@ -19,8 +19,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_nrf52840: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "nrf52840",
+            .url = "https://www.nordicsemi.com/products/nrf52840",
             .cpu = .{
                 .cpu_arch = .thumb,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
@@ -45,8 +47,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_nrf52832: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
-            .name = "nrf52840",
+            .name = "nrf52",
+            .url = "https://www.nordicsemi.com/products/nrf52832",
             .cpu = .{
                 .cpu_arch = .thumb,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
@@ -71,9 +75,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .nordic = .{
                 .nrf52840_dongle = chip_nrf52840.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "nRF52840 Dongle",
+                        .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
                         .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
-                    }),
+                    },
                 }),
             },
         },

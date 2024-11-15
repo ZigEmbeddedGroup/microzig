@@ -23,8 +23,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const chip_atmega328p: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .hex,
         .chip = .{
             .name = "ATmega328P",
+            .url = "https://www.microchip.com/en-us/product/atmega328p",
             .cpu = .{
                 .cpu_arch = .avr,
                 .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -39,16 +41,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .offset = 0x800100, .length = 2048, .kind = .ram },
             },
         },
-        .hal = microzig.ModuleDeclaration.init(b, .{
+        .hal = .{
             .root_source_file = b.path("src/hals/ATmega328P.zig"),
-        }),
-        .preferred_binary_format = .hex,
+        },
     };
 
     const chip_atmega32u4: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .hex,
         .chip = .{
             .name = "ATmega32U4",
+            .url = "https://www.microchip.com/en-us/product/ATmega32U4",
             .cpu = .{
                 .cpu_arch = .avr,
                 .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -63,10 +66,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .offset = 0x800100, .length = 2560, .kind = .ram },
             },
         },
-        .hal = microzig.ModuleDeclaration.init(b, .{
+        .hal = .{
             .root_source_file = b.path("src/hals/ATmega32U4.zig"),
-        }),
-        .preferred_binary_format = .hex,
+        },
     };
 
     return .{
@@ -77,21 +79,27 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .arduino = .{
                 .nano = chip_atmega328p.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Arduino Nano",
+                        .url = "https://docs.arduino.cc/hardware/nano",
                         .root_source_file = b.path("src/boards/arduino_nano.zig"),
-                    }),
+                    },
                 }),
                 .uno_rev3 = chip_atmega328p.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Arduino Nano",
+                        .url = "https://docs.arduino.cc/hardware/nano",
                         .root_source_file = b.path("src/boards/arduino_uno.zig"),
-                    }),
+                    },
                 }),
             },
             .adafruit = .{
                 .itsybitsy_32u4 = chip_atmega32u4.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Arduino Nano",
+                        .url = "https://docs.arduino.cc/hardware/nano",
                         .root_source_file = b.path("src/boards/itsybitsy_32u4.zig"),
-                    }),
+                    },
                 }),
             },
         },

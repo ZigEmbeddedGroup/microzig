@@ -468,6 +468,7 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
             \\    ret.{} = b.allocator.create(microzig.Target) catch @panic("out of memory");
             \\    ret.{}.* = .{{
             \\        .dep = dep,
+            \\        .preferred_binary_format = .elf,
             \\        .chip = .{{
             \\            .name = "{s}",
             \\            .cpu = .{{
@@ -500,6 +501,9 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         }
 
         try writer.writeAll(
+            \\            .register_definition = .{
+            \\                .zig = register_definition_path,
+            \\            },
             \\            .memory_regions = &.{
             \\
         );
@@ -572,9 +576,6 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
 
         try writer.writeAll(
             \\            },
-            \\            .register_definition = .{
-            \\                .zig = register_definition_path,
-            \\            },
             \\        },
             \\
         );
@@ -582,9 +583,9 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
         // TODO: Better system to detect if hal is present.
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
-                \\        .hal = microzig.ModuleDeclaration.init(b, .{
+                \\        .hal = .{
                 \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
-                \\        }),
+                \\        },
                 \\
             );
         }

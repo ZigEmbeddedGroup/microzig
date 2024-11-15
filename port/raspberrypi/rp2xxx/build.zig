@@ -24,8 +24,13 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const hal: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hal.zig"),
+    };
+
     const chip_rp2040: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .{ .uf2 = .RP2040 },
         .chip = .{
             .name = "RP2040",
             .cpu = std.Target.Query{
@@ -41,15 +46,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
-        .hal = microzig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/hal.zig"),
-        }),
+        .hal = hal,
         .linker_script = b.path("rp2040.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2040 },
     };
 
     const chip_rp2350: microzig.Target = .{
         .dep = dep,
+        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
         .chip = .{
             .name = "RP2350",
             .cpu = std.Target.Query{
@@ -65,14 +68,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
-        .hal = microzig.ModuleDeclaration.init(b, .{
-            .root_source_file = b.path("src/hal.zig"),
-        }),
+        .hal = hal,
         .linker_script = b.path("rp2350.ld"),
-        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
     };
 
     const bootrom_rp2040 = get_bootrom(b, chip_rp2040.chip, .w25q080);
+    const rp2040_bootrom_imports = b.allocator.dupe(std.Build.Module.Import, &.{
+        .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
+    }) catch @panic("out of memory");
 
     return .{
         .chips = .{
@@ -82,51 +85,53 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .boards = .{
             .raspberrypi = .{
                 .pico = chip_rp2040.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "RaspberryPi Pico",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
-                        .imports = &.{
-                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-                        },
-                    }),
+                        .imports = rp2040_bootrom_imports,
+                    },
                 }),
                 .pico2_arm = chip_rp2350.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "RaspberryPi Pico 2",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
-                    }),
+                    },
                 }),
             },
             .waveshare = .{
                 .rp2040_plus_4m = chip_rp2040.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Waveshare RP2040-Plus (4M Flash)",
+                        .url = "https://www.waveshare.com/rp2040-plus.htm",
                         .root_source_file = b.path("src/boards/waveshare_rp2040_plus_4m.zig"),
-                        .imports = &.{
-                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-                        },
-                    }),
+                        .imports = rp2040_bootrom_imports,
+                    },
                 }),
                 .rp2040_plus_16m = chip_rp2040.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Waveshare RP2040-Plus (16M Flash)",
+                        .url = "https://www.waveshare.com/rp2040-plus.htm",
                         .root_source_file = b.path("src/boards/waveshare_rp2040_plus_16m.zig"),
-                        .imports = &.{
-                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-                        },
-                    }),
+                        .imports = rp2040_bootrom_imports,
+                    },
                 }),
                 .rp2040_eth = chip_rp2040.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Waveshare RP2040-ETH Mini",
+                        .url = "https://www.waveshare.com/rp2040-eth.htm",
                         .root_source_file = b.path("src/boards/waveshare_rp2040_eth.zig"),
-                        .imports = &.{
-                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-                        },
-                    }),
+                        .imports = rp2040_bootrom_imports,
+                    },
                 }),
                 .rp2040_matrix = chip_rp2040.derive(.{
-                    .board = microzig.ModuleDeclaration.init(b, .{
+                    .board = .{
+                        .name = "Waveshare RP2040-Matrix",
+                        .url = "https://www.waveshare.com/rp2040-matrix.htm",
                         .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
-                        .imports = &.{
-                            .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
-                        },
-                    }),
+                        .imports = rp2040_bootrom_imports,
+                    },
                 }),
             },
         },

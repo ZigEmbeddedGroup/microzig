@@ -11,12 +11,13 @@
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // ports
-        .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
+        // .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
         .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam", .lazy = true },
         .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
-        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
+        .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
         .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
         .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
 
         // used for creating package tarballs

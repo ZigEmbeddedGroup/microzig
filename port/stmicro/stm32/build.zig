@@ -20,24 +20,28 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chips = chips,
         .boards = .{
             .stm32f3discovery = chips.STM32F303VC.derive(.{
-                .board = microzig.ModuleDeclaration.init(b, .{
+                .board = .{
+                    .name = "STM32F3DISCOVERY",
                     .root_source_file = b.path("src/boards/STM32F3DISCOVERY.zig"),
-                }),
+                },
             }),
             .stm32f4discovery = chips.STM32F407VG.derive(.{
-                .board = microzig.ModuleDeclaration.init(b, .{
+                .board = .{
+                    .name = "STM32F4DISCOVERY",
                     .root_source_file = b.path("src/boards/STM32F4DISCOVERY.zig"),
-                }),
+                },
             }),
             .stm3240geval = chips.STM32F407VG.derive(.{
-                .board = microzig.ModuleDeclaration.init(b, .{
+                .board = .{
+                    .name = "STM3240G_EVAL",
                     .root_source_file = b.path("src/boards/STM3240G_EVAL.zig"),
-                }),
+                },
             }),
             .stm32f429idiscovery = chips.STM32F429ZI.derive(.{
-                .board = microzig.ModuleDeclaration.init(b, .{
+                .board = .{
+                    .name = "STM32F429IDISCOVERY",
                     .root_source_file = b.path("src/boards/STM32F429IDISCOVERY.zig"),
-                }),
+                },
             }),
         },
     };
