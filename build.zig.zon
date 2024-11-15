@@ -5,6 +5,7 @@
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
         .core = .{ .path = "core" },
+        .drivers = .{ .path = "drivers" },
 
         // tools
         .@"tools/regz" = .{ .path = "tools/regz" },

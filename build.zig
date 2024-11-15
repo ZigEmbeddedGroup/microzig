@@ -129,6 +129,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
         builder: *Build,
         dep: *Build.Dependency,
         core_dep: *Build.Dependency,
+        drivers_dep: *Build.Dependency,
 
         /// Contains all the ports you selected.
         ports: SelectedPorts,
@@ -176,6 +177,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .builder = b,
                 .dep = dep,
                 .core_dep = dep.builder.dependency("core", .{}),
+                .drivers_dep = dep.builder.dependency("drivers", .{}),
                 .ports = ports,
             };
             return mb;
@@ -250,13 +252,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption([]const u8, "chip_name", target.chip.name);
             config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
 
-            // NOTE: should you pass optimize? the same for all
             const core_mod = b.createModule(.{
                 .root_source_file = mb.core_dep.path("src/microzig.zig"),
                 .imports = &.{
                     .{
                         .name = "config",
                         .module = config.createModule(),
+                    },
+                    .{
+                        .name = "drivers",
+                        .module = mb.drivers_dep.module("drivers"),
                     },
                 },
             });
