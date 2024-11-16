@@ -450,7 +450,7 @@ pub fn Encoder(comptime options: Options) type {
 
         fn encode_instruction_body(self: *Self, program: *BoundedProgram, diags: *?Diagnostics) !void {
             // first scan through body for labels
-            var instr_index: u5 = 0;
+            var instr_index: u5 = program.origin orelse 0;
             for (self.tokens[self.index..]) |token| {
                 switch (token.data) {
                     .label => |label| try program.labels.append(.{
@@ -991,6 +991,60 @@ test "encode.jmp.label" {
     try expectEqual(@as(u5, 0), instr.delay_side_set);
     try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
     try expectEqual(@as(u5, 1), instr.payload.jmp.address);
+}
+
+test "encode.jmp.label origin" {
+    const output = try encode_bounded_output(
+        \\.program program_at_4
+        \\.origin 4
+        \\nop
+        \\program_at_4__label:
+        \\nop
+        \\jmp program_at_4__label
+        \\.program program_at_20
+        \\.origin 20
+        \\nop
+        \\nop
+        \\program_at_20__label:
+        \\nop
+        \\jmp program_at_20__label
+    );
+
+    try expectEqual(@as(usize, 0), output.global_defines.len);
+    try expectEqual(@as(usize, 0), output.private_defines.len);
+    try expectEqual(@as(usize, 2), output.programs.len);
+
+    {
+        const program = output.programs.get(0);
+        try expectEqual(@as(usize, 1), program.labels.len);
+
+        const label = program.labels.get(0);
+        try expectEqualStrings("program_at_4__label", label.name);
+        try expectEqual(@as(u32, 5), label.index);
+        try expectEqual(false, label.public);
+
+        const instr = program.instructions.get(2);
+        try expectEqual(Instruction.Tag.jmp, instr.tag);
+        try expectEqual(@as(u5, 0), instr.delay_side_set);
+        try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
+        try expectEqual(@as(u5, 5), instr.payload.jmp.address);
+    }
+
+    {
+        const program = output.programs.get(1);
+        try expectEqual(@as(usize, 1), program.labels.len);
+
+        const label = program.labels.get(0);
+        try expectEqualStrings("program_at_20__label", label.name);
+        try expectEqual(@as(u32, 22), label.index);
+        try expectEqual(false, label.public);
+
+        const instr = program.instructions.get(3);
+        try expectEqual(Instruction.Tag.jmp, instr.tag);
+        try expectEqual(@as(u5, 0), instr.delay_side_set);
+        try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
+        try expectEqual(@as(u5, 22), instr.payload.jmp.address);
+    }
 }
 
 //test "encode.error.duplicated program name" {}
