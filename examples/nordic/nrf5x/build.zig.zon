@@ -2,7 +2,7 @@
     .name = "examples/nordic/nrf5x",
     .version = "0.0.0",
     .dependencies = .{
-        .microzig = .{ .path = "../../../" },
+        .microzig = .{ .path = "../../.." },
     },
 
     .paths = .{

@@ -1,5 +1,5 @@
 const std = @import("std");
-const microzig = @import("microzig");
+const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 

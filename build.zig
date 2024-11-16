@@ -69,8 +69,8 @@ pub const PortSelect = blk: {
     });
 };
 
-// Don't know if this is required but it doesn't hurt either
-// Helps in case there are multiple microzig instances
+// Don't know if this is required but it doesn't hurt either.
+// Helps in case there are multiple microzig instances including the same ports (eg: examples).
 pub const PortCache = blk: {
     var fields: []const std.builtin.Type.StructField = &.{};
     for (port_list) |port| {
