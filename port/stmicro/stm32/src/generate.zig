@@ -400,7 +400,7 @@ pub fn main() !void {
     const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
     defer chips_file.close();
 
-    try generate_chips_file(allocator, chips_file.writer(), chip_files.items);
+    try generate_chips_file(chips_file.writer(), chip_files.items);
 
     const out_file = try std.fs.cwd().createFile("src/chips/all.zig", .{});
     defer out_file.close();
@@ -420,7 +420,7 @@ const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm33", "cortex_m33" },
 });
 
-fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
+fn generate_chips_file(writer: anytype, chip_files: []const std.json.Parsed(ChipFile)) !void {
     try writer.writeAll(
         \\const std = @import("std");
         \\const microzig = @import("microzig/build-internals");
@@ -508,70 +508,14 @@ fn generate_chips_file(allocator: std.mem.Allocator, writer: anytype, chip_files
             \\
         );
 
-        {
-            var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
-            defer chip_memory.deinit();
-
-            // Some flash bank regions are not merged so we better do that.
-            // Flash memory names are formated as: BANK_{id}_REGION_{id}.
-
-            if (chip_file.memory.len == 0) break;
-
-            var flash_bank: ?ChipFile.Memory = null;
-            for (chip_file.memory) |memory| {
-                if (memory.kind == .flash) {
-                    var part_iter = std.mem.splitBackwards(u8, memory.name, "_");
-
-                    // Ignore the region id.
-                    _ = part_iter.next() orelse return error.InvalidMemoryName;
-
-                    // Ignore 'REGION'.
-                    _ = part_iter.next() orelse return error.InvalidMemoryName;
-
-                    if (part_iter.rest().len > 0) {
-                        // If there are two underscores then a bank is split into regions.
-                        // The rest is equal to BANK_{id}.
-                        const core_ident = part_iter.rest();
-
-                        if (flash_bank) |*bank| {
-                            // Are we in the same bank? Then make it bigger.
-                            if (std.mem.startsWith(u8, bank.name, core_ident)) {
-                                // Assert regions are adjacent.
-                                std.debug.assert(bank.address + bank.size == memory.address);
-                                bank.size += memory.size;
-
-                                continue;
-                            }
-                        } else {
-                            // This is the beggining of a bank with regions.
-                            flash_bank = memory;
-                            flash_bank.?.name = core_ident;
-
-                            continue;
-                        }
-                    }
-                }
-
-                if (flash_bank) |bank| {
-                    chip_memory.appendAssumeCapacity(bank);
-                    flash_bank = null;
-                }
-                chip_memory.appendAssumeCapacity(memory);
-            }
-
-            if (flash_bank) |bank| {
-                chip_memory.appendAssumeCapacity(bank);
-            }
-
-            for (chip_memory.items) |memory| {
-                try writer.print(
-                    \\                .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
-                    \\
-                , .{ memory.address, memory.size, switch (memory.kind) {
-                    .flash => "flash",
-                    .ram => "ram",
-                } });
-            }
+        for (chip_file.memory) |memory| {
+            try writer.print(
+                \\                .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
+                \\
+            , .{ memory.address, memory.size, switch (memory.kind) {
+                .flash => "flash",
+                .ram => "ram",
+            } });
         }
 
         try writer.writeAll(
