@@ -9,6 +9,12 @@ const pin_config = hal.pins.GlobalConfiguration{
             .mode = .{ .output = .general_purpose_push_pull },
         },
     },
+    // .GPIOB = .{
+    //     .PIN0 = .{
+    //         // can access as PB0
+    //         .mode = .{ .output = .general_purpose_push_pull },
+    //     },
+    // },
 };
 
 pub fn main() !void {
@@ -21,6 +27,7 @@ pub fn main() !void {
         //     1 => pins.led.put(0),
         // }
         pins.led.toggle();
+        // pins.PB0.toggle();
 
         busyloop();
     }

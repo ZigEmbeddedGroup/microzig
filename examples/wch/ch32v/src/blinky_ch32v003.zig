@@ -8,6 +8,10 @@ const pin_config = hal.pins.GlobalConfiguration{
             .name = "led",
             .mode = .{ .output = .general_purpose_push_pull },
         },
+        .PIN1 = .{
+            // .name = "led", // can access PC1 without name
+            .mode = .{ .output = .general_purpose_push_pull },
+        },
     },
 };
 
@@ -21,6 +25,7 @@ pub fn main() !void {
         //     1 => pins.led.put(0),
         // }
         pins.led.toggle();
+        pins.PC1.toggle();
 
         busyloop();
     }
