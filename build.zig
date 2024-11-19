@@ -2,13 +2,15 @@ const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
 
-const internals = @import("build-internals");
+const internals = @import("microzig/build-internals");
 pub const Target = internals.Target;
 pub const Chip = internals.Chip;
 pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const MemoryRegion = internals.MemoryRegion;
+
+const regz = @import("microzig/tools/regz");
 
 const port_list: []const struct {
     name: [:0]const u8,
@@ -231,6 +233,17 @@ pub fn MicroBuild(port_select: PortSelect) type {
             strip_unused_symbols: bool = true,
         };
 
+        fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
+            var buf = std.ArrayList(u8).init(b.allocator);
+
+            for (patches) |patch| {
+                std.json.stringify(patch, .{}, buf.writer()) catch @panic("OOM");
+                buf.writer().writeByte('\n') catch @panic("OOM");
+            }
+
+            return buf.toOwnedSlice() catch @panic("OOM");
+        }
+
         /// Creates a new firmware for a given target.
         pub fn add_firmware(mb: *Self, options: CreateFirmwareOptions) *Firmware {
             const b = mb.dep.builder;
@@ -284,6 +297,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                     regz_run.addArg("--output_path"); // Write to a file
                     const zig_file = regz_run.addOutputFileArg("chip.zig");
+
+                    if (target.chip.patches.len > 0) {
+                        // write patches to file
+                        const patch_ndjson = serialize_patches(host_build, chip.patches);
+                        const write_file_step = host_build.addWriteFiles();
+                        const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
+
+                        regz_gen.addArg("--patch_path");
+                        regz_gen.addFileArg(patch_file);
+                    }
 
                     regz_run.addFileArg(file);
 

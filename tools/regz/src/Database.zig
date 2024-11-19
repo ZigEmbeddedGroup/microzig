@@ -68,6 +68,8 @@ const atdf = @import("atdf.zig");
 const dslite = @import("dslite.zig");
 const gen = @import("gen.zig");
 const regzon = @import("regzon.zig");
+const patch = @import("patch.zig");
+const Patch = patch.Patch;
 
 const TypeOfField = @import("testing.zig").TypeOfField;
 
@@ -267,8 +269,7 @@ pub fn init(allocator: std.mem.Allocator) !Database {
     };
 }
 
-// TODO: figure out how to do completions: bash, zsh, fish, powershell, cmd
-fn init_from_atdf_xml(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_atdf_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -276,14 +277,14 @@ fn init_from_atdf_xml(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-fn init_from_atdf(allocator: Allocator, text: []const u8) !Database {
+pub fn init_from_atdf(allocator: Allocator, text: []const u8) !Database {
     var doc = try xml.Doc.from_memory(text);
     defer doc.deinit();
 
     return init_from_atdf_xml(allocator, doc);
 }
 
-fn init_from_svd_xml(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_svd_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -291,14 +292,14 @@ fn init_from_svd_xml(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-fn init_from_svd(allocator: Allocator, text: []const u8) !Database {
+pub fn init_from_svd(allocator: Allocator, text: []const u8) !Database {
     var doc = try xml.Doc.from_memory(text);
     defer doc.deinit();
 
     return init_from_svd_xml(allocator, doc);
 }
 
-fn init_from_dslite_xml(allocator: Allocator, doc: xml.Doc) !Database {
+pub fn init_from_dslite_xml(allocator: Allocator, doc: xml.Doc) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -306,14 +307,14 @@ fn init_from_dslite_xml(allocator: Allocator, doc: xml.Doc) !Database {
     return db;
 }
 
-fn init_from_dslite(allocator: Allocator, text: []const u8) !Database {
+pub fn init_from_dslite(allocator: Allocator, text: []const u8) !Database {
     var doc = try xml.Doc.from_memory(text);
     defer doc.deinit();
 
     return init_from_dslite_xml(allocator, doc);
 }
 
-fn init_from_json(allocator: Allocator, text: []const u8) !Database {
+pub fn init_from_json(allocator: Allocator, text: []const u8) !Database {
     var db = try Database.init(allocator);
     errdefer db.deinit();
 
@@ -987,6 +988,136 @@ pub fn format(
 
 pub fn to_zig(db: Database, out_writer: anytype) !void {
     try gen.to_zig(db, out_writer);
+}
+
+pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
+    var list = std.ArrayList(std.json.Parsed(Patch)).init(db.gpa);
+    defer {
+        for (list.items) |*entry| entry.deinit();
+        list.deinit();
+    }
+
+    var line_it = std.mem.tokenizeScalar(u8, ndjson, '\n');
+    while (line_it.next()) |line| {
+        const p = try Patch.from_json_str(db.gpa, line);
+        errdefer p.deinit();
+        try list.append(p);
+    }
+
+    // TODO: handle patches
+    // TODO: keep track of changes so they can be done, maybe Patch => Change,
+    // and also have a ChangeResult so you could undo deletion of a thing
+
+    for (list.items) |entry| {
+        switch (entry.value) {
+            .add_enum => |added_enum| {
+                const parent_id = try db.get_entity_id_by_ref(added_enum.parent);
+                // TODO: parent constraints
+                const enum_id = try db.create_enum(parent_id, .{
+                    .name = added_enum.@"enum".name,
+                    .description = added_enum.@"enum".description,
+                    .size = added_enum.@"enum".bitsize,
+                });
+
+                for (added_enum.@"enum".fields) |field| {
+                    _ = try db.create_enum_field(enum_id, .{
+                        .name = field.name,
+                        .description = field.description,
+                        .value = field.value,
+                    });
+                }
+            },
+            .set_enum_type => |set_enum_type| {
+                const of_id = try db.get_entity_id_by_ref(set_enum_type.of);
+                const to_id = try db.get_entity_id_by_ref(set_enum_type.to);
+                // TODO: type checks
+                // TODO: size checks
+                // of_id should be a field, it's parent is a register
+                // to_id is a type, an enum
+
+                const old_enum = db.attrs.@"enum".get(of_id);
+                if (old_enum) |old_id| {
+                    const old_size = db.attrs.size.get(old_id).?;
+                    const new_size = db.attrs.size.get(to_id).?;
+
+                    if (old_size != new_size)
+                        return error.SizeMismatch;
+                }
+
+                try db.attrs.@"enum".put(db.gpa, of_id, to_id);
+
+                if (old_enum) |old_id| {
+                    // TODO: make a general "is referenced" function
+                    const is_used = for (db.attrs.@"enum".values()) |used_id| {
+                        if (used_id == old_id)
+                            break true;
+                    } else false;
+
+                    if (is_used)
+                        db.destroy_entity(old_id);
+                }
+            },
+        }
+    }
+}
+
+fn get_keys_from_group_and_table(db: *const Database, comptime group: []const u8, table: []const u8) ![]const EntityId {
+    return inline for (@typeInfo(@TypeOf(@field(db, group))).Struct.fields) |field| {
+        if (std.mem.eql(u8, field.name, table)) {
+            break @field(@field(db, group), field.name).keys();
+        }
+    } else error.InvalidRef;
+}
+
+fn get_all_children(db: *const Database, allocator: Allocator, entity_id: EntityId) ![]const EntityId {
+    var ids = std.AutoArrayHashMap(EntityId, void).init(allocator);
+    defer ids.deinit();
+
+    inline for (@typeInfo(@TypeOf(db.children)).Struct.fields) |field| {
+        if (@field(db.children, field.name).get(entity_id)) |keyset| {
+            for (keyset.keys()) |id|
+                try ids.putNoClobber(id, {});
+        }
+    }
+
+    return try allocator.dupe(EntityId, ids.keys());
+}
+
+pub fn get_entity_id_by_ref(db: *const Database, ref: []const u8) !EntityId {
+    var tok_it = std.mem.tokenizeScalar(u8, ref, '.');
+
+    const group = tok_it.next() orelse return error.InvalidRef;
+    const table = tok_it.next() orelse return error.InvalidRef;
+
+    const keys: []const EntityId = if (std.mem.eql(u8, "types", group))
+        try db.get_keys_from_group_and_table("types", table)
+    else if (std.mem.eql(u8, "instances", group))
+        try db.get_keys_from_group_and_table("instances", table)
+    else
+        return error.InvalidRef;
+
+    const base_name = tok_it.next() orelse return error.InvalidRef;
+    const base_id: EntityId = for (keys) |id| {
+        const name = db.attrs.name.get(id) orelse continue;
+        if (std.mem.eql(u8, base_name, name)) {
+            break id;
+        }
+    } else return error.InvalidRef;
+
+    var current_id = base_id;
+    while (tok_it.next()) |name| {
+        const children_ids = try db.get_all_children(db.gpa, current_id);
+        defer db.gpa.free(children_ids);
+
+        current_id = for (children_ids) |child_id| {
+            const child_name = db.attrs.name.get(child_id) orelse continue;
+            if (std.mem.eql(u8, name, child_name)) {
+                break child_id;
+            }
+        } else return error.InvlidRef;
+    }
+
+    return current_id;
 }
 
 test "all" {

@@ -4,6 +4,8 @@ const Compile = Build.Compile;
 const Step = Build.Step;
 const GeneratedFile = Build.GeneratedFile;
 
+pub const patch = @import("src/patch.zig");
+
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});

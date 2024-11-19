@@ -10,6 +10,7 @@
         "build.zig.zon",
         "build.zig",
         "src",
+        "patches",
         "tools",
         "rp2040.ld",
         "rp2350.ld",
