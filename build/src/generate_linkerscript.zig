@@ -131,6 +131,7 @@ pub fn main() !void {
             \\  {
             \\      microzig_bss_start = .;
             \\      *(.bss*)
+            \\      *(.sbss*)
             \\      microzig_bss_end = .;
             \\  } > ram0
             \\
