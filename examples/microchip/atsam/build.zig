@@ -1,14 +1,19 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build");
-const atsam = @import("microzig/port/microchip/atsam");
+const microzig = @import("microzig");
 
-const available_examples = [_]Example{
-    .{ .target = atsam.chips.atsamd51j19, .name = "atsamd51j19-blinky", .file = "src/blinky.zig" },
-};
+const MicroBuild = microzig.MicroBuild(.{
+    .atsam = true,
+});
 
 pub fn build(b: *std.Build) void {
-    const microzig = MicroZig.init(b, .{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const mz_dep = b.dependency("microzig", .{});
+    const mb = MicroBuild.init(b, mz_dep);
+
+    const available_examples = [_]Example{
+        .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsamd51j19-blinky", .file = "src/blinky.zig" },
+    };
 
     for (available_examples) |example| {
         // `add_firmware` basically works like addExecutable, but takes a
@@ -16,7 +21,7 @@ pub fn build(b: *std.Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
-        const firmware = microzig.add_firmware(b, .{
+        const fw = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
@@ -27,15 +32,15 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        microzig.install_firmware(b, firmware, .{});
+        mb.install_firmware(fw, .{});
 
         // For debugging, we also always install the firmware as an ELF file
-        microzig.install_firmware(b, firmware, .{ .format = .elf });
+        mb.install_firmware(fw, .{ .format = .elf });
     }
 }
 
 const Example = struct {
-    target: MicroZig.Target,
+    target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
 };

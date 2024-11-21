@@ -1,14 +1,51 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig/build-internals");
+const Chips = @import("src/Chips.zig");
 
-fn root() []const u8 {
-    return comptime (std.fs.path.dirname(@src().file) orelse ".");
+const Self = @This();
+
+chips: Chips,
+boards: struct {
+    stm32f3discovery: *const microzig.Target,
+    stm32f4discovery: *const microzig.Target,
+    stm3240geval: *const microzig.Target,
+    stm32f429idiscovery: *const microzig.Target,
+},
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+    const chips = Chips.init(dep);
+
+    return .{
+        .chips = chips,
+        .boards = .{
+            .stm32f3discovery = chips.STM32F303VC.derive(.{
+                .board = .{
+                    .name = "STM32F3DISCOVERY",
+                    .root_source_file = b.path("src/boards/STM32F3DISCOVERY.zig"),
+                },
+            }),
+            .stm32f4discovery = chips.STM32F407VG.derive(.{
+                .board = .{
+                    .name = "STM32F4DISCOVERY",
+                    .root_source_file = b.path("src/boards/STM32F4DISCOVERY.zig"),
+                },
+            }),
+            .stm3240geval = chips.STM32F407VG.derive(.{
+                .board = .{
+                    .name = "STM3240G_EVAL",
+                    .root_source_file = b.path("src/boards/STM3240G_EVAL.zig"),
+                },
+            }),
+            .stm32f429idiscovery = chips.STM32F429ZI.derive(.{
+                .board = .{
+                    .name = "STM32F429IDISCOVERY",
+                    .root_source_file = b.path("src/boards/STM32F429IDISCOVERY.zig"),
+                },
+            }),
+        },
+    };
 }
-const build_root = root();
-
-const KiB = 1024;
-
-pub const chips = @import("src/chips.zig");
 
 pub fn build(b: *std.Build) !void {
     const update = b.step("update", "Update chip definitions from embassy-rs/stm32-data-generated");
@@ -33,75 +70,3 @@ pub fn build(b: *std.Build) !void {
 
     _ = b.step("test", "Run platform agnostic unit tests");
 }
-
-pub const boards = struct {
-    pub const stm32f3discovery = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = chips.STM32F303VC.chip,
-        .board = .{
-            .name = "STM32F3DISCOVERY",
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F3DISCOVERY.zig" },
-        },
-    };
-
-    pub const stm32f4discovery = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = chips.STM32F407VG.chip,
-        .board = .{
-            .name = "STM32F4DISCOVERY",
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F4DISCOVERY.zig" },
-        },
-    };
-
-    pub const stm3240geval = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = chips.STM32F407VG.chip,
-        .board = .{
-            .name = "STM3240G_EVAL",
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM3240G_EVAL.zig" },
-        },
-    };
-
-    pub const stm32f429idiscovery = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = chips.STM32F429ZI.chip,
-        .board = .{
-            .name = "STM32F429IDISCOVERY",
-            .root_source_file = .{ .cwd_relative = build_root ++ "/src/boards/STM32F429IDISCOVERY.zig" },
-        },
-    };
-};
-
-// pub fn build(b: *std.build.Builder) void {
-//     _ = b;
-// const optimize = b.standardOptimizeOption(.{});
-// inline for (@typeInfo(boards).Struct.decls) |decl| {
-//     if (!decl.is_pub)
-//         continue;
-
-//     const exe = microzig.addEmbeddedExecutable(b, .{
-//         .name = @field(boards, decl.name).name ++ ".minimal",
-//         .root_source_file = .{
-//             .path = "test/programs/minimal.zig",
-//         },
-//         .backing = .{ .board = @field(boards, decl.name) },
-//         .optimize = optimize,
-//     });
-//     exe.installArtifact(b);
-// }
-
-// inline for (@typeInfo(chips).Struct.decls) |decl| {
-//     if (!decl.is_pub)
-//         continue;
-
-//     const exe = microzig.addEmbeddedExecutable(b, .{
-//         .name = @field(chips, decl.name).name ++ ".minimal",
-//         .root_source_file = .{
-//             .path = "test/programs/minimal.zig",
-//         },
-//         .backing = .{ .chip = @field(chips, decl.name) },
-//         .optimize = optimize,
-//     });
-//     exe.installArtifact(b);
-// }
-// }

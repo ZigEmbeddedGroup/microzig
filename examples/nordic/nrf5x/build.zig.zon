@@ -2,8 +2,7 @@
     .name = "examples/nordic/nrf5x",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/nordic/nrf5x" = .{ .path = "../../../port/nordic/nrf5x" },
+        .microzig = .{ .path = "../../.." },
     },
 
     .paths = .{

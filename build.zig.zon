@@ -3,30 +3,23 @@
     .version = "0.13.0",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
-        // packages within the monorepo so that others can reach them
-        .build = .{ .path = "build" },
-        .@"build/definitions" = .{ .path = "build/definitions" },
+        .@"build-internals" = .{ .path = "build-internals" },
         .core = .{ .path = "core" },
+        .drivers = .{ .path = "drivers" },
+
+        // tools
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
-        .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x" },
-        .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc" },
-        .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam" },
-        .@"port/microchip/avr" = .{ .path = "port/microchip/avr" },
-        .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32" },
-        .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32" },
-        .@"port/espressif/esp" = .{ .path = "port/espressif/esp" },
-        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx" },
 
-        // examples so that we can build them all in one go
-        .@"examples/nordic/nrf5x" = .{ .path = "examples/nordic/nrf5x" },
-        .@"examples/nxp/lpc" = .{ .path = "examples/nxp/lpc" },
-        .@"examples/microchip/atsam" = .{ .path = "examples/microchip/atsam" },
-        .@"examples/microchip/avr" = .{ .path = "examples/microchip/avr" },
-        .@"examples/gigadevice/gd32" = .{ .path = "examples/gigadevice/gd32" },
-        .@"examples/stmicro/stm32" = .{ .path = "examples/stmicro/stm32" },
-        .@"examples/espressif/esp" = .{ .path = "examples/espressif/esp" },
-        .@"examples/raspberrypi/rp2xxx" = .{ .path = "examples/raspberrypi/rp2xxx" },
+        // ports
+        // .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
+        .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
+        .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam", .lazy = true },
+        .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
+        .@"port/nordic/nrf5x" = .{ .path = "port/nordic/nrf5x", .lazy = true },
+        .@"port/nxp/lpc" = .{ .path = "port/nxp/lpc", .lazy = true },
+        .@"port/raspberrypi/rp2xxx" = .{ .path = "port/raspberrypi/rp2xxx", .lazy = true },
+        .@"port/stmicro/stm32" = .{ .path = "port/stmicro/stm32", .lazy = true },
 
         // used for creating package tarballs
         .boxzer = .{
@@ -34,7 +27,6 @@
             .hash = "12202157366306cd7fb005defe138bf8aeccfa903850d234b1c1edc1ca8071e4a931",
         },
     },
-
     .paths = .{
         "README.md",
         "build.zig",
@@ -42,5 +34,6 @@
         "LICENSE",
         "design",
         "docs",
+        "tools/generate_linker_script.zig",
     },
 }

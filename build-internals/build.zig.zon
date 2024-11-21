@@ -1,0 +1,9 @@
+.{
+    .name = "build-internals",
+    .version = "0.0.0",
+    .paths = .{
+        "LICENSE",
+        "build.zig",
+        "build.zig.zon",
+    },
+}
