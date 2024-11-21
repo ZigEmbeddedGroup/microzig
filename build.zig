@@ -25,10 +25,13 @@ const port_list: []const struct {
 };
 
 pub fn build(b: *Build) void {
+    const optimize = b.standardOptimizeOption(.{});
+
     const generate_linker_script_exe = b.addExecutable(.{
         .name = "generate_linker_script",
         .root_source_file = b.path("tools/generate_linker_script.zig"),
         .target = b.host,
+        .optimize = optimize,
     });
 
     generate_linker_script_exe.root_module.addImport(
