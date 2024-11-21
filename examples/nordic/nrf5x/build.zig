@@ -1,15 +1,19 @@
 const std = @import("std");
-const Build = std.Build;
-const MicroZig = @import("microzig/build");
-const nrf5x = @import("microzig/port/nordic/nrf5x");
+const microzig = @import("microzig");
 
-const available_examples = [_]Example{
-    .{ .target = nrf5x.boards.nordic_nRF52840_Dongle, .name = "nrf52480-dongle_blinky", .file = "src/blinky.zig" },
-};
+const MicroBuild = microzig.MicroBuild(.{
+    .nrf5x = true,
+});
 
-pub fn build(b: *Build) void {
-    const microzig = MicroZig.init(b, .{});
+pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+
+    const mz_dep = b.dependency("microzig", .{});
+    const mb = MicroBuild.init(b, mz_dep);
+
+    const available_examples = [_]Example{
+        .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_dongle, .name = "nrf52480-dongle_blinky", .file = "src/blinky.zig" },
+    };
 
     for (available_examples) |example| {
         // `add_firmware` basically works like addExecutable, but takes a
@@ -17,7 +21,7 @@ pub fn build(b: *Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
-        const firmware = microzig.add_firmware(b, .{
+        const fw = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
@@ -28,15 +32,15 @@ pub fn build(b: *Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        microzig.install_firmware(b, firmware, .{});
+        mb.install_firmware(fw, .{});
 
         // For debugging, we also always install the firmware as an ELF file
-        microzig.install_firmware(b, firmware, .{ .format = .elf });
+        mb.install_firmware(fw, .{ .format = .elf });
     }
 }
 
 const Example = struct {
-    target: MicroZig.Target,
+    target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
 };

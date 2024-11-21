@@ -1,0 +1,19 @@
+.{
+    .name = "examples",
+    .version = "0.0.0",
+    .dependencies = .{
+        // examples
+        // .@"espressif/esp" = .{ .path = "espressif/esp" },
+        .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
+        .@"microchip/atsam" = .{ .path = "microchip/atsam" },
+        .@"microchip/avr" = .{ .path = "microchip/avr" },
+        .@"nordic/nrf5x" = .{ .path = "nordic/nrf5x" },
+        .@"nxp/lpc" = .{ .path = "nxp/lpc" },
+        .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
+        .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

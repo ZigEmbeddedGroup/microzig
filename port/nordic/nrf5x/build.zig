@@ -1,22 +1,36 @@
 const std = @import("std");
-const Build = std.Build;
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig/build-internals");
 
-fn path(comptime suffix: []const u8) std.Build.LazyPath {
-    return .{
-        .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
-    };
-}
+const Self = @This();
 
-pub const chips = struct {
-    pub const nrf52840 = MicroZig.Target{
-        .preferred_format = .elf,
+chips: struct {
+    nrf52840: *const microzig.Target,
+    nrf52832: *const microzig.Target,
+},
+
+boards: struct {
+    nordic: struct {
+        nrf52840_dongle: *const microzig.Target,
+    },
+},
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+
+    const chip_nrf52840: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "nrf52840",
             .url = "https://www.nordicsemi.com/products/nrf52840",
-            .cpu = MicroZig.cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .register_definition = .{
-                .json = path("/src/chips/nrf52840.json"),
+                .json = b.path("src/chips/nrf52840.json"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x00000000, .length = 0x100000, .kind = .flash },
@@ -31,14 +45,20 @@ pub const chips = struct {
         },
     };
 
-    pub const nrf52832 = MicroZig.Target{
-        .preferred_format = .elf,
+    const chip_nrf52832: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "nrf52",
             .url = "https://www.nordicsemi.com/products/nrf52832",
-            .cpu = MicroZig.cpus.cortex_m4,
+            .cpu = .{
+                .cpu_arch = .thumb,
+                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
             .register_definition = .{
-                .json = path("/src/chips/nrf52.json"),
+                .json = b.path("src/chips/nrf52.json"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
@@ -46,20 +66,26 @@ pub const chips = struct {
             },
         },
     };
-};
 
-pub const boards = struct {
-    pub const nordic_nRF52840_Dongle = MicroZig.Target{
-        .preferred_format = .elf,
-        .chip = chips.nrf52840.chip,
-        .board = .{
-            .name = "nRF52840 Dongle",
-            .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
-            .root_source_file = path("/src/boards/nrf52840-dongle.zig"),
+    return .{
+        .chips = .{
+            .nrf52840 = chip_nrf52840.derive(.{}),
+            .nrf52832 = chip_nrf52832.derive(.{}),
+        },
+        .boards = .{
+            .nordic = .{
+                .nrf52840_dongle = chip_nrf52840.derive(.{
+                    .board = .{
+                        .name = "nRF52840 Dongle",
+                        .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
+                        .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
+                    },
+                }),
+            },
         },
     };
-};
+}
 
-pub fn build(b: *Build) void {
+pub fn build(b: *std.Build) void {
     _ = b.step("test", "Run platform agnostic unit tests");
 }

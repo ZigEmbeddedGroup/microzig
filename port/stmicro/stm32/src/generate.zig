@@ -357,7 +357,7 @@ pub fn main() !void {
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
             // TODO
-            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_microzig_cpu.get(core.name).?).?,
+            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_cpu.get(core.name).?).?,
         });
 
         try regz.arm.load_system_interrupts(&db, device_id);
@@ -397,7 +397,7 @@ pub fn main() !void {
         }
     }
 
-    const chips_file = try std.fs.cwd().createFile("src/chips.zig", .{});
+    const chips_file = try std.fs.cwd().createFile("src/Chips.zig", .{});
     defer chips_file.close();
 
     try generate_chips_file(allocator, chips_file.writer(), chip_files.items);
@@ -411,7 +411,7 @@ pub fn main() !void {
     };
 }
 
-const core_to_microzig_cpu = std.StaticStringMap([]const u8).initComptime(&.{
+const core_to_cpu = std.StaticStringMap([]const u8).initComptime(&.{
     .{ "cm0", "cortex_m0" },
     .{ "cm0p", "cortex_m0plus" },
     .{ "cm3", "cortex_m3" },
@@ -427,60 +427,90 @@ fn generate_chips_file(
 ) !void {
     try writer.writeAll(
         \\const std = @import("std");
-        \\const MicroZig = @import("microzig/build");
+        \\const microzig = @import("microzig/build-internals");
         \\
-        \\fn root() []const u8 {
-        \\    return comptime (std.fs.path.dirname(@src().file) orelse ".");
-        \\}
-        \\const build_root = root();
-        \\pub const register_definition_path = build_root ++ "/chips/all.zig";
+        \\const Self = @This();
+        \\
+        \\
+    );
+
+    for (chip_files) |json| {
+        const chip_file = json.value;
+        try writer.print("{}: *microzig.Target,\n", .{std.zig.fmtId(chip_file.name)});
+    }
+
+    try writer.writeAll(
+        \\
+        \\pub fn init(dep: *std.Build.Dependency) Self {
+        \\    const b = dep.builder;
+        \\    const register_definition_path = b.path("src/chips/all.zig");
+        \\
+        \\    var ret: Self = undefined;
+        \\
         \\
     );
 
     for (chip_files) |json| {
         const chip_file = json.value;
         const core = chip_file.cores[0];
-        var microzig_core_name = core_to_microzig_cpu.get(chip_file.cores[0].name) orelse {
-            std.log.err("Unhandled core name: '{s}'", .{core.name});
-            return error.UnhandledCoreName;
-        };
+
+        const fpu_feature = std.StaticStringMap([]const u8).initComptime(&.{
+            .{ "cm4", "vfp4d16sp" },
+            .{ "cm7", "fp_armv8d16sp" },
+            .{ "cm33", "vfp4d16sp" },
+        });
+
+        var with_fpu = false;
         for (core.interrupts) |item| {
             if (std.mem.indexOf(u8, item.name, "FPU")) |_| {
-                const Case = enum { cm4, cm7, cm33, none };
-                const case = std.meta.stringToEnum(Case, core.name) orelse defaultblk: {
-                    std.log.warn("Found core with FPU interrupt, but don't have a target with FPU", .{});
-                    break :defaultblk .none;
-                };
-                switch (case) {
-                    .cm4 => {
-                        microzig_core_name = "cortex_m4f";
-                    },
-                    .cm7 => {
-                        microzig_core_name = "cortex_m7f";
-                    },
-                    .cm33 => {
-                        microzig_core_name = "cortex_m33f";
-                    },
-                    else => {},
-                }
+                with_fpu = true;
                 break;
             }
         }
 
         try writer.print(
-            \\
-            \\pub const {} = MicroZig.Target{{
-            \\    .preferred_format = .elf,
-            \\    .chip = .{{
-            \\        .name = "{s}",
-            \\        .cpu = MicroZig.cpus.{s},
-            \\        .memory_regions = &.{{
+            \\    ret.{} = b.allocator.create(microzig.Target) catch @panic("out of memory");
+            \\    ret.{}.* = .{{
+            \\        .dep = dep,
+            \\        .preferred_binary_format = .elf,
+            \\        .chip = .{{
+            \\            .name = "{s}",
+            \\            .cpu = .{{
+            \\                .cpu_arch = .thumb,
+            \\                .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
+            \\                .os_tag = .freestanding,
             \\
         , .{
             std.zig.fmtId(chip_file.name),
+            std.zig.fmtId(chip_file.name),
             chip_file.name,
-            microzig_core_name,
+            core_to_cpu.get(core.name).?,
         });
+
+        if (with_fpu) {
+            try writer.print(
+                \\                .cpu_features_add = std.Target.arm.featureSet(&.{{.{s}}}),
+                \\                .abi = .eabihf,
+                \\            }},
+                \\
+            , .{
+                fpu_feature.get(core.name).?,
+            });
+        } else {
+            try writer.writeAll(
+                \\                .abi = .eabi,
+                \\            },
+                \\
+            );
+        }
+
+        try writer.writeAll(
+            \\            .register_definition = .{
+            \\                .zig = register_definition_path,
+            \\            },
+            \\            .memory_regions = &.{
+            \\
+        );
 
         {
             var chip_memory = try std.ArrayList(ChipFile.Memory).initCapacity(allocator, chip_file.memory.len);
@@ -539,7 +569,7 @@ fn generate_chips_file(
 
             for (chip_memory.items) |memory| {
                 try writer.print(
-                    \\            .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
+                    \\                .{{ .offset = 0x{X}, .length = 0x{X}, .kind = .{s} }},
                     \\
                 , .{ memory.address, memory.size, switch (memory.kind) {
                     .flash => "flash",
@@ -549,30 +579,33 @@ fn generate_chips_file(
         }
 
         try writer.writeAll(
+            \\            },
             \\        },
-            \\        .register_definition = .{
-            \\            .zig = .{ .cwd_relative = register_definition_path },
-            \\        },
-            \\    },
             \\
         );
 
-        // For now
+        // TODO: Better system to detect if hal is present.
         if (std.mem.startsWith(u8, chip_file.name, "STM32F103")) {
             try writer.writeAll(
-                \\    .hal = .{
-                \\        .root_source_file = .{ .cwd_relative = build_root ++ "/hals/STM32F103/hal.zig" },
-                \\    },
+                \\        .hal = .{
+                \\            .root_source_file = b.path("src/hals/STM32F103/hal.zig"),
+                \\        },
                 \\
-                ,
             );
         }
 
         try writer.writeAll(
-            \\};
+            \\    };
+            \\
             \\
         );
     }
+
+    try writer.writeAll(
+        \\    return ret;
+        \\}
+        \\
+    );
 }
 
 fn chip_file_less_than(_: void, lhs: std.json.Parsed(ChipFile), rhs: std.json.Parsed(ChipFile)) bool {

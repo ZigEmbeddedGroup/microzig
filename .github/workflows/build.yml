@@ -32,7 +32,9 @@ jobs:
         run: zig build -Doptimize=ReleaseSmall
 
       - name: Unit Test Ports
-        run: zig build run-port-tests -Doptimize=ReleaseSmall
+        run: |
+          cd port/raspberrypi/rp2xxx
+          zig build test
 
       - name: Build Website
         run: zig build

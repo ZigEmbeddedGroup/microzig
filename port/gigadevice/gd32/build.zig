@@ -1,66 +1,89 @@
 const std = @import("std");
-const Build = std.Build;
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig/build-internals");
 
-fn path(comptime suffix: []const u8) std.Build.LazyPath {
-    return .{
-        .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
+const Self = @This();
+
+chips: struct {
+    gd32vf103xb: *const microzig.Target,
+    gd32vf103x8: *const microzig.Target,
+},
+
+boards: struct {
+    sipeed: struct {
+        longan_nano: *const microzig.Target,
+    },
+},
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+
+    const hal_f103: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hals/GD32VF103/hal.zig"),
     };
-}
 
-const hal = .{
-    .root_source_file = path("/src/hals/GD32VF103/hal.zig"),
-};
-
-pub const chips = struct {
-    pub const gd32vf103xb = MicroZig.Target{
-        .preferred_format = .elf,
+    const chip_gd32vf103xb: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "GD32VF103",
-            .cpu = MicroZig.cpus.riscv32_imac,
+            .cpu = .{
+                .cpu_arch = .riscv32,
+                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
+                .os_tag = .freestanding,
+                .abi = .none,
+            },
+            .register_definition = .{
+                .json = b.path("src/chips/GD32VF103.json"),
+            },
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 128 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 32 * 1024, .kind = .ram },
             },
-            .register_definition = .{
-                .json = path("/src/chips/GD32VF103.json"),
-            },
         },
-        .hal = hal,
+        .hal = hal_f103,
     };
 
-    pub const gd32vf103x8 = MicroZig.Target{
-        .preferred_format = .elf,
+    const chip_gd32vf103x8: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
         .chip = .{
             .name = "GD32VF103",
-            .cpu = MicroZig.cpus.riscv32_imac,
+            .cpu = .{
+                .cpu_arch = .riscv32,
+                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
+                .os_tag = .freestanding,
+                .abi = .none,
+            },
+            .register_definition = .{
+                .json = b.path("src/chips/GD32VF103.json"),
+            },
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
             },
-            .register_definition = .{
-                .json = path("/src/chips/GD32VF103.json"),
+        },
+        .hal = hal_f103,
+    };
+
+    return .{
+        .chips = .{
+            .gd32vf103xb = chip_gd32vf103xb.derive(.{}),
+            .gd32vf103x8 = chip_gd32vf103x8.derive(.{}),
+        },
+        .boards = .{
+            .sipeed = .{
+                .longan_nano = chip_gd32vf103xb.derive(.{
+                    .board = .{
+                        .name = "Longan Nano",
+                        .url = "https://longan.sipeed.com/en/",
+                        .root_source_file = b.path("src/boards/longan_nano.zig"),
+                    },
+                }),
             },
         },
-        .hal = hal,
     };
-};
+}
 
-pub const boards = struct {
-    pub const sipeed = struct {
-        pub const longan_nano = MicroZig.Target{
-            .preferred_format = .elf,
-            .chip = chips.gd32vf103xb.chip,
-            .hal = hal,
-            .board = .{
-                .name = "Longan Nano",
-                .url = "https://longan.sipeed.com/en/",
-                .root_source_file = path("/src/boards/longan_nano.zig"),
-            },
-        };
-    };
-};
-
-pub fn build(b: *Build) void {
+pub fn build(b: *std.Build) void {
     _ = b.step("test", "Run platform agnostic unit tests");
 }
