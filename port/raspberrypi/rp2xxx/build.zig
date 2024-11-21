@@ -141,8 +141,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
 pub fn build(b: *std.Build) !void {
     // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
 
+    const optimize = b.standardOptimizeOption(.{});
+
     const unit_tests = b.addTest(.{
         .root_source_file = b.path("src/hal.zig"),
+        .optimize = optimize,
     });
     unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
 
