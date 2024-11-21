@@ -138,8 +138,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
     };
 }
 
-pub fn build(_: *std.Build) !void {
+pub fn build(b: *std.Build) !void {
     // TODO: construct all bootroms here and expose them via lazy paths: requires zig 0.14
+
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/hal.zig"),
+    });
+    unit_tests.addIncludePath(b.path("src/hal/pio/assembler"));
+
+    const unit_tests_run = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+    test_step.dependOn(&unit_tests_run.step);
 }
 
 const BootROM = union(enum) {
