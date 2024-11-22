@@ -773,7 +773,7 @@ test "svd.device register properties" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // these only have names attached, so if these functions fail the test will fail.
@@ -816,7 +816,7 @@ test "svd.peripheral register properties" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // these only have names attached, so if these functions fail the test will fail.
@@ -862,7 +862,7 @@ test "svd.register register properties" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // these only have names attached, so if these functions fail the test will fail.
@@ -907,7 +907,7 @@ test "svd.register with fields" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const field_id = try db.get_entity_id_by_name("type.field", "TEST_FIELD");
@@ -960,7 +960,7 @@ test "svd.field with enum value" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const peripheral_id = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
@@ -1015,7 +1015,7 @@ test "svd.peripheral with dimElementGroup" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const peripheral_id = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
@@ -1053,7 +1053,7 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
@@ -1089,7 +1089,7 @@ test "svd.register with dimElementGroup" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
@@ -1130,7 +1130,7 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
@@ -1167,7 +1167,7 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // [%s] is dropped from name, it is redundant
@@ -1201,7 +1201,7 @@ test "svd.register with dimElementGroup, %s in name" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // %s is dropped from name, it is redundant
@@ -1242,7 +1242,7 @@ test "svd.field with dimElementGroup, suffixed with %s" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd(std.testing.allocator, doc);
+    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // %s is dropped from name, it is redundant

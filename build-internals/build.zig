@@ -3,6 +3,9 @@ const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 
+const regz = @import("regz");
+const Patch = regz.patch.Patch;
+
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
         .root_source_file = b.path("build.zig"),
@@ -106,6 +109,8 @@ pub const Chip = struct {
 
     /// The memory regions that are present in this chip.
     memory_regions: []const MemoryRegion,
+
+    patches: []const Patch = &.{},
 };
 
 /// Defines a hardware abstraction layer.

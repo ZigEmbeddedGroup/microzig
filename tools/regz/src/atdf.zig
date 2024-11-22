@@ -1165,7 +1165,7 @@ test "atdf.register with bitfields and enum" {
         \\</avr-tools-device-file>
     ;
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // RTC_PRESCALER enum checks
@@ -1291,7 +1291,7 @@ test "atdf.register with mode" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     // there will only be one register
@@ -1414,7 +1414,7 @@ test "atdf.instance of register group" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     try expectEqual(@as(usize, 9), db.types.registers.count());
@@ -1453,7 +1453,7 @@ test "atdf.interrupts" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const vector1_id = try db.get_entity_id_by_name("instance.interrupt", "TEST_VECTOR1");
@@ -1479,7 +1479,7 @@ test "atdf.interrupts with module-instance" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const crcscan_nmi_id = try db.get_entity_id_by_name("instance.interrupt", "CRCSCAN_NMI");
@@ -1512,7 +1512,7 @@ test "atdf.interrupts with interrupt-groups" {
     ;
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_atdf(std.testing.allocator, doc);
+    var db = try Database.init_from_atdf_xml(std.testing.allocator, doc);
     defer db.deinit();
 
     const portb_int0_id = try db.get_entity_id_by_name("instance.interrupt", "PORTB_INT0");

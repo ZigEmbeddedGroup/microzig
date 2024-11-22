@@ -9,6 +9,10 @@ const assert = std.debug.assert;
 
 const svd_schema = @embedFile("cmsis-svd.xsd");
 
+pub const std_options = std.Options{
+    .log_level = .err,
+};
+
 pub fn main() !void {
     main_impl() catch |err| switch (err) {
         error.Explained => std.process.exit(1),
@@ -22,11 +26,13 @@ const Arguments = struct {
     input_path: ?[]const u8 = null,
     output_path: ?[]const u8 = null,
     output_json: bool = false,
+    patch_path: ?[]const u8 = null,
     help: bool = false,
 
     fn deinit(args: *Arguments) void {
         if (args.input_path) |input_path| args.allocator.free(input_path);
         if (args.output_path) |output_path| args.allocator.free(output_path);
+        if (args.patch_path) |patch_path| args.allocator.free(patch_path);
     }
 };
 
@@ -36,6 +42,7 @@ fn print_usage(writer: anytype) !void {
         \\  --help                Display this help and exit
         \\  --schema <str>        Explicitly set schema type, one of: svd, atdf, json
         \\  --output_path <str>   Write to a file
+        \\  --patch_path <str>    After reading schema, apply NDJSON based patch file
         \\  --json                Write output as JSON
         \\<str>
         \\
@@ -71,6 +78,9 @@ fn parse_args(allocator: Allocator) !Arguments {
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
             ret.output_path = try allocator.dupe(u8, args[i]);
+        } else if (std.mem.eql(u8, args[i], "--patch_path")) {
+            i += 1;
+            ret.patch_path = try allocator.dupe(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--json")) {
             ret.output_json = true;
         } else if (std.mem.startsWith(u8, args[i], "-")) {
@@ -131,6 +141,14 @@ fn main_impl() anyerror!void {
         break :blk try Database.init_from_reader(allocator, stdin, args.schema);
     };
     defer db.deinit();
+
+    if (args.patch_path) |patch_path| {
+        const patch = try std.fs.cwd().readFileAlloc(allocator, patch_path, 1024 * 1024);
+        defer allocator.free(patch);
+
+        // TODO: diagnostics
+        try db.apply_patch(patch);
+    }
 
     const raw_writer = if (args.output_path) |output_path|
         if (std.fs.path.isAbsolute(output_path)) writer: {
