@@ -141,6 +141,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
         ports: SelectedPorts,
 
         const InitReturnType = blk: {
+            // TODO: idk if this is idiomatic
+            @setEvalBranchQuota(2000);
+
             var ok = true;
             for (port_list) |port| {
                 if (@field(port_select, port.name)) {

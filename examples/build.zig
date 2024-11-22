@@ -3,8 +3,7 @@ const std = @import("std");
 const example_dep_names: []const []const u8 = &.{
     //"espressif/esp",
     "gigadevice/gd32",
-    // TODO: problem with regz register generation
-    // "microchip/atsam",
+    "microchip/atsam",
     "microchip/avr",
     "nordic/nrf5x",
     "nxp/lpc",
