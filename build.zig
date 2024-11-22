@@ -300,12 +300,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                     if (target.chip.patches.len > 0) {
                         // write patches to file
-                        const patch_ndjson = serialize_patches(host_build, chip.patches);
-                        const write_file_step = host_build.addWriteFiles();
+                        const patch_ndjson = serialize_patches(b, target.chip.patches);
+                        const write_file_step = b.addWriteFiles();
                         const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
 
-                        regz_gen.addArg("--patch_path");
-                        regz_gen.addFileArg(patch_file);
+                        regz_run.addArg("--patch_path");
+                        regz_run.addFileArg(patch_file);
                     }
 
                     regz_run.addFileArg(file);
