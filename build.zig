@@ -231,6 +231,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
             ///     exe.link_data_sections = true;
             ///     exe.link_function_sections = true;
             strip_unused_symbols: bool = true,
+
+            /// Additional patches the user may apply to the generated register
+            /// code. This does not override the chip's existing patches.
+            patches: []const regz.Patch = .{},
         };
 
         fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
@@ -298,9 +302,17 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
                     const zig_file = regz_run.addOutputFileArg("chip.zig");
 
-                    if (target.chip.patches.len > 0) {
+                    var patches = std.ArrayList(regz.Patch).init(b.allocator);
+
+                    // From chip definition
+                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
+
+                    // From user invoking `add_firmware`
+                    patches.appendSlice(options.patches) catch @panic("OOM");
+
+                    if (patches.len > 0) {
                         // write patches to file
-                        const patch_ndjson = serialize_patches(b, target.chip.patches);
+                        const patch_ndjson = serialize_patches(b, patches);
                         const write_file_step = b.addWriteFiles();
                         const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
 
