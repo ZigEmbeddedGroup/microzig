@@ -3,13 +3,14 @@ const std = @import("std");
 const example_dep_names: []const []const u8 = &.{
     //"espressif/esp",
     "gigadevice/gd32",
-    "microchip/atsam",
+    // TODO: problem with regz register generation
+    // "microchip/atsam",
     "microchip/avr",
     "nordic/nrf5x",
     "nxp/lpc",
     "raspberrypi/rp2xxx",
     "stmicro/stm32",
-    "wch/ch32",
+    // "wch/ch32",
 };
 
 pub fn build(b: *std.Build) void {
