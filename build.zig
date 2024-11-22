@@ -102,6 +102,31 @@ pub const PortCache = blk: {
 var port_cache: PortCache = .{};
 
 /// The MicroZig build system.
+///
+/// # Example usage:
+/// ```zig
+/// const std = @import("std");
+/// const microzig = @import("microzig");
+///
+/// const MicroBuild = microzig.MicroBuild(.{
+///     .rp2xxx = true,
+/// });
+///
+/// pub fn build(b: *std.Build) void {
+///     const optimize = b.standardOptimizeOption(.{});
+///
+///     const mz_dep = b.dependency("microzig", .{});
+///     const mb = MicroBuild.init(b, mz_dep) orelse return;
+///
+///     const fw = mb.add_firmware(.{
+///         .name = "test",
+///         .root_source_file = b.path("src/main.zig"),
+///         .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+///         .optimize = optimize,
+///     });
+///     mb.install_firmware(fw, .{});
+/// }
+/// ```
 pub fn MicroBuild(port_select: PortSelect) type {
     return struct {
         const SelectedPorts = blk: {
@@ -157,8 +182,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             }
         };
 
-        /// Initializes the microzig build system.
-        // TODO: should we call this `create`?
+        /// Initializes the microzig build system. Returns null when there are ports
+        /// that haven't been fetched yet (it uses lazy dependencies internally).
         pub fn init(b: *Build, dep: *Build.Dependency) ?InitReturnType {
             if (InitReturnType == noreturn) {
                 inline for (port_list) |port| {
