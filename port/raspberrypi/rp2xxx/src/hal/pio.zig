@@ -308,6 +308,124 @@ pub const Pio = enum(u1) {
         });
     }
 
+    pub fn sm_set_pindir(self: Pio, sm: StateMachine, base: u5, count: u5, dir: gpio.Direction) void {
+        const sm_regs = self.get_sm_regs(sm);
+        const reg_pinctrl__copy = sm_regs.pinctrl;
+        const reg_execctrl__copy = sm_regs.execctrl;
+
+        for (base..base + count) |pin__number| {
+            const pin_config: PinMappingOptions = .{
+                .out = .{
+                    .base = 0,
+                    .count = 0,
+                },
+                .set = .{
+                    .base = @intCast(pin__number),
+                    .count = 1,
+                },
+                .side_set = .{
+                    .base = 0,
+                    .count = 0,
+                },
+                .in_base = 0,
+            };
+            sm_regs.pinctrl.modify(.{
+                .OUT_BASE = pin_config.out.base,
+                .OUT_COUNT = pin_config.out.count,
+
+                .SET_BASE = pin_config.set.base,
+                .SET_COUNT = pin_config.set.count,
+
+                .SIDESET_BASE = pin_config.side_set.base,
+                .SIDESET_COUNT = pin_config.side_set.count,
+
+                .IN_BASE = pin_config.in_base,
+            });
+            self.sm_exec(sm, .{
+                .payload = .{
+                    .set = .{
+                        .data = @intFromEnum(dir),
+                        .destination = .pindirs,
+                    },
+                },
+                .delay_side_set = 0,
+                .tag = .set,
+            });
+        }
+        sm_regs.pinctrl = reg_pinctrl__copy;
+        sm_regs.execctrl = reg_execctrl__copy;
+    }
+
+    pub fn sm_set_pin(self: Pio, sm: StateMachine, base: u5, count: u5, value: u1) void {
+        const sm_regs = self.get_sm_regs(sm);
+        const reg_pinctrl__copy = sm_regs.pinctrl;
+        const reg_execctrl__copy = sm_regs.execctrl;
+
+        for (base..base + count) |pin__number| {
+            const pin_config: PinMappingOptions = .{
+                .out = .{
+                    .base = 0,
+                    .count = 0,
+                },
+                .set = .{
+                    .base = @intCast(pin__number),
+                    .count = 1,
+                },
+                .side_set = .{
+                    .base = 0,
+                    .count = 0,
+                },
+                .in_base = 0,
+            };
+            sm_regs.pinctrl.modify(.{
+                .OUT_BASE = pin_config.out.base,
+                .OUT_COUNT = pin_config.out.count,
+
+                .SET_BASE = pin_config.set.base,
+                .SET_COUNT = pin_config.set.count,
+
+                .SIDESET_BASE = pin_config.side_set.base,
+                .SIDESET_COUNT = pin_config.side_set.count,
+
+                .IN_BASE = pin_config.in_base,
+            });
+            self.sm_exec(sm, .{
+                .payload = .{
+                    .set = .{
+                        .data = value,
+                        .destination = .pins,
+                    },
+                },
+                .delay_side_set = 0,
+                .tag = .set,
+            });
+        }
+        sm_regs.pinctrl = reg_pinctrl__copy;
+        sm_regs.execctrl = reg_execctrl__copy;
+    }
+
+    pub fn sm_get_rx_fifo(self: Pio, sm: StateMachine) *volatile u32 {
+        const regs = self.get_regs();
+        const fifos = @as(*volatile [4]u32, @ptrCast(&regs.RXF0));
+        return &fifos[@intFromEnum(sm)];
+    }
+
+    pub fn sm_is_rx_fifo_empty(self: Pio, sm: StateMachine) bool {
+        const regs = self.get_regs();
+        const rxempty = regs.FSTAT.read().RXEMPTY;
+        return (rxempty & (@as(u4, 1) << @intFromEnum(sm))) != 0;
+    }
+
+    pub fn sm_blocking_read(self: Pio, sm: StateMachine) u32 {
+        while (self.sm_is_rx_fifo_empty(sm)) {}
+        return self.sm_read(sm);
+    }
+
+    pub fn sm_read(self: Pio, sm: StateMachine) u32 {
+        const fifo_ptr = self.sm_get_rx_fifo(sm);
+        return fifo_ptr.*;
+    }
+
     pub fn sm_is_tx_fifo_full(self: Pio, sm: StateMachine) bool {
         const regs = self.get_regs();
         const txfull = regs.FSTAT.read().TXFULL;
