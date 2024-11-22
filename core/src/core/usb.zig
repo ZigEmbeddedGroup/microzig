@@ -53,8 +53,8 @@ pub fn Usb(comptime f: anytype) type {
         var usb_config: ?*DeviceConfiguration = null;
         /// The clock has been initialized [Y/n]
         var clk_init: bool = false;
-        var itf_to_drv: [16]u8 = .{0} ** 16;
-        var ep_to_drv: [4][2]u8 = .{.{0} ** 2} ** 4;
+        var itf_to_drv: [f.cfg_max_interfaces_count]u8 = .{0} ** f.cfg_max_interfaces_count;
+        var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = .{.{0} ** 2} ** f.cfg_max_endpoints_count;
 
         /// The callbacks passed provided by the caller
         pub const callbacks = f;

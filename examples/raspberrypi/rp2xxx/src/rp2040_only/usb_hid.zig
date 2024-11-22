@@ -14,6 +14,8 @@ const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 const uart_rx_pin = gpio.num(1);
 
+const usb_dev = rp2xxx.usb.Usb(.{});
+
 const usb_packet_size = 64;
 const usb_config_len = usb.templates.config_descriptor_len + usb.templates.hid_in_out_descriptor_len;
 const usb_config_descriptor =
@@ -80,14 +82,14 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     // First we initialize the USB clock
-    rp2xxx.usb.Usb.init_clk();
+    usb_dev.init_clk();
     // Then initialize the USB device using the configuration defined above
-    rp2xxx.usb.Usb.init_device(&DEVICE_CONFIGURATION) catch unreachable;
+    usb_dev.init_device(&DEVICE_CONFIGURATION) catch unreachable;
     var old: u64 = time.get_time_since_boot().to_us();
     var new: u64 = 0;
     while (true) {
         // You can now poll for USB events
-        rp2xxx.usb.Usb.task(
+        usb_dev.task(
             false, // debug output over UART [Y/n]
         ) catch unreachable;
 
