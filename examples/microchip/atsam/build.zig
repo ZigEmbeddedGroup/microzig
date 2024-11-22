@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = MicroBuild.init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsamd51j19-blinky", .file = "src/blinky.zig" },

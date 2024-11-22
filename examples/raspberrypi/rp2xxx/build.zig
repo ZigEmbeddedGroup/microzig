@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = MicroBuild.init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const rp2040_only_examples: []const Example = &.{
         // RaspberryPi Boards:

@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = MicroBuild.init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.gd32.chips.gd32vf103xb, .name = "gd32vf103xb", .file = "src/empty.zig" },

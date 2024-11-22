@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const mz_dep = b.dependency("microzig", .{});
-    const mb = MicroBuild.init(b, mz_dep);
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
 
     const examples: []const Example = &.{
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "rp2xxx" },
@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsam" },
         .{ .target = mb.ports.avr.boards.arduino.nano, .name = "avr" },
         .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_dongle, .name = "nrf5x" },
-        .{ .target = mb.ports.lpc.boards.nordic.mbed.lpc1768, .name = "lpc" },
+        .{ .target = mb.ports.lpc.boards.mbed.lpc1768, .name = "lpc" },
         .{ .target = mb.ports.stm32.boards.stm32f3discovery, .name = "stm32" },
     };
 
@@ -40,6 +40,6 @@ pub fn build(b: *std.Build) void {
 }
 
 const Example = struct {
-    target: *microzig.Target,
+    target: *const microzig.Target,
     name: []const u8,
 };
