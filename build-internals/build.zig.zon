@@ -2,7 +2,7 @@
     .name = "build-internals",
     .version = "0.0.0",
     .dependencies = .{
-        .regz = .{ .path = "../../tools/regz" },
+        .regz = .{ .path = "../tools/regz" },
     },
     .paths = .{
         "LICENSE",
