@@ -10,7 +10,7 @@ const assert = std.debug.assert;
 const svd_schema = @embedFile("cmsis-svd.xsd");
 
 pub const std_options = std.Options{
-    .log_level = .debug,
+    .log_level = .err,
 };
 
 pub fn main() !void {
