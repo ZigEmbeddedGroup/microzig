@@ -9,6 +9,7 @@ const example_dep_names: []const []const u8 = &.{
     "nxp/lpc",
     "raspberrypi/rp2xxx",
     "stmicro/stm32",
+    "wch/ch32",
 };
 
 pub fn build(b: *std.Build) void {
