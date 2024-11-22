@@ -2,7 +2,7 @@ const std = @import("std");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
 
-const internals = @import("microzig/build-internals");
+const internals = @import("build-internals");
 pub const Target = internals.Target;
 pub const Chip = internals.Chip;
 pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
@@ -10,7 +10,7 @@ pub const Board = internals.Board;
 pub const BinaryFormat = internals.BinaryFormat;
 pub const MemoryRegion = internals.MemoryRegion;
 
-const regz = @import("microzig/tools/regz");
+const regz = @import("tools/regz");
 
 const port_list: []const struct {
     name: [:0]const u8,
@@ -156,14 +156,14 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
         /// Initializes the microzig build system.
         // TODO: should we call this `create`?
-        pub fn init(b: *Build, dep: *Build.Dependency) InitReturnType {
+        pub fn init(b: *Build, dep: *Build.Dependency) ?InitReturnType {
             if (InitReturnType == noreturn) {
                 inline for (port_list) |port| {
                     if (@field(port_select, port.name)) {
                         _ = dep.builder.lazyDependency(port.dep_name, .{});
                     }
                 }
-                std.process.exit(0);
+                return null;
             }
 
             var ports: SelectedPorts = undefined;
@@ -234,7 +234,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// Additional patches the user may apply to the generated register
             /// code. This does not override the chip's existing patches.
-            patches: []const regz.Patch = .{},
+            patches: []const regz.patch.Patch = &.{},
         };
 
         fn serialize_patches(b: *Build, patches: []const regz.patch.Patch) []const u8 {
@@ -302,7 +302,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg("--output_path"); // Write to a file
                     const zig_file = regz_run.addOutputFileArg("chip.zig");
 
-                    var patches = std.ArrayList(regz.Patch).init(b.allocator);
+                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
 
                     // From chip definition
                     patches.appendSlice(target.chip.patches) catch @panic("OOM");
@@ -310,9 +310,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     // From user invoking `add_firmware`
                     patches.appendSlice(options.patches) catch @panic("OOM");
 
-                    if (patches.len > 0) {
+                    if (patches.items.len > 0) {
                         // write patches to file
-                        const patch_ndjson = serialize_patches(b, patches);
+                        const patch_ndjson = serialize_patches(b, patches.items);
                         const write_file_step = b.addWriteFiles();
                         const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
 
