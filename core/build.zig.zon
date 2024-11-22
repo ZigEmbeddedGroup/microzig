@@ -1,7 +1,6 @@
 .{
     .name = "core",
     .version = "0.0.1",
-    .dependencies = .{},
     .paths = .{
         "LICENSE",
         "thoughts.md",
