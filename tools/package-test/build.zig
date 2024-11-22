@@ -9,7 +9,6 @@ const MicroBuild = microzig.MicroBuild(.{
     .nrf5x = true,
     .lpc = true,
     .stm32 = true,
-    .ch32 = true,
 });
 
 pub fn build(b: *std.Build) void {
