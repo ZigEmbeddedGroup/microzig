@@ -21,7 +21,7 @@ const usb_config_descriptor =
     usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
     usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
 
-var driver_cdc = usb.cdc.CdcClassDriver{};
+var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
 
 // This is our device configuration
@@ -101,9 +101,12 @@ pub fn main() !void {
             i += 1;
             // uart log
             std.log.info("cdc test: {}\r\n", .{i});
-            // usb log (at this moment 63 bytes is max limit per single call)
-            const text = std.fmt.bufPrint(&buf, "cdc test: {}\r\n", .{i}) catch &.{};
-            driver_cdc.write(text);
+            const text = std.fmt.bufPrint(&buf, "This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i}) catch &.{};
+
+            var write_buff = text;
+            while (write_buff.len > 0) {
+                write_buff = driver_cdc.write(write_buff);
+            }
         }
     }
 }

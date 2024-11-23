@@ -127,6 +127,7 @@ pub fn F(comptime config: UsbConfig) type {
     return struct {
         pub const cfg_max_endpoints_count: u8 = config.max_endpoints_count;
         pub const cfg_max_interfaces_count: u8 = config.max_interfaces_count;
+        pub const high_speed = false;
 
         var endpoints: [config.max_endpoints_count][2]HardwareEndpoint = undefined;
 
