@@ -11,6 +11,7 @@
         .@"nxp/lpc" = .{ .path = "nxp/lpc" },
         .@"raspberrypi/rp2xxx" = .{ .path = "raspberrypi/rp2xxx" },
         .@"stmicro/stm32" = .{ .path = "stmicro/stm32" },
+        .@"wch/ch32v" = .{ .path = "wch/ch32v" },
     },
     .paths = .{
         "build.zig",

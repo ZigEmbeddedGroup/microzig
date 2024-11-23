@@ -12,6 +12,8 @@ pub const MemoryRegion = internals.MemoryRegion;
 
 const regz = @import("tools/regz");
 
+// If more ports are available, the error "error: evaluation exceeded 1000 backwards branches" may occur.
+// In such cases, consider increasing the argument value for @setEvalBranchQuota().
 const port_list: []const struct {
     name: [:0]const u8,
     dep_name: [:0]const u8,
@@ -24,7 +26,7 @@ const port_list: []const struct {
     .{ .name = "lpc", .dep_name = "port/nxp/lpc" },
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
-    //.{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
+    .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
 };
 
 pub fn build(b: *Build) void {
@@ -660,6 +662,7 @@ pub inline fn custom_lazy_import(
 }
 
 inline fn custom_find_import_pkg_hash_or_fatal(comptime dep_name: []const u8) []const u8 {
+    @setEvalBranchQuota(2000);
     const build_runner = @import("root");
     const deps = build_runner.dependencies;
 
