@@ -157,7 +157,11 @@ pub fn Usb(comptime f: anytype) type {
         }
 
         fn device_endpoint_transfer(ep_addr: u8, data: []const u8) void {
-            f.usb_start_tx(ep_addr, data);
+            if (Endpoint.dir_from_address(ep_addr) == .In) {
+                f.usb_start_tx(ep_addr, data);
+            } else {
+                f.usb_start_rx(ep_addr, max_packet_size);
+            }
         }
 
         fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {

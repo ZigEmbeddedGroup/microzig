@@ -126,6 +126,8 @@ pub const CdcLineCoding = extern struct {
 };
 
 pub fn CdcClassDriver(comptime usb: anytype) type {
+    const fifo = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size });
+
     return struct {
         device: ?types.UsbDevice = null,
         ep_notif: u8 = 0,
@@ -134,10 +136,20 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
         line_coding: CdcLineCoding = undefined,
 
-        rx: std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size }) = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size }).init(),
-        tx: std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size }) = std.fifo.LinearFifo(u8, std.fifo.LinearFifoBufferType{ .Static = usb.max_packet_size }).init(),
+        rx: fifo = fifo.init(),
+        tx: fifo = fifo.init(),
 
         epin_buf: [usb.max_packet_size]u8 = undefined,
+
+        pub fn available(self: *@This()) usize {
+            return self.rx.readableLength();
+        }
+
+        pub fn read(self: *@This(), dst: [] u8) usize {
+            const read_count = self.rx.read(dst);
+            self.prep_out_transaction();
+            return read_count;
+        }
 
         pub fn write(self: *@This(), data: []const u8) []const u8 {
             const write_count = @min(self.tx.writableLength(), data.len);
@@ -165,6 +177,13 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             const len = self.tx.read(&self.epin_buf);
             self.device.?.endpoint_transfer(self.ep_in, self.epin_buf[0..len]);
             return len;
+        }
+
+        fn prep_out_transaction(self: *@This()) void {
+            if (self.rx.writableLength() >= usb.max_packet_size) {
+                // Let endpoint know that we are ready for next packet
+                self.device.?.endpoint_transfer(self.ep_out, &.{});
+            }
         }
 
         fn init(ptr: *anyopaque, device: types.UsbDevice) void {
@@ -262,6 +281,11 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
         fn transfer(ptr: *anyopaque, ep_addr: u8, data: []u8) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
+
+            if (ep_addr == self.ep_out) {
+                self.rx.write(data) catch {};
+                self.prep_out_transaction();
+            }
 
             if (ep_addr == self.ep_in) {
                 if (self.write_flush() == 0) {
