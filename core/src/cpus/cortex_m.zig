@@ -48,7 +48,7 @@ pub const mpu: *volatile core.MemoryProtectionUnit = if (mpu_present)
 else
     @compileError("Cortex-M does not have an MPU");
 
-pub const dbg: if (@hasDecl(core, "DebugRegisters")) *volatile core.DebugRegisters else *volatile anyopaque = @ptrFromInt(dwt_base);
+pub const dbg: if (@hasDecl(core, "DebugRegisters")) *volatile core.DebugRegisters else *volatile anyopaque = @ptrFromInt(coredebug_base);
 
 pub const itm: if (@hasDecl(core, "ITM")) *volatile core.ITM else *volatile anyopaque = @ptrFromInt(itm_base);
 
