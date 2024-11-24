@@ -22,16 +22,20 @@ const Core = enum {
     cortex_m7,
 };
 
-const core: type = blk: {
-    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
-    break :blk switch (cortex_m) {
-        .@"ARM Cortex-M0" => @import("cortex_m/m0"),
-        .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
-        .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
-        .@"ARM Cortex-M33" => @import("cortex_m/m33.zig"),
-        .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
-        .cortex_m7 => @import("cortex_m/m7.zig"),
-    };
+const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+
+const core: type = switch (cortex_m) {
+    .@"ARM Cortex-M0" => @import("cortex_m/m0"),
+    .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
+    .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
+    .@"ARM Cortex-M33" => @import("cortex_m/m33.zig"),
+    .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
+    .cortex_m7 => @import("cortex_m/m7.zig"),
+};
+
+pub const utils = switch (cortex_m) {
+    .cortex_m7 => @import("cortex_m/m7_utils.zig"),
+    else => void{},
 };
 
 const properties = microzig.chip.properties;
