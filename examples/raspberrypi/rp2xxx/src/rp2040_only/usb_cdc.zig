@@ -21,7 +21,7 @@ const usb_config_descriptor =
     usb.templates.config_descriptor(1, 2, 0, usb_config_len, 0xc0, 100) ++
     usb.templates.cdc_descriptor(0, 4, usb.Endpoint.to_address(1, .In), 8, usb.Endpoint.to_address(2, .Out), usb.Endpoint.to_address(2, .In), 64);
 
-var driver_cdc = usb.cdc.CdcClassDriver{};
+var driver_cdc: usb.cdc.CdcClassDriver(usb_dev) = .{};
 var drivers = [_]usb.types.UsbClassDriver{driver_cdc.driver()};
 
 // This is our device configuration
@@ -87,7 +87,6 @@ pub fn main() !void {
     var new: u64 = 0;
 
     var i: u32 = 0;
-    var buf: [1024]u8 = undefined;
     while (true) {
         // You can now poll for USB events
         usb_dev.task(
@@ -99,11 +98,45 @@ pub fn main() !void {
             old = new;
             led.toggle();
             i += 1;
-            // uart log
             std.log.info("cdc test: {}\r\n", .{i});
-            // usb log (at this moment 63 bytes is max limit per single call)
-            const text = std.fmt.bufPrint(&buf, "cdc test: {}\r\n", .{i}) catch &.{};
-            driver_cdc.write(text);
+
+            usb_cdc_write("This is very very long text sent from RP Pico by USB CDC to your device: {}\r\n", .{i});
+        }
+
+        // read and print host command if present
+        const message = usb_cdc_read();
+        if (message.len > 0) {
+            usb_cdc_write("Your message to me was: {s}\r\n", .{message});
         }
     }
+}
+
+var usb_tx_buff: [1024]u8 = undefined;
+
+pub fn usb_cdc_write(comptime fmt: []const u8, args: anytype) void {
+    const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
+
+    var write_buff = text;
+    while (write_buff.len > 0) {
+        write_buff = driver_cdc.write(write_buff);
+    }
+}
+
+var usb_rx_buff: [1024]u8 = undefined;
+
+// TODO - right now there are 2 issues with reading data from serial:
+// 1. It not always work, so sometime data is not received. This is probably related to how we reset usb buffer flags.
+// 2. Even when usb host sends small chunk of data cdc read returns full packet length. This require further investigation.
+pub fn usb_cdc_read() []const u8 {
+    var total_read: usize = 0;
+    var read_buff: []u8 = usb_rx_buff[0..];
+
+    while (true) {
+        const len = driver_cdc.read(read_buff);
+        read_buff = read_buff[len..];
+        total_read += len;
+        if (len == 0) break;
+    }
+        
+    return usb_rx_buff[0..total_read];
 }

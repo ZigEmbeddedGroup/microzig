@@ -555,12 +555,16 @@ pub const HidClassDriver = struct {
         return true;
     }
 
+    fn transfer(_: *anyopaque, _: u8, _: []u8) void {
+    }
+
     pub fn driver(self: *@This()) types.UsbClassDriver {
         return .{
             .ptr = self,
             .fn_init = init,
             .fn_open = open,
-            .fn_class_control = class_control
+            .fn_class_control = class_control,
+            .fn_transfer = transfer
         };
     }
 };

@@ -55,6 +55,8 @@ pub fn Usb(comptime f: anytype) type {
         var clk_init: bool = false;
         var itf_to_drv: [f.cfg_max_interfaces_count]u8 = .{0} ** f.cfg_max_interfaces_count;
         var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = .{.{0} ** 2} ** f.cfg_max_endpoints_count;
+        pub const max_packet_size = if(f.high_speed) 512 else 64;
+        const drvid_invalid = 0xff;
 
         /// The callbacks passed provided by the caller
         pub const callbacks = f;
@@ -155,10 +157,17 @@ pub fn Usb(comptime f: anytype) type {
         }
 
         fn device_endpoint_transfer(ep_addr: u8, data: []const u8) void {
-            f.usb_start_tx(ep_addr, data);
+            if (Endpoint.dir_from_address(ep_addr) == .In) {
+                f.usb_start_tx(ep_addr, data);
+            } else {
+                f.usb_start_rx(ep_addr, max_packet_size);
+            }
         }
 
-        fn get_driver(drv_idx: u8) *types.UsbClassDriver {
+        fn get_driver(drv_idx: u8) ?*types.UsbClassDriver {
+            if (drv_idx == drvid_invalid) {
+                return null;
+            }
             return &usb_config.?.drivers[drv_idx];
         }
 
@@ -167,6 +176,11 @@ pub fn Usb(comptime f: anytype) type {
             S.setup_packet = setup;
             S.driver = null;
             return setup;
+        }
+
+        fn configuration_reset() void {
+            @memset(&itf_to_drv, drvid_invalid);
+            @memset(&ep_to_drv, .{drvid_invalid, drvid_invalid});
         }
 
         /// Usb task function meant to be executed in regular intervals after
@@ -201,7 +215,7 @@ pub fn Usb(comptime f: anytype) type {
                                     const cfg_num = setup.value;
                                     if (S.cfg_num != cfg_num) {
                                         if (S.cfg_num > 0) {
-                                            // TODO - cleanup current config drivers
+                                            configuration_reset();
                                         }
 
                                         if (cfg_num > 0) {
@@ -359,9 +373,10 @@ pub fn Usb(comptime f: anytype) type {
                 fn process_setup_request(setup: *const types.SetupPacket) !void {
                     const itf: u8 = @intCast(setup.index & 0xFF);
                     var driver = get_driver(itf_to_drv[itf]);
+                    if (driver == null) return;
                     S.driver = driver;
 
-                    if (driver.class_control(.Setup, setup) == false) {
+                    if (driver.?.class_control(.Setup, setup) == false) {
                         // TODO
                     }
                 }
@@ -456,9 +471,12 @@ pub fn Usb(comptime f: anytype) type {
                             }
                         },
                         else => {
-                            if (debug) std.log.info("    ELSE, ep_addr: {}", .{
-                                epb.endpoint_address & 0x7f,
-                            });
+                            const ep_num = Endpoint.num_from_address(epb.endpoint_address);
+                            const ep_dir = Endpoint.dir_from_address(epb.endpoint_address).as_number();
+                            var driver = get_driver(ep_to_drv[ep_num][ep_dir]);
+                            if (driver != null) {
+                                driver.?.transfer(epb.endpoint_address, epb.buffer);
+                            }
                         },
                     }
                 }
@@ -468,6 +486,7 @@ pub fn Usb(comptime f: anytype) type {
             if (ints.BusReset) {
                 if (debug) std.log.info("bus reset", .{});
 
+                configuration_reset();
                 // Reset the device
                 f.bus_reset();
 
