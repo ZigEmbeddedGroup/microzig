@@ -19,16 +19,18 @@ const Core = enum {
     @"ARM Cortex-M3",
     @"ARM Cortex-M33",
     @"ARM Cortex-M4",
+    cortex_m7,
 };
 
 const core: type = blk: {
-    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
     break :blk switch (cortex_m) {
         .@"ARM Cortex-M0" => @import("cortex_m/m0"),
         .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
         .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
         .@"ARM Cortex-M33" => @import("cortex_m/m33.zig"),
         .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
+        .cortex_m7 => @import("cortex_m/m7.zig"),
     };
 };
 
@@ -45,6 +47,12 @@ pub const mpu: *volatile core.MemoryProtectionUnit = if (mpu_present)
     @ptrFromInt(mpu_base)
 else
     @compileError("Cortex-M does not have an MPU");
+
+pub const dbg: if (@hasDecl(core, "DebugRegisters")) *volatile core.DebugRegisters else *volatile anyopaque = @ptrFromInt(dwt_base);
+
+pub const itm: if (@hasDecl(core, "ITM")) *volatile core.ITM else *volatile anyopaque = @ptrFromInt(itm_base);
+
+pub const tpiu: if (@hasDecl(core, "TPIU")) *volatile core.TPIU else *volatile anyopaque = @ptrFromInt(tpi_base);
 
 pub fn executing_isr() bool {
     return scb.ICSR.read().VECTACTIVE != 0;
