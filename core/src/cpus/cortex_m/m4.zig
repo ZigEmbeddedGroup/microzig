@@ -2,9 +2,9 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
 pub const SystemControlBlock = extern struct {
-    /// CPUID Base Register
+    /// CPUID Base Register.
     CPUID: u32,
-    /// Interrupt Control and State Register
+    /// Interrupt Control and State Register.
     ICSR: mmio.Mmio(packed struct(u32) {
         VECTACTIVE: u9,
         reserved0: u2 = 0,
@@ -21,13 +21,13 @@ pub const SystemControlBlock = extern struct {
         reserved3: u2 = 0,
         NMIPENDSET: u1,
     }),
-    /// Vector Table Offset Register
+    /// Vector Table Offset Register.
     VTOR: u32,
-    /// Application Interrupt  and Reset Control Register
+    /// Application Interrupt  and Reset Control Register.
     AIRCR: u32,
-    /// System Control Register
+    /// System Control Register.
     SCR: u32,
-    /// Configuration Control Register
+    /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
@@ -39,9 +39,9 @@ pub const SystemControlBlock = extern struct {
         STKALIGN: u1,
         reserved2: u22 = 0,
     }),
-    /// System Handlers Priority Registers
+    /// System Handlers Priority Registers.
     SHP: [12]u8,
-    /// System Handler Contol and State Register
+    /// System Handler Contol and State Register.
     SHCSR: u32,
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
@@ -52,43 +52,43 @@ pub const SystemControlBlock = extern struct {
         /// Usage Fault Status Register.
         UFSR: u16,
     }),
-    /// HardFault Status Register
+    /// HardFault Status Register.
     HFSR: u32,
-    /// Debug Fault Status Register
+    /// Debug Fault Status Register.
     DFSR: u32,
-    /// MemManage Fault Address Register
+    /// MemManage Fault Address Register.
     MMFAR: u32,
-    /// BusFault Address Register
+    /// BusFault Address Register.
     BFAR: u32,
-    /// Auxilary Feature Register
+    /// Auxilary Feature Register.
     AFSR: u32,
 };
 
 pub const NestedVectorInterruptController = extern struct {
-    /// Interrupt Set-Enable Registers
+    /// Interrupt Set-Enable Registers.
     ISER: [8]u32,
     reserved0: [24]u32,
-    /// Interrupt Clear-Enable Registers
+    /// Interrupt Clear-Enable Registers.
     ICER: [8]u32,
     reserved1: [24]u32,
-    /// Interrupt Set-Pending Registers
+    /// Interrupt Set-Pending Registers.
     ISPR: [8]u32,
     reserved2: [24]u32,
-    /// Interrupt Clear-Pending Registers
+    /// Interrupt Clear-Pending Registers.
     ICPR: [8]u32,
     reserved3: [24]u32,
-    /// Interrupt Active Bit Registers
+    /// Interrupt Active Bit Registers.
     IABR: [8]u32,
     reserved4: [56]u32,
-    /// Interrupt Priority Registers
+    /// Interrupt Priority Registers.
     IPR: [240]u8,
     reserved5: [644]u32,
-    /// Software Trigger Interrupt Registers
+    /// Software Trigger Interrupt Registers.
     STIR: u32,
 };
 
 pub const MemoryProtectionUnit = extern struct {
-    /// MPU Type Register
+    /// MPU Type Register.
     TYPE: mmio.Mmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
@@ -99,9 +99,9 @@ pub const MemoryProtectionUnit = extern struct {
         IREGION: u8,
         reserved1: u8,
     }),
-    /// MPU Control Register
+    /// MPU Control Register.
     CTRL: mmio.Mmio(packed struct(u32) {
-        /// Enables the MPU
+        /// Enables the MPU.
         ENABLE: u1,
         /// Enables of operation of MPU during HardFault and MNIHandlers.
         HFNMIENA: u1,
@@ -109,27 +109,27 @@ pub const MemoryProtectionUnit = extern struct {
         PRIVDEFENA: u1,
         reserved0: u29 = 0,
     }),
-    /// MPU Region Number Register
+    /// MPU Region Number Register.
     RNR: mmio.Mmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
         reserved0: u24 = 0,
     }),
-    /// MPU Region Base Address Register
+    /// MPU Region Base Address Register.
     RBAR: RBAR,
-    /// MPU Region Attribute and Size Register
+    /// MPU Region Attribute and Size Register.
     RASR: RASR,
-    /// MPU Alias 1 Region Base Address Register
+    /// MPU Alias 1 Region Base Address Register.
     RBAR_A1: RBAR,
-    /// MPU Alias 1 Region Attribute and Size Register
+    /// MPU Alias 1 Region Attribute and Size Register.
     RASR_A1: RASR,
-    /// MPU Alias 2 Region Base Address Register
+    /// MPU Alias 2 Region Base Address Register.
     RBAR_A2: RBAR,
-    /// MPU Alias 2 Region Attribute and Size Register
+    /// MPU Alias 2 Region Attribute and Size Register.
     RASR_A2: RASR,
-    /// MPU Alias 3 Region Base Address Register
+    /// MPU Alias 3 Region Base Address Register.
     RBAR_A3: RBAR,
-    /// MPU Alias 3 Region Attribute and Size Register
+    /// MPU Alias 3 Region Attribute and Size Register.
     RASR_A3: RASR,
 
     pub const RBAR = mmio.Mmio(packed struct(u32) {
