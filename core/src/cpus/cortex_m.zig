@@ -177,16 +177,16 @@ const core = blk: {
 };
 
 pub const peripherals = struct {
-    /// System Control Block (SCB)
+    /// System Control Block (SCB).
     pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
-    /// Nested Vector Interrupt Controller (NVIC)
+    /// Nested Vector Interrupt Controller (NVIC).
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
-    /// System Timer
+    /// System Timer (SysTick).
     pub const systick: *volatile types.peripherals.SysTick = @ptrFromInt(systick_base);
 
-    /// Memory Protection Unit (MPU)
+    /// Memory Protection Unit (MPU).
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
         @ptrFromInt(mpu_base)
     else
@@ -195,42 +195,70 @@ pub const peripherals = struct {
 
 pub const types = struct {
     pub const peripherals = struct {
-        /// System Control Block
+        /// System Control Block (SCB).
         pub const SystemControlBlock = core.SystemControlBlock;
 
-        /// Nested Vector Interrupt Controller
+        /// Nested Vector Interrupt Controller (NVIC).
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
 
-        /// System Timer
+        /// System Timer (SysTick).
         pub const SysTick = extern struct {
-            ///  SysTick Control and Status Register
+            /// Control and Status Register.
             CTRL: mmio.Mmio(packed struct(u32) {
+                /// Enables the counter:
+                /// 0 = counter disabled.
+                /// 1 = counter enabled.
                 ENABLE: u1,
+                /// Enables SysTick exception request:
+                /// 0 = counting down to zero does not assert the SysTick exception request
+                /// 1 = counting down to zero asserts the SysTick exception request.
+                ///
+                /// Software can use COUNTFLAG to determine if SysTick has ever counted to zero.
                 TICKINT: u1,
+                /// Indicates the clock source:
+                /// 0 = external clock
+                /// 1 = processor clock.
                 CLKSOURCE: u1,
                 reserved0: u13,
+                /// Returns 1 if timer counted to 0 since last time this was read.
                 COUNTFLAG: u1,
-                padding: u15,
+                reserved1: u15,
             }),
-            ///  SysTick Reload Value Register
+            /// Reload Value Register.
             LOAD: mmio.Mmio(packed struct(u32) {
+                /// Value to load into the VAL register when the counter is enabled and when it reaches 0.
                 RELOAD: u24,
-                padding: u8,
+                reserved0: u8,
             }),
-            ///  SysTick Current Value Register
+            /// Current Value Register.
             VAL: mmio.Mmio(packed struct(u32) {
+                /// Reads return the current value of the SysTick counter.
+                /// A write of any value clears the field to 0, and also clears the CTRL.COUNTFLAG bit to 0.
                 CURRENT: u24,
-                padding: u8,
+                reserved0: u8,
             }),
-            ///  SysTick Calibration Register
+            /// Calibration Register.
             CALIB: mmio.Mmio(packed struct(u32) {
+                /// Reload value for 10ms (100Hz) timing, subject to system clock skew errors. If the value
+                /// reads as zero, the calibration value is not known.
                 TENMS: u24,
                 reserved0: u6,
+                /// Indicates whether the TENMS value is exact.
+                /// 0 = TENMS value is exact
+                /// 1 = TENMS value is inexact, or not given.
+                ///
+                /// An inexact TENMS value can affect the suitability of SysTick as a software real time clock.
                 SKEW: u1,
+                /// Indicates whether the device provides a reference clock to the processor:
+                /// 0 = reference clock provided
+                /// 1 = no reference clock provided.
+                /// If your device does not provide a reference clock, the SYST_CSR.CLKSOURCE bit reads-as-one
+                /// and ignores writes.
                 NOREF: u1,
             }),
         };
 
+        /// Memory Protection Unit (MPU).
         pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
             core.MemoryProtectionUnit
         else
