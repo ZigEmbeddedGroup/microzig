@@ -281,7 +281,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const b = mb.dep.builder;
 
             const target = options.target;
-            const zig_target = mb.dep.builder.resolveTargetQuery(target.chip.cpu);
+            const zig_target = b.resolveTargetQuery(target.chip.cpu);
             const cpu = Cpu.init(zig_target.result);
 
             // TODO: let the user override which ram section to use the stack on,
@@ -293,7 +293,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
 
-            const config = mb.dep.builder.addOptions();
+            const config = b.addOptions();
             config.addOption(bool, "has_hal", options.hal != null or target.hal != null);
             config.addOption(bool, "has_board", options.board != null or target.board != null);
 
