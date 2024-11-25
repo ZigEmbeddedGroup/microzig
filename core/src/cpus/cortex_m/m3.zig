@@ -2,9 +2,9 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
 pub const SystemControlBlock = extern struct {
-    /// CPUID Base Register
+    /// CPUID Base Register.
     CPUID: u32,
-    /// Interrupt Control and State Register
+    /// Interrupt Control and State Register.
     ICSR: mmio.Mmio(packed struct(u32) {
         VECTACTIVE: u9,
         reserved0: u2 = 0,
@@ -21,13 +21,29 @@ pub const SystemControlBlock = extern struct {
         reserved3: u2 = 0,
         NMIPENDSET: u1,
     }),
-    /// Vector Table Offset Register
+    /// Vector Table Offset Register.
     VTOR: u32,
-    /// Application Interrupt and Reset Control Register
-    AIRCR: u32,
-    /// System Control Register
-    SCR: u32,
-    /// Configuration Control Register
+    /// Application Interrupt and Reset Control Register.
+    AIRCR: mmio.Mmio(packed struct {
+        VECTRESET: u1,
+        VECTCLRACTIVE: u1,
+        SYSRESETREQ: u1,
+        reserved0: u5 = 0,
+        PRIGROUP: u3,
+        reserved1: u4 = 0,
+        ENDIANNESS: u1,
+        VECTKEY: u16,
+    }),
+    /// System Control Register.
+    SCR: mmio.Mmio(packed struct {
+        reserved0: u1 = 0,
+        SLEEPONEXIT: u1,
+        SLEEPDEEP: u1,
+        reserved1: u1 = 0,
+        SEVONPEND: u1,
+        reserved2: u27 = 0,
+    }),
+    /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
@@ -39,9 +55,9 @@ pub const SystemControlBlock = extern struct {
         STKALIGN: u1,
         reserved2: u22 = 0,
     }),
-    /// System Handlers Priority Registers
-    SHP: [12]u8,
-    /// System Handler Control and State Register
+    /// System Handlers Priority Registers.
+    SHPR: [3]u32,
+    /// System Handler Control and State Register.
     SHCSR: u32,
     /// Configurable Fault Status Register.
     CFSR: mmio.Mmio(packed struct(u32) {
@@ -52,14 +68,14 @@ pub const SystemControlBlock = extern struct {
         /// Usage Fault Status Register.
         UFSR: u16,
     }),
-    /// HardFault Status Register
+    /// HardFault Status Register.
     HFSR: u32,
     reserved1: u32,
-    /// MemManage Fault Address Register
+    /// MemManage Fault Address Register.
     MMFAR: u32,
-    /// BusFault Address Register
+    /// BusFault Address Register.
     BFAR: u32,
-    /// Auxilary Feature Register
+    /// Auxilary Feature Register.
     AFSR: u32,
 };
 

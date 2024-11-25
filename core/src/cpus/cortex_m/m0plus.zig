@@ -77,7 +77,7 @@ pub const SystemControlBlock = extern struct {
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
     AIRCR: mmio.Mmio(packed struct {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
         VECTCLRACTIVE: u1,
@@ -87,7 +87,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// This bit reads as 0.
         SYSRESETREQ: u1,
-        reserved1: u12,
+        reserved1: u12 = 0,
         /// Data endianness implemented:
         /// 0 = Little-endian
         /// 1 = Big-endian.
@@ -99,7 +99,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// System Control Register.
     SCR: mmio.Mmio(packed struct(u32) {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
         /// 1 = enter sleep, or deep sleep, on return from an ISR to Thread mode.
@@ -114,7 +114,7 @@ pub const SystemControlBlock = extern struct {
         /// If your device does not support two sleep modes, the effect of changing the value
         /// of this bit is implementation-defined.
         SLEEPDEEP: u1,
-        reserved1: u1,
+        reserved1: u1 = 0,
         /// Send Event on Pending bit:
         /// 0 = only enabled interrupts or events can wakeup the processor, disabled interrupts are excluded
         /// 1 = enabled events and all interrupts, including disabled interrupts, can wakeup the processor.
@@ -124,7 +124,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// The processor also wakes up on execution of an SEV instruction or an external event.
         SEVONPEND: u1,
-        reserved2: u17,
+        reserved2: u17 = 0,
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {

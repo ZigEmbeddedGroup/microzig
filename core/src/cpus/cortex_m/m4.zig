@@ -24,9 +24,25 @@ pub const SystemControlBlock = extern struct {
     /// Vector Table Offset Register.
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
-    AIRCR: u32,
+    AIRCR: mmio.Mmio(packed struct {
+        VECTRESET: u1,
+        VECTCLRACTIVE: u1,
+        SYSRESETREQ: u1,
+        reserved0: u5 = 0,
+        PRIGROUP: u3,
+        reserved1: u4 = 0,
+        ENDIANNESS: u1,
+        VECTKEY: u16,
+    }),
     /// System Control Register.
-    SCR: u32,
+    SCR: mmio.Mmio(packed struct {
+        reserved0: u1 = 0,
+        SLEEPONEXIT: u1,
+        SLEEPDEEP: u1,
+        reserved1: u1 = 0,
+        SEVONPEND: u1,
+        reserved2: u27 = 0,
+    }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
         NONBASETHRDENA: u1,
