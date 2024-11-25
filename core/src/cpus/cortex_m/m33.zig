@@ -37,7 +37,7 @@ pub const SystemControlBlock = extern struct {
         IC: u1,
         /// Read as zero/write ignored.
         BP: u1,
-        padding: u13 = 0,
+        reserved5: u13 = 0,
     }),
     /// System Handler Priority Registers.
     SHPR: [12]u8,
@@ -62,35 +62,35 @@ pub const SystemControlBlock = extern struct {
     /// Auxiliary Fault Status Register not implemented.
     _AFSR: u32,
     reserved1: [18]u32,
-    /// Coprocessor Access Control Register
+    /// Coprocessor Access Control Register.
     CPACR: u32,
     /// Non-secure Access Control Register.
     NSACR: u32,
 };
 
 pub const NestedVectorInterruptController = extern struct {
-    /// Interrupt set registers.
+    /// Interrupt Set Registers.
     ISER: [16]u32,
     reserved0: [16]u32,
-    /// Interrupt clear enable registers.
+    /// Interrupt Clear Enable Registers.
     ICER: [16]u32,
     reserved1: [16]u32,
-    /// Interrupt set pending registers.
+    /// Interrupt Set Pending Registers.
     ISPR: [16]u32,
     reserved2: [16]u32,
-    /// Interrupt clear pending registers.
+    /// Interrupt Clear Pending Registers.
     ICPR: [16]u32,
     reserved3: [16]u32,
-    /// Interrupt active bit registers.
+    /// Interrupt Active Bit Registers.
     IABR: [16]u32,
     reserved4: [16]u32,
-    /// Interrupt target non-secure registers.
+    /// Interrupt Target Non-secure Registers.
     ITNS: [16]u32,
     reserved5: [16]u32,
-    /// Interrupt priority registers.
+    /// Interrupt Priority Registers.
     IPR: [480]u8,
     reserved6: [584]u32,
-    /// Software trigger interrupt register.
+    /// Software Trigger Interrupt Register.
     STIR: u32,
 };
 
@@ -112,16 +112,16 @@ pub const SecurityAttributionUnit = extern struct {
 };
 
 pub const MemoryProtectionUnit = extern struct {
-    /// MPU Type Register
+    /// MPU Type Register.
     TYPE: mmio.Mmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
-        reserved0: u7,
+        reserved0: u7 = 0,
         /// Number of data regions supported by the MPU.
         DREGION: u8,
-        reserved1: u16,
+        reserved1: u16 = 0,
     }),
-    /// MPU Control Register
+    /// MPU Control Register.
     CTRL: mmio.Mmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
@@ -129,13 +129,13 @@ pub const MemoryProtectionUnit = extern struct {
         HFNMIENA: u1,
         /// Enables priviledged software access to default memory map.
         PRIVDEFENA: u1,
-        reserved0: u29,
+        reserved0: u29 = 0,
     }),
-    /// MPU Region Number Register
+    /// MPU Region Number Register.
     RNR: mmio.Mmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
-        reserved0: u24,
+        reserved0: u24 = 0,
     }),
     /// MPU Region Base Address Register.
     RBAR: RBAR,
@@ -178,7 +178,7 @@ pub const MemoryProtectionUnit = extern struct {
         EN: u1,
         /// Attribue Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.
         AttrIndx: u3,
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Limit Address contains bits [31:5] of the upper inclusive limit of the selected MPU memory region. This
         /// value is postfixed with 0x1F to provide the limit address to be checked against.
         LIMIT: u27,

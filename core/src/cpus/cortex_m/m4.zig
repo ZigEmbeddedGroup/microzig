@@ -37,7 +37,7 @@ pub const SystemControlBlock = extern struct {
         reserved1: u3 = 0,
         BFHFNMIGN: u1,
         STKALIGN: u1,
-        padding: u22 = 0,
+        reserved2: u22 = 0,
     }),
     /// System Handlers Priority Registers
     SHP: [12]u8,
@@ -92,12 +92,12 @@ pub const MemoryProtectionUnit = extern struct {
     TYPE: mmio.Mmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
-        reserved0: u7,
+        reserved0: u7 = 0,
         /// Number of data regions supported by the MPU.
         DREGION: u8,
         /// Number of instruction regions supported by the MPU.
         IREGION: u8,
-        padding: u8,
+        reserved1: u8,
     }),
     /// MPU Control Register
     CTRL: mmio.Mmio(packed struct(u32) {
@@ -107,13 +107,13 @@ pub const MemoryProtectionUnit = extern struct {
         HFNMIENA: u1,
         /// Enables priviledged software access to default memory map.
         PRIVDEFENA: u1,
-        padding: u29,
+        reserved0: u29 = 0,
     }),
     /// MPU Region Number Register
     RNR: mmio.Mmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
-        padding: u24,
+        reserved0: u24 = 0,
     }),
     /// MPU Region Base Address Register
     RBAR: RBAR,
@@ -146,7 +146,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Specifies the size of the MPU protection region.
         SIZE: u5,
-        reserved0: u2,
+        reserved0: u2 = 0,
         /// Subregion disable bits.
         SRD: u8,
         /// Shareable bit.
@@ -157,11 +157,11 @@ pub const MemoryProtectionUnit = extern struct {
         C: u1,
         /// Memory Access Attribute.
         TEX: u3,
-        reserved1: u2,
+        reserved1: u2 = 0,
         /// Access permission field.
         AP: u3,
         /// Instruction access disable bit.
         XN: u1,
-        padding: u3,
+        reserved2: u3 = 0,
     });
 };
