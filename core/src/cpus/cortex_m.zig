@@ -3,51 +3,8 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const root = @import("root");
 
-const scs_base = 0xE000E000;
-const itm_base = 0xE0000000;
-const dwt_base = 0xE0001000;
-const tpi_base = 0xE0040000;
-const coredebug_base = 0xE000EDF0;
-const systick_base = scs_base + 0x0010;
-const nvic_base = scs_base + 0x0100;
-const scb_base = scs_base + 0x0D00;
-const mpu_base = scs_base + 0x0D90;
-
-const Core = enum {
-    @"ARM Cortex-M0",
-    @"ARM Cortex-M0+",
-    @"ARM Cortex-M3",
-    @"ARM Cortex-M33",
-    @"ARM Cortex-M4",
-};
-
-const core: type = blk: {
-    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
-    break :blk switch (cortex_m) {
-        .@"ARM Cortex-M0" => @import("cortex_m/m0"),
-        .@"ARM Cortex-M0+" => @import("cortex_m/m0plus.zig"),
-        .@"ARM Cortex-M3" => @import("cortex_m/m3.zig"),
-        .@"ARM Cortex-M33" => @import("cortex_m/m33.zig"),
-        .@"ARM Cortex-M4" => @import("cortex_m/m4.zig"),
-    };
-};
-
-const properties = microzig.chip.properties;
-// TODO: will have to standardize this with regz code generation
-const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
-
-/// System Control Block (SCB)
-pub const scb: *volatile core.SystemControlBlock = @ptrFromInt(scb_base);
-/// Nested Vector Interrupt Controller (NVIC)
-pub const nvic: *volatile core.NestedVectorInterruptController = @ptrFromInt(nvic_base);
-/// Memory Protection Unit (MPU)
-pub const mpu: *volatile core.MemoryProtectionUnit = if (mpu_present)
-    @ptrFromInt(mpu_base)
-else
-    @compileError("Cortex-M does not have an MPU");
-
 pub fn executing_isr() bool {
-    return scb.ICSR.read().VECTACTIVE != 0;
+    return peripherals.scb.ICSR.read().VECTACTIVE != 0;
 }
 
 pub fn enable_interrupts() void {
@@ -184,20 +141,74 @@ fn create_interrupt_vector(
     };
 }
 
+const scs_base = 0xE000E000;
+const itm_base = 0xE0000000;
+const dwt_base = 0xE0001000;
+const tpi_base = 0xE0040000;
+const coredebug_base = 0xE000EDF0;
+const systick_base = scs_base + 0x0010;
+const nvic_base = scs_base + 0x0100;
+const scb_base = scs_base + 0x0D00;
+const mpu_base = scs_base + 0x0D90;
+
+const properties = microzig.chip.properties;
+
+// TODO: to actually check this. Afaik only cortex_m0 has it optional so maybe skip this check?
+const systick_present = true;
+
+// TODO: will have to standardize this with regz code generation
+const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
+
+const core = blk: {
+    const Core = enum {
+        cortex_m0,
+        cortex_m0p,
+        cortex_m3,
+        cortex_m33,
+        cortex_m4,
+    };
+
+    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
+        @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+
+    break :blk switch (cortex_m) {
+        .cortex_m0 => @import("cortex_m/m0"),
+        .cortex_m0p => @import("cortex_m/m0plus.zig"),
+        .cortex_m3 => @import("cortex_m/m3.zig"),
+        .cortex_m33 => @import("cortex_m/m33.zig"),
+        .cortex_4 => @import("cortex_m/m4.zig"),
+    };
+};
+
 pub const peripherals = struct {
-    ///  System Tick Timer
-    pub const SysTick = @as(*volatile types.peripherals.SysTick, @ptrFromInt(0xe000e010));
+    /// System Control Block (SCB)
+    pub const scb: *volatile types.peripherals.SystemControlBlock = @ptrFromInt(scb_base);
 
-    ///  System Control Space
-    pub const NVIC = @compileError("TODO"); // @ptrFromInt(*volatile types.peripherals.NVIC, 0xe000e100);
+    /// Nested Vector Interrupt Controller (NVIC)
+    pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
-    ///  System Control Block
-    pub const SCB = @as(*volatile types.peripherals.SCB, @ptrFromInt(0xe000ed00));
+    /// System Timer
+    pub const systick: *volatile types.peripherals.SysTick = if (systick_present)
+        @ptrFromInt(systick_base)
+    else
+        @compileError("This chip does not have a SysTick.");
+
+    /// Memory Protection Unit (MPU)
+    pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
+        @ptrFromInt(mpu_base)
+    else
+        @compileError("This chip does not have a MPU.");
 };
 
 pub const types = struct {
     pub const peripherals = struct {
-        ///  System Tick Timer
+        /// System Control Block
+        pub const SystemControlBlock = core.SystemControlBlock;
+
+        /// Nested Vector Interrupt Controller
+        pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
+
+        ///  System Timer
         pub const SysTick = extern struct {
             ///  SysTick Control and Status Register
             CTRL: mmio.Mmio(packed struct(u32) {
@@ -227,72 +238,9 @@ pub const types = struct {
             }),
         };
 
-        ///  System Control Block
-        pub const SCB = extern struct {
-            CPUID: mmio.Mmio(packed struct(u32) {
-                REVISION: u4,
-                PARTNO: u12,
-                ARCHITECTURE: u4,
-                VARIANT: u4,
-                IMPLEMENTER: u8,
-            }),
-            ///  Interrupt Control and State Register
-            ICSR: mmio.Mmio(packed struct(u32) {
-                VECTACTIVE: u9,
-                reserved12: u3,
-                VECTPENDING: u9,
-                reserved22: u1,
-                ISRPENDING: u1,
-                ISRPREEMPT: u1,
-                reserved25: u1,
-                PENDSTCLR: u1,
-                PENDSTSET: u1,
-                PENDSVCLR: u1,
-                PENDSVSET: u1,
-                reserved31: u2,
-                NMIPENDSET: u1,
-            }),
-            ///  Vector Table Offset Register
-            VTOR: mmio.Mmio(packed struct(u32) {
-                reserved8: u8,
-                TBLOFF: u24,
-            }),
-            ///  Application Interrupt and Reset Control Register
-            AIRCR: mmio.Mmio(packed struct(u32) {
-                reserved1: u1,
-                VECTCLRACTIVE: u1,
-                SYSRESETREQ: u1,
-                reserved15: u12,
-                ENDIANESS: u1,
-                VECTKEY: u16,
-            }),
-            ///  System Control Register
-            SCR: mmio.Mmio(packed struct(u32) {
-                reserved1: u1,
-                SLEEPONEXIT: u1,
-                SLEEPDEEP: u1,
-                reserved4: u1,
-                SEVONPEND: u1,
-                padding: u27,
-            }),
-            ///  Configuration Control Register
-            CCR: mmio.Mmio(packed struct(u32) {
-                reserved3: u3,
-                UNALIGN_TRP: u1,
-                reserved9: u5,
-                STKALIGN: u1,
-                padding: u22,
-            }),
-            reserved28: [4]u8,
-            ///  System Handlers Priority Registers. [0] is RESERVED
-            SHP: u32,
-            reserved36: [4]u8,
-            ///  System Handler Control and State Register
-            SHCSR: mmio.Mmio(packed struct(u32) {
-                reserved15: u15,
-                SVCALLPENDED: u1,
-                padding: u16,
-            }),
-        };
+        pub const MemoryProtectionUnit = if (@hasDecl(core, "MemoryProtectionUnit"))
+            core.MemoryProtectionUnit
+        else
+            @compileError("This cpu does not have a MPU.");
     };
 };
