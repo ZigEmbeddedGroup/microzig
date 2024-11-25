@@ -80,7 +80,8 @@ fn fallback_panic_handler(msg_ptr: [*]const u8, msg_len: usize) callconv(.C) nor
     @trap();
 }
 comptime {
-    @export(fallback_panic_handler, std.builtin.ExportOptions{
+    const ptr = &fallback_panic_handler;
+    @export(ptr, std.builtin.ExportOptions{
         .name = "foundation_libc_panic_handler",
         .linkage = .weak,
         .visibility = .default,
