@@ -1,5 +1,5 @@
-const micro = @import("microzig");
-const mmio = micro.mmio;
+const microzig = @import("microzig");
+const mmio = microzig.mmio;
 
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register

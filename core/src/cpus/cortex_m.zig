@@ -152,10 +152,6 @@ const scb_base = scs_base + 0x0D00;
 const mpu_base = scs_base + 0x0D90;
 
 const properties = microzig.chip.properties;
-
-// TODO: to actually check this. Afaik only cortex_m0 has it optional so maybe skip this check?
-const systick_present = true;
-
 // TODO: will have to standardize this with regz code generation
 const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
 
@@ -188,10 +184,7 @@ pub const peripherals = struct {
     pub const nvic: *volatile types.peripherals.NestedVectorInterruptController = @ptrFromInt(nvic_base);
 
     /// System Timer
-    pub const systick: *volatile types.peripherals.SysTick = if (systick_present)
-        @ptrFromInt(systick_base)
-    else
-        @compileError("This chip does not have a SysTick.");
+    pub const systick: *volatile types.peripherals.SysTick = @ptrFromInt(systick_base);
 
     /// Memory Protection Unit (MPU)
     pub const mpu: *volatile types.peripherals.MemoryProtectionUnit = if (mpu_present)
@@ -208,14 +201,14 @@ pub const types = struct {
         /// Nested Vector Interrupt Controller
         pub const NestedVectorInterruptController = core.NestedVectorInterruptController;
 
-        ///  System Timer
+        /// System Timer
         pub const SysTick = extern struct {
             ///  SysTick Control and Status Register
             CTRL: mmio.Mmio(packed struct(u32) {
                 ENABLE: u1,
                 TICKINT: u1,
                 CLKSOURCE: u1,
-                reserved16: u13,
+                reserved0: u13,
                 COUNTFLAG: u1,
                 padding: u15,
             }),
@@ -232,7 +225,7 @@ pub const types = struct {
             ///  SysTick Calibration Register
             CALIB: mmio.Mmio(packed struct(u32) {
                 TENMS: u24,
-                reserved30: u6,
+                reserved0: u6,
                 SKEW: u1,
                 NOREF: u1,
             }),
