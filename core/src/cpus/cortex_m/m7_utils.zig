@@ -1,6 +1,6 @@
 const cpu = @import("../cortex_m.zig");
 
-pub fn initSWO(config: struct {
+pub fn init_swo(config: struct {
     /// Implementation defined. In Hz
     tpiu_clock: u32,
     /// SWO output frequency. Used to calculate the prescaler.
@@ -43,7 +43,7 @@ pub fn initSWO(config: struct {
     });
 }
 
-pub fn writeByteITM(ch: u8, stim_port: u5) void {
+pub fn write_byte_itm(ch: u8, stim_port: u5) void {
     // Wait until stimulus port is ready
     while (cpu.itm.STIM[stim_port].read().READ.FIFOREADY == 0) {}
 
@@ -52,8 +52,8 @@ pub fn writeByteITM(ch: u8, stim_port: u5) void {
     stim.* = ch;
 }
 
-pub fn writeBytesITM(str: []const u8, stim_port: u5) void {
+pub fn write_bytes_itm(str: []const u8, stim_port: u5) void {
     for (str) |ch| {
-        writeByteITM(ch, stim_port);
+        write_byte_itm(ch, stim_port);
     }
 }
