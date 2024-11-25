@@ -23,7 +23,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// Vector Table Offset Register
     VTOR: u32,
-    /// Application Interrupt  and Reset Control Register
+    /// Application Interrupt and Reset Control Register
     AIRCR: u32,
     /// System Control Register
     SCR: u32,
@@ -82,7 +82,7 @@ pub const NestedVectorInterruptController = extern struct {
     /// Interrupt Priority Registers
     IPR: [240]u8,
     reserved5: [644]u32,
-    /// Software Trigger Interrupt Registers
+    /// Software Trigger Interrupt Register
     STIR: u32,
 };
 

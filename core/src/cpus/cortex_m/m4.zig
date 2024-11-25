@@ -23,7 +23,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// Vector Table Offset Register.
     VTOR: u32,
-    /// Application Interrupt  and Reset Control Register.
+    /// Application Interrupt and Reset Control Register.
     AIRCR: u32,
     /// System Control Register.
     SCR: u32,
