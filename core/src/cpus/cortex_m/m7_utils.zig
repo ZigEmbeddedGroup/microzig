@@ -1,4 +1,4 @@
-const cpu = @import("../cortex_m.zig");
+const peripherals = @import("../cortex_m.zig").peripherals;
 
 pub fn init_swo(config: struct {
     /// Implementation defined. In Hz
@@ -18,37 +18,37 @@ pub fn init_swo(config: struct {
     trace_bus_id: u7 = 0,
 }) !void {
     // Enable trace in core debug:
-    cpu.dbg.DEMCR.modify(.{ .TRCENA = 1 }); // Enable debugging & monitoring
+    peripherals.dbg.DEMCR.modify(.{ .TRCENA = 1 }); // Enable debugging & monitoring
 
     // Enable ITM:
-    cpu.itm.TCR.modify(.{
+    peripherals.itm.TCR.modify(.{
         .ITMENA = 1, // Enable ITM
         .TXENA = 1, // Enable DWT packets
         .TraceBusID = config.trace_bus_id, // Unique ID for multi-source trace
     });
 
     // Enable stimulus port 0:
-    cpu.itm.TER[config.stim_port].modify(.{ .STIMENA = 1 });
+    peripherals.itm.TER[config.stim_port].modify(.{ .STIMENA = 1 });
 
     // Configure Serial Wire Output (SWO):
-    cpu.tpiu.SPPR.modify(.{ .TXMODE = @intFromEnum(config.tx_mode) });
+    peripherals.tpiu.SPPR.modify(.{ .TXMODE = @intFromEnum(config.tx_mode) });
 
     // SWO output clock = Asynchronous_Reference_Clock/(SWOSCALAR +1)\
     // SWOSCALAR = (Asynchronous_Reference_Clock)/(SWO output clock) - 1
     if (config.swo_output_target_hz > config.tpiu_clock)
         return error.SwoTargetFreqTooHigh; // would cause int underflow
 
-    cpu.tpiu.ACPR.modify(.{
+    peripherals.tpiu.ACPR.modify(.{
         .SWOSCALER = @as(u16, @intCast((config.tpiu_clock / config.swo_output_target_hz) - 1)),
     });
 }
 
 pub fn write_byte_itm(ch: u8, stim_port: u5) void {
     // Wait until stimulus port is ready
-    while (cpu.itm.STIM[stim_port].read().READ.FIFOREADY == 0) {}
+    while (peripherals.itm.STIM[stim_port].read().READ.FIFOREADY == 0) {}
 
     // Write character
-    const stim: *volatile u8 = @ptrCast(&cpu.itm.STIM[stim_port].raw);
+    const stim: *volatile u8 = @ptrCast(&peripherals.itm.STIM[stim_port].raw);
     stim.* = ch;
 }
 

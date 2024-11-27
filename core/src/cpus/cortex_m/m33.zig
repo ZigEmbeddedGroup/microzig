@@ -4,28 +4,6 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
 pub const SystemControlBlock = extern struct {
-    /// Auxiliary Control Base Register.
-    ACTLR: mmio.Mmio(packed struct(u32) {
-        /// Disables interruption of multi-cycle instructions.
-        DISMCYCINT: u1,
-        _reserved0: u1,
-        /// Disables dual-issue functionality.
-        DISFOLD: u1,
-        _reserved1: u6 = 0,
-        /// Disables floating-point instructions completing out of order with respect to non-floating point.
-        /// instructions
-        DISOOFP: u1,
-        /// Disables FPU exception outputs.
-        FPEXCODIS: u1,
-        _reserved2: u1,
-        /// Disables ITM and DWT ATB flush.
-        DISITMATBFLUSH: u1,
-        _reserved3: u16,
-        /// Setting EXTEXCLALL allows external exclusive operations to be used in a configuration with no
-        /// MPU. This is because the default memory map does not include any shareable Normal memory.
-        EXTEXCLALL: u1,
-        _reserved4: u2 = 0,
-    }),
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
@@ -38,28 +16,28 @@ pub const SystemControlBlock = extern struct {
     SCR: u32,
     /// Configuration and Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
-        _reserved0: u1 = 0,
+        reserved0: u1 = 0,
         /// User set pending determines if unpriviledged access to the STIR generates a fault.
         USERSETMPEND: u1,
-        _reserved1: u1 = 0,
+        reserved1: u1 = 0,
         /// Unaligned trap controls trapping of unaligned word and half word accesses.
         UNALIGN_TRP: u1,
         /// Divide by zero trap controls generation of DIVBYZERO usage fault.
         DIV_0_TRP: u1,
-        _reserved2: u2 = 0,
+        reserved2: u3 = 0,
         /// Determines effect of precise bus faults running on handlers at requested priority less than 0.
         BFHFNMIGN: u1,
-        _reserved3: u1 = 0,
+        reserved3: u1 = 0,
         /// Controls effect of stack limit violation while executing at a requested priority less than 0.
         STKOFHFNMIGN: u1,
-        _reserved4: u5 = 0,
+        reserved4: u5 = 0,
         /// Read as zero/write ignored.
         DC: u1,
         /// Read as zero/write ignored.
         IC: u1,
         /// Read as zero/write ignored.
         BP: u1,
-        _reserved5: u12 = 0,
+        reserved5: u13 = 0,
     }),
     /// System Handler Priority Registers.
     SHPR: [12]u8,
@@ -76,41 +54,43 @@ pub const SystemControlBlock = extern struct {
     }),
     /// HardFault Status Register.
     HFSR: u32,
-    _reserved0: [2]u32,
+    reserved0: u32,
     /// MemManage Fault Address Register.
     MMFAR: u32,
     /// BusFault Address Register.
     BFAR: u32,
     /// Auxiliary Fault Status Register not implemented.
     _AFSR: u32,
-    _reserved1: [19]u32,
+    reserved1: [18]u32,
+    /// Coprocessor Access Control Register.
+    CPACR: u32,
     /// Non-secure Access Control Register.
     NSACR: u32,
 };
 
 pub const NestedVectorInterruptController = extern struct {
-    /// Interrupt set registers.
+    /// Interrupt Set Registers.
     ISER: [16]u32,
-    _reserved0: [2]u32,
-    /// Interrupt clear enable registers.
+    reserved0: [16]u32,
+    /// Interrupt Clear Enable Registers.
     ICER: [16]u32,
-    _reserved1: [2]u32,
-    /// Interrupt set pending registers.
+    reserved1: [16]u32,
+    /// Interrupt Set Pending Registers.
     ISPR: [16]u32,
-    _reserved2: [2]u32,
-    /// Interrupt clear pending registers.
+    reserved2: [16]u32,
+    /// Interrupt Clear Pending Registers.
     ICPR: [16]u32,
-    _reserved3: [2]u32,
-    /// Interrupt active bit registers.
+    reserved3: [16]u32,
+    /// Interrupt Active Bit Registers.
     IABR: [16]u32,
-    _reserved4: [2]u32,
-    /// Interrupt target non-secure registers.
+    reserved4: [16]u32,
+    /// Interrupt Target Non-secure Registers.
     ITNS: [16]u32,
-    _reserved5: [2]u32,
-    /// Interrupt priority registers.
+    reserved5: [16]u32,
+    /// Interrupt Priority Registers.
     IPR: [480]u8,
-    _reserved6: [73]u32,
-    /// Software trigger interrupt register.
+    reserved6: [584]u32,
+    /// Software Trigger Interrupt Register.
     STIR: u32,
 };
 
@@ -132,16 +112,16 @@ pub const SecurityAttributionUnit = extern struct {
 };
 
 pub const MemoryProtectionUnit = extern struct {
-    /// MPU Type Register
+    /// MPU Type Register.
     TYPE: mmio.Mmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
-        _reserved0: u7,
+        reserved0: u7 = 0,
         /// Number of data regions supported by the MPU.
         DREGION: u8,
-        _reserved1: u16,
+        reserved1: u16 = 0,
     }),
-    /// MPU Control Register
+    /// MPU Control Register.
     CTRL: mmio.Mmio(packed struct(u32) {
         /// Enables the MPU
         ENABLE: u1,
@@ -149,13 +129,13 @@ pub const MemoryProtectionUnit = extern struct {
         HFNMIENA: u1,
         /// Enables priviledged software access to default memory map.
         PRIVDEFENA: u1,
-        _reserved0: u29,
+        reserved0: u29 = 0,
     }),
-    /// MPU Region Number Register
+    /// MPU Region Number Register.
     RNR: mmio.Mmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
-        _reserved0: u24,
+        reserved0: u24 = 0,
     }),
     /// MPU Region Base Address Register.
     RBAR: RBAR,
@@ -173,7 +153,7 @@ pub const MemoryProtectionUnit = extern struct {
     RLAR_A2: RLAR,
     /// MPU Region Base Address Register Alias 3.
     RLAR_A3: RLAR,
-    _reserved0: [20]u8,
+    reserved0: [20]u8,
     /// MPU Memory Addribute Indirection Register 0.
     MPU_MAIR0: u32,
     /// MPU Memory Addribute Indirection Register 1.
@@ -198,7 +178,7 @@ pub const MemoryProtectionUnit = extern struct {
         EN: u1,
         /// Attribue Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.
         AttrIndx: u3,
-        _reserved0: u1,
+        reserved0: u1 = 0,
         /// Limit Address contains bits [31:5] of the upper inclusive limit of the selected MPU memory region. This
         /// value is postfixed with 0x1F to provide the limit address to be checked against.
         LIMIT: u27,
