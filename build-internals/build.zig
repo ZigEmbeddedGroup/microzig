@@ -92,6 +92,9 @@ pub const Chip = struct {
     /// The cpu target this controller uses.
     cpu: std.Target.Query,
 
+    /// The cpu specific module file, which contains its startup_logic.
+    cpu_module_file: ?LazyPath = null,
+
     /// The provider for register definitions.
     register_definition: union(enum) {
         /// Use `regz` to create a zig file from a JSON schema.

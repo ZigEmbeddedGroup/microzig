@@ -317,7 +317,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 },
             });
 
-            const cpu_mod = cpu.create_module(b, mb.core_dep);
+            const cpu_mod = if (target.chip.cpu_module_file) |root_source_file|
+                b.createModule(.{
+                    .root_source_file = root_source_file,
+                })
+            else
+                cpu.create_module(b, mb.core_dep);
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 

@@ -81,6 +81,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V00xxx", // <name/> from SVD
             .cpu = qingkev2a,
+            .cpu_module_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v003.svd"),
             },
@@ -99,6 +100,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "CH32V103xx", // <name/> from SVD
             .cpu = qingkev3,
             // .cpu = microzig.cpus.riscv32_imac,
+            .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
@@ -117,6 +119,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "CH32V103xx", // <name/> from SVD
             .cpu = qingkev3,
             // .cpu = microzig.cpus.riscv32_imac,
+            .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 32 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 10 * 1024, .kind = .ram },
@@ -135,7 +138,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V20xxx", // <name/> from SVD
             .cpu = qingkev4b,
-            // .cpu = microzig.cpus.riscv32_imac,
+            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
@@ -153,7 +156,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V20xxx", // <name/> from SVD
             .cpu = qingkev4b,
-            // .cpu = microzig.cpus.riscv32_imac,
+            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 32 * 1024, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 10 * 1024, .kind = .ram },
