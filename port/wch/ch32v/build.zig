@@ -3,6 +3,8 @@ const microzig = @import("microzig/build-internals");
 
 const Self = @This();
 
+const KiB = 1024;
+
 chips: struct {
     ch32v003x4: *const microzig.Target,
     ch32v103x6: *const microzig.Target,
@@ -46,7 +48,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             std.Target.riscv.Feature.c,
         }),
         .os_tag = .freestanding,
-        .abi = .none,
+        .abi = .eabi,
     };
 
     const qingkev3 = .{
@@ -86,8 +88,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .svd = b.path("src/chips/ch32v003.svd"),
             },
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 16 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 2 * 1024, .kind = .ram },
+                .{ .offset = 0x08000000, .length = 16 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 2 * KiB, .kind = .ram },
             },
         },
         .hal = hal_ch32v003,
@@ -99,11 +101,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V103xx", // <name/> from SVD
             .cpu = qingkev3,
-            // .cpu = microzig.cpus.riscv32_imac,
             .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+                .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
             },
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v103.svd"),
@@ -118,11 +119,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V103xx", // <name/> from SVD
             .cpu = qingkev3,
-            // .cpu = microzig.cpus.riscv32_imac,
             .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 32 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 10 * 1024, .kind = .ram },
+                .{ .offset = 0x08000000, .length = 32 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 10 * KiB, .kind = .ram },
             },
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v103.svd"),
@@ -140,8 +140,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu = qingkev4b,
             .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+                .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
             },
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v20x.svd"),
@@ -158,8 +158,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu = qingkev4b,
             .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
-                .{ .offset = 0x08000000, .length = 32 * 1024, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 10 * 1024, .kind = .ram },
+                .{ .offset = 0x08000000, .length = 32 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 10 * KiB, .kind = .ram },
             },
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v20x.svd"),
