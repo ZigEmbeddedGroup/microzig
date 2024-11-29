@@ -155,25 +155,32 @@ const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
 const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
 
+const Core = enum {
+    cortex_m0,
+    cortex_m0p,
+    cortex_m3,
+    cortex_m33,
+    cortex_m4,
+    cortex_m7,
+};
+
+const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
+    @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+
 const core = blk: {
-    const Core = enum {
-        cortex_m0,
-        cortex_m0p,
-        cortex_m3,
-        cortex_m33,
-        cortex_m4,
-    };
-
-    const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
-        @panic(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
-
     break :blk switch (cortex_m) {
         .cortex_m0 => @import("cortex_m/m0"),
         .cortex_m0p => @import("cortex_m/m0plus.zig"),
         .cortex_m3 => @import("cortex_m/m3.zig"),
         .cortex_m33 => @import("cortex_m/m33.zig"),
-        .cortex_4 => @import("cortex_m/m4.zig"),
+        .cortex_m4 => @import("cortex_m/m4.zig"),
+        .cortex_m7 => @import("cortex_m/m7.zig"),
     };
+};
+
+pub const utils = switch (cortex_m) {
+    .cortex_m7 => @import("cortex_m/m7_utils.zig"),
+    else => void{},
 };
 
 pub const peripherals = struct {
@@ -191,6 +198,21 @@ pub const peripherals = struct {
         @ptrFromInt(mpu_base)
     else
         @compileError("This chip does not have a MPU.");
+
+    pub const dbg: (if (@hasDecl(core, "DebugRegisters"))
+        *volatile core.DebugRegisters
+    else
+        *volatile anyopaque) = @ptrFromInt(coredebug_base);
+
+    pub const itm: (if (@hasDecl(core, "ITM"))
+        *volatile core.ITM
+    else
+        *volatile anyopaque) = @ptrFromInt(itm_base);
+
+    pub const tpiu: (if (@hasDecl(core, "TPIU"))
+        *volatile core.TPIU
+    else
+        *volatile anyopaque) = @ptrFromInt(tpi_base);
 };
 
 pub const types = struct {
