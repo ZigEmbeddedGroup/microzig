@@ -21,9 +21,6 @@ const resets = @import("resets.zig");
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
 
-pub const EP0_OUT_IDX = 0;
-pub const EP0_IN_IDX = 1;
-
 pub const UsbConfig = struct {
     // Comptime defined supported max endpoints number, can be reduced to save RAM space
     max_endpoints_count: u8 = RP2XXX_MAX_ENDPOINTS_COUNT,
@@ -65,6 +62,7 @@ const HardwareEndpoint = struct {
     endpoint_control_index: usize,
     buffer_control_index: usize,
     data_buffer_index: usize,
+    awaiting_rx: bool,
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -346,6 +344,9 @@ pub fn F(comptime config: UsbConfig) type {
 
             const ep = hardware_endpoint_get_by_address(ep_addr);
 
+            if (ep.awaiting_rx)
+                return;
+
             // Check which DATA0/1 PID this endpoint is expecting next.
             const np: u1 = if (ep.next_pid_1) 1 else 0;
             // Configure the OUT:
@@ -358,6 +359,12 @@ pub fn F(comptime config: UsbConfig) type {
 
             // Flip the DATA0/1 PID for the next receive
             ep.next_pid_1 = !ep.next_pid_1;
+            ep.awaiting_rx = true;
+        }
+
+        pub fn endpoint_reset_rx(ep_addr: u8) void {
+            const ep = hardware_endpoint_get_by_address(ep_addr);
+            ep.awaiting_rx = false;
         }
 
         /// Check which interrupt flags are set
@@ -414,7 +421,7 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         pub fn reset_ep0() void {
-            var ep = hardware_endpoint_get_by_address(Endpoint.EP0_IN_IDX);
+            var ep = hardware_endpoint_get_by_address(Endpoint.EP0_IN_ADDR);
             ep.next_pid_1 = true;
         }
 
@@ -445,12 +452,13 @@ pub fn F(comptime config: UsbConfig) type {
             ep.next_pid_1 = false;
 
             ep.buffer_control_index = 2 * ep_num + ep_dir.as_number_reversed();
-            // TODO - some other way to deal with it
-            ep.data_buffer_index = 2 * ep_num + ep_dir.as_number();
 
             if (ep_num == 0) {
+                ep.data_buffer_index = 0;
                 ep.endpoint_control_index = 0;
             } else {
+                // TODO - some other way to deal with it
+                ep.data_buffer_index = 2 * ep_num + ep_dir.as_number();
                 ep.endpoint_control_index = 2*ep_num - ep_dir.as_number();
                 endpoint_alloc(ep, transfer_type);
             }

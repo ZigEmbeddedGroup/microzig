@@ -95,9 +95,6 @@ pub const Endpoint = struct {
         return if (addr & Dir.DIR_IN_MASK != 0) Dir.In else Dir.Out;
     }
 
-    pub const EP0_OUT_IDX = 0;
-    pub const EP0_IN_IDX = 1;
-
     pub const EP0_IN_ADDR: u8 = to_address(0, .In);
     pub const EP0_OUT_ADDR: u8 = to_address(0, .Out);
 };

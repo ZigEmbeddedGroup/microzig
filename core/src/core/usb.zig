@@ -96,12 +96,12 @@ pub fn Usb(comptime f: anytype) type {
                 const data_chunk = S.buffer_reader.try_peek(64);
 
                 if (data_chunk.len > 0) {
-                    f.usb_start_tx(Endpoint.EP0_IN_IDX, data_chunk);
+                    f.usb_start_tx(Endpoint.EP0_IN_ADDR, data_chunk);
                 }
             }
 
             fn send_cmd_ack() void {
-                f.usb_start_tx(Endpoint.EP0_IN_IDX, &.{});
+                f.usb_start_tx(Endpoint.EP0_IN_ADDR, &.{});
             }
         };
 
@@ -441,12 +441,12 @@ pub fn Usb(comptime f: anytype) type {
                                 const next_data_chunk = buffer_reader.try_peek(64);
                                 if (next_data_chunk.len > 0) {
                                     f.usb_start_tx(
-                                         Endpoint.EP0_IN_IDX,
+                                         Endpoint.EP0_IN_ADDR,
                                          next_data_chunk,
                                      );
                                 } else {
                                     f.usb_start_rx(
-                                        Endpoint.EP0_OUT_IDX,
+                                        Endpoint.EP0_OUT_ADDR,
                                         0,
                                     );
 
@@ -461,7 +461,7 @@ pub fn Usb(comptime f: anytype) type {
                                 // OUT) a zero-byte DATA packet, so, set that
                                 // up:
                                 f.usb_start_rx(
-                                    Endpoint.EP0_OUT_IDX,
+                                    Endpoint.EP0_OUT_ADDR,
                                     0,
                                 );
 
@@ -476,6 +476,9 @@ pub fn Usb(comptime f: anytype) type {
                             var driver = get_driver(ep_to_drv[ep_num][ep_dir]);
                             if (driver != null) {
                                 driver.?.transfer(epb.endpoint_address, epb.buffer);
+                            }
+                            if (Endpoint.dir_from_address(epb.endpoint_address) == .Out) {
+                                f.endpoint_reset_rx(epb.endpoint_address);
                             }
                         },
                     }
