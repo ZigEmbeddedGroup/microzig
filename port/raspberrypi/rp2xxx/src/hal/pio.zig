@@ -234,7 +234,7 @@ pub const Pio = enum(u1) {
         return &sm_regs[@intFromEnum(sm)];
     }
 
-    fn get_irq_regs(self: Pio, irq: Irq) *volatile Irq.Regs {
+    pub fn get_irq_regs(self: Pio, irq: Irq) *volatile Irq.Regs {
         const pio_regs = self.get_regs();
         const irq_regs = @as(*volatile [2]Irq.Regs, @ptrCast(&pio_regs.IRQ0_INTE));
         return &irq_regs[@intFromEnum(irq)];
