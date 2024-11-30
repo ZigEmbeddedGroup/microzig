@@ -16,7 +16,6 @@ pub inline fn wfi() void {
 }
 
 pub inline fn wfe() void {
-    // TODO: impliment wfe()
     const PFIC = microzig.chip.peripherals.PFIC;
     // Treats the subsequent wfi instruction as wfe
     PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });

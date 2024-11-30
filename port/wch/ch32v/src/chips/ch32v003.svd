@@ -1938,37 +1938,37 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>DMA1_Channel1</name>
+        <name>DMA1_CH1</name>
         <description>DMA1 Channel1 global interrupt</description>
         <value>22</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel2</name>
+        <name>DMA1_CH2</name>
         <description>DMA1 Channel2 global interrupt</description>
         <value>23</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel3</name>
+        <name>DMA1_CH3</name>
         <description>DMA1 Channel3 global interrupt</description>
         <value>24</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel4</name>
+        <name>DMA1_CH4</name>
         <description>DMA1 Channel4 global interrupt</description>
         <value>25</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel5</name>
+        <name>DMA1_CH5</name>
         <description>DMA1 Channel5 global interrupt</description>
         <value>26</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel6</name>
+        <name>DMA1_CH6</name>
         <description>DMA1 Channel6 global interrupt</description>
         <value>27</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel7</name>
+        <name>DMA1_CH7</name>
         <description>DMA1 Channel7 global interrupt</description>
         <value>28</value>
       </interrupt>

@@ -61,7 +61,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             std.Target.riscv.Feature.m,
         }),
         .os_tag = .freestanding,
-        .abi = .none,
+        .abi = .eabi,
     };
 
     const qingkev4b = .{
@@ -74,7 +74,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             std.Target.riscv.Feature.m,
         }),
         .os_tag = .freestanding,
-        .abi = .none,
+        .abi = .eabi,
     };
 
     const chip_ch32v003x4: microzig.Target = .{
