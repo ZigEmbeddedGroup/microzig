@@ -25,6 +25,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/rp2040_only/usb_cdc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
