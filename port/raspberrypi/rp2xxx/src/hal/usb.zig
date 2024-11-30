@@ -450,6 +450,7 @@ pub fn F(comptime config: UsbConfig) type {
             ep.max_packet_size = max_packet_size;
             ep.transfer_type = transfer_type;
             ep.next_pid_1 = false;
+            ep.awaiting_rx = false;
 
             ep.buffer_control_index = 2 * ep_num + ep_dir.as_number_reversed();
 
