@@ -1,29 +1,34 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build");
-const wch = @import("microzig/port/wch/ch32v");
+const microzig = @import("microzig");
 
-const available_examples = [_]Example{
-    // CH32V003
-    .{ .target = wch.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
-    .{ .target = wch.chips.ch32v003x4, .name = "blinky_ch32v003", .file = "src/blinky_ch32v003.zig" },
-    // .{ .target = wch.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_empty", .file = "src/empty.zig" },
-    // .{ .target = wch.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_blinky", .file = "src/blinky.zig" },
-
-    // CH32V103
-    .{ .target = wch.chips.ch32v103x8, .name = "empty_ch32v103", .file = "src/empty.zig" },
-    .{ .target = wch.chips.ch32v103x8, .name = "blinky_ch32v103", .file = "src/blinky.zig" },
-    // .{ .target = wch.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_empty", .file = "src/empty.zig" },
-    // .{ .target = wch.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_blinky", .file = "src/blinky.zig" },
-
-    // CH32V203
-    .{ .target = wch.chips.ch32v203x8, .name = "empty_ch32v203", .file = "src/empty.zig" },
-    .{ .target = wch.chips.ch32v203x8, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
-    .{ .target = wch.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
-};
+const MicroBuild = microzig.MicroBuild(.{
+    .ch32v = true,
+});
 
 pub fn build(b: *std.Build) void {
-    const microzig = MicroZig.init(b, .{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const mz_dep = b.dependency("microzig", .{});
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
+
+    const available_examples = [_]Example{
+        // CH32V003
+        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "blinky_ch32v003", .file = "src/blinky_ch32v003.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_empty", .file = "src/empty.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_blinky", .file = "src/blinky.zig" },
+
+        // CH32V103
+        .{ .target = mb.ports.ch32v.chips.ch32v103x8, .name = "empty_ch32v103", .file = "src/empty.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v103x8, .name = "blinky_ch32v103", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v103.ch32v103r_r1_1v1, .name = "ch32v103r_r1_1v1_empty", .file = "src/empty.zig" },
+
+        // CH32V203
+        .{ .target = mb.ports.ch32v.chips.ch32v203x8, .name = "empty_ch32v203", .file = "src/empty.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v203x8, .name = "blinky_ch32v203", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.boards.ch32v203.suzuduino_uno_v1b, .name = "suzuduino_blinky", .file = "src/board_blinky.zig" },
+    };
 
     for (available_examples) |example| {
         // `add_firmware` basically works like addExecutable, but takes a
@@ -31,11 +36,10 @@ pub fn build(b: *std.Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
-        const firmware = microzig.add_firmware(b, .{
+        const fw = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
-            // .optimize = .ReleaseSmall, // not work -Doptimize=ReleaseSmall
             .root_source_file = b.path(example.file),
         });
 
@@ -43,16 +47,15 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        microzig.install_firmware(b, firmware, .{ .format = .bin });
+        mb.install_firmware(fw, .{});
 
         // For debugging, we also always install the firmware as an ELF file
-        // microzig.install_firmware(b, firmware, .{}); // default format is ELF
-        microzig.install_firmware(b, firmware, .{ .format = .elf });
+        mb.install_firmware(fw, .{ .format = .elf });
     }
 }
 
 const Example = struct {
-    target: MicroZig.Target,
+    target: *const microzig.Target,
     name: []const u8,
     file: []const u8,
 };

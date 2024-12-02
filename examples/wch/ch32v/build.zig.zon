@@ -2,8 +2,7 @@
     .name = "examples/wch/ch32v",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/wch/ch32v" = .{ .path = "../../../port/wch/ch32v" },
+        .microzig = .{ .path = "../../.." },
     },
 
     .paths = .{

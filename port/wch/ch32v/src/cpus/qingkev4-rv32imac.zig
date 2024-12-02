@@ -37,7 +37,7 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    pub fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
+    pub fn _start() callconv(.C) noreturn {
         microzig.cpu.disable_interrupts(); // Power-on reset makes interrupts disbaled.
 
         // set global pointer
