@@ -122,6 +122,11 @@ pub const Arch = enum {
     // mips
     mips,
 
+    // riscv
+    qingke_v2,
+    qingke_v3,
+    qingke_v4,
+
     pub fn to_string(arch: Arch) []const u8 {
         return inline for (@typeInfo(Arch).Enum.fields) |field| {
             if (@field(Arch, field.name) == arch)
@@ -175,6 +180,15 @@ pub const Arch = enum {
     pub fn is_mips(arch: Arch) bool {
         return switch (arch) {
             .mips => true,
+            else => false,
+        };
+    }
+
+    pub fn is_riscv(arch: Arch) bool {
+        return switch (arch) {
+            .qingke_v2 => true,
+            .qingke_v3 => true,
+            .qingke_v4 => true,
             else => false,
         };
     }

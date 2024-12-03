@@ -1,15 +1,14 @@
-// const std = @import("std");
 const microzig = @import("microzig");
 const root = @import("root");
 
 pub const cpu_frequency = 24_000_000; // 24 MHz
 
 pub inline fn enable_interrupts() void {
-    asm volatile ("csrrs zero, mstatus, 0x8");
+    asm volatile ("csrsi mstatus, 0b1000");
 }
 
 pub inline fn disable_interrupts() void {
-    asm volatile ("csrrc zero, mstatus, 0x8");
+    asm volatile ("csrci mstatus, 0b1000");
 }
 
 pub inline fn wfi() void {
@@ -17,29 +16,16 @@ pub inline fn wfi() void {
 }
 
 pub inline fn wfe() void {
-    // TODO: impliment wfe()
-    @compileError("wfe() is not implimented.");
-    // set WFITOWFE on PFIC_SCTLR followed by
-    // asm volatile ("wfi");
+    const PFIC = microzig.chip.peripherals.PFIC;
+    // Treats the subsequent wfi instruction as wfe
+    PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
+    asm volatile ("wfi");
 }
 
 pub const startup_logic = struct {
-    comptime {
-        // Program codes are written from 0x800_0000.
-        // The PC pointer after reset is 0x0000_0000 and reads codes from alias of flash memory.
-        // This is not expected PC pointer on init.S. Thus jump to _abs_start is mandatory.
-        asm (
-            \\.section microzig_flash_start
-            \\lui ra, %hi(_start)
-            \\jr %lo(_start)(ra)
-        );
-    }
-
     extern fn microzig_main() noreturn;
 
     pub fn _start() callconv(.C) noreturn {
-        microzig.cpu.disable_interrupts(); // Power-on reset makes interrupts disbaled.
-
         // set global pointer
         asm volatile (
             \\.option push
@@ -52,10 +38,19 @@ pub const startup_logic = struct {
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
-        // root.initialize_system_memories();
-        // smaller than initialize_system_memories() in start.zig
-        initialize_system_memories();
+        root.initialize_system_memories();
+
+        // Vendor-defined CSRs
+        // 3.2 Interrupt-related CSR Registers
+        asm volatile ("csrsi 0x804, 0b111"); // INTSYSCR: enable EABI + Interrupt nesting + HPE
+        asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
+        microzig.cpu.enable_interrupts();
+
         microzig_main();
+    }
+
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.Naked) void {
+        asm volatile ("j _start");
     }
 };
 
@@ -65,37 +60,13 @@ pub fn export_startup_logic() void {
     });
 }
 
-inline fn initialize_system_memories() void {
-    // clear .bss
-    asm volatile (
-        \\clear_bss_section:
-        \\    la      t0, microzig_bss_start
-        \\    la      t1, microzig_bss_end
-        // \\    beq     t0, t1, clear_bss_done
-        \\    j clear_bss_loop_end
-        \\clear_bss_loop:
-        \\    sw      zero, 0(t0)
-        \\    addi    t0, t0, 4
-        \\clear_bss_loop_end:
-        \\    bltu    t0, t1, clear_bss_loop
-        \\clear_bss_done:
-    );
+const VectorTable = microzig.chip.VectorTable;
+pub const vector_table: VectorTable = blk: {
+    var tmp: VectorTable = .{};
+    if (@hasDecl(root, "microzig_options")) {
+        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
+    }
 
-    // copy .data section to RAM
-    asm volatile (
-        \\copy_data_section:
-        \\    la a0, microzig_data_load_start
-        \\    la a1, microzig_data_start
-        \\    la a2, microzig_data_end
-        // \\    beq a1, a2, copy_data_done
-        \\    j copy_data_loop_end
-        \\copy_data_loop:
-        \\    lw t0, 0(a0)
-        \\    sw t0, 0(a1)
-        \\    addi a0, a0, 4
-        \\    addi a1, a1, 4
-        \\copy_data_loop_end:
-        \\    bltu a1, a2, copy_data_loop
-        \\copy_data_done:
-    );
-}
+    break :blk tmp;
+};

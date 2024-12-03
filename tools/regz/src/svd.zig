@@ -215,6 +215,12 @@ fn arch_from_str(str: []const u8) Database.Arch {
         .cortex_a57
     else if (std.mem.eql(u8, "CA72", str))
         .cortex_a72
+    else if (std.mem.eql(u8, "QINGKEV2", str))
+        .qingke_v2
+    else if (std.mem.eql(u8, "QINGKEV3", str))
+        .qingke_v3
+    else if (std.mem.eql(u8, "QINGKEV4", str))
+        .qingke_v4
     else
         .unknown;
 }

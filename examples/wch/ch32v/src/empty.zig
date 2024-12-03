@@ -1,8 +1,8 @@
 const microzig = @import("microzig");
 
-pub fn main() void {
-    while (true) {
-        asm volatile ("" ::: "memory");
-        // asm volatile ("nop");
-    }
+pub fn main() !void {
+    asm volatile ("nop");
+    // while (true) {
+    //     asm volatile ("" ::: "memory");
+    // }
 }

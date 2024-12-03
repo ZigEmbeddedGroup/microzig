@@ -6,6 +6,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
   <name>CH32V103xx</name>
   <version>1.0</version>
   <description>CH32V103xx View File</description>
+  <cpu>
+    <name>QINGKEV3</name>
+    <revision>r0p0</revision>
+    <endian>little</endian>
+    <fpuPresent>false</fpuPresent>
+    <mpuPresent>false</mpuPresent>
+    <nvicPrioBits>2</nvicPrioBits>
+  </cpu>
+
   <!--Bus Interface Properties-->
   <!--Cortex-M3 is byte addressable-->
 
@@ -16,7 +25,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
   <size>0x20</size>
   <resetValue>0x0</resetValue>
   <resetMask>0xFFFFFFFF</resetMask>
- 
+
   <peripherals>
       <peripheral>
       <name>PWR</name>
@@ -132,7 +141,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
       </registers>
     </peripheral>
-    
+
 	  <peripheral>
       <name>RCC</name>
       <description>Reset and clock control</description>
@@ -713,7 +722,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>USART1 clock enable</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>          
+            </field>
           </fields>
         </register>
         <register>
@@ -743,7 +752,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>Timer 4 clock enable</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>   
+            </field>
             <field>
               <name>WWDGEN</name>
               <description>Window watchdog clock
@@ -955,12 +964,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>         
+            </field>
           </fields>
         </register>
-      </registers>   
+      </registers>
     </peripheral>
-	
+
 	<peripheral>
 	<name>EXTEND</name>
     <description>extension configuration</description>
@@ -986,14 +995,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                <field>
               <name>USBDPU</name>
               <description>USBD pullup Enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                <field>
               <name>USBHDIO</name>
               <description>USBHD IO(PB6/PB7) Enable</description>
@@ -1007,7 +1016,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                <field>
               <name>HSIPRE</name>
               <description>Whether HSI is divided </description>
@@ -1021,35 +1030,35 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                <field>
               <name>LKUPRESET</name>
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>    
+            </field>
                   <field>
               <name>ULLDOTRIM</name>
               <description>ULLDOTRIM</description>
               <bitOffset>8</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                  <field>
               <name>LDOTRIM</name>
               <description>LDOTRIM</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>   
+            </field>
           </fields>
         </register>
 		</registers>
 	</peripheral>
-	
-	
-    
+
+
+
 	  <peripheral>
       <name>GPIOA</name>
       <description>General purpose I/O</description>
@@ -1940,7 +1949,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       <name>GPIOD</name>
       <baseAddress>0x40011400</baseAddress>
     </peripheral>
-	
+
 	<peripheral>
       <name>AFIO</name>
       <description>Alternate function I/O</description>
@@ -3116,7 +3125,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
       </registers>
     </peripheral>
-    
+
 	<peripheral>
       <name>DMA</name>
       <description>DMA controller</description>
@@ -3128,37 +3137,37 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>DMA1_Channel1</name>
+        <name>DMA1_CH1</name>
         <description>DMA1 Channel1 global interrupt</description>
         <value>27</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel2</name>
+        <name>DMA1_CH2</name>
         <description>DMA1 Channel2 global interrupt</description>
         <value>28</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel3</name>
+        <name>DMA1_CH3</name>
         <description>DMA1 Channel3 global interrupt</description>
         <value>29</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel4</name>
+        <name>DMA1_CH4</name>
         <description>DMA1 Channel4 global interrupt</description>
         <value>30</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel5</name>
+        <name>DMA1_CH5</name>
         <description>DMA1 Channel5 global interrupt</description>
         <value>31</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel6</name>
+        <name>DMA1_CH6</name>
         <description>DMA1 Channel6 global interrupt</description>
         <value>32</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel7</name>
+        <name>DMA1_CH7</name>
         <description>DMA1 Channel7 global interrupt</description>
         <value>33</value>
       </interrupt>
@@ -5300,19 +5309,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>TIM1_BRK_TIM9</name>
+        <name>TIM1_BRK</name>
         <description>TIM1 Break interrupt and TIM9 global
         interrupt</description>
         <value>40</value>
       </interrupt>
       <interrupt>
-        <name>TIM1_UP_TIM10</name>
+        <name>TIM1_UP</name>
         <description>TIM1 Update interrupt and TIM10 global
         interrupt</description>
         <value>41</value>
       </interrupt>
       <interrupt>
-        <name>TIM1_TRG_COM_TIM11</name>
+        <name>TIM1_TRG_COM</name>
         <description>TIM1 Trigger and Commutation interrupts and
         TIM11 global interrupt</description>
         <value>42</value>
@@ -6516,7 +6525,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               control</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
-            </field> 
+            </field>
           </fields>
         </register>
         <register>
@@ -7316,8 +7325,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <value>46</value>
       </interrupt>
     </peripheral>
-  
-		
+
+
 	<peripheral>
       <name>I2C1</name>
       <description>Inter integrated circuit</description>
@@ -8194,7 +8203,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
     </peripheral>
 
-		
+
     <peripheral>
       <name>USART1</name>
       <description>Universal synchronous asynchronous receiver
@@ -9432,7 +9441,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
       </registers>
     </peripheral>
-    
+
     <peripheral>
       <name>DAC1</name>
       <description>Digital to analog converter</description>
@@ -9851,7 +9860,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </registers>
     </peripheral>
 
-	
+
 	<peripheral>
 		<name>USBHD</name>
 		<description>USB register</description>
@@ -9878,7 +9887,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<field>
 						<name>RB_UC_DMA_EN</name>
 						<description>DMA enable and DMA interrupt enable for USB</description>
-						<bitRange>[0:0]</bitRange>		
+						<bitRange>[0:0]</bitRange>
 					</field>
 					<field>
 						<name>RB_UC_CLR_ALL</name>
@@ -10943,7 +10952,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x20</size>
           <access>read-only</access>
           <resetValue>0x00000000</resetValue>
-          <fields>		   
+          <fields>
             <field>
               <name>INTENSTA2_3</name>
               <description>Interrupt ID Status</description>
@@ -11056,7 +11065,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <displayName>CFGR</displayName>
           <description>Interrupt Config Register</description>
           <addressOffset>0x48</addressOffset>
-          <size>0x20</size>        
+          <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
@@ -11488,7 +11497,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>28</bitWidth>
             </field>
           </fields>
-        </register> 	
+        </register>
       </registers>
     </peripheral>
     <peripheral>
@@ -11503,7 +11512,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>USB_FS_WKUP</name>
+        <name>USBWakeUp</name>
         <description>USB Device FS Wakeup through EXTI line
         interrupt</description>
         <value>58</value>
@@ -11522,7 +11531,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <name>EA</name>
               <description>Endpoint address</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>4</bitWidth>			 
+              <bitWidth>4</bitWidth>
             </field>
             <field>
               <name>STAT_TX</name>
@@ -12382,8 +12391,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
       </registers>
     </peripheral>
-  
-  
+
+
   </peripherals>
- 
+
  </device>

@@ -6,6 +6,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
   <name>CH32V00xxx</name>
   <version>1.0</version>
   <description>CH32V00xxx View File</description>
+  <cpu>
+    <name>QINGKEV2</name>
+    <revision>r0p0</revision>
+    <endian>little</endian>
+    <mpuPresent>false</mpuPresent>
+    <fpuPresent>false</fpuPresent>
+    <nvicPrioBits>2</nvicPrioBits>
+  </cpu>
   <!--Bus Interface Properties-->
   <!--RISC-V is byte addressable-->
 
@@ -108,16 +116,16 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>AWUAPR</name>
-          <displayName>AWUAPR</displayName>
+          <name>AWUWR</name>
+          <displayName>AWUWR</displayName>
           <description>Automatic wake window comparison value register
-          (PWR_AWUAPR)</description>
+          (PWR_AWUWR)</description>
           <addressOffset>0x0C</addressOffset>
           <size>0x20</size>
           <resetValue>0x0000003F</resetValue>
           <fields>
             <field>
-              <name>AWUAPR</name>
+              <name>AWUWR</name>
               <description>AWU window value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>6</bitWidth>
@@ -280,26 +288,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>PPRE1</name>
-              <description>APB Low speed prescaler
-              (APB1)</description>
-              <bitOffset>8</bitOffset>
-              <bitWidth>3</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>PPRE2</name>
-              <description>APB High speed prescaler
-              (APB2)</description>
-              <bitOffset>11</bitOffset>
-              <bitWidth>3</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
               <name>ADCPRE</name>
               <description>ADC prescaler</description>
-              <bitOffset>14</bitOffset>
-              <bitWidth>2</bitWidth>
+              <bitOffset>11</bitOffset>
+              <bitWidth>5</bitWidth>
               <access>read-write</access>
             </field>
             <field>
@@ -501,6 +493,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
           <fields>
+            <field>
+              <name>TIM2RST</name>
+              <description>TIM2 reset</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
             <field>
               <name>WWDGRST</name>
               <description>Window watchdog reset</description>
@@ -742,24 +740,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <description>Configure the extended control register</description>
           <addressOffset>0x00</addressOffset>
           <size>0x20</size>
-          <resetValue>0x00000040</resetValue>
+          <resetValue>0x00000A00</resetValue>
           <fields>
             <field>
-              <name>PLL_CFG</name>
-              <description>Configure the PLL clock delay time</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>4</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>LOCKUP_EN</name>
+              <name>LKUPEN</name>
               <description>LOCKUP_Enable</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>LOCKUP_RESET</name>
+              <name>LKUPRST</name>
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
@@ -769,27 +760,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <name>LDO_TRIM</name>
               <description>LDO_TRIM</description>
               <bitOffset>10</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>FLASH_CLK_TRIM</name>
-              <description>FLASH clock trimming</description>
-              <bitOffset>11</bitOffset>
-              <bitWidth>3</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-                <name>WR_EN</name>
-                <description>Control Register write enable</description>
-                <bitOffset>14</bitOffset>
-                <bitWidth>1</bitWidth>
-                <access>read-write</access>
-            </field>
-            <field>
-                <name>WR_LOCK</name>
-                <description>Control Register write lock</description>
-                <bitOffset>15</bitOffset>
                 <bitWidth>1</bitWidth>
                 <access>read-write</access>
             </field>
@@ -813,23 +783,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
                 <bitOffset>18</bitOffset>
                 <bitWidth>1</bitWidth>
                 <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-            <name>EXTEND_KR</name>
-            <displayName>EXTEND</displayName>
-            <description>Configure the extended key register</description>
-            <addressOffset>0x04</addressOffset>
-            <size>0x20</size>
-            <resetValue>0x00000000</resetValue>
-            <fields>
-              <field>
-                <name>KEY</name>
-                <description>Write key value</description>
-                <bitOffset>0</bitOffset>
-                <bitWidth>32</bitWidth>
-                <access>write-only</access>
               </field>
             </fields>
           </register>
@@ -1338,10 +1291,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </addressBlock>
       <registers>
         <register>
-          <name>PCFR</name>
-          <displayName>PCFR</displayName>
+          <name>PCFR1</name>
+          <displayName>PCFR1</displayName>
           <description>AF remap and debug I/O configuration
-          register (AFIO_PCFR)</description>
+          register (AFIO_PCFR1)</description>
           <addressOffset>0x4</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
@@ -1361,7 +1314,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>USART1RM</name>
+              <name>USART1_RM</name>
               <description>USART1 remapping</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1382,7 +1335,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>PA12RM</name>
+              <name>PA12_RM</name>
               <description>Port A1/Port A2 mapping on
               OSCIN/OSCOUT</description>
               <bitOffset>15</bitOffset>
@@ -1911,61 +1864,61 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>PR0</name>
+              <name>IF0</name>
               <description>Pending bit 0</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR1</name>
+              <name>IF1</name>
               <description>Pending bit 1</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR2</name>
+              <name>IF2</name>
               <description>Pending bit 2</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR3</name>
+              <name>IF3</name>
               <description>Pending bit 3</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR4</name>
+              <name>IF4</name>
               <description>Pending bit 4</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR5</name>
+              <name>IF5</name>
               <description>Pending bit 5</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR6</name>
+              <name>IF6</name>
               <description>Pending bit 6</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR7</name>
+              <name>IF7</name>
               <description>Pending bit 7</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR8</name>
+              <name>IF8</name>
               <description>Pending bit 8</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PR9</name>
+              <name>IF9</name>
               <description>Pending bit 9</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1985,37 +1938,37 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>DMA1_Channel1</name>
+        <name>DMA1_CH1</name>
         <description>DMA1 Channel1 global interrupt</description>
         <value>22</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel2</name>
+        <name>DMA1_CH2</name>
         <description>DMA1 Channel2 global interrupt</description>
         <value>23</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel3</name>
+        <name>DMA1_CH3</name>
         <description>DMA1 Channel3 global interrupt</description>
         <value>24</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel4</name>
+        <name>DMA1_CH4</name>
         <description>DMA1 Channel4 global interrupt</description>
         <value>25</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel5</name>
+        <name>DMA1_CH5</name>
         <description>DMA1 Channel5 global interrupt</description>
         <value>26</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel6</name>
+        <name>DMA1_CH6</name>
         <description>DMA1 Channel6 global interrupt</description>
         <value>27</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_Channel7</name>
+        <name>DMA1_CH7</name>
         <description>DMA1 Channel7 global interrupt</description>
         <value>28</value>
       </interrupt>
@@ -3604,7 +3557,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             <resetValue>0x0000</resetValue>
             <fields>
             <field>
-                <name>WEIF</name>
+                <name>EWIF</name>
                 <description>Early Wakeup Interrupt Flag</description>
                 <bitOffset>0</bitOffset>
                 <bitWidth>1</bitWidth>
@@ -3625,24 +3578,24 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
         </addressBlock>
         <interrupt>
-        <name>TIM1_BRK</name>
+        <name>TIM1BRK</name>
         <description>TIM1 Break
         interrupt</description>
         <value>34</value>
         </interrupt>
         <interrupt>
-        <name>TIM1_UP</name>
+        <name>TIM1UP</name>
         <description>TIM1 Update
         interrupt</description>
         <value>35</value>
         </interrupt>
         <interrupt>
-        <name>TIM1_TRG_COM</name>
+        <name>TIM1TRG</name>
         <description>TIM1 Trigger and Commutation interrupts</description>
         <value>36</value>
         </interrupt>
         <interrupt>
-        <name>TIM1_CC</name>
+        <name>TIM1CC</name>
         <description>TIM1 Capture Compare interrupt</description>
         <value>37</value>
         </interrupt>
@@ -3657,7 +3610,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             <resetValue>0x0000</resetValue>
             <fields>
             <field>
-                <name>TMR_CAP_LVL_EN</name>
+                <name>CAPLVL</name>
                 <description>Timer capture level indication
                 enable</description>
                 <bitOffset>15</bitOffset>
@@ -4404,7 +4357,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             <fields>
             <field>
                 <name>CC4P</name>
-                <description>Capture/Compare 3 output
+                <description>Capture/Compare 4 output
                 Polarity</description>
                 <bitOffset>13</bitOffset>
                 <bitWidth>1</bitWidth>
@@ -4732,7 +4685,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             <resetValue>0x0000</resetValue>
             <fields>
             <field>
-                <name>DMAADR</name>
+                <name>DMAB</name>
                 <description>DMA register for burst
                 accesses</description>
                 <bitOffset>0</bitOffset>
@@ -4768,14 +4721,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             <resetValue>0x0000</resetValue>
             <fields>
             <field>
-                <name>TMR_CAP_LVL_EN</name>
+                <name>CAPLVL</name>
                 <description>Timer capture level indication
                 enable</description>
                 <bitOffset>15</bitOffset>
                 <bitWidth>1</bitWidth>
             </field>
             <field>
-                <name>TMR_CAP_OV_EN</name>
+                <name>CAPOV</name>
                 <description>Timer capture value configuration
                 enable</description>
                 <bitOffset>14</bitOffset>
@@ -5715,12 +5668,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
                 <bitWidth>1</bitWidth>
             </field>
             <field>
-                <name>ENARP</name>
-                <description>ARP enable</description>
-                <bitOffset>4</bitOffset>
-                <bitWidth>1</bitWidth>
-            </field>
-            <field>
                 <name>PE</name>
                 <description>Peripheral enable</description>
                 <bitOffset>0</bitOffset>
@@ -6233,20 +6180,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
                 <access>read-write</access>
             </field>
             <field>
-                <name>CHSID</name>
-                <description>Channel side</description>
-                <bitOffset>2</bitOffset>
-                <bitWidth>1</bitWidth>
-                <access>read-only</access>
-            </field>
-            <field>
                 <name>UDR</name>
                 <description>Underrun flag</description>
                 <bitOffset>3</bitOffset>
                 <bitWidth>1</bitWidth>
                 <access>read-only</access>
             </field>
-
+            <field>
+                <name>CHSID</name>
+                <description>Channel side</description>
+                <bitOffset>2</bitOffset>
+                <bitWidth>1</bitWidth>
+                <access>read-only</access>
+            </field>
             <field>
                 <name>TXE</name>
                 <description>Transmit buffer empty</description>
@@ -6824,7 +6770,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>ADC_CAL_VOL</name>
+              <name>CALVOL</name>
               <description>ADC Calibration voltage selection</description>
               <bitOffset>25</bitOffset>
               <bitWidth>2</bitWidth>
@@ -7003,8 +6949,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>SAMPTR1_CHARGE1</name>
-          <displayName>SAMPTR1_CHARGE1</displayName>
+          <name>SAMPTR1</name>
+          <displayName>SAMPTR1</displayName>
           <description>sample time register 1</description>
           <addressOffset>0xC</addressOffset>
           <size>0x20</size>
@@ -7012,42 +6958,42 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>SMP10_TKCG10</name>
+              <name>SMP10</name>
               <description>Channel 10 sample time
               selection</description>
               <bitOffset>0</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP11_TKCG11</name>
+              <name>SMP11</name>
               <description>Channel 11 sample time
               selection</description>
               <bitOffset>3</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP12_TKCG12</name>
+              <name>SMP12</name>
               <description>Channel 12 sample time
               selection</description>
               <bitOffset>6</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP13_TKCG13</name>
+              <name>SMP13</name>
               <description>Channel 13 sample time
               selection</description>
               <bitOffset>9</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP14_TKCG14</name>
+              <name>SMP14</name>
               <description>Channel 14 sample time
               selection</description>
               <bitOffset>12</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP15_TKCG15</name>
+              <name>SMP15</name>
               <description>Channel 15 sample time
               selection</description>
               <bitOffset>15</bitOffset>
@@ -7056,8 +7002,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>SAMPTR2_CHARGE2</name>
-          <displayName>SAMPTR2_CHARGE2</displayName>
+          <name>SAMPTR2</name>
+          <displayName>SAMPTR2</displayName>
           <description>sample time register 2</description>
           <addressOffset>0x10</addressOffset>
           <size>0x20</size>
@@ -7065,70 +7011,70 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>SMP0_TKCG0</name>
+              <name>SMP0</name>
               <description>Channel 0 sample time
               selection</description>
               <bitOffset>0</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP1_TKCG1</name>
+              <name>SMP1</name>
               <description>Channel 1 sample time
               selection</description>
               <bitOffset>3</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP2_TKCG2</name>
+              <name>SMP2</name>
               <description>Channel 2 sample time
               selection</description>
               <bitOffset>6</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP3_TKCG3</name>
+              <name>SMP3</name>
               <description>Channel 3 sample time
               selection</description>
               <bitOffset>9</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP4_TKCG4</name>
-              <description>Channel 4 sample time
+              <name>SMP4</name>
+              <description>Channample time
               selection</description>
               <bitOffset>12</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP5_TKCG5</name>
+              <name>SMP5</name>
               <description>Channel 5 sample time
               selection</description>
               <bitOffset>15</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP6_TKCG6</name>
+              <name>SMP6</name>
               <description>Channel 6 sample time
               selection</description>
               <bitOffset>18</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP7_TKCG7</name>
+              <name>SMP7</name>
               <description>Channel 7 sample time
               selection</description>
               <bitOffset>21</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP8_TKCG8</name>
+              <name>SMP8</name>
               <description>Channel 8 sample time
               selection</description>
               <bitOffset>24</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
             <field>
-              <name>SMP9_TKCG9</name>
+              <name>SMP9</name>
               <description>Channel 9 sample time
               selection</description>
               <bitOffset>27</bitOffset>
@@ -7578,62 +7524,27 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0</resetValue>
           <fields>
             <field>
-              <name>DEG_IWDG</name>
+              <name>IWDG_STOP</name>
               <description>DEG_IWDG</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>DEG_WWDG</name>
+              <name>WWDG_STOP</name>
               <description>DEG_WWDG</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>DEG_I2C1</name>
-              <description>DEG_I2C1</description>
-              <bitOffset>2</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
-              <name>DEG_TIM1</name>
+              <name>TIM1_STOP</name>
               <description>DEG_TIM1</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>DEG_TIM2</name>
+              <name>TIM2_STOP</name>
               <description>DEG_TIM2</description>
               <bitOffset>5</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>CFGR2</name>
-          <displayName>CFGR2</displayName>
-          <description>DBGMCU_CFGR2</description>
-          <addressOffset>0x4</addressOffset>
-          <size>0x20</size>
-          <access>read-write</access>
-          <resetValue>0x0</resetValue>
-          <fields>
-            <field>
-              <name>DBG_SLEEP</name>
-              <description>DBG_SLEEP</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
-              <name>DBG_STOP</name>
-              <description>DBG_STOP</description>
-              <bitOffset>1</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
-              <name>DBG_STANDBY</name>
-              <description>DBG_STANDBY</description>
-              <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
@@ -7661,7 +7572,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>FLASHSIZE</name>
+              <name>F_SIZE</name>
               <description>Flash size</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -7749,7 +7660,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
                 <name>LATENCY</name>
                 <description>Number of FLASH wait states</description>
                 <bitOffset>0</bitOffset>
-                <bitWidth>1</bitWidth>
+                <bitWidth>2</bitWidth>
                 <access>read-write</access>
               </field>
             </fields>
@@ -7910,13 +7821,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PAGE_PG</name>
+              <name>FTPG</name>
               <description>Fast programming</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PAGE_ER</name>
+              <name>FTER</name>
               <description>Fast erase</description>
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
@@ -7980,20 +7891,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>STOP_RST</name>
-              <description>STOP_RST</description>
-              <bitOffset>3</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
               <name>STANDY_RST</name>
               <description>STANDY_RST</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>CFG_RST_MODE</name>
-              <description>CFG_RST_MODE</description>
+              <name>CFGRSTT</name>
+              <description>CFGRSTT</description>
               <bitOffset>5</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
@@ -8093,10 +7998,22 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>2</bitWidth>
             </field>
             <field>
-              <name>INTENSTA12_31</name>
+              <name>INTENSTA12</name>
               <description>Interrupt ID Status</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTENSTA14</name>
+              <description>Interrupt ID Status</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTENSTA16_31</name>
+              <description>Interrupt ID Status</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
@@ -8114,43 +8031,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <name>INTENSTA</name>
               <description>Interrupt ID Status</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>ISR3</name>
-          <displayName>ISR3</displayName>
-          <description>Interrupt Status
-          Register</description>
-          <addressOffset>0x08</addressOffset>
-          <size>0x20</size>
-          <access>read-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTENSTA</name>
-              <description>Interrupt ID Status</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>ISR4</name>
-          <displayName>ISR4</displayName>
-          <description>Interrupt Status
-          Register</description>
-          <addressOffset>0x0C</addressOffset>
-          <size>0x20</size>
-          <access>read-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTENSTA</name>
-              <description>Interrupt ID Status</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8170,10 +8051,22 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>2</bitWidth>
             </field>
             <field>
-              <name>PENDSTA12_31</name>
+              <name>PENDSTA12</name>
               <description>PENDSTA</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDSTA14</name>
+              <description>PENDSTA</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDSTA16_31</name>
+              <description>PENDSTA</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
@@ -8187,44 +8080,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>PENDSTA</name>
+              <name>PENDSTA32_38</name>
               <description>PENDSTA</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPR3</name>
-          <displayName>IPR3</displayName>
-          <description>Interrupt Pending Register</description>
-          <addressOffset>0x28</addressOffset>
-          <size>0x20</size>
-          <access>read-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDSTA</name>
-              <description>PENDSTA</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPR4</name>
-          <displayName>IPR4</displayName>
-          <description>Interrupt Pending Register</description>
-          <addressOffset>0x2C</addressOffset>
-          <size>0x20</size>
-          <access>read-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDSTA</name>
-              <description>PENDSTA</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8320,18 +8179,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>8</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
-			      <field>
-              <name>VTFID2</name>
-              <description>VTFID2</description>
-              <bitOffset>16</bitOffset>
-              <bitWidth>8</bitWidth>
-            </field>
-			      <field>
-              <name>VTFID3</name>
-              <description>VTFID3</description>
-              <bitOffset>24</bitOffset>
-              <bitWidth>8</bitWidth>
-            </field>
           </fields>
         </register>
         <register>
@@ -8382,54 +8229,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
           </fields>
         </register>
-		<register>
-          <name>VTFADDRR2</name>
-          <displayName>VTFADDRR2</displayName>
-          <description>Interrupt 2 address
-          Register</description>
-          <addressOffset>0x68</addressOffset>
-          <size>0x20</size>
-          <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>VTF2EN</name>
-              <description>VTF2EN</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-			 <field>
-              <name> ADDR2</name>
-              <description> ADDR2</description>
-              <bitOffset>1</bitOffset>
-              <bitWidth>31</bitWidth>
-            </field>
-          </fields>
-        </register>
-		<register>
-          <name>VTFADDRR3</name>
-          <displayName>VTFADDRR3</displayName>
-          <description>Interrupt 3 address
-          Register</description>
-          <addressOffset>0x6C</addressOffset>
-          <size>0x20</size>
-          <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>VTF3EN</name>
-              <description>VTF3EN</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-			 <field>
-              <name> ADDR3</name>
-              <description> ADDR3</description>
-              <bitOffset>1</bitOffset>
-              <bitWidth>31</bitWidth>
-            </field>
-          </fields>
-        </register>
         <register>
           <name>IENR1</name>
           <displayName>IENR1</displayName>
@@ -8440,14 +8239,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>INTEN</name>
+              <name>INTEN12</name>
               <description>INTEN</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTEN14</name>
+              <description>INTEN</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTEN16_31</name>
+              <description>INTEN</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
-		 <register>
+        <register>
           <name>IENR2</name>
           <displayName>IENR2</displayName>
           <description>Interrupt Setting Register</description>
@@ -8458,43 +8269,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>INTEN</name>
-              <description>INTEN</description>
+              <description>INTEN32_38</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IENR3</name>
-          <displayName>IENR3</displayName>
-          <description>Interrupt Setting Register</description>
-          <addressOffset>0x108</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTEN</name>
-              <description>INTEN</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IENR4</name>
-          <displayName>IENR4</displayName>
-          <description>Interrupt Setting Register</description>
-          <addressOffset>0x10C</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTEN</name>
-              <description>INTEN</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8508,14 +8285,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>INTRSET</name>
+              <name>INTRSET12</name>
               <description>INTRSET</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTRSET14</name>
+              <description>INTRSET</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>INTRSET16_31</name>
+              <description>INTRSET</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
-		<register>
+        <register>
           <name>IRER2</name>
           <displayName>IRER2</displayName>
           <description>Interrupt Clear Register</description>
@@ -8525,44 +8314,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>INTRSET</name>
+              <name>INTRSET32_38</name>
               <description>INTRSET</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IRER3</name>
-          <displayName>IRER3</displayName>
-          <description>Interrupt Clear Register</description>
-          <addressOffset>0x188</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTRSET</name>
-              <description>INTRSET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IRER4</name>
-          <displayName>IRER4</displayName>
-          <description>Interrupt Clear Register</description>
-          <addressOffset>0x18C</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>INTRSET</name>
-              <description>INTRSET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8582,14 +8337,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>2</bitWidth>
             </field>
             <field>
-              <name>PENDSET12_31</name>
+              <name>PENDSET12</name>
               <description>PENDSET</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDSET14</name>
+              <description>PENDSET</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDSET16_31</name>
+              <description>PENDSET</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
-		<register>
+        <register>
           <name>IPSR2</name>
           <displayName>IPSR2</displayName>
           <description>Interrupt Pending Register</description>
@@ -8599,44 +8366,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>PENDSET</name>
+              <name>PENDSET32_38</name>
               <description>PENDSET</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPSR3</name>
-          <displayName>IPSR3</displayName>
-          <description>Interrupt Pending Register</description>
-          <addressOffset>0x208</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDSET</name>
-              <description>PENDSET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPSR4</name>
-          <displayName>IPSR4</displayName>
-          <description>Interrupt Pending Register</description>
-          <addressOffset>0x20C</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDSET</name>
-              <description>PENDSET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8656,14 +8389,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>2</bitWidth>
             </field>
             <field>
-              <name>PENDRESET12_31</name>
+              <name>PENDRESET12</name>
               <description>PENDRESET</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDRESET14</name>
+              <description>PENDRESET</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>PENDRESET16_31</name>
+              <description>PENDRESET</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
-		<register>
+        <register>
           <name>IPRR2</name>
           <displayName>IPRR2</displayName>
           <description>Interrupt Pending Clear Register</description>
@@ -8673,44 +8418,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>PENDRESET</name>
+              <name>PENDRESET32_38</name>
               <description>PENDRESET</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPRR3</name>
-          <displayName>IPRR3</displayName>
-          <description>Interrupt Pending Clear Register</description>
-          <addressOffset>0x288</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDRESET</name>
-              <description>PENDRESET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IPRR4</name>
-          <displayName>IPRR4</displayName>
-          <description>Interrupt Pending Clear Register</description>
-          <addressOffset>0x28C</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>PENDRESET</name>
-              <description>PENDRESET</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
@@ -8730,14 +8441,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>2</bitWidth>
             </field>
             <field>
-              <name>IACTS12_31</name>
+              <name>IACTS12</name>
               <description>IACTS</description>
               <bitOffset>12</bitOffset>
-              <bitWidth>20</bitWidth>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>IACTS14</name>
+              <description>IACTS</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+            </field>
+            <field>
+              <name>IACTS16_31</name>
+              <description>IACTS</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
             </field>
           </fields>
         </register>
-		<register>
+        <register>
           <name>IACTR2</name>
           <displayName>IACTR2</displayName>
           <description>Interrupt ACTIVE Register</description>
@@ -8747,44 +8470,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>IACTS</name>
+              <name>IACTS32_38</name>
               <description>IACTS</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IACTR3</name>
-          <displayName>IACTR3</displayName>
-          <description>Interrupt ACTIVE Register</description>
-          <addressOffset>0x308</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>IACTS</name>
-              <description>IACTS</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>IACTR4</name>
-          <displayName>IACTR4</displayName>
-          <description>Interrupt ACTIVE Register</description>
-          <addressOffset>0x30C</addressOffset>
-          <size>0x20</size>
-          <access>write-only</access>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>IACTS</name>
-              <description>IACTS</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
+              <bitWidth>7</bitWidth>
             </field>
           </fields>
         </register>
