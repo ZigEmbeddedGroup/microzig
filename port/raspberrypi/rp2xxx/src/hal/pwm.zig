@@ -15,6 +15,31 @@ fn get_regs(slice: u32) *volatile Regs {
 
 pub const Channel = enum(u1) { a, b };
 
+pub const Slice = enum (u32) {
+    _,
+
+    pub fn set_wrap(self: Slice, wrap: u16) void {
+        set_slice_wrap(@intFromEnum(self), wrap);
+    }
+
+    pub fn enable(self: Slice) void {
+        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 1 });
+    }
+
+    pub fn disable(self: Slice) void {
+        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 0 });
+    }
+
+    pub fn set_phase_correct(self: Slice, phase_correct: bool) void {
+        set_slice_phase_correct(@intFromEnum(self), phase_correct);
+    }
+
+    pub fn set_clk_div(self: Slice, integer: u8, fraction: u4) void {
+        set_slice_clk_div(@intFromEnum(self), integer, fraction);
+    }
+};
+
+
 // An instance of Pwm corresponds to one of the 16 total channels
 //  (There are eight slices and each has two channels)
 pub const Pwm = struct {
@@ -25,12 +50,8 @@ pub const Pwm = struct {
         set_channel_level(self.slice_number, self.channel, level);
     }
 
-    pub fn set_wrap(self: Pwm, wrap: u16) void {
-        set_slice_wrap(self.slice_number, wrap);
-    }
-
-    pub fn enable(self: Pwm) void {
-        get_regs(self.slice_number).csr.modify(.{ .EN = 1 });
+    pub fn slice(self: Pwm) Slice {
+        return @enumFromInt(self.slice_number);
     }
 };
 

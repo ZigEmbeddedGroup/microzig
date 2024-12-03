@@ -10,8 +10,10 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
     },
 };
 
+const pins = pin_config.pins();
+
 pub fn main() !void {
-    const pins = pin_config.apply();
+    pin_config.apply();
 
     while (true) {
         pins.led.toggle();
