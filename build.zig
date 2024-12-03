@@ -396,6 +396,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
                 .mb = mb,
+                .core_mod = core_mod,
                 .artifact = mb.builder.addExecutable(.{
                     .name = options.name,
                     .optimize = options.optimize,
@@ -487,6 +488,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             /// The app module that is built by Zig.
             app_mod: *Build.Module,
+
+            // The @import("microzig") module
+            core_mod: *Build.Module,
 
             /// The target to which the firmware is built.
             target: *const Target,
@@ -580,7 +584,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// Adds an import to your application.
             pub fn add_app_import(fw: *Firmware, name: []const u8, module: *Build.Module, options: AppDependencyOptions) void {
                 if (options.depend_on_microzig) {
-                    module.addImport("microzig", fw.modules.microzig);
+                    module.addImport("microzig", fw.core_mod);
                 }
                 fw.app_mod.addImport(name, module);
             }
