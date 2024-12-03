@@ -395,7 +395,7 @@ pub const GlobalConfiguration = struct {
                 if (pin_config.function == .SIO) {
                     pin_field.type = gpio.Pin;
                 } else if (pin_config.function.is_pwm()) {
-                    pin_field.type = pwm.RuntimePwm;
+                    pin_field.type = pwm.Pwm;
                 } else if (pin_config.function.is_adc()) {
                     // TODO
                     // pin_field.type = adc.Input;
@@ -427,7 +427,7 @@ pub const GlobalConfiguration = struct {
                 if (pin_config.function == .SIO) {
                     @field(ret, pin_config.name orelse field.name) = gpio.num(@intFromEnum(@field(Pin, field.name)));
                 } else if (pin_config.function.is_pwm()) {
-                    @field(ret, pin_config.name orelse field.name) = pwm.RuntimePwm {
+                    @field(ret, pin_config.name orelse field.name) = pwm.Pwm {
                         .slice_number = pin_config.function.pwm_slice(),
                         .channel = pin_config.function.pwm_channel(),
                     };
