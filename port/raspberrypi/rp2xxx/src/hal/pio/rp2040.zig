@@ -9,7 +9,7 @@ const gpio = @import("../gpio.zig");
 const resets = @import("../resets.zig");
 const hw = @import("../hw.zig");
 
-pub const Pio = enum(u2) {
+pub const Pio = enum(u1) {
     pio0 = 0,
     pio1 = 1,
 
