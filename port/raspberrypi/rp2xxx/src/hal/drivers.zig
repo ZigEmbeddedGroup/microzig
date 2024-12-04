@@ -48,7 +48,7 @@ pub const I2C_Device = struct {
         _ = dev;
     }
 
-    pub fn write(dev: I2C_Device, datagram: []const []const u8) !void {
+    pub fn write(dev: I2C_Device, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address, datagram, null);
     }
 
