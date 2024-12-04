@@ -17,8 +17,14 @@ pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
 
 // global state for keeping track of used things
-pub var used_instruction_space: [2]u32 = [_]u32{ 0, 0 };
-pub var claimed_state_machines: [2]u4 = [_]u4{ 0, 0 };
+var used_instruction_space = switch (cpu) {
+    .RP2040 => [_]u32{ 0, 0 },
+    .RP2350 => [_]u32{ 0, 0, 0 },
+};
+var claimed_state_machines = switch (cpu) {
+    .RP2040 => [_]u4{ 0, 0 },
+    .RP2350 => [_]u4{ 0, 0, 0 },
+};
 
 pub const Fifo = enum {
     tx,

@@ -23,10 +23,6 @@ pub const ShiftOptions = chip_specific.ShiftOptions;
 pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");
 
-// global state for keeping track of used things
-var used_instruction_space: [2]u32 = [_]u32{ 0, 0 };
-var claimed_state_machines: [2]u4 = [_]u4{ 0, 0 };
-
 pub const Program = assembler.Program;
 pub const assemble = assembler.assemble;
 
