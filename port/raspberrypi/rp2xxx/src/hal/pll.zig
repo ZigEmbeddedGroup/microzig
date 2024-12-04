@@ -32,34 +32,16 @@ pub const PLL = enum(u1) {
     }
 
     pub fn reset(pll: PLL) void {
-        switch (comptime get_cpu()) {
-            .RP2040 => {
-                switch (pll) {
-                    .sys => {
-                        RESETS.RESET.modify(.{ .pll_sys = 1 });
-                        RESETS.RESET.modify(.{ .pll_sys = 0 });
-                        while (RESETS.RESET_DONE.read().pll_sys != 1) {}
-                    },
-                    .usb => {
-                        RESETS.RESET.modify(.{ .pll_usb = 1 });
-                        RESETS.RESET.modify(.{ .pll_usb = 0 });
-                        while (RESETS.RESET_DONE.read().pll_usb != 1) {}
-                    },
-                }
+        switch (pll) {
+            .sys => {
+                RESETS.RESET.modify(.{ .PLL_SYS = 1 });
+                RESETS.RESET.modify(.{ .PLL_SYS = 0 });
+                while (RESETS.RESET_DONE.read().PLL_SYS != 1) {}
             },
-            .RP2350 => {
-                switch (pll) {
-                    .sys => {
-                        RESETS.RESET.modify(.{ .PLL_SYS = 1 });
-                        RESETS.RESET.modify(.{ .PLL_SYS = 0 });
-                        while (RESETS.RESET_DONE.read().PLL_SYS != 1) {}
-                    },
-                    .usb => {
-                        RESETS.RESET.modify(.{ .PLL_USB = 1 });
-                        RESETS.RESET.modify(.{ .PLL_USB = 0 });
-                        while (RESETS.RESET_DONE.read().PLL_USB != 1) {}
-                    },
-                }
+            .usb => {
+                RESETS.RESET.modify(.{ .PLL_USB = 1 });
+                RESETS.RESET.modify(.{ .PLL_USB = 0 });
+                while (RESETS.RESET_DONE.read().PLL_USB != 1) {}
             },
         }
     }

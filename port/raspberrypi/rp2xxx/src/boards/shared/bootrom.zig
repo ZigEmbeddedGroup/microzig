@@ -1,12 +1,12 @@
 const std = @import("std");
-const get_cpu = @import("microzig").hal.compatibility.get_cpu;
+const cpu = @import("microzig").hal.compatibility.cpu;
 
 comptime {
     _ = BootromData.bootloader_data;
 }
 
 const BootromData =
-    switch (get_cpu()) {
+    switch (cpu) {
     .RP2040 => struct {
         fn prepare_boot_sector(comptime stage2_rom: []const u8) [256]u8 {
             @setEvalBranchQuota(10_000);

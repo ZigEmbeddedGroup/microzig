@@ -12,6 +12,7 @@ const resets = @import("resets.zig");
 const hw = @import("hw.zig");
 pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");
+const cpu = @import("compatibility.zig").cpu;
 
 // global state for keeping track of used things
 var used_instruction_space: [2]u32 = [_]u32{ 0, 0 };
@@ -275,21 +276,43 @@ pub const Pio = enum(u1) {
 
     pub fn sm_set_shift_options(self: Pio, sm: StateMachine, options: ShiftOptions) void {
         const sm_regs = self.get_sm_regs(sm);
-        sm_regs.shiftctrl.write(.{
-            .AUTOPUSH = @intFromBool(options.autopush),
-            .AUTOPULL = @intFromBool(options.autopull),
+        switch (cpu) {
+            .RP2040 => sm_regs.shiftctrl.write(.{
+                .AUTOPUSH = @intFromBool(options.autopush),
+                .AUTOPULL = @intFromBool(options.autopull),
 
-            .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
-            .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
+                .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
+                .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
 
-            .PUSH_THRESH = options.push_threshold,
-            .PULL_THRESH = options.pull_threshold,
+                .PUSH_THRESH = options.push_threshold,
+                .PULL_THRESH = options.pull_threshold,
 
-            .FJOIN_TX = @intFromBool(options.join_tx),
-            .FJOIN_RX = @intFromBool(options.join_rx),
+                .FJOIN_TX = @intFromBool(options.join_tx),
+                .FJOIN_RX = @intFromBool(options.join_rx),
 
-            .reserved16 = 0,
-        });
+                .reserved16 = 0,
+            }),
+            .RP2350 => sm_regs.shiftctrl.write(.{
+                .AUTOPUSH = @intFromBool(options.autopush),
+                .AUTOPULL = @intFromBool(options.autopull),
+
+                .IN_SHIFTDIR = @intFromEnum(options.in_shiftdir),
+                .OUT_SHIFTDIR = @intFromEnum(options.out_shiftdir),
+
+                .PUSH_THRESH = options.push_threshold,
+                .PULL_THRESH = options.pull_threshold,
+
+                .FJOIN_TX = @intFromBool(options.join_tx),
+                .FJOIN_RX = @intFromBool(options.join_rx),
+
+                // TODO: figure out what this is doing in RP2350
+                .IN_COUNT = 0,
+                .FJOIN_RX_GET = 0,
+                .FJOIN_RX_PUT = 0,
+
+                .reserved14 = 0,
+            }),
+        }
     }
 
     pub fn sm_set_pin_mappings(self: Pio, sm: StateMachine, options: PinMappingOptions) void {
@@ -480,17 +503,37 @@ pub const Pio = enum(u1) {
     pub fn sm_clear_fifos(self: Pio, sm: StateMachine) void {
         const sm_regs = self.get_sm_regs(sm);
         const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = .{
-            .FJOIN_TX = 1,
-            .FJOIN_RX = 1,
+        const mask = switch (cpu) {
+            .RP2040 => .{
+                .FJOIN_TX = 1,
+                .FJOIN_RX = 1,
 
-            .AUTOPUSH = 0,
-            .AUTOPULL = 0,
-            .IN_SHIFTDIR = 0,
-            .OUT_SHIFTDIR = 0,
-            .PUSH_THRESH = 0,
-            .PULL_THRESH = 0,
-            .reserved16 = 0,
+                .AUTOPUSH = 0,
+                .AUTOPULL = 0,
+                .IN_SHIFTDIR = 0,
+                .OUT_SHIFTDIR = 0,
+                .PUSH_THRESH = 0,
+                .PULL_THRESH = 0,
+                .reserved16 = 0,
+            },
+            .RP2350 => .{
+                .FJOIN_TX = 1,
+                .FJOIN_RX = 1,
+
+                .AUTOPUSH = 0,
+                .AUTOPULL = 0,
+                .IN_SHIFTDIR = 0,
+                .OUT_SHIFTDIR = 0,
+                .PUSH_THRESH = 0,
+                .PULL_THRESH = 0,
+
+                //TODO: figure out what this is doing in RP2350
+                .IN_COUNT = 0,
+                .FJOIN_RX_GET = 0,
+                .FJOIN_RX_PUT = 0,
+
+                .reserved14 = 0,
+            },
         };
 
         xor_shiftctrl.write(mask);

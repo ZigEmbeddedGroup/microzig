@@ -6,6 +6,7 @@ const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const adc = rp2xxx.adc;
 const time = rp2xxx.time;
+const cpu = rp2xxx.compatibility.cpu;
 
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
@@ -21,8 +22,13 @@ pub fn main() void {
         .temp_sensor_enabled = true,
     });
 
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
+    switch (cpu) {
+        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart);
+        },
+        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart_second);
+        },
     }
 
     uart.apply(.{

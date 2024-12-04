@@ -3,10 +3,10 @@ const std = @import("std");
 const microzig = @import("microzig");
 const CLOCKS = microzig.chip.peripherals.CLOCKS;
 
-const get_cpu = @import("compatibility.zig").get_cpu;
+const cpu = @import("compatibility.zig").cpu;
 
 // Re-export of platform rectified clocks implementation
-const chip_specific = switch (get_cpu()) {
+const chip_specific = switch (cpu) {
     .RP2040 => @import("clocks/rp2040.zig"),
     .RP2350 => @import("clocks/rp2350.zig"),
 };

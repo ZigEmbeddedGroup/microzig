@@ -5,6 +5,7 @@ const rp2xxx = microzig.hal;
 const i2c = rp2xxx.i2c;
 const gpio = rp2xxx.gpio;
 const peripherals = microzig.chip.peripherals;
+const cpu = rp2xxx.compatibility.cpu;
 
 pub const microzig_options = .{
     .log_level = .info,
@@ -12,15 +13,24 @@ pub const microzig_options = .{
 };
 
 const uart = rp2xxx.uart.instance.num(0);
+const baud_rate = 115200;
+const uart_tx_pin = gpio.num(0);
+const uart_rx_pin = gpio.num(1);
+
 const i2c0 = i2c.instance.num(0);
 
 pub fn main() !void {
-    inline for (&.{ gpio.num(0), gpio.num(1) }) |pin| {
-        pin.set_function(.uart);
+    switch (cpu) {
+        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart);
+        },
+        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+            pin.set_function(.uart_second);
+        },
     }
 
     uart.apply(.{
-        .baud_rate = 115200,
+        .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
     rp2xxx.uart.init_logger(uart);
