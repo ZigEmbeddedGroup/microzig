@@ -1,7 +1,7 @@
 const mdf = @import("../framework.zig");
 pub const delayus_callback = fn (delay: u32) void;
 
-pub const LcdCommands = enum(u8) {
+pub const LCD_Commands = enum(u8) {
     clear = 0x01,
     reset = 0x02,
     shift_cursor_left = 0x10,
@@ -109,37 +109,35 @@ pub fn HD44780(comptime config: HD44780_Config) type {
 
         //========== commands functions ==========
 
-        //TODO: change left/right to dec/inc
-
         //low level command function
-        pub inline fn command(lcd: *Self, cmd: LcdCommands) !void {
+        pub inline fn command(lcd: *Self, cmd: LCD_Commands) !void {
             try lcd.send(@intFromEnum(cmd), 0);
         }
 
         pub fn screen_clear(lcd: *Self) !void {
-            try lcd.command(LcdCommands.clear);
+            try lcd.command(.clear);
             lcd.internal_delay(1600); //clear and reset need to delay >1.6ms
         }
 
         pub fn reset_cursor(lcd: *Self) !void {
-            try lcd.command(LcdCommands.reset);
+            try lcd.command(.reset);
             lcd.internal_delay(1600); //clear and reset need to delay >1.6ms
         }
 
         pub fn shift_cursor_left(lcd: *Self) !void {
-            try lcd.command(LcdCommands.shift_cursor_left);
+            try lcd.command(.shift_cursor_left);
         }
 
         pub fn shift_cursor_right(lcd: *Self) !void {
-            try lcd.command(LcdCommands.shift_cursor_right);
+            try lcd.command(.shift_cursor_right);
         }
 
         pub fn shift_display_left(lcd: *Self) !void {
-            try lcd.command(LcdCommands.shift_display_left);
+            try lcd.command(.shift_display_left);
         }
 
         pub fn shift_display_right(lcd: *Self) !void {
-            try lcd.command(LcdCommands.shift_display_right);
+            try lcd.command(.shift_display_right);
         }
 
         //control functions
