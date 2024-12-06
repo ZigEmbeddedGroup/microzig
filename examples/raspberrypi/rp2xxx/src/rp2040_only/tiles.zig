@@ -32,7 +32,7 @@ const ws2812_program = blk: {
     , .{}).get_program_by_name("ws2812");
 };
 
-const pio: Pio = .pio0;
+const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const led_pin = gpio.num(16);
 
