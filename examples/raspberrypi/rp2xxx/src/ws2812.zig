@@ -32,17 +32,12 @@ const ws2812_program = blk: {
     , .{}).get_program_by_name("ws2812");
 };
 
-const pio: Pio = rp2xxx.pio.num(1);
+const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
-const led_pin = gpio.num(22);
-const power_pin = gpio.num(23);
+const led_pin = gpio.num(23);
 
 pub fn main() void {
     pio.gpio_init(led_pin);
-    // seeed xiao needs power applied to the ws2812 led
-    power_pin.set_function(.sio);
-    power_pin.set_direction(.out);
-    power_pin.put(1);
 
     sm_set_consecutive_pindirs(pio, sm, @intFromEnum(led_pin), 1, true);
 
