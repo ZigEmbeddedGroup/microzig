@@ -15,16 +15,16 @@ pub fn build(b: *std.Build) void {
         // RaspberryPi Boards:
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/rp2040_only/adc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
-        // .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/rp2040_only/i2c_bus_scan.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/rp2040_only/pwm.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/rp2040_only/spi_host.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-echo", .file = "src/rp2040_only/uart_echo.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-log", .file = "src/rp2040_only/uart_log.zig" },
-        // .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
-        // .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/rp2040_only/usb_cdc.zig" },
-        // .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-cdc", .file = "src/rp2040_only/usb_cdc.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },

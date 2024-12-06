@@ -13,13 +13,6 @@ pub const Pio = enum(u1) {
     pio0 = 0,
     pio1 = 1,
 
-    pub fn reset(self: Pio) void {
-        switch (self) {
-            .pio0 => resets.reset(&.{.pio0}),
-            .pio1 => resets.reset(&.{.pio1}),
-        }
-    }
-
     pub fn get_regs(self: Pio) *volatile common.PIO {
         return switch (self) {
             .pio0 => common.PIO0,
