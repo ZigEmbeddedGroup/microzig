@@ -12,7 +12,7 @@
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // ports
-        // .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
+        .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
         .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam", .lazy = true },
         .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
