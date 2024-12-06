@@ -70,29 +70,7 @@ pub const Pio = enum(u1) {
     pub const sm_blocking_write = common.PioImpl(Pio).sm_blocking_write;
     pub const sm_set_enabled = common.PioImpl(Pio).sm_set_enabled;
     pub const sm_clear_debug = common.PioImpl(Pio).sm_clear_debug;
-
-    /// changing the state of fifos will clear them
-    pub fn sm_clear_fifos(self: Pio, sm: common.StateMachine) void {
-        const sm_regs = self.get_sm_regs(sm);
-        const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = .{
-            .FJOIN_TX = 1,
-            .FJOIN_RX = 1,
-
-            .AUTOPUSH = 0,
-            .AUTOPULL = 0,
-            .IN_SHIFTDIR = 0,
-            .OUT_SHIFTDIR = 0,
-            .PUSH_THRESH = 0,
-            .PULL_THRESH = 0,
-
-            .reserved16 = 0,
-        };
-
-        xor_shiftctrl.write(mask);
-        xor_shiftctrl.write(mask);
-    }
-
+    pub const sm_clear_fifos = common.PioImpl(Pio).sm_clear_fifos;
     pub const sm_fifo_level = common.PioImpl(Pio).sm_fifo_level;
     const interrupt_bit_pos = common.PioImpl(Pio).interrupt_bit_pos;
     pub const sm_clear_interrupt = common.PioImpl(Pio).sm_clear_interrupt;
