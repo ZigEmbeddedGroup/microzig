@@ -407,45 +407,6 @@ pub fn PioImpl(EnumType: type) type {
             });
         }
 
-        /// changing the state of fifos will clear them
-        pub fn sm_clear_fifos(self: EnumType, sm: StateMachine) void {
-            const sm_regs = self.get_sm_regs(sm);
-            const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-            const mask = switch (cpu) {
-                .RP2040 => .{
-                    .FJOIN_TX = 1,
-                    .FJOIN_RX = 1,
-
-                    .AUTOPUSH = 0,
-                    .AUTOPULL = 0,
-                    .IN_SHIFTDIR = 0,
-                    .OUT_SHIFTDIR = 0,
-                    .PUSH_THRESH = 0,
-                    .PULL_THRESH = 0,
-
-                    .reserved16 = 0,
-                },
-                .RP2350 => .{
-                    .FJOIN_TX = 1,
-                    .FJOIN_RX = 1,
-
-                    .AUTOPUSH = 0,
-                    .AUTOPULL = 0,
-                    .IN_SHIFTDIR = 0,
-                    .OUT_SHIFTDIR = 0,
-                    .PUSH_THRESH = 0,
-                    .PULL_THRESH = 0,
-
-                    .FJOIN_RX_GET = 0,
-                    .FJOIN_RX_PUT = 0,
-                    .reserved14 = 0,
-                    .IN_COUNT = 0,
-                },
-            };
-            xor_shiftctrl.write(mask);
-            xor_shiftctrl.write(mask);
-        }
-
         pub fn sm_fifo_level(self: EnumType, sm: StateMachine, fifo: Fifo) u4 {
             const snum = @intFromEnum(sm);
             const offset: u5 = switch (fifo) {
