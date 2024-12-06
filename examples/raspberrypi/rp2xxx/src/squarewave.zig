@@ -26,7 +26,7 @@ const squarewave_program = blk: {
 // Pick one PIO instance arbitrarily. We're also arbitrarily picking state
 // machine 0 on this PIO instance (the state machines are numbered 0 to 3
 // inclusive).
-const pio: Pio = .pio0;
+const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 
 pub fn main() void {
