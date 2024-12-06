@@ -33,6 +33,11 @@ pub const input = struct {
     };
 };
 
+pub const IO_expander = struct {
+    pub const pcf8574 = @import("IO_expander/PCF8574.zig");
+    pub const PCF8574 = pcf8574.PCF8574;
+};
+
 pub const wireless = struct {
     // pub const sx1278 = @import("wireless/sx1278.zig");
 };
@@ -51,6 +56,8 @@ test {
     _ = input.keyboard_matrix;
     _ = input.debounced_button;
     _ = input.rotary_encoder;
+
+    _ = IO_expander.pcf8574;
 
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
