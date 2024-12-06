@@ -72,7 +72,6 @@ pub const Pio = enum(u1) {
     pub const sm_clear_debug = common.PioImpl(Pio).sm_clear_debug;
     pub const sm_clear_fifos = common.PioImpl(Pio).sm_clear_fifos;
     pub const sm_fifo_level = common.PioImpl(Pio).sm_fifo_level;
-    const interrupt_bit_pos = common.PioImpl(Pio).interrupt_bit_pos;
     pub const sm_clear_interrupt = common.PioImpl(Pio).sm_clear_interrupt;
     pub const sm_enable_interrupt = common.PioImpl(Pio).sm_enable_interrupt;
     pub const sm_restart = common.PioImpl(Pio).sm_restart;
