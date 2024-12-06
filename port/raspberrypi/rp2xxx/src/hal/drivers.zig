@@ -56,7 +56,7 @@ pub const I2C_Device = struct {
         try dev.bus.writev_blocking(dev.address, datagrams, null);
     }
 
-    pub fn read(dev: I2C_Device, datagram: []const u8) !usize {
+    pub fn read(dev: I2C_Device, datagram: []u8) !usize {
         try dev.bus.read_blocking(dev.address, datagram, null);
         return datagram.len;
     }
