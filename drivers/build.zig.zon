@@ -9,5 +9,6 @@
         "base",
         "display",
         "input",
+        "io_expander",
     },
 }
