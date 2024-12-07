@@ -157,7 +157,7 @@ const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, pr
 
 const Core = enum {
     cortex_m0,
-    cortex_m0p,
+    cortex_m0plus,
     cortex_m3,
     cortex_m33,
     cortex_m4,
@@ -170,7 +170,7 @@ const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
 const core = blk: {
     break :blk switch (cortex_m) {
         .cortex_m0 => @import("cortex_m/m0"),
-        .cortex_m0p => @import("cortex_m/m0plus.zig"),
+        .cortex_m0plus => @import("cortex_m/m0plus.zig"),
         .cortex_m3 => @import("cortex_m/m3.zig"),
         .cortex_m33 => @import("cortex_m/m33.zig"),
         .cortex_m4 => @import("cortex_m/m4.zig"),
@@ -241,7 +241,7 @@ pub const types = struct {
                 /// 0 = external clock
                 /// 1 = processor clock.
                 CLKSOURCE: u1,
-                reserved0: u13,
+                reserved0: u13 = 0,
                 /// Returns 1 if timer counted to 0 since last time this was read.
                 COUNTFLAG: u1,
                 reserved1: u15,
@@ -250,21 +250,21 @@ pub const types = struct {
             LOAD: mmio.Mmio(packed struct(u32) {
                 /// Value to load into the VAL register when the counter is enabled and when it reaches 0.
                 RELOAD: u24,
-                reserved0: u8,
+                reserved0: u8 = 0,
             }),
             /// Current Value Register.
             VAL: mmio.Mmio(packed struct(u32) {
                 /// Reads return the current value of the SysTick counter.
                 /// A write of any value clears the field to 0, and also clears the CTRL.COUNTFLAG bit to 0.
                 CURRENT: u24,
-                reserved0: u8,
+                reserved0: u8 = 0,
             }),
             /// Calibration Register.
             CALIB: mmio.Mmio(packed struct(u32) {
                 /// Reload value for 10ms (100Hz) timing, subject to system clock skew errors. If the value
                 /// reads as zero, the calibration value is not known.
                 TENMS: u24,
-                reserved0: u6,
+                reserved0: u6 = 0,
                 /// Indicates whether the TENMS value is exact.
                 /// 0 = TENMS value is exact
                 /// 1 = TENMS value is inexact, or not given.
@@ -274,7 +274,7 @@ pub const types = struct {
                 /// Indicates whether the device provides a reference clock to the processor:
                 /// 0 = reference clock provided
                 /// 1 = no reference clock provided.
-                /// If your device does not provide a reference clock, the SYST_CSR.CLKSOURCE bit reads-as-one
+                /// If your device does not provide a reference clock, the CTRL.CLKSOURCE bit reads-as-one
                 /// and ignores writes.
                 NOREF: u1,
             }),
