@@ -241,7 +241,7 @@ pub const types = struct {
                 /// 0 = external clock
                 /// 1 = processor clock.
                 CLKSOURCE: u1,
-                reserved0: u13 = 0,
+                reserved0: u13,
                 /// Returns 1 if timer counted to 0 since last time this was read.
                 COUNTFLAG: u1,
                 reserved1: u15,
@@ -250,21 +250,21 @@ pub const types = struct {
             LOAD: mmio.Mmio(packed struct(u32) {
                 /// Value to load into the VAL register when the counter is enabled and when it reaches 0.
                 RELOAD: u24,
-                reserved0: u8 = 0,
+                reserved0: u8,
             }),
             /// Current Value Register.
             VAL: mmio.Mmio(packed struct(u32) {
                 /// Reads return the current value of the SysTick counter.
                 /// A write of any value clears the field to 0, and also clears the CTRL.COUNTFLAG bit to 0.
                 CURRENT: u24,
-                reserved0: u8 = 0,
+                reserved0: u8,
             }),
             /// Calibration Register.
             CALIB: mmio.Mmio(packed struct(u32) {
                 /// Reload value for 10ms (100Hz) timing, subject to system clock skew errors. If the value
                 /// reads as zero, the calibration value is not known.
                 TENMS: u24,
-                reserved0: u6 = 0,
+                reserved0: u6,
                 /// Indicates whether the TENMS value is exact.
                 /// 0 = TENMS value is exact
                 /// 1 = TENMS value is inexact, or not given.
