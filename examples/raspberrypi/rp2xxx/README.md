@@ -36,7 +36,7 @@ examples will eventually be able to run on either chip with no changes due to th
   Showcases how to use the internal random generator.
 - [spi host](src/rp2040_only/spi_host.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   Showcases how to use the SPI host controller.
-- [squarewave](src/rp2040_only/squarewave.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
+- [squarewave](src/squarewave.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   Showcases how to use the PIO to emit a basic square wave.
 - [uart](src/rp2040_only/uart.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   Showcases how to use the UART together with `std.log`.
@@ -44,9 +44,9 @@ examples will eventually be able to run on either chip with no changes due to th
   A really basic example for a raw USB device. You can use the Python 3 script [`scripts/usb_device_loopback.py`](scripts/usb_device_loopback.py) to test the USB device.
 - [usb hid](src/rp2040_only/usb_hid.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   A really basic example how to implement a USB HID device. You can use the Python 3 script [`scripts/hid_test.py`](scripts/hid_test.py) to test the HID device.
-- [ws2812](src/rp2040_only/ws2812.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
+- [ws2812](src/ws2812.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   Showcases how to control one WS2812 LED attached to GPIO23.
-- [tiles](src/rp2040_only/tiles.zig) on the [RP2040-Matrix](https://www.waveshare.com/rp2040-matrix.htm) board
+- [tiles](src/rp2040_only/tiles.zig) on the [RP2040-Matrix](https://www.waveshare.com/rp2040-matrix.htm) board  
   Showcases how to control the LED matrix on the development board to do a simple color flipper effect.
 
 ### RP2350 Only
