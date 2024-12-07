@@ -34,7 +34,7 @@ pub const input = struct {
 };
 
 pub const IO_expander = struct {
-    pub const pcf8574 = @import("io_expander/PCF8574.zig");
+    pub const pcf8574 = @import("io_expander/pcf8574.zig");
     pub const PCF8574 = pcf8574.PCF8574;
 };
 
