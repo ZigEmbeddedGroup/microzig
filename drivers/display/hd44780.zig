@@ -1,4 +1,5 @@
 const mdf = @import("../framework.zig");
+const DigitalIO = mdf.base.Digital_IO;
 pub const delayus_callback = fn (delay: u32) void;
 
 pub const LCD_Commands = enum(u8) {
@@ -53,35 +54,97 @@ pub const DeviceConfig = struct {
 };
 
 pub const HD44780_Config = struct {
-    Datagram_Device: type = mdf.base.Datagram_Device,
+    high_pins: type = DigitalIO,
+    lower_pins: type = DigitalIO,
+    RS: type = DigitalIO,
+    EN1: type = DigitalIO,
+    EN2: type = DigitalIO,
+    BK: type = DigitalIO,
+};
+
+pub const EnableSet = enum {
+    EN1,
+    EN2,
+    All,
 };
 
 pub fn HD44780(comptime config: HD44780_Config) type {
     return struct {
         const Self = @This();
-        //internal_callbacks
-        internal_delay: *const delayus_callback,
-        io_interface: config.Datagram_Device,
+        pub const pins_struct = struct {
+            high_pins: [4]config.high_pins,
+            lower_pins: ?[4]config.lower_pins = null,
+            RS: config.RS,
+            EN1: config.EN1,
+            EN2: ?config.EN2 = null,
+            BK: ?config.BK = null,
+        };
 
         //internal Deviceconfig vars
         function_set: u6 = 0,
         entry_mode: u3 = 0,
         display_control: u4 = 0,
-        enable_set: u8 = 0b1100,
+        enable_set: EnableSet = .EN1,
         full_bus: bool = false,
+        internal_delay: *const delayus_callback,
+        io_interface: pins_struct,
 
         //LCD functions
-        //TODO:  remove this, implement a driver for PCF8574 i2C I/O expander
-        fn interface(lcd: *Self, lcd_config: u8, data: u8) !void {
-            const pkg: [1]u8 = .{(lcd_config & 0b00000111) | (data & 0xF0) | 0x08};
-            try lcd.io_interface.write(&pkg);
+        fn set_rs_pin(lcd: *Self, value: u1) !void {
+            try lcd.io_interface.RS.write(@enumFromInt(value));
+        }
+
+        fn pulse_en_pin(lcd: *Self) !void {
+            switch (lcd.enable_set) {
+                .EN1 => {
+                    try lcd.io_interface.EN1.write(.high);
+                    lcd.internal_delay(1);
+                    try lcd.io_interface.EN1.write(.low);
+                    lcd.internal_delay(1);
+                },
+                .EN2 => {
+                    //en2 is check on select_lcd
+                    try lcd.io_interface.EN2.?.write(.high);
+                    lcd.internal_delay(1);
+                    try lcd.io_interface.EN2.?.write(.low);
+                    lcd.internal_delay(1);
+                },
+                .All => {
+                    try lcd.io_interface.EN1.write(.high);
+                    try lcd.io_interface.EN2.?.write(.high);
+                    lcd.internal_delay(1);
+                    try lcd.io_interface.EN1.write(.low);
+                    try lcd.io_interface.EN2.?.write(.low);
+                    lcd.internal_delay(1);
+                },
+            }
+        }
+
+        fn load_data(lcd: *Self, data: u8) !void {
+            //load high-bits first
+            for (0..4) |index| {
+                const pin_bit: u3 = @as(u3, @intCast(index)) + 4;
+                const value: u1 = if (data & (@as(u8, 1) << pin_bit) != 0) 1 else 0;
+                try lcd.io_interface.high_pins[index].write(@enumFromInt(value));
+            }
+
+            if (lcd.full_bus) {
+                if (lcd.io_interface.lower_pins) |pins| {
+                    //load lower-bits
+                    for (0..4) |index| {
+                        const value: u1 = if (data & (@as(u8, 1) << @intCast(index)) != 0) 1 else 0;
+                        try pins[index].write(@enumFromInt(value));
+                    }
+                } else {
+                    return error.UnsupportedBus;
+                }
+            }
         }
 
         fn send8bits(lcd: *Self, data: u8, rs_state: u1) !void {
-            try lcd.interface(rs_state, data);
-            try lcd.interface(rs_state | lcd.enable_set, data);
-            lcd.internal_delay(1);
-            try lcd.interface(rs_state, data);
+            try lcd.set_rs_pin(rs_state);
+            try lcd.load_data(data);
+            try lcd.pulse_en_pin();
         }
 
         fn send4bits(lcd: *Self, data: u8, rs_state: u1) !void {
@@ -182,11 +245,16 @@ pub fn HD44780(comptime config: HD44780_Config) type {
             try lcd.send(lcd.displayControl, 0);
         }
 
-        pub fn select_all(lcd: *Self) void {
-            lcd.enable_set = 0b1100;
-        }
-        pub inline fn select_lcd(lcd: *Self, en: u1) !void {
-            lcd.enable_set = 1 << en;
+        pub fn select_lcd(lcd: *Self, en: EnableSet) !void {
+            switch (en) {
+                .EN2, .All => {
+                    if (lcd.io_interface.lower_pins == null) {
+                        return error.InvlaidEnablePin;
+                    }
+                },
+                else => {},
+            }
+            lcd.enable_set = en;
         }
 
         pub fn set_cursor(lcd: *Self, line: u8, col: u8) !void {
@@ -194,6 +262,14 @@ pub fn HD44780(comptime config: HD44780_Config) type {
             if ((line < 2) and (col < 40)) {
                 try lcd.send(addrs[line] | col, 0);
             }
+        }
+
+        pub fn set_backlight(lcd: *Self, value: u1) !void {
+            if (lcd.io_interface.BK) |bk| {
+                try bk.write(@enumFromInt(value));
+                return;
+            }
+            return error.NoBacklight;
         }
 
         pub fn create_custom_char(lcd: *Self, new_char: [8]u8, mem_addr: u3) !void {
@@ -232,10 +308,10 @@ pub fn HD44780(comptime config: HD44780_Config) type {
             try lcd.send(lcd.display_control, 0);
         }
 
-        pub fn init(io_device: config.Datagram_Device, delay_callback: *const delayus_callback) Self {
+        pub fn init(io_pins: pins_struct, delay_callback: *const delayus_callback) Self {
             return .{
                 .internal_delay = delay_callback,
-                .io_interface = io_device,
+                .io_interface = io_pins,
             };
         }
     };
