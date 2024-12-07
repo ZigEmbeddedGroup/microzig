@@ -10,17 +10,17 @@ pub const SystemControlBlock = extern struct {
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
         VECTACTIVE: u6,
-        reserved0: u6 = 0,
+        reserved0: u6,
         /// Indicates the exception number of the highest priority pending enabled exception:
         /// 0 = no pending exceptions
         /// Nonzero = the exception number of the highest priority pending enabled exception.
         VECTPENDING: u6,
-        reserved1: u4 = 0,
+        reserved1: u4,
         /// Interrupt pending flag, excluding NMI and Faults:
         /// 0 = interrupt not pending
         /// 1 = interrupt pending.
         ISRPENDING: u1,
-        reserved2: u2 = 0,
+        reserved2: u2,
         /// SysTick exception clear-pending bit.
         ///
         /// Write:
@@ -57,7 +57,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// Writing 1 to this bit is the only way to set the PendSV exception state to pending.
         PENDSVSET: u1,
-        reserved3: u2 = 0,
+        reserved3: u2,
         /// NMI set-pending bit.
         ///
         /// Write:
@@ -127,17 +127,17 @@ pub const SystemControlBlock = extern struct {
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
-        reserved0: u3 = 0,
+        reserved0: u3,
         /// Always reads as one, indicates that all unaligned accesses generate a HardFault.
         UNALIGN_TRP: u1,
-        reserved1: u5 = 0,
+        reserved1: u5,
         /// Always reads as one, indicates 8-byte stack alignment on exception entry.
         ///
         /// On exception entry, the processor uses bit[9] of the stacked PSR to indicate the stack
         /// alignment. On return from the exception it uses this stacked bit to restore the correct
         /// stack alignment.
         STKALIGN: u1,
-        reserved2: u22 = 0,
+        reserved2: u22,
     }),
     /// System Handlers Priority Registers.
     SHPR: [3]u32,

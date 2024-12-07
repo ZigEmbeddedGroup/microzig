@@ -143,6 +143,6 @@ pub fn usb_cdc_read() []const u8 {
         total_read += len;
         if (len == 0) break;
     }
-        
+
     return usb_rx_buff[0..total_read];
 }
