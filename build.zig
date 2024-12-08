@@ -244,10 +244,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
             bundle_compiler_rt: ?bool = null,
 
             /// If set, overrides the `hal` property of the target.
-            hal: ?*HardwareAbstractionLayer = null,
+            hal: ?HardwareAbstractionLayer = null,
 
             /// If set, overrides the `board` property of the target.
-            board: ?*Board = null,
+            board: ?Board = null,
 
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LazyPath = null,
