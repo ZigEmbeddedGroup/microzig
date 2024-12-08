@@ -243,11 +243,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `bundle_compiler_rt` property of the target.
             bundle_compiler_rt: ?bool = null,
 
-            /// If set, overrides the `hal` module.
-            hal: ?*Build.Module = null,
+            /// If set, overrides the `hal` property of the target.
+            hal: ?*HardwareAbstractionLayer = null,
 
-            /// If set, overrides the `board` module.
-            board: ?*Build.Module = null,
+            /// If set, overrides the `board` property of the target.
+            board: ?*Board = null,
 
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LazyPath = null,
@@ -295,9 +295,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
 
+            const maybe_hal = options.hal orelse target.hal;
+            const maybe_board = options.board orelse target.board;
+
             const config = b.addOptions();
-            config.addOption(bool, "has_hal", options.hal != null or target.hal != null);
-            config.addOption(bool, "has_board", options.board != null or target.board != null);
+            config.addOption(bool, "has_hal", maybe_hal != null);
+            config.addOption(bool, "has_board", maybe_board != null);
 
             config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
@@ -369,8 +372,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             chip_mod.addImport("microzig", core_mod);
             core_mod.addImport("chip", chip_mod);
 
-            if (target.hal) |hal| {
-                const hal_mod = options.hal orelse b.createModule(.{
+            if (maybe_hal) |hal| {
+                const hal_mod = b.createModule(.{
                     .root_source_file = hal.root_source_file,
                     .imports = hal.imports,
                 });
@@ -378,8 +381,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 core_mod.addImport("hal", hal_mod);
             }
 
-            if (target.board) |board| {
-                const board_mod = options.board orelse b.createModule(.{
+            if (maybe_board) |board| {
+                const board_mod = b.createModule(.{
                     .root_source_file = board.root_source_file,
                     .imports = board.imports,
                 });
