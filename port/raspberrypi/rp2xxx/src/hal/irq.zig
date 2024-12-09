@@ -113,10 +113,10 @@ pub fn enable(mask: Mask) void {
             const reg_index = @divFloor(@intFromEnum(mask), 32);
 
             // Clear any pending interrupts
-            NVIC_ICPR_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
+            NVIC_ICPR_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask)));
 
             // Enable interrupts
-            NVIC_ISER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
+            NVIC_ISER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask)));
         },
     }
 }
@@ -135,7 +135,7 @@ pub fn disable(mask: Mask) void {
             // Index 0: Interrupts 0->31, Index 1: Interrupts 32->51
             const reg_index = @divFloor(@intFromEnum(mask), 32);
 
-            NVIC_ICER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
+            NVIC_ICER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask)));
         },
     }
 }
