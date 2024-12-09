@@ -1,12 +1,14 @@
 const std = @import("std");
-const cpu = @import("microzig").hal.compatibility.cpu;
+const microzig = @import("microzig");
+const arch = microzig.hal.compatibility.arch;
+const chip = microzig.hal.compatibility.chip;
 
 comptime {
     _ = BootromData.bootloader_data;
 }
 
 const BootromData =
-    switch (cpu) {
+    switch (chip) {
     .RP2040 => struct {
         fn prepare_boot_sector(comptime stage2_rom: []const u8) [256]u8 {
             @setEvalBranchQuota(10_000);
@@ -41,18 +43,78 @@ const BootromData =
 
         export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));
     },
-    .RP2350 => struct {
-        /// Taken directly from section 5.9.5.1 of the RP2350 datasheet
-        ///
-        /// Translates to an IMAGE_DEF block that lets the bootrom know there is an executable flash image at address 0 in flash.
-        /// TODO: This isn't very sophisticated and a lot more functionality surrounding metadata and how the ROM bootloader treats
-        ///       it can be implemented for the RP2350.
-        export const bootloader_data: [5]u32 linksection(".bootmeta") = [5]u32{
-            0xffffded3,
-            0x10210142,
-            0x000001ff,
-            0x00000000,
-            0xab123579,
-        };
+    .RP2350 => switch (arch) {
+        .arm => struct {
+            /// Taken directly from section 5.9.5.1 of the RP2350 datasheet
+            ///
+            /// Translates to an IMAGE_DEF block that lets the bootrom know there is an executable flash image at address 0 in flash.
+            /// TODO: This isn't very sophisticated and a lot more functionality surrounding metadata and how the ROM bootloader treats
+            ///       it can be implemented for the RP2350.
+            export const bootloader_data: [5]u32 linksection(".bootmeta") = [5]u32{
+                0xffffded3,
+                0x10210142,
+                0x000001ff,
+                0x00000000,
+                0xab123579,
+            };
+        },
+        .riscv => struct {
+            pub const Entry = extern union {
+                V: u32,
+                F: *const fn () callconv(.Naked) void,
+            };
+
+            export const bootloader_data: [8]Entry linksection(".bootmeta") = [8]Entry{
+                .{ .V = 0xffffded3 },
+                .{ .V = 0x11210142 },
+                .{ .V = 0x00000344 },
+                .{ .F = trampoline },
+                .{ .V = microzig.config.end_of_stack },
+                .{ .V = 0x000004ff },
+                .{ .V = 0x00000000 },
+                .{ .V = 0xab123579 },
+            };
+
+            export fn trap() callconv(.C) void {
+                const pin_config = microzig.hal.pins.GlobalConfiguration{
+                    .GPIO0 = .{
+                        .name = "led",
+                        .direction = .out,
+                    },
+                };
+                const pins = pin_config.apply();
+                pins.led.toggle();
+
+                while (true) {
+                    asm volatile ("wfi");
+                }
+            }
+
+            export fn trampoline() callconv(.Naked) void {
+                asm volatile (
+                    \\.option push
+                    \\.option norelax
+                    \\la gp, __global_pointer$
+                    \\.option pop
+                    \\
+                    \\mv sp, %[eos]
+                    \\
+                    \\la a0, trap
+                    \\csrw mtvec, a0
+                    \\
+                    // if core 1 gets here (through a miracle), send it back to bootrom
+                    \\csrr a0, mhartid
+                    \\bnez a0, reenter_bootrom
+                    \\
+                    \\call _start
+                    \\
+                    \\reenter_bootrom:
+                    \\li a0, 0x7dfc
+                    \\jr a0
+                    :
+                    : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                );
+            }
+        },
     },
 };
