@@ -103,13 +103,20 @@ pub fn enable(mask: Mask) void {
             PPB.NVIC_ISER.write(.{ .SETENA = @as(u32, 1) << @intFromEnum(mask) });
         },
         .RP2350 => {
-            if (@intFromEnum(mask) >= 32) {
-                PPB.NVIC_ICPR1.write(.{ .CLRPEND = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32)) });
-                PPB.NVIC_ISER1.write(.{ .SETENA = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32)) });
-            } else {
-                PPB.NVIC_ICPR0.write(.{ .CLRPEND = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask))) });
-                PPB.NVIC_ISER0.write(.{ .SETENA = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask))) });
-            }
+
+            // Since ICPR/ISER registers are just sequential 32 bit registers where the entire 32 bits are used,
+            // we can cast to a volatile *u32 array to avoid having to branch on what range the mask is in
+            const NVIC_ICPR_REGs = @as(*volatile [2]u32, @ptrCast(&PPB.NVIC_ICPR0));
+            const NVIC_ISER_REGs = @as(*volatile [2]u32, @ptrCast(&PPB.NVIC_ISER0));
+
+            // Index 0: Interrupts 0->31, Index 1: Interrupts 32->51
+            const reg_index = @divFloor(@intFromEnum(mask), 32);
+
+            // Clear any pending interrupts
+            NVIC_ICPR_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
+
+            // Enable interrupts
+            NVIC_ISER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
         },
     }
 }
@@ -120,11 +127,15 @@ pub fn disable(mask: Mask) void {
             PPB.NVIC_ICER.write(.{ .CLRENA = @as(u32, 1) << @as(u5, @intFromEnum(mask)) });
         },
         .RP2350 => {
-            if (@intFromEnum(mask) >= 32) {
-                PPB.NVIC_ICER1.write(.{ .CLRENA = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32)) });
-            } else {
-                PPB.NVIC_ICER0.write(.{ .CLRENA = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask))) });
-            }
+
+            // Since ICER registers are just sequential 32 bit registers where the entire 32 bits are used,
+            // we can cast to a volatile *u32 array to avoid having to branch on what range the mask is in
+            const NVIC_ICER_REGs = @as(*volatile [2]u32, @ptrCast(&PPB.NVIC_ICER0));
+
+            // Index 0: Interrupts 0->31, Index 1: Interrupts 32->51
+            const reg_index = @divFloor(@intFromEnum(mask), 32);
+
+            NVIC_ICER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask) % 32));
         },
     }
 }
