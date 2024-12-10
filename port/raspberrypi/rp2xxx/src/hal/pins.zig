@@ -397,8 +397,7 @@ pub const GlobalConfiguration = struct {
                 } else if (pin_config.function.is_pwm()) {
                     pin_field.type = pwm.Pwm;
                 } else if (pin_config.function.is_adc()) {
-                    // TODO
-                    // pin_field.type = adc.Input;
+                    pin_field.type = adc.Input;
                 } else {
                     continue;
                 }
@@ -431,16 +430,15 @@ pub const GlobalConfiguration = struct {
                         .slice_number = pin_config.function.pwm_slice(),
                         .channel = pin_config.function.pwm_channel(),
                     };
+                } else if (pin_config.function.is_adc()) {
+                    @field(ret, pin_config.name orelse field.name) = @as(adc.Input, @enumFromInt(switch(pin_config.function) {
+                        .ADC0 => 0,
+                        .ADC1 => 1,
+                        .ADC2 => 2,
+                        .ADC3 => 3,
+                        else => unreachable,
+                    }));
                 }
-
-                // TODO
-                // } else if (pin_config.function.is_adc()) {
-                //     switch (pin_config.function) {
-                //         .ADC0 => &adc.Input.ain0,
-                //         .ADC1 => &adc.Input.ain1,
-                //         .ADC2 => &adc.Input.ain2,
-                //         .ADC3 => &adc.Input.ain3,
-                //         else => unreachable,
             }
         }
 
@@ -506,7 +504,10 @@ pub const GlobalConfiguration = struct {
                 } else if (comptime func.is_pwm()) {
                     pin.set_function(.pwm);
                 } else if (comptime func.is_adc()) {
+                    // Matches adc.Input.configure_gpio_pin
                     pin.set_function(.disabled);
+                    pin.set_pull(.disabled);
+                    pin.set_input_enabled(false);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
                     pin.set_function(.uart);
                 } else if (comptime func.is_spi()) {
@@ -538,8 +539,8 @@ pub const GlobalConfiguration = struct {
         }
 
         if (has_adc) {
-            adc.init();
+            // FIXME: https://github.com/ZigEmbeddedGroup/microzig/issues/311
+            // adc.init();
         }
-
     }
 };
