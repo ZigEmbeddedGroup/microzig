@@ -9,20 +9,23 @@ ENTRY(microzig_main);
 
 MEMORY
 {
-  flash0    (rx!w) : ORIGIN = 0x10000100, LENGTH = 0x001FFF00
-  flash1    (rx!w) : ORIGIN = 0x10000000, LENGTH = 0x00000100
-  ram0      (rw!x) : ORIGIN = 0x20000000, LENGTH = 0x00040000
+  flash0 (rx!w) : ORIGIN = 0x10000000, LENGTH = 0x00400000
+  ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00082000
 }
 
 SECTIONS
 {
-  .bootmeta : {
+  .flash_start :
+  {
     KEEP(*(microzig_flash_start))
+  }
 
+  .bootmeta :
+  {
     __bootmeta_start__ = .;
     KEEP (*(.bootmeta))
     __bootmeta_end__ = .;
-  } > flash0
+  }
 
   .text :
   {

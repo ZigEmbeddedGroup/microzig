@@ -39,7 +39,6 @@ pub inline fn init() void {
 /// Allows user to easily swap in their own clock config while still
 /// using the reccomended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
-
     // Reset all peripherals to put system into a known state, - except
     // for QSPI pads and the XIP IO bank, as this is fatal if running from
     // flash - and the PLLs, as this is fatal if clock muxing has not been

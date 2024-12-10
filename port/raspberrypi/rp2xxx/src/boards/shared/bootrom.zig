@@ -43,78 +43,193 @@ const BootromData =
 
         export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));
     },
-    .RP2350 => switch (arch) {
-        .arm => struct {
-            /// Taken directly from section 5.9.5.1 of the RP2350 datasheet
-            ///
-            /// Translates to an IMAGE_DEF block that lets the bootrom know there is an executable flash image at address 0 in flash.
-            /// TODO: This isn't very sophisticated and a lot more functionality surrounding metadata and how the ROM bootloader treats
-            ///       it can be implemented for the RP2350.
-            export const bootloader_data: [5]u32 linksection(".bootmeta") = [5]u32{
-                0xffffded3,
-                0x10210142,
-                0x000001ff,
-                0x00000000,
-                0xab123579,
-            };
-        },
-        .riscv => struct {
-            pub const Entry = extern union {
-                V: u32,
-                F: *const fn () callconv(.Naked) void,
-            };
+    .RP2350 => blk: {
+        // taken directly from section 5.9.5.1 of the rp2350 datasheet
+        //
+        // translates to an image_def block that lets the bootrom know there is an executable flash image at address 0 in flash.
+        // todo: this isn't very sophisticated and a lot more functionality surrounding metadata and how the rom bootloader treats
+        //       it can be implemented for the rp2350.
 
-            export const bootloader_data: [8]Entry linksection(".bootmeta") = [8]Entry{
-                .{ .V = 0xffffded3 },
-                .{ .V = 0x11210142 },
-                .{ .V = 0x00000344 },
-                .{ .F = trampoline },
-                .{ .V = microzig.config.end_of_stack },
-                .{ .V = 0x000004ff },
-                .{ .V = 0x00000000 },
-                .{ .V = 0xab123579 },
-            };
-
-            export fn trap() callconv(.C) void {
-                const pin_config = microzig.hal.pins.GlobalConfiguration{
-                    .GPIO0 = .{
-                        .name = "led",
-                        .direction = .out,
+        break :blk switch (arch) {
+            .arm => struct {
+                export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
+                    Metadata.ImageDef{
+                        .image_type_flags = .{
+                            .image_type = .exe,
+                            .exe_security = .secure,
+                            .cpu = .arm,
+                            .chip = .RP2350,
+                            .try_before_you_buy = false,
+                        },
                     },
-                };
-                const pins = pin_config.apply();
-                pins.led.toggle();
+                });
+            },
+            .riscv => struct {
+                export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
+                    Metadata.ImageDef{
+                        .image_type_flags = .{
+                            .image_type = .exe,
+                            .exe_security = .secure,
+                            .cpu = .riscv,
+                            .chip = .RP2350,
+                            .try_before_you_buy = false,
+                        },
+                    },
+                    Metadata.EntryPoint(false){
+                        .entry = trampoline,
+                        .sp = microzig.config.end_of_stack,
+                    },
+                });
 
-                while (true) {
-                    asm volatile ("wfi");
+                export fn trap() callconv(.C) void {
+                    const pin_config = microzig.hal.pins.GlobalConfiguration{
+                        .GPIO0 = .{
+                            .name = "led",
+                            .direction = .out,
+                        },
+                    };
+                    const pins = pin_config.apply();
+                    pins.led.toggle();
+
+                    while (true) {}
                 }
-            }
 
-            export fn trampoline() callconv(.Naked) void {
-                asm volatile (
-                    \\.option push
-                    \\.option norelax
-                    \\la gp, __global_pointer$
-                    \\.option pop
-                    \\
-                    \\mv sp, %[eos]
-                    \\
-                    \\la a0, trap
-                    \\csrw mtvec, a0
-                    \\
-                    // if core 1 gets here (through a miracle), send it back to bootrom
-                    \\csrr a0, mhartid
-                    \\bnez a0, reenter_bootrom
-                    \\
-                    \\call _start
-                    \\
-                    \\reenter_bootrom:
-                    \\li a0, 0x7dfc
-                    \\jr a0
-                    :
-                    : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
-                );
-            }
-        },
+                export fn trampoline() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+                    asm volatile (
+                        \\.option push
+                        \\.option norelax
+                        \\la gp, __global_pointer$
+                        \\.option pop
+                    );
+
+                    asm volatile (
+                        \\mv sp, %[eos]
+                        :
+                        : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                    );
+
+                    asm volatile (
+                        \\la a0, trap
+                        \\csrw mtvec, a0
+                        \\
+                        \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
+                        \\bnez a0, reenter_bootrom
+                        \\
+                        \\call _start
+                        \\
+                        \\reenter_bootrom:
+                        \\li a0, 0x7dfc
+                        \\jr a0
+                    );
+                }
+            },
+        };
     },
+};
+
+pub const Metadata = struct {
+    fn Extern(Any: type) type {
+        var fields: []const std.builtin.Type.StructField = &.{};
+        for (@typeInfo(Any).Struct.fields) |item_field| {
+            fields = fields ++ [_]std.builtin.Type.StructField{.{
+                .name = item_field.name,
+                .type = item_field.type,
+                .default_value = null,
+                .is_comptime = false,
+                .alignment = 0,
+            }};
+        }
+
+        return @Type(.{
+            .Struct = .{
+                .layout = .@"extern",
+                .fields = fields,
+                .decls = &.{},
+                .is_tuple = false,
+            },
+        });
+    }
+
+    fn BlockType(Items: type) type {
+        return extern struct {
+            header: u32,
+            user_items: Extern(Items),
+            last_item: u32,
+            link: u32,
+            footer: u32,
+        };
+    }
+
+    pub fn block(items: anytype) BlockType(@TypeOf(items)) {
+        return .{
+            .header = 0xffffded3,
+            .user_items = items,
+            .last_item = 0x000000ff | ((@sizeOf(Extern(@TypeOf(items))) / 4) << 8),
+            .link = 0,
+            .footer = 0xab123579,
+        };
+    }
+
+    pub const ImageDef = packed struct {
+        pub const ImageTypeFlags = packed struct {
+            pub const ImageType = enum(u4) {
+                invalid = 0,
+                exe = 1,
+                data = 2,
+            };
+
+            pub const ExeSecurity = enum(u2) {
+                unspecified = 0,
+                non_secure = 1,
+                secure = 2,
+            };
+
+            pub const Cpu = enum(u3) {
+                arm = 0,
+                riscv = 1,
+            };
+
+            pub const Chip = enum(u3) {
+                RP2040 = 0,
+                RP2350 = 1,
+            };
+
+            image_type: ImageType,
+            exe_security: ExeSecurity,
+            reserved0: u2 = 0,
+            cpu: Cpu,
+            reserved1: u1 = 0,
+            chip: Chip,
+            try_before_you_buy: bool,
+        };
+
+        type: u8 = 0x42,
+        block_size: u8 = 0x01,
+        image_type_flags: ImageTypeFlags,
+    };
+
+    pub fn EntryPoint(with_stack_limit: bool) type {
+        if (with_stack_limit) {
+            return extern struct {
+                header: packed struct {
+                    item_type: u8 = 0x44,
+                    block_size: u8 = 0x04,
+                    padding: u16 = 0,
+                } = .{},
+                entry: *const fn () callconv(.Naked) noreturn,
+                sp: u32,
+                sp_limit: u32,
+            };
+        } else {
+            return extern struct {
+                header: packed struct {
+                    item_type: u8 = 0x44,
+                    block_size: u8 = 0x03,
+                    padding: u16 = 0,
+                } = .{},
+                entry: *const fn () callconv(.Naked) noreturn,
+                sp: u32,
+            };
+        }
+    }
 };

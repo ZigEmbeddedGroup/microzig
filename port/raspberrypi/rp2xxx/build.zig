@@ -66,13 +66,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
-                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
         .hal = hal,
-        .linker_script = b.path("rp2350.ld"),
+        .linker_script = b.path("rp2350_arm.ld"),
     };
 
     const chip_rp2350_riscv: microzig.Target = .{
@@ -83,20 +82,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu = std.Target.Query{
                 .cpu_arch = .riscv32,
                 .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+                // the commented ones are in the datasheet but for some reason break the code
                 .cpu_features_add = std.Target.riscv.featureSet(&.{
-                    std.Target.riscv.Feature.i,
-                    std.Target.riscv.Feature.m,
+                    // std.Target.riscv.Feature.c,
                     std.Target.riscv.Feature.a,
-                    std.Target.riscv.Feature.c,
-                    std.Target.riscv.Feature.zicsr,
-                    std.Target.riscv.Feature.zifencei,
+                    std.Target.riscv.Feature.m,
                     std.Target.riscv.Feature.zba,
                     std.Target.riscv.Feature.zbb,
-                    std.Target.riscv.Feature.zbc,
                     std.Target.riscv.Feature.zbs,
+                    // std.Target.riscv.Feature.zcb,
+                    // std.Target.riscv.Feature.zcmp,
                     std.Target.riscv.Feature.zbkb,
-                    std.Target.riscv.Feature.zcb,
-                    std.Target.riscv.Feature.zcmp,
+                    std.Target.riscv.Feature.zifencei,
                 }),
                 .os_tag = .freestanding,
                 .abi = .eabi,

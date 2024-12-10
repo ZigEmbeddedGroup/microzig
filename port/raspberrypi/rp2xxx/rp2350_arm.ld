@@ -26,9 +26,6 @@ SECTIONS
     __bootmeta_end__ = .;
   } > flash0
 
-  ASSERT(__bootmeta_end__ - __bootmeta_start__ == 20,
-    "TODO: For now boot metadata is fixed to a constant series of 20 bytes, but this can change in the future")
-
   .text :
   {
      *(.text*)
