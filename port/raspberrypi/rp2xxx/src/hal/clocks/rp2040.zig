@@ -300,7 +300,7 @@ pub const config = struct {
         ///     - TODO: Could vary the PLL frequency based on sys_freq input to open up a broader range of SYS frequencies
         /// - CLK_USB sourced from PLL_USB @ 48 MHz
         /// - CLK_ADC sourced from PLL_USB @ 48 MHz
-        /// - CLK_RTC sourced from CLK_SYS
+        /// - CLK_RTC sourced from PLL_USB @ 48 MHz and divided down to ~65484 Hz
         /// - CLK_PERI sourced from CLK_SYS
         pub fn system(sys_freq: u32, ref_freq: u32) Global {
             var cfg: Global = .{};
@@ -359,14 +359,15 @@ pub const config = struct {
                 .integer_divisor = 1,
             };
 
-            // RTC gets connected to PLL_USB
+            // RTC gets connected to PLL_USB, and divided down to ~65484 Hz in order
+            // to be a suitable clock for 1 second reference.
             cfg.rtc =
                 .{
                 .input = .{
                     .source = .pll_usb,
                     .freq = 48_000_000,
                 },
-                .integer_divisor = 1,
+                .integer_divisor = 733,
             };
 
             // CLK_PERI is sourced from CLK_SYS, divisor hard coded to 1 on RP2040
