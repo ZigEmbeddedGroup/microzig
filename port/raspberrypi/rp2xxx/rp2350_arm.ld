@@ -16,11 +16,13 @@ MEMORY
 SECTIONS
 {
 
-  .vectortable : {
+  .vectortable :
+  {
      KEEP(*(microzig_flash_start))
   } > flash0
 
-  .bootmeta : {
+  .bootmeta :
+  {
     __bootmeta_start__ = .;
     KEEP (*(.bootmeta))
     __bootmeta_end__ = .;
@@ -35,11 +37,6 @@ SECTIONS
   .ARM.exidx : {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } >flash0
-
-  .flash1 :
-  {
-    *(.flash1)
-  } > flash1
 
   .data :
   {

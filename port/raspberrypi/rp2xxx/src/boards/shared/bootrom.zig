@@ -43,90 +43,83 @@ const BootromData =
 
         export const bootloader_data: [256]u8 linksection(".boot2") = prepare_boot_sector(@embedFile("bootloader"));
     },
-    .RP2350 => blk: {
-        // taken directly from section 5.9.5.1 of the rp2350 datasheet
-        //
-        // translates to an image_def block that lets the bootrom know there is an executable flash image at address 0 in flash.
-        // todo: this isn't very sophisticated and a lot more functionality surrounding metadata and how the rom bootloader treats
-        //       it can be implemented for the rp2350.
-
-        break :blk switch (arch) {
-            .arm => struct {
-                export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
-                    Metadata.ImageDef{
-                        .image_type_flags = .{
-                            .image_type = .exe,
-                            .exe_security = .secure,
-                            .cpu = .arm,
-                            .chip = .RP2350,
-                            .try_before_you_buy = false,
-                        },
+    .RP2350 => switch (arch) {
+        .arm => struct {
+            export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
+                Metadata.ImageDef{
+                    .image_type_flags = .{
+                        .image_type = .exe,
+                        .exe_security = .secure,
+                        .cpu = .arm,
+                        .chip = .RP2350,
+                        .try_before_you_buy = false,
                     },
-                });
-            },
-            .riscv => struct {
-                export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
-                    Metadata.ImageDef{
-                        .image_type_flags = .{
-                            .image_type = .exe,
-                            .exe_security = .secure,
-                            .cpu = .riscv,
-                            .chip = .RP2350,
-                            .try_before_you_buy = false,
-                        },
+                },
+            });
+        },
+        .riscv => struct {
+            export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
+                Metadata.ImageDef{
+                    .image_type_flags = .{
+                        .image_type = .exe,
+                        .exe_security = .secure,
+                        .cpu = .riscv,
+                        .chip = .RP2350,
+                        .try_before_you_buy = false,
                     },
-                    Metadata.EntryPoint(false){
-                        .entry = trampoline,
-                        .sp = microzig.config.end_of_stack,
+                },
+                Metadata.EntryPoint(false){
+                    .entry = trampoline,
+                    .sp = microzig.config.end_of_stack,
+                },
+            });
+
+            export fn trap() callconv(.C) void {
+                const pin_config = microzig.hal.pins.GlobalConfiguration{
+                    .GPIO0 = .{
+                        .name = "led",
+                        .direction = .out,
                     },
-                });
+                };
+                const pins = pin_config.apply();
+                pins.led.toggle();
 
-                export fn trap() callconv(.C) void {
-                    const pin_config = microzig.hal.pins.GlobalConfiguration{
-                        .GPIO0 = .{
-                            .name = "led",
-                            .direction = .out,
-                        },
-                    };
-                    const pins = pin_config.apply();
-                    pins.led.toggle();
+                while (true) {}
+            }
 
-                    while (true) {}
-                }
+            export fn trampoline() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+                asm volatile (
+                    \\.option push
+                    \\.option norelax
+                    \\la gp, __global_pointer$
+                    \\.option pop
+                );
 
-                export fn trampoline() linksection("microzig_flash_start") callconv(.Naked) noreturn {
-                    asm volatile (
-                        \\.option push
-                        \\.option norelax
-                        \\la gp, __global_pointer$
-                        \\.option pop
-                    );
+                asm volatile (
+                    \\mv sp, %[eos]
+                    :
+                    : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+                );
 
-                    asm volatile (
-                        \\mv sp, %[eos]
-                        :
-                        : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
-                    );
-
-                    asm volatile (
-                        \\la a0, trap
-                        \\csrw mtvec, a0
-                        \\
-                        \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
-                        \\bnez a0, reenter_bootrom
-                        \\
-                        \\call _start
-                        \\
-                        \\reenter_bootrom:
-                        \\li a0, 0x7dfc
-                        \\jr a0
-                    );
-                }
-            },
-        };
+                asm volatile (
+                    \\la a0, trap
+                    \\csrw mtvec, a0
+                    \\
+                    \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
+                    \\bnez a0, reenter_bootrom
+                    \\
+                    \\call _start
+                    \\
+                    \\reenter_bootrom:
+                    \\li a0, 0x7dfc
+                    \\jr a0
+                );
+            }
+        },
     },
 };
 
+/// Documentation taken from section 5.9.5.1 of the rp2350 datasheet
 pub const Metadata = struct {
     fn Extern(Any: type) type {
         var fields: []const std.builtin.Type.StructField = &.{};
