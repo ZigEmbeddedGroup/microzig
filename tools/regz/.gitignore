@@ -1,4 +1,4 @@
 zig-cache
 zig-out
-.gyro/redirects
 data
+*.regz

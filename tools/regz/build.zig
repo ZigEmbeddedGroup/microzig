@@ -16,6 +16,12 @@ pub fn build(b: *Build) !void {
         .iconv = false,
     });
 
+    const sqlite_dep = b.dependency("sqlite", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const sqlite = sqlite_dep.module("sqlite");
+
     const regz = b.addExecutable(.{
         .name = "regz",
         .root_source_file = b.path("src/main.zig"),
@@ -23,6 +29,7 @@ pub fn build(b: *Build) !void {
         .optimize = optimize,
     });
     regz.linkLibrary(libxml2_dep.artifact("xml2"));
+    regz.root_module.addImport("sqlite", sqlite);
     b.installArtifact(regz);
 
     const exported_module = b.addModule("regz", .{
@@ -68,6 +75,8 @@ pub fn build(b: *Build) !void {
         .optimize = optimize,
     });
     tests.linkLibrary(libxml2_dep.artifact("xml2"));
+    tests.root_module.addImport("sqlite", sqlite);
+
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);

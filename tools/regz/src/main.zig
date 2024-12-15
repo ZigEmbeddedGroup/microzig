@@ -7,10 +7,9 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const svd_schema = @embedFile("cmsis-svd.xsd");
-
+const file_size_max = 100 * 1024 * 1024;
 pub const std_options = std.Options{
-    .log_level = .err,
+    .log_level = .debug,
 };
 
 pub fn main() !void {
@@ -22,11 +21,11 @@ pub fn main() !void {
 
 const Arguments = struct {
     allocator: Allocator,
-    schema: ?Database.Schema = null,
+    format: ?Database.Format = null,
     input_path: ?[]const u8 = null,
-    output_path: ?[]const u8 = null,
-    output_json: bool = false,
+    output_path: ?[:0]const u8 = null,
     patch_path: ?[]const u8 = null,
+    dump: bool = false,
     help: bool = false,
 
     fn deinit(args: *Arguments) void {
@@ -40,10 +39,10 @@ fn print_usage(writer: anytype) !void {
     try writer.writeAll(
         \\regz
         \\  --help                Display this help and exit
-        \\  --schema <str>        Explicitly set schema type, one of: svd, atdf, json
+        \\  --dump                Dump SQLite file instead of generate code
+        \\  --format <str>        Explicitly set format type, one of: svd, atdf, json
         \\  --output_path <str>   Write to a file
-        \\  --patch_path <str>    After reading schema, apply NDJSON based patch file
-        \\  --json                Write output as JSON
+        \\  --patch_path <str>    After reading format, apply NDJSON based patch file
         \\<str>
         \\
     );
@@ -62,27 +61,27 @@ fn parse_args(allocator: Allocator) !Arguments {
     while (i < args.len) : (i += 1)
         if (std.mem.eql(u8, args[i], "--help")) {
             ret.help = true;
-        } else if (std.mem.eql(u8, args[i], "--schema")) {
+        } else if (std.mem.eql(u8, args[i], "--dump")) {
+            ret.dump = true;
+        } else if (std.mem.eql(u8, args[i], "--format")) {
             i += 1;
             if (i >= args.len)
-                return error.SchemaRequiresArgument;
+                return error.FormatRequiresArgument;
 
-            const schema_str = args[i];
+            const format_str = args[i];
 
-            ret.schema = std.meta.stringToEnum(Database.Schema, schema_str) orelse {
+            ret.format = std.meta.stringToEnum(Database.Format, format_str) orelse {
                 std.log.err("Unknown schema type: {s}, must be one of: svd, atdf, json", .{
-                    schema_str,
+                    format_str,
                 });
                 return error.Explained;
             };
         } else if (std.mem.eql(u8, args[i], "--output_path")) {
             i += 1;
-            ret.output_path = try allocator.dupe(u8, args[i]);
+            ret.output_path = try allocator.dupeZ(u8, args[i]);
         } else if (std.mem.eql(u8, args[i], "--patch_path")) {
             i += 1;
             ret.patch_path = try allocator.dupe(u8, args[i]);
-        } else if (std.mem.eql(u8, args[i], "--json")) {
-            ret.output_json = true;
         } else if (std.mem.startsWith(u8, args[i], "-")) {
             std.log.err("Unknown argument '{s}'", .{args[i]});
             try print_usage(std.io.getStdErr().writer());
@@ -118,29 +117,22 @@ fn main_impl() anyerror!void {
         return;
     }
 
-    var db = if (args.input_path) |input_path| blk: {
-        const schema = args.schema orelse schema: {
-            // if schema is null, then try to determine using file extension
-            const ext = std.fs.path.extension(input_path);
-            if (ext.len > 0) {
-                break :schema std.meta.stringToEnum(Database.Schema, ext[1..]) orelse {
-                    std.log.err("unable to determine schema from file extension of '{s}'", .{input_path});
-                    return error.Explained;
-                };
-            }
-
-            std.log.err("unable to determine schema from file extension of '{s}'", .{input_path});
-            return error.Explained;
-        };
-        const file = try std.fs.cwd().openFile(input_path, .{});
-        defer file.close();
-        const reader = file.reader().any();
-        break :blk try Database.init_from_reader(allocator, reader, schema);
+    // TODO: if format not specified, try using file extension
+    const text = if (args.input_path) |input_path| blk: {
+        break :blk try std.fs.cwd().readFileAlloc(allocator, input_path, file_size_max);
     } else blk: {
         const stdin = std.io.getStdIn().reader().any();
-        break :blk try Database.init_from_reader(allocator, stdin, args.schema);
+        break :blk try stdin.readAllAlloc(allocator, file_size_max);
     };
-    defer db.deinit();
+    defer allocator.free(text);
+
+    const format = args.format orelse {
+        std.log.err("Format not specified", .{});
+        return error.Explained;
+    };
+
+    var db = try Database.create_from_xml(allocator, format, text);
+    defer db.destroy();
 
     if (args.patch_path) |patch_path| {
         const patch = try std.fs.cwd().readFileAlloc(allocator, patch_path, 1024 * 1024);
@@ -148,6 +140,12 @@ fn main_impl() anyerror!void {
 
         // TODO: diagnostics
         try db.apply_patch(patch);
+    }
+
+    if (args.dump) {
+        const output_path = args.output_path orelse return error.MissingOutputPath;
+        try db.backup(output_path);
+        return;
     }
 
     const raw_writer = if (args.output_path) |output_path|
@@ -168,13 +166,6 @@ fn main_impl() anyerror!void {
         std.io.getStdOut().writer();
 
     var buffered = std.io.bufferedWriter(raw_writer);
-    if (args.output_json)
-        try db.json_stringify(
-            .{ .whitespace = .indent_2 },
-            buffered.writer(),
-        )
-    else
-        try db.to_zig(buffered.writer());
-
+    try db.to_zig(buffered.writer());
     try buffered.flush();
 }
