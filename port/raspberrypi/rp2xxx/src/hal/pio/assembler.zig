@@ -1,6 +1,8 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const CPU = @import("../cpu.zig").CPU;
+// TODO: Isn't this circular?
 const tokenizer = @import("assembler/tokenizer.zig");
 const encoder = @import("assembler/encoder.zig");
 
@@ -71,9 +73,9 @@ pub const Diagnostics = struct {
     }
 };
 
-pub fn assemble_impl(comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
-    const tokens = try tokenizer.tokenize(source, diags, options.tokenize);
-    const encoder_output = try encoder.encode(tokens.slice(), diags, options.encode);
+pub fn assemble_impl(comptime format: Format, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
+    const tokens = try tokenizer.tokenize(format, source, diags, options.tokenize);
+    const encoder_output = try encoder.encode(format, tokens.slice(), diags, options.encode);
     var programs = std.BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
@@ -121,9 +123,25 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     });
 }
 
+// TODO: Place. Who should own this?
+pub const Format = enum {
+    RP2040,
+    RP2350,
+};
+
+pub fn cpuToFormat(cpu: CPU) Format {
+    return switch (cpu) {
+        .RP2040 => .RP2040,
+        .RP2350 => .RP2350,
+    };
+}
+
 pub fn assemble(comptime source: []const u8, comptime options: AssembleOptions) Output {
     var diags: ?Diagnostics = null;
-    return assemble_impl(source, &diags, options) catch |err| if (diags) |d|
+    // TODO: We can't import compatibility & zig build test since it depends on microzig
+    // cpuToFormat(cpu) instead of hardcoding
+    // const cpu = @import("../compatibility.zig").cpu;
+    return assemble_impl(.RP2040, source, &diags, options) catch |err| if (diags) |d|
         @compileError(format_compile_error(d.message.slice(), source, d.index))
     else
         @compileError(err);

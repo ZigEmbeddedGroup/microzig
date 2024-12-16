@@ -5,6 +5,10 @@ const assembler = @import("../assembler.zig");
 const Diagnostics = assembler.Diagnostics;
 
 const tokenizer = @import("tokenizer.zig");
+// TODO: How do I pass in the format to this module? There is no (comptime)
+// instance object
+// const format: assembler.Format = .RP2350;
+// const Token = tokenizer.Token(format);
 const Token = tokenizer.Token;
 const Value = tokenizer.Value;
 
@@ -16,11 +20,13 @@ pub const Options = struct {
 };
 
 pub fn encode(
-    comptime tokens: []const Token,
+    // We don't want the user to have to specify this
+    comptime format: assembler.Format,
+    comptime tokens: []const Token(format),
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !Encoder(options).Output {
-    var encoder = Encoder(options).init(tokens);
+) !Encoder(format, options).Output {
+    var encoder = Encoder(format, options).init(tokens);
     return try encoder.encode_output(diags);
 }
 
@@ -41,10 +47,10 @@ pub const DefineWithIndex = struct {
     index: u32,
 };
 
-pub fn Encoder(comptime options: Options) type {
+pub fn Encoder(comptime format: assembler.Format, comptime options: Options) type {
     return struct {
         output: Self.Output,
-        tokens: []const Token,
+        tokens: []const Token(format),
         index: u32,
 
         const Self = @This();
@@ -56,7 +62,7 @@ pub fn Encoder(comptime options: Options) type {
 
         const BoundedDefines = std.BoundedArray(DefineWithIndex, options.max_defines);
         const BoundedPrograms = std.BoundedArray(BoundedProgram, options.max_programs);
-        const BoundedInstructions = std.BoundedArray(Instruction, 32);
+        const BoundedInstructions = std.BoundedArray(Instruction(format), 32);
         const BoundedLabels = std.BoundedArray(Label, 32);
         const Label = struct {
             name: []const u8,
@@ -105,7 +111,7 @@ pub fn Encoder(comptime options: Options) type {
             }
         };
 
-        fn init(tokens: []const Token) Self {
+        fn init(tokens: []const Token(format)) Self {
             return Self{
                 .output = Self.Output{
                     .global_defines = BoundedDefines.init(0) catch unreachable,
@@ -117,14 +123,14 @@ pub fn Encoder(comptime options: Options) type {
             };
         }
 
-        fn peek_token(self: Self) ?Token {
+        fn peek_token(self: Self) ?Token(format) {
             return if (self.index < self.tokens.len)
                 self.tokens[self.index]
             else
                 null;
         }
 
-        fn get_token(self: *Self) ?Token {
+        fn get_token(self: *Self) ?Token(format) {
             return if (self.peek_token()) |token| blk: {
                 self.consume(1);
                 break :blk token;
@@ -303,12 +309,12 @@ pub fn Encoder(comptime options: Options) type {
         fn encode_instruction(
             self: *Self,
             program: *BoundedProgram,
-            token: Token.Instruction,
+            token: Token(format).Instruction,
             token_index: u32,
             diags: *?Diagnostics,
         ) !void {
             // guaranteed to be an instruction variant
-            const payload: Instruction.Payload = switch (token.payload) {
+            const payload: Instruction(format).Payload = switch (token.payload) {
                 .nop => .{
                     .mov = .{
                         .destination = .y,
@@ -353,6 +359,7 @@ pub fn Encoder(comptime options: Options) type {
                         .block = @intFromBool(pull.block),
                     },
                 },
+                // TODO: Make sure this is OK? We just added one more encoding
                 .mov => |mov| .{
                     .mov = .{
                         .destination = mov.destination,
@@ -361,17 +368,32 @@ pub fn Encoder(comptime options: Options) type {
                     },
                 },
                 .irq => |irq| blk: {
-                    const irq_num = try self.evaluate(u5, program.*, irq.num, token_index, diags);
-                    break :blk .{
-                        .irq = .{
-                            .clear = @intFromBool(irq.clear),
-                            .wait = @intFromBool(irq.wait),
-                            .index = if (irq.rel)
-                                @as(u5, 0x10) | irq_num
-                            else
-                                irq_num,
+                    switch (format) {
+                        .RP2040 => {
+                            const irq_num = try self.evaluate(u5, program.*, irq.num, token_index, diags);
+                            break :blk .{
+                                .irq = .{
+                                    .clear = @intFromBool(irq.clear),
+                                    .wait = @intFromBool(irq.wait),
+                                    .index = if (irq.rel)
+                                        @as(u5, 0x10) | irq_num
+                                    else
+                                        irq_num,
+                                },
+                            };
                         },
-                    };
+                        .RP2350 => {
+                            const irq_num = try self.evaluate(u3, program.*, irq.num, token_index, diags);
+                            break :blk .{
+                                .irq = .{
+                                    .clear = @intFromBool(irq.clear),
+                                    .wait = @intFromBool(irq.wait),
+                                    .index = @as(u3, irq_num),
+                                    .idxmode = @intFromEnum(irq.idxmode),
+                                },
+                            };
+                        },
+                    }
                 },
                 .set => |set| .{
                     .set = .{
@@ -381,7 +403,7 @@ pub fn Encoder(comptime options: Options) type {
                 },
             };
 
-            const tag: Instruction.Tag = switch (token.payload) {
+            const tag: Instruction(format).Tag = switch (token.payload) {
                 .nop => .mov,
                 .jmp => .jmp,
                 .wait => .wait,
@@ -422,7 +444,7 @@ pub fn Encoder(comptime options: Options) type {
                 delay,
             );
 
-            try program.instructions.append(Instruction{
+            try program.instructions.append(Instruction(format){
                 .tag = tag,
                 .payload = payload,
                 .delay_side_set = delay_side_set,
@@ -485,7 +507,7 @@ pub fn Encoder(comptime options: Options) type {
                 switch (token.data) {
                     .instruction => |instr| try self.encode_instruction(program, instr, token.index, diags),
                     .word => |word| try program.instructions.append(
-                        @as(Instruction, @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
+                        @as(Instruction(format), @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
                     ),
                     // already processed
                     .label, .wrap_target, .wrap => {},
@@ -534,87 +556,98 @@ pub fn Encoder(comptime options: Options) type {
     };
 }
 
-pub const Instruction = packed struct(u16) {
-    payload: Payload,
-    delay_side_set: u5,
-    tag: Tag,
+pub fn Instruction(comptime format: assembler.Format) type {
+    return packed struct(u16) {
+        payload: Payload,
+        delay_side_set: u5,
+        tag: Tag,
 
-    pub const Payload = packed union {
-        jmp: Jmp,
-        wait: Wait,
-        in: In,
-        out: Out,
-        push: Push,
-        pull: Pull,
-        mov: Mov,
-        irq: Irq,
-        set: Set,
-    };
+        pub const Payload = packed union {
+            jmp: Jmp,
+            wait: Wait,
+            in: In,
+            out: Out,
+            push: Push,
+            pull: Pull,
+            mov: Mov,
+            irq: Irq,
+            set: Set,
+        };
 
-    pub const Tag = enum(u3) {
-        jmp,
-        wait,
-        in,
-        out,
-        push_pull,
-        mov,
-        irq,
-        set,
-    };
+        pub const Tag = enum(u3) {
+            jmp,
+            wait,
+            in,
+            out,
+            push_pull,
+            mov,
+            irq,
+            set,
+        };
 
-    pub const Jmp = packed struct(u8) {
-        address: u5,
-        condition: Token.Instruction.Jmp.Condition,
-    };
+        pub const Jmp = packed struct(u8) {
+            address: u5,
+            condition: Token(format).Instruction.Jmp.Condition,
+        };
 
-    pub const Wait = packed struct(u8) {
-        index: u5,
-        source: Token.Instruction.Wait.Source,
-        polarity: u1,
-    };
+        pub const Wait = packed struct(u8) {
+            index: u5,
+            source: Token(format).Instruction.Wait.Source,
+            polarity: u1,
+        };
 
-    pub const In = packed struct(u8) {
-        bit_count: u5,
-        source: Token.Instruction.In.Source,
-    };
+        pub const In = packed struct(u8) {
+            bit_count: u5,
+            source: Token(format).Instruction.In.Source,
+        };
 
-    pub const Out = packed struct(u8) {
-        bit_count: u5,
-        destination: Token.Instruction.Out.Destination,
-    };
+        pub const Out = packed struct(u8) {
+            bit_count: u5,
+            destination: Token(format).Instruction.Out.Destination,
+        };
 
-    pub const Push = packed struct(u8) {
-        _reserved0: u5 = 0,
-        block: u1,
-        if_full: u1,
-        _reserved1: u1 = 0,
-    };
+        pub const Push = packed struct(u8) {
+            _reserved0: u5 = 0,
+            block: u1,
+            if_full: u1,
+            _reserved1: u1 = 0,
+        };
 
-    pub const Pull = packed struct(u8) {
-        _reserved0: u5 = 0,
-        block: u1,
-        if_empty: u1,
-        _reserved1: u1 = 1,
-    };
+        pub const Pull = packed struct(u8) {
+            _reserved0: u5 = 0,
+            block: u1,
+            if_empty: u1,
+            _reserved1: u1 = 1,
+        };
 
-    pub const Mov = packed struct(u8) {
-        source: Token.Instruction.Mov.Source,
-        operation: Token.Instruction.Mov.Operation,
-        destination: Token.Instruction.Mov.Destination,
-    };
+        pub const Mov = packed struct(u8) {
+            source: Token(format).Instruction.Mov.Source,
+            operation: Token(format).Instruction.Mov.Operation,
+            destination: Token(format).Instruction.Mov.Destination,
+        };
 
-    pub const Irq = packed struct(u8) {
-        index: u5,
-        wait: u1,
-        clear: u1,
-        reserved: u1 = 0,
-    };
+        pub const Irq = switch (format) {
+            .RP2040 => packed struct(u8) {
+                index: u5,
+                wait: u1,
+                clear: u1,
+                reserved: u1 = 0,
+            },
+            .RP2350 => packed struct(u8) {
+                index: u3,
+                idxmode: u2,
+                wait: u1,
+                clear: u1,
+                reserved: u1 = 0,
+            },
+        };
 
-    pub const Set = packed struct(u8) {
-        data: u5,
-        destination: Token.Instruction.Set.Destination,
+        pub const Set = packed struct(u8) {
+            data: u5,
+            destination: Token(format).Instruction.Set.Destination,
+        };
     };
-};
+}
 
 //==============================================================================
 // Encoder Tests
@@ -624,22 +657,22 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
-fn encode_bounded_output_impl(source: []const u8, diags: *?assembler.Diagnostics) !Encoder(.{}).Output {
-    const tokens = try tokenizer.tokenize(source, diags, .{});
-    var encoder = Encoder(.{}).init(tokens.slice());
+fn encode_bounded_output_impl(comptime format: assembler.Format, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(format, .{}).Output {
+    const tokens = try tokenizer.tokenize(format, source, diags, .{});
+    var encoder = Encoder(format, .{}).init(tokens.slice());
     return try encoder.encode_output(diags);
 }
 
-fn encode_bounded_output(source: []const u8) !Encoder(.{}).Output {
+fn encode_bounded_output(comptime format: assembler.Format, source: []const u8) !Encoder(format, .{}).Output {
     var diags: ?assembler.Diagnostics = null;
-    return encode_bounded_output_impl(source, &diags) catch |err| if (diags) |d| blk: {
+    return encode_bounded_output_impl(format, source, &diags) catch |err| if (diags) |d| blk: {
         std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
         break :blk err;
     } else err;
 }
 
 test "encode.define" {
-    const output = try encode_bounded_output(".define foo 5");
+    const output = try encode_bounded_output(.RP2040, ".define foo 5");
 
     try expectEqual(@as(usize, 0), output.global_defines.len);
     try expectEqual(@as(usize, 1), output.private_defines.len);
@@ -650,7 +683,7 @@ test "encode.define" {
 }
 
 test "encode.define.public" {
-    const output = try encode_bounded_output(".define PUBLIC foo 5");
+    const output = try encode_bounded_output(.RP2040, ".define PUBLIC foo 5");
 
     try expectEqual(@as(usize, 1), output.global_defines.len);
     try expectEqual(@as(usize, 0), output.private_defines.len);
@@ -658,7 +691,7 @@ test "encode.define.public" {
 }
 
 test "encode.program.empty" {
-    const output = try encode_bounded_output(".program arst");
+    const output = try encode_bounded_output(.RP2040, ".program arst");
 
     try expectEqual(@as(usize, 0), output.global_defines.len);
     try expectEqual(@as(usize, 0), output.private_defines.len);
@@ -669,7 +702,7 @@ test "encode.program.empty" {
 }
 
 test "encode.program.define" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.define bruh 7
     );
@@ -688,7 +721,7 @@ test "encode.program.define" {
 }
 
 test "encode.program.define.public" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.define public bruh 7
     );
@@ -707,7 +740,7 @@ test "encode.program.define.public" {
 }
 
 test "encode.program.define.namespaced" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.define public bruh 7
         \\.program what
@@ -736,7 +769,7 @@ test "encode.program.define.namespaced" {
 }
 
 test "encode.origin" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.origin 0
     );
@@ -753,7 +786,7 @@ test "encode.origin" {
 }
 
 test "encode.wrap_target" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\nop
         \\.wrap_target
@@ -772,7 +805,7 @@ test "encode.wrap_target" {
 }
 
 test "encode.wrap" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\nop
         \\.wrap
@@ -791,7 +824,7 @@ test "encode.wrap" {
 }
 
 test "encode.side_set" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.side_set 1
     );
@@ -805,7 +838,7 @@ test "encode.side_set" {
 }
 
 test "encode.side_set.opt" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.side_set 1 opt
     );
@@ -820,7 +853,7 @@ test "encode.side_set.opt" {
 }
 
 test "encode.side_set.pindirs" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.side_set 1 pindirs
     );
@@ -835,7 +868,7 @@ test "encode.side_set.pindirs" {
 }
 
 test "encode.label" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\nop
         \\my_label:
@@ -856,7 +889,7 @@ test "encode.label" {
 }
 
 test "encode.label.public" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\nop
         \\nop
@@ -878,7 +911,7 @@ test "encode.label.public" {
 }
 
 test "encode.side_set.bits" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\.side_set 1 opt
         \\nop side 1
@@ -903,7 +936,7 @@ test "encode.side_set.bits" {
 }
 
 test "encode.evaluate.global" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define NUM 5
         \\.define public FOO NUM
     );
@@ -915,7 +948,7 @@ test "encode.evaluate.global" {
 }
 
 test "encode.evaluate.addition" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define public FOO (1+5)
     );
 
@@ -925,7 +958,7 @@ test "encode.evaluate.addition" {
 }
 
 test "encode.evaluate.subtraction" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define public FOO (5-1)
     );
 
@@ -935,7 +968,7 @@ test "encode.evaluate.subtraction" {
 }
 
 test "encode.evaluate.multiplication" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define public FOO (5*2)
     );
 
@@ -945,7 +978,7 @@ test "encode.evaluate.multiplication" {
 }
 
 test "encode.evaluate.division" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define public FOO (6/2)
     );
 
@@ -955,7 +988,7 @@ test "encode.evaluate.division" {
 }
 
 test "encode.evaluate.bit reversal" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.define public FOO ::1
     );
 
@@ -965,7 +998,7 @@ test "encode.evaluate.bit reversal" {
 }
 
 test "encode.jmp.label" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program arst
         \\nop
         \\my_label:
@@ -987,14 +1020,14 @@ test "encode.jmp.label" {
     try expectEqual(false, label.public);
 
     const instr = program.instructions.get(3);
-    try expectEqual(Instruction.Tag.jmp, instr.tag);
+    try expectEqual(Instruction(.RP2040).Tag.jmp, instr.tag);
     try expectEqual(@as(u5, 0), instr.delay_side_set);
-    try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
+    try expectEqual(Token(.RP2040).Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
     try expectEqual(@as(u5, 1), instr.payload.jmp.address);
 }
 
 test "encode.jmp.label origin" {
-    const output = try encode_bounded_output(
+    const output = try encode_bounded_output(.RP2040,
         \\.program program_at_4
         \\.origin 4
         \\nop
@@ -1024,9 +1057,9 @@ test "encode.jmp.label origin" {
         try expectEqual(false, label.public);
 
         const instr = program.instructions.get(2);
-        try expectEqual(Instruction.Tag.jmp, instr.tag);
+        try expectEqual(Instruction(.RP2040).Tag.jmp, instr.tag);
         try expectEqual(@as(u5, 0), instr.delay_side_set);
-        try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
+        try expectEqual(Token(.RP2040).Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
         try expectEqual(@as(u5, 5), instr.payload.jmp.address);
     }
 
@@ -1040,9 +1073,9 @@ test "encode.jmp.label origin" {
         try expectEqual(false, label.public);
 
         const instr = program.instructions.get(3);
-        try expectEqual(Instruction.Tag.jmp, instr.tag);
+        try expectEqual(Instruction(.RP2040).Tag.jmp, instr.tag);
         try expectEqual(@as(u5, 0), instr.delay_side_set);
-        try expectEqual(Token.Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
+        try expectEqual(Token(.RP2040).Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
         try expectEqual(@as(u5, 22), instr.payload.jmp.address);
     }
 }

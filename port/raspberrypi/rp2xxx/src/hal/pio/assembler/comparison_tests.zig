@@ -12,6 +12,7 @@ const c = @cImport({
     @cInclude("comparison_tests/hello.pio.h");
     @cInclude("comparison_tests/hub75.pio.h");
     @cInclude("comparison_tests/i2c.pio.h");
+    @cInclude("comparison_tests/irq.pio.h");
     @cInclude("comparison_tests/manchester_encoding.pio.h");
     @cInclude("comparison_tests/nec_carrier_burst.pio.h");
     @cInclude("comparison_tests/nec_carrier_control.pio.h");
@@ -31,7 +32,8 @@ const c = @cImport({
 });
 
 fn pio_comparison(comptime source: []const u8) !void {
-    const output = comptime assembler.assemble(source, .{});
+    comptime var diags: ?assembler.Diagnostics = null;
+    const output = try comptime assembler.assemble_impl(.RP2040, source, &diags, .{});
     try std.testing.expect(output.programs.len > 0);
 
     inline for (output.programs) |program| {
@@ -85,6 +87,11 @@ test "pio.comparison.hub75" {
 test "pio.comparison.i2c" {
     @setEvalBranchQuota(17000);
     try pio_comparison(@embedFile("comparison_tests/i2c.pio"));
+}
+
+test "pio.comparison.irq" {
+    @setEvalBranchQuota(22000);
+    try pio_comparison(@embedFile("comparison_tests/irq.pio"));
 }
 
 test "pio.comparison.manchester_encoding" {

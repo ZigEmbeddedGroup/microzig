@@ -1,10 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-
-pub const CPU = enum {
-    RP2040,
-    RP2350,
-};
+const CPU = @import("cpu.zig").CPU;
 
 pub const cpu: CPU = blk: {
     if (std.mem.eql(u8, microzig.config.chip_name, "RP2040")) {

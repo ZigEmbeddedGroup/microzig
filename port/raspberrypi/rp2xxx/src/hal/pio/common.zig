@@ -9,11 +9,13 @@ pub const PIO0 = microzig.chip.peripherals.PIO0;
 pub const PIO1 = microzig.chip.peripherals.PIO1;
 
 pub const assembler = @import("assembler.zig");
+const compatibility = @import("../compatibility.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
 const hw = @import("../hw.zig");
 
-pub const Instruction = encoder.Instruction;
+// TODO: This is CPU specific
+pub const Instruction = encoder.Instruction(assembler.cpuToFormat(compatibility.cpu));
 pub const Program = assembler.Program;
 
 // global state for keeping track of used things
