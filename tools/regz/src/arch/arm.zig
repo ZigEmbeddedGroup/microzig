@@ -50,42 +50,39 @@ const system_interrupts = struct {
     pub const cortex_m55 = cortex_m33;
 };
 
-pub fn load_system_interrupts(db: *Database, device_id: DeviceID) !void {
-    _ = db;
-    _ = device_id;
-    //const arch = try db.get_device_arch(device_id);
-    //assert(arch.is_arm());
+pub fn load_system_interrupts(db: *Database, device: *const Database.Device) !void {
+    assert(device.arch.is_arm());
 
-    //inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
-    //    if (arch == @field(Database.Arch, field.name)) {
-    //        if (@hasDecl(system_interrupts, field.name)) {
-    //            for (@field(system_interrupts, field.name)) |interrupt| {
-    //                _ = try db.create_interrupt(device_id, .{
-    //                    .name = interrupt.name,
-    //                    .idx = interrupt.index,
-    //                    .description = interrupt.description,
-    //                });
-    //            }
-    //        }
+    inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
+        if (device.arch == @field(Database.Arch, field.name)) {
+            if (@hasDecl(system_interrupts, field.name)) {
+                for (@field(system_interrupts, field.name)) |interrupt| {
+                    _ = try db.create_interrupt(device.id, .{
+                        .name = interrupt.name,
+                        .idx = interrupt.index,
+                        .description = interrupt.description,
+                    });
+                }
+            }
 
-    //        break;
-    //    }
-    //} else {
-    //    log.warn("TODO: system interrupts handlers for {}", .{arch});
-    //}
+            break;
+        }
+    } else {
+        log.warn("TODO: system interrupts handlers for {}", .{device.arch});
+    }
 
-    //const vendor_systick_config = if (try db.get_device_property(db.gpa, device_id, "cpu.vendorSystickConfig")) |str| blk: {
-    //    defer db.gpa.free(str);
+    const vendor_systick_config = if (try db.get_device_property(db.gpa, device.id, "cpu.vendorSystickConfig")) |str| blk: {
+        defer db.gpa.free(str);
 
-    //    break :blk try svd.parse_bool(str);
-    //} else false;
+        break :blk try svd.parse_bool(str);
+    } else false;
 
-    //if (!vendor_systick_config) {
-    //    _ = try db.create_interrupt(device_id, .{
-    //        .name = system_interrupts.systick.name,
-    //        .idx = system_interrupts.systick.index,
-    //    });
-    //}
+    if (!vendor_systick_config) {
+        _ = try db.create_interrupt(device.id, .{
+            .name = system_interrupts.systick.name,
+            .idx = system_interrupts.systick.index,
+        });
+    }
 }
 
 pub fn write_interrupt_vector(

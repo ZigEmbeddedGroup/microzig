@@ -8,7 +8,6 @@
         "build.zig.zon",
         "characterized",
         "src",
-        "tests",
     },
     .dependencies = .{
         .libxml2 = .{

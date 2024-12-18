@@ -1379,7 +1379,7 @@ test "atdf.instance of register group" {
 
     try db.backup("instance_of_register_group.regz");
 
-    const device_id = try db.get_device_by_name("ATmega328P") orelse return error.NoDevice;
+    const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
 
     const portb_instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "PORTB");
     try expectEqual(@as(u64, 0x23), portb_instance.offset_bytes);
@@ -1411,7 +1411,7 @@ test "atdf.interrupts" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("ATmega328P") orelse return error.NoDevice;
+    const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
     const vector1_id = try db.get_interrupt_by_name(device_id, "TEST_VECTOR1") orelse return error.NoInterrupt;
     try expectEqual(@as(i32, 1), try db.get_interrupt_idx(vector1_id));
 
@@ -1438,7 +1438,7 @@ test "atdf.interrupts with module-instance" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("ATmega328P") orelse return error.NoDevice;
+    const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
 
     const crcscan_nmi_id = try db.get_interrupt_by_name(device_id, "CRCSCAN_NMI") orelse return error.NoInterrupt;
     try expectEqual(@as(i32, 1), try db.get_interrupt_idx(crcscan_nmi_id));
@@ -1473,7 +1473,7 @@ test "atdf.interrupts with interrupt-groups" {
     var db = try Database.create_from_doc(std.testing.allocator, .atdf, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("ATmega328P") orelse return error.NoDevice;
+    const device_id = try db.get_device_id_by_name("ATmega328P") orelse return error.NoDevice;
 
     const portb_int0_id = try db.get_interrupt_by_name(device_id, "PORTB_INT0") orelse return error.NoInterrupt;
     try expectEqual(@as(i32, 1), try db.get_interrupt_idx(portb_int0_id));

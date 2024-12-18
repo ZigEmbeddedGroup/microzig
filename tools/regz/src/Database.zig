@@ -794,9 +794,23 @@ pub fn get_register_struct(db: *Database, register: RegisterID) !?StructID {
     return row.struct_id;
 }
 
-pub fn get_device_by_name(db: *Database, name: []const u8) !?DeviceID {
+pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
     const query = "SELECT id FROM devices WHERE name = ?";
     return db.sql.one(DeviceID, query, .{}, .{ .name = name });
+}
+
+pub fn get_device_by_name(db: *Database, allocator: Allocator, name: []const u8) !Device {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM devices
+        \\WHERE name = ?
+    , .{
+        comptime gen_field_list(Device, .{}),
+    });
+
+    return db.one_alloc(Device, allocator, query, .{
+        .name = name,
+    });
 }
 
 fn get_name_for_id(db: *Database, allocator: Allocator, id: anytype) ![]const u8 {

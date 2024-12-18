@@ -725,7 +725,7 @@ test "svd.device register properties" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
@@ -771,7 +771,7 @@ test "svd.peripheral register properties" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
@@ -820,7 +820,7 @@ test "svd.register register properties" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
@@ -869,7 +869,7 @@ test "svd.register with fields" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
@@ -988,7 +988,7 @@ test "svd.peripheral with dimElementGroup" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     const instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const peripheral = try db.get_peripheral(arena.allocator(), peripheral_id);
@@ -1030,7 +1030,7 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
 
     // should not exist since dimIndex is not allowed to be defined for peripherals
     try expectError(error.MissingEntity, db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL"));
@@ -1115,7 +1115,7 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    const device_id = try db.get_device_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
     _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);

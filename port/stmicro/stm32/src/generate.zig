@@ -362,7 +362,8 @@ pub fn main() !void {
             .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_cpu.get(core.name).?).?,
         });
 
-        try regz.arm.load_system_interrupts(db, device_id);
+        const device = try db.get_device_by_name(arena.allocator(), chip_file.value.name);
+        try regz.arm.load_system_interrupts(db, &device);
 
         // TODO: how do we want to handle multi core MCUs?
         //
