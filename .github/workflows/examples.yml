@@ -1,0 +1,29 @@
+name: Build Examples
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        exmaple_dir: [
+          stmicro/stm32
+          raspberrypi/rp2xxx
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall
+        working-directory: examples/${{ matrix.example_dir }}
