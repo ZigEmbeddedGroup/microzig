@@ -12,8 +12,15 @@ jobs:
     strategy:
       matrix:
         exmaple_dir: [
+          espressif/esp,
+          gigadevice/gd32,
+          microchip/avr,
+          microchip/atsam,
+          nordic/nrf5x,
+          nxp/lpc,
           stmicro/stm32,
           raspberrypi/rp2xxx,
+          wch/ch32v,
         ]
     steps:
       - name: Checkout
