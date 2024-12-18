@@ -46,7 +46,7 @@ regz <path-to-svd> > my-chip.zig
 
 Provide schema via stdin, must specify the schema type:
 ```
-cat my-file.svd | regz --schema svd > my-chip.zig
+cat my-file.svd | regz --format svd > my-chip.zig
 ```
 
 ### Does this work for RISC-V?
