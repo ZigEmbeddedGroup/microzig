@@ -1,13 +1,13 @@
 //! USB device implementation
 //!
-//! Inspired by cbiffle's Rust [implementation](https://github.com/cbiffle/rp2040-usb-device-in-one-file/blob/main/src/main.rs)
+//! Initial inspiration: cbiffle's Rust [implementation](https://github.com/cbiffle/rp2040-usb-device-in-one-file/blob/main/src/main.rs)
+//! Currently progressing towards adopting the TinyUSB like API
 
 const std = @import("std");
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
-/// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
 pub const types = usb.types;
 pub const hid = usb.hid;
@@ -26,10 +26,6 @@ pub const UsbConfig = struct {
     max_endpoints_count: u8 = RP2XXX_MAX_ENDPOINTS_COUNT,
     max_interfaces_count: u8 = 16,
 };
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// User Interface
-// +++++++++++++++++++++++++++++++++++++++++++++++++
 
 /// The rp2040 usb device impl
 ///
@@ -53,59 +49,68 @@ pub const Endpoint = usb.types.Endpoint;
 
 pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
+const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(microzig.chip.peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
+const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+
 const HardwareEndpoint = struct {
     configured: bool,
     ep_addr: u8,
     next_pid_1: bool,
-    max_packet_size: u16,
     transfer_type: types.TransferType,
     endpoint_control_index: usize,
     buffer_control_index: usize,
-    data_buffer_index: usize,
     awaiting_rx: bool,
+
+    max_packet_size: u11,
+    buffer_control: ?*BufferControlMmio,
+    endpoint_control: ?*EndpointControlMimo,
+    data_buffer: []u8,
 };
 
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Reference to endpoint buffers
-// +++++++++++++++++++++++++++++++++++++++++++++++++
+const rp2xxx_buffers = struct {
+    // Address 0x100-0xfff (3840 bytes) can be used for data buffers
+    const USB_DPRAM_DATA_BUFFER_BASE = 0x50100100;
 
-/// USB data buffers
-pub const buffers = struct {
-    // Address 0x100-0xfff (3840 bytes) can be used for data buffers.
-    const USBDPRAM_BASE = 0x50100100;
-    // Data buffers are 64 bytes long as this is the max normal packet size
-    const BUFFER_SIZE = 64;
-    /// EP0 buffer 0 (shared between in and out)
-    const USB_EP0_BUFFER0 = USBDPRAM_BASE;
-    /// Optional EP0 buffer 1
-    const USB_EP0_BUFFER1 = USBDPRAM_BASE + BUFFER_SIZE;
-    /// Data buffers
-    const USB_BUFFERS = USBDPRAM_BASE + (2 * BUFFER_SIZE);
+    const CTRL_EP_BUFFER_SIZE = 64;
 
-    /// Mapping to the different data buffers in DPSRAM
-    pub var B: usb.Buffers = .{
-        .ep0_buffer0 = @as([*]u8, @ptrFromInt(USB_EP0_BUFFER0)),
-        .ep0_buffer1 = @as([*]u8, @ptrFromInt(USB_EP0_BUFFER1)),
-        // We will initialize this comptime in a loop
-        .rest = .{
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (0 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (1 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (2 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (3 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (4 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (5 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (6 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (7 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (8 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (9 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (10 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (11 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (12 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (13 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (14 * BUFFER_SIZE))),
-            @as([*]u8, @ptrFromInt(USB_BUFFERS + (15 * BUFFER_SIZE))),
-        },
-    };
+    const USB_EP0_BUFFER0 = USB_DPRAM_DATA_BUFFER_BASE;
+    const USB_EP0_BUFFER1 = USB_DPRAM_DATA_BUFFER_BASE + CTRL_EP_BUFFER_SIZE;
+
+    const USB_DATA_BUFFER = USB_DPRAM_DATA_BUFFER_BASE + (2 * CTRL_EP_BUFFER_SIZE);
+    const USB_DATA_BUFFER_SIZE = 3840 - (2 * CTRL_EP_BUFFER_SIZE);
+
+    const ep0_buffer0: *[CTRL_EP_BUFFER_SIZE]u8 = @as(*[CTRL_EP_BUFFER_SIZE]u8, @ptrFromInt(USB_EP0_BUFFER0));
+    const ep0_buffer1: *[CTRL_EP_BUFFER_SIZE]u8 = @as(*[CTRL_EP_BUFFER_SIZE]u8, @ptrFromInt(USB_EP0_BUFFER1));
+    const data_buffer: *[USB_DATA_BUFFER_SIZE]u8 = @as(*[USB_DATA_BUFFER_SIZE]u8, @ptrFromInt(USB_DATA_BUFFER));
+
+    fn data_offset(ep_data_buffer: []u8) u16 {
+        const buf_base = @intFromPtr(&ep_data_buffer[0]);
+        const dpram_base = @intFromPtr(peripherals.USB_DPRAM);
+        return @as(u16, @intCast(buf_base - dpram_base));
+    }
+};
+
+const rp2xxx_endpoints = struct {
+    const USB_DPRAM_BASE = 0x50100000;
+    const USB_DPRAM_BUFFERS_BASE = USB_DPRAM_BASE + 0x100;
+    const USB_DPRAM_BUFFERS_CTRL_BASE = USB_DPRAM_BASE + 0x80;
+    const USB_DPRAM_ENDPOINTS_CTRL_BASE = USB_DPRAM_BASE + 0x8;
+
+    pub fn get_ep_ctrl(ep_num: u8, ep_dir: types.Dir) ?*EndpointControlMimo {
+        if (ep_num == 0) {
+            return null;
+        } else {
+            const dir_index: u8 = if (ep_dir == .In) 0 else 1;
+            const ep_ctrl_base = @as([*][2]u32, @ptrFromInt(USB_DPRAM_ENDPOINTS_CTRL_BASE));
+            return @ptrCast(&ep_ctrl_base[ep_num - 1][dir_index]);
+        }
+    }
+
+    pub fn get_buf_ctrl(ep_num: u8, ep_dir: types.Dir) ?*BufferControlMmio {
+        const dir_index: u8 = if (ep_dir == .In) 0 else 1;
+        const buf_ctrl_base = @as([*][2]u32, @ptrFromInt(USB_DPRAM_BUFFERS_CTRL_BASE));
+        return @ptrCast(&buf_ctrl_base[ep_num][dir_index]);
+    }
 };
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -127,6 +132,7 @@ pub fn F(comptime config: UsbConfig) type {
         pub const high_speed = false;
 
         var endpoints: [config.max_endpoints_count][2]HardwareEndpoint = undefined;
+        var data_buffer: []u8 = rp2xxx_buffers.data_buffer;
 
         /// Initialize the USB clock to 48 MHz
         ///
@@ -164,70 +170,16 @@ pub fn F(comptime config: UsbConfig) type {
             peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);
             peripherals.USB_DPRAM.SETUP_PACKET_HIGH.write_raw(0);
 
-            peripherals.USB_DPRAM.EP1_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP1_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP2_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP2_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP3_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP3_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP4_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP4_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP5_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP5_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP6_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP6_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP7_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP7_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP8_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP8_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP9_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP9_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP10_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP10_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP11_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP11_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP12_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP12_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP13_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP13_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP14_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP14_OUT_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP15_IN_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP15_OUT_CONTROL.write_raw(0);
+            for (1..cfg_max_endpoints_count) |i| {
+                rp2xxx_endpoints.get_ep_ctrl(@intCast(i), .In).?.write_raw(0);
+                rp2xxx_endpoints.get_ep_ctrl(@intCast(i), .Out).?.write_raw(0);
+            }
 
-            peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP1_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP1_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP2_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP2_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP3_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP3_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP4_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP4_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP5_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP5_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP6_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP6_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP7_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP7_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP8_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP8_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP9_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP9_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP10_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP10_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP11_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP11_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP12_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP12_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP13_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP13_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP14_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP14_OUT_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP15_IN_BUFFER_CONTROL.write_raw(0);
-            peripherals.USB_DPRAM.EP15_OUT_BUFFER_CONTROL.write_raw(0);
-
+            for (0..cfg_max_endpoints_count) |i| {
+                rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .In).?.write_raw(0);
+                rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .Out).?.write_raw(0);
+            }
+            
             // Mux the controller to the onboard USB PHY. I was surprised that there are
             // alternatives to this, but, there are.
             peripherals.USB.USB_MUXING.modify(.{
@@ -270,8 +222,8 @@ pub fn F(comptime config: UsbConfig) type {
             });
 
             @memset(std.mem.asBytes(&endpoints), 0);
-            endpoint_init(Endpoint.EP0_IN_ADDR, 64, types.TransferType.Control);
-            endpoint_init(Endpoint.EP0_OUT_ADDR, 64, types.TransferType.Control);
+            endpoint_open(Endpoint.EP0_IN_ADDR, 64, types.TransferType.Control);
+            endpoint_open(Endpoint.EP0_OUT_ADDR, 64, types.TransferType.Control);
 
             // Present full-speed device by enabling pullup on DP. This is the point
             // where the host will notice our presence.
@@ -296,9 +248,7 @@ pub fn F(comptime config: UsbConfig) type {
 
             const ep = hardware_endpoint_get_by_address(ep_addr);
 
-            // Copy the given data into the corresponding ep buffer
-            const epbuffer = buffers.B.get(ep.data_buffer_index);
-            _ = rom.memcpy(epbuffer[0..buffer.len], buffer);
+            _ = rom.memcpy(ep.data_buffer[0..buffer.len], buffer);
 
             // Configure the IN:
             const np: u1 = if (ep.next_pid_1) 1 else 0;
@@ -309,7 +259,7 @@ pub fn F(comptime config: UsbConfig) type {
             // accurate when the AVAILABLE bit is set.
 
             // Write the buffer information to the buffer control register
-            modify_buffer_control(ep.buffer_control_index, .{
+            ep.buffer_control.?.modify(.{
                 .PID_0 = np, // DATA0/1, depending
                 .FULL_0 = 1, // We have put data in
                 .LENGTH_0 = @as(u10, @intCast(buffer.len)), // There are this many bytes
@@ -324,7 +274,7 @@ pub fn F(comptime config: UsbConfig) type {
             );
 
             // Set available bit
-            modify_buffer_control(ep.buffer_control_index, .{
+            ep.buffer_control.?.modify(.{
                 .AVAILABLE_0 = 1, // The data is for the computer to use now
             });
 
@@ -349,7 +299,7 @@ pub fn F(comptime config: UsbConfig) type {
             // Check which DATA0/1 PID this endpoint is expecting next.
             const np: u1 = if (ep.next_pid_1) 1 else 0;
             // Configure the OUT:
-            modify_buffer_control(ep.buffer_control_index, .{
+            ep.buffer_control.?.modify(.{
                 .PID_0 = np, // DATA0/1 depending
                 .FULL_0 = 0, // Buffer is NOT full, we want the computer to fill it
                 .AVAILABLE_0 = 1, // It is, however, available to be filled
@@ -424,21 +374,25 @@ pub fn F(comptime config: UsbConfig) type {
             ep.next_pid_1 = true;
         }
 
-        pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
-            return .{
-                .bufbits = peripherals.USB.BUFF_STATUS.raw,
-                .device_config = dc,
-                .next = next,
-            };
-        }
-
         fn hardware_endpoint_get_by_address(ep_addr: u8) *HardwareEndpoint {
             const num = Endpoint.num_from_address(ep_addr);
             const dir = Endpoint.dir_from_address(ep_addr);
             return &endpoints[num][dir.as_number()];
         }
 
-        pub fn endpoint_init(ep_addr: u8, max_packet_size: u16, transfer_type: types.TransferType) void {
+        pub fn endpoint_open(ep_addr: u8, max_packet_size: u11, transfer_type: types.TransferType) void {
+            const ep_num = Endpoint.num_from_address(ep_addr);
+            const ep = hardware_endpoint_get_by_address(ep_addr);
+
+            endpoint_init(ep_addr, max_packet_size, transfer_type);
+
+            if (ep_num != 0) {
+                endpoint_alloc(ep) catch {};
+                endpoint_enable(ep);
+            }
+        }
+
+        fn endpoint_init(ep_addr: u8, max_packet_size: u11, transfer_type: types.TransferType) void {
             const ep_num = Endpoint.num_from_address(ep_addr);
             const ep_dir = Endpoint.dir_from_address(ep_addr);
 
@@ -451,38 +405,45 @@ pub fn F(comptime config: UsbConfig) type {
             ep.next_pid_1 = false;
             ep.awaiting_rx = false;
 
-            ep.buffer_control_index = 2 * ep_num + ep_dir.as_number_reversed();
+            ep.buffer_control = rp2xxx_endpoints.get_buf_ctrl(ep_num, ep_dir);
+            ep.endpoint_control = rp2xxx_endpoints.get_ep_ctrl(ep_num, ep_dir);
 
             if (ep_num == 0) {
-                ep.data_buffer_index = 0;
-                ep.endpoint_control_index = 0;
-            } else {
-                // TODO - some other way to deal with it
-                ep.data_buffer_index = 2 * ep_num + ep_dir.as_number();
-                ep.endpoint_control_index = 2 * ep_num - ep_dir.as_number();
-                endpoint_alloc(ep, transfer_type);
+                // ep0 has fixed data buffer
+                ep.data_buffer = rp2xxx_buffers.ep0_buffer0;
             }
         }
 
-        fn endpoint_alloc(ep: *HardwareEndpoint, transfer_type: TransferType) void {
-            const buf_base = @intFromPtr(buffers.B.get(ep.data_buffer_index));
-            const dpram_base = @intFromPtr(peripherals.USB_DPRAM);
-            // The offset _should_ fit in a u16, but if we've gotten something
-            // wrong in the past few lines, a common symptom will be integer
-            // overflow producing a Very Large Number,
-            const dpram_offset = @as(u16, @intCast(buf_base - dpram_base));
+        fn endpoint_alloc(ep: *HardwareEndpoint) !void {
+            // round up size to multiple of 64
+            var size = try std.math.divCeil(u11, ep.max_packet_size, 64) * 64;
+            // double buffered Bulk endpoint
+            if (ep.transfer_type == .Bulk) {
+                size *= 2;
+            }
 
-            // Configure the endpoint!
-            modify_endpoint_control(ep.endpoint_control_index, .{
+            std.debug.assert(data_buffer.len >= size);
+
+            ep.data_buffer = data_buffer[0..size];
+            data_buffer = data_buffer[size..];
+        }
+
+        fn endpoint_enable(ep: *HardwareEndpoint) void {
+            ep.endpoint_control.?.modify(.{
                 .ENABLE = 1,
-                // Please set the corresponding bit in buff_status when a
-                // buffer is done, thx.
                 .INTERRUPT_PER_BUFF = 1,
-                // Select bulk vs control (or interrupt as soon as implemented).
-                .ENDPOINT_TYPE = .{ .raw = transfer_type.as_number() },
-                // And, designate our buffer by its offset.
-                .BUFFER_ADDRESS = dpram_offset,
+                .ENDPOINT_TYPE = .{ .raw = ep.transfer_type.as_number() },
+                .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
             });
+        }
+
+        /// Iterator over endpoint buffers events
+        pub fn get_EPBIter(dc: *const usb.DeviceConfiguration) usb.EPBIter {
+            return .{
+                .bufbits = peripherals.USB.BUFF_STATUS.raw,
+                .device_config = dc,
+                .next = next,
+            };
         }
 
         pub fn next(self: *usb.EPBIter) ?usb.EPB {
@@ -521,12 +482,7 @@ pub fn F(comptime config: UsbConfig) type {
             // method here, but in practice, the number of endpoints is
             // small so a linear scan doesn't kill us.
 
-            const endpoint = hardware_endpoint_get_by_address(ep_addr);
-
-            // Buffer event for unknown EP?!
-            // TODO: if (endpoint == null) return EPBError.UnknownEndpoint;
-            // Read the buffer control register to check status.
-            const bc = read_raw_buffer_control(endpoint.buffer_control_index);
+            const ep = hardware_endpoint_get_by_address(ep_addr);
 
             // We should only get here if we've been notified that
             // the buffer is ours again. This is indicated by the hw
@@ -538,146 +494,15 @@ pub fn F(comptime config: UsbConfig) type {
 
             // Cool. Checks out.
 
-            // Get a pointer to the buffer in USB SRAM. This is the
-            // buffer _contents_. See the safety comments below.
-            const epbuffer = buffers.B.get(endpoint.data_buffer_index);
-
             // Get the actual length of the data, which may be less
             // than the buffer size.
-            const len = @as(usize, @intCast(bc & 0x3ff));
+            const len = ep.buffer_control.?.read().LENGTH_0;
 
             // Copy the data from SRAM
             return usb.EPB{
                 .endpoint_address = ep_addr,
-                .buffer = epbuffer[0..len],
+                .buffer = ep.data_buffer[0..len],
             };
         }
     };
-}
-
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-// Utility functions
-// +++++++++++++++++++++++++++++++++++++++++++++++++
-
-pub fn modify_buffer_control(
-    i: usize,
-    fields: anytype,
-) void {
-    // haven't found a better way to handle this
-    switch (i) {
-        0 => peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.modify(fields),
-        1 => peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.modify(fields),
-        2 => peripherals.USB_DPRAM.EP1_IN_BUFFER_CONTROL.modify(fields),
-        3 => peripherals.USB_DPRAM.EP1_OUT_BUFFER_CONTROL.modify(fields),
-        4 => peripherals.USB_DPRAM.EP2_IN_BUFFER_CONTROL.modify(fields),
-        5 => peripherals.USB_DPRAM.EP2_OUT_BUFFER_CONTROL.modify(fields),
-        6 => peripherals.USB_DPRAM.EP3_IN_BUFFER_CONTROL.modify(fields),
-        7 => peripherals.USB_DPRAM.EP3_OUT_BUFFER_CONTROL.modify(fields),
-        8 => peripherals.USB_DPRAM.EP4_IN_BUFFER_CONTROL.modify(fields),
-        9 => peripherals.USB_DPRAM.EP4_OUT_BUFFER_CONTROL.modify(fields),
-        10 => peripherals.USB_DPRAM.EP5_IN_BUFFER_CONTROL.modify(fields),
-        11 => peripherals.USB_DPRAM.EP5_OUT_BUFFER_CONTROL.modify(fields),
-        12 => peripherals.USB_DPRAM.EP6_IN_BUFFER_CONTROL.modify(fields),
-        13 => peripherals.USB_DPRAM.EP6_OUT_BUFFER_CONTROL.modify(fields),
-        14 => peripherals.USB_DPRAM.EP7_IN_BUFFER_CONTROL.modify(fields),
-        15 => peripherals.USB_DPRAM.EP7_OUT_BUFFER_CONTROL.modify(fields),
-        16 => peripherals.USB_DPRAM.EP8_IN_BUFFER_CONTROL.modify(fields),
-        17 => peripherals.USB_DPRAM.EP8_OUT_BUFFER_CONTROL.modify(fields),
-        18 => peripherals.USB_DPRAM.EP9_IN_BUFFER_CONTROL.modify(fields),
-        19 => peripherals.USB_DPRAM.EP9_OUT_BUFFER_CONTROL.modify(fields),
-        20 => peripherals.USB_DPRAM.EP10_IN_BUFFER_CONTROL.modify(fields),
-        21 => peripherals.USB_DPRAM.EP10_OUT_BUFFER_CONTROL.modify(fields),
-        22 => peripherals.USB_DPRAM.EP11_IN_BUFFER_CONTROL.modify(fields),
-        23 => peripherals.USB_DPRAM.EP11_OUT_BUFFER_CONTROL.modify(fields),
-        24 => peripherals.USB_DPRAM.EP12_IN_BUFFER_CONTROL.modify(fields),
-        25 => peripherals.USB_DPRAM.EP12_OUT_BUFFER_CONTROL.modify(fields),
-        26 => peripherals.USB_DPRAM.EP13_IN_BUFFER_CONTROL.modify(fields),
-        27 => peripherals.USB_DPRAM.EP13_OUT_BUFFER_CONTROL.modify(fields),
-        28 => peripherals.USB_DPRAM.EP14_IN_BUFFER_CONTROL.modify(fields),
-        29 => peripherals.USB_DPRAM.EP14_OUT_BUFFER_CONTROL.modify(fields),
-        30 => peripherals.USB_DPRAM.EP15_IN_BUFFER_CONTROL.modify(fields),
-        31 => peripherals.USB_DPRAM.EP15_OUT_BUFFER_CONTROL.modify(fields),
-        else => {}, // TODO: We'll just ignore it for now
-    }
-}
-
-pub fn read_raw_buffer_control(
-    i: usize,
-) u32 {
-    // haven't found a better way to handle this
-    return switch (i) {
-        0 => peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.raw,
-        1 => peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.raw,
-        2 => peripherals.USB_DPRAM.EP1_IN_BUFFER_CONTROL.raw,
-        3 => peripherals.USB_DPRAM.EP1_OUT_BUFFER_CONTROL.raw,
-        4 => peripherals.USB_DPRAM.EP2_IN_BUFFER_CONTROL.raw,
-        5 => peripherals.USB_DPRAM.EP2_OUT_BUFFER_CONTROL.raw,
-        6 => peripherals.USB_DPRAM.EP3_IN_BUFFER_CONTROL.raw,
-        7 => peripherals.USB_DPRAM.EP3_OUT_BUFFER_CONTROL.raw,
-        8 => peripherals.USB_DPRAM.EP4_IN_BUFFER_CONTROL.raw,
-        9 => peripherals.USB_DPRAM.EP4_OUT_BUFFER_CONTROL.raw,
-        10 => peripherals.USB_DPRAM.EP5_IN_BUFFER_CONTROL.raw,
-        11 => peripherals.USB_DPRAM.EP5_OUT_BUFFER_CONTROL.raw,
-        12 => peripherals.USB_DPRAM.EP6_IN_BUFFER_CONTROL.raw,
-        13 => peripherals.USB_DPRAM.EP6_OUT_BUFFER_CONTROL.raw,
-        14 => peripherals.USB_DPRAM.EP7_IN_BUFFER_CONTROL.raw,
-        15 => peripherals.USB_DPRAM.EP7_OUT_BUFFER_CONTROL.raw,
-        16 => peripherals.USB_DPRAM.EP8_IN_BUFFER_CONTROL.raw,
-        17 => peripherals.USB_DPRAM.EP8_OUT_BUFFER_CONTROL.raw,
-        18 => peripherals.USB_DPRAM.EP9_IN_BUFFER_CONTROL.raw,
-        19 => peripherals.USB_DPRAM.EP9_OUT_BUFFER_CONTROL.raw,
-        20 => peripherals.USB_DPRAM.EP10_IN_BUFFER_CONTROL.raw,
-        21 => peripherals.USB_DPRAM.EP10_OUT_BUFFER_CONTROL.raw,
-        22 => peripherals.USB_DPRAM.EP11_IN_BUFFER_CONTROL.raw,
-        23 => peripherals.USB_DPRAM.EP11_OUT_BUFFER_CONTROL.raw,
-        24 => peripherals.USB_DPRAM.EP12_IN_BUFFER_CONTROL.raw,
-        25 => peripherals.USB_DPRAM.EP12_OUT_BUFFER_CONTROL.raw,
-        26 => peripherals.USB_DPRAM.EP13_IN_BUFFER_CONTROL.raw,
-        27 => peripherals.USB_DPRAM.EP13_OUT_BUFFER_CONTROL.raw,
-        28 => peripherals.USB_DPRAM.EP14_IN_BUFFER_CONTROL.raw,
-        29 => peripherals.USB_DPRAM.EP14_OUT_BUFFER_CONTROL.raw,
-        30 => peripherals.USB_DPRAM.EP15_IN_BUFFER_CONTROL.raw,
-        31 => peripherals.USB_DPRAM.EP15_OUT_BUFFER_CONTROL.raw,
-        else => 0, // TODO: We'll just return 0 for now
-    };
-}
-
-pub fn modify_endpoint_control(
-    epci: usize,
-    fields: anytype,
-) void {
-    // haven't found a better way to handle this
-    switch (epci) {
-        1 => peripherals.USB_DPRAM.EP1_IN_CONTROL.modify(fields),
-        2 => peripherals.USB_DPRAM.EP1_OUT_CONTROL.modify(fields),
-        3 => peripherals.USB_DPRAM.EP2_IN_CONTROL.modify(fields),
-        4 => peripherals.USB_DPRAM.EP2_OUT_CONTROL.modify(fields),
-        5 => peripherals.USB_DPRAM.EP3_IN_CONTROL.modify(fields),
-        6 => peripherals.USB_DPRAM.EP3_OUT_CONTROL.modify(fields),
-        7 => peripherals.USB_DPRAM.EP4_IN_CONTROL.modify(fields),
-        8 => peripherals.USB_DPRAM.EP4_OUT_CONTROL.modify(fields),
-        9 => peripherals.USB_DPRAM.EP5_IN_CONTROL.modify(fields),
-        10 => peripherals.USB_DPRAM.EP5_OUT_CONTROL.modify(fields),
-        11 => peripherals.USB_DPRAM.EP6_IN_CONTROL.modify(fields),
-        12 => peripherals.USB_DPRAM.EP6_OUT_CONTROL.modify(fields),
-        13 => peripherals.USB_DPRAM.EP7_IN_CONTROL.modify(fields),
-        14 => peripherals.USB_DPRAM.EP7_OUT_CONTROL.modify(fields),
-        15 => peripherals.USB_DPRAM.EP8_IN_CONTROL.modify(fields),
-        16 => peripherals.USB_DPRAM.EP8_OUT_CONTROL.modify(fields),
-        17 => peripherals.USB_DPRAM.EP9_IN_CONTROL.modify(fields),
-        18 => peripherals.USB_DPRAM.EP9_OUT_CONTROL.modify(fields),
-        19 => peripherals.USB_DPRAM.EP10_IN_CONTROL.modify(fields),
-        20 => peripherals.USB_DPRAM.EP10_OUT_CONTROL.modify(fields),
-        21 => peripherals.USB_DPRAM.EP11_IN_CONTROL.modify(fields),
-        22 => peripherals.USB_DPRAM.EP11_OUT_CONTROL.modify(fields),
-        23 => peripherals.USB_DPRAM.EP12_IN_CONTROL.modify(fields),
-        24 => peripherals.USB_DPRAM.EP12_OUT_CONTROL.modify(fields),
-        25 => peripherals.USB_DPRAM.EP13_IN_CONTROL.modify(fields),
-        26 => peripherals.USB_DPRAM.EP13_OUT_CONTROL.modify(fields),
-        27 => peripherals.USB_DPRAM.EP14_IN_CONTROL.modify(fields),
-        28 => peripherals.USB_DPRAM.EP14_OUT_CONTROL.modify(fields),
-        29 => peripherals.USB_DPRAM.EP15_IN_CONTROL.modify(fields),
-        30 => peripherals.USB_DPRAM.EP15_OUT_CONTROL.modify(fields),
-        else => {}, // TODO: We'll just ignore it for now
-    }
 }
