@@ -265,6 +265,21 @@ fn write_vector_table(
     try out_writer.writeAll(buffer.items);
 }
 
+fn get_device_peripheral_description(
+    db: *Database,
+    arena: Allocator,
+    instance: *const DevicePeripheral,
+) !?[]const u8 {
+    return if (instance.description) |description|
+        description
+    else if (try db.get_peripheral_by_struct_id(arena, instance.struct_id)) |peripheral|
+        peripheral.description
+    else if (try db.get_struct_decl_by_struct_id(arena, instance.struct_id)) |struct_decl|
+        struct_decl.description
+    else
+        null;
+}
+
 fn write_device_peripheral(
     db: *Database,
     arena: Allocator,
@@ -278,8 +293,8 @@ fn write_device_peripheral(
     const writer = buffer.writer();
     const type_ref = try types_reference(db, arena, .{ .@"struct" = instance.struct_id });
 
-    if (instance.description) |desc|
-        try write_comment(arena, desc, writer);
+    if (try get_device_peripheral_description(db, arena, instance)) |description|
+        try write_comment(arena, description, writer);
 
     // TODO: get description
     //else if (s.description) |desc|

@@ -36,6 +36,7 @@ pub fn build(b: *Build) !void {
         .root_source_file = b.path("src/module.zig"),
     });
     exported_module.linkLibrary(libxml2_dep.artifact("xml2"));
+    exported_module.addImport("sqlite", sqlite);
 
     const run_cmd = b.addRunArtifact(regz);
     run_cmd.step.dependOn(b.getInstallStep());

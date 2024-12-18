@@ -52,14 +52,17 @@ pub fn build(b: *std.Build) !void {
 
     const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
 
-    const regz_dep = b.dependency("microzig/tools/regz", .{});
+    const generate_optimize = .ReleaseSafe;
+    const regz_dep = b.dependency("microzig/tools/regz", .{
+        .optimize = generate_optimize,
+    });
     const regz = regz_dep.module("regz");
 
     const generate = b.addExecutable(.{
         .name = "generate",
         .root_source_file = b.path("src/generate.zig"),
         .target = b.host,
-        .optimize = .Debug,
+        .optimize = generate_optimize,
     });
     generate.root_module.addImport("regz", regz);
 

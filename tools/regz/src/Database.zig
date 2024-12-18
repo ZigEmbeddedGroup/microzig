@@ -9,7 +9,7 @@ const assert = std.debug.assert;
 
 const sqlite = @import("sqlite");
 const xml = @import("xml.zig");
-//const svd = @import("svd.zig");
+const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
 const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
@@ -446,6 +446,12 @@ const schema: []const []const u8 = &.{
     gen_sql_table("device_properties", DeviceProperty),
     gen_sql_table("interrupts", Interrupt),
     gen_sql_table("device_peripherals", DevicePeripheral),
+    // indexes
+    "CREATE INDEX idx_struct_fields_struct_id_offset_bits ON struct_fields(struct_id, offset_bits);",
+    "CREATE INDEX idx_interrupts_device_id_idx ON interrupts(device_id, idx)",
+    "CREATE INDEX idx_device_peripherals_device_id_offset_bytes ON device_peripherals(device_id, offset_bytes)",
+    "CREATE INDEX idx_struct_registers_struct_id ON struct_registers(struct_id)",
+    "CREATE INDEX idx_registers_id_offset_bytes ON registers(id, offset_bytes)",
 };
 
 pub const Format = enum {
@@ -605,6 +611,11 @@ fn init(db: *Database, allocator: Allocator) !void {
     };
     errdefer db.deinit();
 
+    // Good starting point to improve SQLite's poor defaults
+    _ = try db.sql.pragma(void, .{}, "journal_mode", "WAL");
+    _ = try db.sql.pragma(void, .{}, "synchronous", "NORMAL");
+    _ = try db.sql.pragma(void, .{}, "foreign_keys", "true");
+
     // Create tables and indexes
     inline for (schema) |query| {
         log.debug("query: {s}", .{query});
@@ -636,11 +647,10 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     var db = try Database.create(allocator);
     errdefer db.destroy();
 
+    defer db.exec("VACUUM", .{}) catch {};
+
     switch (format) {
-        .svd => {
-            return error.TODO;
-            //svd.load_into_db(db, doc),
-        },
+        .svd => try svd.load_into_db(db, doc),
         .atdf => try atdf.load_into_db(db, doc),
     }
 
@@ -735,6 +745,21 @@ pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_i
     });
 
     return try db.get_one_alloc(Peripheral, allocator, query, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
+    log.debug("get_struct_decl_by_struct_id: struct_id={}", .{struct_id});
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_decls
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(StructDecl, .{}),
+    });
+
+    return try db.get_one_alloc(StructDecl, allocator, query, .{
         .struct_id = struct_id,
     });
 }
@@ -1013,6 +1038,27 @@ pub fn get_register_fields(
     });
     return db.all(StructField, query, allocator, .{
         .register_id = register_id,
+    });
+}
+
+pub fn get_register_field_by_name(
+    db: *Database,
+    allocator: Allocator,
+    register_id: RegisterID,
+    name: []const u8,
+) !StructField {
+    const query =
+        std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_fields AS sf
+        \\JOIN registers AS r ON sf.struct_id = r.struct_id
+        \\WHERE r.id = ? AND sf.name = ?
+    , .{
+        comptime gen_field_list(StructField, .{ .prefix = "sf" }),
+    });
+    return db.one_alloc(StructField, allocator, query, .{
+        .register_id = register_id,
+        .name = name,
     });
 }
 
@@ -1673,5 +1719,5 @@ test "all" {
     @setEvalBranchQuota(2000);
     _ = atdf;
     _ = gen;
-    //std.testing.refAllDeclsRecursive(svd);
+    _ = svd;
 }
