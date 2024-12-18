@@ -12,8 +12,8 @@ jobs:
     strategy:
       matrix:
         exmaple_dir: [
-          stmicro/stm32
-          raspberrypi/rp2xxx
+          stmicro/stm32,
+          raspberrypi/rp2xxx,
         ]
     steps:
       - name: Checkout
