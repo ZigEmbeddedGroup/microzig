@@ -161,8 +161,10 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
     // TODO: derive entities here
 
-    if (arch.is_arm())
-        try arm.load_system_interrupts(db, device_id);
+    if (arch.is_arm()) {
+        const device = try db.get_device_by_name(arena.allocator(), name);
+        try arm.load_system_interrupts(db, &device);
+    }
 }
 
 fn arch_from_str(str: []const u8) Database.Arch {
