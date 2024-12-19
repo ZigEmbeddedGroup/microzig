@@ -2,31 +2,41 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const cpu = @import("../compatibility.zig").cpu;
+const CPU = @import("../cpu.zig").CPU;
 
 pub const PIO = microzig.chip.types.peripherals.PIO0;
 pub const PIO0 = microzig.chip.peripherals.PIO0;
 pub const PIO1 = microzig.chip.peripherals.PIO1;
 
 pub const assembler = @import("assembler.zig");
-const compatibility = @import("../compatibility.zig");
 const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
 const hw = @import("../hw.zig");
 
-// TODO: This is CPU specific
-pub const Instruction = encoder.Instruction(assembler.cpuToFormat(compatibility.cpu));
+const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
 
 // global state for keeping track of used things
-var used_instruction_space = switch (cpu) {
-    .RP2040 => [_]u32{ 0, 0 },
-    .RP2350 => [_]u32{ 0, 0, 0 },
-};
-var claimed_state_machines = switch (cpu) {
-    .RP2040 => [_]u4{ 0, 0 },
-    .RP2350 => [_]u4{ 0, 0, 0 },
-};
+fn UsedInstructionSpace(cpu: CPU) type {
+    switch (cpu) {
+        .RP2040 => return struct {
+            pub var val = [_]u32{ 0, 0 };
+        },
+        .RP2350 => return struct {
+            pub var val = [_]u32{ 0, 0, 0 };
+        },
+    }
+}
+fn ClaimedStateMachines(cpu: CPU) type {
+    switch (cpu) {
+        .RP2040 => return struct {
+            pub var val = [_]u4{ 0, 0 };
+        },
+        .RP2350 => return struct {
+            pub var val = [_]u4{ 0, 0, 0 };
+        },
+    }
+}
 
 pub const Fifo = enum {
     tx,
@@ -111,7 +121,7 @@ pub const PinMappingOptions = struct {
     in_base: u5 = 0,
 };
 
-pub fn PioImpl(EnumType: type) type {
+pub fn PioImpl(EnumType: type, cpu: CPU) type {
     return struct {
         pub fn get_instruction_memory(self: EnumType) *volatile [32]u32 {
             const regs = self.get_regs();
@@ -123,7 +133,7 @@ pub fn PioImpl(EnumType: type) type {
                 if (origin != offset)
                     return false;
 
-            const used_mask = used_instruction_space[@intFromEnum(self)];
+            const used_mask = UsedInstructionSpace(cpu).val[@intFromEnum(self)];
             const program_mask = program.get_mask();
 
             // We can add the program if the masks don't overlap, if there is
@@ -153,7 +163,7 @@ pub fn PioImpl(EnumType: type) type {
                 instruction_memory[i] = insn;
 
             const program_mask = program.get_mask();
-            used_instruction_space[@intFromEnum(self)] |= program_mask << offset;
+            UsedInstructionSpace(cpu).val[@intFromEnum(self)] |= program_mask << offset;
         }
 
         /// Public functions will need to lock independently, so only exposing this function for now
@@ -170,11 +180,11 @@ pub fn PioImpl(EnumType: type) type {
             // TODO: const lock = hw.Lock.claim()
             // defer lock.unlock();
 
-            const claimed_mask = claimed_state_machines[@intFromEnum(self)];
+            const claimed_mask = ClaimedStateMachines(cpu).val[@intFromEnum(self)];
             return for (0..4) |i| {
                 const sm_mask = (@as(u4, 1) << @as(u2, @intCast(i)));
                 if (0 == (claimed_mask & sm_mask)) {
-                    claimed_state_machines[@intFromEnum(self)] |= sm_mask;
+                    ClaimedStateMachines(cpu).val[@intFromEnum(self)] |= sm_mask;
                     break @as(StateMachine, @enumFromInt(i));
                 }
             } else error.NoSpace;
@@ -471,7 +481,7 @@ pub fn PioImpl(EnumType: type) type {
             self: EnumType,
             sm: StateMachine,
             initial_pc: u5,
-            options: StateMachineInitOptions,
+            options: StateMachineInitOptions(cpu),
         ) void {
             // Halt the machine, set some sensible defaults
             self.sm_set_enabled(sm, false);
@@ -486,7 +496,7 @@ pub fn PioImpl(EnumType: type) type {
             // Finally, clear some internal SM state
             self.sm_restart(sm);
             self.sm_clkdiv_restart(sm);
-            self.sm_exec(sm, Instruction{
+            self.sm_exec(sm, Instruction(cpu){
                 .tag = .jmp,
 
                 .delay_side_set = 0,
@@ -499,7 +509,7 @@ pub fn PioImpl(EnumType: type) type {
             });
         }
 
-        pub fn sm_exec(self: EnumType, sm: StateMachine, instruction: Instruction) void {
+        pub fn sm_exec(self: EnumType, sm: StateMachine, instruction: Instruction(cpu)) void {
             const sm_regs = self.get_sm_regs(sm);
             sm_regs.instr.raw = @as(u16, @bitCast(instruction));
         }
@@ -508,7 +518,7 @@ pub fn PioImpl(EnumType: type) type {
             self: EnumType,
             sm: StateMachine,
             program: Program,
-            options: LoadAndStartProgramOptions,
+            options: LoadAndStartProgramOptions(cpu),
         ) !void {
             const expected_side_set_pins = if (program.side_set) |side_set|
                 if (side_set.optional)
@@ -554,57 +564,63 @@ pub fn PioImpl(EnumType: type) type {
     };
 }
 
-pub const ShiftOptions = switch (cpu) {
-    .RP2040 => struct {
-        autopush: bool = false,
-        autopull: bool = false,
-        in_shiftdir: Direction = .right,
-        out_shiftdir: Direction = .right,
-        /// 0 means full 32-bits
-        push_threshold: u5 = 0,
-        /// 0 means full 32-bits
-        pull_threshold: u5 = 0,
-        join_tx: bool = false,
-        join_rx: bool = false,
+pub fn ShiftOptions(cpu: CPU) type {
+    return switch (cpu) {
+        .RP2040 => struct {
+            autopush: bool = false,
+            autopull: bool = false,
+            in_shiftdir: Direction = .right,
+            out_shiftdir: Direction = .right,
+            /// 0 means full 32-bits
+            push_threshold: u5 = 0,
+            /// 0 means full 32-bits
+            pull_threshold: u5 = 0,
+            join_tx: bool = false,
+            join_rx: bool = false,
 
-        pub const Direction = enum(u1) {
-            left,
-            right,
-        };
-    },
-    .RP2350 => struct {
-        autopush: bool = false,
-        autopull: bool = false,
-        in_shiftdir: Direction = .right,
-        out_shiftdir: Direction = .right,
-        /// 0 means full 32-bits
-        push_threshold: u5 = 0,
-        /// 0 means full 32-bits
-        pull_threshold: u5 = 0,
-        join_tx: bool = false,
-        join_rx: bool = false,
+            pub const Direction = enum(u1) {
+                left,
+                right,
+            };
+        },
+        .RP2350 => struct {
+            autopush: bool = false,
+            autopull: bool = false,
+            in_shiftdir: Direction = .right,
+            out_shiftdir: Direction = .right,
+            /// 0 means full 32-bits
+            push_threshold: u5 = 0,
+            /// 0 means full 32-bits
+            pull_threshold: u5 = 0,
+            join_tx: bool = false,
+            join_rx: bool = false,
 
-        fjoin_rx_get: bool = false,
-        fjoin_rx_put: bool = false,
-        in_count: u5 = 0,
+            fjoin_rx_get: bool = false,
+            fjoin_rx_put: bool = false,
+            in_count: u5 = 0,
 
-        pub const Direction = enum(u1) {
-            left,
-            right,
-        };
-    },
-};
+            pub const Direction = enum(u1) {
+                left,
+                right,
+            };
+        },
+    };
+}
 
-pub const StateMachineInitOptions = struct {
-    clkdiv: ClkDivOptions = .{},
-    pin_mappings: PinMappingOptions = .{},
-    exec: ExecOptions = .{},
-    shift: ShiftOptions = .{},
-};
+pub fn StateMachineInitOptions(cpu: CPU) type {
+    return struct {
+        clkdiv: ClkDivOptions = .{},
+        pin_mappings: PinMappingOptions = .{},
+        exec: ExecOptions = .{},
+        shift: ShiftOptions(cpu) = .{},
+    };
+}
 
-pub const LoadAndStartProgramOptions = struct {
-    clkdiv: ClkDivOptions,
-    shift: ShiftOptions = .{},
-    pin_mappings: PinMappingOptions = .{},
-    exec: ExecOptions = .{},
-};
+pub fn LoadAndStartProgramOptions(cpu: CPU) type {
+    return struct {
+        clkdiv: ClkDivOptions,
+        shift: ShiftOptions(cpu) = .{},
+        pin_mappings: PinMappingOptions = .{},
+        exec: ExecOptions = .{},
+    };
+}

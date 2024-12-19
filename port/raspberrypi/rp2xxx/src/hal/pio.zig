@@ -12,7 +12,7 @@ const chip_specific = switch (cpu) {
     .RP2350 => @import("pio/rp2350.zig"),
 };
 pub const StateMachine = common.StateMachine;
-pub const Instruction = common.Instruction;
+pub const Instruction = common.Instruction(cpu);
 pub const PinMapping = common.PinMapping;
 pub const PinMappingOptions = common.PinMappingOptions;
 pub const StateMachineInitOptions = chip_specific.StateMachineInitOptions;
@@ -24,7 +24,9 @@ pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");
 
 pub const Program = assembler.Program;
-pub const assemble = assembler.assemble;
+pub inline fn assemble(comptime source: []const u8, comptime options: assembler.AssembleOptions) assembler.Output {
+    return assembler.assemble(cpu, source, options);
+}
 
 pub fn num(n: u2) Pio {
     switch (cpu) {

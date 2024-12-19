@@ -5,19 +5,20 @@ const assembler = @import("../assembler.zig");
 const Diagnostics = assembler.Diagnostics;
 
 const Expression = @import("Expression.zig");
+const CPU = @import("../../cpu.zig").CPU;
 
 pub const Options = struct {
     capacity: u32 = 256,
 };
 
 pub fn tokenize(
-    comptime format: assembler.Format,
+    comptime cpu: CPU,
     source: []const u8,
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !std.BoundedArray(Token(format), options.capacity) {
-    var tokens = std.BoundedArray(Token(format), options.capacity).init(0) catch unreachable;
-    var tokenizer = Tokenizer(format).init(source);
+) !std.BoundedArray(Token(cpu), options.capacity) {
+    var tokens = std.BoundedArray(Token(cpu), options.capacity).init(0) catch unreachable;
+    var tokenizer = Tokenizer(cpu).init(source);
     while (try tokenizer.next(diags)) |token|
         try tokens.append(token);
 
@@ -63,15 +64,13 @@ pub const Value = union(enum) {
 // '/' -> '*' -> block comment
 // '%' -> <whitespace> -> <identifier> -> <whitespace> -> '{' -> code block
 // '.' -> directive
-pub fn Tokenizer(format: assembler.Format) type {
+pub fn Tokenizer(cpu: CPU) type {
     return struct {
         const Self = @This();
-        format: assembler.Format,
         source: []const u8,
         index: u32,
 
-        // TODO: Avoid name collision with the format field
-        pub fn format2(
+        pub fn format(
             self: Self,
             comptime fmt: []const u8,
             options: std.fmt.FormatOptions,
@@ -101,7 +100,6 @@ pub fn Tokenizer(format: assembler.Format) type {
 
         fn init(source: []const u8) Self {
             return Self{
-                .format = format,
                 .source = source,
                 .index = 0,
             };
@@ -312,12 +310,12 @@ pub fn Tokenizer(format: assembler.Format) type {
             TooBig,
         };
 
-        fn get_program(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_program(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             const name = (try self.get_arg(diags)) orelse {
                 diags.* = Diagnostics.init(index, "missing program name", .{});
                 return error.MissingArg;
             };
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{ .program = name },
             };
@@ -340,7 +338,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             return std.mem.eql(u8, &buf, lhs);
         }
 
-        fn get_define(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_define(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             const maybe_public = try self.get_identifier();
             const is_public = eql_lower("public", maybe_public.str);
 
@@ -349,7 +347,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 maybe_public;
 
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{
                     .define = .{
@@ -408,9 +406,9 @@ pub fn Tokenizer(format: assembler.Format) type {
                 return error.NoValue;
         }
 
-        fn get_origin(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_origin(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             _ = diags;
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{
                     .origin = try self.get_value(),
@@ -418,7 +416,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_side_set(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_side_set(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             const args = try self.get_args(3, diags);
             const count = try Value.from_string(args[0] orelse {
                 diags.* = Diagnostics.init(index, "missing count", .{});
@@ -439,7 +437,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                     pindirs = true;
             }
 
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{
                     .side_set = .{
@@ -451,23 +449,23 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_wrap_target(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(format) {
-            return Token(format){
+        fn get_wrap_target(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(cpu) {
+            return Token(cpu){
                 .index = index,
                 .data = .{ .wrap_target = {} },
             };
         }
 
-        fn get_wrap(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(format) {
-            return Token(format){
+        fn get_wrap(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(cpu) {
+            return Token(cpu){
                 .index = index,
                 .data = .{ .wrap = {} },
             };
         }
 
-        fn get_lang_opt(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_lang_opt(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             _ = diags;
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{
                     .lang_opt = .{
@@ -479,15 +477,15 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_word(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(format) {
+        fn get_word(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
             _ = diags;
-            return Token(format){
+            return Token(cpu){
                 .index = index,
                 .data = .{ .word = try self.get_value() },
             };
         }
 
-        const directives = std.StaticStringMap(*const fn (*Self, u32, *?Diagnostics) TokenizeError!Token(format)).initComptime(.{
+        const directives = std.StaticStringMap(*const fn (*Self, u32, *?Diagnostics) TokenizeError!Token(cpu)).initComptime(.{
             .{ "program", get_program },
             .{ "define", get_define },
             .{ "origin", get_origin },
@@ -498,7 +496,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             .{ "word", get_word },
         });
 
-        fn get_directive(self: *Self, diags: *?Diagnostics) !Token(format) {
+        fn get_directive(self: *Self, diags: *?Diagnostics) !Token(cpu) {
             const index = self.index;
             const identifier = try self.read_until_whitespace_or_end();
             return if (directives.get(identifier)) |handler| ret: {
@@ -508,22 +506,22 @@ pub fn Tokenizer(format: assembler.Format) type {
             } else error.InvalidDirective;
         }
 
-        fn get_nop(_: *Self, _: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
-            return Token(format).Instruction.Payload{
+        fn get_nop(_: *Self, _: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+            return Token(cpu).Instruction.Payload{
                 .nop = {},
             };
         }
 
-        fn target_from_string(str: []const u8) TokenizeError!Token(format).Instruction.Jmp.Target {
+        fn target_from_string(str: []const u8) TokenizeError!Token(cpu).Instruction.Jmp.Target {
             const value = Value.from_string(str);
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .jmp = .{
                     .condition = .always,
                     .target = switch (value) {
-                        .string => |label| Token(format).Instruction.Jmp.Target{
+                        .string => |label| Token(cpu).Instruction.Jmp.Target{
                             .label = label,
                         },
-                        else => Token(format).Instruction.Jmp.Target{
+                        else => Token(cpu).Instruction.Jmp.Target{
                             .value = value,
                         },
                     },
@@ -531,8 +529,8 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_jmp(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
-            const Condition = Token(format).Instruction.Jmp.Condition;
+        fn get_jmp(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+            const Condition = Token(cpu).Instruction.Jmp.Condition;
             const conditions = std.StaticStringMap(Condition).initComptime(.{
                 .{ "!x", .x_is_zero },
                 .{ "x--", .x_dec },
@@ -551,12 +549,12 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 (try self.get_arg(diags)) orelse return error.MissingArg;
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .jmp = .{ .condition = cond, .target = target_str },
             };
         }
 
-        fn get_wait(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_wait(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const polarity = try std.fmt.parseInt(u1, (try self.get_arg(diags)) orelse return error.MissingArg, 0);
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const pin = try Value.from_string((try self.get_arg(diags)) orelse return error.MissingArg);
@@ -566,7 +564,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                 buf[i] = std.ascii.toLower(c);
 
             const source_lower = buf[0..source_str.len];
-            const source: Token(format).Instruction.Wait.Source =
+            const source: Token(cpu).Instruction.Wait.Source =
                 if (std.mem.eql(u8, "gpio", source_lower))
                 .gpio
             else if (std.mem.eql(u8, "pin", source_lower))
@@ -587,7 +585,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 false;
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .wait = .{
                     .polarity = polarity,
                     .source = source,
@@ -613,7 +611,7 @@ pub fn Tokenizer(format: assembler.Format) type {
         // I need to keep in mind with `get_args()` is that I must only consume the
         // args that are used. side set and delay may be on the same line
 
-        fn get_in(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_in(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const bit_count_str = (try self.get_arg(diags)) orelse return error.MissingArg;
 
@@ -624,15 +622,15 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 @as(u5, @intCast(bit_count_tmp));
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .in = .{
-                    .source = std.meta.stringToEnum(Token(format).Instruction.In.Source, source_lower.slice()) orelse return error.InvalidSource,
+                    .source = std.meta.stringToEnum(Token(cpu).Instruction.In.Source, source_lower.slice()) orelse return error.InvalidSource,
                     .bit_count = bit_count,
                 },
             };
         }
 
-        fn get_out(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_out(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const dest_src = (try self.get_arg(diags)) orelse return error.MissingArg;
             const bit_count_str = (try self.get_arg(diags)) orelse return error.MissingArg;
 
@@ -643,9 +641,9 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 @as(u5, @intCast(bit_count_tmp));
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .out = .{
-                    .destination = std.meta.stringToEnum(Token(format).Instruction.Out.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
+                    .destination = std.meta.stringToEnum(Token(cpu).Instruction.Out.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
                     .bit_count = bit_count,
                 },
             };
@@ -667,7 +665,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                 true;
         }
 
-        fn get_push(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_push(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             return if (try self.peek_arg(diags)) |first_result| ret: {
                 const lower = try lowercase_bounded(256, first_result.str);
                 const iffull = std.mem.eql(u8, "iffull", lower.slice());
@@ -680,13 +678,13 @@ pub fn Tokenizer(format: assembler.Format) type {
                         true;
                 } else try self.block_from_peek(first_result);
 
-                break :ret Token(format).Instruction.Payload{
+                break :ret Token(cpu).Instruction.Payload{
                     .push = .{
                         .iffull = iffull,
                         .block = block,
                     },
                 };
-            } else Token(format).Instruction.Payload{
+            } else Token(cpu).Instruction.Payload{
                 .push = .{
                     .iffull = false,
                     .block = true,
@@ -694,7 +692,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_pull(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_pull(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             return if (try self.peek_arg(diags)) |first_result| ret: {
                 const lower = try lowercase_bounded(256, first_result.str);
                 const ifempty = std.mem.eql(u8, "ifempty", lower.slice());
@@ -707,13 +705,13 @@ pub fn Tokenizer(format: assembler.Format) type {
                         true;
                 } else try self.block_from_peek(first_result);
 
-                break :ret Token(format).Instruction.Payload{
+                break :ret Token(cpu).Instruction.Payload{
                     .pull = .{
                         .ifempty = ifempty,
                         .block = block,
                     },
                 };
-            } else Token(format).Instruction.Payload{
+            } else Token(cpu).Instruction.Payload{
                 .pull = .{
                     .ifempty = false,
                     .block = true,
@@ -721,10 +719,10 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_mov(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_mov(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str);
-            const destination = std.meta.stringToEnum(Token(format).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
+            const destination = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
 
             const second = try self.get_arg(diags) orelse return error.MissingArg;
             const op_prefixed: ?[]const u8 = if (std.mem.startsWith(u8, second, "!"))
@@ -745,8 +743,8 @@ pub fn Tokenizer(format: assembler.Format) type {
                 second;
 
             const source_lower = try lowercase_bounded(256, source_str);
-            const source = std.meta.stringToEnum(Token(format).Instruction.Mov.Source, source_lower.slice()) orelse return error.InvalidSource;
-            const operation: Token(format).Instruction.Mov.Operation = if (op_prefixed) |op_str|
+            const source = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Source, source_lower.slice()) orelse return error.InvalidSource;
+            const operation: Token(cpu).Instruction.Mov.Operation = if (op_prefixed) |op_str|
                 if (std.mem.eql(u8, "!", op_str))
                     .invert
                 else if (std.mem.eql(u8, "~", op_str))
@@ -758,7 +756,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             else
                 .none;
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .mov = .{
                     .destination = destination,
                     .source = source,
@@ -767,7 +765,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn get_irq(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_irq(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const first = (try self.get_arg(diags)) orelse return error.MissingArg;
 
             var clear = false;
@@ -798,7 +796,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                     first,
             };
 
-            switch (comptime format) {
+            switch (comptime cpu) {
                 .RP2040 => {
                     const rel: bool = if (try self.peek_arg(diags)) |result| blk: {
                         const rel_lower = try lowercase_bounded(256, result.str);
@@ -809,7 +807,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                         break :blk is_rel;
                     } else false;
 
-                    return Token(format).Instruction.Payload{
+                    return Token(cpu).Instruction.Payload{
                         .irq = .{
                             .clear = clear,
                             .wait = wait,
@@ -847,7 +845,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                     } else 0b00;
                     // } else .direct;
 
-                    return Token(format).Instruction.Payload{
+                    return Token(cpu).Instruction.Payload{
                         .irq = .{
                             .clear = clear,
                             .wait = wait,
@@ -859,7 +857,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             }
         }
 
-        fn get_set(self: *Self, diags: *?Diagnostics) TokenizeError!Token(format).Instruction.Payload {
+        fn get_set(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
             const dest_str = (try self.get_arg(diags)) orelse {
                 diags.* = Diagnostics.init(0, "missing destination", .{});
                 return error.MissingArg;
@@ -868,15 +866,15 @@ pub fn Tokenizer(format: assembler.Format) type {
 
             const dest_lower = try lowercase_bounded(256, dest_str);
 
-            return Token(format).Instruction.Payload{
+            return Token(cpu).Instruction.Payload{
                 .set = .{
-                    .destination = std.meta.stringToEnum(Token(format).Instruction.Set.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
+                    .destination = std.meta.stringToEnum(Token(cpu).Instruction.Set.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
                     .value = value,
                 },
             };
         }
 
-        const instructions = std.StaticStringMap(*const fn (*Self, *?Diagnostics) TokenizeError!Token(format).Instruction.Payload).initComptime(.{
+        const instructions = std.StaticStringMap(*const fn (*Self, *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload).initComptime(.{
             .{ "nop", get_nop },
             .{ "jmp", get_jmp },
             .{ "wait", get_wait },
@@ -889,7 +887,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             .{ "set", get_set },
         });
 
-        fn get_instruction(self: *Self, name: Identifier, diags: *?Diagnostics) !Token(format) {
+        fn get_instruction(self: *Self, name: Identifier, diags: *?Diagnostics) !Token(cpu) {
             const name_lower = try lowercase_bounded(256, name.str);
             const payload = if (instructions.get(name_lower.slice())) |handler|
                 try handler(self, diags)
@@ -930,7 +928,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             }
 
             self.skip_line();
-            return Token(format){
+            return Token(cpu){
                 .index = name.index,
                 .data = .{
                     .instruction = .{
@@ -942,7 +940,7 @@ pub fn Tokenizer(format: assembler.Format) type {
             };
         }
 
-        fn next(self: *Self, diags: *?assembler.Diagnostics) !?Token(format) {
+        fn next(self: *Self, diags: *?assembler.Diagnostics) !?Token(cpu) {
             while (self.peek()) |p| {
                 switch (p) {
                     ' ', '\t', '\n', '\r', ',' => self.consume(1),
@@ -971,7 +969,7 @@ pub fn Tokenizer(format: assembler.Format) type {
 
                         // definitely a label
                         return if (eql_lower("public", first.str))
-                            Token(format){
+                            Token(cpu){
                                 .index = first.index,
                                 .data = .{
                                     .label = .{
@@ -984,7 +982,7 @@ pub fn Tokenizer(format: assembler.Format) type {
                                 },
                             }
                         else if (std.mem.endsWith(u8, first.str, ":"))
-                            Token(format){
+                            Token(cpu){
                                 .index = first.index,
                                 .data = .{
                                     .label = .{
@@ -1004,7 +1002,7 @@ pub fn Tokenizer(format: assembler.Format) type {
     };
 }
 
-pub fn Token(comptime format: assembler.Format) type {
+pub fn Token(comptime cpu: CPU) type {
     return struct {
         const Self = @This();
         index: u32,
@@ -1021,7 +1019,7 @@ pub fn Token(comptime format: assembler.Format) type {
             instruction: Instruction,
         },
 
-        pub const Tag = std.meta.Tag(std.meta.FieldType(Token(format), .data));
+        pub const Tag = std.meta.Tag(std.meta.FieldType(Token(cpu), .data));
 
         pub const Label = struct {
             name: []const u8,
@@ -1071,7 +1069,7 @@ pub fn Token(comptime format: assembler.Format) type {
                 num: Value,
                 rel: bool,
 
-                pub const Source = switch (format) {
+                pub const Source = switch (cpu) {
                     .RP2040 => enum(u2) {
                         gpio = 0b00,
                         pin = 0b01,
@@ -1132,7 +1130,7 @@ pub fn Token(comptime format: assembler.Format) type {
                 operation: Operation,
                 source: Source,
 
-                pub const Destination = switch (format) {
+                pub const Destination = switch (cpu) {
                     .RP2040 => enum(u3) {
                         pins = 0b000,
                         x = 0b001,
@@ -1171,7 +1169,7 @@ pub fn Token(comptime format: assembler.Format) type {
                 };
             };
 
-            pub const Irq = switch (format) {
+            pub const Irq = switch (cpu) {
                 .RP2040 => struct {
                     clear: bool,
                     wait: bool,
@@ -1235,15 +1233,15 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
-fn DirectiveTag(comptime format: assembler.Format) type {
-    return @typeInfo(Token(format).Directive).Union.tag_type.?;
+fn DirectiveTag(comptime cpu: CPU) type {
+    return @typeInfo(Token(cpu).Directive).Union.tag_type.?;
 }
-fn PayloadTag(comptime format: assembler.Format) type {
-    return @typeInfo(Token(format).Instruction.Payload).Union.tag_type.?;
+fn PayloadTag(comptime cpu: CPU) type {
+    return @typeInfo(Token(cpu).Instruction.Payload).Union.tag_type.?;
 }
 
-fn expect_program(comptime format: assembler.Format, expected: []const u8, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.program, @as(Token(format).Tag, actual.data));
+fn expect_program(comptime cpu: CPU, expected: []const u8, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.program, @as(Token(cpu).Tag, actual.data));
     try expectEqualStrings(expected, actual.data.program);
 }
 
@@ -1264,21 +1262,21 @@ fn expect_opt_value(expected: ?Value, actual: ?Value) !void {
         };
 }
 
-fn expect_define(comptime format: assembler.Format, expected: Token(format).Define, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.define, @as(Token(format).Tag, actual.data));
+fn expect_define(comptime cpu: CPU, expected: Token(cpu).Define, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.define, @as(Token(cpu).Tag, actual.data));
 
     const define = actual.data.define;
     try expectEqualStrings(expected.name, define.name);
     try expect_value(expected.value, define.value);
 }
 
-fn expect_origin(comptime format: assembler.Format, expected: Value, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.origin, @as(Token(format).Tag, actual.data));
+fn expect_origin(comptime cpu: CPU, expected: Value, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.origin, @as(Token(cpu).Tag, actual.data));
     try expect_value(expected, actual.data.origin);
 }
 
-fn expect_side_set(comptime format: assembler.Format, expected: Token(format).SideSet, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.side_set, @as(Token(format).Tag, actual.data));
+fn expect_side_set(comptime cpu: CPU, expected: Token(cpu).SideSet, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.side_set, @as(Token(cpu).Tag, actual.data));
 
     const side_set = actual.data.side_set;
     try expect_value(expected.count, side_set.count);
@@ -1286,16 +1284,16 @@ fn expect_side_set(comptime format: assembler.Format, expected: Token(format).Si
     try expectEqual(expected.pindir, side_set.pindir);
 }
 
-fn expect_wrap_target(comptime format: assembler.Format, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.wrap_target, @as(Token(format).Tag, actual.data));
+fn expect_wrap_target(comptime cpu: CPU, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.wrap_target, @as(Token(cpu).Tag, actual.data));
 }
 
-fn expect_wrap(comptime format: assembler.Format, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.wrap, @as(Token(format).Tag, actual.data));
+fn expect_wrap(comptime cpu: CPU, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.wrap, @as(Token(cpu).Tag, actual.data));
 }
 
-fn expect_lang_opt(comptime format: assembler.Format, expected: Token(format).LangOpt, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.lang_opt, @as(Token(format).Tag, actual.data));
+fn expect_lang_opt(comptime cpu: CPU, expected: Token(cpu).LangOpt, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.lang_opt, @as(Token(cpu).Tag, actual.data));
 
     const lang_opt = actual.data.lang_opt;
     try expectEqualStrings(expected.lang, lang_opt.lang);
@@ -1303,13 +1301,13 @@ fn expect_lang_opt(comptime format: assembler.Format, expected: Token(format).La
     try expectEqualStrings(expected.option, lang_opt.option);
 }
 
-fn expect_word(comptime format: assembler.Format, expected: Value, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.word, @as(Token(format).Tag, actual.data));
+fn expect_word(comptime cpu: CPU, expected: Value, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.word, @as(Token(cpu).Tag, actual.data));
     try expect_value(expected, actual.data.word);
 }
 
-fn expect_label(comptime format: assembler.Format, expected: Token(format).Label, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.label, @as(Token(format).Tag, actual.data));
+fn expect_label(comptime cpu: CPU, expected: Token(cpu).Label, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.label, @as(Token(cpu).Tag, actual.data));
 
     const label = actual.data.label;
     try expectEqual(expected.public, label.public);
@@ -1321,27 +1319,27 @@ const ExpectedNopInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_nop(comptime format: assembler.Format, expected: ExpectedNopInstr, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).nop, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_nop(comptime cpu: CPU, expected: ExpectedNopInstr, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).nop, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
     try expect_opt_value(expected.side_set, instr.side_set);
 }
 
-fn ExpectedSetInstr(comptime format: assembler.Format) type {
+fn ExpectedSetInstr(comptime cpu: CPU) type {
     return struct {
-        dest: Token(format).Instruction.Set.Destination,
+        dest: Token(cpu).Instruction.Set.Destination,
         value: Value,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_set(comptime format: assembler.Format, expected: ExpectedSetInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).set, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_set(comptime cpu: CPU, expected: ExpectedSetInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).set, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1352,18 +1350,18 @@ fn expect_instr_set(comptime format: assembler.Format, expected: ExpectedSetInst
     try expect_value(expected.value, set.value);
 }
 
-fn ExpectedJmpInstr(comptime format: assembler.Format) type {
+fn ExpectedJmpInstr(comptime cpu: CPU) type {
     return struct {
-        cond: Token(format).Instruction.Jmp.Condition = .always,
+        cond: Token(cpu).Instruction.Jmp.Condition = .always,
         target: []const u8,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_jmp(comptime format: assembler.Format, expected: ExpectedJmpInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).jmp, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_jmp(comptime cpu: CPU, expected: ExpectedJmpInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).jmp, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1374,10 +1372,10 @@ fn expect_instr_jmp(comptime format: assembler.Format, expected: ExpectedJmpInst
     try expectEqualStrings(expected.target, jmp.target);
 }
 
-fn ExpectedWaitInstr(comptime format: assembler.Format) type {
+fn ExpectedWaitInstr(comptime cpu: CPU) type {
     return struct {
         polarity: u1,
-        source: Token(format).Instruction.Wait.Source,
+        source: Token(cpu).Instruction.Wait.Source,
         num: Value,
         // only valid for irq source
         rel: bool = false,
@@ -1386,9 +1384,9 @@ fn ExpectedWaitInstr(comptime format: assembler.Format) type {
     };
 }
 
-fn expect_instr_wait(comptime format: assembler.Format, expected: ExpectedWaitInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).wait, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_wait(comptime cpu: CPU, expected: ExpectedWaitInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).wait, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1400,18 +1398,18 @@ fn expect_instr_wait(comptime format: assembler.Format, expected: ExpectedWaitIn
     try expect_value(expected.num, wait.num);
 }
 
-fn ExpectedInInstr(comptime format: assembler.Format) type {
+fn ExpectedInInstr(comptime cpu: CPU) type {
     return struct {
-        source: Token(format).Instruction.In.Source,
+        source: Token(cpu).Instruction.In.Source,
         bit_count: u5,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_in(comptime format: assembler.Format, expected: ExpectedInInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).in, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_in(comptime cpu: CPU, expected: ExpectedInInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).in, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1422,18 +1420,18 @@ fn expect_instr_in(comptime format: assembler.Format, expected: ExpectedInInstr(
     try expectEqual(expected.bit_count, in.bit_count);
 }
 
-fn ExpectedOutInstr(comptime format: assembler.Format) type {
+fn ExpectedOutInstr(comptime cpu: CPU) type {
     return struct {
-        destination: Token(format).Instruction.Out.Destination,
+        destination: Token(cpu).Instruction.Out.Destination,
         bit_count: u5,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_out(comptime format: assembler.Format, expected: ExpectedOutInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).out, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_out(comptime cpu: CPU, expected: ExpectedOutInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).out, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1451,9 +1449,9 @@ const ExpectedPushInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_push(comptime format: assembler.Format, expected: ExpectedPushInstr, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).push, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_push(comptime cpu: CPU, expected: ExpectedPushInstr, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).push, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1471,9 +1469,9 @@ const ExpectedPullInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_pull(comptime format: assembler.Format, expected: ExpectedPullInstr, actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).pull, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_pull(comptime cpu: CPU, expected: ExpectedPullInstr, actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).pull, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1484,19 +1482,19 @@ fn expect_instr_pull(comptime format: assembler.Format, expected: ExpectedPullIn
     try expectEqual(expected.ifempty, pull.ifempty);
 }
 
-fn ExpectedMovInstr(comptime format: assembler.Format) type {
+fn ExpectedMovInstr(comptime cpu: CPU) type {
     return struct {
-        source: Token(format).Instruction.Mov.Source,
-        destination: Token(format).Instruction.Mov.Destination,
-        operation: Token(format).Instruction.Mov.Operation = .none,
+        source: Token(cpu).Instruction.Mov.Source,
+        destination: Token(cpu).Instruction.Mov.Destination,
+        operation: Token(cpu).Instruction.Mov.Operation = .none,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_mov(comptime format: assembler.Format, expected: ExpectedMovInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).mov, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_mov(comptime cpu: CPU, expected: ExpectedMovInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).mov, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1508,8 +1506,8 @@ fn expect_instr_mov(comptime format: assembler.Format, expected: ExpectedMovInst
     try expectEqual(expected.destination, mov.destination);
 }
 
-fn ExpectedIrqInstr(comptime format: assembler.Format) type {
-    return switch (format) {
+fn ExpectedIrqInstr(comptime cpu: CPU) type {
+    return switch (cpu) {
         .RP2040 => struct {
             clear: bool,
             wait: bool,
@@ -1529,9 +1527,9 @@ fn ExpectedIrqInstr(comptime format: assembler.Format) type {
     };
 }
 
-fn expect_instr_irq(comptime format: assembler.Format, expected: ExpectedIrqInstr(format), actual: Token(format)) !void {
-    try expectEqual(Token(format).Tag.instruction, @as(Token(format).Tag, actual.data));
-    try expectEqual(PayloadTag(format).irq, @as(PayloadTag(format), actual.data.instruction.payload));
+fn expect_instr_irq(comptime cpu: CPU, expected: ExpectedIrqInstr(cpu), actual: Token(cpu)) !void {
+    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
+    try expectEqual(PayloadTag(cpu).irq, @as(PayloadTag(cpu), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1540,7 +1538,7 @@ fn expect_instr_irq(comptime format: assembler.Format, expected: ExpectedIrqInst
     const irq = instr.payload.irq;
     try expectEqual(expected.clear, irq.clear);
     try expectEqual(expected.wait, irq.wait);
-    switch (format) {
+    switch (cpu) {
         .RP2040 => {
             try expectEqual(expected.rel, irq.rel);
         },
@@ -1550,9 +1548,9 @@ fn expect_instr_irq(comptime format: assembler.Format, expected: ExpectedIrqInst
     }
 }
 
-fn bounded_tokenize(comptime format: assembler.Format, source: []const u8) !std.BoundedArray(Token(format), 256) {
+fn bounded_tokenize(comptime cpu: CPU, source: []const u8) !std.BoundedArray(Token(cpu), 256) {
     var diags: ?assembler.Diagnostics = null;
-    return tokenize(format, source, &diags, .{}) catch |err| if (diags) |d| blk: {
+    return tokenize(cpu, source, &diags, .{}) catch |err| if (diags) |d| blk: {
         std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
         break :blk err;
     } else err;
@@ -1590,7 +1588,7 @@ test "tokenize.block comment" {
 }
 
 test "tokenize.code block" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format,
             \\% c-sdk {
             \\   int foo;
@@ -1602,14 +1600,14 @@ test "tokenize.code block" {
 }
 
 test "tokenize.directive.program" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".program arst");
         try expect_program(format, "arst", tokens.get(0));
     }
 }
 
 test "tokenize.directive.define" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".define symbol_name 1");
         try expect_define(format, .{
             .name = "symbol_name",
@@ -1620,7 +1618,7 @@ test "tokenize.directive.define" {
 }
 
 test "tokenize.directive.define.public" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".define public symbol_name 0x1");
         try expect_define(format, .{
             .name = "symbol_name",
@@ -1631,7 +1629,7 @@ test "tokenize.directive.define.public" {
 }
 
 test "tokenize.directive.define.with expression" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format,
             \\.define symbol_name 0x1
             \\.define something (symbol_name * 2)
@@ -1652,98 +1650,98 @@ test "tokenize.directive.define.with expression" {
 }
 
 test "tokenize.directive.origin" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".origin 0x10");
         try expect_origin(format, .{ .integer = 0x10 }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".side_set 1");
         try expect_side_set(format, .{ .count = .{ .integer = 1 } }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.opt" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".side_set 1 opt");
         try expect_side_set(format, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.pindirs" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".side_set 1 pindirs");
         try expect_side_set(format, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap_target" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".wrap_target");
         try expect_wrap_target(format, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".wrap");
         try expect_wrap(format, tokens.get(0));
     }
 }
 
 test "tokenize.directive.lang_opt" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".lang_opt c flag foo");
         try expect_lang_opt(format, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.word" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, ".word 0xaaaa");
         try expect_word(format, .{ .integer = 0xaaaa }, tokens.get(0));
     }
 }
 
 test "tokenize.label" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, "my_label:");
         try expect_label(format, .{ .name = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.label.public" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, "public my_label:");
         try expect_label(format, .{ .name = "my_label", .public = true }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.nop" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, "nop");
         try expect_instr_nop(format, .{}, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.label" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, "jmp my_label");
         try expect_instr_jmp(format, .{ .target = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.value" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const tokens = try bounded_tokenize(format, "jmp 0x2");
         try expect_instr_jmp(format, .{ .target = "0x2" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.conditions" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         const Condition = Token(format).Instruction.Jmp.Condition;
         const cases = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
@@ -1764,7 +1762,7 @@ test "tokenize.instr.jmp.conditions" {
 }
 
 test "tokenize.instr.wait" {
-    inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
         inline for (.{ "gpio", "pin", "irq" }) |source| {
             const tokens = try bounded_tokenize(format, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
             try expect_instr_wait(format, .{
@@ -1957,7 +1955,7 @@ test "tokenize.instr.irq" {
     });
 
     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
-        inline for (comptime .{ assembler.Format.RP2040, assembler.Format.RP2350 }) |format| {
+        inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
             const tokens = try bounded_tokenize(format, comptime std.fmt.comptimePrint("irq {s} {}", .{
                 key,
                 num,

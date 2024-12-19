@@ -5,14 +5,11 @@ const assembler = @import("../assembler.zig");
 const Diagnostics = assembler.Diagnostics;
 
 const tokenizer = @import("tokenizer.zig");
-// TODO: How do I pass in the format to this module? There is no (comptime)
-// instance object
-// const format: assembler.Format = .RP2350;
-// const Token = tokenizer.Token(format);
 const Token = tokenizer.Token;
 const Value = tokenizer.Value;
 
 const Expression = @import("Expression.zig");
+const CPU = @import("../../cpu.zig").CPU;
 
 pub const Options = struct {
     max_defines: u32 = 16,
@@ -20,13 +17,12 @@ pub const Options = struct {
 };
 
 pub fn encode(
-    // We don't want the user to have to specify this
-    comptime format: assembler.Format,
-    comptime tokens: []const Token(format),
+    comptime cpu: CPU,
+    comptime tokens: []const Token(cpu),
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !Encoder(format, options).Output {
-    var encoder = Encoder(format, options).init(tokens);
+) !Encoder(cpu, options).Output {
+    var encoder = Encoder(cpu, options).init(tokens);
     return try encoder.encode_output(diags);
 }
 
@@ -47,10 +43,10 @@ pub const DefineWithIndex = struct {
     index: u32,
 };
 
-pub fn Encoder(comptime format: assembler.Format, comptime options: Options) type {
+pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
     return struct {
         output: Self.Output,
-        tokens: []const Token(format),
+        tokens: []const Token(cpu),
         index: u32,
 
         const Self = @This();
@@ -62,7 +58,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
 
         const BoundedDefines = std.BoundedArray(DefineWithIndex, options.max_defines);
         const BoundedPrograms = std.BoundedArray(BoundedProgram, options.max_programs);
-        const BoundedInstructions = std.BoundedArray(Instruction(format), 32);
+        const BoundedInstructions = std.BoundedArray(Instruction(cpu), 32);
         const BoundedLabels = std.BoundedArray(Label, 32);
         const Label = struct {
             name: []const u8,
@@ -111,7 +107,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
             }
         };
 
-        fn init(tokens: []const Token(format)) Self {
+        fn init(tokens: []const Token(cpu)) Self {
             return Self{
                 .output = Self.Output{
                     .global_defines = BoundedDefines.init(0) catch unreachable,
@@ -123,14 +119,14 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
             };
         }
 
-        fn peek_token(self: Self) ?Token(format) {
+        fn peek_token(self: Self) ?Token(cpu) {
             return if (self.index < self.tokens.len)
                 self.tokens[self.index]
             else
                 null;
         }
 
-        fn get_token(self: *Self) ?Token(format) {
+        fn get_token(self: *Self) ?Token(cpu) {
             return if (self.peek_token()) |token| blk: {
                 self.consume(1);
                 break :blk token;
@@ -309,12 +305,12 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
         fn encode_instruction(
             self: *Self,
             program: *BoundedProgram,
-            token: Token(format).Instruction,
+            token: Token(cpu).Instruction,
             token_index: u32,
             diags: *?Diagnostics,
         ) !void {
             // guaranteed to be an instruction variant
-            const payload: Instruction(format).Payload = switch (token.payload) {
+            const payload: Instruction(cpu).Payload = switch (token.payload) {
                 .nop => .{
                     .mov = .{
                         .destination = .y,
@@ -368,7 +364,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
                     },
                 },
                 .irq => |irq| blk: {
-                    switch (format) {
+                    switch (cpu) {
                         .RP2040 => {
                             const irq_num = try self.evaluate(u5, program.*, irq.num, token_index, diags);
                             break :blk .{
@@ -403,7 +399,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
                 },
             };
 
-            const tag: Instruction(format).Tag = switch (token.payload) {
+            const tag: Instruction(cpu).Tag = switch (token.payload) {
                 .nop => .mov,
                 .jmp => .jmp,
                 .wait => .wait,
@@ -444,7 +440,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
                 delay,
             );
 
-            try program.instructions.append(Instruction(format){
+            try program.instructions.append(Instruction(cpu){
                 .tag = tag,
                 .payload = payload,
                 .delay_side_set = delay_side_set,
@@ -507,7 +503,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
                 switch (token.data) {
                     .instruction => |instr| try self.encode_instruction(program, instr, token.index, diags),
                     .word => |word| try program.instructions.append(
-                        @as(Instruction(format), @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
+                        @as(Instruction(cpu), @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
                     ),
                     // already processed
                     .label, .wrap_target, .wrap => {},
@@ -556,7 +552,7 @@ pub fn Encoder(comptime format: assembler.Format, comptime options: Options) typ
     };
 }
 
-pub fn Instruction(comptime format: assembler.Format) type {
+pub fn Instruction(comptime cpu: CPU) type {
     return packed struct(u16) {
         payload: Payload,
         delay_side_set: u5,
@@ -587,23 +583,23 @@ pub fn Instruction(comptime format: assembler.Format) type {
 
         pub const Jmp = packed struct(u8) {
             address: u5,
-            condition: Token(format).Instruction.Jmp.Condition,
+            condition: Token(cpu).Instruction.Jmp.Condition,
         };
 
         pub const Wait = packed struct(u8) {
             index: u5,
-            source: Token(format).Instruction.Wait.Source,
+            source: Token(cpu).Instruction.Wait.Source,
             polarity: u1,
         };
 
         pub const In = packed struct(u8) {
             bit_count: u5,
-            source: Token(format).Instruction.In.Source,
+            source: Token(cpu).Instruction.In.Source,
         };
 
         pub const Out = packed struct(u8) {
             bit_count: u5,
-            destination: Token(format).Instruction.Out.Destination,
+            destination: Token(cpu).Instruction.Out.Destination,
         };
 
         pub const Push = packed struct(u8) {
@@ -621,12 +617,12 @@ pub fn Instruction(comptime format: assembler.Format) type {
         };
 
         pub const Mov = packed struct(u8) {
-            source: Token(format).Instruction.Mov.Source,
-            operation: Token(format).Instruction.Mov.Operation,
-            destination: Token(format).Instruction.Mov.Destination,
+            source: Token(cpu).Instruction.Mov.Source,
+            operation: Token(cpu).Instruction.Mov.Operation,
+            destination: Token(cpu).Instruction.Mov.Destination,
         };
 
-        pub const Irq = switch (format) {
+        pub const Irq = switch (cpu) {
             .RP2040 => packed struct(u8) {
                 index: u5,
                 wait: u1,
@@ -644,7 +640,7 @@ pub fn Instruction(comptime format: assembler.Format) type {
 
         pub const Set = packed struct(u8) {
             data: u5,
-            destination: Token(format).Instruction.Set.Destination,
+            destination: Token(cpu).Instruction.Set.Destination,
         };
     };
 }
@@ -657,15 +653,15 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
-fn encode_bounded_output_impl(comptime format: assembler.Format, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(format, .{}).Output {
-    const tokens = try tokenizer.tokenize(format, source, diags, .{});
-    var encoder = Encoder(format, .{}).init(tokens.slice());
+fn encode_bounded_output_impl(comptime cpu: CPU, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(cpu, .{}).Output {
+    const tokens = try tokenizer.tokenize(cpu, source, diags, .{});
+    var encoder = Encoder(cpu, .{}).init(tokens.slice());
     return try encoder.encode_output(diags);
 }
 
-fn encode_bounded_output(comptime format: assembler.Format, source: []const u8) !Encoder(format, .{}).Output {
+fn encode_bounded_output(comptime cpu: CPU, source: []const u8) !Encoder(cpu, .{}).Output {
     var diags: ?assembler.Diagnostics = null;
-    return encode_bounded_output_impl(format, source, &diags) catch |err| if (diags) |d| blk: {
+    return encode_bounded_output_impl(cpu, source, &diags) catch |err| if (diags) |d| blk: {
         std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
         break :blk err;
     } else err;
