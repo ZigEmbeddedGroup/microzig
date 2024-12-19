@@ -1268,6 +1268,7 @@ fn expect_define(comptime cpu: CPU, expected: Token(cpu).Define, actual: Token(c
     const define = actual.data.define;
     try expectEqualStrings(expected.name, define.name);
     try expect_value(expected.value, define.value);
+    try expectEqual(expected.index, define.index);
 }
 
 fn expect_origin(comptime cpu: CPU, expected: Value, actual: Token(cpu)) !void {
