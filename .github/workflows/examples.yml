@@ -11,7 +11,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        exmaple_dir: [
+        example_dir: [
           espressif/esp,
           gigadevice/gd32,
           microchip/avr,
