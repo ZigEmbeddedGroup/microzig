@@ -65,8 +65,10 @@ fn rtc_isr() callconv(.C) void {
     critical_section.exit();
 }
 
+const pins = pin_config.pins();
+
 pub fn main() !void {
-    const pins = pin_config.apply();
+    pin_config.apply();
 
     // Configure initial datetime for RTC
     rp2xxx.rtc.set_datetime(.{
