@@ -36,6 +36,14 @@ jobs:
           cd port/raspberrypi/rp2xxx
           zig build test
 
+      - name: Unit Test Regz
+        run: zig build test
+        working-directory: tools/regz
+
+      - name: Unit Test UF2
+        run: zig build test
+        working-directory: tools/uf2
+
       - name: Build Website
         run: zig build
         working-directory: website
