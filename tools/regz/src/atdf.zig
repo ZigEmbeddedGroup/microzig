@@ -1192,7 +1192,7 @@ test "atdf.register with bitfields and enum" {
     try expectEqual(@as(u8, 8), ctrla.size_bits);
 
     // there will 4 registers total, they will all be children of the one register
-    const ctrla_fields = try db.get_register_fields(allocator, ctrla.id);
+    const ctrla_fields = try db.get_register_fields(allocator, ctrla.id, .{ .distinct = false });
     try expectEqual(@as(usize, 4), ctrla_fields.len);
 
     // RTCEN field checks

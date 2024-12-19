@@ -9,7 +9,7 @@ const assert = std.debug.assert;
 
 const file_size_max = 100 * 1024 * 1024;
 pub const std_options = std.Options{
-    .log_level = .err,
+    .log_level = .warn,
 };
 
 pub fn main() !void {

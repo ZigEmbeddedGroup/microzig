@@ -61,7 +61,7 @@ pub const DevicePeripheral = struct {
 
 pub const Mode = struct {
     id: ModeID,
-    struct_id: ModeID,
+    struct_id: StructID,
     name: []const u8,
     description: ?[]const u8,
     value: []const u8,
@@ -432,8 +432,8 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
 }
 
 const schema: []const []const u8 = &.{
-    gen_sql_table("modes", Mode),
     gen_sql_table("registers", Register),
+    gen_sql_table("modes", Mode),
     gen_sql_table("register_modes", RegisterMode),
     gen_sql_table("peripherals", Peripheral),
     gen_sql_table("structs", Struct),
@@ -452,6 +452,8 @@ const schema: []const []const u8 = &.{
     "CREATE INDEX idx_device_peripherals_device_id_offset_bytes ON device_peripherals(device_id, offset_bytes)",
     "CREATE INDEX idx_struct_registers_struct_id ON struct_registers(struct_id)",
     "CREATE INDEX idx_registers_id_offset_bytes ON registers(id, offset_bytes)",
+    "CREATE INDEX idx_enums_struct_id_name ON enums (struct_id, name)",
+    "CREATE INDEX idx_enum_fields_enum_id_value ON enum_fields(enum_id, value)",
 };
 
 pub const Format = enum {
@@ -646,8 +648,6 @@ pub fn destroy(db: *Database) void {
 pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Database {
     var db = try Database.create(allocator);
     errdefer db.destroy();
-
-    defer db.exec("VACUUM", .{}) catch {};
 
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
@@ -939,18 +939,58 @@ pub fn get_struct_modes(
     });
 }
 
+pub const GetEnumsOptions = struct {
+    distinct: bool = false,
+};
 pub fn get_enums(
     db: *Database,
     allocator: Allocator,
     struct_id: StructID,
+    comptime opts: GetEnumsOptions,
 ) ![]const Enum {
-    const query = std.fmt.comptimePrint("SELECT {s} FROM enums WHERE struct_id = ? ORDER BY name ASC", .{
-        comptime gen_field_list(Enum, .{}),
-    });
+    const query = if (opts.distinct)
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enums AS e
+            \\WHERE struct_id = ?
+            \\AND name IS NOT NULL
+            \\AND NOT EXISTS (
+            \\    SELECT 1
+            \\    FROM enums AS e2
+            \\    WHERE e.struct_id = e2.struct_id
+            \\      AND e.name = e2.name
+            \\      AND e.id <> e2.id
+            \\)
+            \\ORDER BY e.name ASC;
+        , .{
+            comptime gen_field_list(Enum, .{ .prefix = "e" }),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enums
+            \\WHERE struct_id = ?
+            \\ORDER BY name ASC
+        , .{
+            comptime gen_field_list(Enum, .{}),
+        });
 
     return db.all(Enum, query, allocator, .{
         .struct_id = struct_id,
     });
+}
+
+pub fn enum_has_name_collision(db: *Database, enum_id: EnumID) !bool {
+    const query =
+        \\SELECT e2.id
+        \\FROM enums AS e1
+        \\JOIN enums AS e2
+        \\  ON e1.struct_id = e2.struct_id
+        \\  AND e1.name = e2.name
+        \\  AND e1.id != e2.id
+        \\WHERE e1.id = ?;
+    ;
+    return null != (try db.get_one(EnumID, query, .{ .enum_id = enum_id }));
 }
 
 pub fn get_enum(
@@ -968,14 +1008,56 @@ pub fn get_enum(
     });
 }
 
+pub const GetEnumFieldOptions = struct {
+    /// Ensure that there are no name or value collisions. Simply picks the
+    /// first entry in the table.
+    distinct: bool = true,
+};
+
 pub fn get_enum_fields(
     db: *Database,
     allocator: Allocator,
     enum_id: EnumID,
+    comptime opts: GetEnumFieldOptions,
 ) ![]const EnumField {
-    const query = std.fmt.comptimePrint("SELECT {s} FROM enum_fields WHERE enum_id = ? ORDER BY value ASC", .{
-        comptime gen_field_list(EnumField, .{}),
-    });
+    const query = if (opts.distinct)
+        std.fmt.comptimePrint(
+            \\WITH duplicates AS (
+            \\    SELECT
+            \\        enum_id,
+            \\        name,
+            \\        value,
+            \\        description,
+            \\        ROW_NUMBER() OVER (PARTITION BY name) AS name_row,
+            \\        ROW_NUMBER() OVER (PARTITION BY value) AS value_row
+            \\    FROM
+            \\        enum_fields
+            \\    WHERE
+            \\        enum_id = ?
+            \\),
+            \\filtered AS (
+            \\    SELECT *
+            \\    FROM duplicates
+            \\    WHERE name_row = 1 AND value_row = 1
+            \\)
+            \\SELECT
+            \\    {s}
+            \\FROM
+            \\    filtered
+            \\ORDER BY
+            \\    value ASC
+        , .{
+            comptime gen_field_list(EnumField, .{}),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enum_fields
+            \\WHERE enum_id = ?
+            \\ORDER BY value ASC
+        , .{
+            comptime gen_field_list(EnumField, .{}),
+        });
 
     return db.all(EnumField, query, allocator, .{
         .enum_id = enum_id,
@@ -1035,21 +1117,67 @@ pub fn backup(db: *Database, path: [:0]const u8) !void {
     }
 }
 
+pub const GetRegisterFieldsOptions = struct {
+    /// Ensures that there is no overlap between fields, and that there is no
+    /// name collisions
+    distinct: bool = true,
+};
+
+// TODO: if we ever need a "get struct fields" function, refactor this to use it
 pub fn get_register_fields(
     db: *Database,
     allocator: Allocator,
     register_id: RegisterID,
+    comptime opts: GetRegisterFieldsOptions,
 ) ![]StructField {
-    const query =
+    const query = if (opts.distinct)
         std.fmt.comptimePrint(
-        \\SELECT {s}
-        \\FROM struct_fields AS sf
-        \\JOIN registers AS r ON sf.struct_id = r.struct_id
-        \\WHERE r.id = ?
-        \\ORDER BY sf.offset_bits ASC;
-    , .{
-        comptime gen_field_list(StructField, .{ .prefix = "sf" }),
-    });
+            \\WITH OrderedFields AS (
+            \\    SELECT
+            \\        sf.struct_id,
+            \\        sf.name,
+            \\        sf.description,
+            \\        sf.size_bits,
+            \\        sf.offset_bits,
+            \\        sf.enum_id,
+            \\        sf.count,
+            \\        ROW_NUMBER() OVER (
+            \\            PARTITION BY sf.struct_id, sf.offset_bits
+            \\            ORDER BY sf.offset_bits ASC, sf.size_bits ASC
+            \\        ) AS row_num
+            \\    FROM struct_fields AS sf
+            \\    INNER JOIN registers AS r ON r.struct_id = sf.struct_id
+            \\    WHERE r.id = ?
+            \\),
+            \\DistinctFields AS (
+            \\    SELECT
+            \\        struct_id,
+            \\        name,
+            \\        description,
+            \\        size_bits,
+            \\        offset_bits,
+            \\        enum_id,
+            \\        count
+            \\    FROM OrderedFields
+            \\    WHERE row_num = 1
+            \\)
+            \\SELECT {s}
+            \\FROM DistinctFields
+            \\GROUP BY name, struct_id
+            \\ORDER BY offset_bits ASC
+        , .{
+            comptime gen_field_list(StructField, .{}),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM struct_fields AS sf
+            \\JOIN registers AS r ON sf.struct_id = r.struct_id
+            \\WHERE r.id = ?
+            \\ORDER BY sf.offset_bits ASC;
+        , .{
+            comptime gen_field_list(StructField, .{ .prefix = "sf" }),
+        });
     return db.all(StructField, query, allocator, .{
         .register_id = register_id,
     });
@@ -1461,6 +1589,7 @@ pub const CreateModeOptions = struct {
 pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !ModeID {
     var savepoint = try db.sql.savepoint("create_mode");
     defer savepoint.rollback();
+    log.debug("create_mode: name={s} parent={}", .{ opts.name, parent });
 
     try db.exec(
         \\INSERT INTO modes

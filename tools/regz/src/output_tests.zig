@@ -157,7 +157,7 @@ pub fn peripheral_with_modes(allocator: Allocator) !*Database {
     // we'll have to read different registers or read registers without fields.
     //
     // might also have registers with enum values
-    // naive implementation goes through each mode and follows the qualifier,
+    // naive implementation goes throuDatabase each mode and follows the qualifier,
     // next level will determine if they're reading the same address even if
     // different modes will use different union members
 
@@ -540,6 +540,151 @@ pub fn interrupts_avr(allocator: Allocator) !*Database {
     _ = try db.create_interrupt(device_id, .{
         .name = "TEST_VECTOR2",
         .idx = 3,
+    });
+
+    return db;
+}
+
+pub fn enums_with_name_collision(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum1_id = try db.create_enum(struct_id, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum1_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum1_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const enum2_id = try db.create_enum(struct_id, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum2_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum2_id, .{ .name = "TEST_ENUM_FIELD2", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD1",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum1_id,
+    });
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD2",
+        .size_bits = 4,
+        .offset_bits = 4,
+        .enum_id = enum2_id,
+    });
+
+    return db;
+}
+
+pub fn enum_with_value_collision(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(null, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD2", .value = 0 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
+    return db;
+}
+
+pub fn enum_fields_with_name_collision(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const enum_id = try db.create_enum(null, .{
+        .name = "ENUM",
+        .size_bits = 4,
+    });
+
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 0 });
+    try db.add_enum_field(enum_id, .{ .name = "TEST_ENUM_FIELD1", .value = 1 });
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .size_bits = 8,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .size_bits = 4,
+        .offset_bits = 0,
+        .enum_id = enum_id,
+    });
+    return db;
+}
+
+pub fn register_fields_with_name_collision(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+
+    const register_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 2",
+        .size_bits = 1,
+        .offset_bits = 1,
     });
 
     return db;

@@ -330,7 +330,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const regz_exe = b.dependency("tools/regz", .{}).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .json, .atdf, .svd => |file| blk: {
+                .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
                     regz_run.addArg("--format");

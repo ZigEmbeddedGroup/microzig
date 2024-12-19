@@ -21,6 +21,7 @@ const Context = struct {
     db: *Database,
     arena: ArenaAllocator,
     register_props: std.AutoArrayHashMapUnmanaged(RegisterPropertiesParent, RegisterProperties) = .{},
+    derived_peripherals: std.AutoArrayHashMapUnmanaged(xml.Node, []const u8) = .{},
 
     fn deinit(ctx: *Context) void {
         ctx.register_props.deinit(ctx.db.gpa);
@@ -65,7 +66,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
         var cpu_it = root.iterate(&.{}, &.{"cpu"});
         if (cpu_it.next()) |cpu| {
             if (cpu.get_value("name")) |cpu_name| {
-                break :blk std.meta.stringToEnum(Database.Arch, cpu_name) orelse .unknown;
+                break :blk arch_from_str(cpu_name);
             }
         }
 
@@ -160,10 +161,51 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
             log.warn("failed to load peripheral: {}", .{err});
 
     // TODO: derive entities here
+    try derive_peripherals(&ctx, device_id);
 
     if (arch.is_arm()) {
         const device = try db.get_device_by_name(arena.allocator(), name);
         try arm.load_system_interrupts(db, &device);
+    }
+}
+
+fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
+    for (ctx.derived_peripherals.keys(), ctx.derived_peripherals.values()) |node, derived_from| {
+        // TODO: partial derivation
+        if (node.get_value("registers") != null)
+            continue;
+
+        const peripheral_id = try ctx.db.get_peripheral_by_name(derived_from) orelse return error.MissingPeripheral;
+        const struct_id = try ctx.db.get_peripheral_struct(peripheral_id);
+
+        // count is applied to the specific instance
+        // size is applied to the type
+        const count: ?u64 = blk: {
+            const dim_elements = try DimElements.parse(node);
+            if (dim_elements) |elements| {
+                // peripherals can't have dimIndex set according to the spec
+                if (elements.dim_index != null)
+                    return error.Malformed;
+
+                if (elements.dim_name != null)
+                    return error.TodoDimElementsExtended;
+
+                break :blk elements.dim;
+            }
+
+            break :blk null;
+        };
+
+        _ = try ctx.db.create_device_peripheral(device_id, .{
+            .name = node.get_value("name") orelse return error.PeripheralMissingName,
+            .description = node.get_value("description"),
+            .struct_id = struct_id,
+            .count = count,
+            .offset_bytes = if (node.get_value("baseAddress")) |base_address|
+                try std.fmt.parseInt(u64, base_address, 0)
+            else
+                return error.PeripheralMissingBaseAddress,
+        });
     }
 }
 
@@ -232,8 +274,8 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
     const db = ctx.db;
 
     if (node.get_attribute("derivedFrom")) |derived_from| {
-        log.warn("TODO: derive '{?s}' from '{s}'", .{ node.get_value("name"), derived_from });
-        return error.TODO_Derivision;
+        try ctx.derived_peripherals.put(ctx.arena.allocator(), node, derived_from);
+        return;
     }
 
     // count is applied to the specific instance
@@ -255,7 +297,6 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
     };
 
     const peripheral_id = try db.create_peripheral(.{ .name = node.get_value("name") orelse return error.PeripheralMissingName, .description = node.get_value("description"), .size_bytes = size_bytes });
-
     const struct_id = try db.get_peripheral_struct(peripheral_id);
     const instance_id = try db.create_device_peripheral(device_id, .{
         .name = node.get_value("name") orelse return error.PeripheralMissingName,
@@ -938,7 +979,7 @@ test "svd.field with enum value" {
     const struct_id = try db.get_peripheral_struct(peripheral_id);
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
-    const fields = try db.get_register_fields(arena.allocator(), register.id);
+    const fields = try db.get_register_fields(arena.allocator(), register.id, .{ .distinct = false });
     try expectEqual(1, fields.len);
 
     const field = fields[0];
@@ -948,7 +989,7 @@ test "svd.field with enum value" {
     const e = try db.get_enum(arena.allocator(), field.enum_id.?);
     try expectEqual(8, e.size_bits);
 
-    const enum_fields = try db.get_enum_fields(arena.allocator(), e.id);
+    const enum_fields = try db.get_enum_fields(arena.allocator(), e.id, .{});
     try expectEqualStrings("TEST_ENUM_FIELD1", enum_fields[0].name);
     try expectEqual(0, enum_fields[0].value);
     try expectEqualStrings("test enum field 1", enum_fields[0].description.?);
@@ -1249,7 +1290,7 @@ test "svd.field with dimElementGroup, suffixed with %s" {
     const struct_id = try db.get_peripheral_struct(peripheral_id);
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
-    const fields = try db.get_register_fields(arena.allocator(), register.id);
+    const fields = try db.get_register_fields(arena.allocator(), register.id, .{ .distinct = false });
 
     try expectEqualStrings("TEST_FIELD", fields[0].name);
     try expectEqual(2, fields[0].count);

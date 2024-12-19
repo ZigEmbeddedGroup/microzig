@@ -381,7 +381,7 @@ fn write_struct_decl(
         try write_mode_enum_and_fn(db, arena, modes, writer);
     }
 
-    const enums = try db.get_enums(arena, struct_id);
+    const enums = try db.get_enums(arena, struct_id, .{ .distinct = true });
     for (enums) |e| {
         try write_newline_if_written(writer, &written);
         try write_enum(db, arena, &e, writer);
@@ -462,7 +462,7 @@ fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    const enum_fields = try db.get_enum_fields(arena, e.id);
+    const enum_fields = try db.get_enum_fields(arena, e.id, .{ .distinct = true });
 
     for (enum_fields) |enum_field|
         try write_enum_field(arena, &enum_field, e.size_bits, writer);
@@ -675,7 +675,7 @@ fn write_register(
         "";
 
     // TODO: named struct type
-    const fields = try db.get_register_fields(arena, register.id);
+    const fields = try db.get_register_fields(arena, register.id, .{});
     if (fields.len > 0) {
         try writer.print("{}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
             std.zig.fmtId(register.name),
@@ -770,17 +770,33 @@ fn write_fields(
         } else if (field.enum_id) |enum_id| {
             const e = try db.get_enum(arena, enum_id);
             if (e.name) |enum_name| {
-                try writer.print(
-                    \\{}: packed union {{
-                    \\    raw: u{},
-                    \\    value: {},
-                    \\}},
-                    \\
-                , .{
-                    std.zig.fmtId(field.name),
-                    field.size_bits,
-                    std.zig.fmtId(enum_name),
-                });
+                if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
+                    try writer.print(
+                        \\{}: packed union {{
+                        \\    raw: u{},
+                        \\    value: enum(u{}) {{
+                        \\
+                    , .{
+                        std.zig.fmtId(field.name),
+                        e.size_bits,
+                        e.size_bits,
+                    });
+
+                    try write_enum_fields(db, arena, &e, writer);
+                    try writer.writeAll("},\n},\n");
+                } else {
+                    try writer.print(
+                        \\{}: packed union {{
+                        \\    raw: u{},
+                        \\    value: {},
+                        \\}},
+                        \\
+                    , .{
+                        std.zig.fmtId(field.name),
+                        field.size_bits,
+                        std.zig.fmtId(enum_name),
+                    });
+                }
             } else {
                 try writer.print(
                     \\{}: packed union {{
@@ -1072,8 +1088,6 @@ test "gen.namespaced register groups" {
     var db = try tests.namespaced_register_groups(std.testing.allocator);
     defer db.destroy();
 
-    try db.backup("namespaced_register_group.regz");
-
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
 
@@ -1182,8 +1196,6 @@ test "gen.peripheral with count, padding required" {
     var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
     defer db.destroy();
 
-    try db.backup("arst.sqlite");
-
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
 
@@ -1250,8 +1262,6 @@ test "gen.register with count" {
 test "gen.register with count and fields" {
     var db = try tests.register_with_count_and_fields(std.testing.allocator);
     defer db.destroy();
-
-    try db.backup("register_with_count_and_fields.regz");
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1387,6 +1397,141 @@ test "gen.peripheral type with register and field" {
         \\            /// test register
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.name collisions in enum name cause them to be anonymous" {
+    var db = try tests.enums_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD1: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        TEST_ENUM_FIELD2 = 0x1,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                TEST_FIELD2: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        TEST_ENUM_FIELD2 = 0x1,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.pick one enum field in value collisions" {
+    var db = try tests.enum_with_value_collision(std.testing.allocator);
+    defer db.destroy();
+
+    try db.backup("value_collision.regz");
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                padding: u4,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.pick one enum field in name collisions" {
+    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                padding: u4,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.register fields with name collision" {
+    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        /// test peripheral
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// test register
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                /// test field 1
         \\                TEST_FIELD: u1,
         \\                padding: u31,
         \\            }),
