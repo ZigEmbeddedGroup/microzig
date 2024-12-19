@@ -564,15 +564,31 @@ pub fn Tokenizer(cpu: CPU) type {
                 buf[i] = std.ascii.toLower(c);
 
             const source_lower = buf[0..source_str.len];
-            const source: Token(cpu).Instruction.Wait.Source =
-                if (std.mem.eql(u8, "gpio", source_lower))
-                .gpio
-            else if (std.mem.eql(u8, "pin", source_lower))
-                .pin
-            else if (std.mem.eql(u8, "irq", source_lower))
-                .irq
-            else
-                return error.InvalidSource;
+            var source: Token(cpu).Instruction.Wait.Source = undefined;
+            switch (comptime cpu) {
+                .RP2040 => {
+                    source = if (std.mem.eql(u8, "gpio", source_lower))
+                        .gpio
+                    else if (std.mem.eql(u8, "pin", source_lower))
+                        .pin
+                    else if (std.mem.eql(u8, "irq", source_lower))
+                        .irq
+                    else
+                        return error.InvalidSource;
+                },
+                .RP2350 => {
+                    source = if (std.mem.eql(u8, "gpio", source_lower))
+                        .gpio
+                    else if (std.mem.eql(u8, "jmppin", source_lower))
+                        .jmppin
+                    else if (std.mem.eql(u8, "pin", source_lower))
+                        .pin
+                    else if (std.mem.eql(u8, "irq", source_lower))
+                        .irq
+                    else
+                        return error.InvalidSource;
+                },
+            }
 
             const rel: bool = if (source == .irq)
                 if (try self.peek_arg(diags)) |rel_result| blk: {
@@ -1790,6 +1806,17 @@ test "tokenize.instr.wait.irq.rel" {
     try expect_instr_wait(.RP2040, .{
         .polarity = 1,
         .source = .irq,
+        .num = .{ .integer = 1 },
+        .rel = true,
+    }, tokens.get(0));
+}
+
+test "tokenize.instr.wait.jmppin" {
+    // JMPPIN is a valid source on RP2350
+    const tokens = try bounded_tokenize(.RP2350, "wait 1 jmppin 1");
+    try expect_instr_wait(.RP2350, .{
+        .polarity = 1,
+        .source = .jmppin,
         .num = .{ .integer = 1 },
         .rel = true,
     }, tokens.get(0));
