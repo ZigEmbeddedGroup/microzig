@@ -1,0 +1,36 @@
+name: Build Examples
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        example_dir: [
+          #espressif/esp,
+          gigadevice/gd32,
+          microchip/avr,
+          microchip/atsam,
+          nordic/nrf5x,
+          nxp/lpc,
+          stmicro/stm32,
+          raspberrypi/rp2xxx,
+          wch/ch32v,
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/${{ matrix.example_dir }}

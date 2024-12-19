@@ -330,10 +330,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const regz_exe = b.dependency("tools/regz", .{}).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .json, .atdf, .svd => |file| blk: {
+                .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
-                    regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+                    regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file

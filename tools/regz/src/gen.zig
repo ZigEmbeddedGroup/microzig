@@ -1,11 +1,17 @@
-//! Code generation and associated tests
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const Database = @import("Database.zig");
-const EntityId = Database.EntityId;
-const EntitySet = Database.EntitySet;
+const Register = Database.Register;
+const Device = Database.Device;
+const Enum = Database.Enum;
+const EnumField = Database.EnumField;
+const Peripheral = Database.Peripheral;
+const Mode = Database.Mode;
+const DevicePeripheral = Database.DevicePeripheral;
+const EnumID = Database.EnumID;
+const StructID = Database.StructID;
 
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
@@ -13,23 +19,13 @@ const riscv = @import("arch/riscv.zig");
 
 const log = std.log.scoped(.gen);
 
-const EntityWithOffsetAndSize = struct {
-    id: EntityId,
-    offset: u64,
-    size: u64,
-};
+pub fn to_zig(db: *Database, out_writer: anytype) !void {
+    var arena = std.heap.ArenaAllocator.init(db.gpa);
+    defer arena.deinit();
 
-const EntityWithOffset = struct {
-    id: EntityId,
-    offset: u64,
+    const allocator = arena.allocator();
 
-    fn less_than(_: void, lhs: EntityWithOffset, rhs: EntityWithOffset) bool {
-        return lhs.offset < rhs.offset;
-    }
-};
-
-pub fn to_zig(db: Database, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    var buffer = std.ArrayList(u8).init(allocator);
     defer buffer.deinit();
 
     const writer = buffer.writer();
@@ -38,19 +34,20 @@ pub fn to_zig(db: Database, out_writer: anytype) !void {
         \\const mmio = micro.mmio;
         \\
     );
-    try write_devices(db, writer);
-    try write_types(db, writer);
+    try write_devices(db, allocator, writer);
+    try write_types(db, allocator, writer);
     try writer.writeByte(0);
 
     // format the generated code
-    var ast = try std.zig.Ast.parse(db.gpa, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
-    defer ast.deinit(db.gpa);
+    var ast = try std.zig.Ast.parse(allocator, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
+    defer ast.deinit(allocator);
 
     if (ast.errors.len > 0) {
+        log.err("Failed to parse:\n{s}", .{buffer.items});
         try out_writer.writeAll(buffer.items);
         for (ast.errors) |err| {
             std.log.err("err: {}", .{err});
-            var err_msg = std.ArrayList(u8).init(db.gpa);
+            var err_msg = std.ArrayList(u8).init(allocator);
             defer err_msg.deinit();
 
             try ast.renderError(err, err_msg.writer());
@@ -59,15 +56,15 @@ pub fn to_zig(db: Database, out_writer: anytype) !void {
         return error.FailedToParse;
     }
 
-    // TODO: ast check?
-    const text = try ast.render(db.gpa);
-    defer db.gpa.free(text);
+    const text = try ast.render(allocator);
+    defer allocator.free(text);
 
     try out_writer.writeAll(text);
 }
 
-fn write_devices(db: Database, writer: anytype) !void {
-    if (db.instances.devices.count() == 0)
+fn write_devices(db: *Database, arena: Allocator, writer: anytype) !void {
+    const devices = try db.get_devices(arena);
+    if (devices.len == 0)
         return;
 
     try writer.writeAll(
@@ -77,8 +74,8 @@ fn write_devices(db: Database, writer: anytype) !void {
     );
 
     // TODO: order devices alphabetically
-    for (db.instances.devices.keys()) |device_id| {
-        write_device(db, device_id, writer) catch |err| {
+    for (devices) |device| {
+        write_device(db, arena, &device, writer) catch |err| {
             log.warn("failed to write device: {}", .{err});
         };
     }
@@ -106,7 +103,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
 
     var line_it = std.mem.tokenizeScalar(u8, unescaped, '\n');
     while (line_it.next()) |line|
-        try writer.print("/// {s}\n", .{line});
+        try writer.print("///{s}\n", .{line});
 }
 
 fn write_string(str: []const u8, writer: anytype) !void {
@@ -120,135 +117,147 @@ fn write_string(str: []const u8, writer: anytype) !void {
     }
 }
 
-fn write_device(db: Database, device_id: EntityId, out_writer: anytype) !void {
-    assert(db.entity_is("instance.device", device_id));
-    const name = db.attrs.name.get(device_id) orelse return error.MissingDeviceName;
-
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+fn write_device(db: *Database, arena: Allocator, device: *const Database.Device, out_writer: anytype) !void {
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    // TODO: multiline?
-    if (db.attrs.description.get(device_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (device.description) |description| {
+        try write_comment(arena, description, writer);
+    }
 
     try writer.print(
         \\pub const {} = struct {{
         \\
-    , .{std.zig.fmtId(name)});
+    , .{std.zig.fmtId(device.name)});
 
-    // TODO: alphabetic order
-    const properties = db.instances.devices.get(device_id).?.properties;
-    if (properties.count() > 0) {
+    const properties = try db.get_device_properties(arena, device.id);
+    if (properties.len > 0) {
         try writer.writeAll("pub const properties = struct {\n");
-        var it = properties.iterator();
-        while (it.next()) |entry| {
+        for (properties) |prop| {
             try writer.print("pub const {} = ", .{
-                std.zig.fmtId(entry.key_ptr.*),
+                std.zig.fmtId(prop.key),
             });
 
-            try write_string(entry.value_ptr.*, writer);
+            try write_string(prop.value orelse "", writer);
             try writer.writeAll(";\n");
         }
-
-        try writer.writeAll("};\n\n");
-    }
-
-    write_vector_table(db, device_id, writer) catch |err|
-        log.warn("failed to write vector table: {}", .{err});
-
-    if (db.children.peripherals.get(device_id)) |peripheral_set| {
-        var list = std.ArrayList(EntityWithOffset).init(db.gpa);
-        defer list.deinit();
-
-        for (peripheral_set.keys()) |peripheral_id| {
-            const offset = db.attrs.offset.get(peripheral_id) orelse return error.MissingPeripheralInstanceOffset;
-            try list.append(.{ .id = peripheral_id, .offset = offset });
-        }
-
-        std.sort.insertion(EntityWithOffset, list.items, {}, EntityWithOffset.less_than);
-
-        try writer.writeAll("pub const peripherals = struct {\n");
-        for (list.items) |periph|
-            write_peripheral_instance(db, periph.id, periph.offset, writer) catch |err| {
-                log.warn("failed to serialize peripheral instance: {}", .{err});
-            };
 
         try writer.writeAll("};\n");
     }
 
+    write_vector_table(db, arena, device, writer) catch |err|
+        log.warn("failed to write vector table: {}", .{err});
+
+    const device_peripherals = try db.get_device_peripherals(arena, device.id);
+    log.debug("peripheral instances: {}", .{device_peripherals.len});
+    if (device_peripherals.len > 0) {
+        try writer.writeAll("pub const peripherals = struct {\n");
+        for (device_peripherals) |instance| {
+            write_device_peripheral(db, arena, &instance, writer) catch |err| {
+                log.warn("failed to serialize peripheral instance: {}", .{err});
+            };
+        }
+        try writer.writeAll("};\n");
+    }
+
     try writer.writeAll("};\n");
+
     try out_writer.writeAll(buffer.items);
 }
+
+const TypeID = union(enum) {
+    @"enum": EnumID,
+    @"struct": StructID,
+};
 
 // generates a string for a type in the `types` namespace of the generated
 // code. Since this is only used in code generation, just going to stuff it in
 // the arena allocator
-fn types_reference(db: Database, type_id: EntityId) ![]const u8 {
-    // TODO: assert type_id is a type
-    var full_name_components = std.ArrayList([]const u8).init(db.gpa);
+fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]const u8 {
+    var full_name_components = std.ArrayList([]const u8).init(allocator);
     defer full_name_components.deinit();
 
-    var id = type_id;
+    var current_id = type_id;
 
-    // hard limit for walking up the tree, if we hit it there's a bug
-    const count_max: u32 = 8;
-    var count: u32 = 0;
-    while (count < count_max) : (count += 1) {
-        if (db.attrs.name.get(id)) |next_name|
-            try full_name_components.insert(0, next_name)
-        else
-            return error.MissingTypeName;
+    // hard limit for walking up the tree, there's probably a bug if we hit
+    // this;
+    const depth_max: u32 = 8;
+    var depth: u32 = 0;
+    while (depth < depth_max) : (depth += 1) {
+        log.debug("current_id={}", .{current_id});
+        switch (current_id) {
+            .@"enum" => |id| {
+                const e = try db.get_enum(allocator, id);
+                defer e.deinit(allocator);
 
-        if (db.attrs.parent.get(id)) |parent_id|
-            id = parent_id
-        else
-            break;
-    } else @panic("hit limit for reference length");
+                if (e.struct_id) |struct_id|
+                    current_id = .{ .@"struct" = struct_id }
+                else
+                    return error.MissingParent;
+
+                const name_copy = try allocator.dupe(u8, e.name.?);
+                errdefer allocator.free(name_copy);
+
+                try full_name_components.insert(0, name_copy);
+            },
+            .@"struct" => |id| if (try db.get_struct_decl(allocator, id)) |struct_decl| {
+                defer struct_decl.deinit(allocator);
+
+                log.debug("got struct_decl: {}", .{struct_decl});
+                const name_copy = try allocator.dupe(u8, struct_decl.name);
+                errdefer allocator.free(name_copy);
+
+                try full_name_components.insert(0, name_copy);
+                current_id = .{ .@"struct" = struct_decl.parent_id };
+            } else if (try db.get_peripheral_by_struct_id(allocator, id)) |peripheral| {
+                defer peripheral.deinit(allocator);
+
+                const name_copy = try allocator.dupe(u8, peripheral.name);
+                errdefer allocator.free(name_copy);
+
+                try full_name_components.insert(0, name_copy);
+                break;
+            } else @panic("A struct should have some sort of decl entry"),
+        }
+    } else @panic("Hit limit for reference length");
 
     if (full_name_components.items.len == 0)
         return error.CantReference;
 
-    var full_name = std.ArrayList(u8).init(db.arena.allocator());
-    const writer = full_name.writer();
-    try writer.writeAll("types");
+    var full_name = std.ArrayList(u8).init(allocator);
+    defer full_name.deinit();
 
-    // determine the namespace under 'types' the reference is under
-    const root_parent_entity_type = db.get_entity_type(id).?;
-    inline for (@typeInfo(Database.EntityType).Enum.fields) |field| {
-        if (root_parent_entity_type == @field(Database.EntityType, field.name)) {
-            try writer.print(".{s}s", .{field.name});
-            break;
-        }
-    }
+    const writer = full_name.writer();
+    try writer.writeAll("types.peripherals");
 
     for (full_name_components.items) |component|
         try writer.print(".{}", .{
             std.zig.fmtId(component),
         });
 
+    log.debug("generated type ref: {s}", .{full_name.items});
     return full_name.toOwnedSlice();
 }
 
 fn write_vector_table(
-    db: Database,
-    device_id: EntityId,
+    db: *Database,
+    arena: Allocator,
+    device: *const Device,
     out_writer: anytype,
 ) !void {
-    assert(db.entity_is("instance.device", device_id));
-
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    const arch = db.instances.devices.get(device_id).?.arch;
-    if (arch.is_arm())
-        try arm.write_interrupt_vector(db, device_id, writer)
-    else if (arch.is_avr())
-        try avr.write_interrupt_vector(db, device_id, writer)
-    else if (arch.is_riscv())
-        try riscv.write_interrupt_vector(db, device_id, writer)
-    else if (arch == .unknown)
+
+    if (device.arch.is_arm())
+        try arm.write_interrupt_vector(db, arena, device, writer)
+    else if (device.arch.is_avr())
+        try avr.write_interrupt_vector(db, arena, device, writer)
+    else if (device.arch.is_riscv())
+        try riscv.write_interrupt_vector(db, arena, device, writer)
+    else if (device.arch == .unknown)
         return
     else
         unreachable;
@@ -256,56 +265,60 @@ fn write_vector_table(
     try out_writer.writeAll(buffer.items);
 }
 
-fn write_peripheral_instance(db: Database, instance_id: EntityId, offset: u64, out_writer: anytype) !void {
-    assert(db.entity_is("instance.peripheral", instance_id));
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+fn get_device_peripheral_description(
+    db: *Database,
+    arena: Allocator,
+    instance: *const DevicePeripheral,
+) !?[]const u8 {
+    return if (instance.description) |description|
+        description
+    else if (try db.get_peripheral_by_struct_id(arena, instance.struct_id)) |peripheral|
+        peripheral.description
+    else if (try db.get_struct_decl_by_struct_id(arena, instance.struct_id)) |struct_decl|
+        struct_decl.description
+    else
+        null;
+}
+
+fn write_device_peripheral(
+    db: *Database,
+    arena: Allocator,
+    instance: *const DevicePeripheral,
+    out_writer: anytype,
+) !void {
+    log.debug("writing periph instance", .{});
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    const name = db.attrs.name.get(instance_id) orelse return error.MissingPeripheralInstanceName;
-    const type_id = db.instances.peripherals.get(instance_id).?;
-    assert(db.attrs.name.contains(type_id));
-    const type_ref = try types_reference(db, type_id);
+    const type_ref = try types_reference(db, arena, .{ .@"struct" = instance.struct_id });
 
-    if (db.attrs.description.get(instance_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer)
-    else if (db.attrs.description.get(type_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (try get_device_peripheral_description(db, arena, instance)) |description|
+        try write_comment(arena, description, writer);
+
+    // TODO: get description
+    //else if (s.description) |desc|
+    //    try write_comment(arena, desc, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
-    const array_prefix = if (db.attrs.count.get(instance_id)) |count|
+    const array_prefix = if (instance.count) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
     else
         "";
 
     try writer.print("pub const {}: *volatile {s}{s} = @ptrFromInt(0x{x});\n", .{
-        std.zig.fmtId(name),
+        std.zig.fmtId(instance.name),
         array_prefix,
         type_ref,
-        offset,
+        instance.offset_bytes,
     });
 
     try out_writer.writeAll(buffer.items);
 }
 
-// Top level types are any types without a parent. In order for them to be
-// rendered in the `types` namespace they need a name
-fn has_top_level_named_types(db: Database) bool {
-    inline for (@typeInfo(@TypeOf(db.types)).Struct.fields) |field| {
-        for (@field(db.types, field.name).keys()) |id| {
-            if (!db.attrs.parent.contains(id) and
-                db.attrs.name.contains(id))
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-fn write_types(db: Database, writer: anytype) !void {
-    if (!has_top_level_named_types(db))
+fn write_types(db: *Database, arena: Allocator, writer: anytype) !void {
+    const peripherals = try db.get_peripherals(arena);
+    if (peripherals.len == 0)
         return;
 
     try writer.writeAll(
@@ -314,78 +327,45 @@ fn write_types(db: Database, writer: anytype) !void {
         \\
     );
 
-    if (db.types.peripherals.count() > 0) {
-        try writer.writeAll("pub const peripherals = struct {\n");
+    try writer.writeAll("pub const peripherals = struct {\n");
 
-        for (db.types.peripherals.keys()) |peripheral_id| {
-            write_peripheral(db, peripheral_id, writer) catch |err| {
-                log.warn("failed to generate peripheral '{s}': {}", .{
-                    db.attrs.name.get(peripheral_id) orelse "<unknown>",
-                    err,
-                });
-            };
-        }
-
-        try writer.writeAll("};\n");
+    for (peripherals) |peripheral| {
+        write_peripheral(db, arena, &peripheral, writer) catch |err| {
+            log.warn("failed to generate peripheral '{s}': {}", .{
+                peripheral.name,
+                err,
+            });
+        };
     }
+
+    try writer.writeAll("};\n");
 
     try writer.writeAll("};\n");
 }
 
-// a peripheral is zero sized if it doesn't have any registers, and if none of
-// its register groups have an offset
-fn is_peripheral_zero_sized(db: Database, peripheral_id: EntityId) bool {
-    if (db.children.registers.contains(peripheral_id)) {
-        return false;
-    } else {
-        log.debug("no registers found", .{});
-    }
-
-    return if (db.children.register_groups.get(peripheral_id)) |register_group_set| blk: {
-        for (register_group_set.keys()) |register_group_id| {
-            if (db.attrs.offset.contains(register_group_id))
-                break :blk false;
-        }
-
-        break :blk true;
-    } else true;
-}
-
-fn write_peripheral(
-    db: Database,
-    peripheral_id: EntityId,
+fn write_struct_decl(
+    db: *Database,
+    arena: Allocator,
+    name: []const u8,
+    description: ?[]const u8,
+    block_size_bytes: ?u64,
+    struct_id: StructID,
     out_writer: anytype,
 ) !void {
-    assert(db.entity_is("type.peripheral", peripheral_id) or
-        db.entity_is("type.register_group", peripheral_id));
-
-    // peripheral types should always have a name (responsibility of parsing to get this done)
-    const name = db.attrs.name.get(peripheral_id) orelse unreachable;
-
-    // for now only serialize flat peripherals with no register groups
-    // TODO: expand this
-    if (db.children.register_groups.get(peripheral_id)) |register_group_set| {
-        for (register_group_set.keys()) |register_group_id| {
-            if (db.attrs.offset.contains(register_group_id)) {
-                log.warn("TODO: implement register groups with offset in peripheral type ({s})", .{name});
-                return;
-            }
-        }
-    }
-
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    log.debug("writing struct decl: name='{s}'", .{name});
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
-    var registers = try get_ordered_register_list(db, peripheral_id);
-    defer registers.deinit();
+    const registers = try db.get_struct_registers(arena, struct_id);
+    const modes = try db.get_struct_modes(arena, struct_id);
 
     const writer = buffer.writer();
     try writer.writeByte('\n');
-    if (db.attrs.description.get(peripheral_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (description) |d|
+        try write_comment(arena, d, writer);
 
-    const zero_sized = is_peripheral_zero_sized(db, peripheral_id);
-    const has_modes = db.children.modes.contains(peripheral_id);
+    const zero_sized = registers.len == 0;
+    const has_modes = modes.len > 0;
     try writer.print(
         \\pub const {} = {s} {s} {{
         \\
@@ -396,33 +376,56 @@ fn write_peripheral(
     });
 
     var written = false;
-    if (db.children.modes.get(peripheral_id)) |mode_set| {
+    if (modes.len > 0) {
         try write_newline_if_written(writer, &written);
-        try write_mode_enum_and_fn(db, mode_set, writer);
+        try write_mode_enum_and_fn(db, arena, modes, writer);
     }
 
-    if (db.children.enums.get(peripheral_id)) |enum_set|
-        try write_enums(db, &written, enum_set, writer);
+    const enums = try db.get_enums(arena, struct_id, .{ .distinct = true });
+    for (enums) |e| {
+        try write_newline_if_written(writer, &written);
+        try write_enum(db, arena, &e, writer);
+    }
 
-    // namespaced registers
-    if (db.children.register_groups.get(peripheral_id)) |register_group_set| {
-        for (register_group_set.keys()) |register_group_id| {
-            // a register group with an offset means that it has a location within the peripheral
-            if (db.attrs.offset.contains(register_group_id))
-                continue;
-
-            try write_newline_if_written(writer, &written);
-            try write_peripheral(db, register_group_id, writer);
-        }
+    const struct_decls = try db.get_struct_decls(arena, struct_id);
+    for (struct_decls) |sd| {
+        try write_newline_if_written(writer, &written);
+        try write_struct_decl(
+            db,
+            arena,
+            sd.name,
+            sd.description,
+            sd.size_bytes,
+            sd.struct_id,
+            writer,
+        );
     }
 
     try write_newline_if_written(writer, &written);
-    try write_registers(db, peripheral_id, writer);
+    try write_registers(db, arena, struct_id, block_size_bytes, modes, registers, writer);
 
     try writer.writeAll("\n}");
     try writer.writeAll(";\n");
 
     try out_writer.writeAll(buffer.items);
+}
+
+fn write_peripheral(
+    db: *Database,
+    arena: Allocator,
+    peripheral: *const Peripheral,
+    out_writer: anytype,
+) !void {
+    log.debug("writing peripheral: name='{s}'", .{peripheral.name});
+    try write_struct_decl(
+        db,
+        arena,
+        peripheral.name,
+        peripheral.description,
+        peripheral.size_bytes,
+        peripheral.struct_id,
+        out_writer,
+    );
 }
 
 fn write_newline_if_written(writer: anytype, written: *bool) !void {
@@ -432,85 +435,73 @@ fn write_newline_if_written(writer: anytype, written: *bool) !void {
         written.* = true;
 }
 
-fn write_enums(db: Database, written: *bool, enum_set: EntitySet, writer: anytype) !void {
-    for (enum_set.keys()) |enum_id| {
-        try write_newline_if_written(writer, written);
-        try write_enum(db, enum_id, writer);
-    }
-}
-
-fn write_enum(db: Database, enum_id: EntityId, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: anytype) !void {
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    const name = db.attrs.name.get(enum_id) orelse return;
-    const size = db.attrs.size.get(enum_id) orelse return error.MissingEnumSize;
 
     // TODO: handle this instead of assert
     // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
 
-    if (db.attrs.description.get(enum_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (e.description) |description|
+        try write_comment(arena, description, writer);
 
     try writer.print("pub const {} = enum(u{}) {{\n", .{
-        std.zig.fmtId(name),
-        size,
+        std.zig.fmtId(e.name.?),
+        e.size_bits,
     });
-    try write_enum_fields(db, enum_id, writer);
+    try write_enum_fields(db, arena, e, writer);
     try writer.writeAll("};\n");
 
     try out_writer.writeAll(buffer.items);
 }
 
-fn write_enum_fields(db: Database, enum_id: u32, out_writer: anytype) !void {
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+fn write_enum_fields(db: *Database, arena: Allocator, e: *const Enum, out_writer: anytype) !void {
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    const size = db.attrs.size.get(enum_id) orelse return error.MissingEnumSize;
-    const field_set = db.children.enum_fields.get(enum_id) orelse return error.MissingEnumFields;
-    for (field_set.keys()) |enum_field_id|
-        try write_enum_field(db, enum_field_id, size, writer);
+    const enum_fields = try db.get_enum_fields(arena, e.id, .{ .distinct = true });
+
+    for (enum_fields) |enum_field|
+        try write_enum_field(arena, &enum_field, e.size_bits, writer);
 
     // if the enum doesn't completely fill the integer then make it a non-exhaustive enum
-    if (field_set.count() < std.math.pow(u64, 2, size))
+    if (enum_fields.len < std.math.pow(u64, 2, e.size_bits))
         try writer.writeAll("_,\n");
 
     try out_writer.writeAll(buffer.items);
 }
 
 fn write_enum_field(
-    db: Database,
-    enum_field_id: EntityId,
+    arena: Allocator,
+    enum_field: *const EnumField,
     size: u64,
     writer: anytype,
 ) !void {
-    const name = db.attrs.name.get(enum_field_id) orelse return error.MissingEnumFieldName;
-    const value = db.types.enum_fields.get(enum_field_id) orelse return error.MissingEnumFieldValue;
-
     // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
-    if (db.attrs.description.get(enum_field_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (enum_field.description) |description|
+        try write_comment(arena, description, writer);
 
-    try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(name), value });
+    try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(enum_field.name), enum_field.value });
 }
 
 fn write_mode_enum_and_fn(
-    db: Database,
-    mode_set: EntitySet,
+    db: *Database,
+    arena: Allocator,
+    modes: []const Mode,
     out_writer: anytype,
 ) !void {
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
     try writer.writeAll("pub const Mode = enum {\n");
 
-    for (mode_set.keys()) |mode_id| {
-        const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
-        try writer.print("{},\n", .{std.zig.fmtId(mode_name)});
+    for (modes) |mode| {
+        try writer.print("{},\n", .{std.zig.fmtId(mode.name)});
     }
 
     try writer.writeAll(
@@ -520,21 +511,16 @@ fn write_mode_enum_and_fn(
         \\
     );
 
-    for (mode_set.keys()) |mode_id| {
-        const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
-
+    for (modes) |mode| {
         var components = std.ArrayList([]const u8).init(db.gpa);
         defer components.deinit();
 
-        const mode = db.types.modes.get(mode_id).?;
         var tok_it = std.mem.tokenizeScalar(u8, mode.qualifier, '.');
         while (tok_it.next()) |token|
             try components.append(token);
 
         const field_name = components.items[components.items.len - 1];
-        _ = try db.get_entity_id_by_name("type.field", field_name);
-
-        const access_path = try std.mem.join(db.arena.allocator(), ".", components.items[1 .. components.items.len - 1]);
+        const access_path = try std.mem.join(arena, ".", components.items[1 .. components.items.len - 1]);
         try writer.writeAll("{\n");
         try writer.print("const value = self.{s}.read().{s};\n", .{
             access_path,
@@ -547,7 +533,7 @@ fn write_mode_enum_and_fn(
             const value = try std.fmt.parseInt(u64, token, 0);
             try writer.print("{},\n", .{value});
         }
-        try writer.print("=> return .{},\n", .{std.zig.fmtId(mode_name)});
+        try writer.print("=> return .{},\n", .{std.zig.fmtId(mode.name)});
         try writer.writeAll("else => {},\n");
         try writer.writeAll("}\n");
         try writer.writeAll("}\n");
@@ -559,48 +545,42 @@ fn write_mode_enum_and_fn(
     try out_writer.writeAll(buffer.items);
 }
 
-fn write_registers(db: Database, parent_id: EntityId, out_writer: anytype) !void {
-    var registers = try get_ordered_register_list(db, parent_id);
-    defer registers.deinit();
-
-    if (db.children.modes.get(parent_id)) |modes|
-        try write_registers_with_modes(db, parent_id, modes, registers, out_writer)
+fn write_registers(
+    db: *Database,
+    arena: Allocator,
+    struct_id: StructID,
+    block_size_bytes: ?u64,
+    modes: []const Mode,
+    registers: []const Register,
+    out_writer: anytype,
+) !void {
+    log.debug("write_registers: modes.len={}", .{modes.len});
+    if (modes.len > 0)
+        try write_registers_with_modes(db, arena, struct_id, block_size_bytes, modes, out_writer)
     else
-        try write_registers_base(db, parent_id, registers.items, out_writer);
+        try write_registers_base(db, arena, block_size_bytes, registers, out_writer);
 }
 
 fn write_registers_with_modes(
-    db: Database,
-    parent_id: EntityId,
-    mode_set: EntitySet,
-    registers: std.ArrayList(EntityWithOffset),
+    db: *Database,
+    arena: Allocator,
+    struct_id: StructID,
+    block_size_bytes: ?u64,
+    modes: []const Mode,
     out_writer: anytype,
 ) !void {
-    const allocator = db.arena.allocator();
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    log.debug("write_registers_with_modes", .{});
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    for (mode_set.keys()) |mode_id| {
-        const mode_name = db.attrs.name.get(mode_id) orelse unreachable;
-
-        // filter registers for this mode
-        var moded_registers = std.ArrayList(EntityWithOffset).init(allocator);
-        for (registers.items) |register| {
-            if (db.attrs.modes.get(register.id)) |reg_mode_set| {
-                for (reg_mode_set.keys()) |reg_mode_id| {
-                    if (reg_mode_id == mode_id)
-                        try moded_registers.append(register);
-                }
-                // if no mode is specified, then it should always be present
-            } else try moded_registers.append(register);
-        }
-
+    for (modes) |mode| {
+        const registers = try db.get_registers_with_mode(arena, struct_id, mode.id);
         try writer.print("{}: extern struct {{\n", .{
-            std.zig.fmtId(mode_name),
+            std.zig.fmtId(mode.name),
         });
 
-        try write_registers_base(db, parent_id, moded_registers.items, writer);
+        try write_registers_base(db, arena, block_size_bytes, registers, writer);
         try writer.writeAll("},\n");
     }
 
@@ -608,71 +588,63 @@ fn write_registers_with_modes(
 }
 
 fn write_registers_base(
-    db: Database,
-    parent_id: EntityId,
-    registers: []const EntityWithOffset,
+    db: *Database,
+    arena: Allocator,
+    block_size_bytes: ?u64,
+    registers: []const Register,
     out_writer: anytype,
 ) !void {
-    // registers _should_ be sorted when then make their way here
-    assert(std.sort.isSorted(EntityWithOffset, registers, {}, EntityWithOffset.less_than));
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
-    defer buffer.deinit();
-
-    const writer = buffer.writer();
-
-    // don't have to care about modes
-    // prioritize smaller fields that come earlier
-    var offset: u64 = 0;
-    var i: u32 = 0;
-
-    while (i < registers.len) {
-        if (offset < registers[i].offset) {
-            try writer.print("reserved{}: [{}]u8,\n", .{ registers[i].offset, registers[i].offset - offset });
-            offset = registers[i].offset;
-        } else if (offset > registers[i].offset) {
-            if (db.attrs.name.get(registers[i].id)) |name|
-                log.warn("skipping register: {s}", .{name});
-
-            i += 1;
+    log.debug("write_registers_base", .{});
+    // Fields are assumed to be in order of offset, it's possible there are
+    // registers that overlap so we're going to filter out some registers so
+    // there's no overlap
+    var non_overlapping = std.ArrayList(Register).init(arena);
+    for (registers) |register| {
+        if (non_overlapping.items.len == 0) {
+            try non_overlapping.append(register);
             continue;
         }
 
-        var end = i;
-        while (end < registers.len and registers[end].offset == offset) : (end += 1) {}
-        const next = blk: {
-            var ret: ?EntityWithOffsetAndSize = null;
-            for (registers[i..end]) |register| {
-                const size = if (db.attrs.size.get(register.id)) |size|
-                    if (db.attrs.count.get(register.id)) |count|
-                        size * count
-                    else
-                        size
-                else
-                    unreachable;
+        const last_register = &non_overlapping.items[non_overlapping.items.len - 1];
+        const last_register_end_bytes = last_register.offset_bytes + last_register.get_size_bytes();
 
-                if (ret == null or (size < ret.?.size))
-                    ret = .{
-                        .id = register.id,
-                        .offset = register.offset,
-                        .size = size,
-                    };
-            }
-
-            break :blk ret orelse unreachable;
-        };
-
-        try write_register(db, next.id, writer);
-        // TODO: round up to next power of two
-        assert(next.size % 8 == 0);
-        offset += next.size / 8;
-        i = end;
+        // If there's no overlap then append and continue
+        if (last_register_end_bytes <= register.offset_bytes) {
+            try non_overlapping.append(register);
+        } else if (last_register.offset_bytes == register.offset_bytes and
+            register.get_size_bytes() < last_register.get_size_bytes())
+        {
+            // Edge case for overlapping
+            //
+            // If a register's offset comes before another, it has precedence,
+            // but if the offsets are the exact same, and the new one is
+            // smaller, then the new will replace the old.
+            last_register.* = register;
+        }
     }
 
-    // TODO: name collision
-    if (db.attrs.size.get(parent_id)) |size| {
+    // registers _should_ be sorted when then make their way here
+    var buffer = std.ArrayList(u8).init(arena);
+    defer buffer.deinit();
+
+    const writer = buffer.writer();
+    var offset: u64 = 0;
+    for (non_overlapping.items) |register| {
+        if (offset < register.offset_bytes) {
+            try writer.print("reserved{}: [{}]u8,\n", .{ register.offset_bytes, register.offset_bytes - offset });
+            offset = register.offset_bytes;
+        }
+
+        assert(offset == register.offset_bytes);
+        try write_register(db, arena, &register, writer);
+        offset += register.get_size_bytes();
+    }
+
+    if (block_size_bytes) |size| {
         if (offset > size)
             @panic("peripheral size too small, parsing should have caught this");
 
+        log.debug("offset={}, size={}", .{ offset, size });
         if (offset != size)
             try writer.print("padding: [{}]u8,\n", .{
                 size - offset,
@@ -683,136 +655,107 @@ fn write_registers_base(
 }
 
 fn write_register(
-    db: Database,
-    register_id: EntityId,
+    db: *Database,
+    arena: Allocator,
+    register: *const Register,
     out_writer: anytype,
 ) !void {
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
+    log.debug("write_register: {}", .{register.*});
+    var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
-    const name = db.attrs.name.get(register_id) orelse unreachable;
-    const size = db.attrs.size.get(register_id) orelse unreachable;
-
     const writer = buffer.writer();
-    if (db.attrs.description.get(register_id)) |description|
-        try write_comment(db.arena.allocator(), description, writer);
+    if (register.description) |description|
+        try write_comment(arena, description, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
-    const array_prefix: []const u8 = if (db.attrs.count.get(register_id)) |count|
+    const array_prefix: []const u8 = if (register.count) |count|
         try std.fmt.bufPrint(&array_prefix_buf, "[{}]", .{count})
     else
         "";
 
-    if (db.attrs.group.contains(register_id)) {
-        try writer.print("{}: {s}{},\n", .{
-            std.zig.fmtId(name),
-            array_prefix,
-            std.zig.fmtId(name),
-        });
-    } else if (db.children.fields.get(register_id)) |field_set| {
-        var fields = std.ArrayList(EntityWithOffset).init(db.gpa);
-        defer fields.deinit();
-
-        for (field_set.keys()) |field_id|
-            try fields.append(.{
-                .id = field_id,
-                .offset = db.attrs.offset.get(field_id) orelse continue,
-            });
-
-        std.sort.insertion(EntityWithOffset, fields.items, {}, EntityWithOffset.less_than);
+    // TODO: named struct type
+    const fields = try db.get_register_fields(arena, register.id, .{});
+    if (fields.len > 0) {
         try writer.print("{}: {s}mmio.Mmio(packed struct(u{}) {{\n", .{
-            std.zig.fmtId(name),
+            std.zig.fmtId(register.name),
             array_prefix,
-            size,
+            register.size_bits,
         });
 
-        try write_fields(db, fields.items, size, writer);
+        try write_fields(db, arena, fields, register.size_bits, writer);
         try writer.writeAll("}),\n");
-    } else try writer.print("{}: {s}u{},\n", .{
-        std.zig.fmtId(name),
-        array_prefix,
-        size,
-    });
+    } else {
+        try writer.print("{}: {s}u{},\n", .{
+            std.zig.fmtId(register.name),
+            array_prefix,
+            register.size_bits,
+        });
+    }
 
     try out_writer.writeAll(buffer.items);
 }
 
 fn write_fields(
-    db: Database,
-    fields: []const EntityWithOffset,
-    register_size: u64,
+    db: *Database,
+    arena: Allocator,
+    fields: []const Database.StructField,
+    register_size_bits: u64,
     out_writer: anytype,
 ) !void {
-    assert(std.sort.isSorted(EntityWithOffset, fields, {}, EntityWithOffset.less_than));
-    var buffer = std.ArrayList(u8).init(db.arena.allocator());
-    defer buffer.deinit();
-
-    // don't have to care about modes
-    // prioritize smaller fields that come earlier
-    const writer = buffer.writer();
-    var offset: u64 = 0;
-    var i: u32 = 0;
-    while (i < fields.len and offset < register_size) {
-        if (offset < fields[i].offset) {
-            try writer.print("reserved{}: u{},\n", .{ fields[i].offset, fields[i].offset - offset });
-            offset = fields[i].offset;
-        } else if (offset > fields[i].offset) {
-            if (db.attrs.name.get(fields[i].id)) |name|
-                log.warn("skipping field: {s}, offset={}, field_offset={}", .{
-                    name,
-                    offset,
-                    fields[i].offset,
-                });
-
-            i += 1;
+    // Fields are assumed to be in order of offset, it's possible there are
+    // fields that overlap so we're going to filter out some fields so there's
+    // no overlap
+    var non_overlapping = std.ArrayList(Database.StructField).init(arena);
+    for (fields) |field| {
+        if (non_overlapping.items.len == 0) {
+            try non_overlapping.append(field);
             continue;
         }
 
-        var end = i;
-        while (end < fields.len and fields[end].offset == offset) : (end += 1) {}
-        const next = blk: {
-            var ret: ?EntityWithOffsetAndSize = null;
-            for (fields[i..end]) |field| {
-                const size = if (db.attrs.size.get(field.id)) |size|
-                    if (db.attrs.count.get(field.id)) |count|
-                        size * count
-                    else
-                        size
-                else
-                    unreachable;
+        const last_field = &non_overlapping.items[non_overlapping.items.len - 1];
+        const last_field_end_bits = last_field.offset_bits + last_field.get_size_bits();
 
-                if (ret == null or (size < ret.?.size))
-                    ret = .{
-                        .id = field.id,
-                        .offset = field.offset,
-                        .size = size,
-                    };
-            }
+        // If there's no overlap then append and continue
+        if (last_field_end_bits <= field.offset_bits) {
+            try non_overlapping.append(field);
+        } else if (last_field.offset_bits == field.offset_bits and
+            field.get_size_bits() < last_field.get_size_bits())
+        {
+            // Edge case for overlapping
+            //
+            // If a field's offset comes before another, it has precedence, but if
+            // the offsets are the exact same, and the new one is smaller, then the
+            // new will replace the old.
+            last_field.* = field;
+        }
+    }
 
-            break :blk ret orelse unreachable;
-        };
+    // TODO: Remove any fields that don't fit in the register
 
-        const name = db.attrs.name.get(next.id) orelse unreachable;
-        if (offset + next.size > register_size) {
-            log.warn("register '{s}' is outside register boundaries: offset={}, size={}, register_size={}", .{
-                name,
-                next.offset,
-                next.size,
-                register_size,
-            });
-            break;
+    var buffer = std.ArrayList(u8).init(arena);
+    defer buffer.deinit();
+    const writer = buffer.writer();
+    var offset: u64 = 0;
+
+    for (non_overlapping.items) |field| {
+        assert(offset <= field.offset_bits);
+        if (offset < field.offset_bits) {
+            try writer.print("reserved{}: u{},\n", .{ field.offset_bits, field.offset_bits - offset });
+            offset = field.offset_bits;
         }
 
-        if (db.attrs.description.get(next.id)) |description|
-            try write_comment(db.arena.allocator(), description, writer);
+        assert(offset == field.offset_bits);
+        if (field.description) |description|
+            try write_comment(arena, description, writer);
 
-        if (db.attrs.count.get(fields[i].id)) |count| {
-            if (db.attrs.@"enum".contains(fields[i].id))
+        if (field.count) |count| {
+            if (field.enum_id != null)
                 log.warn("TODO: field array with enums", .{});
 
             try writer.print("{}: packed struct(u{}) {{ ", .{
-                std.zig.fmtId(name),
-                next.size,
+                std.zig.fmtId(field.name),
+                field.get_size_bits(),
             });
 
             var j: u32 = 0;
@@ -820,23 +763,40 @@ fn write_fields(
                 if (j > 0)
                     try writer.writeAll(", ");
 
-                try writer.print("u{}", .{next.size / count});
+                try writer.print("u{}", .{field.size_bits});
             }
 
             try writer.writeAll(" },\n");
-        } else if (db.attrs.@"enum".get(fields[i].id)) |enum_id| {
-            if (db.attrs.name.get(enum_id)) |enum_name| {
-                try writer.print(
-                    \\{}: packed union {{
-                    \\    raw: u{},
-                    \\    value: {},
-                    \\}},
-                    \\
-                , .{
-                    std.zig.fmtId(name),
-                    next.size,
-                    std.zig.fmtId(enum_name),
-                });
+        } else if (field.enum_id) |enum_id| {
+            const e = try db.get_enum(arena, enum_id);
+            if (e.name) |enum_name| {
+                if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
+                    try writer.print(
+                        \\{}: packed union {{
+                        \\    raw: u{},
+                        \\    value: enum(u{}) {{
+                        \\
+                    , .{
+                        std.zig.fmtId(field.name),
+                        e.size_bits,
+                        e.size_bits,
+                    });
+
+                    try write_enum_fields(db, arena, &e, writer);
+                    try writer.writeAll("},\n},\n");
+                } else {
+                    try writer.print(
+                        \\{}: packed union {{
+                        \\    raw: u{},
+                        \\    value: {},
+                        \\}},
+                        \\
+                    , .{
+                        std.zig.fmtId(field.name),
+                        field.size_bits,
+                        std.zig.fmtId(enum_name),
+                    });
+                }
             } else {
                 try writer.print(
                     \\{}: packed union {{
@@ -844,78 +804,33 @@ fn write_fields(
                     \\    value: enum(u{}) {{
                     \\
                 , .{
-                    std.zig.fmtId(name),
-                    next.size,
-                    next.size,
+                    std.zig.fmtId(field.name),
+                    e.size_bits,
+                    e.size_bits,
                 });
-                try write_enum_fields(db, enum_id, writer);
+
+                try write_enum_fields(db, arena, &e, writer);
                 try writer.writeAll("},\n},\n");
             }
         } else {
-            try writer.print("{}: u{},\n", .{ std.zig.fmtId(name), next.size });
+            try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.get_size_bits() });
         }
 
-        offset += next.size;
-        i = end;
+        offset += field.get_size_bits();
     }
 
-    assert(offset <= register_size);
-    if (offset < register_size)
-        try writer.print("padding: u{},\n", .{register_size - offset});
+    assert(offset <= register_size_bits);
+    if (offset < register_size_bits)
+        try writer.print("padding: u{},\n", .{register_size_bits - offset});
 
     try out_writer.writeAll(buffer.items);
 }
 
-fn get_ordered_register_list(
-    db: Database,
-    parent_id: EntityId,
-) !std.ArrayList(EntityWithOffset) {
-    var registers = std.ArrayList(EntityWithOffset).init(db.gpa);
-    errdefer registers.deinit();
-
-    // get list of registers
-    if (db.children.registers.get(parent_id)) |register_set| {
-        for (register_set.keys()) |register_id| {
-            const offset = db.attrs.offset.get(register_id) orelse continue;
-            try registers.append(.{ .id = register_id, .offset = offset });
-        }
-    }
-
-    std.sort.insertion(EntityWithOffset, registers.items, {}, EntityWithOffset.less_than);
-    return registers;
-}
-
 const tests = @import("output_tests.zig");
-
-test "gen.peripheral type with register and field" {
-    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
-    defer db.deinit();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer());
-    try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                TEST_FIELD: u1,
-        \\                padding: u31,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
 
 test "gen.peripheral instantiation" {
     var db = try tests.peripheral_instantiation(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -949,7 +864,7 @@ test "gen.peripheral instantiation" {
 
 test "gen.peripherals with a shared type" {
     var db = try tests.peripherals_with_shared_type(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -984,7 +899,7 @@ test "gen.peripherals with a shared type" {
 
 test "gen.peripheral with modes" {
     var db = try tests.peripheral_with_modes(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1046,7 +961,7 @@ test "gen.peripheral with modes" {
 
 test "gen.peripheral with enum" {
     var db = try tests.peripheral_with_enum(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1075,7 +990,7 @@ test "gen.peripheral with enum" {
 
 test "gen.peripheral with enum, enum is exhausted of values" {
     var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1103,7 +1018,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
 
 test "gen.field with named enum" {
     var db = try tests.field_with_named_enum(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1138,7 +1053,7 @@ test "gen.field with named enum" {
 
 test "gen.field with anonymous enum" {
     var db = try tests.field_with_anonymous_enum(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1171,7 +1086,7 @@ test "gen.field with anonymous enum" {
 
 test "gen.namespaced register groups" {
     var db = try tests.namespaced_register_groups(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1213,7 +1128,7 @@ test "gen.namespaced register groups" {
 
 test "gen.peripheral with reserved register" {
     var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1246,7 +1161,7 @@ test "gen.peripheral with reserved register" {
 
 test "gen.peripheral with count" {
     var db = try tests.peripheral_with_count(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1279,7 +1194,7 @@ test "gen.peripheral with count" {
 
 test "gen.peripheral with count, padding required" {
     var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1313,7 +1228,7 @@ test "gen.peripheral with count, padding required" {
 
 test "gen.register with count" {
     var db = try tests.register_with_count(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1346,7 +1261,7 @@ test "gen.register with count" {
 
 test "gen.register with count and fields" {
     var db = try tests.register_with_count_and_fields(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1382,7 +1297,7 @@ test "gen.register with count and fields" {
 
 test "gen.field with count, width of one, offset, and padding" {
     var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1409,7 +1324,7 @@ test "gen.field with count, width of one, offset, and padding" {
 
 test "gen.field with count, multi-bit width, offset, and padding" {
     var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1436,7 +1351,7 @@ test "gen.field with count, multi-bit width, offset, and padding" {
 
 test "gen.interrupts.avr" {
     var db = try tests.interrupts_avr(std.testing.allocator);
-    defer db.deinit();
+    defer db.destroy();
 
     var buffer = std.ArrayList(u8).init(std.testing.allocator);
     defer buffer.deinit();
@@ -1462,3 +1377,174 @@ test "gen.interrupts.avr" {
         \\
     , buffer.items);
 }
+
+test "gen.peripheral type with register and field" {
+    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        /// test peripheral
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// test register
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                /// test field
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.name collisions in enum name cause them to be anonymous" {
+    var db = try tests.enums_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD1: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        TEST_ENUM_FIELD2 = 0x1,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                TEST_FIELD2: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        TEST_ENUM_FIELD2 = 0x1,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.pick one enum field in value collisions" {
+    var db = try tests.enum_with_value_collision(std.testing.allocator);
+    defer db.destroy();
+
+    try db.backup("value_collision.regz");
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                padding: u4,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.pick one enum field in name collisions" {
+    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+        \\                TEST_FIELD: packed union {
+        \\                    raw: u4,
+        \\                    value: enum(u4) {
+        \\                        TEST_ENUM_FIELD1 = 0x0,
+        \\                        _,
+        \\                    },
+        \\                },
+        \\                padding: u4,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+test "gen.register fields with name collision" {
+    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
+    defer db.destroy();
+
+    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+    defer buffer.deinit();
+
+    try db.to_zig(buffer.writer());
+    try std.testing.expectEqualStrings(
+        \\const micro = @import("microzig");
+        \\const mmio = micro.mmio;
+        \\
+        \\pub const types = struct {
+        \\    pub const peripherals = struct {
+        \\        /// test peripheral
+        \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// test register
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                /// test field 1
+        \\                TEST_FIELD: u1,
+        \\                padding: u31,
+        \\            }),
+        \\        };
+        \\    };
+        \\};
+        \\
+    , buffer.items);
+}
+
+// FIXME: Additional unit tests to create
+//
+// - Registers with shared struct
+// - Complex struct as field in a peripheral
+// - Moded Register
+// - Moded Field

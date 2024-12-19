@@ -34,7 +34,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .eabi,
             },
             .register_definition = .{
-                .json = b.path("src/chips/ATmega328P.json"),
+                .atdf = b.path("src/chips/ATmega328P.atdf"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
@@ -59,7 +59,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .eabi,
             },
             .register_definition = .{
-                .json = b.path("src/chips/ATmega32U4.json"),
+                .atdf = b.path("src/chips/ATmega32U4.atdf"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },

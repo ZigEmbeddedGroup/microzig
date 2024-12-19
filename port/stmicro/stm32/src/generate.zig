@@ -241,15 +241,15 @@ pub fn main() !void {
     // sort to try to keep things somewhat in order
     std.sort.insertion(std.json.Parsed(ChipFile), chip_files.items, {}, chip_file_less_than);
 
-    var db = try regz.Database.init(gpa.allocator());
-    defer db.deinit();
+    var db = try regz.Database.create(gpa.allocator());
+    defer db.destroy();
 
     for (register_files.keys(), register_files.values()) |name, register_file| {
         const periph_id = try db.create_peripheral(.{
             .name = name,
         });
 
-        var enums = std.StringArrayHashMap(regz.Database.EntityId).init(allocator);
+        var enums = std.StringArrayHashMap(regz.Database.EnumID).init(allocator);
         defer enums.deinit();
 
         for (register_file.value.object.keys(), register_file.value.object.values()) |key, obj| {
@@ -259,10 +259,11 @@ pub fn main() !void {
             const enum_description: ?[]const u8 = if (obj.object.get("description")) |desc| desc.string else null;
             const size = obj.object.get("bit_size").?.integer;
 
-            const enum_id = try db.create_enum(periph_id, .{
+            const struct_id = try db.get_peripheral_struct(periph_id);
+            const enum_id = try db.create_enum(struct_id, .{
                 .name = key["enum/".len..],
                 .description = enum_description,
-                .size = @intCast(size),
+                .size_bits = @intCast(size),
             });
 
             try enums.put(key["enum/".len..], enum_id);
@@ -272,7 +273,7 @@ pub fn main() !void {
                 const enum_field_description: ?[]const u8 = if (item.object.get("description")) |desc| desc.string else null;
                 const value = item.object.get("value").?.integer;
 
-                _ = try db.create_enum_field(enum_id, .{
+                try db.add_enum_field(enum_id, .{
                     .name = enum_field_name,
                     .description = enum_field_description,
                     .value = @intCast(value),
@@ -284,7 +285,8 @@ pub fn main() !void {
             if (!std.mem.startsWith(u8, key, "block/"))
                 continue;
 
-            const group_id = try db.create_register_group(periph_id, .{
+            const struct_id = try db.get_peripheral_struct(periph_id);
+            const group_id = try db.create_nested_struct(struct_id, .{
                 .name = key["block/".len..],
                 .description = if (obj.object.get("description")) |desc|
                     desc.string
@@ -300,8 +302,8 @@ pub fn main() !void {
                 const register_id = try db.create_register(group_id, .{
                     .name = register_name,
                     .description = description,
-                    .offset = @intCast(byte_offset),
-                    .size = 32,
+                    .offset_bytes = @intCast(byte_offset),
+                    .size_bits = 32,
                     .count = if (item.object.get("array")) |array| blk: {
                         if (array.object.get("len")) |count| {
                             // ensure stride is always 4 for now, assuming that
@@ -334,16 +336,16 @@ pub fn main() !void {
                         };
 
                         const bit_size = field.object.get("bit_size").?.integer;
-                        const enum_id: ?regz.Database.EntityId = if (field.object.get("enum")) |enum_name|
+                        const enum_id: ?regz.Database.EnumID = if (field.object.get("enum")) |enum_name|
                             if (enums.get(enum_name.string)) |enum_id| enum_id else null
                         else
                             null;
 
-                        _ = try db.create_field(register_id, .{
+                        try db.add_register_field(register_id, .{
                             .name = field_name,
                             .description = field_description,
-                            .offset = @intCast(bit_offset),
-                            .size = @intCast(bit_size),
+                            .offset_bits = @intCast(bit_offset),
+                            .size_bits = @intCast(bit_size),
                             .enum_id = enum_id,
                         });
                     }
@@ -360,7 +362,8 @@ pub fn main() !void {
             .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_cpu.get(core.name).?).?,
         });
 
-        try regz.arm.load_system_interrupts(&db, device_id);
+        const device = try db.get_device_by_name(arena.allocator(), chip_file.value.name);
+        try regz.arm.load_system_interrupts(db, &device);
 
         // TODO: how do we want to handle multi core MCUs?
         //
@@ -372,7 +375,7 @@ pub fn main() !void {
         for (core.interrupts) |interrupt| {
             _ = try db.create_interrupt(device_id, .{
                 .name = interrupt.name,
-                .index = interrupt.number,
+                .idx = interrupt.number,
             });
         }
 
@@ -382,17 +385,13 @@ pub fn main() !void {
 
             const periph_name = try std.fmt.allocPrint(allocator, "{s}_{s}", .{ registers.kind, registers.version });
             // get the register group representing the peripheral instance
-            const periph_id = try db.get_entity_id_by_name("type.peripheral", periph_name);
-            const children = db.children.register_groups.get(periph_id).?;
-            const register_group_id = for (children.keys()) |child_id| {
-                const child_name = db.attrs.name.get(child_id).?;
-                if (std.mem.eql(u8, child_name, registers.block))
-                    break child_id;
-            } else return error.FailedToFindRegisterGroup;
-
-            _ = try db.create_peripheral_instance(device_id, register_group_id, .{
+            const periph_id = try db.get_peripheral_by_name(periph_name) orelse return error.MissingPeripheral;
+            const struct_id = try db.get_peripheral_struct(periph_id);
+            const struct_decl = try db.get_struct_decl_by_name(arena.allocator(), struct_id, registers.block);
+            _ = try db.create_device_peripheral(device_id, .{
+                .struct_id = struct_decl.struct_id,
                 .name = peripheral.name,
-                .offset = peripheral.address,
+                .offset_bytes = peripheral.address,
             });
         }
     }
@@ -404,6 +403,8 @@ pub fn main() !void {
 
     const out_file = try std.fs.cwd().createFile("src/chips/all.zig", .{});
     defer out_file.close();
+
+    try db.backup("stm32.regz");
 
     db.to_zig(out_file.writer()) catch |err| {
         std.log.err("Failed to write", .{});

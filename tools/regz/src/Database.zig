@@ -1,84 +1,487 @@
 gpa: Allocator,
-arena: *ArenaAllocator,
-next_entity_id: u32,
+sql: sqlite.Db,
+diags: sqlite.Diagnostics = .{},
 
-// attributes are extra information that each entity might have, in some
-// contexts they're required, in others they're optional
-attrs: struct {
-    name: HashMap(EntityId, []const u8) = .{},
-    description: HashMap(EntityId, []const u8) = .{},
-    offset: HashMap(EntityId, u64) = .{},
-    access: HashMap(EntityId, Access) = .{},
-    group: HashMap(EntityId, void) = .{},
-    count: HashMap(EntityId, u64) = .{},
-    size: HashMap(EntityId, u64) = .{},
-    reset_value: HashMap(EntityId, u64) = .{},
-    reset_mask: HashMap(EntityId, u64) = .{},
-    version: HashMap(EntityId, []const u8) = .{},
-
-    // a register or bitfield can be valid in one or more modes of their parent
-    modes: HashMap(EntityId, Modes) = .{},
-
-    // a field type might have an enum type. This is an array hash map
-    // because it's iterated when inferring enum size
-    @"enum": ArrayHashMap(EntityId, EntityId) = .{},
-
-    parent: HashMap(EntityId, EntityId) = .{},
-} = .{},
-
-children: struct {
-    modes: ArrayHashMap(EntityId, EntitySet) = .{},
-    interrupts: ArrayHashMap(EntityId, EntitySet) = .{},
-    peripherals: ArrayHashMap(EntityId, EntitySet) = .{},
-    register_groups: ArrayHashMap(EntityId, EntitySet) = .{},
-    registers: ArrayHashMap(EntityId, EntitySet) = .{},
-    fields: ArrayHashMap(EntityId, EntitySet) = .{},
-    enums: ArrayHashMap(EntityId, EntitySet) = .{},
-    enum_fields: ArrayHashMap(EntityId, EntitySet) = .{},
-} = .{},
-
-types: struct {
-    // atdf has modes which make registers into unions
-    modes: ArrayHashMap(EntityId, Mode) = .{},
-
-    peripherals: ArrayHashMap(EntityId, void) = .{},
-    register_groups: ArrayHashMap(EntityId, void) = .{},
-    registers: ArrayHashMap(EntityId, void) = .{},
-    fields: ArrayHashMap(EntityId, void) = .{},
-    enums: ArrayHashMap(EntityId, void) = .{},
-    enum_fields: ArrayHashMap(EntityId, u32) = .{},
-} = .{},
-
-instances: struct {
-    devices: ArrayHashMap(EntityId, Device) = .{},
-    interrupts: ArrayHashMap(EntityId, i32) = .{},
-    peripherals: ArrayHashMap(EntityId, EntityId) = .{},
-} = .{},
-
+const Database = @This();
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const ArenaAllocator = std.heap.ArenaAllocator;
 const assert = std.debug.assert;
-const HashMap = std.AutoHashMapUnmanaged;
-const ArrayHashMap = std.AutoArrayHashMapUnmanaged;
 
+const sqlite = @import("sqlite");
 const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
-const dslite = @import("dslite.zig");
 const gen = @import("gen.zig");
-const regzon = @import("regzon.zig");
-const patch = @import("patch.zig");
-const Patch = patch.Patch;
+const Patch = @import("patch.zig").Patch;
+const SQL_Options = @import("SQL_Options.zig");
 
-const TypeOfField = @import("testing.zig").TypeOfField;
+const log = std.log.scoped(.db);
 
-const Database = @This();
-const log = std.log.scoped(.database);
+// Actual instances will have "Instance" in the type name for the ID
+pub const DeviceID = ID(u32, "devices");
+pub const InterruptID = ID(u32, "interrupts");
+pub const DevicePeripheralID = ID(u32, "device_peripherals");
 
-pub const EntityId = u32;
-pub const EntitySet = ArrayHashMap(EntityId, void);
-pub const RegisterKind = enum { register, register_group };
+// Lots of operations use types so we omit "Type" in the type name for the ID
+pub const PeripheralID = ID(u32, "peripherals");
+pub const EnumID = ID(u32, "enums");
+pub const RegisterID = ID(u32, "registers");
+pub const ModeID = ID(u32, "modes");
+pub const StructID = ID(u32, "structs");
+
+pub const Device = struct {
+    id: DeviceID,
+    name: []const u8,
+    description: ?[]const u8,
+    arch: Arch,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+    };
+};
+
+pub const DevicePeripheral = struct {
+    id: DevicePeripheralID,
+    name: []const u8,
+    description: ?[]const u8,
+    device_id: DeviceID,
+    offset_bytes: u64,
+    count: ?u64,
+    struct_id: StructID,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+
+    // TODO: SQL opts
+};
+
+pub const Mode = struct {
+    id: ModeID,
+    struct_id: StructID,
+    name: []const u8,
+    description: ?[]const u8,
+    value: []const u8,
+    qualifier: []const u8,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+};
+
+pub const Interrupt = struct {
+    id: InterruptID,
+    device_id: DeviceID,
+    name: []const u8,
+    description: ?[]const u8,
+    idx: i32,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+        .foreign_keys = &.{
+            .{ .name = "device_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+
+    pub fn deinit(interrupt: *const Interrupt, allocator: Allocator) void {
+        if (interrupt.description) |desc|
+            allocator.free(desc);
+
+        allocator.free(interrupt.name);
+    }
+};
+
+pub const Enum = struct {
+    id: EnumID,
+    struct_id: ?StructID,
+    size_bits: u8,
+    name: ?[]const u8 = null,
+    description: ?[]const u8 = null,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+
+        // TODO:
+        //  CHECK ((struct_id IS NULL AND name IS NULL) OR (struct_id IS NOT NULL AND name IS NOT NULL)),
+    };
+
+    pub fn deinit(e: *const Enum, allocator: Allocator) void {
+        if (e.name) |name|
+            allocator.free(name);
+
+        if (e.description) |desc|
+            allocator.free(desc);
+    }
+};
+
+pub const Register = struct {
+    id: RegisterID,
+    struct_id: ?StructID,
+    name: []const u8,
+    description: ?[]const u8,
+    size_bits: u64,
+    offset_bytes: u64,
+    count: ?u64,
+    access: Access,
+    reset_mask: ?u64,
+    reset_value: ?u64,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+
+    pub fn get_size_bytes(register: *const Register) u32 {
+        const single_size_bytes = register.size_bits / 8;
+        return if (register.count) |count|
+            @intCast(count * single_size_bytes)
+        else
+            @intCast(single_size_bytes);
+    }
+
+    pub fn format(
+        register: Register,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+
+        try writer.print("Register: id={} struct_id={?} name='{s}' size_bits={} offset_bytes={} desc='{?s}'", .{
+            register.id,
+            register.struct_id,
+            register.name,
+            register.size_bits,
+            register.offset_bytes,
+            register.description,
+        });
+    }
+};
+
+pub const EnumField = struct {
+    enum_id: EnumID,
+    name: []const u8,
+    description: ?[]const u8,
+    value: u64,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "enum_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+        .unique_constraints = &.{
+            &.{ "enum_id", "name" },
+        },
+    };
+};
+
+pub const Struct = struct {
+    id: StructID,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+    };
+};
+
+pub const StructField = struct {
+    struct_id: StructID,
+    name: []const u8,
+    description: ?[]const u8,
+    size_bits: u8,
+    offset_bits: u8,
+    enum_id: ?EnumID,
+    count: ?u64,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "enum_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+        .unique_constraints = &.{
+            &.{ "struct_id", "name" },
+        },
+        // .checks = .{
+        //      .{ .name = "count", .expr = "{} >= 1",
+        // },
+    };
+
+    pub fn get_size_bits(field: *const StructField) u32 {
+        return if (field.count) |count|
+            @intCast(field.size_bits * count)
+        else
+            field.size_bits;
+    }
+};
+
+pub const StructDecl = struct {
+    parent_id: StructID,
+    struct_id: StructID,
+    name: []const u8,
+    description: ?[]const u8,
+    size_bytes: ?u64,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "parent_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+        .unique_constraints = &.{
+            &.{ "parent_id", "name" },
+            &.{"struct_id"},
+        },
+    };
+
+    pub fn deinit(decl: *const StructDecl, allocator: Allocator) void {
+        if (decl.description) |desc|
+            allocator.free(desc);
+
+        allocator.free(decl.name);
+    }
+};
+
+pub const StructRegister = struct {
+    struct_id: StructID,
+    register_id: RegisterID,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "register_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+};
+
+pub const Peripheral = struct {
+    id: PeripheralID,
+    struct_id: StructID,
+    name: []const u8,
+    description: ?[]const u8,
+    size_bytes: ?u64,
+
+    pub const sql_opts = SQL_Options{
+        .primary_key = .{ .name = "id", .autoincrement = true },
+    };
+
+    pub fn deinit(peripheral: *const Peripheral, allocator: Allocator) void {
+        if (peripheral.description) |desc|
+            allocator.free(desc);
+
+        allocator.free(peripheral.name);
+    }
+};
+
+pub const RegisterMode = struct {
+    mode_id: ModeID,
+    register_id: RegisterID,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "mode_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "register_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+};
+
+pub const DeviceProperty = struct {
+    device_id: DeviceID,
+    key: []const u8,
+    value: ?[]const u8,
+    description: ?[]const u8,
+
+    pub const sql_opts = SQL_Options{
+        .unique_constraints = &.{
+            &.{ "device_id", "key" },
+        },
+    };
+};
+
+// not sure how to communicate the *_once values in generated code
+// besides adding it to documentation comments
+pub const Access = enum {
+    read_write,
+    read_only,
+    write_only,
+    write_once,
+    read_write_once,
+
+    pub const BaseType = []const u8;
+    pub const default = .read_write;
+};
+
+pub const StructLayout = enum {
+    auto,
+    @"extern",
+    @"packed",
+
+    pub const BaseType = []const u8;
+};
+
+fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
+    var buf = std.BoundedArray(u8, 4096).init(0) catch unreachable;
+    const writer = buf.writer();
+    inline for (@typeInfo(T).Struct.fields, 0..) |field, i| {
+        if (i != 0)
+            writer.writeAll(", ") catch unreachable;
+
+        if (opts.prefix) |prefix|
+            writer.print("{s}.", .{prefix}) catch unreachable;
+
+        writer.print("{s}", .{field.name}) catch unreachable;
+    }
+
+    const buf_copy = buf;
+    return buf_copy.slice();
+}
+
+fn zig_type_to_sql_type(comptime T: type) []const u8 {
+    const info = @typeInfo(T);
+    return switch (info) {
+        .Int => "INTEGER",
+        .Pointer => |ptr| if (ptr.child == u8) "TEXT" else unreachable,
+        .Enum => zig_type_to_sql_type(T.BaseType),
+        .Optional => |opt| zig_type_to_sql_type(opt.child),
+        else => {
+            @compileLog(T);
+            unreachable;
+        },
+    };
+}
+
+fn gen_sql_table(comptime name: []const u8, comptime T: type) []const u8 {
+    return gen_sql_table_impl(name, T) catch unreachable;
+}
+
+fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
+    var buf = try std.BoundedArray(u8, 4096).init(0);
+
+    // check that primary key and foreign keys exist
+    var primary_key_found = T.sql_opts.primary_key == null;
+
+    const info = @typeInfo(T);
+    inline for (info.Struct.fields) |field| {
+        if (T.sql_opts.primary_key) |primary_key| {
+            if (std.mem.eql(u8, primary_key.name, field.name))
+                primary_key_found = true;
+        }
+    }
+
+    assert(primary_key_found);
+
+    const writer = buf.writer();
+    try writer.print("CREATE TABLE {s} (\n", .{name});
+    var first = true;
+    inline for (info.Struct.fields) |field| {
+        if (first) {
+            first = false;
+        } else {
+            try writer.writeAll(",\n");
+        }
+        try writer.print("  {s}", .{field.name});
+        try writer.print(" {s}", .{zig_type_to_sql_type(field.type)});
+
+        const field_type_info = @typeInfo(field.type);
+        if (field_type_info != .Optional)
+            try writer.writeAll(" NOT NULL");
+
+        if (T.sql_opts.primary_key) |primary_key| {
+            if (std.mem.eql(u8, primary_key.name, field.name)) {
+                try writer.writeAll(" PRIMARY KEY");
+
+                if (primary_key.autoincrement)
+                    try writer.writeAll(" AUTOINCREMENT");
+            }
+        }
+    }
+
+    for (T.sql_opts.foreign_keys) |foreign_key| {
+        try writer.writeAll(",\n");
+
+        const field = for (@typeInfo(T).Struct.fields) |field| {
+            if (std.mem.eql(u8, field.name, foreign_key.name))
+                break field;
+        } else unreachable;
+
+        try writer.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
+            foreign_key.name,
+            (switch (@typeInfo(field.type)) {
+                .Optional => |opt| opt.child,
+                else => field.type,
+            }).table,
+            foreign_key.on_delete.to_string(),
+            foreign_key.on_update.to_string(),
+        });
+    }
+
+    // foreign keys
+
+    try writer.writeAll(");\n");
+
+    const buf_copy = buf;
+    return buf_copy.slice();
+}
+
+const schema: []const []const u8 = &.{
+    gen_sql_table("registers", Register),
+    gen_sql_table("modes", Mode),
+    gen_sql_table("register_modes", RegisterMode),
+    gen_sql_table("peripherals", Peripheral),
+    gen_sql_table("structs", Struct),
+    gen_sql_table("struct_fields", StructField),
+    gen_sql_table("struct_decls", StructDecl),
+    gen_sql_table("struct_registers", StructRegister),
+    gen_sql_table("enums", Enum),
+    gen_sql_table("enum_fields", EnumField),
+    gen_sql_table("devices", Device),
+    gen_sql_table("device_properties", DeviceProperty),
+    gen_sql_table("interrupts", Interrupt),
+    gen_sql_table("device_peripherals", DevicePeripheral),
+    // indexes
+    "CREATE INDEX idx_struct_fields_struct_id_offset_bits ON struct_fields(struct_id, offset_bits);",
+    "CREATE INDEX idx_interrupts_device_id_idx ON interrupts(device_id, idx)",
+    "CREATE INDEX idx_device_peripherals_device_id_offset_bytes ON device_peripherals(device_id, offset_bytes)",
+    "CREATE INDEX idx_struct_registers_struct_id ON struct_registers(struct_id)",
+    "CREATE INDEX idx_registers_id_offset_bytes ON registers(id, offset_bytes)",
+    "CREATE INDEX idx_enums_struct_id_name ON enums (struct_id, name)",
+    "CREATE INDEX idx_enum_fields_enum_id_value ON enum_fields(enum_id, value)",
+};
+
+pub const Format = enum {
+    svd,
+    atdf,
+};
+
+fn ID(comptime T: type, comptime table_name: []const u8) type {
+    return enum(T) {
+        pub const BaseType = u32;
+        pub const table = table_name;
+
+        _,
+
+        pub fn format(
+            id: @This(),
+            comptime fmt: []const u8,
+            options: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            _ = fmt;
+            _ = options;
+
+            const ID_Type = @TypeOf(id);
+            try writer.print("{s}({})", .{ ID_Type.table, @intFromEnum(id) });
+        }
+    };
+}
 
 // concrete arch's that we support in codegen, for stuff like interrupt
 // table generation
@@ -126,6 +529,8 @@ pub const Arch = enum {
     qingke_v2,
     qingke_v3,
     qingke_v4,
+    pub const BaseType = []const u8;
+    pub const default = .unknown;
 
     pub fn to_string(arch: Arch) []const u8 {
         return inline for (@typeInfo(Arch).Enum.fields) |field| {
@@ -194,814 +599,1244 @@ pub const Arch = enum {
     }
 };
 
-// not sure how to communicate the *_once values in generated code
-// besides adding it to documentation comments
-pub const Access = enum {
-    read_write,
-    read_only,
-    write_only,
-    write_once,
-    read_write_once,
-};
+fn init(db: *Database, allocator: Allocator) !void {
+    const sql = try sqlite.Db.init(.{
+        .diags = &db.diags,
+        .open_flags = .{
+            .write = true,
+        },
+    });
 
-pub const Device = struct {
-    arch: Arch,
-    properties: std.StringHashMapUnmanaged([]const u8) = .{},
-
-    pub fn deinit(self: *Device, gpa: Allocator) void {
-        self.properties.deinit(gpa);
-    }
-};
-
-pub const Mode = struct {
-    qualifier: []const u8,
-    value: []const u8,
-};
-
-/// a collection of modes that applies to a register or bitfield
-pub const Modes = EntitySet;
-
-fn deinit_map_and_values(allocator: std.mem.Allocator, map: anytype) void {
-    var it = map.iterator();
-    while (it.next()) |entry|
-        entry.value_ptr.deinit(allocator);
-
-    map.deinit(allocator);
-}
-
-pub fn deinit(db: *Database) void {
-    // attrs
-    db.attrs.name.deinit(db.gpa);
-    db.attrs.description.deinit(db.gpa);
-    db.attrs.offset.deinit(db.gpa);
-    db.attrs.access.deinit(db.gpa);
-    db.attrs.group.deinit(db.gpa);
-    db.attrs.count.deinit(db.gpa);
-    db.attrs.size.deinit(db.gpa);
-    db.attrs.reset_value.deinit(db.gpa);
-    db.attrs.reset_mask.deinit(db.gpa);
-    db.attrs.version.deinit(db.gpa);
-    db.attrs.@"enum".deinit(db.gpa);
-    db.attrs.parent.deinit(db.gpa);
-    deinit_map_and_values(db.gpa, &db.attrs.modes);
-
-    // children
-    deinit_map_and_values(db.gpa, &db.children.interrupts);
-    deinit_map_and_values(db.gpa, &db.children.peripherals);
-    deinit_map_and_values(db.gpa, &db.children.register_groups);
-    deinit_map_and_values(db.gpa, &db.children.registers);
-    deinit_map_and_values(db.gpa, &db.children.fields);
-    deinit_map_and_values(db.gpa, &db.children.enums);
-    deinit_map_and_values(db.gpa, &db.children.enum_fields);
-    deinit_map_and_values(db.gpa, &db.children.modes);
-
-    // types
-    db.types.peripherals.deinit(db.gpa);
-    db.types.register_groups.deinit(db.gpa);
-    db.types.registers.deinit(db.gpa);
-    db.types.fields.deinit(db.gpa);
-    db.types.enums.deinit(db.gpa);
-    db.types.enum_fields.deinit(db.gpa);
-    db.types.modes.deinit(db.gpa);
-
-    // instances
-    deinit_map_and_values(db.gpa, &db.instances.devices);
-    db.instances.interrupts.deinit(db.gpa);
-    db.instances.peripherals.deinit(db.gpa);
-
-    db.arena.deinit();
-    db.gpa.destroy(db.arena);
-}
-
-pub fn init(allocator: std.mem.Allocator) !Database {
-    const arena = try allocator.create(ArenaAllocator);
-    arena.* = std.heap.ArenaAllocator.init(allocator);
-    return Database{
+    db.* = Database{
         .gpa = allocator,
-        .arena = arena,
-        .next_entity_id = 0,
+        .sql = sql,
+    };
+    errdefer db.deinit();
+
+    // Good starting point to improve SQLite's poor defaults
+    _ = try db.sql.pragma(void, .{}, "journal_mode", "WAL");
+    _ = try db.sql.pragma(void, .{}, "synchronous", "NORMAL");
+    _ = try db.sql.pragma(void, .{}, "foreign_keys", "true");
+
+    // Create tables and indexes
+    inline for (schema) |query| {
+        log.debug("query: {s}", .{query});
+        try db.exec(query, .{});
+    }
+
+    log.debug("finished loading schema", .{});
+}
+
+pub fn create(allocator: Allocator) !*Database {
+    const db = try allocator.create(Database);
+    errdefer allocator.destroy(db);
+
+    try db.init(allocator);
+    return db;
+}
+
+fn deinit(db: *Database) void {
+    db.sql.deinit();
+}
+
+pub fn destroy(db: *Database) void {
+    const allocator = db.gpa;
+    db.deinit();
+    allocator.destroy(db);
+}
+
+pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    switch (format) {
+        .svd => try svd.load_into_db(db, doc),
+        .atdf => try atdf.load_into_db(db, doc),
+    }
+
+    return db;
+}
+
+pub fn create_from_xml(allocator: Allocator, format: Format, xml_text: []const u8) !*Database {
+    var doc = try xml.Doc.from_memory(xml_text);
+    defer doc.deinit();
+
+    return create_from_doc(allocator, format, doc);
+}
+
+pub const CreateDeviceOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    arch: Arch,
+};
+
+fn exec(db: *Database, comptime query: []const u8, args: anytype) !void {
+    db.sql.exec(query, .{ .diags = &db.diags }, args) catch |err| {
+        std.log.err("Failed Query:\n{s}", .{query});
+        if (err == error.SQLiteError)
+            std.log.err("{}", .{db.diags});
+
+        return err;
     };
 }
 
-pub fn init_from_atdf_xml(allocator: Allocator, doc: xml.Doc) !Database {
-    var db = try Database.init(allocator);
-    errdefer db.deinit();
+pub fn create_device(db: *Database, opts: CreateDeviceOptions) !DeviceID {
+    log.debug("create_device: name={s} arch={} desc={?s}", .{
+        opts.name,
+        opts.arch,
+        opts.description,
+    });
 
-    try atdf.load_into_db(&db, doc);
-    return db;
-}
+    var savepoint = try db.sql.savepoint("create_device");
+    defer savepoint.rollback();
 
-pub fn init_from_atdf(allocator: Allocator, text: []const u8) !Database {
-    var doc = try xml.Doc.from_memory(text);
-    defer doc.deinit();
-
-    return init_from_atdf_xml(allocator, doc);
-}
-
-pub fn init_from_svd_xml(allocator: Allocator, doc: xml.Doc) !Database {
-    var db = try Database.init(allocator);
-    errdefer db.deinit();
-
-    try svd.load_into_db(&db, doc);
-    return db;
-}
-
-pub fn init_from_svd(allocator: Allocator, text: []const u8) !Database {
-    var doc = try xml.Doc.from_memory(text);
-    defer doc.deinit();
-
-    return init_from_svd_xml(allocator, doc);
-}
-
-pub fn init_from_dslite_xml(allocator: Allocator, doc: xml.Doc) !Database {
-    var db = try Database.init(allocator);
-    errdefer db.deinit();
-
-    try dslite.load_into_db(&db, doc);
-    return db;
-}
-
-pub fn init_from_dslite(allocator: Allocator, text: []const u8) !Database {
-    var doc = try xml.Doc.from_memory(text);
-    defer doc.deinit();
-
-    return init_from_dslite_xml(allocator, doc);
-}
-
-pub fn init_from_json(allocator: Allocator, text: []const u8) !Database {
-    var db = try Database.init(allocator);
-    errdefer db.deinit();
-
-    try regzon.load_into_db(&db, text);
-    return db;
-}
-
-pub const Schema = enum {
-    atdf,
-    dslite,
-    json,
-    svd,
-    xml,
-};
-
-pub fn init_from_memory(allocator: Allocator, text: []const u8, schema: ?Schema) !Database {
-    if (schema) |s| {
-        return switch (s) {
-            .json => try Database.init_from_json(allocator, text),
-            .atdf => try Database.init_from_atdf(allocator, text),
-            .svd => Database.init_from_svd(allocator, text),
-            .dslite => Database.init_from_dslite(allocator, text),
-            .xml => return error.Todo,
-        };
-    }
-
-    // try to determine schema
-    if (text.len == 0) return error.StreamTooShort;
-
-    if (text[0] == '{')
-        return try Database.init_from_json(allocator, text);
-
-    if (text[0] == '<') {
-        var doc = try xml.Doc.from_memory(text);
-        defer doc.deinit();
-
-        const root = try doc.get_root_element();
-        const root_name = root.get_name();
-        if (std.mem.eql(u8, root_name, "device"))
-            return try Database.init_from_svd_xml(allocator, doc)
-        else if (std.mem.eql(u8, root_name, "avr-tools-device-file"))
-            return try Database.init_from_atdf_xml(allocator, doc);
-    }
-
-    log.err("unable do detect register schema type", .{});
-    return error.Explained;
-}
-
-pub fn init_from_reader(allocator: Allocator, reader: std.io.AnyReader, schema: ?Schema) !Database {
-    var buffered = std.io.bufferedReader(reader);
-    const buffered_reader = buffered.reader().any();
-    const text = try buffered_reader.readAllAlloc(allocator, std.math.maxInt(usize));
-    defer allocator.free(text);
-    return init_from_memory(allocator, text, schema);
-}
-
-pub fn create_entity(db: *Database) EntityId {
-    defer db.next_entity_id += 1;
-    return db.next_entity_id;
-}
-
-pub fn destroy_entity(db: *Database, id: EntityId) void {
-    // note that if something can be a child, you must remove it from the child
-    // set of its parent
-    switch (db.get_entity_type(id) orelse return) {
-        .register => {
-            log.debug("{}: destroying register", .{id});
-            if (db.attrs.parent.get(id)) |parent_id| {
-                if (db.children.registers.getEntry(parent_id)) |entry| {
-                    _ = entry.value_ptr.swapRemove(id);
-                }
-            }
-
-            // if has a parent, remove it from the set
-            // remove all attributes
-
-            // TODO: remove fields
-            _ = db.types.registers.swapRemove(id);
-        },
-        .peripheral => {
-            log.debug("{}: destroying peripheral", .{id});
-            // TODO: remove children
-            _ = db.types.peripherals.swapRemove(id);
-            _ = db.instances.peripherals.swapRemove(id);
-        },
-        else => {},
-    }
-
-    db.remove_children(id);
-    db.remove_attrs(id);
-}
-
-fn remove_attrs(db: *Database, id: EntityId) void {
-    inline for (@typeInfo(TypeOfField(Database, "attrs")).Struct.fields) |field| {
-        if (@hasDecl(field.type, "swapRemove"))
-            _ = @field(db.attrs, field.name).swapRemove(id)
-        else if (@hasDecl(field.type, "remove"))
-            _ = @field(db.attrs, field.name).remove(id)
-        else
-            unreachable;
-    }
-}
-
-fn remove_children(db: *Database, id: EntityId) void {
-    inline for (@typeInfo(TypeOfField(Database, "children")).Struct.fields) |field| {
-        if (@field(db.children, field.name).fetchSwapRemove(id)) |children_entry| {
-            var children_set = children_entry.value;
-            defer children_set.deinit(db.gpa);
-
-            for (children_set.keys()) |child_id|
-                // this will get rid of the parent attr
-                db.destroy_entity(child_id);
-        }
-    }
-}
-
-pub fn create_device(
-    db: *Database,
-    opts: struct {
-        // required for now
-        name: []const u8,
-        description: ?[]const u8 = null,
-        arch: Arch = .unknown,
-    },
-) !EntityId {
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating device", .{id});
-    try db.instances.devices.put(db.gpa, id, .{
+    try db.exec(
+        \\INSERT INTO devices
+        \\  (name, description, arch)
+        \\VALUES
+        \\  (?, ?, ?)
+    , .{
+        .name = opts.name,
+        .description = opts.description,
         .arch = opts.arch,
     });
 
-    try db.add_name(id, opts.name);
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    return id;
+    const row_id = db.sql.getLastInsertRowID();
+    savepoint.commit();
+    return @enumFromInt(row_id);
 }
 
-pub fn create_peripheral_instance(
-    db: *Database,
-    device_id: EntityId,
-    type_id: EntityId,
-    opts: struct {
-        // required for now
-        name: []const u8,
-        description: ?[]const u8 = null,
-        // required for now
-        offset: u64,
-        // count for an array
-        count: ?u64 = null,
-    },
-) !EntityId {
-    assert(db.entity_is("instance.device", device_id));
-    assert(db.entity_is("type.peripheral", type_id) or
-        db.entity_is("type.register_group", type_id));
+fn get_id_by_name(db: *Database, comptime T: type, name: []const u8) !?T {
+    var stmt = try db.sql.prepare(
+        std.fmt.comptimePrint("SELECT id FROM {s} WHERE name = ?", .{T.table}),
+    );
+    defer stmt.deinit();
 
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating peripheral instance", .{id});
-    try db.instances.peripherals.put(db.gpa, id, type_id);
-    try db.add_name(id, opts.name);
-    try db.add_offset(id, opts.offset);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    if (opts.count) |c|
-        try db.add_count(id, c);
-
-    try db.add_child("instance.peripheral", device_id, id);
-    return id;
+    return try stmt.one(T, .{}, .{ .name = name });
 }
 
-pub fn create_peripheral(
-    db: *Database,
-    opts: struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        size: ?u64 = null,
-    },
-) !EntityId {
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating peripheral", .{id});
-
-    try db.types.peripherals.put(db.gpa, id, {});
-    try db.add_name(id, opts.name);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    if (opts.size) |s|
-        try db.add_size(id, s);
-
-    return id;
+pub fn get_peripheral_by_name(db: *Database, name: []const u8) !?PeripheralID {
+    return db.get_id_by_name(PeripheralID, name);
 }
 
-pub fn create_register_group(
-    db: *Database,
-    parent_id: EntityId,
-    opts: struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-    },
-) !EntityId {
-    assert(db.entity_is("type.peripheral", parent_id));
+pub fn get_struct_decl_by_name(db: *Database, allocator: Allocator, parent: StructID, name: []const u8) !StructDecl {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_decls
+        \\WHERE parent_id = ? AND name = ?
+    , .{
+        comptime gen_field_list(StructDecl, .{}),
+    });
 
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating register group", .{id});
-    try db.types.register_groups.put(db.gpa, id, {});
-    try db.add_name(id, opts.name);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    try db.add_child("type.register_group", parent_id, id);
-    return id;
+    return db.one_alloc(StructDecl, allocator, query, .{
+        .parent_id = parent,
+        .name = name,
+    });
 }
 
-pub fn create_register(
+pub fn get_peripheral_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?Peripheral {
+    log.debug("get_peripheral_by_struct_id: strut_id={}", .{struct_id});
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM peripherals
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(Peripheral, .{}),
+    });
+
+    return try db.get_one_alloc(Peripheral, allocator, query, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub fn get_struct_decl_by_struct_id(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
+    log.debug("get_struct_decl_by_struct_id: struct_id={}", .{struct_id});
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_decls
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(StructDecl, .{}),
+    });
+
+    return try db.get_one_alloc(StructDecl, allocator, query, .{
+        .struct_id = struct_id,
+    });
+}
+
+fn get_one(db: *Database, comptime T: type, comptime query: []const u8, args: anytype) !?T {
+    return db.sql.one(T, query, .{ .diags = &db.diags }, args) catch |err| {
+        std.log.err("Failed Query:\n{s}", .{query});
+        if (err == error.SQLiteError)
+            std.log.err("{}", .{db.diags});
+
+        return err;
+    };
+}
+
+fn one(db: *Database, comptime T: type, comptime query: []const u8, args: anytype) !T {
+    return try db.get_one(T, query, args) orelse return error.MissingEntity;
+}
+
+pub fn get_peripheral_struct(db: *Database, peripheral: PeripheralID) !StructID {
+    const query = "SELECT struct_id FROM peripherals WHERE id = ?";
+    return db.one(StructID, query, .{
+        .id = peripheral,
+    });
+}
+
+pub fn get_register_struct(db: *Database, register: RegisterID) !?StructID {
+    const query = "SELECT struct_id FROM registers WHERE id = ?";
+    const row = try db.one(struct { struct_id: ?StructID }, query, .{
+        .id = register,
+    });
+
+    return row.struct_id;
+}
+
+pub fn get_device_id_by_name(db: *Database, name: []const u8) !?DeviceID {
+    const query = "SELECT id FROM devices WHERE name = ?";
+    return db.sql.one(DeviceID, query, .{}, .{ .name = name });
+}
+
+pub fn get_device_by_name(db: *Database, allocator: Allocator, name: []const u8) !Device {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM devices
+        \\WHERE name = ?
+    , .{
+        comptime gen_field_list(Device, .{}),
+    });
+
+    return db.one_alloc(Device, allocator, query, .{
+        .name = name,
+    });
+}
+
+fn get_name_for_id(db: *Database, allocator: Allocator, id: anytype) ![]const u8 {
+    const query = std.fmt.comptimePrint("SELECT name FROM {s} WHERE id = ?", .{
+        @TypeOf(id).table,
+    });
+
+    return db.one_alloc([]const u8, allocator, query, .{
+        .id = id,
+    });
+}
+
+pub fn get_peripheral_name(db: *Database, allocator: Allocator, peripheral_id: PeripheralID) ![]const u8 {
+    return db.get_name_for_id(allocator, peripheral_id);
+}
+
+fn all(db: *Database, comptime T: type, comptime query: []const u8, allocator: Allocator, args: anytype) ![]T {
+    var stmt = db.sql.prepareWithDiags(query, .{
+        .diags = &db.diags,
+    }) catch |err| {
+        if (err == error.SQLiteError) {
+            log.err("query failed: {s}", .{query});
+            log.err("{}", .{db.diags});
+        }
+
+        return err;
+    };
+    defer stmt.deinit();
+
+    return stmt.all(T, allocator, .{
+        .diags = &db.diags,
+    }, args) catch |err| {
+        if (err == error.SQLiteError) {
+            log.err("query failed: {s}", .{query});
+            log.err("{}", .{db.diags});
+        }
+
+        return err;
+    };
+}
+
+pub fn get_devices(db: *Database, allocator: Allocator) ![]Device {
+    const query = std.fmt.comptimePrint("SELECT {s} FROM devices ORDER BY name ASC", .{
+        comptime gen_field_list(Device, .{}),
+    });
+    return db.all(Device, query, allocator, .{});
+}
+
+pub fn get_struct_decls(db: *Database, allocator: Allocator, parent: StructID) ![]StructDecl {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_decls
+        \\WHERE parent_id = ?
+        \\ORDER BY name ASC
+    , .{
+        comptime gen_field_list(StructDecl, .{}),
+    });
+
+    return db.all(StructDecl, query, allocator, .{
+        .parent_id = parent,
+    });
+}
+
+pub fn get_registers_with_mode(
     db: *Database,
-    parent_id: EntityId,
-    opts: struct {
-        // make name required for now
-        name: []const u8,
-        description: ?[]const u8 = null,
-        /// offset is in bytes
-        offset: u64,
-        /// size is in bits
-        size: u64,
-        kind: RegisterKind = .register,
-        /// count if there is an array
-        count: ?u64 = null,
-        access: ?Access = null,
-        reset_mask: ?u64 = null,
-        reset_value: ?u64 = null,
-    },
-) !EntityId {
-    assert(db.entity_is("type.peripheral", parent_id) or
-        db.entity_is("type.register_group", parent_id));
+    allocator: Allocator,
+    struct_id: StructID,
+    mode_id: ModeID,
+) ![]Register {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_registers AS sr
+        \\JOIN registers AS r ON r.id = sr.register_id
+        \\LEFT JOIN register_modes rm ON rm.register_id = r.id
+        \\WHERE
+        \\    sr.struct_id = ?
+        \\  AND (
+        \\        rm.mode_id = ? OR rm.mode_id IS NULL
+        \\    );
+    , .{
+        comptime gen_field_list(Register, .{ .prefix = "r" }),
+    });
 
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
+    return db.all(Register, query, allocator, .{
+        .struct_id = struct_id,
+        .mode_id = mode_id,
+    });
+}
 
-    log.debug("{}: creating register", .{id});
+pub fn get_struct_registers(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+) ![]Register {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_registers AS sr
+        \\JOIN structs AS s ON sr.struct_id = s.id
+        \\JOIN registers AS r ON sr.register_id = r.id
+        \\WHERE s.id = ?
+        \\ORDER BY r.offset_bytes ASC
+    , .{
+        comptime gen_field_list(Register, .{ .prefix = "r" }),
+    });
 
-    try db.types.registers.put(db.gpa, id, {});
-    try db.add_name(id, opts.name);
-    if (opts.description) |d|
-        try db.add_description(id, d);
+    return db.all(Register, query, allocator, .{
+        .struct_id = struct_id,
+    });
+}
 
-    try db.add_offset(id, opts.offset);
-    try db.add_size(id, opts.size);
+pub fn get_struct_modes(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+) ![]Mode {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM modes
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(Mode, .{}),
+    });
 
-    switch (opts.kind) {
-        .register => {},
-        .register_group => try db.add_group(id),
+    return db.all(Mode, query, allocator, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub const GetEnumsOptions = struct {
+    distinct: bool = false,
+};
+pub fn get_enums(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+    comptime opts: GetEnumsOptions,
+) ![]const Enum {
+    const query = if (opts.distinct)
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enums AS e
+            \\WHERE struct_id = ?
+            \\AND name IS NOT NULL
+            \\AND NOT EXISTS (
+            \\    SELECT 1
+            \\    FROM enums AS e2
+            \\    WHERE e.struct_id = e2.struct_id
+            \\      AND e.name = e2.name
+            \\      AND e.id <> e2.id
+            \\)
+            \\ORDER BY e.name ASC;
+        , .{
+            comptime gen_field_list(Enum, .{ .prefix = "e" }),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enums
+            \\WHERE struct_id = ?
+            \\ORDER BY name ASC
+        , .{
+            comptime gen_field_list(Enum, .{}),
+        });
+
+    return db.all(Enum, query, allocator, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub fn enum_has_name_collision(db: *Database, enum_id: EnumID) !bool {
+    const query =
+        \\SELECT e2.id
+        \\FROM enums AS e1
+        \\JOIN enums AS e2
+        \\  ON e1.struct_id = e2.struct_id
+        \\  AND e1.name = e2.name
+        \\  AND e1.id != e2.id
+        \\WHERE e1.id = ?;
+    ;
+    return null != (try db.get_one(EnumID, query, .{ .enum_id = enum_id }));
+}
+
+pub fn get_enum(
+    db: *Database,
+    allocator: Allocator,
+    id: EnumID,
+) !Enum {
+    log.debug("get_enum: id={}", .{id});
+    const query = std.fmt.comptimePrint("SELECT {s} FROM enums WHERE id = ?", .{
+        comptime gen_field_list(Enum, .{}),
+    });
+
+    return db.one_alloc(Enum, allocator, query, .{
+        .id = id,
+    });
+}
+
+pub const GetEnumFieldOptions = struct {
+    /// Ensure that there are no name or value collisions. Simply picks the
+    /// first entry in the table.
+    distinct: bool = true,
+};
+
+pub fn get_enum_fields(
+    db: *Database,
+    allocator: Allocator,
+    enum_id: EnumID,
+    comptime opts: GetEnumFieldOptions,
+) ![]const EnumField {
+    const query = if (opts.distinct)
+        std.fmt.comptimePrint(
+            \\WITH duplicates AS (
+            \\    SELECT
+            \\        enum_id,
+            \\        name,
+            \\        value,
+            \\        description,
+            \\        ROW_NUMBER() OVER (PARTITION BY name) AS name_row,
+            \\        ROW_NUMBER() OVER (PARTITION BY value) AS value_row
+            \\    FROM
+            \\        enum_fields
+            \\    WHERE
+            \\        enum_id = ?
+            \\),
+            \\filtered AS (
+            \\    SELECT *
+            \\    FROM duplicates
+            \\    WHERE name_row = 1 AND value_row = 1
+            \\)
+            \\SELECT
+            \\    {s}
+            \\FROM
+            \\    filtered
+            \\ORDER BY
+            \\    value ASC
+        , .{
+            comptime gen_field_list(EnumField, .{}),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM enum_fields
+            \\WHERE enum_id = ?
+            \\ORDER BY value ASC
+        , .{
+            comptime gen_field_list(EnumField, .{}),
+        });
+
+    return db.all(EnumField, query, allocator, .{
+        .enum_id = enum_id,
+    });
+}
+
+pub fn get_enum_field_by_name(
+    db: *Database,
+    allocator: Allocator,
+    enum_id: EnumID,
+    name: []const u8,
+) !EnumField {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM enum_fields
+        \\WHERE enum_id = ? AND name = ?
+    , .{
+        comptime gen_field_list(EnumField, .{}),
+    });
+
+    return db.one_alloc(EnumField, allocator, query, .{
+        .enum_id = enum_id,
+        .name = name,
+    });
+}
+
+pub fn get_interrupts(db: *Database, allocator: Allocator, device_id: DeviceID) ![]Interrupt {
+    const query = std.fmt.comptimePrint("SELECT {s} FROM interrupts WHERE device_id = ? ORDER BY idx ASC", .{
+        comptime gen_field_list(Interrupt, .{}),
+    });
+    var stmt = try db.sql.prepare(query);
+    defer stmt.deinit();
+
+    return stmt.all(Interrupt, allocator, .{}, .{
+        .device_id = device_id,
+    });
+}
+
+const c = sqlite.c;
+
+pub fn backup(db: *Database, path: [:0]const u8) !void {
+    var backup_db = try sqlite.Db.init(.{
+        .mode = .{
+            .File = path,
+        },
+        .open_flags = .{
+            .write = true,
+            .create = true,
+        },
+    });
+    defer backup_db.deinit();
+
+    const backup_step = c.sqlite3_backup_init(backup_db.db, "main", db.sql.db, "main");
+    if (backup_step != null) {
+        _ = c.sqlite3_backup_step(backup_step, -1);
+        _ = c.sqlite3_backup_finish(backup_step);
     }
-
-    if (opts.count) |c|
-        try db.add_count(id, c);
-
-    if (opts.access) |a|
-        try db.add_access(id, a);
-
-    if (opts.reset_mask) |rm|
-        try db.add_reset_mask(id, rm);
-
-    if (opts.reset_value) |rv|
-        try db.add_reset_value(id, rv);
-
-    try db.add_child("type.register", parent_id, id);
-
-    return id;
 }
 
-pub fn create_field(
+pub const GetRegisterFieldsOptions = struct {
+    /// Ensures that there is no overlap between fields, and that there is no
+    /// name collisions
+    distinct: bool = true,
+};
+
+// TODO: if we ever need a "get struct fields" function, refactor this to use it
+pub fn get_register_fields(
     db: *Database,
-    parent_id: EntityId,
-    opts: struct {
-        // make name required for now
-        name: []const u8,
-        description: ?[]const u8 = null,
-        /// offset is in bits
-        offset: ?u64 = null,
-        /// size is in bits
-        size: ?u64 = null,
-        enum_id: ?EntityId = null,
-        count: ?u64 = null,
-    },
-) !EntityId {
-    assert(db.entity_is("type.register", parent_id));
-
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating field", .{id});
-    try db.types.fields.put(db.gpa, id, {});
-    try db.add_name(id, opts.name);
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    if (opts.offset) |o|
-        try db.add_offset(id, o);
-
-    if (opts.size) |s|
-        try db.add_size(id, s);
-
-    if (opts.count) |c|
-        try db.add_count(id, c);
-
-    if (opts.enum_id) |enum_id| {
-        assert(db.entity_is("type.enum", enum_id));
-        if (db.attrs.size.get(enum_id)) |enum_size|
-            if (opts.size) |size|
-                assert(size == enum_size);
-
-        try db.attrs.@"enum".put(db.gpa, id, enum_id);
-    }
-
-    try db.add_child("type.field", parent_id, id);
-
-    return id;
+    allocator: Allocator,
+    register_id: RegisterID,
+    comptime opts: GetRegisterFieldsOptions,
+) ![]StructField {
+    const query = if (opts.distinct)
+        std.fmt.comptimePrint(
+            \\WITH OrderedFields AS (
+            \\    SELECT
+            \\        sf.struct_id,
+            \\        sf.name,
+            \\        sf.description,
+            \\        sf.size_bits,
+            \\        sf.offset_bits,
+            \\        sf.enum_id,
+            \\        sf.count,
+            \\        ROW_NUMBER() OVER (
+            \\            PARTITION BY sf.struct_id, sf.offset_bits
+            \\            ORDER BY sf.offset_bits ASC, sf.size_bits ASC
+            \\        ) AS row_num
+            \\    FROM struct_fields AS sf
+            \\    INNER JOIN registers AS r ON r.struct_id = sf.struct_id
+            \\    WHERE r.id = ?
+            \\),
+            \\DistinctFields AS (
+            \\    SELECT
+            \\        struct_id,
+            \\        name,
+            \\        description,
+            \\        size_bits,
+            \\        offset_bits,
+            \\        enum_id,
+            \\        count
+            \\    FROM OrderedFields
+            \\    WHERE row_num = 1
+            \\)
+            \\SELECT {s}
+            \\FROM DistinctFields
+            \\GROUP BY name, struct_id
+            \\ORDER BY offset_bits ASC
+        , .{
+            comptime gen_field_list(StructField, .{}),
+        })
+    else
+        std.fmt.comptimePrint(
+            \\SELECT {s}
+            \\FROM struct_fields AS sf
+            \\JOIN registers AS r ON sf.struct_id = r.struct_id
+            \\WHERE r.id = ?
+            \\ORDER BY sf.offset_bits ASC;
+        , .{
+            comptime gen_field_list(StructField, .{ .prefix = "sf" }),
+        });
+    return db.all(StructField, query, allocator, .{
+        .register_id = register_id,
+    });
 }
 
-pub fn create_enum(
+pub fn get_register_field_by_name(
     db: *Database,
-    parent_id: EntityId,
-    opts: struct {
-        name: ?[]const u8 = null,
-        description: ?[]const u8 = null,
-        size: ?u64 = null,
-    },
-) !EntityId {
-    assert(db.entity_is("type.peripheral", parent_id));
-
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating enum", .{id});
-    try db.types.enums.put(db.gpa, id, {});
-
-    if (opts.name) |n|
-        try db.add_name(id, n);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    if (opts.size) |s|
-        try db.add_size(id, s);
-
-    try db.add_child("type.enum", parent_id, id);
-    return id;
+    allocator: Allocator,
+    register_id: RegisterID,
+    name: []const u8,
+) !StructField {
+    const query =
+        std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_fields AS sf
+        \\JOIN registers AS r ON sf.struct_id = r.struct_id
+        \\WHERE r.id = ? AND sf.name = ?
+    , .{
+        comptime gen_field_list(StructField, .{ .prefix = "sf" }),
+    });
+    return db.one_alloc(StructField, allocator, query, .{
+        .register_id = register_id,
+        .name = name,
+    });
 }
 
-pub fn create_enum_field(
+pub fn get_interrupt_name(db: *Database, allocator: Allocator, interrupt_id: InterruptID) ![]const u8 {
+    const query = "SELECT name FROM interrupts WHERE id = ?";
+    return db.one_alloc([]const u8, allocator, query, .{
+        .id = interrupt_id,
+    });
+}
+
+pub fn get_interrupt_description(db: *Database, allocator: Allocator, interrupt_id: InterruptID) !?[]const u8 {
+    const query = "SELECT description FROM interrupts WHERE id = ?";
+    return db.get_one_alloc([]const u8, allocator, query, .{
+        .id = interrupt_id,
+    });
+}
+
+pub fn get_struct(db: *Database, struct_id: StructID) !Struct {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM structs
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(Struct, .{}),
+    });
+
+    return try db.one(Struct, query, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub fn get_struct_decl(db: *Database, allocator: Allocator, struct_id: StructID) !?StructDecl {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM struct_decls
+        \\WHERE struct_id = ?
+    , .{
+        comptime gen_field_list(StructDecl, .{}),
+    });
+
+    return try db.get_one_alloc(StructDecl, allocator, query, .{
+        .struct_id = struct_id,
+    });
+}
+
+pub fn get_peripherals(db: *Database, allocator: Allocator) ![]Peripheral {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM peripherals
+        \\ORDER BY name ASC
+    , .{
+        comptime gen_field_list(Peripheral, .{}),
+    });
+    return db.all(Peripheral, query, allocator, .{});
+}
+
+pub fn get_peripheral(db: *Database, allocator: Allocator, peripheral_id: PeripheralID) !Peripheral {
+    const query = std.fmt.comptimePrint("SELECT {s} FROM peripherals WHERE id = ?", .{
+        comptime gen_field_list(Peripheral, .{}),
+    });
+    return db.one_alloc(Peripheral, allocator, query, .{
+        .id = peripheral_id,
+    });
+}
+
+pub fn get_device_properties(db: *Database, allocator: Allocator, device_id: DeviceID) ![]DeviceProperty {
+    const query = std.fmt.comptimePrint("SELECT {s} FROM device_properties WHERE device_id = ? ORDER BY key ASC", .{
+        comptime gen_field_list(DeviceProperty, .{}),
+    });
+    var stmt = try db.sql.prepare(query);
+    defer stmt.deinit();
+
+    return stmt.all(DeviceProperty, allocator, .{}, .{
+        .device_id = device_id,
+    });
+}
+
+pub fn get_device_peripherals(db: *Database, allocator: Allocator, device_id: DeviceID) ![]DevicePeripheral {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM device_peripherals
+        \\WHERE device_id = ?
+        \\ORDER BY offset_bytes ASC
+    , .{
+        comptime gen_field_list(DevicePeripheral, .{}),
+    });
+
+    return db.all(DevicePeripheral, query, allocator, .{
+        .device_id = device_id,
+    });
+}
+
+pub fn get_device_peripheral_by_name(db: *Database, allocator: Allocator, device_id: DeviceID, name: []const u8) !DevicePeripheral {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM device_peripherals
+        \\WHERE device_id = ? and name = ?
+    , .{
+        comptime gen_field_list(DevicePeripheral, .{}),
+    });
+
+    return db.one_alloc(DevicePeripheral, allocator, query, .{
+        .device_id = device_id,
+        .name = name,
+    });
+}
+
+pub fn get_interrupt_by_name(
     db: *Database,
-    parent_id: EntityId,
-    opts: struct {
-        name: []const u8,
-        description: ?[]const u8 = null,
-        value: u32,
-    },
-) !EntityId {
-    assert(db.entity_is("type.enum", parent_id));
-
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating enum field", .{id});
-    try db.types.enum_fields.put(db.gpa, id, opts.value);
-    try db.add_name(id, opts.name);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    try db.add_child("type.enum_field", parent_id, id);
-    return id;
+    device_id: DeviceID,
+    name: []const u8,
+) !?InterruptID {
+    const query = "SELECT id FROM interrupts WHERE device_id = ? AND name = ?";
+    return db.sql.one(InterruptID, query, .{}, .{
+        .device_id = device_id,
+        .name = name,
+    });
 }
 
-pub fn create_mode(db: *Database, parent_id: EntityId, opts: struct {
+pub fn get_enum_by_name(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+    name: []const u8,
+) !Enum {
+    log.debug("get_enum_by_name: struct_id={} name='{s}'", .{ struct_id, name });
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM enums
+        \\WHERE struct_id = ? AND name = ?
+    , .{
+        comptime gen_field_list(Enum, .{}),
+    });
+
+    return db.one_alloc(Enum, allocator, query, .{
+        .struct_id = struct_id,
+        .name = name,
+    });
+}
+
+fn one_alloc(
+    db: *Database,
+    comptime T: type,
+    allocator: Allocator,
+    comptime query: []const u8,
+    args: anytype,
+) !T {
+    return try db.get_one_alloc(T, allocator, query, args) orelse return error.MissingEntity;
+}
+
+fn get_one_alloc(
+    db: *Database,
+    comptime T: type,
+    allocator: Allocator,
+    comptime query: []const u8,
+    args: anytype,
+) !?T {
+    return db.sql.oneAlloc(T, allocator, query, .{ .diags = &db.diags }, args) catch |err| {
+        log.err("Failed query:\n{s}", .{query});
+        if (err == error.SQLiteError) {
+            log.err("{}", .{db.diags});
+        }
+
+        return err;
+    };
+}
+
+pub fn get_enum_description(
+    db: *Database,
+    allocator: Allocator,
+    enum_id: EnumID,
+) !?[]const u8 {
+    const query = "SELECT description FROM enums WHERE id = ?";
+    return db.get_one_alloc([]const u8, allocator, query, .{ .id = enum_id });
+}
+
+pub fn get_interrupt_idx(db: *Database, interrupt_id: InterruptID) !i32 {
+    var stmt = try db.sql.prepare("SELECT idx FROM interrupts WHERE id = ?");
+    defer stmt.deinit();
+
+    const row = try stmt.one(i32, .{}, .{
+        .id = interrupt_id,
+    });
+
+    return if (row) |idx| idx else error.NoInterruptForID;
+}
+
+pub const CreateNestedStructOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    size_bytes: ?u64 = null,
+};
+
+pub fn create_nested_struct(
+    db: *Database,
+    parent: StructID,
+    opts: CreateNestedStructOptions,
+) !StructID {
+    var savepoint = try db.sql.savepoint("create_interrupt");
+    defer savepoint.rollback();
+
+    const struct_id = try db.create_struct(.{});
+    try db.exec(
+        \\INSERT INTO struct_decls
+        \\  (parent_id, struct_id, name, description, size_bytes)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?)
+    , .{
+        .parent_id = parent,
+        .struct_id = struct_id,
+        .name = opts.name,
+        .description = opts.description,
+        .size_bytes = opts.size_bytes,
+    });
+
+    savepoint.commit();
+    log.debug("created struct_decl: parent={} struct_id={} name='{s}' description='{?s}' size_bytes={?}", .{
+        parent,
+        struct_id,
+        opts.name,
+        opts.description,
+        opts.size_bytes,
+    });
+    return struct_id;
+}
+
+pub const AddDevicePropertyOptions = struct {
+    key: []const u8,
+    value: ?[]const u8 = null,
+    description: ?[]const u8 = null,
+};
+
+pub fn add_device_property(db: *Database, device_id: DeviceID, opts: AddDevicePropertyOptions) !void {
+    try db.exec(
+        \\INSERT INTO device_properties
+        \\  (device_id, key, value, description)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{
+        .device_id = @intFromEnum(device_id),
+        .key = opts.key,
+        .value = opts.value,
+        .description = opts.description,
+    });
+}
+
+pub fn get_device_property(db: *Database, allocator: Allocator, device_id: DeviceID, key: []const u8) !?[]const u8 {
+    var stmt = try db.sql.prepare(
+        \\SELECT
+        \\  value
+        \\FROM
+        \\  device_properties
+        \\WHERE
+        \\  device_id = ? AND
+        \\  key = ?
+    );
+    defer stmt.deinit();
+
+    return try stmt.oneAlloc([]const u8, allocator, .{}, .{
+        .device_id = @intFromEnum(device_id),
+        .key = key,
+    });
+}
+
+const CreateInterruptOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    idx: i32,
+};
+
+pub fn create_interrupt(db: *Database, device_id: DeviceID, opts: CreateInterruptOptions) !InterruptID {
+    log.debug("create_interrupt: device_id={} name={s} idx={} desc={?s}", .{
+        device_id,
+        opts.name,
+        opts.idx,
+        opts.description,
+    });
+
+    var savepoint = try db.sql.savepoint("create_interrupt");
+    defer savepoint.rollback();
+
+    try db.exec(
+        \\INSERT INTO interrupts
+        \\  (device_id, name, description, idx)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{
+        .device_id = @intFromEnum(device_id),
+        .name = opts.name,
+        .description = opts.description,
+        .idx = opts.idx,
+    });
+
+    const row_id = db.sql.getLastInsertRowID();
+    savepoint.commit();
+    return @enumFromInt(row_id);
+}
+
+pub const CreatePeripheralOptions = struct {
+    struct_id: ?StructID = null,
+    name: []const u8,
+    description: ?[]const u8 = null,
+    size_bytes: ?u64 = null,
+};
+
+/// Create a peripheral type.
+///
+/// The code generated for a peripheral can be a struct itself, or a namespace
+/// containing structs. In the latter case, a peripheral
+pub fn create_peripheral(db: *Database, opts: CreatePeripheralOptions) !PeripheralID {
+    var savepoint = try db.sql.savepoint("create_peripheral");
+    defer savepoint.rollback();
+
+    const struct_id = opts.struct_id orelse try db.create_struct(.{});
+
+    try db.exec("INSERT INTO peripherals (struct_id, name, description, size_bytes) VALUES (?, ?, ?, ?)", .{
+        .struct_id = struct_id,
+        .name = opts.name,
+        .description = opts.description,
+        .size_bytes = opts.size_bytes,
+    });
+
+    const peripheral_id: PeripheralID = @enumFromInt(db.sql.getLastInsertRowID());
+    savepoint.commit();
+
+    log.debug("created {}: struct_id={?} name={s} size_bytes={?} desc={?s}", .{
+        peripheral_id,
+        struct_id,
+        opts.name,
+        opts.size_bytes,
+        opts.description,
+    });
+    return peripheral_id;
+}
+
+pub const CreateDevicePeripheralOptions = struct {
+    struct_id: StructID,
+    name: []const u8,
+    description: ?[]const u8 = null,
+    offset_bytes: u64,
+    count: ?u64 = null,
+};
+
+pub fn create_device_peripheral(
+    db: *Database,
+    device_id: DeviceID,
+    opts: CreateDevicePeripheralOptions,
+) !DevicePeripheralID {
+    log.debug("create_device_peripherals: device_id={} struct_id={} name={s} offset=0x{X} desc={?s}", .{
+        device_id,
+        opts.struct_id,
+        opts.name,
+        opts.offset_bytes,
+        opts.description,
+    });
+
+    var savepoint = try db.sql.savepoint("create_perip_inst");
+    defer savepoint.rollback();
+
+    try db.exec(
+        \\INSERT INTO device_peripherals
+        \\  (device_id, struct_id, name, description, offset_bytes, count)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?, ?)
+    , .{
+        .device_id = @intFromEnum(device_id),
+        .struct_id = opts.struct_id,
+        .name = opts.name,
+        .description = opts.description,
+        .offset_bytes = opts.offset_bytes,
+        .count = opts.count,
+    });
+
+    const row_id = db.sql.getLastInsertRowID();
+    savepoint.commit();
+    return @enumFromInt(row_id);
+}
+
+pub const CreateModeOptions = struct {
     name: []const u8,
     description: ?[]const u8 = null,
     value: []const u8,
     qualifier: []const u8,
-}) !EntityId {
-    // TODO: what types of parents can it have?
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating mode", .{id});
-    try db.types.modes.put(db.gpa, id, .{
-        .value = try db.arena.allocator().dupe(u8, opts.value),
-        .qualifier = try db.arena.allocator().dupe(u8, opts.qualifier),
-    });
-    try db.add_name(id, opts.name);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    try db.add_child("type.mode", parent_id, id);
-    return id;
-}
-
-pub fn create_interrupt(db: *Database, device_id: EntityId, opts: struct {
-    name: []const u8,
-    index: i32,
-    description: ?[]const u8 = null,
-}) !EntityId {
-    assert(db.entity_is("instance.device", device_id));
-
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
-    log.debug("{}: creating interrupt", .{id});
-    try db.instances.interrupts.put(db.gpa, id, opts.index);
-    try db.add_name(id, opts.name);
-
-    if (opts.description) |d|
-        try db.add_description(id, d);
-
-    try db.add_child("instance.interrupt", device_id, id);
-    return id;
-}
-
-pub fn add_name(db: *Database, id: EntityId, name: []const u8) !void {
-    if (name.len == 0)
-        return;
-
-    log.debug("{}: adding name: {s}", .{ id, name });
-    try db.attrs.name.putNoClobber(
-        db.gpa,
-        id,
-        try db.arena.allocator().dupe(u8, name),
-    );
-}
-
-pub fn add_description(
-    db: *Database,
-    id: EntityId,
-    description: []const u8,
-) !void {
-    if (description.len == 0)
-        return;
-
-    log.debug("{}: adding description: {s}", .{ id, description });
-    try db.attrs.description.putNoClobber(
-        db.gpa,
-        id,
-        try db.arena.allocator().dupe(u8, description),
-    );
-}
-
-pub fn add_version(db: *Database, id: EntityId, version: []const u8) !void {
-    if (version.len == 0)
-        return;
-
-    log.debug("{}: adding version: {s}", .{ id, version });
-    try db.attrs.version.putNoClobber(
-        db.gpa,
-        id,
-        try db.arena.allocator().dupe(u8, version),
-    );
-}
-
-pub fn add_size(db: *Database, id: EntityId, size: u64) !void {
-    log.debug("{}: adding size: {}", .{ id, size });
-    try db.attrs.size.putNoClobber(db.gpa, id, size);
-}
-
-pub fn add_offset(db: *Database, id: EntityId, offset: u64) !void {
-    log.debug("{}: adding offset: 0x{x}", .{ id, offset });
-    try db.attrs.offset.putNoClobber(db.gpa, id, offset);
-}
-
-pub fn add_reset_value(db: *Database, id: EntityId, reset_value: u64) !void {
-    log.debug("{}: adding reset value: {}", .{ id, reset_value });
-    try db.attrs.reset_value.putNoClobber(db.gpa, id, reset_value);
-}
-
-pub fn add_reset_mask(db: *Database, id: EntityId, reset_mask: u64) !void {
-    log.debug("{}: adding register mask: 0x{x}", .{ id, reset_mask });
-    try db.attrs.reset_mask.putNoClobber(db.gpa, id, reset_mask);
-}
-
-pub fn add_access(db: *Database, id: EntityId, access: Access) !void {
-    log.debug("{}: adding access: {}", .{ id, access });
-    try db.attrs.access.putNoClobber(db.gpa, id, access);
-}
-
-pub fn add_group(db: *Database, id: EntityId) !void {
-    log.debug("{}: adding register group", .{id});
-    try db.attrs.group.putNoClobber(db.gpa, id, {});
-}
-
-pub fn add_count(db: *Database, id: EntityId, count: u64) !void {
-    log.debug("{}: adding count: {}", .{ id, count });
-    try db.attrs.count.putNoClobber(db.gpa, id, count);
-}
-
-pub fn add_child(
-    db: *Database,
-    comptime entity_location: []const u8,
-    parent_id: EntityId,
-    child_id: EntityId,
-) !void {
-    log.debug("{}: ({s}) is child of: {}", .{
-        child_id,
-        entity_location,
-        parent_id,
-    });
-
-    assert(db.entity_is(entity_location, child_id));
-    comptime var it = std.mem.tokenizeScalar(u8, entity_location, '.');
-    // the tables are in plural form but "type.peripheral" feels better to me
-    // for calling this function
-    _ = comptime it.next();
-    const table = comptime (it.next() orelse unreachable) ++ "s";
-
-    const result = try @field(db.children, table).getOrPut(db.gpa, parent_id);
-    if (!result.found_existing)
-        result.value_ptr.* = .{};
-
-    try result.value_ptr.put(db.gpa, child_id, {});
-    try db.attrs.parent.putNoClobber(db.gpa, child_id, parent_id);
-}
-
-pub fn add_device_property(
-    db: *Database,
-    id: EntityId,
-    key: []const u8,
-    value: []const u8,
-) !void {
-    log.debug("{}: adding device attr: {s}={s}", .{ id, key, value });
-    if (db.instances.devices.getEntry(id)) |entry|
-        try entry.value_ptr.properties.put(
-            db.gpa,
-            try db.arena.allocator().dupe(u8, key),
-            try db.arena.allocator().dupe(u8, value),
-        )
-    else
-        unreachable;
-}
-
-// TODO: assert that entity is only found in one table
-pub fn entity_is(db: Database, comptime entity_location: []const u8, id: EntityId) bool {
-    comptime var it = std.mem.tokenizeScalar(u8, entity_location, '.');
-    // the tables are in plural form but "type.peripheral" feels better to me
-    // for calling this function
-    const group = comptime (it.next() orelse unreachable) ++ "s";
-    const table = comptime (it.next() orelse unreachable) ++ "s";
-
-    // TODO: nice error messages, like group should either be 'type' or 'instance'
-    return @field(@field(db, group), table).contains(id);
-}
-
-pub fn get_entity_id_by_name(
-    db: Database,
-    comptime entity_location: []const u8,
-    name: []const u8,
-) !EntityId {
-    comptime var tok_it = std.mem.tokenizeScalar(u8, entity_location, '.');
-    // the tables are in plural form but "type.peripheral" feels better to me
-    // for calling this function
-    const group = comptime (tok_it.next() orelse unreachable) ++ "s";
-    const table = comptime (tok_it.next() orelse unreachable) ++ "s";
-
-    return for (@field(@field(db, group), table).keys()) |id| {
-        const entry_name = db.attrs.name.get(id) orelse continue;
-        if (std.mem.eql(u8, name, entry_name)) {
-            assert(db.entity_is(entity_location, id));
-            return id;
-        }
-    } else error.NameNotFound;
-}
-
-pub const EntityType = enum {
-    peripheral,
-    register_group,
-    register,
-    field,
-    @"enum",
-    enum_field,
-    mode,
-    device,
-    interrupt,
-    peripheral_instance,
-
-    pub fn is_instance(entity_type: EntityType) bool {
-        return switch (entity_type) {
-            .device, .interrupt, .peripheral_instance => true,
-            else => false,
-        };
-    }
-
-    pub fn is_type(entity_type: EntityType) bool {
-        return !entity_type.is_type();
-    }
 };
 
-pub fn get_entity_type(
-    db: Database,
-    id: EntityId,
-) ?EntityType {
-    inline for (@typeInfo(TypeOfField(Database, "types")).Struct.fields) |field| {
-        if (@field(db.types, field.name).contains(id))
-            return @field(EntityType, field.name[0 .. field.name.len - 1]);
-    }
+pub fn create_mode(db: *Database, parent: StructID, opts: CreateModeOptions) !ModeID {
+    var savepoint = try db.sql.savepoint("create_mode");
+    defer savepoint.rollback();
+    log.debug("create_mode: name={s} parent={}", .{ opts.name, parent });
 
-    inline for (@typeInfo(TypeOfField(Database, "instances")).Struct.fields) |field| {
-        if (@field(db.instances, field.name).contains(id))
-            return if (std.mem.eql(u8, "peripheral", field.name))
-                .peripheral_instance
-            else
-                @field(EntityType, field.name[0 .. field.name.len - 1]);
-    }
+    try db.exec(
+        \\INSERT INTO modes
+        \\  (name, struct_id, description, value, qualifier)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?)
+    , .{
+        .name = opts.name,
+        .struct_id = parent,
+        .description = opts.description,
+        .value = opts.value,
+        .qualifier = opts.qualifier,
+    });
 
-    return null;
+    const mode_id: ModeID = @enumFromInt(db.sql.getLastInsertRowID());
+    savepoint.commit();
+
+    log.debug(
+        "created {}: struct_id={} name='{s}' value='{s}' qualifier='{s}'",
+        .{ mode_id, parent, opts.name, opts.value, opts.qualifier },
+    );
+
+    return mode_id;
 }
 
-// assert that the database is in valid state
-pub fn assert_valid(db: Database) void {
-    // entity id's should only ever be the primary key in one of the type or
-    // instance maps.
-    var id: u32 = 0;
-    while (id < db.next_entity_id) : (id += 1) {
-        var count: u32 = 0;
-        inline for (.{ "types", "instances" }) |area| {
-            inline for (@typeInfo(@TypeOf(@field(db, area))).Struct.fields) |field| {
-                if (@field(@field(db, area), field.name).contains(id))
-                    count += 1;
-            }
-        }
+pub const CreateRegisterOptions = struct {
+    // make name required for now
+    name: []const u8,
+    description: ?[]const u8 = null,
+    /// offset is in bytes
+    offset_bytes: u64,
+    /// size is in bits
+    size_bits: u64,
+    /// count if there is an array
+    count: ?u64 = null,
+    access: Access = .read_write,
+    reset_mask: ?u64 = null,
+    reset_value: ?u64 = null,
+};
 
-        assert(count <= 1); // entity id found in more than one place
-    }
-
-    // TODO: check for circular dependencies in relationships
+pub fn add_register_mode(db: *Database, register_id: RegisterID, mode_id: ModeID) !void {
+    log.debug("add_register_mode: mode_id={} register_id={}", .{ mode_id, register_id });
+    try db.exec(
+        \\INSERT INTO register_modes
+        \\  (register_id, mode_id)
+        \\VALUES
+        \\  (?, ?)
+    , .{
+        .register_id = register_id,
+        .mode_id = mode_id,
+    });
 }
 
-/// stringify entire database to JSON, you choose what formatting options you
-/// want
-pub fn json_stringify(
-    db: Database,
-    opts: std.json.StringifyOptions,
-    writer: anytype,
-) !void {
-    var obj = try regzon.to_json(db);
-    defer obj.deinit();
+pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOptions) !RegisterID {
+    var savepoint = try db.sql.savepoint("create_register");
+    defer savepoint.rollback();
 
-    try std.json.stringify(obj.value, opts, writer);
+    try db.exec(
+        \\INSERT INTO registers
+        \\  (name, description, offset_bytes, size_bits, count, access, reset_mask, reset_value)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?, ?, ?, ?)
+    , .{
+        .name = opts.name,
+        .description = opts.description,
+        .offset_bytes = opts.offset_bytes,
+        .size_bits = opts.size_bits,
+        .count = opts.count,
+        .access = opts.access,
+        .reset_mask = opts.reset_mask,
+        .reset_value = opts.reset_value,
+    });
+
+    const register_id: RegisterID = @enumFromInt(db.sql.getLastInsertRowID());
+    try db.exec(
+        \\INSERT INTO struct_registers
+        \\  (struct_id, register_id)
+        \\VALUES
+        \\  (?, ?)
+    , .{
+        .struct_id = parent,
+        .register_id = register_id,
+    });
+
+    savepoint.commit();
+
+    log.debug("created {}: name='{s}' offset_bytes={} size_bits={}", .{
+        register_id,
+        opts.name,
+        opts.offset_bytes,
+        opts.size_bits,
+    });
+
+    return register_id;
 }
 
-pub fn format(
-    db: Database,
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
-    writer: anytype,
-) !void {
-    _ = db;
-    _ = options;
-    _ = fmt;
-    _ = writer;
+pub fn get_register_by_name(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+    name: []const u8,
+) !Register {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM registers AS r
+        \\JOIN struct_registers AS sr ON sr.register_id = r.id
+        \\WHERE sr.struct_id = ? AND name = ?
+    , .{
+        comptime gen_field_list(Register, .{ .prefix = "r" }),
+    });
+
+    return try db.one_alloc(Register, allocator, query, .{
+        .struct_id = struct_id,
+        .name = name,
+    });
 }
 
-pub fn to_zig(db: Database, out_writer: anytype) !void {
-    try gen.to_zig(db, out_writer);
+pub const AddStructFieldOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    size_bits: u8,
+    offset_bits: u8,
+    enum_id: ?EnumID = null,
+    count: ?u16 = null,
+};
+
+pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {
+    // if there's no struct for a register then we need to create one
+    var savepoint = try db.sql.savepoint("add_register_field");
+    defer savepoint.rollback();
+
+    const struct_id = try db.get_register_struct(parent) orelse blk: {
+        const struct_id = try db.create_struct(.{});
+
+        try db.exec("UPDATE registers SET struct_id = ? WHERE id = ?", .{
+            .struct_id = struct_id,
+            .id = parent,
+        });
+
+        log.debug("{} now has {}", .{ parent, struct_id });
+        break :blk struct_id;
+    };
+
+    try db.add_struct_field(struct_id, opts);
+    savepoint.commit();
+}
+
+pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOptions) !void {
+    var savepoint = try db.sql.savepoint("add_struct_field");
+    defer savepoint.rollback();
+
+    try db.exec(
+        \\INSERT INTO struct_fields
+        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?, ?, ?)
+    , .{
+        .struct_id = parent,
+        .name = opts.name,
+        .description = opts.description,
+        .size_bits = opts.size_bits,
+        .offset_bits = opts.offset_bits,
+        .enum_id = opts.enum_id,
+        .count = opts.count,
+    });
+
+    savepoint.commit();
+
+    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} count={?}", .{
+        parent,
+        opts.name,
+        opts.offset_bits,
+        opts.size_bits,
+        opts.enum_id,
+        opts.count,
+    });
+}
+
+pub const CreateEnumOptions = struct {
+    name: ?[]const u8 = null,
+    description: ?[]const u8 = null,
+    size_bits: u8,
+};
+
+pub fn create_enum(db: *Database, struct_id: ?StructID, opts: CreateEnumOptions) !EnumID {
+    var savepoint = try db.sql.savepoint("create_enum");
+    defer savepoint.rollback();
+
+    try db.exec(
+        \\INSERT INTO enums
+        \\  (struct_id, name, description, size_bits)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{
+        .struct_id = struct_id,
+        .name = opts.name,
+        .description = opts.description,
+        .size_bits = opts.size_bits,
+    });
+
+    const enum_id: EnumID = @enumFromInt(db.sql.getLastInsertRowID());
+    savepoint.commit();
+
+    log.debug("created {}: struct_id={?} name='{?s}' description='{?s}' size_bits={}", .{
+        enum_id,
+        struct_id,
+        opts.name,
+        opts.description,
+        opts.size_bits,
+    });
+    return enum_id;
+}
+
+pub const CreateEnumFieldOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    value: u64,
+};
+
+pub fn add_enum_field(db: *Database, enum_id: EnumID, opts: CreateEnumFieldOptions) !void {
+    try db.exec(
+        \\INSERT INTO enum_fields
+        \\  (enum_id, name, description, value)
+        \\VALUES
+        \\  (?, ?, ?, ?)
+    , .{
+        .enum_id = enum_id,
+        .name = opts.name,
+        .description = opts.description,
+        .value = opts.value,
+    });
+}
+
+pub const CreateStructOptions = struct {};
+
+pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
+    _ = opts;
+    var savepoint = try db.sql.savepoint("create_struct");
+    defer savepoint.rollback();
+
+    try db.exec("INSERT INTO structs DEFAULT VALUES", .{});
+
+    const struct_id: StructID = @enumFromInt(db.sql.getLastInsertRowID());
+    savepoint.commit();
+
+    log.debug("created {}", .{struct_id});
+    return struct_id;
 }
 
 pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
@@ -1017,128 +1852,15 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
         errdefer p.deinit();
         try list.append(p);
     }
-
-    // TODO: handle patches
-    // TODO: keep track of changes so they can be done, maybe Patch => Change,
-    // and also have a ChangeResult so you could undo deletion of a thing
-
-    for (list.items) |entry| {
-        switch (entry.value) {
-            .add_enum => |added_enum| {
-                const parent_id = try db.get_entity_id_by_ref(added_enum.parent);
-                // TODO: parent constraints
-                const enum_id = try db.create_enum(parent_id, .{
-                    .name = added_enum.@"enum".name,
-                    .description = added_enum.@"enum".description,
-                    .size = added_enum.@"enum".bitsize,
-                });
-
-                for (added_enum.@"enum".fields) |field| {
-                    _ = try db.create_enum_field(enum_id, .{
-                        .name = field.name,
-                        .description = field.description,
-                        .value = field.value,
-                    });
-                }
-            },
-            .set_enum_type => |set_enum_type| {
-                const of_id = try db.get_entity_id_by_ref(set_enum_type.of);
-                const to_id = try db.get_entity_id_by_ref(set_enum_type.to);
-                // TODO: type checks
-                // TODO: size checks
-                // of_id should be a field, it's parent is a register
-                // to_id is a type, an enum
-
-                const old_enum = db.attrs.@"enum".get(of_id);
-                if (old_enum) |old_id| {
-                    const old_size = db.attrs.size.get(old_id).?;
-                    const new_size = db.attrs.size.get(to_id).?;
-
-                    if (old_size != new_size)
-                        return error.SizeMismatch;
-                }
-
-                try db.attrs.@"enum".put(db.gpa, of_id, to_id);
-
-                if (old_enum) |old_id| {
-                    // TODO: make a general "is referenced" function
-                    const is_used = for (db.attrs.@"enum".values()) |used_id| {
-                        if (used_id == old_id)
-                            break true;
-                    } else false;
-
-                    if (is_used)
-                        db.destroy_entity(old_id);
-                }
-            },
-        }
-    }
 }
 
-fn get_keys_from_group_and_table(db: *const Database, comptime group: []const u8, table: []const u8) ![]const EntityId {
-    return inline for (@typeInfo(@TypeOf(@field(db, group))).Struct.fields) |field| {
-        if (std.mem.eql(u8, field.name, table)) {
-            break @field(@field(db, group), field.name).keys();
-        }
-    } else error.InvalidRef;
-}
-
-fn get_all_children(db: *const Database, allocator: Allocator, entity_id: EntityId) ![]const EntityId {
-    var ids = std.AutoArrayHashMap(EntityId, void).init(allocator);
-    defer ids.deinit();
-
-    inline for (@typeInfo(@TypeOf(db.children)).Struct.fields) |field| {
-        if (@field(db.children, field.name).get(entity_id)) |keyset| {
-            for (keyset.keys()) |id|
-                try ids.putNoClobber(id, {});
-        }
-    }
-
-    return try allocator.dupe(EntityId, ids.keys());
-}
-
-pub fn get_entity_id_by_ref(db: *const Database, ref: []const u8) !EntityId {
-    var tok_it = std.mem.tokenizeScalar(u8, ref, '.');
-
-    const group = tok_it.next() orelse return error.InvalidRef;
-    const table = tok_it.next() orelse return error.InvalidRef;
-
-    const keys: []const EntityId = if (std.mem.eql(u8, "types", group))
-        try db.get_keys_from_group_and_table("types", table)
-    else if (std.mem.eql(u8, "instances", group))
-        try db.get_keys_from_group_and_table("instances", table)
-    else
-        return error.InvalidRef;
-
-    const base_name = tok_it.next() orelse return error.InvalidRef;
-    const base_id: EntityId = for (keys) |id| {
-        const name = db.attrs.name.get(id) orelse continue;
-        if (std.mem.eql(u8, base_name, name)) {
-            break id;
-        }
-    } else return error.InvalidRef;
-
-    var current_id = base_id;
-    while (tok_it.next()) |name| {
-        const children_ids = try db.get_all_children(db.gpa, current_id);
-        defer db.gpa.free(children_ids);
-
-        current_id = for (children_ids) |child_id| {
-            const child_name = db.attrs.name.get(child_id) orelse continue;
-            if (std.mem.eql(u8, name, child_name)) {
-                break child_id;
-            }
-        } else return error.InvlidRef;
-    }
-
-    return current_id;
+pub fn to_zig(db: *Database, out_writer: anytype) !void {
+    try gen.to_zig(db, out_writer);
 }
 
 test "all" {
     @setEvalBranchQuota(2000);
-    std.testing.refAllDeclsRecursive(atdf);
-    std.testing.refAllDeclsRecursive(dslite);
-    std.testing.refAllDeclsRecursive(gen);
-    std.testing.refAllDeclsRecursive(regzon);
-    std.testing.refAllDeclsRecursive(svd);
+    _ = atdf;
+    _ = gen;
+    _ = svd;
 }

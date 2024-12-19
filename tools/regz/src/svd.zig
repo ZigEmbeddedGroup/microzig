@@ -7,31 +7,31 @@ const xml = @import("xml.zig");
 const arm = @import("arch/arm.zig");
 
 const Database = @import("Database.zig");
-const EntityId = Database.EntityId;
 const Access = Database.Access;
+const StructID = Database.StructID;
+const DeviceID = Database.DeviceID;
+const PeripheralID = Database.PeripheralID;
+const RegisterID = Database.RegisterID;
+const EnumID = Database.EnumID;
 
 const log = std.log.scoped(.svd);
 
-// svd specific context to hold extra state like derived entities
+// svd specific context to hold extra state
 const Context = struct {
     db: *Database,
-    register_props: std.AutoArrayHashMapUnmanaged(EntityId, RegisterProperties) = .{},
-    derived_entities: std.AutoArrayHashMapUnmanaged(EntityId, []const u8) = .{},
+    arena: ArenaAllocator,
+    register_props: std.AutoArrayHashMapUnmanaged(RegisterPropertiesParent, RegisterProperties) = .{},
+    derived_peripherals: std.AutoArrayHashMapUnmanaged(xml.Node, []const u8) = .{},
 
     fn deinit(ctx: *Context) void {
         ctx.register_props.deinit(ctx.db.gpa);
-        ctx.derived_entities.deinit(ctx.db.gpa);
-    }
-
-    fn add_derived_entity(ctx: *Context, id: EntityId, derived_from: []const u8) !void {
-        try ctx.derived_entities.putNoClobber(ctx.db.gpa, id, derived_from);
-        log.debug("{}: derived from '{s}'", .{ id, derived_from });
+        ctx.arena.deinit();
     }
 
     fn derive_register_properties_from(
         ctx: *Context,
         node: xml.Node,
-        from: EntityId,
+        from: RegisterPropertiesParent,
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
@@ -56,21 +56,31 @@ pub fn parse_bool(str: []const u8) !bool {
 }
 
 pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
+    var arena = std.heap.ArenaAllocator.init(db.gpa);
+    defer arena.deinit();
     const root = try doc.get_root_element();
 
-    const device_id = db.create_entity();
-    try db.instances.devices.put(db.gpa, device_id, .{
-        .arch = .unknown,
+    const name = root.get_value("name") orelse return error.MissingDeviceName;
+    const description = root.get_value("description");
+    const arch: Database.Arch = blk: {
+        var cpu_it = root.iterate(&.{}, &.{"cpu"});
+        if (cpu_it.next()) |cpu| {
+            if (cpu.get_value("name")) |cpu_name| {
+                break :blk arch_from_str(cpu_name);
+            }
+        }
+
+        break :blk .unknown;
+    };
+
+    const device_id = try db.create_device(.{
+        .name = name,
+        .description = description,
+        .arch = arch,
     });
 
-    const name = root.get_value("name") orelse return error.MissingDeviceName;
-    try db.add_name(device_id, name);
-
-    if (root.get_value("description")) |description|
-        try db.add_description(device_id, description);
-
     if (root.get_value("licenseText")) |license|
-        try db.add_device_property(device_id, "license", license);
+        try db.add_device_property(device_id, .{ .key = "license", .value = license });
 
     // vendor
     // vendorID
@@ -115,14 +125,20 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
                 return error.MissingRequiredProperty;
             };
 
-            const property_name = try std.mem.join(db.arena.allocator(), ".", &.{ "cpu", property });
-            try db.add_device_property(device_id, property_name, value);
+            const property_name = try std.mem.join(arena.allocator(), ".", &.{ "cpu", property });
+            try db.add_device_property(device_id, .{
+                .key = property_name,
+                .value = value,
+            });
         }
 
         for (optional_properties) |property| {
             if (cpu.get_value(property)) |value| {
-                const property_name = try std.mem.join(db.arena.allocator(), ".", &.{ "cpu", property });
-                try db.add_device_property(device_id, property_name, value);
+                const property_name = try std.mem.join(arena.allocator(), ".", &.{ "cpu", property });
+                try db.add_device_property(device_id, .{
+                    .key = property_name,
+                    .value = value,
+                });
             }
         }
     }
@@ -132,36 +148,65 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
     var ctx = Context{
         .db = db,
+        .arena = std.heap.ArenaAllocator.init(db.gpa),
     };
     defer ctx.deinit();
 
     const register_props = try RegisterProperties.parse(root);
-    try ctx.register_props.put(db.gpa, device_id, register_props);
+    try ctx.register_props.put(db.gpa, .{ .device = device_id }, register_props);
 
     var peripheral_it = root.iterate(&.{"peripherals"}, &.{"peripheral"});
     while (peripheral_it.next()) |peripheral_node|
         load_peripheral(&ctx, peripheral_node, device_id) catch |err|
             log.warn("failed to load peripheral: {}", .{err});
 
-    for (ctx.derived_entities.keys(), ctx.derived_entities.values()) |id, derived_name| {
-        derive_entity(ctx, id, derived_name) catch |err| {
-            log.warn("failed to derive entity {} from {s}: {}", .{
-                id,
-                derived_name,
-                err,
-            });
-        };
+    // TODO: derive entities here
+    try derive_peripherals(&ctx, device_id);
+
+    if (arch.is_arm()) {
+        const device = try db.get_device_by_name(arena.allocator(), name);
+        try arm.load_system_interrupts(db, &device);
     }
+}
 
-    const device = db.instances.devices.getEntry(device_id).?.value_ptr;
-    device.arch = if (device.properties.get("cpu.name")) |cpu_name|
-        arch_from_str(cpu_name)
-    else
-        .unknown;
-    if (device.arch.is_arm())
-        try arm.load_system_interrupts(db, device_id);
+fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
+    for (ctx.derived_peripherals.keys(), ctx.derived_peripherals.values()) |node, derived_from| {
+        // TODO: partial derivation
+        if (node.get_value("registers") != null)
+            continue;
 
-    db.assert_valid();
+        const peripheral_id = try ctx.db.get_peripheral_by_name(derived_from) orelse return error.MissingPeripheral;
+        const struct_id = try ctx.db.get_peripheral_struct(peripheral_id);
+
+        // count is applied to the specific instance
+        // size is applied to the type
+        const count: ?u64 = blk: {
+            const dim_elements = try DimElements.parse(node);
+            if (dim_elements) |elements| {
+                // peripherals can't have dimIndex set according to the spec
+                if (elements.dim_index != null)
+                    return error.Malformed;
+
+                if (elements.dim_name != null)
+                    return error.TodoDimElementsExtended;
+
+                break :blk elements.dim;
+            }
+
+            break :blk null;
+        };
+
+        _ = try ctx.db.create_device_peripheral(device_id, .{
+            .name = node.get_value("name") orelse return error.PeripheralMissingName,
+            .description = node.get_value("description"),
+            .struct_id = struct_id,
+            .count = count,
+            .offset_bytes = if (node.get_value("baseAddress")) |base_address|
+                try std.fmt.parseInt(u64, base_address, 0)
+            else
+                return error.PeripheralMissingBaseAddress,
+        });
+    }
 }
 
 fn arch_from_str(str: []const u8) Database.Arch {
@@ -225,98 +270,65 @@ fn arch_from_str(str: []const u8) Database.Arch {
         .unknown;
 }
 
-pub fn derive_entity(ctx: Context, id: EntityId, derived_name: []const u8) !void {
+pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
     const db = ctx.db;
-    log.debug("{}: derived from {s}", .{ id, derived_name });
-    const entity_type = db.get_entity_type(id);
-    assert(entity_type != null);
-    switch (entity_type.?) {
-        .peripheral => {
-            // TODO: what do we do when we have other fields set? maybe make
-            // some assertions and then skip if we're not sure
-            const name = db.attrs.name.get(id);
-            const base_instance_id = try db.get_entity_id_by_name("instance.peripheral", derived_name);
-            const base_id = db.instances.peripherals.get(base_instance_id) orelse return error.PeripheralNotFound;
 
-            if (ctx.derived_entities.contains(base_id)) {
-                log.warn("TODO: chained peripheral derivation: {?s}", .{name});
-                return error.TodoChainedDerivation;
-            }
-
-            if (try db.instances.peripherals.fetchPut(db.gpa, id, base_id)) |entry| {
-                const maybe_remove_peripheral_id = entry.value;
-                for (db.instances.peripherals.keys()) |used_peripheral_id| {
-                    // if there is a match don't delete the entity
-                    if (used_peripheral_id == maybe_remove_peripheral_id)
-                        break;
-                } else {
-                    // no instance is using this peripheral so we can remove it
-                    db.destroy_entity(maybe_remove_peripheral_id);
-                }
-            }
-        },
-        else => {
-            log.warn("TODO: implement derivation for {?}", .{entity_type});
-        },
+    if (node.get_attribute("derivedFrom")) |derived_from| {
+        try ctx.derived_peripherals.put(ctx.arena.allocator(), node, derived_from);
+        return;
     }
-}
 
-pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void {
-    const db = ctx.db;
+    // count is applied to the specific instance
+    // size is applied to the type
+    const count: ?u64, const size_bytes: ?u64 = blk: {
+        const dim_elements = try DimElements.parse(node);
+        if (dim_elements) |elements| {
+            // peripherals can't have dimIndex set according to the spec
+            if (elements.dim_index != null)
+                return error.Malformed;
 
-    const type_id = try load_peripheral_type(ctx, node);
-    errdefer db.destroy_entity(type_id);
+            if (elements.dim_name != null)
+                return error.TodoDimElementsExtended;
 
-    const instance_id = try db.create_peripheral_instance(device_id, type_id, .{
+            break :blk .{ elements.dim, elements.dim_increment };
+        }
+
+        break :blk .{ null, null };
+    };
+
+    const peripheral_id = try db.create_peripheral(.{ .name = node.get_value("name") orelse return error.PeripheralMissingName, .description = node.get_value("description"), .size_bytes = size_bytes });
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const instance_id = try db.create_device_peripheral(device_id, .{
         .name = node.get_value("name") orelse return error.PeripheralMissingName,
-        .offset = if (node.get_value("baseAddress")) |base_address|
+        .description = node.get_value("description"),
+        .struct_id = struct_id,
+        .count = count,
+        .offset_bytes = if (node.get_value("baseAddress")) |base_address|
             try std.fmt.parseInt(u64, base_address, 0)
         else
             return error.PeripheralMissingBaseAddress,
     });
-    errdefer db.destroy_entity(instance_id);
-
-    const dim_elements = try DimElements.parse(node);
-    if (dim_elements) |elements| {
-        // peripherals can't have dimIndex set according to the spec
-        if (elements.dim_index != null)
-            return error.Malformed;
-
-        if (elements.dim_name != null)
-            return error.TodoDimElementsExtended;
-
-        // count is applied to the specific instance
-        try db.add_count(instance_id, elements.dim);
-
-        // size is applied to the type
-        try db.add_size(type_id, elements.dim_increment);
-    }
+    _ = instance_id;
 
     var interrupt_it = node.iterate(&.{}, &.{"interrupt"});
     while (interrupt_it.next()) |interrupt_node|
         try load_interrupt(db, interrupt_node, device_id);
 
-    if (node.get_value("description")) |description|
-        try db.add_description(instance_id, description);
+    //if (node.get_value("version")) |version|
+    //    try db.add_version(instance_id, version);
 
-    if (node.get_value("version")) |version|
-        try db.add_version(instance_id, version);
-
-    if (node.get_attribute("derivedFrom")) |derived_from|
-        try ctx.add_derived_entity(instance_id, derived_from);
-
-    const register_props = try ctx.derive_register_properties_from(node, device_id);
-    try ctx.register_props.put(db.gpa, type_id, register_props);
+    const register_props = try ctx.derive_register_properties_from(node, .{ .device = device_id });
+    try ctx.register_props.put(db.gpa, .{ .@"struct" = struct_id }, register_props);
 
     var register_it = node.iterate(&.{"registers"}, &.{"register"});
     while (register_it.next()) |register_node|
-        load_register(ctx, register_node, type_id) catch |err|
+        load_register(ctx, register_node, struct_id) catch |err|
             log.warn("failed to load register: {}", .{err});
 
     // TODO: handle errors when implemented
     var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
     while (cluster_it.next()) |cluster_node|
-        load_cluster(ctx, cluster_node, type_id) catch |err|
+        load_cluster(ctx, cluster_node) catch |err|
             log.warn("failed to load cluster: {}", .{err});
 
     // alternatePeripheral
@@ -328,27 +340,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: EntityId) !void
     // addressBlock
 }
 
-fn load_peripheral_type(ctx: *Context, node: xml.Node) !EntityId {
-    const db = ctx.db;
-
-    // TODO: get version
-    const id = try db.create_peripheral(.{
-        .name = node.get_value("name") orelse return error.PeripheralMissingName,
-    });
-    errdefer db.destroy_entity(id);
-
-    if (node.get_value("description")) |description|
-        try db.add_description(id, description);
-
-    return id;
-}
-
-fn load_interrupt(db: *Database, node: xml.Node, device_id: EntityId) !void {
-    assert(db.entity_is("instance.device", device_id));
-
-    const id = db.create_entity();
-    errdefer db.destroy_entity(id);
-
+fn load_interrupt(db: *Database, node: xml.Node, device_id: DeviceID) !void {
     const name = node.get_value("name") orelse return error.MissingInterruptName;
     const value_str = node.get_value("value") orelse return error.MissingInterruptIndex;
     const value = std.fmt.parseInt(i32, value_str, 0) catch |err| {
@@ -359,22 +351,18 @@ fn load_interrupt(db: *Database, node: xml.Node, device_id: EntityId) !void {
         return err;
     };
 
-    log.debug("{}: creating interrupt {}", .{ id, value });
-    try db.instances.interrupts.put(db.gpa, id, value);
-    try db.add_name(id, name);
-    if (node.get_value("description")) |description|
-        try db.add_description(id, description);
-
-    try db.add_child("instance.interrupt", device_id, id);
+    _ = try db.create_interrupt(device_id, .{
+        .name = name,
+        .description = node.get_value("description"),
+        .idx = value,
+    });
 }
 
 fn load_cluster(
     ctx: *Context,
     node: xml.Node,
-    parent_id: EntityId,
 ) !void {
     _ = ctx;
-    _ = parent_id;
 
     const name = node.get_value("name") orelse return error.MissingClusterName;
     log.warn("TODO clusters. name: {s}", .{name});
@@ -397,10 +385,10 @@ fn get_name_without_suffix(node: xml.Node, suffix: []const u8) ![]const u8 {
 fn load_register(
     ctx: *Context,
     node: xml.Node,
-    parent_id: EntityId,
+    parent: StructID,
 ) !void {
     const db = ctx.db;
-    const register_props = try ctx.derive_register_properties_from(node, parent_id);
+    const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     const name = node.get_value("name") orelse return error.MissingRegisterName;
     const size = register_props.size orelse return error.MissingRegisterSize;
     const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
@@ -413,31 +401,31 @@ fn load_register(
         break :count elements.dim;
     } else null;
 
-    const id = try db.create_register(parent_id, .{
+    const register_id = try db.create_register(parent, .{
         .name = if (std.mem.endsWith(u8, name, "[%s]"))
             name[0 .. name.len - 4]
         else
-            try std.mem.replaceOwned(u8, ctx.db.arena.allocator(), name, "%s", ""),
+            try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", ""),
         .description = node.get_value("description"),
-        .offset = if (node.get_value("addressOffset")) |offset_str|
+        .offset_bytes = if (node.get_value("addressOffset")) |offset_str|
             try std.fmt.parseInt(u64, offset_str, 0)
         else
             return error.MissingRegisterOffset,
-        .size = size,
+        .size_bits = size,
         .count = count,
-        .access = register_props.access,
+        .access = register_props.access orelse .read_write,
         .reset_mask = register_props.reset_mask,
         .reset_value = register_props.reset_value,
     });
-    errdefer db.destroy_entity(id);
 
     var field_it = node.iterate(&.{"fields"}, &.{"field"});
     while (field_it.next()) |field_node|
-        load_field(ctx, field_node, id) catch |err|
+        load_field(ctx, field_node, register_id) catch |err|
             log.warn("failed to load register: {}", .{err});
 
-    if (node.get_attribute("derivedFrom")) |derived_from|
-        try ctx.add_derived_entity(id, derived_from);
+    // TODO: derivision
+    //if (node.get_attribute("derivedFrom")) |derived_from|
+    //    try ctx.add_derived_entity(id, derived_from);
 
     // TODO:
     // dimElementGroup
@@ -450,37 +438,42 @@ fn load_register(
     // readAction
 }
 
-fn load_field(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
+fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     const db = ctx.db;
 
     const bit_range = try BitRange.parse(node);
-    const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
+    const count: ?u16 = if (try DimElements.parse(node)) |elements| count: {
         if (elements.dim_index != null or elements.dim_name != null)
             return error.TodoDimElementsExtended;
 
         if (elements.dim_increment != bit_range.width)
             return error.DimIncrementSizeMismatch;
 
-        break :count elements.dim;
+        break :count @intCast(elements.dim);
     } else null;
 
-    const id = try db.create_field(register_id, .{
+    if (node.get_attribute("derivedFrom")) |derived_from| {
+        _ = derived_from;
+        return error.TODO_DerivedRegisterFields;
+    }
+
+    const enum_id: ?EnumID = if (node.find_child(&.{"enumeratedValues"})) |enum_values_node|
+        try load_enumerated_values(ctx, enum_values_node, @intCast(bit_range.width))
+    else
+        null;
+
+    // TODO: field access
+    //if (node.get_value("access")) |access_str|
+    //    try db.add_access(id, try parse_access(access_str));
+
+    try db.add_register_field(register_id, .{
         .name = try get_name_without_suffix(node, "%s"),
         .description = node.get_value("description"),
-        .size = bit_range.width,
-        .offset = bit_range.offset,
+        .size_bits = @intCast(bit_range.width),
+        .offset_bits = @intCast(bit_range.offset),
         .count = count,
+        .enum_id = enum_id,
     });
-    errdefer db.destroy_entity(id);
-
-    if (node.get_value("access")) |access_str|
-        try db.add_access(id, try parse_access(access_str));
-
-    if (node.find_child(&.{"enumeratedValues"})) |enum_values_node|
-        try load_enumerated_values(ctx, enum_values_node, id);
-
-    if (node.get_attribute("derivedFrom")) |derived_from|
-        try ctx.add_derived_entity(id, derived_from);
 
     // TODO:
     // modifiedWriteValues
@@ -488,37 +481,25 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: EntityId) !void {
     // readAction
 }
 
-fn load_enumerated_values(ctx: *Context, node: xml.Node, field_id: EntityId) !void {
-    const db = ctx.db;
-
-    assert(db.entity_is("type.field", field_id));
-    const peripheral_id = peripheral_id: {
-        var id = field_id;
-        break :peripheral_id while (db.attrs.parent.get(id)) |parent_id| : (id = parent_id) {
-            if (.peripheral == db.get_entity_type(parent_id).?)
-                break parent_id;
-        } else return error.NoPeripheralFound;
-    };
-
-    const id = try db.create_enum(peripheral_id, .{
+fn load_enumerated_values(ctx: *Context, node: xml.Node, enum_size_bits: u8) !EnumID {
+    const enum_id = try ctx.db.create_enum(null, .{
         // TODO: find solution to potential name collisions for enums at the peripheral level.
-        //.name = node.get_value("name"),
-        .size = db.attrs.size.get(field_id),
+        .name = node.get_value("name"),
+        // TODO: description?
+        .size_bits = enum_size_bits,
     });
-    errdefer db.destroy_entity(id);
-
-    try db.attrs.@"enum".putNoClobber(db.gpa, field_id, id);
 
     var value_it = node.iterate(&.{}, &.{"enumeratedValue"});
     while (value_it.next()) |value_node|
-        try load_enumerated_value(ctx, value_node, id);
+        try load_enumerated_value(ctx, value_node, enum_id);
+
+    return enum_id;
 }
 
-fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EntityId) !void {
+fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
     const db = ctx.db;
 
-    assert(db.entity_is("type.enum", enum_id));
-    const id = try db.create_enum_field(enum_id, .{
+    try db.add_enum_field(enum_id, .{
         .name = if (node.get_value("name")) |name|
             if (std.mem.eql(u8, "_", name))
                 return error.InvalidEnumFieldName
@@ -532,7 +513,6 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EntityId) !void
         else
             return error.EnumFieldMissingValue,
     });
-    errdefer db.destroy_entity(id);
 }
 
 pub const Revision = struct {
@@ -592,9 +572,7 @@ pub const DimIndex = struct {};
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectError = std.testing.expectError;
-
-const testing = @import("testing.zig");
-const expectAttr = testing.expect_attr;
+const expectEqualStrings = std.testing.expectEqualStrings;
 
 test "svd.Revision.parse" {
     try expectEqual(Revision{
@@ -710,6 +688,11 @@ const Protection = enum {
     privileged,
 };
 
+pub const RegisterPropertiesParent = union(enum) {
+    device: DeviceID,
+    @"struct": StructID,
+};
+
 const RegisterProperties = struct {
     size: ?u64,
     access: ?Access,
@@ -778,20 +761,23 @@ test "svd.device register properties" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    // these only have names attached, so if these functions fail the test will fail.
-    _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
-    _ = try db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL");
-    _ = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
 
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "size", 32, register_id);
-    try expectAttr(db, "access", .read_only, register_id);
-    try expectAttr(db, "reset_value", 0, register_id);
-    try expectAttr(db, "reset_mask", 0xffffffff, register_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+    try expectEqual(32, register.size_bits);
+    try expectEqual(.read_only, register.access);
+    try expectEqual(0, register.reset_value);
+    try expectEqual(0xFFFFFFFF, register.reset_mask);
 }
 
 test "svd.peripheral register properties" {
@@ -821,19 +807,23 @@ test "svd.peripheral register properties" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    // these only have names attached, so if these functions fail the test will fail.
-    _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
-    _ = try db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL");
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "size", 16, register_id);
-    try expectAttr(db, "access", .write_only, register_id);
-    try expectAttr(db, "reset_value", 1, register_id);
-    try expectAttr(db, "reset_mask", 0xffff, register_id);
+    try expectEqual(16, register.size_bits);
+    try expectEqual(.write_only, register.access);
+    try expectEqual(1, register.reset_value);
+    try expectEqual(0xFFFF, register.reset_mask);
 }
 
 test "svd.register register properties" {
@@ -866,20 +856,23 @@ test "svd.register register properties" {
         \\  </peripherals>
         \\</device>
     ;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
 
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    // these only have names attached, so if these functions fail the test will fail.
-    _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
-    _ = try db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL");
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "size", 8, register_id);
-    try expectAttr(db, "access", .read_write, register_id);
-    try expectAttr(db, "reset_value", 2, register_id);
-    try expectAttr(db, "reset_mask", 0xff, register_id);
+    try expectEqual(8, register.size_bits);
+    try expectEqual(.read_write, register.access);
+    try expectEqual(2, register.reset_value);
+    try expectEqual(0xFF, register.reset_mask);
 }
 
 test "svd.register with fields" {
@@ -912,14 +905,24 @@ test "svd.register with fields" {
         \\</device>
     ;
 
-    const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
 
-    const field_id = try db.get_entity_id_by_name("type.field", "TEST_FIELD");
-    try expectAttr(db, "size", 8, field_id);
-    try expectAttr(db, "offset", 0, field_id);
-    try expectAttr(db, "access", .read_write, field_id);
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+
+    const field = try db.get_register_field_by_name(arena.allocator(), register.id, "TEST_FIELD");
+    try expectEqual(8, field.size_bits);
+    try expectEqual(0, field.offset_bits);
+
+    // TODO: field access
 }
 
 test "svd.field with enum value" {
@@ -965,34 +968,35 @@ test "svd.field with enum value" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    const peripheral_id = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
-    const field_id = try db.get_entity_id_by_name("type.field", "TEST_FIELD");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
-    // TODO: figure out a name collision avoidance mechanism for SVD. For now
-    // we'll make all SVD enums anonymous
-    const enum_id = db.attrs.@"enum".get(field_id).?;
-    try expect(!db.attrs.name.contains(enum_id));
+    const fields = try db.get_register_fields(arena.allocator(), register.id, .{ .distinct = false });
+    try expectEqual(1, fields.len);
 
-    // field
-    try expectAttr(db, "enum", enum_id, field_id);
+    const field = fields[0];
+    try expect(field.enum_id != null);
 
     // enum
-    try expectAttr(db, "size", 8, enum_id);
-    try expectAttr(db, "parent", peripheral_id, enum_id);
+    const e = try db.get_enum(arena.allocator(), field.enum_id.?);
+    try expectEqual(8, e.size_bits);
 
-    const enum_field1_id = try db.get_entity_id_by_name("type.enum_field", "TEST_ENUM_FIELD1");
-    try expectEqual(@as(u32, 0), db.types.enum_fields.get(enum_field1_id).?);
-    try expectAttr(db, "parent", enum_id, enum_field1_id);
-    try expectAttr(db, "description", "test enum field 1", enum_field1_id);
+    const enum_fields = try db.get_enum_fields(arena.allocator(), e.id, .{});
+    try expectEqualStrings("TEST_ENUM_FIELD1", enum_fields[0].name);
+    try expectEqual(0, enum_fields[0].value);
+    try expectEqualStrings("test enum field 1", enum_fields[0].description.?);
 
-    const enum_field2_id = try db.get_entity_id_by_name("type.enum_field", "TEST_ENUM_FIELD2");
-    try expectEqual(@as(u32, 1), db.types.enum_fields.get(enum_field2_id).?);
-    try expectAttr(db, "parent", enum_id, enum_field2_id);
-    try expectAttr(db, "description", "test enum field 2", enum_field2_id);
+    try expectEqualStrings("TEST_ENUM_FIELD2", enum_fields[1].name);
+    try expectEqual(1, enum_fields[1].value);
+    try expectEqualStrings("test enum field 2", enum_fields[1].description.?);
 }
 
 test "svd.peripheral with dimElementGroup" {
@@ -1020,19 +1024,23 @@ test "svd.peripheral with dimElementGroup" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    const peripheral_id = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
-    try expectAttr(db, "size", 4, peripheral_id);
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    const instance = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const peripheral = try db.get_peripheral(arena.allocator(), peripheral_id);
 
-    const instance_id = try db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL");
-    try expectAttr(db, "count", 4, instance_id);
+    try expectEqual(4, peripheral.size_bytes);
+    try expectEqual(4, instance.count);
 }
 
 test "svd.peripheral with dimElementgroup, dimIndex set" {
-    std.testing.log_level = .err;
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1058,15 +1066,18 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
         \\</device>
     ;
 
-    const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
 
-    _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
 
     // should not exist since dimIndex is not allowed to be defined for peripherals
-    try expectError(error.NameNotFound, db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL"));
-    try expectError(error.NameNotFound, db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL"));
+    try expectError(error.MissingEntity, db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL"));
+    try expectEqual(null, try db.get_peripheral_by_name("TEST_PERIPHERAL"));
 }
 
 test "svd.register with dimElementGroup" {
@@ -1094,16 +1105,21 @@ test "svd.register with dimElementGroup" {
         \\</device>
     ;
 
-    const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
 
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "count", 4, register_id);
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+
+    try expectEqual(4, register.count);
 }
 
 test "svd.register with dimElementGroup, dimIncrement != size" {
-    std.testing.log_level = .err;
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1135,16 +1151,19 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
-    _ = try db.get_entity_id_by_name("instance.device", "TEST_DEVICE");
-    _ = try db.get_entity_id_by_name("instance.peripheral", "TEST_PERIPHERAL");
-    _ = try db.get_entity_id_by_name("type.peripheral", "TEST_PERIPHERAL");
+    const device_id = try db.get_device_id_by_name("TEST_DEVICE") orelse return error.MissingDevice;
+    _ = try db.get_device_peripheral_by_name(arena.allocator(), device_id, "TEST_PERIPHERAL");
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
 
-    // dimIncrement is different than the size of the register, so it should never be made
-    try expectError(error.NameNotFound, db.get_entity_id_by_name("type.register", "TEST_REGISTER"));
+    try expectError(error.MissingEntity, db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER"));
 }
 
 test "svd.register with dimElementGroup, suffixed with [%s]" {
@@ -1172,13 +1191,19 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
     // [%s] is dropped from name, it is redundant
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "count", 4, register_id);
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+
+    try expectEqual(4, register.count);
 }
 
 test "svd.register with dimElementGroup, %s in name" {
@@ -1206,13 +1231,19 @@ test "svd.register with dimElementGroup, %s in name" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
     // %s is dropped from name, it is redundant
-    const register_id = try db.get_entity_id_by_name("type.register", "TEST_REGISTER");
-    try expectAttr(db, "count", 4, register_id);
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+
+    try expectEqual(4, register.count);
 }
 
 test "svd.field with dimElementGroup, suffixed with %s" {
@@ -1247,11 +1278,20 @@ test "svd.field with dimElementGroup, suffixed with %s" {
         \\</device>
     ;
 
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
     const doc = try xml.Doc.from_memory(text);
-    var db = try Database.init_from_svd_xml(std.testing.allocator, doc);
-    defer db.deinit();
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
 
     // %s is dropped from name, it is redundant
-    const register_id = try db.get_entity_id_by_name("type.field", "TEST_FIELD");
-    try expectAttr(db, "count", 2, register_id);
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+
+    const fields = try db.get_register_fields(arena.allocator(), register.id, .{ .distinct = false });
+
+    try expectEqualStrings("TEST_FIELD", fields[0].name);
+    try expectEqual(2, fields[0].count);
 }

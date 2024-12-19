@@ -17,6 +17,8 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const nrfx = b.dependency("nrfx", .{});
+
     const chip_nrf52840: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
@@ -30,7 +32,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .eabi,
             },
             .register_definition = .{
-                .json = b.path("src/chips/nrf52840.json"),
+                .svd = nrfx.path("mdk/nrf52840.svd"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x00000000, .length = 0x100000, .kind = .flash },
@@ -58,7 +60,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .eabi,
             },
             .register_definition = .{
-                .json = b.path("src/chips/nrf52.json"),
+                .svd = nrfx.path("mdk/nrf52.svd"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
