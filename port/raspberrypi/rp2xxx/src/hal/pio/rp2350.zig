@@ -46,7 +46,7 @@ pub const Pio = enum(u2) {
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
     pub const sm_set_exec_options = PioImpl.sm_set_exec_options;
 
-    pub fn sm_set_shift_options(self: Pio, sm: common.StateMachine, options: common.ShiftOptions) void {
+    pub fn sm_set_shift_options(self: Pio, sm: common.StateMachine, options: common.ShiftOptions(.RP2350)) void {
         const sm_regs = self.get_sm_regs(sm);
         sm_regs.shiftctrl.write(.{
             .AUTOPUSH = @intFromBool(options.autopush),
