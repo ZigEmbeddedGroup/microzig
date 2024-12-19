@@ -32,5 +32,5 @@ jobs:
           version: 0.13.0
 
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall
+        run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
