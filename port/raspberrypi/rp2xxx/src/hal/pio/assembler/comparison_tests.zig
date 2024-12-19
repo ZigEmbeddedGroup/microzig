@@ -1,6 +1,8 @@
 const std = @import("std");
 const assembler = @import("../assembler.zig");
 const tokenizer = @import("tokenizer.zig");
+const CPU = @import("../../cpu.zig").CPU;
+
 const c = @cImport({
     @cDefine("PICO_NO_HARDWARE", "1");
     @cInclude("stdint.h");
@@ -32,8 +34,14 @@ const c = @cImport({
 });
 
 fn pio_comparison(comptime source: []const u8) !void {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        try pio_comparison_cpu(cpu, source);
+    }
+}
+
+fn pio_comparison_cpu(comptime cpu: CPU, comptime source: []const u8) !void {
     comptime var diags: ?assembler.Diagnostics = null;
-    const output = try comptime assembler.assemble_impl(.RP2040, source, &diags, .{});
+    const output = try comptime assembler.assemble_impl(cpu, source, &diags, .{});
     try std.testing.expect(output.programs.len > 0);
 
     inline for (output.programs) |program| {
@@ -91,7 +99,7 @@ test "pio.comparison.i2c" {
 
 test "pio.comparison.irq" {
     @setEvalBranchQuota(22000);
-    try pio_comparison(@embedFile("comparison_tests/irq.pio"));
+    try pio_comparison_cpu(.RP2350, @embedFile("comparison_tests/irq.pio"));
 }
 
 test "pio.comparison.manchester_encoding" {
