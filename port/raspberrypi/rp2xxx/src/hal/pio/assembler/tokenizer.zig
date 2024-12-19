@@ -1558,34 +1558,44 @@ fn bounded_tokenize(comptime cpu: CPU, source: []const u8) !std.BoundedArray(Tok
 }
 
 test "tokenize.empty string" {
-    const tokens = try bounded_tokenize(.RP2040, "");
-    try expectEqual(@as(usize, 0), tokens.len);
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "");
+        try expectEqual(@as(usize, 0), tokens.len);
+    }
 }
 
 test "tokenize.whitespace" {
-    const tokens = try bounded_tokenize(.RP2040, " \t\r\n");
-    try expectEqual(@as(usize, 0), tokens.len);
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, " \t\r\n");
+        try expectEqual(@as(usize, 0), tokens.len);
+    }
 }
 
 test "tokenize.comma line comment" {
-    const tokens = try bounded_tokenize(.RP2040, "; this is a line comment");
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "; this is a line comment");
 
-    try expectEqual(@as(usize, 0), tokens.len);
+        try expectEqual(@as(usize, 0), tokens.len);
+    }
 }
 
 test "tokenize.slash line comment" {
-    const tokens = try bounded_tokenize(.RP2040, "// this is a line comment");
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "// this is a line comment");
 
-    try expectEqual(@as(usize, 0), tokens.len);
+        try expectEqual(@as(usize, 0), tokens.len);
+    }
 }
 
 test "tokenize.block comment" {
-    const tokens = try bounded_tokenize(.RP2040,
-        \\/* this is
-        \\   a block comment */
-    );
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu,
+            \\/* this is
+            \\   a block comment */
+        );
 
-    try expectEqual(@as(usize, 0), tokens.len);
+        try expectEqual(@as(usize, 0), tokens.len);
+    }
 }
 
 test "tokenize.code block" {
