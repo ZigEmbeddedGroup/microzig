@@ -1551,7 +1551,7 @@ fn expect_instr_irq(comptime cpu: CPU, expected: ExpectedIrqInstr(cpu), actual: 
 fn bounded_tokenize(comptime cpu: CPU, source: []const u8) !std.BoundedArray(Token(cpu), 256) {
     var diags: ?assembler.Diagnostics = null;
     return tokenize(cpu, source, &diags, .{}) catch |err| if (diags) |d| blk: {
-        std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
+        std.log.err("error with cpu {s} at index {}: {s}", .{ @tagName(cpu), d.index, d.message.slice() });
         break :blk err;
     } else err;
 }
