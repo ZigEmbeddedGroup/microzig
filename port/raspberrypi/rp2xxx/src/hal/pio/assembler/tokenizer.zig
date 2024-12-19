@@ -1588,8 +1588,8 @@ test "tokenize.block comment" {
 }
 
 test "tokenize.code block" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format,
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu,
             \\% c-sdk {
             \\   int foo;
             \\%}
@@ -1600,16 +1600,16 @@ test "tokenize.code block" {
 }
 
 test "tokenize.directive.program" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".program arst");
-        try expect_program(format, "arst", tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".program arst");
+        try expect_program(cpu, "arst", tokens.get(0));
     }
 }
 
 test "tokenize.directive.define" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".define symbol_name 1");
-        try expect_define(format, .{
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".define symbol_name 1");
+        try expect_define(cpu, .{
             .name = "symbol_name",
             .value = .{ .expression = "1" },
             .index = 8,
@@ -1618,9 +1618,9 @@ test "tokenize.directive.define" {
 }
 
 test "tokenize.directive.define.public" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".define public symbol_name 0x1");
-        try expect_define(format, .{
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".define public symbol_name 0x1");
+        try expect_define(cpu, .{
             .name = "symbol_name",
             .value = .{ .expression = "0x1" },
             .index = 15,
@@ -1629,19 +1629,19 @@ test "tokenize.directive.define.public" {
 }
 
 test "tokenize.directive.define.with expression" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format,
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu,
             \\.define symbol_name 0x1
             \\.define something (symbol_name * 2)
         );
 
-        try expect_define(format, .{
+        try expect_define(cpu, .{
             .name = "symbol_name",
             .value = .{ .expression = "0x1" },
             .index = 8,
         }, tokens.get(0));
 
-        try expect_define(format, .{
+        try expect_define(cpu, .{
             .name = "something",
             .value = .{ .expression = "(symbol_name * 2)" },
             .index = 32,
@@ -1650,99 +1650,99 @@ test "tokenize.directive.define.with expression" {
 }
 
 test "tokenize.directive.origin" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".origin 0x10");
-        try expect_origin(format, .{ .integer = 0x10 }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".origin 0x10");
+        try expect_origin(cpu, .{ .integer = 0x10 }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".side_set 1");
-        try expect_side_set(format, .{ .count = .{ .integer = 1 } }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".side_set 1");
+        try expect_side_set(cpu, .{ .count = .{ .integer = 1 } }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.opt" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".side_set 1 opt");
-        try expect_side_set(format, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".side_set 1 opt");
+        try expect_side_set(cpu, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.pindirs" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".side_set 1 pindirs");
-        try expect_side_set(format, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".side_set 1 pindirs");
+        try expect_side_set(cpu, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap_target" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".wrap_target");
-        try expect_wrap_target(format, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".wrap_target");
+        try expect_wrap_target(cpu, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".wrap");
-        try expect_wrap(format, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".wrap");
+        try expect_wrap(cpu, tokens.get(0));
     }
 }
 
 test "tokenize.directive.lang_opt" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".lang_opt c flag foo");
-        try expect_lang_opt(format, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".lang_opt c flag foo");
+        try expect_lang_opt(cpu, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.word" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, ".word 0xaaaa");
-        try expect_word(format, .{ .integer = 0xaaaa }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, ".word 0xaaaa");
+        try expect_word(cpu, .{ .integer = 0xaaaa }, tokens.get(0));
     }
 }
 
 test "tokenize.label" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, "my_label:");
-        try expect_label(format, .{ .name = "my_label" }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "my_label:");
+        try expect_label(cpu, .{ .name = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.label.public" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, "public my_label:");
-        try expect_label(format, .{ .name = "my_label", .public = true }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "public my_label:");
+        try expect_label(cpu, .{ .name = "my_label", .public = true }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.nop" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, "nop");
-        try expect_instr_nop(format, .{}, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "nop");
+        try expect_instr_nop(cpu, .{}, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.label" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, "jmp my_label");
-        try expect_instr_jmp(format, .{ .target = "my_label" }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "jmp my_label");
+        try expect_instr_jmp(cpu, .{ .target = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.value" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const tokens = try bounded_tokenize(format, "jmp 0x2");
-        try expect_instr_jmp(format, .{ .target = "0x2" }, tokens.get(0));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const tokens = try bounded_tokenize(cpu, "jmp 0x2");
+        try expect_instr_jmp(cpu, .{ .target = "0x2" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.conditions" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-        const Condition = Token(format).Instruction.Jmp.Condition;
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        const Condition = Token(cpu).Instruction.Jmp.Condition;
         const cases = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
             .{ "x--", .x_dec },
@@ -1754,20 +1754,20 @@ test "tokenize.instr.jmp.conditions" {
         });
 
         inline for (comptime cases.keys(), comptime cases.values()) |op, cond| {
-            const tokens = try bounded_tokenize(format, comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
 
-            try expect_instr_jmp(format, .{ .cond = cond, .target = "my_label" }, tokens.get(0));
+            try expect_instr_jmp(cpu, .{ .cond = cond, .target = "my_label" }, tokens.get(0));
         }
     }
 }
 
 test "tokenize.instr.wait" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
         inline for (.{ "gpio", "pin", "irq" }) |source| {
-            const tokens = try bounded_tokenize(format, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
-            try expect_instr_wait(format, .{
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
+            try expect_instr_wait(cpu, .{
                 .polarity = 0,
-                .source = @field(Token(format).Instruction.Wait.Source, source),
+                .source = @field(Token(cpu).Instruction.Wait.Source, source),
                 .num = .{ .integer = 1 },
             }, tokens.get(0));
         }
@@ -1955,13 +1955,13 @@ test "tokenize.instr.irq" {
     });
 
     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
-        inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |format| {
-            const tokens = try bounded_tokenize(format, comptime std.fmt.comptimePrint("irq {s} {}", .{
+        inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("irq {s} {}", .{
                 key,
                 num,
             }));
 
-            try expect_instr_irq(format, .{
+            try expect_instr_irq(cpu, .{
                 .clear = value.clear,
                 .wait = value.wait,
                 .num = num,
