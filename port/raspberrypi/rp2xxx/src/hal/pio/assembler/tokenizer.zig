@@ -1921,59 +1921,70 @@ test "tokenize.instr.pull.ifempty" {
 }
 
 test "tokenize.instr.mov" {
-    inline for (.{
-        "pins",
-        "x",
-        "y",
-        "null",
-        "status",
-        "isr",
-        "osr",
-    }) |source| {
-        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        inline for (.{
+            "pins",
+            "x",
+            "y",
+            "null",
+            "status",
+            "isr",
+            "osr",
+        }) |source| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
 
-        try expect_instr_mov(.RP2040, .{
-            .source = @field(Token(.RP2040).Instruction.Mov.Source, source),
-            .destination = .x,
-        }, tokens.get(0));
-    }
-
-    inline for (.{
-        "pins",
-        "x",
-        "y",
-        "exec",
-        "pc",
-        "isr",
-        "osr",
-    }) |dest| {
-        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
-
-        try expect_instr_mov(.RP2040, .{
-            .source = .x,
-            .destination = @field(Token(.RP2040).Instruction.Mov.Destination, dest),
-        }, tokens.get(0));
-    }
-
-    const Operation = Token(.RP2040).Instruction.Mov.Operation;
-    const operations = std.StaticStringMap(Operation).initComptime(.{
-        .{ "!", .invert },
-        .{ "~", .invert },
-        .{ "::", .bit_reverse },
-    });
-
-    inline for (.{ "", " " }) |space| {
-        inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
-            const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
-                str,
-                space,
-            }));
-
-            try expect_instr_mov(.RP2040, .{
+            try expect_instr_mov(cpu, .{
+                .source = @field(Token(cpu).Instruction.Mov.Source, source),
                 .destination = .x,
-                .operation = operation,
-                .source = .y,
             }, tokens.get(0));
+        }
+
+        inline for (.{
+            "pins",
+            "x",
+            "y",
+            "exec",
+            "pc",
+            "isr",
+            "osr",
+        }) |dest| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
+
+            try expect_instr_mov(cpu, .{
+                .source = .x,
+                .destination = @field(Token(cpu).Instruction.Mov.Destination, dest),
+            }, tokens.get(0));
+        }
+        // RP2350 also supports pindirs as dest
+        {
+            const tokens = try bounded_tokenize(.RP2350, "mov pindirs x");
+
+            try expect_instr_mov(.RP2350, .{
+                .source = .x,
+                .destination = @field(Token(.RP2350).Instruction.Mov.Destination, "pindirs"),
+            }, tokens.get(0));
+        }
+
+        const Operation = Token(cpu).Instruction.Mov.Operation;
+        const operations = std.StaticStringMap(Operation).initComptime(.{
+            .{ "!", .invert },
+            .{ "~", .invert },
+            .{ "::", .bit_reverse },
+        });
+
+        inline for (.{ "", " " }) |space| {
+            inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
+                const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
+                    str,
+                    space,
+                }));
+
+                try expect_instr_mov(cpu, .{
+                    .destination = .x,
+                    .operation = operation,
+                    .source = .y,
+                }, tokens.get(0));
+            }
         }
     }
 }
