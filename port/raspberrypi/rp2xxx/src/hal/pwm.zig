@@ -6,53 +6,54 @@ const log = std.log.scoped(.pwm);
 
 pub const Config = struct {};
 
-fn get_regs(comptime slice: u32) *volatile Regs {
+fn get_regs(slice: u32) *volatile Regs {
     @import("std").debug.assert(slice < 8);
     const PwmType = microzig.chip.types.peripherals.PWM;
     const reg_diff = comptime @offsetOf(PwmType, "CH1_CSR") - @offsetOf(PwmType, "CH0_CSR");
     return @as(*volatile Regs, @ptrFromInt(@intFromPtr(PWM) + reg_diff * slice));
 }
 
-pub fn Pwm(comptime slice_num: u32, comptime chan: Channel) type {
-    return struct {
-        pub const slice_number = slice_num;
-        pub const channel = chan;
+pub const Channel = enum(u1) { a, b };
 
-        pub inline fn set_level(_: @This(), level: u16) void {
-            set_channel_level(slice_number, channel, level);
-        }
+pub const Slice = enum (u32) {
+    _,
 
-        pub fn slice(_: @This()) Slice(slice_number) {
-            return .{};
-        }
-    };
-}
+    pub fn set_wrap(self: Slice, wrap: u16) void {
+        set_slice_wrap(@intFromEnum(self), wrap);
+    }
 
-pub fn Slice(comptime slice_num: u32) type {
-    return struct {
-        const slice_number = slice_num;
+    pub fn enable(self: Slice) void {
+        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 1 });
+    }
 
-        pub inline fn set_wrap(_: @This(), wrap: u16) void {
-            set_slice_wrap(slice_number, wrap);
-        }
+    pub fn disable(self: Slice) void {
+        get_regs(@intFromEnum(self)).csr.modify(.{ .EN = 0 });
+    }
 
-        pub inline fn enable(_: @This()) void {
-            get_regs(slice_number).csr.modify(.{ .EN = 1 });
-        }
+    pub fn set_phase_correct(self: Slice, phase_correct: bool) void {
+        set_slice_phase_correct(@intFromEnum(self), phase_correct);
+    }
 
-        pub inline fn disable(_: @This()) void {
-            get_regs(slice_number).csr.modify(.{ .EN = 0 });
-        }
+    pub fn set_clk_div(self: Slice, integer: u8, fraction: u4) void {
+        set_slice_clk_div(@intFromEnum(self), integer, fraction);
+    }
+};
 
-        pub inline fn set_phase_correct(_: @This(), phase_correct: bool) void {
-            set_slice_phase_correct(slice_number, phase_correct);
-        }
 
-        pub inline fn set_clk_div(_: @This(), integer: u8, fraction: u4) void {
-            set_slice_clk_div(slice_number, integer, fraction);
-        }
-    };
-}
+// An instance of Pwm corresponds to one of the 16 total channels
+//  (There are eight slices and each has two channels)
+pub const Pwm = struct {
+    slice_number: u32,
+    channel: Channel,
+
+    pub fn set_level(self: Pwm, level: u16) void {
+        set_channel_level(self.slice_number, self.channel, level);
+    }
+
+    pub fn slice(self: Pwm) Slice {
+        return @enumFromInt(self.slice_number);
+    }
+};
 
 pub const ClkDivMode = enum(u2) {
     free_running,
@@ -60,8 +61,6 @@ pub const ClkDivMode = enum(u2) {
     b_rising,
     b_falling,
 };
-
-pub const Channel = enum(u1) { a, b };
 
 const Regs = extern struct {
     csr: @TypeOf(PWM.CH0_CSR),
@@ -71,14 +70,14 @@ const Regs = extern struct {
     top: @TypeOf(PWM.CH0_TOP),
 };
 
-pub inline fn set_slice_phase_correct(comptime slice: u32, phase_correct: bool) void {
+pub fn set_slice_phase_correct(slice: u32, phase_correct: bool) void {
     log.debug("PWM{} set phase correct: {}", .{ slice, phase_correct });
     get_regs(slice).csr.modify(.{
         .PH_CORRECT = @intFromBool(phase_correct),
     });
 }
 
-pub inline fn set_slice_clk_div(comptime slice: u32, integer: u8, fraction: u4) void {
+pub fn set_slice_clk_div(slice: u32, integer: u8, fraction: u4) void {
     log.debug("PWM{} set clk div: {}.{}", .{ slice, integer, fraction });
     get_regs(slice).div.modify(.{
         .INT = integer,
@@ -86,16 +85,16 @@ pub inline fn set_slice_clk_div(comptime slice: u32, integer: u8, fraction: u4) 
     });
 }
 
-pub inline fn set_slice_clk_div_mode(comptime slice: u32, mode: ClkDivMode) void {
+pub fn set_slice_clk_div_mode(slice: u32, mode: ClkDivMode) void {
     log.debug("PWM{} set clk div mode: {}", .{ slice, mode });
     get_regs(slice).csr.modify(.{
         .DIVMODE = @intFromEnum(mode),
     });
 }
 
-pub inline fn set_channel_inversion(
-    comptime slice: u32,
-    comptime channel: Channel,
+pub fn set_channel_inversion(
+    slice: u32,
+    channel: Channel,
     invert: bool,
 ) void {
     switch (channel) {
@@ -108,14 +107,14 @@ pub inline fn set_channel_inversion(
     }
 }
 
-pub inline fn set_slice_wrap(comptime slice: u32, wrap: u16) void {
+pub fn set_slice_wrap(slice: u32, wrap: u16) void {
     log.debug("PWM{} set wrap: {}", .{ slice, wrap });
     get_regs(slice).top.raw = wrap;
 }
 
-pub inline fn set_channel_level(
-    comptime slice: u32,
-    comptime channel: Channel,
+pub fn set_channel_level(
+    slice: u32,
+    channel: Channel,
     level: u16,
 ) void {
     log.debug("PWM{} {} set level: {}", .{ slice, channel, level });
