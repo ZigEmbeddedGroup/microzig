@@ -16,37 +16,6 @@ pub const microzig_options = .{
     },
 };
 
-/// Enables/disables interrupts to prevent data-races with variables
-/// shared between ISRs and normal code
-///
-/// TODO: microzig/core/src/interrupt.zig might provide a more general implementation
-///       for this in the future.
-const CriticalSection = struct {
-    isr_reg_value: usize = 0,
-
-    pub fn enter(self: *CriticalSection) void {
-        var val: usize = undefined;
-        asm volatile (
-            \\mrs   %[val], primask
-            \\movs  r1, #1
-            \\msr   primask, r1
-            : [val] "=r" (val),
-            :
-            : "r1", "cc"
-        );
-        self.isr_reg_value = val;
-    }
-
-    pub fn exit(self: *CriticalSection) void {
-        const val = self.isr_reg_value;
-        asm volatile ("msr   primask, %[val]"
-            :
-            : [val] "r" (val),
-        );
-    }
-};
-var critical_section: CriticalSection = .{};
-
 var _fast_blink: bool = false;
 /// Access underlying _sleep_time via volatile * to prevent reads from being optimized away
 var fast_blink_vp: *volatile bool = &_fast_blink;
@@ -60,15 +29,11 @@ fn rtc_isr() callconv(.C) void {
     rp2xxx.rtc.alarm.enable();
 
     // Every 1 minute, alternate between fast and slow blinking
-    critical_section.enter();
     fast_blink_vp.* = !fast_blink_vp.*;
-    critical_section.exit();
 }
 
-const pins = pin_config.pins();
-
 pub fn main() !void {
-    pin_config.apply();
+    const pins = pin_config.pins();
 
     // Configure initial datetime for RTC
     rp2xxx.rtc.set_datetime(.{
@@ -94,9 +59,9 @@ pub fn main() !void {
     while (true) {
 
         // Disable interrupts during volatile read of fast_blink to prevent data races
-        critical_section.enter();
+        microzig.cpu.disable_interrupts();
         const fast_blink = fast_blink_vp.*;
-        critical_section.exit();
+        microzig.cpu.enable_interrupts();
 
         pins.led.toggle();
         time.sleep_ms(if (fast_blink) 500 else 1000);
