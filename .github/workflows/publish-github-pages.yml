@@ -27,10 +27,6 @@ jobs:
       - name: Authenticate with GitHub CLI
         run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Build
-        working-directory: website
-        run: zig build
-
       - name: List, download, unpack, and generate metadata
         run: |
           # Create an array to store releases with the artifact
@@ -67,6 +63,10 @@ jobs:
 
           echo "List of files uploaded to github pages:"
           tree website/zig-out/www
+
+      - name: Build
+        working-directory: website
+        run: zig build
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
