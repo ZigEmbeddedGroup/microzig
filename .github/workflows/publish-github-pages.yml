@@ -61,14 +61,12 @@ jobs:
           echo "Generating metadata.json"
           echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > website/zig-out/www/downloads/microzig/metadata.json
 
+          echo "Build website"
+          cd website
+          zig build
+
           echo "List of files uploaded to github pages:"
-
-      - name: Build
-        working-directory: website
-        run: zig build
-
-      - name: List Contents
-        run: tree website/zig-out/www
+          tree zig-out/www
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
