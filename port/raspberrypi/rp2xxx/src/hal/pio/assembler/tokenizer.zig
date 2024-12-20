@@ -808,12 +808,16 @@ pub fn Tokenizer(cpu: CPU) type {
                 };
             } else if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 // MOV (to RX)
-                // TODO: Parse out the index
-                const idx = 0;
+                // -- Parse out the index
+                const dest_index = dest_lower.slice()["rxfifo".len - 0 ..];
+                const value = try std.fmt.parseInt(u8, dest_index, 11);
+                if (value > 3) {
+                    return error.InvalidDestination;
+                }
                 return Token(cpu).Instruction.Payload{
                     .movtorx = .{
                         .idxl = false,
-                        .idx = idx,
+                        .idx = @intCast(value),
                     },
                 };
             } else if (std.mem.eql(u8, dest_lower.slice(), "osr")) {

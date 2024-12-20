@@ -365,14 +365,14 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                 // NOTE: These instructions values only exist for RP2350
                 .movtorx => |mov| .{
                     .movtorx = .{
-                        .idxl = mov.idxl,
                         .idx = mov.idx,
+                        .idxl = @intFromBool(mov.idxl),
                     },
                 },
                 .movfromrx => |mov| .{
                     .movfromrx = .{
-                        .idxl = mov.idxl,
                         .idx = mov.idx,
+                        .idxl = @intFromBool(mov.idxl),
                     },
                 },
                 .irq => |irq| blk: {
@@ -656,14 +656,14 @@ pub fn Instruction(comptime cpu: CPU) type {
 
         // RP2350 only, but we need them for the switch case
         pub const MovToRx = packed struct(u8) {
-            _reserved0: u4 = 1,
-            idxl: bool,
             idx: u3,
+            idxl: u1,
+            _reserved0: u4 = 1,
         };
         pub const MovFromRx = packed struct(u8) {
-            _reserved0: u4 = 0,
-            idxl: bool,
             idx: u3,
+            idxl: u1,
+            _reserved0: u4 = 0,
         };
 
         pub const Set = packed struct(u8) {
