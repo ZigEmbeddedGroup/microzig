@@ -16,6 +16,7 @@ const c = @cImport({
     @cInclude("comparison_tests/i2c.pio.h");
     @cInclude("comparison_tests/irq.pio.h");
     @cInclude("comparison_tests/manchester_encoding.pio.h");
+    @cInclude("comparison_tests/movrx.pio.h");
     @cInclude("comparison_tests/nec_carrier_burst.pio.h");
     @cInclude("comparison_tests/nec_carrier_control.pio.h");
     @cInclude("comparison_tests/nec_receive.pio.h");
@@ -105,6 +106,11 @@ test "pio.comparison.irq" {
 test "pio.comparison.manchester_encoding" {
     @setEvalBranchQuota(11000);
     try pio_comparison(@embedFile("comparison_tests/manchester_encoding.pio"));
+}
+
+test "pio.comparison.movrx" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison_cpu(.RP2350, @embedFile("comparison_tests/movrx.pio"));
 }
 
 test "pio.comparison.nec_carrier_burst" {
