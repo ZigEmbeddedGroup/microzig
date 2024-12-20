@@ -70,8 +70,8 @@ pub const Ascon = struct {
     fn rosc(buffer: []u8) void {
         const rosc_state = peripherals.ROSC.CTRL.read().ENABLE.value;
         // Enable the ROSC so it generates random bits for us
-        peripherals.ROSC.CTRL.modify(.{ .ENABLE = .{ .value = .ENABLE } });
-        defer peripherals.ROSC.CTRL.modify(.{ .ENABLE = .{ .value = rosc_state } });
+        peripherals.ROSC.CTRL.modify(.{ .ENABLE = .ENABLE });
+        defer peripherals.ROSC.CTRL.modify(.{ .ENABLE = rosc_state });
 
         var i: usize = 0;
         while (i < buffer.len) : (i += 1) {

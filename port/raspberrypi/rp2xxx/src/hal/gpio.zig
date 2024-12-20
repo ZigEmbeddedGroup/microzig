@@ -471,11 +471,11 @@ pub const Pin = enum(u6) {
 
         const regs = gpio.get_regs();
         regs.ctrl.modify(.{
-            .FUNCSEL = .{ .value = function },
-            .OUTOVER = .{ .value = .normal },
-            .INOVER = .{ .value = .normal },
-            .IRQOVER = .{ .value = .normal },
-            .OEOVER = .{ .value = .normal },
+            .FUNCSEL = function,
+            .OUTOVER = .normal,
+            .INOVER = .normal,
+            .IRQOVER = .normal,
+            .OEOVER = .normal,
         });
 
         switch (cpu) {

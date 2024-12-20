@@ -159,7 +159,7 @@ pub fn F(comptime config: UsbConfig) type {
             peripherals.PLL_USB.PRIM.modify(.{ .POSTDIV1 = 5, .POSTDIV2 = 5 });
             peripherals.PLL_USB.PWR.modify(.{ .POSTDIVPD = 0 });
             // Switch usbclk to be derived from PLLUSB
-            peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .{ .value = .clksrc_pll_usb } });
+            peripherals.CLOCKS.CLK_USB_CTRL.modify(.{ .AUXSRC = .clksrc_pll_usb });
 
             // We now have the stable 48MHz reference clock required for USB:
         }
@@ -179,7 +179,7 @@ pub fn F(comptime config: UsbConfig) type {
                 rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .In).?.write_raw(0);
                 rp2xxx_endpoints.get_buf_ctrl(@intCast(i), .Out).?.write_raw(0);
             }
-            
+
             // Mux the controller to the onboard USB PHY. I was surprised that there are
             // alternatives to this, but, there are.
             peripherals.USB.USB_MUXING.modify(.{
@@ -432,7 +432,7 @@ pub fn F(comptime config: UsbConfig) type {
             ep.endpoint_control.?.modify(.{
                 .ENABLE = 1,
                 .INTERRUPT_PER_BUFF = 1,
-                .ENDPOINT_TYPE = .{ .raw = ep.transfer_type.as_number() },
+                .ENDPOINT_TYPE = @enumFromInt(ep.transfer_type.as_number()),
                 .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
             });
         }
