@@ -16,6 +16,8 @@ pub const vendor = usb.vendor;
 pub const templates = usb.templates.DescriptorsConfigTemplates;
 pub const utils = usb.UsbUtils;
 
+const EndpointType = microzig.chip.types.USB_CTRL.EndpointType;
+
 const rom = @import("rom.zig");
 const resets = @import("resets.zig");
 
@@ -432,7 +434,7 @@ pub fn F(comptime config: UsbConfig) type {
             ep.endpoint_control.?.modify(.{
                 .ENABLE = 1,
                 .INTERRUPT_PER_BUFF = 1,
-                .ENDPOINT_TYPE = @enumFromInt(ep.transfer_type.as_number()),
+                .ENDPOINT_TYPE = @as(EndpointType, @enumFromInt(ep.transfer_type.as_number())),
                 .BUFFER_ADDRESS = rp2xxx_buffers.data_offset(ep.data_buffer),
             });
         }
