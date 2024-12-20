@@ -64,7 +64,7 @@ jobs:
       - name: Build Website
         run: |
           zig build --summary all
-          tree zig-out/www
+          tree zig-out
         working-directory: website
 
       - name: List Contents
