@@ -62,7 +62,7 @@ jobs:
           echo "{ \"releases\": [$(IFS=,; echo "${releases_with_artifact[*]}")] }" > website/zig-out/www/downloads/microzig/metadata.json
 
       - name: Build Website
-        run: zig build
+        run: zig build --summary all
         working-directory: website
 
       - name: List Contents
