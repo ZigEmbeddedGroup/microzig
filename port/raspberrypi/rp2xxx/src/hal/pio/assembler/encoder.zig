@@ -355,12 +355,24 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                         .block = @intFromBool(pull.block),
                     },
                 },
-                // TODO: Make sure this is OK? We just added one more encoding
                 .mov => |mov| .{
                     .mov = .{
                         .destination = mov.destination,
                         .operation = mov.operation,
                         .source = mov.source,
+                    },
+                },
+                // NOTE: These instructions values only exist for RP2350
+                .movtorx => |mov| .{
+                    .movtorx = .{
+                        .idxl = mov.idxl,
+                        .idx = mov.idx,
+                    },
+                },
+                .movfromrx => |mov| .{
+                    .movfromrx = .{
+                        .idxl = mov.idxl,
+                        .idx = mov.idx,
                     },
                 },
                 .irq => |irq| blk: {
@@ -405,8 +417,10 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                 .wait => .wait,
                 .in => .in,
                 .out => .out,
-                .push => .push_pull,
-                .pull => .push_pull,
+                .push => .push_pull_mov_rx,
+                .pull => .push_pull_mov_rx,
+                .movtorx => .push_pull_mov_rx,
+                .movfromrx => .push_pull_mov_rx,
                 .mov => .mov,
                 .irq => .irq,
                 .set => .set,
@@ -566,6 +580,8 @@ pub fn Instruction(comptime cpu: CPU) type {
             push: Push,
             pull: Pull,
             mov: Mov,
+            movtorx: MovToRx,
+            movfromrx: MovFromRx,
             irq: Irq,
             set: Set,
         };
@@ -575,7 +591,7 @@ pub fn Instruction(comptime cpu: CPU) type {
             wait,
             in,
             out,
-            push_pull,
+            push_pull_mov_rx,
             mov,
             irq,
             set,
@@ -636,6 +652,18 @@ pub fn Instruction(comptime cpu: CPU) type {
                 clear: u1,
                 reserved: u1 = 0,
             },
+        };
+
+        // RP2350 only, but we need them for the switch case
+        pub const MovToRx = packed struct(u8) {
+            _reserved0: u4 = 1,
+            idxl: bool,
+            idx: u3,
+        };
+        pub const MovFromRx = packed struct(u8) {
+            _reserved0: u4 = 0,
+            idxl: bool,
+            idx: u3,
         };
 
         pub const Set = packed struct(u8) {

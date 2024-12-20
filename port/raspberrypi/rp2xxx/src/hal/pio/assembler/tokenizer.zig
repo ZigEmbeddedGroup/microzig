@@ -736,8 +736,16 @@ pub fn Tokenizer(cpu: CPU) type {
         }
 
         fn get_mov(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
-            const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
-            const dest_lower = try lowercase_bounded(256, dest_str);
+            // Peek so that we can unwind for the mov_rx case
+            const dest_str = try self.peek_arg(diags) orelse return error.MissingArg;
+            const dest_lower = try lowercase_bounded(256, dest_str.str);
+            // If the destination is rxfifo_ or rxfifoy, then it's a mov (to) rx instruction
+            if (cpu == .RP2350 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
+                return try self.get_movrx(diags);
+            }
+
+            self.consume_peek(dest_str);
+
             const destination = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
 
             const second = try self.get_arg(diags) orelse return error.MissingArg;
@@ -779,6 +787,58 @@ pub fn Tokenizer(cpu: CPU) type {
                     .operation = operation,
                 },
             };
+        }
+
+        fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+            const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
+            const dest_lower = try lowercase_bounded(256, dest_str);
+            const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
+            const source_lower = try lowercase_bounded(256, source_str);
+            if (std.mem.eql(u8, dest_lower.slice(), "rxfifoy")) {
+                // MOV (to RX)
+                // Second arg must be isr
+                if (!std.mem.eql(u8, source_lower.slice(), "isr"))
+                    return error.InvalidSource;
+
+                return Token(cpu).Instruction.Payload{
+                    .movtorx = .{
+                        .idxl = true,
+                        .idx = 0,
+                    },
+                };
+            } else if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
+                // MOV (to RX)
+                // TODO: Parse out the index
+                const idx = 0;
+                return Token(cpu).Instruction.Payload{
+                    .movtorx = .{
+                        .idxl = false,
+                        .idx = idx,
+                    },
+                };
+            } else if (std.mem.eql(u8, dest_lower.slice(), "osr")) {
+                // MOV (from RX)
+                var idxl: bool = false;
+                var idx: u3 = 0;
+                if (std.mem.eql(u8, source_lower.slice(), "rxfifoy")) {
+                    idxl = true;
+                    idx = 0;
+                } else if (std.mem.startsWith(u8, source_lower.slice(), "rxfifo")) {
+                    // TODO: Parse out the index
+                    idxl = false;
+                    idx = 0;
+                } else {
+                    return error.InvalidSource;
+                }
+                return Token(cpu).Instruction.Payload{
+                    .movfromrx = .{
+                        .idxl = idxl,
+                        .idx = idx,
+                    },
+                };
+            } else {
+                return error.InvalidDestination;
+            }
         }
 
         fn get_irq(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
@@ -1059,6 +1119,8 @@ pub fn Token(comptime cpu: CPU) type {
                 push: Push,
                 pull: Pull,
                 mov: Mov,
+                movtorx: if (cpu == .RP2350) MovToRx else noreturn,
+                movfromrx: if (cpu == .RP2350) MovFromRx else noreturn,
                 irq: Irq,
                 set: Set,
             };
@@ -1140,7 +1202,6 @@ pub fn Token(comptime cpu: CPU) type {
                 ifempty: bool,
             };
 
-            // TODO: Add mov to RX for rp2350
             pub const Mov = struct {
                 destination: Destination,
                 operation: Operation,
@@ -1183,6 +1244,15 @@ pub fn Token(comptime cpu: CPU) type {
                     isr = 0b110,
                     osr = 0b111,
                 };
+            };
+
+            pub const MovToRx = struct {
+                idxl: bool,
+                idx: u3,
+            };
+            pub const MovFromRx = struct {
+                idxl: bool,
+                idx: u3,
             };
 
             pub const Irq = switch (cpu) {
