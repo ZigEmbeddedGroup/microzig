@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         example_dir: [
-          #espressif/esp,
+          espressif/esp,
           gigadevice/gd32,
           microchip/avr,
           microchip/atsam,
