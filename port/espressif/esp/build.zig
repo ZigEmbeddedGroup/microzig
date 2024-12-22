@@ -34,6 +34,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
+            .cpu_module_file = b.path("src/cpus/espressif-riscv.zig"),
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
                 // external memory, ibus
