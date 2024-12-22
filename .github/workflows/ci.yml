@@ -6,38 +6,22 @@ on:
     branches: [main, zig-master]
 
 jobs:
-  common-setup:
-    name: Setup
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [
-          ubuntu-latest,
-          windows-latest,
-          macos-latest,
-        ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
-
   build:
     name: Build
     runs-on: ${{ matrix.os }}
-    needs: common-setup
     continue-on-error: true
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
+
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
   unit-test-ports:
     name: Unit Test Ports
     runs-on: ${{ matrix.os }}
-    needs: common-setup
     strategy:
       matrix:
         os: [
@@ -51,6 +35,11 @@ jobs:
           stmicro/stm32,
         ]
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
+
       - name: Unit Test Ports
         run: zig build test
         working-directory: port/${{ matrix.port_dir }}
@@ -58,8 +47,12 @@ jobs:
   unit-test-regz:
     name: Unit Test Regz
     runs-on: ${{ matrix.os }}
-    needs: common-setup
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
+
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
@@ -67,8 +60,12 @@ jobs:
   unit-test-uf2:
     name: Unit Test UF2
     runs-on: ${{ matrix.os }}
-    needs: common-setup
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
+
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
@@ -76,8 +73,12 @@ jobs:
   build-website:
     name: Build Website
     runs-on: ${{ matrix.os }}
-    needs: common-setup
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
+
       - name: Build Website
         run: zig build
         working-directory: website
@@ -85,8 +86,12 @@ jobs:
   dry-run-packaging:
     name: Dry Run Packaging
     runs-on: macos-latest
-    needs: common-setup
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: macos-latest
+
       - name: Dry Run Packaging
         run: |
           MICROZIG_VERSION=$(zig build package -- get-version)
@@ -104,7 +109,6 @@ jobs:
   build-examples:
     name: Build Examples
     runs-on: ubuntu-latest
-    needs: common-setup
     continue-on-error: true
     strategy:
       matrix:
@@ -120,6 +124,11 @@ jobs:
           wch/ch32v,
         ]
     steps:
+      - name: Setup
+        uses: ./.github/workflows/setup.yml
+        with:
+          runner: ubuntu-latest
+
       - name: Build Examples
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
