@@ -12,6 +12,6 @@ pub fn write(comptime index: comptime_int, slice: []const u8) void {
     const r = reg(index);
     for (slice) |c| {
         while (r.STATUS.read().TXFIFO_CNT > 8) {}
-        r.FIFO = @enumFromInt(c);
+        r.FIFO.raw = c;
     }
 }

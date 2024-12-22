@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const example_dep_names: []const []const u8 = &.{
-    //"espressif/esp",
+    "espressif/esp",
     "gigadevice/gd32",
     "microchip/atsam",
     "microchip/avr",
