@@ -21,10 +21,10 @@ const all_mask = led_mask[0] | led_mask[1] | led_mask[2] | led_mask[3];
 
 pub fn main() !void {
     conn.PINSEL3.modify(.{
-        .P1_18 = .{ .value = .GPIO_P1 },
-        .P1_20 = .{ .value = .GPIO_P1 },
-        .P1_21 = .{ .value = .GPIO_P1 },
-        .P1_23 = .{ .value = .GPIO_P1 },
+        .P1_18 = .GPIO_P1,
+        .P1_20 = .GPIO_P1,
+        .P1_21 = .GPIO_P1,
+        .P1_23 = .GPIO_P1,
     });
 
     const p1 = &gpio[1];

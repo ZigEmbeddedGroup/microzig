@@ -772,45 +772,35 @@ fn write_fields(
             if (e.name) |enum_name| {
                 if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
                     try writer.print(
-                        \\{}: packed union {{
-                        \\    raw: u{},
-                        \\    value: enum(u{}) {{
+                        \\{}: enum(u{}) {{
                         \\
                     , .{
                         std.zig.fmtId(field.name),
-                        e.size_bits,
                         e.size_bits,
                     });
 
                     try write_enum_fields(db, arena, &e, writer);
-                    try writer.writeAll("},\n},\n");
+                    try writer.writeAll("},\n");
                 } else {
                     try writer.print(
-                        \\{}: packed union {{
-                        \\    raw: u{},
-                        \\    value: {},
-                        \\}},
+                        \\{}:  {},
                         \\
                     , .{
                         std.zig.fmtId(field.name),
-                        field.size_bits,
                         std.zig.fmtId(enum_name),
                     });
                 }
             } else {
                 try writer.print(
-                    \\{}: packed union {{
-                    \\    raw: u{},
-                    \\    value: enum(u{}) {{
+                    \\{}: enum(u{}) {{
                     \\
                 , .{
                     std.zig.fmtId(field.name),
                     e.size_bits,
-                    e.size_bits,
                 });
 
                 try write_enum_fields(db, arena, &e, writer);
-                try writer.writeAll("},\n},\n");
+                try writer.writeAll("},\n");
             }
         } else {
             try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.get_size_bits() });
@@ -1038,10 +1028,7 @@ test "gen.field with named enum" {
         \\            };
         \\
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: TEST_ENUM,
-        \\                },
+        \\                TEST_FIELD: TEST_ENUM,
         \\                padding: u4,
         \\            }),
         \\        };
@@ -1067,13 +1054,10 @@ test "gen.field with anonymous enum" {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        TEST_ENUM_FIELD2 = 0x1,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    TEST_ENUM_FIELD2 = 0x1,
+        \\                    _,
         \\                },
         \\                padding: u4,
         \\            }),
@@ -1423,21 +1407,15 @@ test "gen.name collisions in enum name cause them to be anonymous" {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD1: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        TEST_ENUM_FIELD2 = 0x1,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD1: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    TEST_ENUM_FIELD2 = 0x1,
+        \\                    _,
         \\                },
-        \\                TEST_FIELD2: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        TEST_ENUM_FIELD2 = 0x1,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD2: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    TEST_ENUM_FIELD2 = 0x1,
+        \\                    _,
         \\                },
         \\            }),
         \\        };
@@ -1465,12 +1443,9 @@ test "gen.pick one enum field in value collisions" {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    _,
         \\                },
         \\                padding: u4,
         \\            }),
@@ -1497,12 +1472,9 @@ test "gen.pick one enum field in name collisions" {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: packed union {
-        \\                    raw: u4,
-        \\                    value: enum(u4) {
-        \\                        TEST_ENUM_FIELD1 = 0x0,
-        \\                        _,
-        \\                    },
+        \\                TEST_FIELD: enum(u4) {
+        \\                    TEST_ENUM_FIELD1 = 0x0,
+        \\                    _,
         \\                },
         \\                padding: u4,
         \\            }),
