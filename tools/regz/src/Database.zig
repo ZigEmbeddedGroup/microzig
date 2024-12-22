@@ -1839,6 +1839,143 @@ pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     return struct_id;
 }
 
+/// Returns the last part of the reference, and the beginning part of the
+/// reference
+fn get_ref_last_component(ref: []const u8) !struct { []const u8, ?[]const u8 } {
+    var it = std.mem.splitScalar(u8, ref, '.');
+    var last: ?[]const u8 = null;
+    while (it.next()) |comp| {
+        last = comp;
+    }
+
+    log.debug("  last={?s}", .{last});
+
+    return if (last) |l|
+        if (l.len == ref.len)
+            .{ l, null }
+        else
+            .{ l, ref[0 .. ref.len - l.len - 1] }
+    else
+        error.EmptyRef;
+}
+
+fn strip_ref_prefix(expected_prefix: []const u8, ref: []const u8) ![]const u8 {
+    var prefix_it = std.mem.splitScalar(u8, expected_prefix, '.');
+    var ref_it = std.mem.splitScalar(u8, ref, '.');
+
+    while (prefix_it.next()) |prefix_comp| {
+        const ref_comp = ref_it.next() orelse return error.RefTooShort;
+
+        if (!std.mem.eql(u8, prefix_comp, ref_comp))
+            return error.RefPrefixNotExpected;
+    }
+
+    const index = ref_it.index orelse return error.RefTooShort;
+    return ref[index..];
+}
+
+pub fn get_struct_ref(db: *Database, ref: []const u8) !StructID {
+    log.debug("get_struct_ref: ref={s}", .{ref});
+    var arena = std.heap.ArenaAllocator.init(db.gpa);
+    defer arena.deinit();
+
+    const base_ref = try strip_ref_prefix("types.peripherals", ref);
+    log.debug("  base_ref={s}", .{base_ref});
+    const struct_name, const rest_ref = try get_ref_last_component(base_ref);
+    log.debug("  rest_ref={?s} struct_name={s}", .{ rest_ref, struct_name });
+
+    return if (rest_ref) |rest| blk: {
+        var it = std.mem.splitScalar(u8, rest, '.');
+        const peripheral_name = it.next() orelse return error.NoPeripheral;
+        log.debug("  peripheral_name={s}", .{peripheral_name});
+        const peripheral_id = try db.get_peripheral_by_name(peripheral_name) orelse return error.NoPeripheral;
+        var struct_id = try db.get_peripheral_struct(peripheral_id);
+        if (it.index == null) {
+            log.debug("struct_name={s}", .{struct_name});
+            return if (std.mem.eql(u8, struct_name, peripheral_name))
+                struct_id
+            else
+                error.NoPeripheral;
+        }
+
+        break :blk while (it.next()) |name| {
+            const struct_decl = try db.get_struct_decl_by_name(arena.allocator(), struct_id, name);
+            log.debug("  struct_decl.name={s}", .{struct_decl.name});
+            if (it.index == null and std.mem.eql(u8, struct_name, struct_decl.name))
+                break struct_decl.struct_id;
+
+            struct_id = struct_decl.struct_id;
+        } else error.RefNotFound;
+    } else blk: {
+        log.debug("  just getting peripheral struct: peripheral_name={s}", .{struct_name});
+        // just getting a peripheral
+        const peripheral_id = try db.get_peripheral_by_name(struct_name) orelse return error.NoPeripheral;
+        break :blk try db.get_peripheral_struct(peripheral_id);
+    };
+}
+
+pub fn get_enum_ref(db: *Database, ref: []const u8) !EnumID {
+    var arena = std.heap.ArenaAllocator.init(db.gpa);
+    defer arena.deinit();
+
+    log.debug("get_enum_ref: ref={s}", .{ref});
+
+    const enum_name, const struct_ref = try get_ref_last_component(ref);
+
+    // An enum that can be referenced has a struct as a parent
+    const struct_id = try db.get_struct_ref(struct_ref orelse return error.InvalidRef);
+
+    // TODO: create a `get_enum_id_by_name()` function
+    const e = try db.get_enum_by_name(arena.allocator(), struct_id, enum_name);
+    return e.id;
+}
+
+pub fn get_register_ref(db: *Database, ref: []const u8) !RegisterID {
+    var arena = std.heap.ArenaAllocator.init(db.gpa);
+    defer arena.deinit();
+
+    log.debug("get_register_ref: ref={s}", .{ref});
+
+    const register_name, const struct_ref = try get_ref_last_component(ref);
+    const struct_id = try db.get_struct_ref(struct_ref orelse return error.InvalidRef);
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, register_name);
+    return register.id;
+}
+
+pub fn set_register_field_enum_id(db: *Database, register_id: RegisterID, field_name: []const u8, enum_id: EnumID) !void {
+    try db.exec(
+        \\UPDATE struct_fields
+        \\SET enum_id = ?
+        \\WHERE struct_id = (
+        \\    SELECT struct_id
+        \\    FROM registers
+        \\    WHERE id = ?
+        \\)
+        \\AND name = ?;
+    , .{
+        .enum_id = enum_id,
+        .register_id = register_id,
+        .name = field_name,
+    });
+
+    log.debug("set_register_field_enum_id: register_id={} field_name={s} enum_id={}", .{
+        register_id,
+        field_name,
+        enum_id,
+    });
+}
+
+pub fn cleanup_unused_enums(db: *Database) !void {
+    try db.exec(
+        \\DELETE FROM enums
+        \\WHERE id NOT IN (
+        \\    SELECT DISTINCT enum_id
+        \\    FROM struct_fields
+        \\    WHERE enum_id IS NOT NULL
+        \\)
+    , .{});
+}
+
 pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
     var list = std.ArrayList(std.json.Parsed(Patch)).init(db.gpa);
     defer {
@@ -1851,6 +1988,35 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
         const p = try Patch.from_json_str(db.gpa, line);
         errdefer p.deinit();
         try list.append(p);
+    }
+
+    for (list.items) |patch| {
+        switch (patch.value) {
+            .add_enum => |add_enum| {
+                const struct_id = try db.get_struct_ref(add_enum.parent);
+
+                const enum_id = try db.create_enum(struct_id, .{
+                    .name = add_enum.@"enum".name,
+                    .description = add_enum.@"enum".description,
+                    .size_bits = add_enum.@"enum".bitsize,
+                });
+
+                for (add_enum.@"enum".fields) |enum_field| {
+                    try db.add_enum_field(enum_id, .{
+                        .name = enum_field.name,
+                        .description = enum_field.description,
+                        .value = enum_field.value,
+                    });
+                }
+            },
+            .set_enum_type => |set_enum_type| {
+                const enum_id = try db.get_enum_ref(set_enum_type.to);
+                const field_name, const register_ref = try get_ref_last_component(set_enum_type.of);
+                const register_id = try db.get_register_ref(register_ref orelse return error.InvalidRef);
+                try db.set_register_field_enum_id(register_id, field_name, enum_id);
+                try db.cleanup_unused_enums();
+            },
+        }
     }
 }
 

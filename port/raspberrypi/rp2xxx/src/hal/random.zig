@@ -28,9 +28,9 @@ pub const Ascon = struct {
 
     pub fn init() @This() {
         // Ensure that the system clocks run from the XOSC and/or PLLs
-        const ref_src = peripherals.CLOCKS.CLK_REF_CTRL.read().SRC.value;
-        const sys_clk_src = peripherals.CLOCKS.CLK_SYS_CTRL.read().SRC.value;
-        const aux_src = peripherals.CLOCKS.CLK_SYS_CTRL.read().AUXSRC.value;
+        const ref_src = peripherals.CLOCKS.CLK_REF_CTRL.read().SRC;
+        const sys_clk_src = peripherals.CLOCKS.CLK_SYS_CTRL.read().SRC;
+        const aux_src = peripherals.CLOCKS.CLK_SYS_CTRL.read().AUXSRC;
         assert((ref_src != .rosc_clksrc_ph and sys_clk_src == .clk_ref) or
             (sys_clk_src == .clksrc_clk_sys_aux and aux_src != .rosc_clksrc));
 
@@ -68,7 +68,7 @@ pub const Ascon = struct {
     /// for security systems because it can be compromised, but it may be useful
     /// in less critical applications.
     fn rosc(buffer: []u8) void {
-        const rosc_state = peripherals.ROSC.CTRL.read().ENABLE.value;
+        const rosc_state = peripherals.ROSC.CTRL.read().ENABLE;
         // Enable the ROSC so it generates random bits for us
         peripherals.ROSC.CTRL.modify(.{ .ENABLE = .ENABLE });
         defer peripherals.ROSC.CTRL.modify(.{ .ENABLE = rosc_state });

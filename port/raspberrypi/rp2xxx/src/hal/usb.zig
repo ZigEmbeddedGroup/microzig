@@ -16,8 +16,6 @@ pub const vendor = usb.vendor;
 pub const templates = usb.templates.DescriptorsConfigTemplates;
 pub const utils = usb.UsbUtils;
 
-const EndpointType = microzig.chip.types.USB_CTRL.EndpointType;
-
 const rom = @import("rom.zig");
 const resets = @import("resets.zig");
 
@@ -53,6 +51,7 @@ pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
 
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(microzig.chip.peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);
+const EndpointType = microzig.chip.types.peripherals.USB_DPRAM.EndpointType;
 
 const HardwareEndpoint = struct {
     configured: bool,
