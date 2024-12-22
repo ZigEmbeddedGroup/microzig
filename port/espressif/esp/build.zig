@@ -23,8 +23,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "ESP32-C3",
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
             .cpu = std.Target.Query{
-                // .name = "Espressif RISC-V",
-                // .root_source_file = b.path("/src/cpus/espressif-riscv.zig"),
                 .cpu_arch = .riscv32,
                 .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
                 .cpu_features_add = std.Target.riscv.featureSet(&.{
