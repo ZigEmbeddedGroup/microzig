@@ -7,6 +7,7 @@ on:
 
 jobs:
   common-setup:
+    name: Setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,6 +26,7 @@ jobs:
           version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
 
   build:
+    name: Build
     runs-on: ${{ matrix.os }}
     needs: common-setup
     continue-on-error: true
@@ -33,6 +35,7 @@ jobs:
         run: zig build -Doptimize=ReleaseSmall
 
   unit-test-ports:
+    name: Unit Test Ports
     runs-on: ${{ matrix.os }}
     needs: common-setup
     strategy:
@@ -53,6 +56,7 @@ jobs:
         working-directory: port/${{ matrix.port_dir }}
 
   unit-test-regz:
+    name: Unit Test Regz
     runs-on: ${{ matrix.os }}
     needs: common-setup
     steps:
@@ -61,6 +65,7 @@ jobs:
         working-directory: tools/regz
 
   unit-test-uf2:
+    name: Unit Test UF2
     runs-on: ${{ matrix.os }}
     needs: common-setup
     steps:
@@ -69,6 +74,7 @@ jobs:
         working-directory: tools/uf2
 
   build-website:
+    name: Build Website
     runs-on: ${{ matrix.os }}
     needs: common-setup
     steps:
@@ -77,6 +83,7 @@ jobs:
         working-directory: website
 
   dry-run-packaging:
+    name: Dry Run Packaging
     runs-on: macos-latest
     needs: common-setup
     steps:
@@ -95,6 +102,7 @@ jobs:
           jobs -p | xargs kill
 
   build-examples:
+    name: Build Examples
     runs-on: ubuntu-latest
     needs: common-setup
     continue-on-error: true
