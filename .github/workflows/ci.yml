@@ -9,7 +9,6 @@ jobs:
   build:
     name: Build
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,6 +47,13 @@ jobs:
 
   unit-test-regz:
     name: Unit Test Regz
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -62,6 +68,13 @@ jobs:
 
   unit-test-uf2:
     name: Unit Test UF2
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -76,6 +89,13 @@ jobs:
 
   build-website:
     name: Build Website
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -115,7 +135,6 @@ jobs:
   build-examples:
     name: Build Examples
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         example_dir: [
