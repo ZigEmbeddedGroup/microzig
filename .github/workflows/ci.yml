@@ -156,3 +156,25 @@ jobs:
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
 
+  stm32-gen-check:
+    name: Check that stm32 generated code is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Generate Code
+        run: zig build update
+      - name: Check for code diffs
+        run: |
+          if [[ $(git status --porcelain) ]]; then
+            echo "Code differences detected:"
+            git diff
+            echo "Please commit or fix these changes to proceed."
+            exit 1
+          else
+            echo "No code differences detected."
+          fi
