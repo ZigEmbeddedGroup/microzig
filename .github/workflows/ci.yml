@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [main, zig-master]
 
+
+defaults:
+  run:
+    environment:
+      ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
+
 jobs:
   build:
     name: Build
@@ -13,7 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
@@ -36,7 +44,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Ports
         run: zig build test
         working-directory: port/${{ matrix.port_dir }}
@@ -55,7 +65,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
@@ -74,19 +86,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
 
   build-website:
     name: Build Website
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Build Website
         run: zig build
         working-directory: website
@@ -98,7 +121,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Dry Run Packaging
         run: |
           MICROZIG_VERSION=$(zig build package -- get-version)
@@ -133,7 +158,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: ./.github/workflows/setup-zig.yml
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
       - name: Build Examples
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
