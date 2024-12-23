@@ -171,7 +171,7 @@ jobs:
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
-          if [[ $(git status --porcelain) ]]; then
+          if [[ $(git status --porcelain | grep -v '^??') ]]; then
             echo "Code differences detected:"
             git diff
             echo "Please commit or fix these changes to proceed."
