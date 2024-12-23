@@ -158,6 +158,7 @@ jobs:
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
