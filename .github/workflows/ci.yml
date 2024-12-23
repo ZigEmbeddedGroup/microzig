@@ -43,10 +43,10 @@ jobs:
   unit-test-regz:
     name: Unit Test Regz
     runs-on: ${{ matrix.os }}
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
