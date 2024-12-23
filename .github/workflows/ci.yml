@@ -168,7 +168,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
         run: zig build update
-        working-directory: ports/stmicro/stm32
+        working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
           if [[ $(git status --porcelain) ]]; then
