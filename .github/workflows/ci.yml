@@ -11,9 +11,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
@@ -33,9 +36,12 @@ jobs:
           stmicro/stm32,
         ]
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Unit Test Ports
         run: zig build test
         working-directory: port/${{ matrix.port_dir }}
@@ -44,9 +50,12 @@ jobs:
     name: Unit Test Regz
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
@@ -55,9 +64,12 @@ jobs:
     name: Unit Test UF2
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
@@ -66,9 +78,12 @@ jobs:
     name: Build Website
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Build Website
         run: zig build
         working-directory: website
@@ -77,9 +92,12 @@ jobs:
     name: Dry Run Packaging
     runs-on: macos-latest
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Dry Run Packaging
         run: |
           MICROZIG_VERSION=$(zig build package -- get-version)
@@ -112,9 +130,12 @@ jobs:
           wch/ch32v,
         ]
     steps:
-      - uses: ./.github/workflows/setup.yml
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
         with:
-          runner: ${{ matrix.os }}
+          version: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
       - name: Build Examples
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
