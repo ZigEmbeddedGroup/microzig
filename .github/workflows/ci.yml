@@ -10,10 +10,10 @@ jobs:
     name: Build
     runs-on: ${{ matrix.os }}
     continue-on-error: true
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Build
         run: zig build -Doptimize=ReleaseSmall
 
@@ -32,10 +32,10 @@ jobs:
           raspberrypi/rp2xxx,
           stmicro/stm32,
         ]
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Unit Test Ports
         run: zig build test
         working-directory: port/${{ matrix.port_dir }}
@@ -54,10 +54,10 @@ jobs:
   unit-test-uf2:
     name: Unit Test UF2
     runs-on: ${{ matrix.os }}
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
@@ -65,10 +65,10 @@ jobs:
   build-website:
     name: Build Website
     runs-on: ${{ matrix.os }}
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Build Website
         run: zig build
         working-directory: website
@@ -76,10 +76,10 @@ jobs:
   dry-run-packaging:
     name: Dry Run Packaging
     runs-on: macos-latest
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Dry Run Packaging
         run: |
           MICROZIG_VERSION=$(zig build package -- get-version)
@@ -111,10 +111,10 @@ jobs:
           raspberrypi/rp2xxx,
           wch/ch32v,
         ]
-    uses: ./.github/workflows/setup.yml
-    with:
-      runner: ${{ matrix.os }}
     steps:
+      - uses: ./.github/workflows/setup.yml
+        with:
+          runner: ${{ matrix.os }}
       - name: Build Examples
         run: zig build -Doptimize=ReleaseSmall --summary all
         working-directory: examples/${{ matrix.example_dir }}
