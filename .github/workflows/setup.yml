@@ -1,8 +1,8 @@
 on:
   workflow_call:
     inputs:
-      zig-version:
-        required: true
+      runner:
+        required: false
         type: string
 
 jobs:
