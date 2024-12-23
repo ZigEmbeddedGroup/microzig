@@ -1,0 +1,158 @@
+name: CI
+on:
+  push:
+    branches: [main, zig-master]
+  pull_request:
+    branches: [main, zig-master]
+
+
+env:
+  ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall
+
+  unit-test-ports:
+    name: Unit Test Ports
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+        port_dir: [
+          gigadevice/gd32,
+          raspberrypi/rp2xxx,
+          stmicro/stm32,
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Unit Test Ports
+        run: zig build test
+        working-directory: port/${{ matrix.port_dir }}
+
+  unit-test-regz:
+    name: Unit Test Regz
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Unit Test Regz
+        run: zig build test
+        working-directory: tools/regz
+
+  unit-test-uf2:
+    name: Unit Test UF2
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Unit Test UF2
+        run: zig build test
+        working-directory: tools/uf2
+
+  build-website:
+    name: Build Website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build Website
+        run: zig build
+        working-directory: website
+
+  dry-run-packaging:
+    name: Dry Run Packaging
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Dry Run Packaging
+        run: |
+          MICROZIG_VERSION=$(zig build package -- get-version)
+          echo microzig version: $MICROZIG_VERSION
+          zig build package -- http://localhost:8000
+          python3 -m http.server 8000 --directory boxzer-out &
+          sleep 1
+
+          cd tools/package-test
+          zig fetch --save=microzig http://localhost:8000/${MICROZIG_VERSION}/microzig.tar.gz
+          zig build -Doptimize=ReleaseSmall
+
+          jobs -p | xargs kill
+
+  build-examples:
+    name: Build Examples
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example_dir: [
+          espressif/esp,
+          gigadevice/gd32,
+          microchip/avr,
+          microchip/atsam,
+          nordic/nrf5x,
+          nxp/lpc,
+          stmicro/stm32,
+          raspberrypi/rp2xxx,
+          wch/ch32v,
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build Examples
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/${{ matrix.example_dir }}
+
