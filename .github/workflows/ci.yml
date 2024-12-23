@@ -158,7 +158,6 @@ jobs:
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -168,7 +167,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
-        run: zig build update
+        run: zig build -Dgenerate
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
