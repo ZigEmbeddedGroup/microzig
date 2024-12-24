@@ -29,10 +29,10 @@
         },
     },
     .paths = .{
+        "LICENSE",
         "README.md",
         "build.zig",
         "build.zig.zon",
-        "LICENSE",
         "design",
         "docs",
         "tools/generate_linker_script.zig",
