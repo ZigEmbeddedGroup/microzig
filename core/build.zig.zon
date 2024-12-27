@@ -2,6 +2,7 @@
     .name = "core",
     .version = "0.0.1",
     .paths = .{
+        "LICENSE",
         "thoughts.md",
         "build.zig",
         "build.zig.zon",

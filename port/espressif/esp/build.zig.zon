@@ -5,6 +5,7 @@
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
     },
     .paths = .{
+        "LICENSE",
         "README.md",
         "build.zig.zon",
         "build.zig",

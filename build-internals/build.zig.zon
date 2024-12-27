@@ -5,6 +5,7 @@
         .regz = .{ .path = "../tools/regz" },
     },
     .paths = .{
+        "LICENSE",
         "build.zig",
         "build.zig.zon",
     },
