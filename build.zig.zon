@@ -39,12 +39,16 @@
         "tools",
         "port",
         "examples",
-        "build-internals"
+        "build-internals",
+        "core",
+        "drivers",
     },
     .boxzer_ignore_paths = .{
         "tools",
         "port",
         "examples",
         "build-internals",
+        "core",
+        "drivers",
     },
 }
