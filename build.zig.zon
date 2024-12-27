@@ -38,9 +38,11 @@
         "tools/generate_linker_script.zig",
         "port",
         "examples",
+        "build-internals"
     },
     .boxzer_ignore_paths = .{
         "port",
         "examples",
+        "build-internals",
     },
 }
