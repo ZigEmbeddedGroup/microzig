@@ -29,6 +29,15 @@ const port_list: []const struct {
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
 };
 
+const exe_targets: []const std.Target.Query = &.{
+    .{ .cpu_arch = .aarch64, .os_tag = .macos },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux },
+    .{ .cpu_arch = .aarch64, .os_tag = .windows },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
+};
+
 pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
@@ -54,6 +63,51 @@ pub fn build(b: *Build) void {
 
     const package_step = b.step("package", "Package monorepo using boxzer");
     package_step.dependOn(&boxzer_run.step);
+
+    generate_release_steps(b);
+}
+
+fn generate_release_steps(b: *Build) void {
+    const release_regz_step = b.step("release-regz", "Generate the release binaries for regz");
+    const release_uf2_step = b.step("release-uf2", "Generate the release binaries for uf2");
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const regz_dep = b.dependency("tools/regz", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const regz_artifact = regz_dep.artifact("regz");
+        const regz_target_output = b.addInstallArtifact(regz_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_regz_step.dependOn(&regz_target_output.step);
+    }
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const uf2_dep = b.dependency("tools/uf2", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const uf2_artifact = uf2_dep.artifact("elf2uf2");
+        const uf2_target_output = b.addInstallArtifact(uf2_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_uf2_step.dependOn(&uf2_target_output.step);
+    }
 }
 
 pub const PortSelect = blk: {
