@@ -47,6 +47,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
+        .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
