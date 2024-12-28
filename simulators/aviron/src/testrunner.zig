@@ -150,6 +150,8 @@ pub fn main() !u8 {
         .cpu = aviron.Cpu{
             .trace = cli.options.trace,
 
+            .instruction_set = .avr5,
+
             .flash = test_system.flash_storage.memory(),
             .sram = test_system.sram.memory(),
             .eeprom = test_system.eeprom.memory(),
