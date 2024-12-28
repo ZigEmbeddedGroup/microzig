@@ -50,7 +50,9 @@ jobs:
           draft: true
           generateReleaseNotes: true
 
-      - name: Create Tarball
+      - name: Create Microzig Tarball
+        run: |
+          tar -czf boxzer-out.tar.gz -C boxzer-out .
 
       - name: Create regz Tarballs
         run: |
