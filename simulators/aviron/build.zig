@@ -194,10 +194,13 @@ fn addTestSuite(
 
                     const test_payload = b.addExecutable(.{
                         .name = std.fs.path.stem(entry.basename),
-                        .root_source_file = b.path(b.fmt("testsuite/{s}", .{entry.path})),
                         .target = custom_target,
                         .optimize = config.optimize,
                         .strip = false,
+                    });
+                    test_payload.addCSourceFile(.{
+                        .file = b.path(b.fmt("testsuite/{s}", .{entry.path})),
+                        .flags = &.{},
                     });
                     test_payload.bundle_compiler_rt = false;
                     test_payload.addIncludePath(b.path("testsuite"));
