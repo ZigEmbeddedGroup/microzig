@@ -5,9 +5,8 @@ on:
   pull_request:
     branches: [main, zig-master]
 
-
 env:
-  ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
+  ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || vars.TARGET_ZIG_VERSION }}
 
 jobs:
   build:
@@ -28,16 +27,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [
-          ubuntu-latest,
-          windows-latest,
-          macos-latest,
-        ]
-        port_dir: [
-          gigadevice/gd32,
-          raspberrypi/rp2xxx,
-          stmicro/stm32,
-        ]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        port_dir: [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,11 +44,7 @@ jobs:
     name: Unit Test Regz
     strategy:
       matrix:
-        os: [
-          ubuntu-latest,
-          windows-latest,
-          macos-latest,
-        ]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -74,11 +61,7 @@ jobs:
     name: Unit Test UF2
     strategy:
       matrix:
-        os: [
-          ubuntu-latest,
-          windows-latest,
-          macos-latest,
-        ]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -134,17 +117,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example_dir: [
-          espressif/esp,
-          gigadevice/gd32,
-          microchip/avr,
-          microchip/atsam,
-          nordic/nrf5x,
-          nxp/lpc,
-          stmicro/stm32,
-          raspberrypi/rp2xxx,
-          wch/ch32v,
-        ]
+        example_dir:
+          [
+            espressif/esp,
+            gigadevice/gd32,
+            microchip/avr,
+            microchip/atsam,
+            nordic/nrf5x,
+            nxp/lpc,
+            stmicro/stm32,
+            raspberrypi/rp2xxx,
+            wch/ch32v,
+          ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
