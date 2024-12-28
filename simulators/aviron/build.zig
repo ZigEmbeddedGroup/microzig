@@ -95,7 +95,7 @@ pub fn build(b: *Build) !void {
 
     // Test suite:
 
-    try addTestSuite(b, test_step, debug_testsuite_step, target, optimize, args_module, aviron_module);
+    try addTestSuite(b, test_step, debug_testsuite_step, target, avr_target, optimize, args_module, aviron_module);
 
     try addTestSuiteUpdate(b, update_testsuite_step);
 }
@@ -104,14 +104,15 @@ fn addTestSuite(
     b: *Build,
     test_step: *Build.Step,
     debug_step: *Build.Step,
-    target: ResolvedTarget,
+    host_target: ResolvedTarget,
+    avr_target: ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     args_module: *Build.Module,
     aviron_module: *Build.Module,
 ) !void {
     const unit_tests = b.addTest(.{
         .root_source_file = b.path("src/main.zig"),
-        .target = target,
+        .target = host_target,
         .optimize = optimize,
     });
     test_step.dependOn(&b.addRunArtifact(unit_tests).step);
@@ -119,7 +120,7 @@ fn addTestSuite(
     const testrunner_exe = b.addExecutable(.{
         .name = "aviron-test-runner",
         .root_source_file = b.path("src/testrunner.zig"),
-        .target = target,
+        .target = host_target,
         .optimize = optimize,
     });
     testrunner_exe.root_module.addImport("args", args_module);
@@ -139,6 +140,11 @@ fn addTestSuite(
         while (try walker.next()) |entry| {
             if (entry.kind != .file)
                 continue;
+
+            if (std.mem.eql(u8, entry.path, "dummy.zig")) {
+                // This file is not interesting to test.
+                continue;
+            }
 
             const FileAction = union(enum) {
                 compile,
@@ -190,18 +196,33 @@ fn addTestSuite(
                             .cpu_features = cpu,
                         }) catch @panic(cpu))
                     else
-                        target;
+                        avr_target;
+
+                    const is_zig_test = std.mem.eql(u8, std.fs.path.extension(entry.path), ".zig");
+
+                    const source_file = b.path(b.fmt("testsuite/{s}", .{entry.path}));
+                    const root_file = if (is_zig_test)
+                        source_file
+                    else
+                        b.path("testsuite/dummy.zig");
 
                     const test_payload = b.addExecutable(.{
                         .name = std.fs.path.stem(entry.basename),
                         .target = custom_target,
                         .optimize = config.optimize,
                         .strip = false,
+                        .root_source_file = root_file,
+                        .link_libc = false,
                     });
-                    test_payload.addCSourceFile(.{
-                        .file = b.path(b.fmt("testsuite/{s}", .{entry.path})),
-                        .flags = &.{},
-                    });
+                    test_payload.want_lto = false; // AVR has no LTO support!
+                    test_payload.verbose_link = true;
+                    test_payload.verbose_cc = true;
+                    if (!is_zig_test) {
+                        test_payload.addCSourceFile(.{
+                            .file = source_file,
+                            .flags = &.{},
+                        });
+                    }
                     test_payload.bundle_compiler_rt = false;
                     test_payload.addIncludePath(b.path("testsuite"));
                     test_payload.setLinkerScriptPath(b.path("linker.ld"));
