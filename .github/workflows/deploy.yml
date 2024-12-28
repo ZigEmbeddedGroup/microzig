@@ -61,4 +61,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out.tar.gz,zig-out/regz*.tar.gz,uf2*.tar.gz
+          artifacts: boxzer-out.tar.gz,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
