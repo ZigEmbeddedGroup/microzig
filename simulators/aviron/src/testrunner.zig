@@ -103,7 +103,7 @@ fn validateSystemAndExit(exit_mode: ExitMode) noreturn {
         std.debug.print("test {s} failed.\n", .{ts.options.name});
     }
 
-    std.os.exit(if (ok) 0x00 else 0x01);
+    std.process.exit(if (ok) 0x00 else 0x01);
 }
 
 pub fn main() !u8 {
@@ -352,16 +352,16 @@ const IO = struct {
     fn lobyte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
-            .Big => return &bits[1],
-            .Little => return &bits[0],
+            .big => return &bits[1],
+            .little => return &bits[0],
         };
     }
 
     fn hibyte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
-            .Big => return &bits[0],
-            .Little => return &bits[1],
+            .big => return &bits[0],
+            .little => return &bits[1],
         };
     }
 
