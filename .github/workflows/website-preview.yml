@@ -1,0 +1,43 @@
+name: Deploy PR Preview Website
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+      - name: Build Website
+        run: zig build
+        working-directory: website
+      - name: Publish Website Preview
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          ARGS: "-vzrli"
+          SOURCE: website/zig-out
+          REMOTE_HOST: ${{ secrets.DEPLOY_HOST }}
+          REMOTE_USER: ${{ secrets.DEPLOY_USER }}
+          REMOTE_PORT: ${{ secrets.DEPLOY_PORT }}
+          TARGET: ${{ format('{0}/staging/pulls/{1}', secrets.DEPLOY_ROOT_DATA_PATH, github.event.number) }}
+  pr-comment:
+    runs-on: ubuntu-latest
+    needs: deploy
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            Heya!
+            You can check out a preview of your PR at [${{vars.WEBSITE_STAGING_HOST}}/pulls/${{ github.event.number}}](${{vars.WEBSITE_STAGING_HOST}}/pulls/${{ github.event.number}})!
