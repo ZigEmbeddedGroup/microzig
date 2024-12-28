@@ -34,12 +34,12 @@ jobs:
       - name: Release RegZ
         run: |
           zig build release-regz
-          find zig-out/* -type d -exec sh -c 'mv {} "$(dirname {})"/regz-"$(basename {})"' \;
+          find zig-out/* -type d -print0 | xargs -0 -I {} sh -c 'mv {} "$(dirname {})"/regz-"$(basename {})"'
 
       - name: Release Uf2
         run: |
           zig build release-uf2
-          find zig-out/* -type d -and -not -path "*regz*" -exec sh -c 'mv "{}" "$(dirname {})"/uf2-"$(basename {})"' \;
+          find zig-out/* -type d -and -not -path "*regz*" -print0 | xargs -0 -I {} sh -c 'mv {} "$(dirname {})"/uf2-"$(basename {})"'
 
       - name: Create Microzig Tarball
         run: |
