@@ -227,7 +227,7 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => std.os.exit(value & mask),
+            .exit => std.process.exit(value & mask),
             .stdio => std.io.getStdOut().writer().writeByte(value & mask) catch @panic("i/o failure"),
             .stderr => std.io.getStdErr().writer().writeByte(value & mask) catch @panic("i/o failure"),
 
@@ -259,16 +259,16 @@ const IO = struct {
     fn lobyte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
-            .Big => return &bits[1],
-            .Little => return &bits[0],
+            .big => return &bits[1],
+            .little => return &bits[0],
         };
     }
 
     fn hibyte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
-            .Big => return &bits[0],
-            .Little => return &bits[1],
+            .big => return &bits[0],
+            .little => return &bits[1],
         };
     }
 

@@ -1,11 +1,15 @@
 const std = @import("std");
+const Build = std.Build;
+const LazyPath = Build.LazyPath;
+const ResolvedTarget = Build.ResolvedTarget;
+
 const TestSuiteConfig = @import("src/testconfig.zig").TestSuiteConfig;
 
 const samples = [_][]const u8{
     "math",
 };
 
-const avr_target = std.zig.CrossTarget{
+const avr_target_query = std.zig.CrossTarget{
     .cpu_arch = .avr,
     .cpu_model = .{ .explicit = &std.Target.avr.cpu.atmega328p },
     .os_tag = .freestanding,
@@ -15,7 +19,7 @@ const avr_target = std.zig.CrossTarget{
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *Build) !void {
     // Targets
     const test_step = b.step("test", "Run test suite");
     const run_step = b.step("run", "Run the app");
@@ -36,17 +40,17 @@ pub fn build(b: *std.Build) !void {
     // Modules
 
     const isa_module = b.createModule(.{
-        .source_file = .{ .path = "src/shared/isa.zig" },
+        .root_source_file = b.path("src/shared/isa.zig"),
     });
     const isa_tables_module = b.createModule(.{
-        .source_file = generateIsaTables(b, isa_module),
-        .dependencies = &.{
+        .root_source_file = generateIsaTables(b, isa_module),
+        .imports = &.{
             .{ .name = "isa", .module = isa_module },
         },
     });
     const aviron_module = b.addModule("aviron", .{
-        .source_file = .{ .path = "src/lib/aviron.zig" },
-        .dependencies = &.{
+        .root_source_file = b.path("src/lib/aviron.zig"),
+        .imports = &.{
             .{ .name = "autogen-tables", .module = isa_tables_module },
             .{ .name = "isa", .module = isa_module },
         },
@@ -55,12 +59,12 @@ pub fn build(b: *std.Build) !void {
     // Main emulator executable
     const aviron_exe = b.addExecutable(.{
         .name = "aviron",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    aviron_exe.addModule("args", args_module);
-    aviron_exe.addModule("aviron", aviron_module);
+    aviron_exe.root_module.addImport("args", args_module);
+    aviron_exe.root_module.addImport("aviron", aviron_module);
     b.installArtifact(aviron_exe);
 
     const run_cmd = b.addRunArtifact(aviron_exe);
@@ -70,17 +74,19 @@ pub fn build(b: *std.Build) !void {
     }
     run_step.dependOn(&run_cmd.step);
 
+    const avr_target = b.resolveTargetQuery(avr_target_query);
+
     // Samples
     for (samples) |sample_name| {
         const sample = b.addExecutable(.{
             .name = sample_name,
-            .root_source_file = .{ .path = b.fmt("samples/{s}.zig", .{sample_name}) },
+            .root_source_file = b.path(b.fmt("samples/{s}.zig", .{sample_name})),
             .target = avr_target,
             .optimize = .ReleaseSmall,
+            .strip = false,
         });
         sample.bundle_compiler_rt = false;
-        sample.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
-        sample.strip = false;
+        sample.setLinkerScriptPath(b.path("linker.ld"));
 
         // install to the prefix:
         const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
@@ -95,16 +101,16 @@ pub fn build(b: *std.Build) !void {
 }
 
 fn addTestSuite(
-    b: *std.Build,
-    test_step: *std.Build.Step,
-    debug_step: *std.Build.Step,
-    target: std.zig.CrossTarget,
+    b: *Build,
+    test_step: *Build.Step,
+    debug_step: *Build.Step,
+    target: ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    args_module: *std.build.Module,
-    aviron_module: *std.build.Module,
+    args_module: *Build.Module,
+    aviron_module: *Build.Module,
 ) !void {
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -112,17 +118,19 @@ fn addTestSuite(
 
     const testrunner_exe = b.addExecutable(.{
         .name = "aviron-test-runner",
-        .root_source_file = .{ .path = "src/testrunner.zig" },
+        .root_source_file = b.path("src/testrunner.zig"),
         .target = target,
         .optimize = optimize,
     });
-    testrunner_exe.addModule("args", args_module);
-    testrunner_exe.addModule("aviron", aviron_module);
+    testrunner_exe.root_module.addImport("args", args_module);
+    testrunner_exe.root_module.addImport("aviron", aviron_module);
 
     debug_step.dependOn(&b.addInstallArtifact(testrunner_exe, .{}).step);
 
     {
-        var walkdir = try b.build_root.handle.openIterableDir("testsuite", .{});
+        var walkdir = try b.build_root.handle.openDir("testsuite", .{
+            .iterate = true,
+        });
         defer walkdir.close();
 
         var walker = try walkdir.walk(b.allocator);
@@ -162,7 +170,7 @@ fn addTestSuite(
             } else .unknown;
 
             const ConfigAndExe = struct {
-                binary: std.Build.LazyPath,
+                binary: LazyPath,
                 config: TestSuiteConfig,
             };
 
@@ -177,26 +185,26 @@ fn addTestSuite(
                     const config = try parseTestSuiteConfig(b, file);
 
                     const custom_target = if (config.cpu) |cpu|
-                        std.zig.CrossTarget.parse(.{
+                        b.resolveTargetQuery(std.zig.CrossTarget.parse(.{
                             .arch_os_abi = "avr-freestanding-eabi",
                             .cpu_features = cpu,
-                        }) catch @panic(cpu)
+                        }) catch @panic(cpu))
                     else
-                        avr_target;
+                        target;
 
                     const test_payload = b.addExecutable(.{
                         .name = std.fs.path.stem(entry.basename),
-                        .root_source_file = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
+                        .root_source_file = b.path(b.fmt("testsuite/{s}", .{entry.path})),
                         .target = custom_target,
                         .optimize = config.optimize,
+                        .strip = false,
                     });
                     test_payload.bundle_compiler_rt = false;
-                    test_payload.addIncludePath(.{ .path = "testsuite" });
-                    test_payload.setLinkerScriptPath(std.build.FileSource{ .path = "linker.ld" });
-                    test_payload.addAnonymousModule("testsuite", .{
-                        .source_file = .{ .path = "src/libtestsuite/lib.zig" },
+                    test_payload.addIncludePath(b.path("testsuite"));
+                    test_payload.setLinkerScriptPath(b.path("linker.ld"));
+                    test_payload.root_module.addAnonymousImport("testsuite", .{
+                        .root_source_file = b.path("src/libtestsuite/lib.zig"),
                     });
-                    test_payload.strip = false;
 
                     debug_step.dependOn(&b.addInstallFile(
                         test_payload.getEmittedBin(),
@@ -219,7 +227,7 @@ fn addTestSuite(
                     } else |_| @panic(config_path);
 
                     break :blk ConfigAndExe{
-                        .binary = .{ .path = b.fmt("testsuite/{s}", .{entry.path}) },
+                        .binary = b.path(b.fmt("testsuite/{s}", .{entry.path})),
                         .config = config,
                     };
                 },
@@ -242,16 +250,20 @@ fn addTestSuite(
     }
 }
 
-fn addTestSuiteUpdate(b: *std.Build, invoke_step: *std.Build.Step) !void {
-    const avr_gcc = if (b.findProgram(&.{"avr-gcc"}, &.{})) |path| std.build.LazyPath{
+fn addTestSuiteUpdate(
+    b: *Build,
+    invoke_step: *Build.Step,
+) !void {
+    const avr_gcc = if (b.findProgram(&.{"avr-gcc"}, &.{})) |path| LazyPath{
         .cwd_relative = path,
     } else |_| b.addExecutable(.{
         .name = "no-avr-gcc",
-        .root_source_file = .{ .path = "tools/no-avr-gcc.zig" },
+        .target = b.host,
+        .root_source_file = b.path("tools/no-avr-gcc.zig"),
     }).getEmittedBin();
 
     {
-        var walkdir = try b.build_root.handle.openIterableDir("testsuite.avr-gcc", .{});
+        var walkdir = try b.build_root.handle.openDir("testsuite.avr-gcc", .{ .iterate = true });
         defer walkdir.close();
 
         var walker = try walkdir.walk(b.allocator);
@@ -295,11 +307,12 @@ fn addTestSuiteUpdate(b: *std.Build, invoke_step: *std.Build.Step) !void {
 
                     const config = try parseTestSuiteConfig(b, file);
 
-                    const gcc_invocation = std.Build.Step.Run.create(b, "run avr-gcc");
+                    const gcc_invocation = Build.Step.Run.create(b, "run avr-gcc");
                     gcc_invocation.addFileArg(avr_gcc);
                     gcc_invocation.addArg("-o");
                     gcc_invocation.addArg(b.fmt("testsuite/{s}/{s}.elf", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
-                    gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse avr_target.cpu_model.explicit.llvm_name orelse @panic("Unknown MCU!")}));
+                    gcc_invocation.addArg(b.fmt("-mmcu={s}", .{config.cpu orelse @panic("Uknown MCU!")}));
+                    //avr_target.cpu_model.explicit.llvm_name orelse @panic("Unknown MCU!")}));
                     for (config.gcc_flags) |opt| {
                         gcc_invocation.addArg(opt);
                     }
@@ -321,7 +334,7 @@ fn addTestSuiteUpdate(b: *std.Build, invoke_step: *std.Build.Step) !void {
     }
 }
 
-fn parseTestSuiteConfig(b: *std.Build, file: std.fs.File) !TestSuiteConfig {
+fn parseTestSuiteConfig(b: *Build, file: std.fs.File) !TestSuiteConfig {
     var code = std.ArrayList(u8).init(b.allocator);
     defer code.deinit();
 
@@ -355,14 +368,14 @@ fn parseTestSuiteConfig(b: *std.Build, file: std.fs.File) !TestSuiteConfig {
     );
 }
 
-fn generateIsaTables(b: *std.Build, isa_mod: *std.Build.Module) std.Build.LazyPath {
+fn generateIsaTables(b: *Build, isa_mod: *Build.Module) LazyPath {
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
-        .root_source_file = .{ .path = "tools/generate-tables.zig" },
-        .target = .{},
+        .root_source_file = b.path("tools/generate-tables.zig"),
+        .target = b.host,
         .optimize = .Debug,
     });
-    generate_tables_exe.addModule("isa", isa_mod);
+    generate_tables_exe.root_module.addImport("isa", isa_mod);
 
     const run = b.addRunArtifact(generate_tables_exe);
 

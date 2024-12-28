@@ -60,7 +60,7 @@ pub fn main() !void {
                 '0' => {},
                 '1' => base_number_bit_set.set(index),
                 else => {
-                    var gop = try positionals.getPtr(opcode).getOrPut(allocator, r);
+                    const gop = try positionals.getPtr(opcode).getOrPut(allocator, r);
                     if (!gop.found_existing) {
                         gop.value_ptr.* = try std.BoundedArray(u8, 16).init(0);
                     }
@@ -144,7 +144,7 @@ pub fn main() !void {
     try writer.writeAll("pub const lookup = [65536]isa.Opcode {");
 
     for (lut, 0..) |v, i| {
-        try writer.print(".{s},", .{std.zig.fmtId(@tagName(v))});
+        try writer.print(".{},", .{std.zig.fmtId(@tagName(v))});
         if ((i + 1) % 16 == 0) {
             try writer.print("\n", .{});
         }
@@ -180,7 +180,7 @@ pub fn main() !void {
 
     try writer.writeAll("};");
 
-    var txt = try buf.toOwnedSliceSentinel(0);
+    const txt = try buf.toOwnedSliceSentinel(0);
     defer allocator.free(txt);
 
     var tree = try std.zig.Ast.parse(allocator, txt, .zig);
