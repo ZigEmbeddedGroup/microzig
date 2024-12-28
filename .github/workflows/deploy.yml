@@ -43,7 +43,7 @@ jobs:
 
       - name: Create Microzig Tarball
         run: |
-          tar -czf boxzer-out.tar.gz -C boxzer-out .
+          tar -czf microzig-packaged.tar.gz -C boxzer-out .
 
       - name: Create regz Tarballs
         run: |
@@ -61,4 +61,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out.tar.gz,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
+          artifacts: microzig-packaged.tar.gz,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
