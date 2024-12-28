@@ -4,7 +4,7 @@ pub export fn _start() callconv(.C) noreturn {
     var a: usize = 1 + 2;
 
     for (0..10) |p| {
-        var k = p;
+        const k = p;
         std.mem.doNotOptimizeAway(k);
         a += k;
     }
