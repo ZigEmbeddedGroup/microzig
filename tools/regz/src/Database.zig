@@ -201,7 +201,8 @@ pub const StructField = struct {
     size_bits: u8,
     offset_bits: u8,
     enum_id: ?EnumID,
-    count: ?u64,
+    count: ?u16,
+    stride: u8,
 
     pub const sql_opts = SQL_Options{
         .foreign_keys = &.{
@@ -217,6 +218,8 @@ pub const StructField = struct {
     };
 
     pub fn get_size_bits(field: *const StructField) u32 {
+        if (field.count != null and field.count.? > 1 and field.stride > field.size_bits)
+            log.warn("get_size_bits() result is unreliable for field array {s} with stride {d} bits > size {d} bits", .{ field.name, field.stride, field.size_bits });
         return if (field.count) |count|
             @intCast(field.size_bits * count)
         else
@@ -1141,6 +1144,7 @@ pub fn get_register_fields(
             \\        sf.offset_bits,
             \\        sf.enum_id,
             \\        sf.count,
+            \\        sf.stride,
             \\        ROW_NUMBER() OVER (
             \\            PARTITION BY sf.struct_id, sf.offset_bits
             \\            ORDER BY sf.offset_bits ASC, sf.size_bits ASC
@@ -1157,7 +1161,8 @@ pub fn get_register_fields(
             \\        size_bits,
             \\        offset_bits,
             \\        enum_id,
-            \\        count
+            \\        count,
+            \\        stride
             \\    FROM OrderedFields
             \\    WHERE row_num = 1
             \\)
@@ -1714,6 +1719,7 @@ pub const AddStructFieldOptions = struct {
     offset_bits: u8,
     enum_id: ?EnumID = null,
     count: ?u16 = null,
+    stride: u8 = 0,
 };
 
 pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {
@@ -1743,9 +1749,9 @@ pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOpt
 
     try db.exec(
         \\INSERT INTO struct_fields
-        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count)
+        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
         \\VALUES
-        \\  (?, ?, ?, ?, ?, ?, ?)
+        \\  (?, ?, ?, ?, ?, ?, ?, ?)
     , .{
         .struct_id = parent,
         .name = opts.name,
@@ -1754,17 +1760,19 @@ pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOpt
         .offset_bits = opts.offset_bits,
         .enum_id = opts.enum_id,
         .count = opts.count,
+        .stride = opts.stride,
     });
 
     savepoint.commit();
 
-    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} count={?}", .{
+    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} count={?} stride={?}", .{
         parent,
         opts.name,
         opts.offset_bits,
         opts.size_bits,
         opts.enum_id,
         opts.count,
+        opts.stride,
     });
 }
 
