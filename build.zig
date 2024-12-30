@@ -462,6 +462,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .linkage = .static,
                     .root_source_file = mb.core_dep.path("src/start.zig"),
                     .strip = options.strip,
+                    .unwind_tables = true,
                 }),
                 .app_mod = app_mod,
                 .target = target,
