@@ -83,7 +83,15 @@ fn write_devices(db: *Database, arena: Allocator, writer: anytype) !void {
     try writer.writeAll("};\n");
 }
 
-pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn write_doc_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+    try write_comment(allocator, "///", comment, writer);
+}
+
+pub fn write_regular_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+    try write_comment(allocator, "//", comment, writer);
+}
+
+fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comment: []const u8, writer: anytype) !void {
     var tokenized = std.ArrayList(u8).init(allocator);
     defer tokenized.deinit();
 
@@ -103,7 +111,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
 
     var line_it = std.mem.tokenizeScalar(u8, unescaped, '\n');
     while (line_it.next()) |line|
-        try writer.print("///{s}\n", .{line});
+        try writer.print("{s}{s}\n", .{ comment_prefix, line });
 }
 
 fn write_string(str: []const u8, writer: anytype) !void {
@@ -123,7 +131,7 @@ fn write_device(db: *Database, arena: Allocator, device: *const Database.Device,
 
     const writer = buffer.writer();
     if (device.description) |description| {
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
     }
 
     try writer.print(
@@ -294,11 +302,11 @@ fn write_device_peripheral(
     const type_ref = try types_reference(db, arena, .{ .@"struct" = instance.struct_id });
 
     if (try get_device_peripheral_description(db, arena, instance)) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     // TODO: get description
     //else if (s.description) |desc|
-    //    try write_comment(arena, desc, writer);
+    //    try write_doc_comment(arena, desc, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix = if (instance.count) |count|
@@ -362,7 +370,7 @@ fn write_struct_decl(
     const writer = buffer.writer();
     try writer.writeByte('\n');
     if (description) |d|
-        try write_comment(arena, d, writer);
+        try write_doc_comment(arena, d, writer);
 
     const zero_sized = registers.len == 0;
     const has_modes = modes.len > 0;
@@ -445,7 +453,7 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: anyty
     // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
 
     if (e.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     try writer.print("pub const {} = enum(u{}) {{\n", .{
         std.zig.fmtId(e.name.?),
@@ -483,7 +491,7 @@ fn write_enum_field(
     // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
     if (enum_field.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(enum_field.name), enum_field.value });
 }
@@ -666,7 +674,7 @@ fn write_register(
 
     const writer = buffer.writer();
     if (register.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (register.count) |count|
@@ -755,13 +763,13 @@ fn write_fields(
             // and here we are skipping the longer field.
             const message = try std.fmt.allocPrint(arena, "skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
             log.warn("{s}", .{message});
-            try write_comment(arena, message, writer);
+            try write_doc_comment(arena, message, writer);
             continue;
         }
         if (offset + field.size_bits > register_size_bits) {
             const message = try std.fmt.allocPrint(arena, "skipped too long field {s} at offset {d} bits, length {d} bits", .{ field.name, field.offset_bits, field.size_bits });
             log.warn("{s}", .{message});
-            try write_comment(arena, message, writer);
+            try write_doc_comment(arena, message, writer);
             continue;
         }
         if (offset < field.offset_bits) {
@@ -771,7 +779,7 @@ fn write_fields(
         assert(offset == field.offset_bits);
 
         if (field.description) |description|
-            try write_comment(arena, description, writer);
+            try write_doc_comment(arena, description, writer);
 
         if (field.enum_id) |enum_id| {
             const e = try db.get_enum(arena, enum_id);

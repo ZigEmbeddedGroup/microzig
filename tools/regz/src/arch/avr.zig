@@ -47,7 +47,7 @@ pub fn write_interrupt_vector(
             }
 
             if (interrupt.description) |description|
-                try gen.write_comment(arena, description, writer);
+                try gen.write_doc_comment(arena, description, writer);
 
             try writer.print("{}: Handler = unhandled,\n", .{
                 std.zig.fmtId(interrupt.name),
