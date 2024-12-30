@@ -310,7 +310,7 @@ pub fn main() !void {
                             // it's in bytes
                             const stride = array.object.get("stride").?.integer;
                             if (stride != 4) {
-                                std.log.warn("found stride: {} for {s} in {s} in {s}", .{ stride, register_name, key["block/".len..], name });
+                                std.log.warn("ignoring register array with unsupported stride: {} != 4 for register {s} in {s} in {s}", .{ stride, register_name, key["block/".len..], name });
                                 break :blk null;
                             }
 
