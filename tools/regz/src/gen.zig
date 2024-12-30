@@ -763,13 +763,13 @@ fn write_fields(
             // and here we are skipping the longer field.
             const message = try std.fmt.allocPrint(arena, "skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
             log.warn("{s}", .{message});
-            try write_doc_comment(arena, message, writer);
+            try write_regular_comment(arena, message, writer);
             continue;
         }
         if (offset + field.size_bits > register_size_bits) {
             const message = try std.fmt.allocPrint(arena, "skipped too long field {s} at offset {d} bits, length {d} bits", .{ field.name, field.offset_bits, field.size_bits });
             log.warn("{s}", .{message});
-            try write_doc_comment(arena, message, writer);
+            try write_regular_comment(arena, message, writer);
             continue;
         }
         if (offset < field.offset_bits) {
