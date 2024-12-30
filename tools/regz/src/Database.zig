@@ -202,7 +202,7 @@ pub const StructField = struct {
     offset_bits: u8,
     enum_id: ?EnumID,
     count: ?u16,
-    stride: u8,
+    stride: ?u8,
 
     pub const sql_opts = SQL_Options{
         .foreign_keys = &.{
@@ -1719,7 +1719,7 @@ pub const AddStructFieldOptions = struct {
     offset_bits: u8,
     enum_id: ?EnumID = null,
     count: ?u16 = null,
-    stride: u8 = 0,
+    stride: ?u8 = null,
 };
 
 pub fn add_register_field(db: *Database, parent: RegisterID, opts: AddStructFieldOptions) !void {

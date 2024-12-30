@@ -341,10 +341,10 @@ pub fn main() !void {
                         else
                             null;
                         var array_count: ?u16 = null;
-                        var array_stride: u8 = 0;
+                        var array_stride: ?u8 = null;
                         if (field.object.get("array")) |array| {
                             array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
-                            array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else 0;
+                            array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
                         }
 
                         try db.add_register_field(register_id, .{

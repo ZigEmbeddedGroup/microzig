@@ -714,7 +714,7 @@ fn write_fields(
     var expanded_fields = std.ArrayList(Database.StructField).init(arena);
     for (fields) |field| {
         if (field.count) |count| {
-            var stride = field.stride;
+            var stride = field.stride orelse field.size_bits;
             if (stride < field.size_bits) {
                 log.warn("array field stride {d} for field {s} is too small, assuming stride == field size ({d}) instead", .{ stride, field.name, field.size_bits });
                 stride = field.size_bits;
@@ -1302,7 +1302,16 @@ test "gen.field with count, width of one, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2,
-        \\                TEST_FIELD: packed struct(u5) { u1, u1, u1, u1, u1 },
+        \\                /// (1/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[0]": u1,
+        \\                /// (2/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[1]": u1,
+        \\                /// (3/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[2]": u1,
+        \\                /// (4/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[3]": u1,
+        \\                /// (5/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[4]": u1,
         \\                padding: u1,
         \\            }),
         \\        };
@@ -1329,7 +1338,10 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2,
-        \\                TEST_FIELD: packed struct(u4) { u2, u2 },
+        \\                /// (1/2 of TEST_FIELD)
+        \\                @"TEST_FIELD[0]": u2,
+        \\                /// (2/2 of TEST_FIELD)
+        \\                @"TEST_FIELD[1]": u2,
         \\                padding: u2,
         \\            }),
         \\        };
