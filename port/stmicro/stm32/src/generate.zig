@@ -340,6 +340,12 @@ pub fn main() !void {
                             if (enums.get(enum_name.string)) |enum_id| enum_id else null
                         else
                             null;
+                        var array_count: ?u16 = null;
+                        var array_stride: u8 = 0;
+                        if (field.object.get("array")) |array| {
+                            array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
+                            array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else 0;
+                        }
 
                         try db.add_register_field(register_id, .{
                             .name = field_name,
@@ -347,6 +353,8 @@ pub fn main() !void {
                             .offset_bits = @intCast(bit_offset),
                             .size_bits = @intCast(bit_size),
                             .enum_id = enum_id,
+                            .count = array_count,
+                            .stride = array_stride,
                         });
                     }
                 }
