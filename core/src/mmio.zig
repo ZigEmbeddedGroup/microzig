@@ -32,10 +32,20 @@ pub fn Mmio(comptime PackedT: type) type {
             addr.write_raw(@bitCast(val));
         }
 
-        pub fn write_raw(addr: *volatile Self, val: IntT) void {
+        pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
             addr.raw = val;
         }
 
+        /// Set field `field_name` of this register to `value`.
+        /// A one-field version of modify(), more helpful if `field_name` is comptime calculated.
+        pub inline fn modify_one(addr: *volatile Self, comptime field_name: []const u8, value: anytype) void {
+            var val = read(addr);
+            @field(val, field_name) = value;
+            write(addr, val);
+        }
+
+        /// For each `.Field = value` entry of `fields`:
+        /// Set field `Field` of this register to `value`.
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
@@ -44,10 +54,40 @@ pub fn Mmio(comptime PackedT: type) type {
             write(addr, val);
         }
 
+        /// In field `field_name` of struct `val`, toggle (only) all bits that are set in `value`.
+        inline fn toggle_field(val: anytype, comptime field_name: []const u8, value: anytype) void {
+            const FieldType = @TypeOf(@field(val, field_name));
+            switch (@typeInfo(FieldType)) {
+                .Int => {
+                    @field(val, field_name) = @field(val, field_name) ^ value;
+                },
+                .Enum => |enum_info| {
+                    // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
+                    const U = enum_info.tag_type;
+                    @field(val, field_name) =
+                        @as(FieldType, @enumFromInt(@as(U, @intFromEnum(@field(val, field_name))) ^
+                        @as(U, @intFromEnum(@as(FieldType, value)))));
+                },
+                else => |T| {
+                    @compileError("unsupported register field type '" ++ @typeName(T) ++ "'");
+                },
+            }
+        }
+
+        /// In field `field_name` of this register, toggle (only) all bits that are set in `value`.
+        /// A one-field version of toggle(), more helpful if `field_name` is comptime calculated.
+        pub inline fn toggle_one(addr: *volatile Self, comptime field_name: []const u8, value: anytype) void {
+            var val = read(addr);
+            toggle_field(&val, field_name, value);
+            write(addr, val);
+        }
+
+        /// For each `.Field = value` entry of `fields`:
+        /// In field `F` of this register, toggle (only) all bits that are set in `value`.
         pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
-                @field(val, field.name) = @field(val, field.name) ^ @field(fields, field.name);
+                toggle_field(&val, field.name, @field(fields, field.name));
             }
             write(addr, val);
         }
