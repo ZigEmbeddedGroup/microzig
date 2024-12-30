@@ -19,6 +19,8 @@ examples will eventually be able to run on either chip with no changes due to th
   Shows an example of a fully custom clock configuration.
 - [gpio clock output](src/gpio_clock_output.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
   Routes the SYS clock divided by 1000 out to GPIO25.
+- [watchdog timer](src/watchdog_timer.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
+  Enables a watchdog timer for 1 second, and demonstrates the chip resetting when the watchdog timer elapses
 
 ### RP2040 Only
 

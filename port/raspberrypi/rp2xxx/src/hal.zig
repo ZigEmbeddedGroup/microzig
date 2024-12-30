@@ -24,6 +24,7 @@ pub const i2c = @import("hal/i2c.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
+pub const watchdog = @import("hal/watchdog.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 
@@ -43,6 +44,9 @@ pub inline fn init() void {
 /// Allows user to easily swap in their own clock config while still
 /// using the reccomended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
+
+    // Disable the watchdog as a soft reset doesn't disable the WD automatically!
+    watchdog.disable();
 
     // Reset all peripherals to put system into a known state, - except
     // for QSPI pads and the XIP IO bank, as this is fatal if running from
