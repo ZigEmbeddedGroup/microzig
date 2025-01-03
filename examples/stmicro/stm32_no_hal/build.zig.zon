@@ -1,0 +1,14 @@
+.{
+    .name = "examples/stmicro/stm32",
+    .version = "0.0.0",
+    .dependencies = .{
+        .microzig = .{ .path = "../../.." },
+    },
+
+    .paths = .{
+        "LICENSE",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
