@@ -1,13 +1,13 @@
 //! codegen specific to arm
 const std = @import("std");
 const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
 
 const Database = @import("../Database.zig");
 const Arch = Database.Arch;
-const EntityId = Database.EntityId;
+const DeviceID = Database.DeviceID;
 
 const gen = @import("../gen.zig");
-const InterruptWithIndexAndName = @import("InterruptWithIndexAndName.zig");
 const Interrupt = @import("Interrupt.zig");
 
 const svd = @import("../svd.zig");
@@ -50,17 +50,16 @@ const system_interrupts = struct {
     pub const cortex_m55 = cortex_m33;
 };
 
-pub fn load_system_interrupts(db: *Database, device_id: EntityId) !void {
-    const device = db.instances.devices.get(device_id).?;
+pub fn load_system_interrupts(db: *Database, device: *const Database.Device) !void {
     assert(device.arch.is_arm());
 
     inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
         if (device.arch == @field(Database.Arch, field.name)) {
             if (@hasDecl(system_interrupts, field.name)) {
                 for (@field(system_interrupts, field.name)) |interrupt| {
-                    _ = try db.create_interrupt(device_id, .{
+                    _ = try db.create_interrupt(device.id, .{
                         .name = interrupt.name,
-                        .index = interrupt.index,
+                        .idx = interrupt.index,
                         .description = interrupt.description,
                     });
                 }
@@ -72,80 +71,63 @@ pub fn load_system_interrupts(db: *Database, device_id: EntityId) !void {
         log.warn("TODO: system interrupts handlers for {}", .{device.arch});
     }
 
-    const vendor_systick_config = if (device.properties.get("cpu.vendorSystickConfig")) |str|
-        try svd.parse_bool(str)
-    else
-        false;
+    const vendor_systick_config = if (try db.get_device_property(db.gpa, device.id, "cpu.vendorSystickConfig")) |str| blk: {
+        defer db.gpa.free(str);
+
+        break :blk try svd.parse_bool(str);
+    } else false;
 
     if (!vendor_systick_config) {
-        _ = try db.create_interrupt(device_id, .{
+        _ = try db.create_interrupt(device.id, .{
             .name = system_interrupts.systick.name,
-            .index = system_interrupts.systick.index,
+            .idx = system_interrupts.systick.index,
         });
     }
 }
 
 pub fn write_interrupt_vector(
-    db: Database,
-    device_id: EntityId,
+    db: *Database,
+    allocator: Allocator,
+    device: *const Database.Device,
     writer: anytype,
 ) !void {
-    assert(db.entity_is("instance.device", device_id));
-    const arch = db.instances.devices.get(device_id).?.arch;
-    assert(arch.is_arm());
+    assert(device.arch.is_arm());
 
-    try writer.writeAll(
-        \\pub const VectorTable = extern struct {
-        \\    const Handler = micro.interrupt.Handler;
-        \\    const unhandled = micro.interrupt.unhandled;
-        \\
-        \\    initial_stack_pointer: u32,
-        \\    Reset: Handler,
-        \\
-    );
+    const interrupts = try db.get_interrupts(allocator, device.id);
+    defer {
+        for (interrupts) |interrupt| interrupt.deinit(allocator);
+        allocator.free(interrupts);
+    }
 
-    if (db.children.interrupts.get(device_id)) |interrupt_set| {
-        var interrupts = std.ArrayList(InterruptWithIndexAndName).init(db.gpa);
-        defer interrupts.deinit();
-
-        var it = interrupt_set.iterator();
-        while (it.next()) |entry| {
-            const interrupt_id = entry.key_ptr.*;
-            const index = db.instances.interrupts.get(interrupt_id).?;
-            const name = db.attrs.name.get(interrupt_id) orelse continue;
-
-            try interrupts.append(.{
-                .id = interrupt_id,
-                .name = name,
-                .index = index,
-            });
-        }
-
-        std.sort.insertion(
-            InterruptWithIndexAndName,
-            interrupts.items,
-            {},
-            InterruptWithIndexAndName.less_than,
+    if (interrupts.len > 0) {
+        try writer.writeAll(
+            \\pub const VectorTable = extern struct {
+            \\    const Handler = micro.interrupt.Handler;
+            \\    const unhandled = micro.interrupt.unhandled;
+            \\
+            \\    initial_stack_pointer: u32,
+            \\    Reset: Handler,
+            \\
         );
 
         var index: i32 = -14;
         var i: u32 = 0;
 
-        while (i < interrupts.items.len) : (i += 1) {
-            const interrupt = interrupts.items[i];
-            if (index < interrupt.index) {
+        while (i < interrupts.len) : (i += 1) {
+            const interrupt = interrupts[i];
+            if (index < interrupt.idx) {
                 try writer.print("reserved{}: [{}]u32 = undefined,\n", .{
                     index + 14,
-                    interrupt.index - index,
+                    interrupt.idx - index,
                 });
-                index = interrupt.index;
-            } else if (index > interrupt.index) {
+                index = interrupt.idx;
+            } else if (index > interrupt.idx) {
                 log.warn("skipping interrupt: {s}", .{interrupt.name});
                 continue;
             }
 
-            if (db.attrs.description.get(interrupt.id)) |description|
-                try gen.write_comment(db.gpa, description, writer);
+            if (interrupt.description) |description|
+                try gen.write_doc_comment(db.gpa, description, writer);
 
             try writer.print("{}: Handler = unhandled,\n", .{
                 std.zig.fmtId(interrupt.name),
@@ -153,7 +135,7 @@ pub fn write_interrupt_vector(
 
             index += 1;
         }
-    }
 
-    try writer.writeAll("};\n\n");
+        try writer.writeAll("};\n\n");
+    }
 }

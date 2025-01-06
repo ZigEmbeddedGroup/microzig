@@ -11,8 +11,10 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
     .GPIO25 = .{ .name = "led", .function = .PWM4_B },
 };
 
+const pins = pin_config.pins();
+
 pub fn main() !void {
-    const pins = pin_config.apply();
+    pin_config.apply();
     pins.led.slice().set_wrap(100);
     pins.led.slice().enable();
 

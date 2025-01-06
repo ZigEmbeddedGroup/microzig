@@ -1,55 +1,66 @@
 const std = @import("std");
-const MicroZig = @import("microzig/build");
+const microzig = @import("microzig/build-internals");
 
-fn path(comptime suffix: []const u8) std.Build.LazyPath {
-    return .{
-        .cwd_relative = comptime ((std.fs.path.dirname(@src().file) orelse ".") ++ suffix),
+const Self = @This();
+
+chips: struct {
+    esp32_c3: *const microzig.Target,
+},
+
+boards: struct {},
+
+pub fn init(dep: *std.Build.Dependency) Self {
+    const b = dep.builder;
+
+    const hal: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hals/ESP32_C3.zig"),
     };
-}
-
-const esp_riscv = .{
-    .name = "Espressif RISC-V",
-    .root_source_file = path("/src/cpus/espressif-riscv.zig"),
-    .target = std.Target.Query{
-        .cpu_arch = .riscv32,
-        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            std.Target.riscv.Feature.c,
-            std.Target.riscv.Feature.m,
-        }),
-        .os_tag = .freestanding,
-        .abi = .eabi,
-    },
-};
-
-const hal = .{
-    .root_source_file = path("/src/hals/ESP32_C3.zig"),
-};
-
-pub const chips = struct {
-    pub const esp32_c3 = MicroZig.Target{
-        .preferred_format = .bin, // TODO: Exchange FLAT format with .esp format
+    const chip_esp32c3: microzig.Target = .{
+        .dep = dep,
+        // TODO: Exchange FLAT format with .esp format
+        .preferred_binary_format = .bin,
         .chip = .{
             .name = "ESP32-C3",
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
-
-            .cpu = esp_riscv,
-
-            .register_definition = .{
-                .svd = path("/src/chips/ESP32-C3.svd"),
+            .cpu = std.Target.Query{
+                .cpu_arch = .riscv32,
+                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+                .cpu_features_add = std.Target.riscv.featureSet(&.{
+                    std.Target.riscv.Feature.c,
+                    std.Target.riscv.Feature.m,
+                }),
+                .os_tag = .freestanding,
+                .abi = .eabi,
             },
-
+            .cpu_module_file = b.path("src/cpus/espressif-riscv.zig"),
+            .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 }, // external memory, ibus
-                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 }, // sram 1, data bus
+                // external memory, ibus
+                .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
+                // sram 1, data bus
+                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
             },
         },
         .hal = hal,
     };
-};
 
-pub const boards = struct {};
+    return .{
+        .chips = .{
+            .esp32_c3 = chip_esp32c3.derive(.{}),
+        },
+        .boards = .{},
+    };
+}
 
 pub fn build(b: *std.Build) void {
-    _ = b.step("test", "Run platform agnostic unit tests");
+    const optimize = b.standardOptimizeOption(.{});
+
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/hal.zig"),
+        .optimize = optimize,
+    });
+
+    const unit_tests_run = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+    test_step.dependOn(&unit_tests_run.step);
 }

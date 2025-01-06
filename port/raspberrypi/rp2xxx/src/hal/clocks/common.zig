@@ -24,19 +24,19 @@ pub const xosc = struct {
     }
     pub fn init() void {
         if (xosc_freq <= 15_000_000 and xosc_freq >= 1_000_000) {
-            XOSC.CTRL.modify(.{ .FREQ_RANGE = .{ .value = .@"1_15MHZ" } });
+            XOSC.CTRL.modify(.{ .FREQ_RANGE = .@"1_15MHZ" });
         } else if (xosc_freq <= 30_000_000 and xosc_freq >= 10_000_000) {
-            XOSC.CTRL.modify(.{ .FREQ_RANGE = .{ .value = .@"10_30MHZ" } });
+            XOSC.CTRL.modify(.{ .FREQ_RANGE = .@"10_30MHZ" });
         } else if (xosc_freq <= 60_000_000 and xosc_freq >= 25_000_000) {
-            XOSC.CTRL.modify(.{ .FREQ_RANGE = .{ .value = .@"25_60MHZ" } });
+            XOSC.CTRL.modify(.{ .FREQ_RANGE = .@"25_60MHZ" });
         } else if (xosc_freq <= 100_000_000 and xosc_freq >= 40_000_000) {
-            XOSC.CTRL.modify(.{ .FREQ_RANGE = .{ .value = .@"40_100MHZ" } });
+            XOSC.CTRL.modify(.{ .FREQ_RANGE = .@"40_100MHZ" });
         } else {
             unreachable;
         }
 
         XOSC.STARTUP.modify(.{ .DELAY = startup_delay_value });
-        XOSC.CTRL.modify(.{ .ENABLE = .{ .value = .ENABLE } });
+        XOSC.CTRL.modify(.{ .ENABLE = .ENABLE });
 
         // wait for xosc startup to complete:
         while (XOSC.STATUS.read().STABLE == 0) {}

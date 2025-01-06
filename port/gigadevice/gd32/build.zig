@@ -33,7 +33,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .none,
             },
             .register_definition = .{
-                .json = b.path("src/chips/GD32VF103.json"),
+                .svd = b.path("src/chips/GD32VF103.svd"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 128 * 1024, .kind = .flash },
@@ -55,7 +55,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .abi = .none,
             },
             .register_definition = .{
-                .json = b.path("src/chips/GD32VF103.json"),
+                .svd = b.path("src/chips/GD32VF103.svd"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },

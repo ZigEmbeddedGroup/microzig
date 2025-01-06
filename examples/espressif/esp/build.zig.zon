@@ -2,10 +2,8 @@
     .name = "examples/espressif/esp",
     .version = "0.0.0",
     .dependencies = .{
-        .@"microzig/build" = .{ .path = "../../../build" },
-        .@"microzig/port/espressif/esp" = .{ .path = "../../../port/espressif/esp" },
+        .microzig = .{ .path = "../../.." },
     },
-
     .paths = .{
         "LICENSE",
         "README.md",

@@ -99,9 +99,6 @@ pub const Chip = struct {
 
     /// The provider for register definitions.
     register_definition: union(enum) {
-        /// Use `regz` to create a zig file from a JSON schema.
-        json: LazyPath,
-
         /// Use `regz` to create a json file from a SVD schema.
         svd: LazyPath,
 

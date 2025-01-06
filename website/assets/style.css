@@ -1,0 +1,135 @@
+body {
+}
+
+.upper-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar {
+    display: flex;
+    flex-direction: row;
+}
+
+.navlink {
+    margin: 5px;
+}
+
+.logo {
+    max-height: 30px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+:root {
+    --srcery-black:          #1C1B19;
+    --srcery-red:            #EF2F27;
+    --srcery-green:          #519F50;
+    --srcery-yellow:         #FBB829;
+    --srcery-blue:           #2C78BF;
+    --srcery-magenta:        #E02C6D;
+    --srcery-cyan:           #0AAEB3;
+    --srcery-white:          #BAA67F;
+
+    --srcery-black-bright:   #918175;
+    --srcery-red-bright:     #F75341;
+    --srcery-green-bright:   #98BC37;
+    --srcery-yellow-bright:  #FED06E;
+    --srcery-blue-bright:    #68A8E4;
+    --srcery-magenta-bright: #FF5C8F;
+    --srcery-cyan-bright:    #2BE4D0;
+    --srcery-white-bright:   #FCE8C3;
+
+    --srcery-orange:         #FF5F00;
+    --srcery-orange-bright:  #FF8700;
+    --srcery-black-hard:     #121212;
+    --srcery-teal:           #008080;
+    --srcery-xgray1:         #262626;
+    --srcery-xgray2:         #303030;
+    --srcery-xgray3:         #3A3A3A;
+    --srcery-xgray4:         #444444;
+    --srcery-xgray5:         #4E4E4E;
+    --srcery-xgray6:         #585858;
+    --srcery-xgray7:         #626262;
+    --srcery-xgray8:         #6C6C6C;
+    --srcery-xgray9:         #767676;
+    --srcery-xgray10:        #808080;
+    --srcery-xgray11:        #8A8A8A;
+    --srcery-xgray12:        #949494;
+}
+
+pre {
+    background-color: var(--srcery-black);
+    color: var(--srcery-white-bright);
+    padding: 10px;
+    overflow-x: auto;
+}
+
+code {
+  white-space: pre;
+
+}
+
+code .attribute             { color: var(--srcery-white-bright)   }
+code .boolean               { color: var(--srcery-magenta-bright) }
+code .character             { color: var(--srcery-magenta-bright) }
+code .character-special     { color: var(--srcery-blue)           }
+code .comment               { color: var(--srcery-black-bright)   }
+code .conditional           { color: var(--srcery-red)            }
+code .constant              { color: var(--srcery-magenta-bright) }
+code .constant-builtin      { color: var(--srcery-orange)         }
+code .constant-macro        { color: var(--srcery-cyan)           }
+code .constructor           { color: var(--srcery-blue)           }
+code .debug                 { color: var(--srcery-black-bright)   }
+code .define                { color: var(--srcery-cyan)           }
+code .error                 { color: var(--srcery-white)          }
+code .exception             { color: var(--srcery-red)            }
+code .field                 { color: var(--srcery-cyan)           }
+code .float                 { color: var(--srcery-magenta-bright) }
+code .function              { color: var(--srcery-yellow)         }
+code .function-builtin      { color: var(--srcery-orange)         }
+code .function-call         { color: var(--srcery-yellow)         }
+code .function-macro        { color: var(--srcery-orange)         }
+code .include               { color: var(--srcery-cyan)           }
+code .keyword               { color: var(--srcery-red)            }
+code .keyword-function      { color: var(--srcery-red)            }
+code .keyword-return        { color: var(--srcery-red)            }
+code .keyword-operator      { color: var(--srcery-red)            }
+code .label                 { color: var(--srcery-red)            }
+code .literal               { color: var(--srcery-red)            }
+code .macro                 { color: var(--srcery-orange)         }
+code .method                { color: var(--srcery-yellow)         }
+code .namespace             { color: var(--srcery-cyan)           }
+code .number                { color: var(--srcery-magenta-bright) }
+code .operator              { color: var(--srcery-white-bright)   }
+code .parameter             { color: var(--srcery-cyan)           }
+code .preproc               { color: var(--srcery-cyan)           }
+code .property              { color: var(--srcery-cyan)           }
+code .punctuation           { color: var(--srcery-black-bright)   }
+code .punctuation-bracket   { color: var(--srcery-black-bright)   }
+code .punctuation-delimiter { color: var(--srcery-black-bright)   }
+code .punctuation-special   { color: var(--srcery-black-bright)   }
+code .repeat                { color: var(--srcery-red)            }
+code .storageclass          { color: var(--srcery-orange)         }
+code .string                { color: var(--srcery-green-bright)   }
+code .string-escape         { color: var(--srcery-blue)           }
+code .string-special        { color: var(--srcery-blue)           }
+code .structure             { color: var(--srcery-cyan)           }
+code .tag                   { color: var(--srcery-cyan)           }
+code .text-literal          { color: var(--srcery-black-bright)   }
+code .text-reference        { color: var(--srcery-cyan)           }
+code .text-title            { color: var(--srcery-green)          } /* TODO: bold */
+code .text-todo             { color: var(--srcery-white)          } /* TODO: bold */
+code .text-underline        { color: var(--srcery-blue)           } /* TODO: underline */
+code .text-uri              { color: var(--srcery-blue)           } /* TODO: underline */
+code .type                  { color: var(--srcery-blue-bright)    }
+code .type-builtin          { color: var(--srcery-blue-bright)    }
+code .type-definition       { color: var(--srcery-magenta)        }
+code .type-qualifier        { color: var(--srcery-blue-bright)    }
+code .variable              { color: var(--srcery-cyan)           }
+code .variable-builtin      { color: var(--srcery-magenta-bright) }

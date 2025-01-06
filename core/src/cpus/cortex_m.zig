@@ -169,7 +169,7 @@ const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
 
 const core = blk: {
     break :blk switch (cortex_m) {
-        .cortex_m0 => @import("cortex_m/m0"),
+        .cortex_m0 => @import("cortex_m/m0.zig"),
         .cortex_m0plus => @import("cortex_m/m0plus.zig"),
         .cortex_m3 => @import("cortex_m/m3.zig"),
         .cortex_m33 => @import("cortex_m/m33.zig"),

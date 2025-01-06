@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/rp2040_only/i2c_bus_scan.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pwm", .file = "src/rp2040_only/pwm.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/rp2040_only/spi_host.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-echo", .file = "src/rp2040_only/uart_echo.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-log", .file = "src/rp2040_only/uart_log.zig" },
@@ -46,6 +47,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
+        .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);

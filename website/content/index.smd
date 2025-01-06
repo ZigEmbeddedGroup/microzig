@@ -8,15 +8,107 @@
 .tags = []
 ---
 
-# MicroZig
+# Getting Started
 
-[Repository](https://github.com/ZigEmbeddedGroup/microzig)
+This tutorial assumes that you're programming a [Raspberry Pi
+Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/). This hardware
+is by far the best supported in MicroZig. It's a fairly alpha project based on
+a fairly new and breaking language so your mileage may vary. That being said,
+it does support other hardware, such as Microchip's `ATSAMD51J19` which was
+used for the [2024 SYCL](https://sycl.it) Badge.
 
-## Goals
+## Let's Begin
 
-- Provide documents on how to get started with embedded programming (for absolute newbies)
-- Provide example snippets for common operations on certain architectures (LPC, STM32, AVR, ...)
-- Provide example worked through embedded mini-projects
-- Create register definition libraries
-- Create a common interface/HAL over several architectures
-- Create a performant common set of drivers for external platforms
+Assuming you've initialized a zig project with `zig init`, or have set one up
+yourself, you can add microzig as a dependency with the following command:
+
+```sh
+zig fetch --save=microzig https://microzig.tech/downloads/microzig/0.13.1/microzig.tar.gz
+```
+
+Then in your `build.zig`:
+
+```zig
+const std = @import("std");
+const microzig = @import("microzig");
+
+const MicroBuild = microzig.MicroBuild(.{
+    .rp2xxx = true,
+});
+
+pub fn build(b: *std.Build) void {
+    const mz_dep = b.dependency("microzig", .{});
+    const mb = MicroBuild.init(b, mz_dep) orelse return;
+
+    const firmware = mb.add_firmware(.{
+        .name = "blinky",
+        .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+        .optimize = .ReleaseSmall,
+        .root_source_file = b.path("src/main.zig"),
+    });
+
+    // We call this twice to demonstrate that the default binary output for
+    // RP2040 is UF2, but we can also output other formats easily
+    mb.install_firmware(firmware, .{ });
+    mb.install_firmware(firmware, .{ .format = .elf });
+}
+```
+
+and for your `src/main.zig`, let's start with a classic blinky program. Yes,
+most of the main stdlib is available for use on an MCU with Zig:
+
+```zig
+const std = @import("std");
+const microzig = @import("microzig");
+const rp2xxx = microzig.hal;
+const time = rp2xxx.time;
+
+// Compile-time pin configuration
+const pin_config = rp2xxx.pins.GlobalConfiguration{
+    .GPIO25 = .{
+        .name = "led",
+        .direction = .out,
+    },
+};
+
+const pins = pin_config.pins();
+
+pub fn main() !void {
+    pin_config.apply();
+
+    while (true) {
+        pins.led.toggle();
+        time.sleep_ms(250);
+    }
+}
+```
+
+Now if you run `zig build`, our extremely simple program will be installed under `zig-out`:
+
+```
+zig-out
+└── firmware
+    ├── blinky.uf2
+    └── blinky.elf
+```
+
+And if we run the `file` command, often found on Linux and MacOS, on the ELF
+file we'll see that it's targetting ARM!:
+
+```
+zig-out/firmware/blinky.elf: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, with debug_info, not stripped
+```
+
+## Programming the MCU
+
+To activate the UF2 bootloader, power must be applied to the pico while the
+`BOOTSEL` button is held. This is best done by connecting a button from `RUN`
+to ground, pressing both buttons, and releasing the `RUN` button first, then
+`BOOTSEL`. The other option is to plug/unplug the USB cable which is awkward
+and gets tiresome.
+
+Copy the uf2 file into the mounted drive. Execution should take place immediately.
+
+## Further Resources
+
+- [Zig Language Reference](https://ziglang.org/documentation/0.13.0/)

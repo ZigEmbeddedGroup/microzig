@@ -3,7 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         // examples
-        // .@"espressif/esp" = .{ .path = "espressif/esp" },
+         .@"espressif/esp" = .{ .path = "espressif/esp" },
         .@"gigadevice/gd32" = .{ .path = "gigadevice/gd32" },
         .@"microchip/atsam" = .{ .path = "microchip/atsam" },
         .@"microchip/avr" = .{ .path = "microchip/avr" },

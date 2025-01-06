@@ -217,18 +217,18 @@ pub const I2C = enum(u1) {
 
     inline fn disable(i2c: I2C) void {
         i2c.get_regs().IC_ENABLE.write(.{
-            .ENABLE = .{ .value = .DISABLED },
-            .ABORT = .{ .value = .DISABLE },
-            .TX_CMD_BLOCK = .{ .value = .NOT_BLOCKED },
+            .ENABLE = .DISABLED,
+            .ABORT = .DISABLE,
+            .TX_CMD_BLOCK = .NOT_BLOCKED,
             .padding = 0,
         });
     }
 
     inline fn enable(i2c: I2C) void {
         i2c.get_regs().IC_ENABLE.write(.{
-            .ENABLE = .{ .value = .ENABLED },
-            .ABORT = .{ .value = .DISABLE },
-            .TX_CMD_BLOCK = .{ .value = .NOT_BLOCKED },
+            .ENABLE = .ENABLED,
+            .ABORT = .DISABLE,
+            .TX_CMD_BLOCK = .NOT_BLOCKED,
             .padding = 0,
         });
     }
@@ -244,15 +244,15 @@ pub const I2C = enum(u1) {
         i2c.disable();
         const regs = i2c.get_regs();
         regs.IC_CON.write(.{
-            .MASTER_MODE = .{ .value = .ENABLED },
-            .SPEED = .{ .value = .FAST },
-            .IC_RESTART_EN = .{ .value = if (config.repeated_start) .ENABLED else .DISABLED },
-            .IC_SLAVE_DISABLE = .{ .value = .SLAVE_DISABLED },
-            .TX_EMPTY_CTRL = .{ .value = .ENABLED },
-            .IC_10BITADDR_SLAVE = .{ .raw = 0 },
-            .IC_10BITADDR_MASTER = .{ .raw = 0 },
-            .STOP_DET_IFADDRESSED = .{ .raw = 0 },
-            .RX_FIFO_FULL_HLD_CTRL = .{ .raw = 0 },
+            .MASTER_MODE = .ENABLED,
+            .SPEED = .FAST,
+            .IC_RESTART_EN = if (config.repeated_start) .ENABLED else .DISABLED,
+            .IC_SLAVE_DISABLE = .SLAVE_DISABLED,
+            .TX_EMPTY_CTRL = .ENABLED,
+            .IC_10BITADDR_SLAVE = @enumFromInt(0),
+            .IC_10BITADDR_MASTER = @enumFromInt(0),
+            .STOP_DET_IFADDRESSED = @enumFromInt(0),
+            .RX_FIFO_FULL_HLD_CTRL = @enumFromInt(0),
             .STOP_DET_IF_MASTER_ACTIVE = 0,
             .padding = 0,
         });
@@ -263,8 +263,8 @@ pub const I2C = enum(u1) {
 
         // DREQ signal control
         regs.IC_DMA_CR.write(.{
-            .RDMAE = .{ .value = .ENABLED },
-            .TDMAE = .{ .value = .ENABLED },
+            .RDMAE = .ENABLED,
+            .TDMAE = .ENABLED,
             .padding = 0,
         });
 
@@ -308,8 +308,8 @@ pub const I2C = enum(u1) {
         i2c.disable();
         i2c.get_regs().IC_TAR.write(.{
             .IC_TAR = @intFromEnum(addr),
-            .GC_OR_START = .{ .value = .GENERAL_CALL },
-            .SPECIAL = .{ .value = .DISABLED },
+            .GC_OR_START = .GENERAL_CALL,
+            .SPECIAL = .DISABLED,
             .padding = 0,
         });
         i2c.enable();
@@ -324,10 +324,10 @@ pub const I2C = enum(u1) {
             // IC_CLR_TX_ABRT register always reads as 0.
             _ = regs.IC_CLR_TX_ABRT.read();
 
-            if (abort_reason.ABRT_7B_ADDR_NOACK.value == .ACTIVE) {
+            if (abort_reason.ABRT_7B_ADDR_NOACK == .ACTIVE) {
                 // Address byte wasn't acknowledged by any targets on the bus
                 return TransactionError.DeviceNotPresent;
-            } else if (abort_reason.ABRT_TXDATA_NOACK.value == .ABRT_TXDATA_NOACK_GENERATED) {
+            } else if (abort_reason.ABRT_TXDATA_NOACK == .ABRT_TXDATA_NOACK_GENERATED) {
                 // Address byte was acknowledged, but a data byte wasn't
                 return TransactionError.NoAcknowledge;
             } else if (abort_reason.TX_FLUSH_CNT > 0) {
@@ -353,7 +353,7 @@ pub const I2C = enum(u1) {
         //     condition here? If so, additional code would be needed here
         //     to take care of the abort.
         // As far as I can tell from the datasheet, no, this is not possible.
-        while (regs.IC_RAW_INTR_STAT.read().STOP_DET.value == .INACTIVE) {
+        while (regs.IC_RAW_INTR_STAT.read().STOP_DET == .INACTIVE) {
             hw.tight_loop_contents();
             if (deadline.is_reached())
                 break;
@@ -400,12 +400,12 @@ pub const I2C = enum(u1) {
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = .{ .raw = 0 },
-                .STOP = .{ .raw = @intFromBool(element.last) },
-                .CMD = .{ .value = .WRITE },
+                .RESTART = @enumFromInt(0),
+                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .CMD = .WRITE,
                 .DAT = element.value,
 
-                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .FIRST_DATA_BYTE = .INACTIVE,
                 .padding = 0,
             });
             // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
@@ -427,7 +427,7 @@ pub const I2C = enum(u1) {
 
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
         // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
-        while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY.value == .INACTIVE) {
+        while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY == .INACTIVE) {
             if (deadline.is_reached()) {
                 timed_out = true;
                 break;
@@ -479,12 +479,12 @@ pub const I2C = enum(u1) {
         var iter = read_vec.iterator();
         while (iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = .{ .raw = 0 },
-                .STOP = .{ .raw = @intFromBool(element.last) },
-                .CMD = .{ .value = .READ },
+                .RESTART = @enumFromInt(0),
+                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .CMD = .READ,
                 .DAT = 0,
 
-                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .FIRST_DATA_BYTE = .INACTIVE,
                 .padding = 0,
             });
 
@@ -551,12 +551,12 @@ pub const I2C = enum(u1) {
         var write_iter = write_vec.iterator();
         send_loop: while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = .{ .raw = 0 },
-                .STOP = .{ .raw = 0 },
-                .CMD = .{ .value = .WRITE },
+                .RESTART = @enumFromInt(0),
+                .STOP = @enumFromInt(0),
+                .CMD = .WRITE,
                 .DAT = element.value,
 
-                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .FIRST_DATA_BYTE = .INACTIVE,
                 .padding = 0,
             });
             // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
@@ -583,12 +583,12 @@ pub const I2C = enum(u1) {
         var read_iter = read_vec.iterator();
         recv_loop: while (read_iter.next_element_ptr()) |element| {
             regs.IC_DATA_CMD.write(.{
-                .RESTART = .{ .raw = @intFromBool(element.first) },
-                .STOP = .{ .raw = @intFromBool(element.last) },
-                .CMD = .{ .value = .READ },
+                .RESTART = @enumFromInt(@intFromBool(element.first)),
+                .STOP = @enumFromInt(@intFromBool(element.last)),
+                .CMD = .READ,
                 .DAT = 0,
 
-                .FIRST_DATA_BYTE = .{ .value = .INACTIVE },
+                .FIRST_DATA_BYTE = .INACTIVE,
                 .padding = 0,
             });
 

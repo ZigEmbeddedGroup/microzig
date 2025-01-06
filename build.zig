@@ -18,7 +18,7 @@ const port_list: []const struct {
     name: [:0]const u8,
     dep_name: [:0]const u8,
 } = &.{
-    // .{ .name = "esp", .dep_name = "port/espressif/esp" },
+    .{ .name = "esp", .dep_name = "port/espressif/esp" },
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
     .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
@@ -27,6 +27,15 @@ const port_list: []const struct {
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
+};
+
+const exe_targets: []const std.Target.Query = &.{
+    .{ .cpu_arch = .aarch64, .os_tag = .macos },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux },
+    .{ .cpu_arch = .aarch64, .os_tag = .windows },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
 pub fn build(b: *Build) void {
@@ -54,6 +63,51 @@ pub fn build(b: *Build) void {
 
     const package_step = b.step("package", "Package monorepo using boxzer");
     package_step.dependOn(&boxzer_run.step);
+
+    generate_release_steps(b);
+}
+
+fn generate_release_steps(b: *Build) void {
+    const release_regz_step = b.step("release-regz", "Generate the release binaries for regz");
+    const release_uf2_step = b.step("release-uf2", "Generate the release binaries for uf2");
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const regz_dep = b.dependency("tools/regz", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const regz_artifact = regz_dep.artifact("regz");
+        const regz_target_output = b.addInstallArtifact(regz_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_regz_step.dependOn(&regz_target_output.step);
+    }
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const uf2_dep = b.dependency("tools/uf2", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const uf2_artifact = uf2_dep.artifact("elf2uf2");
+        const uf2_target_output = b.addInstallArtifact(uf2_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_uf2_step.dependOn(&uf2_target_output.step);
+    }
 }
 
 pub const PortSelect = blk: {
@@ -328,12 +382,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{}).artifact("regz");
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .json, .atdf, .svd => |file| blk: {
+                .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
-                    regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+                    regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file

@@ -143,9 +143,9 @@ pub fn Usb(comptime f: anytype) type {
         fn device_endpoint_open(ep_desc: []const u8) void {
             const ep_addr = BosConfig.get_data_u8(ep_desc, 2);
             const ep_transfer_type = BosConfig.get_data_u8(ep_desc, 3);
-            const ep_max_packet_size = BosConfig.get_data_u16(ep_desc, 4);
+            const ep_max_packet_size = @as(u11, @intCast(BosConfig.get_data_u16(ep_desc, 4) & 0x7FF));
 
-            f.endpoint_init(ep_addr, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
+            f.endpoint_open(ep_addr, ep_max_packet_size, types.TransferType.from_u8(ep_transfer_type) orelse types.TransferType.Bulk);
         }
 
         fn device_endpoint_transfer(ep_addr: u8, data: []const u8) void {
@@ -505,26 +505,6 @@ pub fn Usb(comptime f: anytype) type {
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 
 pub const DeviceConfiguration = struct { device_descriptor: *const types.DeviceDescriptor, config_descriptor: []const u8, lang_descriptor: []const u8, descriptor_strings: []const []const u8, drivers: []types.UsbClassDriver };
-
-/// Buffer pointers, once they're prepared and initialized.
-pub const Buffers = struct {
-    /// Fixed EP0 Buffer0, defined by the hardware
-    ep0_buffer0: [*]u8,
-    /// Fixed EP0 Buffer1, defined by the hardware and NOT USED in this driver
-    ep0_buffer1: [*]u8,
-    /// /// Remaining buffer pool
-    rest: [16][*]u8,
-
-    /// Gets a buffer corresponding to a `data_buffer_index` in a
-    /// `EndpointConfiguration`.
-    pub fn get(self: *@This(), i: usize) [*]u8 {
-        return switch (i) {
-            0 => self.ep0_buffer0,
-            1 => self.ep0_buffer1,
-            else => self.rest[i - 2],
-        };
-    }
-};
 
 /// USB interrupt status
 ///

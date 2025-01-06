@@ -264,58 +264,28 @@ pub const Pin = enum(u6) {
         .RP2040 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: packed union {
-                    raw: u5,
-                    value: Function,
-                },
+                FUNCSEL: Function,
                 reserved8: u3,
-                OUTOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OUTOVER: Override,
                 reserved12: u2,
-                OEOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OEOVER: Override,
                 reserved16: u2,
-                INOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                INOVER: Override,
                 reserved28: u10,
-                IRQOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                IRQOVER: Override,
                 padding: u2,
             }),
         },
         .RP2350 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: packed union {
-                    raw: u5,
-                    value: Function,
-                },
+                FUNCSEL: Function,
                 reserved12: u7,
-                OUTOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
-                OEOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
-                INOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OUTOVER: Override,
+                OEOVER: Override,
+                INOVER: Override,
                 reserved28: u10,
-                IRQOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                IRQOVER: Override,
                 padding: u2,
             }),
         },
@@ -471,11 +441,11 @@ pub const Pin = enum(u6) {
 
         const regs = gpio.get_regs();
         regs.ctrl.modify(.{
-            .FUNCSEL = .{ .value = function },
-            .OUTOVER = .{ .value = .normal },
-            .INOVER = .{ .value = .normal },
-            .IRQOVER = .{ .value = .normal },
-            .OEOVER = .{ .value = .normal },
+            .FUNCSEL = function,
+            .OUTOVER = .normal,
+            .INOVER = .normal,
+            .IRQOVER = .normal,
+            .OEOVER = .normal,
         });
 
         switch (chip) {
