@@ -123,10 +123,11 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
 
 pub fn assemble(comptime source: []const u8, comptime options: AssembleOptions) Output {
     var diags: ?Diagnostics = null;
-    return assemble_impl(source, &diags, options) catch |err| if (diags) |d|
-        @compileError(format_compile_error(d.message.slice(), source, d.index))
-    else
-        @compileError(err);
+    return assemble_impl(source, &diags, options) catch |err| {
+        if (diags) |d|
+            @compileError(format_compile_error(d.message.slice(), source, d.index));
+        @compileError(@errorName(err));
+    };
 }
 
 test "tokenizer and encoder" {
