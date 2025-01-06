@@ -36,12 +36,10 @@ pub fn build(b: *std.Build) void {
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
     };
 
-    const rp2350_only_examples: []const Example = &.{
-        // TODO: No RP2350 feature specific examples to show off yet
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm, .name = "ws2812", .file = "src/ws2812.zig" },
-    };
+    const rp2350_only_examples: []const Example = &.{};
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
+        .{ .name = "ws2812", .file = "src/ws2812.zig" },
         // .{ .name = "squarewave", .file = "src/squarewave.zig" },
         // .{ .name = "blinky", .file = "src/blinky.zig" },
         // .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
