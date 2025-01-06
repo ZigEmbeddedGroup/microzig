@@ -45,8 +45,10 @@ const BootromData =
     },
     .RP2350 => switch (arch) {
         .arm => struct {
-            export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
-                Metadata.ImageDef{
+            export const bootloader_data linksection(".bootmeta") = Metadata.Block(.{
+                .image_def = Metadata.ImageDef,
+            }){
+                .image_def = .{
                     .image_type_flags = .{
                         .image_type = .exe,
                         .exe_security = .secure,
@@ -55,60 +57,39 @@ const BootromData =
                         .try_before_you_buy = false,
                     },
                 },
-            });
+            };
         },
         .riscv => struct {
-            export const bootloader_data linksection(".bootmeta") = Metadata.block(.{
-                Metadata.ImageDef{
+            export const bootloader_data: Metadata.Block(.{
+                .image_def = Metadata.ImageDef,
+                .entry_point = Metadata.EntryPoint(false),
+            }) linksection(".bootmeta") = .{
+                .image_def = .{
                     .image_type_flags = .{
                         .image_type = .exe,
-                        .exe_security = .secure,
+                        .exe_security = .non_secure,
                         .cpu = .riscv,
                         .chip = .RP2350,
                         .try_before_you_buy = false,
                     },
                 },
-                Metadata.EntryPoint(false){
-                    .entry = trampoline,
+                .entry_point = .{
+                    .entry = _entry,
                     .sp = microzig.config.end_of_stack,
                 },
-            });
+            };
 
-            export fn trap() callconv(.C) void {
-                const pin_config = microzig.hal.pins.GlobalConfiguration{
-                    .GPIO0 = .{
-                        .name = "led",
-                        .direction = .out,
-                    },
-                };
-                const pins = pin_config.apply();
-                pins.led.toggle();
-
-                while (true) {}
-            }
-
-            export fn trampoline() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+            export fn _entry() callconv(.Naked) noreturn {
                 asm volatile (
                     \\.option push
                     \\.option norelax
                     \\la gp, __global_pointer$
                     \\.option pop
-                );
-
-                asm volatile (
-                    \\mv sp, %[eos]
-                    :
-                    : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
-                );
-
-                asm volatile (
-                    \\la a0, trap
-                    \\csrw mtvec, a0
                     \\
                     \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
                     \\bnez a0, reenter_bootrom
                     \\
-                    \\call _start
+                    \\j _start
                     \\
                     \\reenter_bootrom:
                     \\li a0, 0x7dfc
@@ -119,19 +100,45 @@ const BootromData =
     },
 };
 
-/// Documentation taken from section 5.9.5.1 of the rp2350 datasheet
 pub const Metadata = struct {
-    fn Extern(Any: type) type {
+    /// Documentation taken from section 5.9.5.1 of the rp2350 datasheet
+    pub fn Block(layout: anytype) type {
         var fields: []const std.builtin.Type.StructField = &.{};
-        for (@typeInfo(Any).Struct.fields) |item_field| {
+
+        fields = fields ++ [_]std.builtin.Type.StructField{.{
+            .name = "_default0",
+            .type = u32,
+            .default_value = @as(*const anyopaque, @ptrCast(&@as(u32, 0xffffded3))),
+            .is_comptime = false,
+            .alignment = 4,
+        }};
+
+        comptime var size = 0;
+        for (@typeInfo(@TypeOf(layout)).Struct.fields) |field| {
+            size += @sizeOf(@field(layout, field.name));
+
             fields = fields ++ [_]std.builtin.Type.StructField{.{
-                .name = item_field.name,
-                .type = item_field.type,
+                .name = field.name,
+                .type = @field(layout, field.name),
                 .default_value = null,
                 .is_comptime = false,
-                .alignment = 0,
+                .alignment = 4,
             }};
         }
+
+        const Default1 = extern struct {
+            last_item: u32 = 0x000000ff | ((size / 4) << 8),
+            link: u32 = 0,
+            footer: u32 = 0xab123579,
+        };
+
+        fields = fields ++ [_]std.builtin.Type.StructField{.{
+            .name = "_default1",
+            .type = Default1,
+            .default_value = @as(*const anyopaque, @ptrCast(&@as(Default1, .{}))),
+            .is_comptime = false,
+            .alignment = 4,
+        }};
 
         return @Type(.{
             .Struct = .{
@@ -141,26 +148,6 @@ pub const Metadata = struct {
                 .is_tuple = false,
             },
         });
-    }
-
-    fn BlockType(Items: type) type {
-        return extern struct {
-            header: u32,
-            user_items: Extern(Items),
-            last_item: u32,
-            link: u32,
-            footer: u32,
-        };
-    }
-
-    pub fn block(items: anytype) BlockType(@TypeOf(items)) {
-        return .{
-            .header = 0xffffded3,
-            .user_items = items,
-            .last_item = 0x000000ff | ((@sizeOf(Extern(@TypeOf(items))) / 4) << 8),
-            .link = 0,
-            .footer = 0xab123579,
-        };
     }
 
     pub const ImageDef = packed struct {
@@ -196,15 +183,15 @@ pub const Metadata = struct {
             try_before_you_buy: bool,
         };
 
-        type: u8 = 0x42,
-        block_size: u8 = 0x01,
+        _default0: u8 = 0x42,
+        _default1: u8 = 0x01,
         image_type_flags: ImageTypeFlags,
     };
 
     pub fn EntryPoint(with_stack_limit: bool) type {
         if (with_stack_limit) {
             return extern struct {
-                header: packed struct {
+                _default0: packed struct {
                     item_type: u8 = 0x44,
                     block_size: u8 = 0x04,
                     padding: u16 = 0,
@@ -215,7 +202,7 @@ pub const Metadata = struct {
             };
         } else {
             return extern struct {
-                header: packed struct {
+                _default0: packed struct {
                     item_type: u8 = 0x44,
                     block_size: u8 = 0x03,
                     padding: u16 = 0,

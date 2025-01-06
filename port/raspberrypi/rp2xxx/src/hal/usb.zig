@@ -6,6 +6,7 @@ const std = @import("std");
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const chip = microzig.hal.compatibility.chip;
 
 /// Human Interface Device (HID)
 pub const usb = microzig.core.usb;
@@ -159,6 +160,12 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
+            if (chip == .RP2350) {
+                peripherals.USB.MAIN_CTRL.modify(.{
+                    .PHY_ISO = 0,
+                });
+            }
+
             // Clear the control portion of DPRAM. This may not be necessary -- the
             // datasheet is ambiguous -- but the C examples do it, and so do we.
             peripherals.USB_DPRAM.SETUP_PACKET_LOW.write_raw(0);

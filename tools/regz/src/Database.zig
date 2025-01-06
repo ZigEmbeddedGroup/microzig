@@ -126,6 +126,7 @@ pub const Arch = enum {
     qingke_v2,
     qingke_v3,
     qingke_v4,
+    hazard3,
 
     pub fn to_string(arch: Arch) []const u8 {
         return inline for (@typeInfo(Arch).Enum.fields) |field| {
@@ -186,9 +187,11 @@ pub const Arch = enum {
 
     pub fn is_riscv(arch: Arch) bool {
         return switch (arch) {
-            .qingke_v2 => true,
-            .qingke_v3 => true,
-            .qingke_v4 => true,
+            .qingke_v2,
+            .qingke_v3,
+            .qingke_v4,
+            .hazard3,
+            => true,
             else => false,
         };
     }
@@ -1024,6 +1027,12 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
 
     for (list.items) |entry| {
         switch (entry.value) {
+            .override_arch => |override_arch| {
+                const device_id = try db.get_entity_id_by_name("instance.device", override_arch.device_name);
+                if (db.instances.devices.getPtr(device_id)) |device| {
+                    device.arch = override_arch.arch;
+                }
+            },
             .add_enum => |added_enum| {
                 const parent_id = try db.get_entity_id_by_ref(added_enum.parent);
                 // TODO: parent constraints
