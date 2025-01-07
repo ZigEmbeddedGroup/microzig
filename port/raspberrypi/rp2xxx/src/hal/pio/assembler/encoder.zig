@@ -18,7 +18,7 @@ pub const Options = struct {
 
 pub fn encode(
     comptime cpu: CPU,
-    comptime tokens: []const Token(cpu),
+    tokens: []const Token(cpu),
     diags: *?assembler.Diagnostics,
     comptime options: Options,
 ) !Encoder(cpu, options).Output {
@@ -77,20 +77,24 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
             wrap_target: ?u5,
             wrap: ?u5,
 
-            pub fn to_exported_program(comptime bounded: BoundedProgram) assembler.Program {
-                comptime var program_name: [bounded.name.len]u8 = undefined;
-                std.mem.copyForwards(u8, &program_name, bounded.name);
+            pub fn to_exported_program(bounded: BoundedProgram) !assembler.Program {
+                const program_name = try std.heap.page_allocator.alloc(u8, bounded.name.len);
+                defer std.heap.page_allocator.free(program_name);
+                // var program_name: [bounded.name.len]u8 = undefined;
+                std.mem.copyForwards(u8, program_name, bounded.name);
                 const name_const = program_name;
                 return assembler.Program{
-                    .name = &name_const,
+                    .name = name_const,
                     .defines = blk: {
                         var tmp = std.BoundedArray(assembler.Define, options.max_defines).init(0) catch unreachable;
                         for (bounded.defines.slice()) |define| {
-                            comptime var define_name: [define.name.len]u8 = undefined;
-                            std.mem.copyForwards(u8, &define_name, define.name);
+                            // comptime var define_name: [define.name.len]u8 = undefined;
+                            const define_name = try std.heap.page_allocator.alloc(u8, define.name.len);
+                            defer std.heap.page_allocator.free(define_name);
+                            std.mem.copyForwards(u8, define_name, define.name);
                             const const_def_name = define_name;
                             tmp.append(.{
-                                .name = &const_def_name,
+                                .name = const_def_name,
                                 .value = @as(i64, @intCast(define.value)),
                             }) catch unreachable;
                         }
@@ -362,12 +366,16 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                         .source = mov.source,
                     },
                 },
+                // TODO: Can we make it s/t these prongs only exist for .RP2350?
                 // NOTE: These instructions values only exist for RP2350
-                .movtorx => |mov| .{
-                    .movtorx = .{
-                        .idx = mov.idx,
-                        .idxl = @intFromBool(mov.idxl),
-                    },
+                .movtorx => |mov| blk: {
+                    std.debug.print("Got movtorx\n", .{});
+                    break :blk .{
+                        .movtorx = .{
+                            .idx = mov.idx,
+                            .idxl = @intFromBool(mov.idxl),
+                        },
+                    };
                 },
                 .movfromrx => |mov| .{
                     .movfromrx = .{
@@ -536,6 +544,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
             const program_token = self.get_token() orelse return null;
             if (program_token.data != .program)
                 return error.ExpectedProgramToken;
+            std.debug.print("Program token {s}\n", .{program_token.data.program});
 
             var program = BoundedProgram{
                 .name = program_token.data.program,
@@ -551,6 +560,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
 
             try self.encode_program_init(&program, diags);
             try self.encode_instruction_body(&program, diags);
+            std.debug.print("Program token {any}\n", .{program.instructions});
 
             return program;
         }
@@ -580,6 +590,8 @@ pub fn Instruction(comptime cpu: CPU) type {
             push: Push,
             pull: Pull,
             mov: Mov,
+            // TODO: If CPU stuff else noreturn (doesn't work?)
+            // packed unions cannot contain fields of type 'noreturn'
             movtorx: MovToRx,
             movfromrx: MovFromRx,
             irq: Irq,

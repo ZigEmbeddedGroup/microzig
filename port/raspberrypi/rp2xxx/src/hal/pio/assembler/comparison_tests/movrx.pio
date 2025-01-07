@@ -1,13 +1,20 @@
 .program movrx
 
 .wrap_target
+    ; mov to rx
     mov rxfifoy, isr
     mov rxfifo0, isr
     mov rxfifo1, isr
     mov rxfifo2, isr
     mov rxfifo3, isr
+    ;mov rxfifo4, isr ; bad index
+    ;mov rxfifo3, xsr ; bad source
 
+    ; mov from rx
     mov osr, rxfifoy
+    ;mov osr, rxfifog ; bad source index (unparseable)
+    ;mov osr, rxfifo4 ; bad source index (>3)
+    ;mov osr, xxfifoy ; bad source
 ;    mov osr, rxfifo0
 ;    mov osr, rxfifo1
 ;    mov osr, rxfifo2
