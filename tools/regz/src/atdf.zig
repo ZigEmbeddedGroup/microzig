@@ -12,7 +12,6 @@ const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
 const xml = @import("xml.zig");
-const arm = @import("arch/arm.zig");
 
 const log = std.log.scoped(.atdf);
 
@@ -101,12 +100,6 @@ fn load_device(ctx: *Context, node: xml.Node) !void {
         try load_param(ctx, param_node, device_id);
 
     //try infer_peripheral_offsets(ctx);
-
-    // system interrupts
-    if (arch.is_arm()) {
-        const device = try db.get_device_by_name(ctx.arena.allocator(), name);
-        try arm.load_system_interrupts(db, &device);
-    }
 
     // TODO: maybe others?
 

@@ -18,14 +18,14 @@ SECTIONS
   .flash_start :
   {
     KEEP(*(microzig_flash_start))
-  }
+  } > flash0
 
   .bootmeta :
   {
     __bootmeta_start__ = .;
-    KEEP (*(.bootmeta))
+    KEEP(*(.bootmeta))
     __bootmeta_end__ = .;
-  }
+  } > flash0
 
   .text :
   {

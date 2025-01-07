@@ -58,6 +58,11 @@ pub const startup_logic = struct {
 
     pub fn _start() callconv(.C) noreturn {
         asm volatile (
+            \\.option push
+            \\.option norelax
+            \\la gp, __global_pointer$
+            \\.option pop
+            \\
             \\la a0, _trap_entry
             \\csrw mtvec, a0
         );
@@ -145,6 +150,7 @@ pub const startup_logic = struct {
 pub fn export_startup_logic() void {
     @export(startup_logic._start, .{
         .name = "_start",
+        .section = "microzig_flash_start",
     });
 }
 

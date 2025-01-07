@@ -1989,6 +1989,20 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
 
     for (list.items) |patch| {
         switch (patch.value) {
+            .override_arch => |override_arch| {
+                const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                try db.exec(
+                    \\UPDATE devices
+                    \\SET arch = ?
+                    \\WHERE id = ?;
+                , .{
+                    .arch = override_arch.arch,
+                    .device_id = device_id,
+                });
+            },
             .add_enum => |add_enum| {
                 const struct_id = try db.get_struct_ref(add_enum.parent);
 

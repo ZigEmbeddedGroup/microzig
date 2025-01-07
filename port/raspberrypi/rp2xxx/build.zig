@@ -98,6 +98,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
+            .cpu_module_file = b.path("src/cpus/hazard3.zig"),
             .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },

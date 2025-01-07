@@ -4,7 +4,6 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const xml = @import("xml.zig");
-const arm = @import("arch/arm.zig");
 
 const Database = @import("Database.zig");
 const Access = Database.Access;
@@ -162,11 +161,6 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
     // TODO: derive entities here
     try derive_peripherals(&ctx, device_id);
-
-    if (arch.is_arm()) {
-        const device = try db.get_device_by_name(arena.allocator(), name);
-        try arm.load_system_interrupts(db, &device);
-    }
 }
 
 fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {

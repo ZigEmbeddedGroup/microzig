@@ -62,7 +62,6 @@ const BootromData =
         .riscv => struct {
             export const bootloader_data: Metadata.Block(.{
                 .image_def = Metadata.ImageDef,
-                .entry_point = Metadata.EntryPoint(false),
             }) linksection(".bootmeta") = .{
                 .image_def = .{
                     .image_type_flags = .{
@@ -73,29 +72,21 @@ const BootromData =
                         .try_before_you_buy = false,
                     },
                 },
-                .entry_point = .{
-                    .entry = _entry,
-                    .sp = microzig.config.end_of_stack,
-                },
             };
 
-            export fn _entry() callconv(.Naked) noreturn {
-                asm volatile (
-                    \\.option push
-                    \\.option norelax
-                    \\la gp, __global_pointer$
-                    \\.option pop
-                    \\
-                    \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
-                    \\bnez a0, reenter_bootrom
-                    \\
-                    \\j _start
-                    \\
-                    \\reenter_bootrom:
-                    \\li a0, 0x7dfc
-                    \\jr a0
-                );
-            }
+            // export fn _entry() callconv(.Naked) noreturn {
+            //     asm volatile (
+            //         \\
+            //         \\csrr a0, mhartid // if core 1 gets here (through a miracle), send it back to bootrom
+            //         \\bnez a0, reenter_bootrom
+            //         \\
+            //         \\j _start
+            //         \\
+            //         \\reenter_bootrom:
+            //         \\li a0, 0x7dfc
+            //         \\jr a0
+            //     );
+            // }
         },
     },
 };
