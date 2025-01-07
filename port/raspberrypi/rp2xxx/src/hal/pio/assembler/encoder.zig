@@ -663,7 +663,7 @@ pub fn Instruction(comptime cpu: CPU) type {
         pub const MovFromRx = packed struct(u8) {
             idx: u3,
             idxl: u1,
-            _reserved0: u4 = 0,
+            _reserved0: u4 = 9,
         };
 
         pub const Set = packed struct(u8) {

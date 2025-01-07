@@ -790,19 +790,23 @@ pub fn Tokenizer(cpu: CPU) type {
         }
 
         fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+            // TODO: Assuming one space after opcode
+            const dest_idx = self.index + 1;
             const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str);
+            // TODO: Assuming comma and one space
+            const source_idx = self.index + 2;
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const source_lower = try lowercase_bounded(256, source_str);
             if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 // MOV (to RX)
                 // -- Source must be isr
                 if (!std.mem.eql(u8, source_lower.slice(), "isr")) {
-                    diags.* = Diagnostics.init(self.index, "mov (to rx): source must be isr", .{});
+                    diags.* = Diagnostics.init(source_idx, "mov (to rx): source must be isr", .{});
                     return error.InvalidSource;
                 }
-                const dest_index = dest_lower.slice()["rxfifo".len - 0 ..];
-                if (dest_index[0] == 'y') {
+                const dest_index_char = dest_lower.slice()["rxfifo".len - 0 ..];
+                if (dest_index_char[0] == 'y') {
                     return Token(cpu).Instruction.Payload{
                         .movtorx = .{
                             .idxl = true,
@@ -811,15 +815,17 @@ pub fn Tokenizer(cpu: CPU) type {
                     };
                 } else {
                     // -- Parse out the index
-                    const value = try std.fmt.parseInt(u8, dest_index, 10);
+                    diags.* = Diagnostics.init(
+                        dest_idx,
+                        // @intCast(self.index - dest_str.len + 1),
+                        "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
+                        .{},
+                    );
+                    const value = try std.fmt.parseInt(u8, dest_index_char, 10);
                     if (value > 3) {
-                        diags.* = Diagnostics.init(
-                            self.index - dest_str.len + 1,
-                            "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
-                            .{},
-                        );
                         return error.InvalidDestination;
                     }
+                    diags.* = null;
                     return Token(cpu).Instruction.Payload{
                         .movtorx = .{
                             .idxl = false,
@@ -831,16 +837,34 @@ pub fn Tokenizer(cpu: CPU) type {
                 // MOV (from RX)
                 var idxl: bool = false;
                 var idx: u3 = 0;
-                if (std.mem.eql(u8, source_lower.slice(), "rxfifoy")) {
-                    idxl = true;
-                    idx = 0;
-                } else if (std.mem.startsWith(u8, source_lower.slice(), "rxfifo")) {
-                    // TODO: Parse out the index
-                    idxl = false;
-                    idx = 0;
+                if (std.mem.startsWith(u8, source_lower.slice(), "rxfifo")) {
+                    const src_index_char = source_lower.slice()["rxfifo".len - 0 ..];
+                    if (src_index_char[0] == 'y') {
+                        idxl = true;
+                        idx = 0;
+                    } else {
+                        // -- Parse out the index
+                        idxl = false;
+                        idx = 0;
+                        diags.* = Diagnostics.init(
+                            @intCast(source_idx + "rxfifo".len),
+                            "mov (from rx): x source must be rxfifoy or rxfifo[<index>]",
+                            .{},
+                        );
+                        const value = try std.fmt.parseInt(u8, src_index_char, 10);
+                        if (value > 3) {
+                            return error.InvalidSource;
+                        }
+                    }
                 } else {
+                    diags.* = Diagnostics.init(
+                        @intCast(self.index - source_str.len),
+                        "mov (from rx): y source must be rxfifoy or rxfifo[<index>]",
+                        .{},
+                    );
                     return error.InvalidSource;
                 }
+                diags.* = null;
                 return Token(cpu).Instruction.Payload{
                     .movfromrx = .{
                         .idxl = idxl,
@@ -848,6 +872,11 @@ pub fn Tokenizer(cpu: CPU) type {
                     },
                 };
             } else {
+                diags.* = Diagnostics.init(
+                    dest_idx,
+                    "unknown destination",
+                    .{},
+                );
                 return error.InvalidDestination;
             }
         }
