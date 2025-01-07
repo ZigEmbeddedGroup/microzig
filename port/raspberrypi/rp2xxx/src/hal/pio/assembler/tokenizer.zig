@@ -206,6 +206,11 @@ pub fn Tokenizer(cpu: CPU) type {
             self.index = result.start + @as(u32, @intCast(result.str.len));
         }
 
+        fn unconsume(self: *Self, result: PeekResult) void {
+            assert(self.index > result.start);
+            self.index = result.start;
+        }
+
         /// gets next arg without consuming the stream
         fn peek_arg_impl(
             self: *Self,
@@ -744,7 +749,24 @@ pub fn Tokenizer(cpu: CPU) type {
                 return try self.get_movrx(diags);
             }
 
+            // NOTE: Destination MUST be OSR for mov (from rx) but the normal
+            // mov can also have OSR as the destination, so we need to peek to
+            // the source and look for rxfifo. To peek twice we have to consume
+            // the first peek, but if we find it's mov from rx, then we need to
+            // unconsume the first arg, so that the tokenizer is in the right
+            // state when we call get_movrx
+            //
+            // Determine if it's a mov from rx based on source
             self.consume_peek(dest_str);
+            const peek_source_str = try self.peek_arg(diags) orelse return error.MissingArg;
+            const peek_source_lower = try lowercase_bounded(256, peek_source_str.str);
+            // If the destination is osr, and the source is rxfifo_ or rxfifoy, then it's a mov (from) rx instruction
+            if (cpu == .RP2350 and std.mem.startsWith(u8, peek_source_lower.slice(), "rxfifo")) {
+                // Need to unconsume first arg
+                self.unconsume(dest_str);
+
+                return try self.get_movrx(diags);
+            }
 
             const destination = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
 
@@ -848,7 +870,7 @@ pub fn Tokenizer(cpu: CPU) type {
                         idx = 0;
                         diags.* = Diagnostics.init(
                             @intCast(source_idx + "rxfifo".len),
-                            "mov (from rx): x source must be rxfifoy or rxfifo[<index>]",
+                            "mov (from rx): source must be rxfifoy or rxfifo[<index>]",
                             .{},
                         );
                         const value = try std.fmt.parseInt(u8, src_index_char, 10);
@@ -859,7 +881,7 @@ pub fn Tokenizer(cpu: CPU) type {
                 } else {
                     diags.* = Diagnostics.init(
                         @intCast(self.index - source_str.len),
-                        "mov (from rx): y source must be rxfifoy or rxfifo[<index>]",
+                        "mov (from rx): source must be rxfifoy or rxfifo[<index>]",
                         .{},
                     );
                     return error.InvalidSource;
