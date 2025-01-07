@@ -100,9 +100,9 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     var line_it = std.mem.tokenize(u8, source, "\n\r");
     while (line_it.next()) |line| : (line_num += 1) {
         line_str = line_str ++ "\n" ++ line;
-        @compileLog(line.len, line_it.index, index);
+        // If the line iterator is overlapping the provided index, then we are on the correct line
+        if (line_it.index >= index) {
         // Calculate the column
-        if (line_it.index > index) {
             column = line.len - (line_it.index - index);
             line_str = line;
             break;
