@@ -745,6 +745,7 @@ pub fn Tokenizer(cpu: CPU) type {
             }
 
             self.consume_peek(dest_str);
+            diags.* = Diagnostics.init(self.index, "hello {}", .{self.index});
 
             const destination = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
 
@@ -767,6 +768,7 @@ pub fn Tokenizer(cpu: CPU) type {
                 second;
 
             const source_lower = try lowercase_bounded(256, source_str);
+            diags.* = Diagnostics.init(self.index, "hello {}", .{self.index});
             const source = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Source, source_lower.slice()) orelse return error.InvalidSource;
             const operation: Token(cpu).Instruction.Mov.Operation = if (op_prefixed) |op_str|
                 if (std.mem.eql(u8, "!", op_str))
