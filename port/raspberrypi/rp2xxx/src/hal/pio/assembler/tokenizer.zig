@@ -794,32 +794,39 @@ pub fn Tokenizer(cpu: CPU) type {
             const dest_lower = try lowercase_bounded(256, dest_str);
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const source_lower = try lowercase_bounded(256, source_str);
-            if (std.mem.eql(u8, dest_lower.slice(), "rxfifoy")) {
+            if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 // MOV (to RX)
-                // Second arg must be isr
-                if (!std.mem.eql(u8, source_lower.slice(), "isr"))
+                // -- Source must be isr
+                if (!std.mem.eql(u8, source_lower.slice(), "isr")) {
+                    diags.* = Diagnostics.init(self.index, "mov (to rx): source must be isr", .{});
                     return error.InvalidSource;
-
-                return Token(cpu).Instruction.Payload{
-                    .movtorx = .{
-                        .idxl = true,
-                        .idx = 0,
-                    },
-                };
-            } else if (std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
-                // MOV (to RX)
-                // -- Parse out the index
-                const dest_index = dest_lower.slice()["rxfifo".len - 0 ..];
-                const value = try std.fmt.parseInt(u8, dest_index, 11);
-                if (value > 3) {
-                    return error.InvalidDestination;
                 }
-                return Token(cpu).Instruction.Payload{
-                    .movtorx = .{
-                        .idxl = false,
-                        .idx = @intCast(value),
-                    },
-                };
+                const dest_index = dest_lower.slice()["rxfifo".len - 0 ..];
+                if (dest_index[0] == 'y') {
+                    return Token(cpu).Instruction.Payload{
+                        .movtorx = .{
+                            .idxl = true,
+                            .idx = 0,
+                        },
+                    };
+                } else {
+                    // -- Parse out the index
+                    const value = try std.fmt.parseInt(u8, dest_index, 10);
+                    if (value > 3) {
+                        diags.* = Diagnostics.init(
+                            self.index - dest_str.len + 1,
+                            "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
+                            .{},
+                        );
+                        return error.InvalidDestination;
+                    }
+                    return Token(cpu).Instruction.Payload{
+                        .movtorx = .{
+                            .idxl = false,
+                            .idx = @intCast(value),
+                        },
+                    };
+                }
             } else if (std.mem.eql(u8, dest_lower.slice(), "osr")) {
                 // MOV (from RX)
                 var idxl: bool = false;
