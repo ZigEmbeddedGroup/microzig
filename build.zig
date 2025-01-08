@@ -448,6 +448,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .imports = options.imports,
             });
             app_mod.addImport("microzig", core_mod);
+            core_mod.addImport("app", app_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{

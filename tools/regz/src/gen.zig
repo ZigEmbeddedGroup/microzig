@@ -263,14 +263,14 @@ fn write_interrupt_indices(
     const writer = buffer.writer();
 
     try writer.writeAll(
-        \\pub const interrupts = struct {
+        \\pub const Interrupts = enum(i16) {
         \\
     );
 
     const interrupts = try db.get_interrupts(arena, device.id);
     for (interrupts) |interrupt| {
         try writer.print(
-            \\    pub const {s} = {};
+            \\    {s} = {},
             \\
         ,
             .{ interrupt.name, interrupt.idx },

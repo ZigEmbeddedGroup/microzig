@@ -27,6 +27,11 @@ pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
+pub const image_def = @import("hal/image_def.zig");
+
+comptime {
+    _ = image_def;
+}
 
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific
