@@ -4,12 +4,10 @@ const microzig = @import("microzig");
 
 pub fn enable_interrupts() void {
     @panic("TODO");
-    // asm volatile ("sei");
 }
 
 pub fn disable_interrupts() void {
     @panic("TODO");
-    // asm volatile ("cli");
 }
 
 pub fn wfi() void {
@@ -60,40 +58,9 @@ pub const startup_logic = struct {
     }
 
     pub fn trap_handler() callconv(.C) void {
-        var mcause: u32 = 0;
-        asm volatile ("csrr %[mcause], mcause"
-            : [mcause] "+r" (mcause),
-            :
-            : "memory"
-        );
-
-        var mepc: u32 = undefined;
-        asm volatile ("csrr %[mepc], mepc"
-            : [mepc] "+r" (mepc),
-            :
-            : "memory"
-        );
-        mepc += 4;
-        asm volatile ("csrw mepc, %[mepc]"
-            :
-            : [mepc] "r" (mepc),
-            : "memory"
-        );
-
-        const is_interrupt = (mcause >> 31) == 1;
-        const code = mcause & ~@as(u32, @intCast(1 << 31));
-
-        if (is_interrupt) {
-            std.log.info("interrupt occured with code {}", .{code});
-        } else {
-            std.log.info("exception occured with code {}", .{code});
-            while (true) {}
-        }
+        // TODO: something useful
+        @panic("trap occured");
     }
-
-    pub const TrapFrame = extern struct {
-        ra: u32,
-    };
 };
 
 pub const vector_table = wrap_trap_handler(startup_logic.trap_handler);
