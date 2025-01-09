@@ -3,11 +3,11 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const cpu = @import("compatibility.zig").cpu;
+const chip = @import("compatibility.zig").chip;
 
 // Re-export of platform rectified pio implementation
 const common = @import("pio/common.zig");
-const chip_specific = switch (cpu) {
+const chip_specific = switch (chip) {
     .RP2040 => @import("pio/rp2040.zig"),
     .RP2350 => @import("pio/rp2350.zig"),
 };
@@ -27,7 +27,7 @@ pub const Program = assembler.Program;
 pub const assemble = assembler.assemble;
 
 pub fn num(n: u2) Pio {
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             if (n > 1)
                 @panic("the RP2040 only has PIO0 and PIO1");
