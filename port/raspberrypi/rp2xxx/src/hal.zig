@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
@@ -30,7 +31,10 @@ pub const compatibility = @import("hal/compatibility.zig");
 pub const image_def = @import("hal/image_def.zig");
 
 comptime {
-    _ = image_def;
+    // HACK: tests can't access microzig. maybe there's a better way to do this.
+    if (!builtin.is_test) {
+        _ = image_def;
+    }
 }
 
 /// A default clock configuration with sensible defaults that will work
