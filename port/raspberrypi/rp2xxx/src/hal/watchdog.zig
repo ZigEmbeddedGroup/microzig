@@ -3,10 +3,10 @@ const microzig = @import("microzig");
 const WATCHDOG = microzig.chip.peripherals.WATCHDOG;
 const PSM = microzig.chip.peripherals.PSM;
 const hw = @import("hw.zig");
-const cpu = @import("compatibility.zig").cpu;
+const chip = @import("compatibility.zig").chip;
 
 pub const Config =
-    switch (cpu) {
+    switch (chip) {
     .RP2040 => struct {
         // See errata RP2040-E1, duration ends up getting multiplied by 2 reducing the allowable delay range
         duration_us: u23,
@@ -27,7 +27,7 @@ pub fn apply(config: Config) void {
     // Disable WD during changing settings
     disable();
 
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => hw.set_alias(&PSM.WDSEL).write(.{
             .ROSC = 0,
             .XOSC = 0,
@@ -80,7 +80,7 @@ pub fn apply(config: Config) void {
     // Tell RESETS hardware to reset everything except ROSC/XOSC on a watchdog reset
 
     // See errata RP2040-E1, duration needs to be multiplied by 2 for RP2040
-    const duration: u24 = if (cpu == .RP2040) @as(u24, config.duration_us) << 1 else config.duration_us;
+    const duration: u24 = if (chip == .RP2040) @as(u24, config.duration_us) << 1 else config.duration_us;
     WATCHDOG.LOAD.write(.{
         .LOAD = duration,
         .padding = 0,
@@ -140,7 +140,7 @@ pub fn update(delay_us: ?u24) void {
     var duration_us: u24 = if (delay_us) |nd| nd else if (previous_watchdog_delay) |pd| pd else std.debug.panic("update() called before watchdog configured with apply()", .{});
 
     // See errata RP2040-E1, duration needs to be multiplied by 2 for RP2040
-    if (cpu == .RP2040) duration_us = duration_us << 1;
+    if (chip == .RP2040) duration_us = duration_us << 1;
     WATCHDOG.LOAD.write(.{
         .LOAD = duration_us,
         .padding = 0,
@@ -169,7 +169,7 @@ pub inline fn force() void {
 ///       ticks. RP2350 functions as expected.
 pub fn remaining_us() u24 {
     const rd = WATCHDOG.CTRL.read();
-    return switch (cpu) {
+    return switch (chip) {
         .RP2040 => rd.TIME / 2,
         .RP2350 => rd.TIME,
     };
