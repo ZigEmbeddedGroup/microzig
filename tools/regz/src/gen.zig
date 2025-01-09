@@ -154,9 +154,6 @@ fn write_device(db: *Database, arena: Allocator, device: *const Database.Device,
         try writer.writeAll("};\n");
     }
 
-    write_interrupt_indices(db, arena, device, writer) catch |err|
-        log.warn("failed to write interrupt indices: {}", .{err});
-
     write_vector_table(db, arena, device, writer) catch |err|
         log.warn("failed to write vector table: {}", .{err});
 
@@ -249,40 +246,6 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
 
     log.debug("generated type ref: {s}", .{full_name.items});
     return full_name.toOwnedSlice();
-}
-
-fn write_interrupt_indices(
-    db: *Database,
-    arena: Allocator,
-    device: *const Device,
-    out_writer: anytype,
-) !void {
-    var buffer = std.ArrayList(u8).init(arena);
-    defer buffer.deinit();
-
-    const writer = buffer.writer();
-
-    try writer.writeAll(
-        \\pub const Interrupts = enum(i16) {
-        \\
-    );
-
-    const interrupts = try db.get_interrupts(arena, device.id);
-    for (interrupts) |interrupt| {
-        try writer.print(
-            \\    {s} = {},
-            \\
-        ,
-            .{ interrupt.name, interrupt.idx },
-        );
-    }
-
-    try writer.writeAll(
-        \\};
-        \\
-    );
-
-    try out_writer.writeAll(buffer.items);
 }
 
 fn write_vector_table(

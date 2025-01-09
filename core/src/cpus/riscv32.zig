@@ -57,15 +57,6 @@ pub const startup_logic = struct {
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.C) noreturn {
-        asm volatile (
-            \\.option push
-            \\.option norelax
-            \\la gp, __global_pointer$
-            \\.option pop
-            \\
-            \\la a0, _trap_entry
-            \\csrw mtvec, a0
-        );
 
         // fill .bss with zeroes
         {
@@ -88,90 +79,13 @@ pub const startup_logic = struct {
 
         microzig_main();
     }
-
-    export fn _trap_entry() align(16) callconv(.Naked) noreturn {
-        asm volatile (std.fmt.comptimePrint("addi sp, sp, -{}", .{@sizeOf(TrapFrame)}));
-
-        inline for (@typeInfo(TrapFrame).Struct.fields, 0..) |field, i| {
-            asm volatile (std.fmt.comptimePrint("sw {s}, 4*{}(sp)", .{ field.name, i }));
-        }
-
-        asm volatile (
-            \\add a0, sp, zero
-            \\jal ra, trap_handler
-        );
-
-        inline for (@typeInfo(TrapFrame).Struct.fields, 0..) |field, i| {
-            asm volatile (std.fmt.comptimePrint("lw {s}, 4*{}(sp)", .{ field.name, i }));
-        }
-
-        asm volatile (std.fmt.comptimePrint("addi sp, sp, {}", .{@sizeOf(TrapFrame)}));
-
-        asm volatile (
-            \\ mret
-        );
-    }
-
-    export fn trap_handler(frame: *const TrapFrame) callconv(.C) void {
-        _ = frame; // autofix
-
-        var mcause: u32 = 0;
-        asm volatile ("csrr %[mcause], mcause"
-            : [mcause] "+r" (mcause),
-            :
-            : "memory"
-        );
-
-        var mepc: u32 = undefined;
-        asm volatile ("csrr %[mepc], mepc"
-            : [mepc] "+r" (mepc),
-            :
-            : "memory"
-        );
-        mepc += 4;
-        asm volatile ("csrw mepc, %[mepc]"
-            :
-            : [mepc] "r" (mepc),
-            : "memory"
-        );
-
-        const is_interrupt = (mcause >> 31) == 1;
-        const code = mcause & ~@as(u32, @intCast(1 << 31));
-
-        if (is_interrupt) {
-            std.log.info("interrupt occured with code {}", .{code});
-        } else {
-            std.log.info("exception occured with code {}", .{code});
-            while (true) {}
-        }
-    }
 };
 
 pub fn export_startup_logic() void {
     @export(startup_logic._start, .{
         .name = "_start",
-        .section = "microzig_flash_start",
     });
 }
-
-pub const TrapFrame = extern struct {
-    ra: u32,
-    t0: u32,
-    t1: u32,
-    t2: u32,
-    t3: u32,
-    t4: u32,
-    t5: u32,
-    t6: u32,
-    a0: u32,
-    a1: u32,
-    a2: u32,
-    a3: u32,
-    a4: u32,
-    a5: u32,
-    a6: u32,
-    a7: u32,
-};
 
 pub const MSTATUS_UIE = 0x00000001;
 pub const MSTATUS_SIE = 0x00000002;

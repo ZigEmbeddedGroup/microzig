@@ -1,6 +1,5 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const arch = microzig.hal.compatibility.arch;
 const chip = microzig.hal.compatibility.chip;
 
 comptime {
