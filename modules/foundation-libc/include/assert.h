@@ -40,6 +40,8 @@ extern FOUNDATION_LIBC_NORETURN void foundation_libc_assert(char const * asserti
 #error "bad definition of FOUNDATION_LIBC_ASSERT_DEFAULT!"
 #endif
 
+#if !defined(__cplusplus)
 #define static_assert FOUNDATION_LIBC_STATIC_ASSERT
+#endif
 
 #endif
