@@ -12,6 +12,8 @@
 #define FOUNDATION_LIBC_ASSERT FOUNDATION_LIBC_ASSERT_DEFAULT
 #endif
 
+#define FOUNDATION_LIBC_STATIC_ASSERT _Static_assert
+
 #if defined(__clang__)
 
 #define FOUNDATION_LIBC_NORETURN __attribute__((__noreturn__))
