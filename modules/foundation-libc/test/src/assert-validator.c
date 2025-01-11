@@ -23,3 +23,7 @@ void assert_ok(void) {
 void assert_bad(void) {
     assert(0);
 }
+
+void assert_static(void) {
+    static_assert(sizeof(int) == sizeof(int), "int size check");
+}

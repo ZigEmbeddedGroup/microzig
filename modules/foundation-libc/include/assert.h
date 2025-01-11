@@ -41,6 +41,7 @@ extern FOUNDATION_LIBC_NORETURN void foundation_libc_assert(char const * asserti
 #endif
 
 #if !defined(__cplusplus)
+#undef static_assert
 #define static_assert FOUNDATION_LIBC_STATIC_ASSERT
 #endif
 
