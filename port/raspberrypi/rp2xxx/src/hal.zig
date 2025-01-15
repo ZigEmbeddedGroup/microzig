@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
@@ -15,7 +16,7 @@ pub const pwm = @import("hal/pwm.zig");
 pub const rand = @import("hal/random.zig");
 pub const resets = @import("hal/resets.zig");
 pub const rom = @import("hal/rom.zig");
-pub const rtc = switch (compatibility.cpu) {
+pub const rtc = switch (compatibility.chip) {
     .RP2040 => @import("hal/rtc.zig"),
     .RP2350 => {}, // No explicit "RTC" module on RP2350
 };
@@ -27,6 +28,14 @@ pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
+pub const image_def = @import("hal/image_def.zig");
+
+comptime {
+    // HACK: tests can't access microzig. maybe there's a better way to do this.
+    if (!builtin.is_test) {
+        _ = image_def;
+    }
+}
 
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific
@@ -44,7 +53,6 @@ pub inline fn init() void {
 /// Allows user to easily swap in their own clock config while still
 /// using the reccomended initialization sequence
 pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
-
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 

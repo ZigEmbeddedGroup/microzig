@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const cpu = @import("../compatibility.zig").cpu;
+const chip = @import("../compatibility.zig").chip;
 
 pub const PIO = microzig.chip.types.peripherals.PIO0;
 pub const PIO0 = microzig.chip.peripherals.PIO0;
@@ -17,11 +17,11 @@ pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
 
 // global state for keeping track of used things
-var used_instruction_space = switch (cpu) {
+var used_instruction_space = switch (chip) {
     .RP2040 => [_]u32{ 0, 0 },
     .RP2350 => [_]u32{ 0, 0, 0 },
 };
-var claimed_state_machines = switch (cpu) {
+var claimed_state_machines = switch (chip) {
     .RP2040 => [_]u4{ 0, 0 },
     .RP2350 => [_]u4{ 0, 0, 0 },
 };
@@ -552,7 +552,7 @@ pub fn PioImpl(EnumType: type) type {
     };
 }
 
-pub const ShiftOptions = switch (cpu) {
+pub const ShiftOptions = switch (chip) {
     .RP2040 => struct {
         autopush: bool = false,
         autopull: bool = false,

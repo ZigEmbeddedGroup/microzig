@@ -9,7 +9,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
 const rand = rp2xxx.rand;
-const cpu = rp2xxx.compatibility.cpu;
+const chip = rp2xxx.compatibility.chip;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -33,7 +33,7 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
             pin.set_function(.uart);
         },

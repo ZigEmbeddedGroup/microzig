@@ -106,8 +106,6 @@ fn main_impl() anyerror!void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
-    var arena = ArenaAllocator.init(allocator);
-    defer arena.deinit();
 
     var args = try parse_args(allocator);
     defer args.deinit();
@@ -140,6 +138,19 @@ fn main_impl() anyerror!void {
 
         // TODO: diagnostics
         try db.apply_patch(patch);
+    }
+
+    // arch dependent stuff
+    {
+        var arena = ArenaAllocator.init(allocator);
+        defer arena.deinit();
+
+        for (try db.get_devices(arena.allocator())) |device| {
+            if (device.arch.is_arm()) {
+                const arm = @import("arch/arm.zig");
+                try arm.load_system_interrupts(db, &device);
+            }
+        }
     }
 
     if (args.dump) {

@@ -216,17 +216,12 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
                     // Switching the AUX on an active clock before it's fully disabled can lead to
                     // undefined behavior since clock glitches would propagate to the peripheral
                     // that is using the clock.
-                    var delay_cycles: u32 = sys_frequency / config.frequency() + 1;
+                    const delay_cycles: u32 = sys_frequency / config.frequency() + 1;
 
                     // From the pico SDK, spin waits for at LEAST delay_cycles amount of
                     // system clocks.
-                    asm volatile (
-                        \\1: subs %[cycles], #3
-                        \\bcs 1b
-                        : [cycles] "+r" (delay_cycles),
-                        :
-                        : "cc", "memory"
-                    );
+                    // TODO: should use `compatibility.arch` but for some reason it breaks the code.
+                    busy_wait_at_least(delay_cycles);
 
                     generator.set_aux_source(input.source);
                     generator.enable();
@@ -239,7 +234,6 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
 }
 
 pub fn calculate_integer_divisor(comptime input_freq: u32, comptime output_freq: u32, IntegerDivisorType: type) IntegerDivisorType {
-
     // source frequency has to be faster because dividing will always reduce.
     comptime assert(input_freq >= output_freq);
 
@@ -250,4 +244,29 @@ pub fn calculate_integer_divisor(comptime input_freq: u32, comptime output_freq:
         @compileError(std.fmt.comptimePrint("Unable to integer divide input frequency: {d} evenly into requested output frequency: {d}. Closest valid frequency is: {d}", .{ input_freq, output_freq, input_freq / fixed_divisor }));
 
     return fixed_divisor;
+}
+
+fn busy_wait_at_least(delay_cycles: u32) void {
+    var _cycles = delay_cycles * 3;
+
+    const arch = microzig.hal.compatibility.arch;
+    asm volatile (switch (arch) {
+            .arm =>
+            \\1: subs %[cycles], #3
+            \\bcs 1b
+            ,
+            .riscv =>
+            \\.option push
+            \\.option norvc
+            \\.p2align 2
+            \\1:
+            \\addi %[cycles], %[cycles], -2
+            \\bgez %[cycles], 1b
+            \\.option pop
+            ,
+        }
+        : [cycles] "+r" (_cycles),
+        :
+        : "cc", "memory"
+    );
 }

@@ -532,6 +532,8 @@ pub const Arch = enum {
     qingke_v2,
     qingke_v3,
     qingke_v4,
+    hazard3,
+
     pub const BaseType = []const u8;
     pub const default = .unknown;
 
@@ -594,9 +596,11 @@ pub const Arch = enum {
 
     pub fn is_riscv(arch: Arch) bool {
         return switch (arch) {
-            .qingke_v2 => true,
-            .qingke_v3 => true,
-            .qingke_v4 => true,
+            .qingke_v2,
+            .qingke_v3,
+            .qingke_v4,
+            .hazard3,
+            => true,
             else => false,
         };
     }
@@ -1985,6 +1989,20 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
 
     for (list.items) |patch| {
         switch (patch.value) {
+            .override_arch => |override_arch| {
+                const device_id = try db.get_device_id_by_name(override_arch.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                try db.exec(
+                    \\UPDATE devices
+                    \\SET arch = ?
+                    \\WHERE id = ?;
+                , .{
+                    .arch = override_arch.arch,
+                    .device_id = device_id,
+                });
+            },
             .add_enum => |add_enum| {
                 const struct_id = try db.get_struct_ref(add_enum.parent);
 

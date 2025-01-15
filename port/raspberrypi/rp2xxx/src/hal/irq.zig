@@ -4,10 +4,10 @@
 /// this is only to control the NVIC enable/disable of the actual processor.
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
-const cpu = rp2xxx.compatibility.cpu;
+const chip = rp2xxx.compatibility.chip;
 const PPB = microzig.chip.peripherals.PPB;
 
-pub const Mask = switch (cpu) {
+pub const Mask = switch (chip) {
     // RP2040 only has a single set of registers for interrupts
     .RP2040 => enum(u5) {
         TIMER_IRQ_0 = 0,
@@ -97,7 +97,7 @@ pub const Mask = switch (cpu) {
 };
 
 pub fn enable(mask: Mask) void {
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             PPB.NVIC_ICPR.write(.{ .CLRPEND = @as(u32, 1) << @intFromEnum(mask) });
             PPB.NVIC_ISER.write(.{ .SETENA = @as(u32, 1) << @intFromEnum(mask) });
@@ -122,7 +122,7 @@ pub fn enable(mask: Mask) void {
 }
 
 pub fn disable(mask: Mask) void {
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             PPB.NVIC_ICER.write(.{ .CLRENA = @as(u32, 1) << @as(u5, @intFromEnum(mask)) });
         },
