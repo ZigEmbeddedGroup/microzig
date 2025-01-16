@@ -750,11 +750,8 @@ pub fn Tokenizer(chip: Chip) type {
             }
 
             // NOTE: Destination MUST be OSR for mov (from rx) but the normal
-            // mov can also have OSR as the destination, so we need to peek to
-            // the source and look for rxfifo. To peek twice we have to consume
-            // the first peek, but if we find it's mov from rx, then we need to
-            // unconsume the first arg, so that the tokenizer is in the right
-            // state when we call get_movrx
+            // mov can also have OSR as the destination, so we need to peek a
+            // second time to the source and look for rxfifo.
             //
             // Determine if it's a mov from rx based on source
             self.consume_peek(dest_str);
@@ -958,37 +955,30 @@ pub fn Tokenizer(chip: Chip) type {
                     // This doesn't work: idx_mode's type only exists at comptime,
                     // even though this is a comptime-only switch :/
                     // Hardcoding the type
-                    const idx_mode: u2 = if (try self.peek_arg(diags)) |result| blk: {
+                    const IdxMode = Token(chip).Instruction.Irq.IdxMode;
+                    const idx_mode: IdxMode = if (try self.peek_arg(diags)) |result| blk: {
                         const idxmode_lower = try lowercase_bounded(256, result.str);
                         if (std.mem.eql(u8, "rel", idxmode_lower.slice())) {
-                            // @compileLog("got rel"); // DELETEME
                             self.consume_peek(result);
-                            break :blk 0b10;
-                            // break :blk .rel;
+                            break :blk .rel;
                         } else if (std.mem.eql(u8, "prev", idxmode_lower.slice())) {
-                            // @compileLog("got prev"); // DELETEME
                             self.consume_peek(result);
-                            break :blk 0b01;
-                            // break :blk .prev;
+                            break :blk .prev;
                         } else if (std.mem.eql(u8, "next", idxmode_lower.slice())) {
-                            // @compileLog("got next"); // DELETEME
                             self.consume_peek(result);
-                            break :blk 0b11;
-                            // break :blk .next;
+                            break :blk .next;
                         } else {
                             // Not specified: direct
-                            break :blk 0b00;
-                            // break :blk .direct;
+                            break :blk .direct;
                         }
-                    } else 0b00;
-                    // } else .direct;
+                    } else .direct;
 
                     return Token(chip).Instruction.Payload{
                         .irq = .{
                             .clear = clear,
                             .wait = wait,
                             .num = num,
-                            .idxmode = @enumFromInt(idx_mode),
+                            .idxmode = idx_mode,
                         },
                     };
                 },
@@ -1298,7 +1288,7 @@ pub fn Token(comptime chip: Chip) type {
                 };
 
                 pub const Source = enum(u3) {
-                    pins = 0b00,
+                    pins = 0b000,
                     x = 0b001,
                     y = 0b010,
                     null = 0b011,
