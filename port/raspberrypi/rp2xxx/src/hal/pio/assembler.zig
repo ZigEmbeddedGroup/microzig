@@ -10,9 +10,7 @@ pub const EncodeOptions = encoder.Options;
 
 pub const Define = struct {
     name: []const u8,
-    // NO idea why this has to change
-    value: i128,
-    // value: i64,
+    value: i64,
 };
 
 pub const Program = struct {
@@ -74,16 +72,12 @@ pub const Diagnostics = struct {
     }
 };
 
-pub fn assemble_impl(comptime cpu: CPU, source: []const u8, diags: *?Diagnostics, comptime options: AssembleOptions) !Output {
+pub fn assemble_impl(comptime cpu: CPU, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
     const tokens = try tokenizer.tokenize(cpu, source, diags, options.tokenize);
-    for (tokens.slice()) |t| // DELETEME
-        std.debug.print("Got tokens: {any}\n", .{t}); // DELETEME
     const encoder_output = try encoder.encode(cpu, tokens.slice(), diags, options.encode);
     var programs = std.BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
-    for (encoder_output.programs.slice()) |bounded| {
-        const prog = try bounded.to_exported_program();
-        try programs.append(prog);
-    }
+    for (encoder_output.programs.slice()) |bounded|
+        try programs.append(bounded.to_exported_program());
 
     return Output{
         .defines = blk: {
@@ -108,7 +102,7 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
         line_str = line_str ++ "\n" ++ line;
         // If the line iterator is overlapping the provided index, then we are on the correct line
         if (line_it.index >= index) {
-            // Calculate the column
+        // Calculate the column
             column = line.len - (line_it.index - index);
             line_str = line;
             break;

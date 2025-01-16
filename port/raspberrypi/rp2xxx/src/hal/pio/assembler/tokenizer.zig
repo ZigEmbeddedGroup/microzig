@@ -839,6 +839,7 @@ pub fn Tokenizer(cpu: CPU) type {
                     // -- Parse out the index
                     diags.* = Diagnostics.init(
                         dest_idx,
+                        // @intCast(self.index - dest_str.len + 1),
                         "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
                         .{},
                     );
@@ -2051,234 +2052,234 @@ test "tokenize.instr.pull.ifempty" {
     }, tokens.get(0));
 }
 
-// test "tokenize.instr.mov" {
-//     inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-//         inline for (.{
-//             "pins",
-//             "x",
-//             "y",
-//             "null",
-//             "status",
-//             "isr",
-//             "osr",
-//         }) |source| {
-//             const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
-//
-//             try expect_instr_mov(cpu, .{
-//                 .source = @field(Token(cpu).Instruction.Mov.Source, source),
-//                 .destination = .x,
-//             }, tokens.get(0));
-//         }
-//
-//         inline for (.{
-//             "pins",
-//             "x",
-//             "y",
-//             "exec",
-//             "pc",
-//             "isr",
-//             "osr",
-//         }) |dest| {
-//             const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
-//
-//             try expect_instr_mov(cpu, .{
-//                 .source = .x,
-//                 .destination = @field(Token(cpu).Instruction.Mov.Destination, dest),
-//             }, tokens.get(0));
-//         }
-//         // RP2350 also supports pindirs as dest
-//         {
-//             const tokens = try bounded_tokenize(.RP2350, "mov pindirs x");
-//
-//             try expect_instr_mov(.RP2350, .{
-//                 .source = .x,
-//                 .destination = @field(Token(.RP2350).Instruction.Mov.Destination, "pindirs"),
-//             }, tokens.get(0));
-//         }
-//
-//         const Operation = Token(cpu).Instruction.Mov.Operation;
-//         const operations = std.StaticStringMap(Operation).initComptime(.{
-//             .{ "!", .invert },
-//             .{ "~", .invert },
-//             .{ "::", .bit_reverse },
-//         });
-//
-//         inline for (.{ "", " " }) |space| {
-//             inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
-//                 const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
-//                     str,
-//                     space,
-//                 }));
-//
-//                 try expect_instr_mov(cpu, .{
-//                     .destination = .x,
-//                     .operation = operation,
-//                     .source = .y,
-//                 }, tokens.get(0));
-//             }
-//         }
-//     }
-// }
-//
-// test "tokenize.instr.irq" {
-//     const ClearWait = struct {
-//         clear: bool,
-//         wait: bool,
-//     };
-//
-//     const modes = std.StaticStringMap(ClearWait).initComptime(.{
-//         .{ "", .{ .clear = false, .wait = false } },
-//         .{ "set", .{ .clear = false, .wait = false } },
-//         .{ "nowait", .{ .clear = false, .wait = false } },
-//         .{ "wait", .{ .clear = false, .wait = true } },
-//         .{ "clear", .{ .clear = true, .wait = false } },
-//     });
-//
-//     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
-//         inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-//             const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("irq {s} {}", .{
-//                 key,
-//                 num,
-//             }));
-//
-//             try expect_instr_irq(cpu, .{
-//                 .clear = value.clear,
-//                 .wait = value.wait,
-//                 .num = num,
-//             }, tokens.get(0));
-//         }
-//     }
-// }
-//
-// test "tokenize.instr.irq.rel" {
-//     const tokens = try bounded_tokenize(.RP2040, "irq set 2 rel");
-//     // TODO: rp2350 support
-//     try expect_instr_irq(.RP2040, .{
-//         .clear = false,
-//         .wait = false,
-//         .num = 2,
-//         .rel = true,
-//     }, tokens.get(0));
-// }
-//
-// test "tokenize.instr.set" {
-//     inline for (.{
-//         "pins",
-//         "x",
-//         "y",
-//         "pindirs",
-//     }) |dest| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("set {s}, 2", .{dest}));
-//         try expect_instr_set(.RP2040, .{
-//             .dest = @field(Token(.RP2040).Instruction.Set.Destination, dest),
-//             .value = .{ .integer = 2 },
-//         }, tokens.get(0));
-//     }
-// }
-//
-// test "tokenize.instr.set.with expression including define" {
-//     const tokens = try bounded_tokenize(.RP2040, "set X, (NUM_CYCLES - 1)         ; initialise the loop counter");
-//     try expect_instr_set(.RP2040, .{
-//         .dest = .x,
-//         .value = .{ .expression = "(NUM_CYCLES - 1)" },
-//     }, tokens.get(0));
-// }
-//
-// const instruction_examples = .{
-//     "nop",
-//     "jmp arst",
-//     "wait 0 gpio 1",
-//     "in pins, 2",
-//     "out pc, 1",
-//     "push",
-//     "pull",
-//     "mov x y",
-//     "irq 1",
-//     "set pins 2",
-// };
-//
-// test "tokenize.instr.label prefixed" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("my_label: {s}", .{instr}));
-//         try expectEqual(@as(usize, 2), tokens.len);
-//         try expect_label(.RP2040, .{ .name = "my_label" }, tokens.get(0));
-//     }
-// }
-//
-// test "tokenize.instr.side_set" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side 0", .{instr}));
-//         const token = tokens.get(0);
-//         try expect_value(.{
-//             .expression = "0",
-//         }, token.data.instruction.side_set.?);
-//         try expectEqual(@as(?Value, null), token.data.instruction.delay);
-//     }
-// }
-//
-// test "tokenize.instr.delay" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [1]", .{instr}));
-//         const token = tokens.get(0);
-//         try expectEqual(@as(?Value, null), token.data.instruction.side_set);
-//         try expect_value(.{
-//             .expression = "1",
-//         }, token.data.instruction.delay.?);
-//     }
-// }
-//
-// test "tokenize.instr.delay.expression" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [T-1]", .{instr}));
-//         const token = tokens.get(0);
-//         try expectEqual(@as(?Value, null), token.data.instruction.side_set);
-//         try expect_value(.{
-//             .expression = "T-1",
-//         }, token.data.instruction.delay.?);
-//     }
-// }
-//
-// test "tokenize.instr.side_set.expression" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side (N-1)", .{instr}));
-//         const token = tokens.get(0);
-//         try expect_value(.{
-//             .expression = "(N-1)",
-//         }, token.data.instruction.side_set.?);
-//         try expectEqual(@as(?Value, null), token.data.instruction.delay);
-//     }
-// }
-//
-// test "tokenize.instr.side_set and delay" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side 1 [2]", .{instr}));
-//         const token = tokens.get(0);
-//         try expect_value(.{
-//             .expression = "1",
-//         }, token.data.instruction.side_set.?);
-//         try expect_value(.{
-//             .expression = "2",
-//         }, token.data.instruction.delay.?);
-//     }
-// }
-//
-// test "tokenize.instr.side_set and delay reversed" {
-//     inline for (instruction_examples) |instr| {
-//         const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [2] side 1", .{instr}));
-//         const token = tokens.get(0);
-//         try expect_value(.{
-//             .expression = "1",
-//         }, token.data.instruction.side_set.?);
-//         try expect_value(.{
-//             .expression = "2",
-//         }, token.data.instruction.delay.?);
-//     }
-// }
-//
-// test "tokenize.instr.comment with no whitespace" {
-//     const tokens = try bounded_tokenize(.RP2040, "nop side 0x0 [1]; CSn front porch");
-//     try expect_instr_nop(.RP2040, .{
-//         .side_set = .{ .expression = "0x0" },
-//         .delay = .{ .expression = "1" },
-//     }, tokens.get(0));
-// }
+test "tokenize.instr.mov" {
+    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+        inline for (.{
+            "pins",
+            "x",
+            "y",
+            "null",
+            "status",
+            "isr",
+            "osr",
+        }) |source| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
+
+            try expect_instr_mov(cpu, .{
+                .source = @field(Token(cpu).Instruction.Mov.Source, source),
+                .destination = .x,
+            }, tokens.get(0));
+        }
+
+        inline for (.{
+            "pins",
+            "x",
+            "y",
+            "exec",
+            "pc",
+            "isr",
+            "osr",
+        }) |dest| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
+
+            try expect_instr_mov(cpu, .{
+                .source = .x,
+                .destination = @field(Token(cpu).Instruction.Mov.Destination, dest),
+            }, tokens.get(0));
+        }
+        // RP2350 also supports pindirs as dest
+        {
+            const tokens = try bounded_tokenize(.RP2350, "mov pindirs x");
+
+            try expect_instr_mov(.RP2350, .{
+                .source = .x,
+                .destination = @field(Token(.RP2350).Instruction.Mov.Destination, "pindirs"),
+            }, tokens.get(0));
+        }
+
+        const Operation = Token(cpu).Instruction.Mov.Operation;
+        const operations = std.StaticStringMap(Operation).initComptime(.{
+            .{ "!", .invert },
+            .{ "~", .invert },
+            .{ "::", .bit_reverse },
+        });
+
+        inline for (.{ "", " " }) |space| {
+            inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
+                const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
+                    str,
+                    space,
+                }));
+
+                try expect_instr_mov(cpu, .{
+                    .destination = .x,
+                    .operation = operation,
+                    .source = .y,
+                }, tokens.get(0));
+            }
+        }
+    }
+}
+
+test "tokenize.instr.irq" {
+    const ClearWait = struct {
+        clear: bool,
+        wait: bool,
+    };
+
+    const modes = std.StaticStringMap(ClearWait).initComptime(.{
+        .{ "", .{ .clear = false, .wait = false } },
+        .{ "set", .{ .clear = false, .wait = false } },
+        .{ "nowait", .{ .clear = false, .wait = false } },
+        .{ "wait", .{ .clear = false, .wait = true } },
+        .{ "clear", .{ .clear = true, .wait = false } },
+    });
+
+    inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
+        inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("irq {s} {}", .{
+                key,
+                num,
+            }));
+
+            try expect_instr_irq(cpu, .{
+                .clear = value.clear,
+                .wait = value.wait,
+                .num = num,
+            }, tokens.get(0));
+        }
+    }
+}
+
+test "tokenize.instr.irq.rel" {
+    const tokens = try bounded_tokenize(.RP2040, "irq set 2 rel");
+    // TODO: rp2350 support
+    try expect_instr_irq(.RP2040, .{
+        .clear = false,
+        .wait = false,
+        .num = 2,
+        .rel = true,
+    }, tokens.get(0));
+}
+
+test "tokenize.instr.set" {
+    inline for (.{
+        "pins",
+        "x",
+        "y",
+        "pindirs",
+    }) |dest| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("set {s}, 2", .{dest}));
+        try expect_instr_set(.RP2040, .{
+            .dest = @field(Token(.RP2040).Instruction.Set.Destination, dest),
+            .value = .{ .integer = 2 },
+        }, tokens.get(0));
+    }
+}
+
+test "tokenize.instr.set.with expression including define" {
+    const tokens = try bounded_tokenize(.RP2040, "set X, (NUM_CYCLES - 1)         ; initialise the loop counter");
+    try expect_instr_set(.RP2040, .{
+        .dest = .x,
+        .value = .{ .expression = "(NUM_CYCLES - 1)" },
+    }, tokens.get(0));
+}
+
+const instruction_examples = .{
+    "nop",
+    "jmp arst",
+    "wait 0 gpio 1",
+    "in pins, 2",
+    "out pc, 1",
+    "push",
+    "pull",
+    "mov x y",
+    "irq 1",
+    "set pins 2",
+};
+
+test "tokenize.instr.label prefixed" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("my_label: {s}", .{instr}));
+        try expectEqual(@as(usize, 2), tokens.len);
+        try expect_label(.RP2040, .{ .name = "my_label" }, tokens.get(0));
+    }
+}
+
+test "tokenize.instr.side_set" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side 0", .{instr}));
+        const token = tokens.get(0);
+        try expect_value(.{
+            .expression = "0",
+        }, token.data.instruction.side_set.?);
+        try expectEqual(@as(?Value, null), token.data.instruction.delay);
+    }
+}
+
+test "tokenize.instr.delay" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [1]", .{instr}));
+        const token = tokens.get(0);
+        try expectEqual(@as(?Value, null), token.data.instruction.side_set);
+        try expect_value(.{
+            .expression = "1",
+        }, token.data.instruction.delay.?);
+    }
+}
+
+test "tokenize.instr.delay.expression" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [T-1]", .{instr}));
+        const token = tokens.get(0);
+        try expectEqual(@as(?Value, null), token.data.instruction.side_set);
+        try expect_value(.{
+            .expression = "T-1",
+        }, token.data.instruction.delay.?);
+    }
+}
+
+test "tokenize.instr.side_set.expression" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side (N-1)", .{instr}));
+        const token = tokens.get(0);
+        try expect_value(.{
+            .expression = "(N-1)",
+        }, token.data.instruction.side_set.?);
+        try expectEqual(@as(?Value, null), token.data.instruction.delay);
+    }
+}
+
+test "tokenize.instr.side_set and delay" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} side 1 [2]", .{instr}));
+        const token = tokens.get(0);
+        try expect_value(.{
+            .expression = "1",
+        }, token.data.instruction.side_set.?);
+        try expect_value(.{
+            .expression = "2",
+        }, token.data.instruction.delay.?);
+    }
+}
+
+test "tokenize.instr.side_set and delay reversed" {
+    inline for (instruction_examples) |instr| {
+        const tokens = try bounded_tokenize(.RP2040, comptime std.fmt.comptimePrint("{s} [2] side 1", .{instr}));
+        const token = tokens.get(0);
+        try expect_value(.{
+            .expression = "1",
+        }, token.data.instruction.side_set.?);
+        try expect_value(.{
+            .expression = "2",
+        }, token.data.instruction.delay.?);
+    }
+}
+
+test "tokenize.instr.comment with no whitespace" {
+    const tokens = try bounded_tokenize(.RP2040, "nop side 0x0 [1]; CSn front porch");
+    try expect_instr_nop(.RP2040, .{
+        .side_set = .{ .expression = "0x0" },
+        .delay = .{ .expression = "1" },
+    }, tokens.get(0));
+}

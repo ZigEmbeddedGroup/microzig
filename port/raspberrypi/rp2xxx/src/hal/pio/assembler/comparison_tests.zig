@@ -40,20 +40,25 @@ fn pio_comparison(comptime source: []const u8) !void {
     }
 }
 
-fn pio_comparison_cpu(comptime cpu: CPU, source: []const u8) !void {
-    var diags: ?assembler.Diagnostics = null;
-    const output = assembler.assemble_impl(cpu, source, &diags, .{}) catch |e| {
-        std.log.debug("diags: {any}\n", .{diags});
-        std.log.debug("could not assemble: {}\n", .{e});
-        return e;
-    };
+fn pio_comparison_cpu(comptime cpu: CPU, comptime source: []const u8) !void {
+    // comptime var diags: ?assembler.Diagnostics = null;
+    // const output = comptime blk: {
+    //     const v = assembler.assemble_impl(cpu, source, &diags, .{}) catch |err| {
+    //         @compileLog("err {}", err);
+    //         if (diags != null) {
+    //             std.log.debug("diag {}", .{diags});
+    //             @compileLog("Diag", diags);
+    //         }
+    //         // I want to return an error here but this is comptime?
+    //         break :blk err;
+    //     };
+    //     break :blk v;
+    // };
+    const output = comptime assembler.assemble(cpu, source, .{});
     try std.testing.expect(output.programs.len > 0);
 
-    for (output.programs) |program| {
-        std.debug.print("Program: {any}\n", .{program.instructions});
-        // const expected_insns = @field(c, program.name ++ "_program_instructions");
-        // Hardcoded for now since program.name is runtime for me
-        const expected_insns = @field(c, "movrx_program_instructions");
+    inline for (output.programs) |program| {
+        const expected_insns = @field(c, program.name ++ "_program_instructions");
         for (program.instructions, expected_insns) |actual, expected| {
             std.log.debug("expected: 0x{x}", .{expected});
             std.log.debug("  actual: 0x{x}", .{actual});
@@ -65,134 +70,132 @@ fn pio_comparison_cpu(comptime cpu: CPU, source: []const u8) !void {
     }
 }
 
-// test "pio.comparison.addition" {
-//     @setEvalBranchQuota(4000);
-//     try pio_comparison(@embedFile("comparison_tests/addition.pio"));
-// }
-//
-// test "pio.comparison.apa102" {
-//     @setEvalBranchQuota(11000);
-//     try pio_comparison(@embedFile("comparison_tests/apa102.pio"));
-// }
-//
-// test "pio.comparison.blink" {
-//     @setEvalBranchQuota(4000);
-//     try pio_comparison(@embedFile("comparison_tests/blink.pio"));
-// }
-//
-// test "pio.comparison.clocked_input" {
-//     @setEvalBranchQuota(5000);
-//     try pio_comparison(@embedFile("comparison_tests/clocked_input.pio"));
-// }
-//
-// test "pio.comparison.differential_manchester" {
-//     @setEvalBranchQuota(14000);
-//     try pio_comparison(@embedFile("comparison_tests/differential_manchester.pio"));
-// }
-//
-// test "pio.comparison.hello" {
-//     @setEvalBranchQuota(3000);
-//     try pio_comparison(@embedFile("comparison_tests/hello.pio"));
-// }
-//
-// test "pio.comparison.hub75" {
-//     @setEvalBranchQuota(17000);
-//     try pio_comparison(@embedFile("comparison_tests/hub75.pio"));
-// }
-//
-// test "pio.comparison.i2c" {
-//     @setEvalBranchQuota(17000);
-//     try pio_comparison(@embedFile("comparison_tests/i2c.pio"));
-// }
+test "pio.comparison.addition" {
+    @setEvalBranchQuota(4000);
+    try pio_comparison(@embedFile("comparison_tests/addition.pio"));
+}
 
-// test "pio.comparison.irq" {
-//     @setEvalBranchQuota(22000);
-//     try pio_comparison_cpu(.RP2350, @embedFile("comparison_tests/irq.pio"));
-// }
-//
-// test "pio.comparison.manchester_encoding" {
-//     @setEvalBranchQuota(11000);
-//     try pio_comparison(@embedFile("comparison_tests/manchester_encoding.pio"));
-// }
-//
+test "pio.comparison.apa102" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison(@embedFile("comparison_tests/apa102.pio"));
+}
+
+test "pio.comparison.blink" {
+    @setEvalBranchQuota(4000);
+    try pio_comparison(@embedFile("comparison_tests/blink.pio"));
+}
+
+test "pio.comparison.clocked_input" {
+    @setEvalBranchQuota(5000);
+    try pio_comparison(@embedFile("comparison_tests/clocked_input.pio"));
+}
+
+test "pio.comparison.differential_manchester" {
+    @setEvalBranchQuota(14000);
+    try pio_comparison(@embedFile("comparison_tests/differential_manchester.pio"));
+}
+
+test "pio.comparison.hello" {
+    @setEvalBranchQuota(3000);
+    try pio_comparison(@embedFile("comparison_tests/hello.pio"));
+}
+
+test "pio.comparison.hub75" {
+    @setEvalBranchQuota(17000);
+    try pio_comparison(@embedFile("comparison_tests/hub75.pio"));
+}
+
+test "pio.comparison.i2c" {
+    @setEvalBranchQuota(17000);
+    try pio_comparison(@embedFile("comparison_tests/i2c.pio"));
+}
+
+test "pio.comparison.irq" {
+    @setEvalBranchQuota(22000);
+    try pio_comparison_cpu(.RP2350, @embedFile("comparison_tests/irq.pio"));
+}
+
+test "pio.comparison.manchester_encoding" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison(@embedFile("comparison_tests/manchester_encoding.pio"));
+}
+
 test "pio.comparison.movrx" {
     @setEvalBranchQuota(11000);
-    // @compileLog("movrx test"); // DELETEME
     try pio_comparison_cpu(.RP2350, @embedFile("comparison_tests/movrx.pio"));
-    // @compileLog("movrx test done"); // DELETEME
 }
-//
-// test "pio.comparison.nec_carrier_burst" {
-//     @setEvalBranchQuota(6000);
-//     try pio_comparison(@embedFile("comparison_tests/nec_carrier_burst.pio"));
-// }
-//
-// test "pio.comparison.nec_carrier_control" {
-//     @setEvalBranchQuota(9000);
-//     try pio_comparison(@embedFile("comparison_tests/nec_carrier_control.pio"));
-// }
-//
-// test "pio.comparison.nec_receive" {
-//     @setEvalBranchQuota(11000);
-//     try pio_comparison(@embedFile("comparison_tests/nec_receive.pio"));
-// }
-//
-// test "pio.comparison.pio_serialiser" {
-//     @setEvalBranchQuota(3000);
-//     try pio_comparison(@embedFile("comparison_tests/pio_serialiser.pio"));
-// }
-//
-// test "pio.comparison.pwm" {
-//     @setEvalBranchQuota(4000);
-//     try pio_comparison(@embedFile("comparison_tests/pwm.pio"));
-// }
-//
-// test "pio.comparison.quadrature_encoder" {
-//     @setEvalBranchQuota(17000);
-//     try pio_comparison(@embedFile("comparison_tests/quadrature_encoder.pio"));
-// }
-//
-// test "pio.comparison.resistor_dac" {
-//     @setEvalBranchQuota(3000);
-//     try pio_comparison(@embedFile("comparison_tests/resistor_dac.pio"));
-// }
-//
-// test "pio.comparison.spi" {
-//     @setEvalBranchQuota(22000);
-//     try pio_comparison(@embedFile("comparison_tests/spi.pio"));
-// }
-//
-// test "pio.comparison.squarewave" {
-//     @setEvalBranchQuota(2000);
-//     try pio_comparison(@embedFile("comparison_tests/squarewave.pio"));
-// }
-//
-// test "pio.comparison.squarewave_fast" {
-//     @setEvalBranchQuota(2000);
-//     try pio_comparison(@embedFile("comparison_tests/squarewave_fast.pio"));
-// }
-//
-// test "pio.comparison.squarewave_wrap" {
-//     @setEvalBranchQuota(3000);
-//     try pio_comparison(@embedFile("comparison_tests/squarewave_wrap.pio"));
-// }
-//
-// test "pio.comparison.st7789_lcd" {
-//     @setEvalBranchQuota(5000);
-//     try pio_comparison(@embedFile("comparison_tests/st7789_lcd.pio"));
-// }
-//
-// test "pio.comparison.uart_rx" {
-//     @setEvalBranchQuota(11000);
-//     try pio_comparison(@embedFile("comparison_tests/uart_rx.pio"));
-// }
-//
-// test "pio.comparison.uart_tx" {
-//     @setEvalBranchQuota(6000);
-//     try pio_comparison(@embedFile("comparison_tests/uart_tx.pio"));
-// }
 
-// test "pio.comparison.ws2812" {
-//     @setEvalBranchQuota(11000);
-//     try pio_comparison(@embedFile("comparison_tests/ws2812.pio"));
-// }
+test "pio.comparison.nec_carrier_burst" {
+    @setEvalBranchQuota(6000);
+    try pio_comparison(@embedFile("comparison_tests/nec_carrier_burst.pio"));
+}
+
+test "pio.comparison.nec_carrier_control" {
+    @setEvalBranchQuota(9000);
+    try pio_comparison(@embedFile("comparison_tests/nec_carrier_control.pio"));
+}
+
+test "pio.comparison.nec_receive" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison(@embedFile("comparison_tests/nec_receive.pio"));
+}
+
+test "pio.comparison.pio_serialiser" {
+    @setEvalBranchQuota(3000);
+    try pio_comparison(@embedFile("comparison_tests/pio_serialiser.pio"));
+}
+
+test "pio.comparison.pwm" {
+    @setEvalBranchQuota(4000);
+    try pio_comparison(@embedFile("comparison_tests/pwm.pio"));
+}
+
+test "pio.comparison.quadrature_encoder" {
+    @setEvalBranchQuota(17000);
+    try pio_comparison(@embedFile("comparison_tests/quadrature_encoder.pio"));
+}
+
+test "pio.comparison.resistor_dac" {
+    @setEvalBranchQuota(3000);
+    try pio_comparison(@embedFile("comparison_tests/resistor_dac.pio"));
+}
+
+test "pio.comparison.spi" {
+    @setEvalBranchQuota(22000);
+    try pio_comparison(@embedFile("comparison_tests/spi.pio"));
+}
+
+test "pio.comparison.squarewave" {
+    @setEvalBranchQuota(2000);
+    try pio_comparison(@embedFile("comparison_tests/squarewave.pio"));
+}
+
+test "pio.comparison.squarewave_fast" {
+    @setEvalBranchQuota(2000);
+    try pio_comparison(@embedFile("comparison_tests/squarewave_fast.pio"));
+}
+
+test "pio.comparison.squarewave_wrap" {
+    @setEvalBranchQuota(3000);
+    try pio_comparison(@embedFile("comparison_tests/squarewave_wrap.pio"));
+}
+
+test "pio.comparison.st7789_lcd" {
+    @setEvalBranchQuota(5000);
+    try pio_comparison(@embedFile("comparison_tests/st7789_lcd.pio"));
+}
+
+test "pio.comparison.uart_rx" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison(@embedFile("comparison_tests/uart_rx.pio"));
+}
+
+test "pio.comparison.uart_tx" {
+    @setEvalBranchQuota(6000);
+    try pio_comparison(@embedFile("comparison_tests/uart_tx.pio"));
+}
+
+test "pio.comparison.ws2812" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison(@embedFile("comparison_tests/ws2812.pio"));
+}
