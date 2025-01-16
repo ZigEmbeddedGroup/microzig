@@ -13,7 +13,7 @@ const encoder = @import("assembler/encoder.zig");
 const gpio = @import("../gpio.zig");
 const hw = @import("../hw.zig");
 
-const Instruction = encoder.Instruction;
+pub const Instruction = encoder.Instruction;
 pub const Program = assembler.Program;
 
 // global state for keeping track of used things
