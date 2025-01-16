@@ -9,7 +9,7 @@ const Token = tokenizer.Token;
 const Value = tokenizer.Value;
 
 const Expression = @import("Expression.zig");
-const CPU = @import("../../cpu.zig").CPU;
+const Chip = @import("../../chip.zig").Chip;
 
 pub const Options = struct {
     max_defines: u32 = 16,
@@ -17,12 +17,12 @@ pub const Options = struct {
 };
 
 pub fn encode(
-    comptime cpu: CPU,
-    comptime tokens: []const Token(cpu),
+    comptime chip: Chip,
+    comptime tokens: []const Token(chip),
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !Encoder(cpu, options).Output {
-    var encoder = Encoder(cpu, options).init(tokens);
+) !Encoder(chip, options).Output {
+    var encoder = Encoder(chip, options).init(tokens);
     return try encoder.encode_output(diags);
 }
 
@@ -43,10 +43,10 @@ pub const DefineWithIndex = struct {
     index: u32,
 };
 
-pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
+pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
     return struct {
         output: Self.Output,
-        tokens: []const Token(cpu),
+        tokens: []const Token(chip),
         index: u32,
 
         const Self = @This();
@@ -58,7 +58,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
 
         const BoundedDefines = std.BoundedArray(DefineWithIndex, options.max_defines);
         const BoundedPrograms = std.BoundedArray(BoundedProgram, options.max_programs);
-        const BoundedInstructions = std.BoundedArray(Instruction(cpu), 32);
+        const BoundedInstructions = std.BoundedArray(Instruction(chip), 32);
         const BoundedLabels = std.BoundedArray(Label, 32);
         const Label = struct {
             name: []const u8,
@@ -107,7 +107,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
             }
         };
 
-        fn init(tokens: []const Token(cpu)) Self {
+        fn init(tokens: []const Token(chip)) Self {
             return Self{
                 .output = Self.Output{
                     .global_defines = BoundedDefines.init(0) catch unreachable,
@@ -119,14 +119,14 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
             };
         }
 
-        fn peek_token(self: Self) ?Token(cpu) {
+        fn peek_token(self: Self) ?Token(chip) {
             return if (self.index < self.tokens.len)
                 self.tokens[self.index]
             else
                 null;
         }
 
-        fn get_token(self: *Self) ?Token(cpu) {
+        fn get_token(self: *Self) ?Token(chip) {
             return if (self.peek_token()) |token| blk: {
                 self.consume(1);
                 break :blk token;
@@ -305,12 +305,12 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
         fn encode_instruction(
             self: *Self,
             program: *BoundedProgram,
-            token: Token(cpu).Instruction,
+            token: Token(chip).Instruction,
             token_index: u32,
             diags: *?Diagnostics,
         ) !void {
             // guaranteed to be an instruction variant
-            const payload: Instruction(cpu).Payload = switch (token.payload) {
+            const payload: Instruction(chip).Payload = switch (token.payload) {
                 .nop => .{
                     .mov = .{
                         .destination = .y,
@@ -376,7 +376,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                     },
                 },
                 .irq => |irq| blk: {
-                    switch (cpu) {
+                    switch (chip) {
                         .RP2040 => {
                             const irq_num = try self.evaluate(u5, program.*, irq.num, token_index, diags);
                             break :blk .{
@@ -411,7 +411,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                 },
             };
 
-            const tag: Instruction(cpu).Tag = switch (token.payload) {
+            const tag: Instruction(chip).Tag = switch (token.payload) {
                 .nop => .mov,
                 .jmp => .jmp,
                 .wait => .wait,
@@ -454,7 +454,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                 delay,
             );
 
-            try program.instructions.append(Instruction(cpu){
+            try program.instructions.append(Instruction(chip){
                 .tag = tag,
                 .payload = payload,
                 .delay_side_set = delay_side_set,
@@ -517,7 +517,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
                 switch (token.data) {
                     .instruction => |instr| try self.encode_instruction(program, instr, token.index, diags),
                     .word => |word| try program.instructions.append(
-                        @as(Instruction(cpu), @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
+                        @as(Instruction(chip), @bitCast(try self.evaluate(u16, program.*, word, token.index, diags))),
                     ),
                     // already processed
                     .label, .wrap_target, .wrap => {},
@@ -566,7 +566,7 @@ pub fn Encoder(comptime cpu: CPU, comptime options: Options) type {
     };
 }
 
-pub fn Instruction(comptime cpu: CPU) type {
+pub fn Instruction(comptime chip: Chip) type {
     return packed struct(u16) {
         payload: Payload,
         delay_side_set: u5,
@@ -599,23 +599,23 @@ pub fn Instruction(comptime cpu: CPU) type {
 
         pub const Jmp = packed struct(u8) {
             address: u5,
-            condition: Token(cpu).Instruction.Jmp.Condition,
+            condition: Token(chip).Instruction.Jmp.Condition,
         };
 
         pub const Wait = packed struct(u8) {
             index: u5,
-            source: Token(cpu).Instruction.Wait.Source,
+            source: Token(chip).Instruction.Wait.Source,
             polarity: u1,
         };
 
         pub const In = packed struct(u8) {
             bit_count: u5,
-            source: Token(cpu).Instruction.In.Source,
+            source: Token(chip).Instruction.In.Source,
         };
 
         pub const Out = packed struct(u8) {
             bit_count: u5,
-            destination: Token(cpu).Instruction.Out.Destination,
+            destination: Token(chip).Instruction.Out.Destination,
         };
 
         pub const Push = packed struct(u8) {
@@ -633,12 +633,12 @@ pub fn Instruction(comptime cpu: CPU) type {
         };
 
         pub const Mov = packed struct(u8) {
-            source: Token(cpu).Instruction.Mov.Source,
-            operation: Token(cpu).Instruction.Mov.Operation,
-            destination: Token(cpu).Instruction.Mov.Destination,
+            source: Token(chip).Instruction.Mov.Source,
+            operation: Token(chip).Instruction.Mov.Operation,
+            destination: Token(chip).Instruction.Mov.Destination,
         };
 
-        pub const Irq = switch (cpu) {
+        pub const Irq = switch (chip) {
             .RP2040 => packed struct(u8) {
                 index: u5,
                 wait: u1,
@@ -668,7 +668,7 @@ pub fn Instruction(comptime cpu: CPU) type {
 
         pub const Set = packed struct(u8) {
             data: u5,
-            destination: Token(cpu).Instruction.Set.Destination,
+            destination: Token(chip).Instruction.Set.Destination,
         };
     };
 }
@@ -681,15 +681,15 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
-fn encode_bounded_output_impl(comptime cpu: CPU, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(cpu, .{}).Output {
-    const tokens = try tokenizer.tokenize(cpu, source, diags, .{});
-    var encoder = Encoder(cpu, .{}).init(tokens.slice());
+fn encode_bounded_output_impl(comptime chip: Chip, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(chip, .{}).Output {
+    const tokens = try tokenizer.tokenize(chip, source, diags, .{});
+    var encoder = Encoder(chip, .{}).init(tokens.slice());
     return try encoder.encode_output(diags);
 }
 
-fn encode_bounded_output(comptime cpu: CPU, source: []const u8) !Encoder(cpu, .{}).Output {
+fn encode_bounded_output(comptime chip: Chip, source: []const u8) !Encoder(chip, .{}).Output {
     var diags: ?assembler.Diagnostics = null;
-    return encode_bounded_output_impl(cpu, source, &diags) catch |err| if (diags) |d| blk: {
+    return encode_bounded_output_impl(chip, source, &diags) catch |err| if (diags) |d| blk: {
         std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
         break :blk err;
     } else err;

@@ -5,6 +5,8 @@ const Module = Build.Module;
 
 const regz = @import("regz");
 const Patch = regz.patch.Patch;
+const uf2 = @import("uf2");
+const FamilyId = uf2.FamilyId;
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
@@ -110,6 +112,7 @@ pub const Chip = struct {
     /// The memory regions that are present in this chip.
     memory_regions: []const MemoryRegion,
 
+    /// Register patches for this chip.
     patches: []const Patch = &.{},
 };
 
@@ -172,54 +175,7 @@ pub const BinaryFormat = union(enum) {
     dfu,
 
     /// The [USB Flashing Format (UF2)](https://github.com/microsoft/uf2) designed by Microsoft.
-    uf2: enum {
-        ATMEGA32,
-        SAML21,
-        NRF52,
-        ESP32,
-        STM32L1,
-        STM32L0,
-        STM32WL,
-        LPC55,
-        STM32G0,
-        GD32F350,
-        STM32L5,
-        STM32G4,
-        MIMXRT10XX,
-        STM32F7,
-        SAMD51,
-        STM32F4,
-        FX2,
-        STM32F2,
-        STM32F1,
-        NRF52833,
-        STM32F0,
-        SAMD21,
-        STM32F3,
-        STM32F407,
-        STM32H7,
-        STM32WB,
-        ESP8266,
-        KL32L2,
-        STM32F407VG,
-        NRF52840,
-        ESP32S2,
-        ESP32S3,
-        ESP32C3,
-        ESP32C2,
-        ESP32H2,
-        RP2040,
-        RP2XXX_ABSOLUTE,
-        RP2XXX_DATA,
-        RP2350_ARM_S,
-        RP2350_RISC_V,
-        RP2350_ARM_NS,
-        STM32L4,
-        GD32VF103,
-        CSK4,
-        CSK6,
-        M0SENSE,
-    },
+    uf2: uf2.FamilyId,
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
     esp,

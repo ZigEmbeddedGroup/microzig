@@ -6,12 +6,14 @@ const Self = @This();
 chips: struct {
     rp2040: *const microzig.Target,
     rp2350_arm: *const microzig.Target,
+    rp2350_riscv: *const microzig.Target,
 },
 
 boards: struct {
     raspberrypi: struct {
         pico: *const microzig.Target,
         pico2_arm: *const microzig.Target,
+        pico2_riscv: *const microzig.Target,
     },
     waveshare: struct {
         rp2040_plus_4m: *const microzig.Target,
@@ -51,7 +53,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .linker_script = b.path("rp2040.ld"),
     };
 
-    const chip_rp2350: microzig.Target = .{
+    const chip_rp2350_arm: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
         .chip = .{
@@ -64,13 +66,56 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
             .memory_regions = &.{
-                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
-                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
         },
         .hal = hal,
-        .linker_script = b.path("rp2350.ld"),
+        .linker_script = b.path("rp2350_arm.ld"),
+    };
+
+    const chip_rp2350_riscv: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .{ .uf2 = .RP2350_RISC_V },
+        .chip = .{
+            .name = "RP2350",
+            .cpu = std.Target.Query{
+                .cpu_arch = .riscv32,
+                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+                // the commented ones are in the datasheet but for some reason they break the code
+                .cpu_features_add = std.Target.riscv.featureSet(&.{
+                    // std.Target.riscv.Feature.c,
+                    std.Target.riscv.Feature.a,
+                    std.Target.riscv.Feature.m,
+                    std.Target.riscv.Feature.zba,
+                    std.Target.riscv.Feature.zbb,
+                    std.Target.riscv.Feature.zbs,
+                    // std.Target.riscv.Feature.zcb,
+                    // std.Target.riscv.Feature.zcmp,
+                    std.Target.riscv.Feature.zbkb,
+                    std.Target.riscv.Feature.zifencei,
+                }),
+                .os_tag = .freestanding,
+                .abi = .eabi,
+            },
+            .cpu_module_file = b.path("src/cpus/hazard3.zig"),
+            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .memory_regions = &.{
+                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+            },
+            .patches = &.{
+                .{
+                    .override_arch = .{
+                        .device_name = "RP2350",
+                        .arch = .hazard3,
+                    },
+                },
+            },
+        },
+        .hal = hal,
+        .linker_script = b.path("rp2350_riscv.ld"),
     };
 
     const bootrom_rp2040 = get_bootrom(b, chip_rp2040.chip, .w25q080);
@@ -81,7 +126,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
     return .{
         .chips = .{
             .rp2040 = chip_rp2040.derive(.{}),
-            .rp2350_arm = chip_rp2350.derive(.{}),
+            .rp2350_arm = chip_rp2350_arm.derive(.{}),
+            .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
         },
         .boards = .{
             .raspberrypi = .{
@@ -93,7 +139,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .imports = rp2040_bootrom_imports,
                     },
                 }),
-                .pico2_arm = chip_rp2350.derive(.{
+                .pico2_arm = chip_rp2350_arm.derive(.{
+                    .board = .{
+                        .name = "RaspberryPi Pico 2",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
+                    },
+                }),
+                .pico2_riscv = chip_rp2350_riscv.derive(.{
                     .board = .{
                         .name = "RaspberryPi Pico 2",
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico2/",

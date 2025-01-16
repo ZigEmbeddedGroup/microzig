@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
-const CPU = @import("../cpu.zig").CPU;
+const Chip = @import("../chip.zig").Chip;
 const tokenizer = @import("assembler/tokenizer.zig");
 const encoder = @import("assembler/encoder.zig");
 
@@ -72,9 +72,9 @@ pub const Diagnostics = struct {
     }
 };
 
-pub fn assemble_impl(comptime cpu: CPU, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
-    const tokens = try tokenizer.tokenize(cpu, source, diags, options.tokenize);
-    const encoder_output = try encoder.encode(cpu, tokens.slice(), diags, options.encode);
+pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
+    const tokens = try tokenizer.tokenize(chip, source, diags, options.tokenize);
+    const encoder_output = try encoder.encode(chip, tokens.slice(), diags, options.encode);
     var programs = std.BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
@@ -102,7 +102,7 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
         line_str = line_str ++ "\n" ++ line;
         // If the line iterator is overlapping the provided index, then we are on the correct line
         if (line_it.index >= index) {
-        // Calculate the column
+            // Calculate the column
             column = line.len - (line_it.index - index);
             line_str = line;
             break;
@@ -124,9 +124,9 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     });
 }
 
-pub fn assemble(comptime cpu: CPU, comptime source: []const u8, comptime options: AssembleOptions) Output {
+pub fn assemble(comptime chip: Chip, comptime source: []const u8, comptime options: AssembleOptions) Output {
     var diags: ?Diagnostics = null;
-    return assemble_impl(cpu, source, &diags, options) catch |err| {
+    return assemble_impl(chip, source, &diags, options) catch |err| {
         if (diags) |d|
             @compileError(format_compile_error(d.message.slice(), source, d.index));
         @compileError(@errorName(err));

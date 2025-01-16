@@ -3,11 +3,11 @@ const EnumField = std.builtin.Type.EnumField;
 
 const microzig = @import("microzig");
 const RESETS = microzig.chip.peripherals.RESETS;
-const cpu = @import("compatibility.zig").cpu;
+const chip = @import("compatibility.zig").chip;
 const hw = @import("hw.zig");
 
 pub const Mask =
-    switch (cpu) {
+    switch (chip) {
     .RP2040 => packed struct(u32) {
         adc: bool = true,
         busctrl: bool = true,
@@ -140,7 +140,7 @@ pub const masks = struct {
         tmp.uart0 = false;
         tmp.uart1 = false;
         tmp.usbctrl = false;
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {
                 tmp.rtc = false;
             },

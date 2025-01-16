@@ -39,12 +39,12 @@ pub fn build(b: *std.Build) void {
     const rp2350_only_examples: []const Example = &.{};
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
-        .{ .name = "ws2812", .file = "src/ws2812.zig" },
-        // .{ .name = "squarewave", .file = "src/squarewave.zig" },
+        // .{ .name = "ws2812", .file = "src/ws2812.zig" },
         // .{ .name = "blinky", .file = "src/blinky.zig" },
         // .{ .name = "gpio-clock-output", .file = "src/gpio_clock_output.zig" },
         // .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         // .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
+        // .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);

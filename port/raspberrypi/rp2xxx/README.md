@@ -25,3 +25,4 @@ The RP2350 is very similar to the RP2040, but has enough differences to require 
 - [x] time
 - [ ] uart
 - [ ] usb
+- [x] watchdog

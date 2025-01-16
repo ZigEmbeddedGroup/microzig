@@ -83,7 +83,15 @@ fn write_devices(db: *Database, arena: Allocator, writer: anytype) !void {
     try writer.writeAll("};\n");
 }
 
-pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+pub fn write_doc_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+    try write_comment(allocator, "///", comment, writer);
+}
+
+pub fn write_regular_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+    try write_comment(allocator, "//", comment, writer);
+}
+
+fn write_comment(allocator: Allocator, comptime comment_prefix: []const u8, comment: []const u8, writer: anytype) !void {
     var tokenized = std.ArrayList(u8).init(allocator);
     defer tokenized.deinit();
 
@@ -103,7 +111,7 @@ pub fn write_comment(allocator: Allocator, comment: []const u8, writer: anytype)
 
     var line_it = std.mem.tokenizeScalar(u8, unescaped, '\n');
     while (line_it.next()) |line|
-        try writer.print("///{s}\n", .{line});
+        try writer.print("{s}{s}\n", .{ comment_prefix, line });
 }
 
 fn write_string(str: []const u8, writer: anytype) !void {
@@ -123,7 +131,7 @@ fn write_device(db: *Database, arena: Allocator, device: *const Database.Device,
 
     const writer = buffer.writer();
     if (device.description) |description| {
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
     }
 
     try writer.print(
@@ -294,11 +302,11 @@ fn write_device_peripheral(
     const type_ref = try types_reference(db, arena, .{ .@"struct" = instance.struct_id });
 
     if (try get_device_peripheral_description(db, arena, instance)) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     // TODO: get description
     //else if (s.description) |desc|
-    //    try write_comment(arena, desc, writer);
+    //    try write_doc_comment(arena, desc, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix = if (instance.count) |count|
@@ -362,7 +370,7 @@ fn write_struct_decl(
     const writer = buffer.writer();
     try writer.writeByte('\n');
     if (description) |d|
-        try write_comment(arena, d, writer);
+        try write_doc_comment(arena, d, writer);
 
     const zero_sized = registers.len == 0;
     const has_modes = modes.len > 0;
@@ -445,7 +453,7 @@ fn write_enum(db: *Database, arena: Allocator, e: *const Enum, out_writer: anyty
     // assert(std.math.ceilPowerOfTwo(field_set.count()) <= size);
 
     if (e.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     try writer.print("pub const {} = enum(u{}) {{\n", .{
         std.zig.fmtId(e.name.?),
@@ -483,7 +491,7 @@ fn write_enum_field(
     // TODO: use size to print the hex value (pad with zeroes accordingly)
     _ = size;
     if (enum_field.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     try writer.print("{} = 0x{x},\n", .{ std.zig.fmtId(enum_field.name), enum_field.value });
 }
@@ -666,7 +674,7 @@ fn write_register(
 
     const writer = buffer.writer();
     if (register.description) |description|
-        try write_comment(arena, description, writer);
+        try write_doc_comment(arena, description, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (register.count) |count|
@@ -696,6 +704,12 @@ fn write_register(
     try out_writer.writeAll(buffer.items);
 }
 
+/// Determine if a field comes before another, i.e. has a lower bit offset in the register
+/// (or should be preferred to another, if they incorrectly have the same offset).
+fn field_comes_before(_: void, a: Database.StructField, b: Database.StructField) bool {
+    return a.offset_bits < b.offset_bits or (a.offset_bits == b.offset_bits and a.size_bits < b.size_bits);
+}
+
 fn write_fields(
     db: *Database,
     arena: Allocator,
@@ -703,71 +717,71 @@ fn write_fields(
     register_size_bits: u64,
     out_writer: anytype,
 ) !void {
-    // Fields are assumed to be in order of offset, it's possible there are
-    // fields that overlap so we're going to filter out some fields so there's
-    // no overlap
-    var non_overlapping = std.ArrayList(Database.StructField).init(arena);
+    // We first expand every 'array field' into its consituent fields,
+    // named e.g. `@OISN[0]`, `@OISN[1]`, etc. for `field.name` OISN.
+    var expanded_fields = std.ArrayList(Database.StructField).init(arena);
     for (fields) |field| {
-        if (non_overlapping.items.len == 0) {
-            try non_overlapping.append(field);
-            continue;
-        }
-
-        const last_field = &non_overlapping.items[non_overlapping.items.len - 1];
-        const last_field_end_bits = last_field.offset_bits + last_field.get_size_bits();
-
-        // If there's no overlap then append and continue
-        if (last_field_end_bits <= field.offset_bits) {
-            try non_overlapping.append(field);
-        } else if (last_field.offset_bits == field.offset_bits and
-            field.get_size_bits() < last_field.get_size_bits())
-        {
-            // Edge case for overlapping
-            //
-            // If a field's offset comes before another, it has precedence, but if
-            // the offsets are the exact same, and the new one is smaller, then the
-            // new will replace the old.
-            last_field.* = field;
-        }
+        if (field.count) |count| {
+            var stride = field.stride orelse field.size_bits;
+            if (stride < field.size_bits) {
+                log.warn("array field stride {d} for field {s} is too small, assuming stride == field size ({d}) instead", .{ stride, field.name, field.size_bits });
+                stride = field.size_bits;
+            }
+            for (0..count) |i| {
+                var subfield = field;
+                subfield.count = undefined;
+                subfield.stride = undefined;
+                subfield.offset_bits = field.offset_bits + @as(u8, @intCast(stride * i));
+                subfield.name = try std.fmt.allocPrint(arena, "{s}[{d}]", .{ field.name, i });
+                subfield.description = try std.fmt.allocPrint(arena, "({d}/{d} of {s}) {s}", .{ i + 1, count, field.name, field.description orelse "" });
+                try expanded_fields.append(subfield);
+            }
+        } else try expanded_fields.append(field);
     }
+    // the 'count' and 'stride' of each entry of `expanded_fields` are never used below
 
-    // TODO: Remove any fields that don't fit in the register
+    // Fields are not assumed to be in order of offset, but they often are,
+    // so we use a stable sort algorithm that is fast on almost sorted data.
+    // (One examples where fields are not in order, is with array fields that 'interleave',
+    // where both have stride > size_bits: Above those are appended out of order.)
+    std.sort.insertion(Database.StructField, expanded_fields.items, {}, field_comes_before);
 
     var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
     const writer = buffer.writer();
     var offset: u64 = 0;
 
-    for (non_overlapping.items) |field| {
-        assert(offset <= field.offset_bits);
+    for (expanded_fields.items) |field| {
+        if (offset > field.offset_bits) {
+            // It's possible there are fields that overlap so
+            // we're going to filter out some fields so there's no overlap.
+            //
+            // Edge case for overlapping
+            //
+            // If the offset of this field is the exact same as for another shorter field,
+            // then (because of the `field_comes_before()` sort order) we will already have seen the shorter field,
+            // and here we are skipping the longer field.
+            const message = try std.fmt.allocPrint(arena, "skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
+            log.warn("{s}", .{message});
+            try write_regular_comment(arena, message, writer);
+            continue;
+        }
+        if (offset + field.size_bits > register_size_bits) {
+            const message = try std.fmt.allocPrint(arena, "skipped too long field {s} at offset {d} bits, length {d} bits", .{ field.name, field.offset_bits, field.size_bits });
+            log.warn("{s}", .{message});
+            try write_regular_comment(arena, message, writer);
+            continue;
+        }
         if (offset < field.offset_bits) {
             try writer.print("reserved{}: u{},\n", .{ field.offset_bits, field.offset_bits - offset });
             offset = field.offset_bits;
         }
-
         assert(offset == field.offset_bits);
+
         if (field.description) |description|
-            try write_comment(arena, description, writer);
+            try write_doc_comment(arena, description, writer);
 
-        if (field.count) |count| {
-            if (field.enum_id != null)
-                log.warn("TODO: field array with enums", .{});
-
-            try writer.print("{}: packed struct(u{}) {{ ", .{
-                std.zig.fmtId(field.name),
-                field.get_size_bits(),
-            });
-
-            var j: u32 = 0;
-            while (j < count) : (j += 1) {
-                if (j > 0)
-                    try writer.writeAll(", ");
-
-                try writer.print("u{}", .{field.size_bits});
-            }
-
-            try writer.writeAll(" },\n");
-        } else if (field.enum_id) |enum_id| {
+        if (field.enum_id) |enum_id| {
             const e = try db.get_enum(arena, enum_id);
             if (e.name) |enum_name| {
                 if (e.struct_id == null or try db.enum_has_name_collision(enum_id)) {
@@ -803,10 +817,10 @@ fn write_fields(
                 try writer.writeAll("},\n");
             }
         } else {
-            try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.get_size_bits() });
+            try writer.print("{}: u{},\n", .{ std.zig.fmtId(field.name), field.size_bits });
         }
 
-        offset += field.get_size_bits();
+        offset += field.size_bits;
     }
 
     assert(offset <= register_size_bits);
@@ -1296,7 +1310,16 @@ test "gen.field with count, width of one, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2,
-        \\                TEST_FIELD: packed struct(u5) { u1, u1, u1, u1, u1 },
+        \\                /// (1/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[0]": u1,
+        \\                /// (2/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[1]": u1,
+        \\                /// (3/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[2]": u1,
+        \\                /// (4/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[3]": u1,
+        \\                /// (5/5 of TEST_FIELD)
+        \\                @"TEST_FIELD[4]": u1,
         \\                padding: u1,
         \\            }),
         \\        };
@@ -1323,7 +1346,10 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2,
-        \\                TEST_FIELD: packed struct(u4) { u2, u2 },
+        \\                /// (1/2 of TEST_FIELD)
+        \\                @"TEST_FIELD[0]": u2,
+        \\                /// (2/2 of TEST_FIELD)
+        \\                @"TEST_FIELD[1]": u2,
         \\                padding: u2,
         \\            }),
         \\        };

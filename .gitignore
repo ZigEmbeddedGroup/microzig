@@ -9,3 +9,5 @@ boxzer-out
 microzig-deploy/
 zig-cache/
 zig-out/
+
+*.regz

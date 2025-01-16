@@ -7,7 +7,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
 const usb = rp2xxx.usb;
-const cpu = rp2xxx.compatibility.cpu;
+const chip = rp2xxx.compatibility.chip;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -69,7 +69,7 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
             pin.set_function(.uart);
         },
@@ -119,20 +119,25 @@ pub fn main() !void {
 
 var usb_tx_buff: [1024]u8 = undefined;
 
+// Transfer data to host
+// NOTE: After each USB chunk transfer, we have to call the USB task so that bus TX events can be handled
 pub fn usb_cdc_write(comptime fmt: []const u8, args: anytype) void {
     const text = std.fmt.bufPrint(&usb_tx_buff, fmt, args) catch &.{};
 
     var write_buff = text;
     while (write_buff.len > 0) {
         write_buff = driver_cdc.write(write_buff);
+        usb_dev.task(false) catch unreachable;
     }
+    // Short messages are not sent right away; instead, they accumulate in a buffer, so we have to force a flush to send them
+    _ = driver_cdc.write_flush();
+    usb_dev.task(false) catch unreachable;
 }
 
 var usb_rx_buff: [1024]u8 = undefined;
 
-// TODO - right now there are 2 issues with reading data from serial:
-// 1. It not always work, so sometime data is not received. This is probably related to how we reset usb buffer flags.
-// 2. Even when usb host sends small chunk of data cdc read returns full packet length. This require further investigation.
+// Receive data from host
+// NOTE: Read code was not tested extensively. In case of issues, try to call USB task before every read operation
 pub fn usb_cdc_read() []const u8 {
     var total_read: usize = 0;
     var read_buff: []u8 = usb_rx_buff[0..];

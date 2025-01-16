@@ -207,7 +207,7 @@ pub const Function = enum {
             .I2C1_SDA,
             .I2C1_SCL,
             => true,
-            else => false
+            else => false,
         };
     }
 

@@ -5,7 +5,7 @@ const rp2xxx = microzig.hal;
 const i2c = rp2xxx.i2c;
 const gpio = rp2xxx.gpio;
 const peripherals = microzig.chip.peripherals;
-const cpu = rp2xxx.compatibility.cpu;
+const chip = rp2xxx.compatibility.chip;
 
 pub const microzig_options = .{
     .log_level = .info,
@@ -20,7 +20,7 @@ const uart_rx_pin = gpio.num(1);
 const i2c0 = i2c.instance.num(0);
 
 pub fn main() !void {
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
             pin.set_function(.uart);
         },

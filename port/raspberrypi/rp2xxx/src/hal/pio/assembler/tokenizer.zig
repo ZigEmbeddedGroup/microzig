@@ -5,20 +5,20 @@ const assembler = @import("../assembler.zig");
 const Diagnostics = assembler.Diagnostics;
 
 const Expression = @import("Expression.zig");
-const CPU = @import("../../cpu.zig").CPU;
+const Chip = @import("../../chip.zig").Chip;
 
 pub const Options = struct {
     capacity: u32 = 256,
 };
 
 pub fn tokenize(
-    comptime cpu: CPU,
+    comptime chip: Chip,
     source: []const u8,
     diags: *?assembler.Diagnostics,
     comptime options: Options,
-) !std.BoundedArray(Token(cpu), options.capacity) {
-    var tokens = std.BoundedArray(Token(cpu), options.capacity).init(0) catch unreachable;
-    var tokenizer = Tokenizer(cpu).init(source);
+) !std.BoundedArray(Token(chip), options.capacity) {
+    var tokens = std.BoundedArray(Token(chip), options.capacity).init(0) catch unreachable;
+    var tokenizer = Tokenizer(chip).init(source);
     while (try tokenizer.next(diags)) |token|
         try tokens.append(token);
 
@@ -64,7 +64,7 @@ pub const Value = union(enum) {
 // '/' -> '*' -> block comment
 // '%' -> <whitespace> -> <identifier> -> <whitespace> -> '{' -> code block
 // '.' -> directive
-pub fn Tokenizer(cpu: CPU) type {
+pub fn Tokenizer(chip: Chip) type {
     return struct {
         const Self = @This();
         source: []const u8,
@@ -315,12 +315,12 @@ pub fn Tokenizer(cpu: CPU) type {
             TooBig,
         };
 
-        fn get_program(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_program(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             const name = (try self.get_arg(diags)) orelse {
                 diags.* = Diagnostics.init(index, "missing program name", .{});
                 return error.MissingArg;
             };
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{ .program = name },
             };
@@ -343,7 +343,7 @@ pub fn Tokenizer(cpu: CPU) type {
             return std.mem.eql(u8, &buf, lhs);
         }
 
-        fn get_define(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_define(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             const maybe_public = try self.get_identifier();
             const is_public = eql_lower("public", maybe_public.str);
 
@@ -352,7 +352,7 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 maybe_public;
 
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{
                     .define = .{
@@ -411,9 +411,9 @@ pub fn Tokenizer(cpu: CPU) type {
                 return error.NoValue;
         }
 
-        fn get_origin(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_origin(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             _ = diags;
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{
                     .origin = try self.get_value(),
@@ -421,7 +421,7 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_side_set(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_side_set(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             const args = try self.get_args(3, diags);
             const count = try Value.from_string(args[0] orelse {
                 diags.* = Diagnostics.init(index, "missing count", .{});
@@ -442,7 +442,7 @@ pub fn Tokenizer(cpu: CPU) type {
                     pindirs = true;
             }
 
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{
                     .side_set = .{
@@ -454,23 +454,23 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_wrap_target(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(cpu) {
-            return Token(cpu){
+        fn get_wrap_target(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(chip) {
+            return Token(chip){
                 .index = index,
                 .data = .{ .wrap_target = {} },
             };
         }
 
-        fn get_wrap(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(cpu) {
-            return Token(cpu){
+        fn get_wrap(_: *Self, index: u32, _: *?Diagnostics) TokenizeError!Token(chip) {
+            return Token(chip){
                 .index = index,
                 .data = .{ .wrap = {} },
             };
         }
 
-        fn get_lang_opt(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_lang_opt(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             _ = diags;
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{
                     .lang_opt = .{
@@ -482,15 +482,15 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_word(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(cpu) {
+        fn get_word(self: *Self, index: u32, diags: *?Diagnostics) TokenizeError!Token(chip) {
             _ = diags;
-            return Token(cpu){
+            return Token(chip){
                 .index = index,
                 .data = .{ .word = try self.get_value() },
             };
         }
 
-        const directives = std.StaticStringMap(*const fn (*Self, u32, *?Diagnostics) TokenizeError!Token(cpu)).initComptime(.{
+        const directives = std.StaticStringMap(*const fn (*Self, u32, *?Diagnostics) TokenizeError!Token(chip)).initComptime(.{
             .{ "program", get_program },
             .{ "define", get_define },
             .{ "origin", get_origin },
@@ -501,7 +501,7 @@ pub fn Tokenizer(cpu: CPU) type {
             .{ "word", get_word },
         });
 
-        fn get_directive(self: *Self, diags: *?Diagnostics) !Token(cpu) {
+        fn get_directive(self: *Self, diags: *?Diagnostics) !Token(chip) {
             const index = self.index;
             const identifier = try self.read_until_whitespace_or_end();
             return if (directives.get(identifier)) |handler| ret: {
@@ -511,22 +511,22 @@ pub fn Tokenizer(cpu: CPU) type {
             } else error.InvalidDirective;
         }
 
-        fn get_nop(_: *Self, _: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
-            return Token(cpu).Instruction.Payload{
+        fn get_nop(_: *Self, _: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
+            return Token(chip).Instruction.Payload{
                 .nop = {},
             };
         }
 
-        fn target_from_string(str: []const u8) TokenizeError!Token(cpu).Instruction.Jmp.Target {
+        fn target_from_string(str: []const u8) TokenizeError!Token(chip).Instruction.Jmp.Target {
             const value = Value.from_string(str);
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .jmp = .{
                     .condition = .always,
                     .target = switch (value) {
-                        .string => |label| Token(cpu).Instruction.Jmp.Target{
+                        .string => |label| Token(chip).Instruction.Jmp.Target{
                             .label = label,
                         },
-                        else => Token(cpu).Instruction.Jmp.Target{
+                        else => Token(chip).Instruction.Jmp.Target{
                             .value = value,
                         },
                     },
@@ -534,8 +534,8 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_jmp(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
-            const Condition = Token(cpu).Instruction.Jmp.Condition;
+        fn get_jmp(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
+            const Condition = Token(chip).Instruction.Jmp.Condition;
             const conditions = std.StaticStringMap(Condition).initComptime(.{
                 .{ "!x", .x_is_zero },
                 .{ "x--", .x_dec },
@@ -554,12 +554,12 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 (try self.get_arg(diags)) orelse return error.MissingArg;
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .jmp = .{ .condition = cond, .target = target_str },
             };
         }
 
-        fn get_wait(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_wait(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             const polarity = try std.fmt.parseInt(u1, (try self.get_arg(diags)) orelse return error.MissingArg, 0);
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const pin = try Value.from_string((try self.get_arg(diags)) orelse return error.MissingArg);
@@ -569,8 +569,8 @@ pub fn Tokenizer(cpu: CPU) type {
                 buf[i] = std.ascii.toLower(c);
 
             const source_lower = buf[0..source_str.len];
-            var source: Token(cpu).Instruction.Wait.Source = undefined;
-            switch (comptime cpu) {
+            var source: Token(chip).Instruction.Wait.Source = undefined;
+            switch (comptime chip) {
                 .RP2040 => {
                     source = if (std.mem.eql(u8, "gpio", source_lower))
                         .gpio
@@ -606,7 +606,7 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 false;
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .wait = .{
                     .polarity = polarity,
                     .source = source,
@@ -632,7 +632,7 @@ pub fn Tokenizer(cpu: CPU) type {
         // I need to keep in mind with `get_args()` is that I must only consume the
         // args that are used. side set and delay may be on the same line
 
-        fn get_in(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_in(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const bit_count_str = (try self.get_arg(diags)) orelse return error.MissingArg;
 
@@ -643,15 +643,15 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 @as(u5, @intCast(bit_count_tmp));
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .in = .{
-                    .source = std.meta.stringToEnum(Token(cpu).Instruction.In.Source, source_lower.slice()) orelse return error.InvalidSource,
+                    .source = std.meta.stringToEnum(Token(chip).Instruction.In.Source, source_lower.slice()) orelse return error.InvalidSource,
                     .bit_count = bit_count,
                 },
             };
         }
 
-        fn get_out(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_out(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             const dest_src = (try self.get_arg(diags)) orelse return error.MissingArg;
             const bit_count_str = (try self.get_arg(diags)) orelse return error.MissingArg;
 
@@ -662,9 +662,9 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 @as(u5, @intCast(bit_count_tmp));
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .out = .{
-                    .destination = std.meta.stringToEnum(Token(cpu).Instruction.Out.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
+                    .destination = std.meta.stringToEnum(Token(chip).Instruction.Out.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
                     .bit_count = bit_count,
                 },
             };
@@ -686,7 +686,7 @@ pub fn Tokenizer(cpu: CPU) type {
                 true;
         }
 
-        fn get_push(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_push(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             return if (try self.peek_arg(diags)) |first_result| ret: {
                 const lower = try lowercase_bounded(256, first_result.str);
                 const iffull = std.mem.eql(u8, "iffull", lower.slice());
@@ -699,13 +699,13 @@ pub fn Tokenizer(cpu: CPU) type {
                         true;
                 } else try self.block_from_peek(first_result);
 
-                break :ret Token(cpu).Instruction.Payload{
+                break :ret Token(chip).Instruction.Payload{
                     .push = .{
                         .iffull = iffull,
                         .block = block,
                     },
                 };
-            } else Token(cpu).Instruction.Payload{
+            } else Token(chip).Instruction.Payload{
                 .push = .{
                     .iffull = false,
                     .block = true,
@@ -713,7 +713,7 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_pull(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_pull(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             return if (try self.peek_arg(diags)) |first_result| ret: {
                 const lower = try lowercase_bounded(256, first_result.str);
                 const ifempty = std.mem.eql(u8, "ifempty", lower.slice());
@@ -726,13 +726,13 @@ pub fn Tokenizer(cpu: CPU) type {
                         true;
                 } else try self.block_from_peek(first_result);
 
-                break :ret Token(cpu).Instruction.Payload{
+                break :ret Token(chip).Instruction.Payload{
                     .pull = .{
                         .ifempty = ifempty,
                         .block = block,
                     },
                 };
-            } else Token(cpu).Instruction.Payload{
+            } else Token(chip).Instruction.Payload{
                 .pull = .{
                     .ifempty = false,
                     .block = true,
@@ -740,12 +740,12 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_mov(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_mov(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             // Peek so that we can unwind for the mov_rx case
             const dest_str = try self.peek_arg(diags) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str.str);
             // If the destination is rxfifo_ or rxfifoy, then it's a mov (to) rx instruction
-            if (cpu == .RP2350 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
+            if (chip == .RP2350 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 return try self.get_movrx(diags);
             }
 
@@ -761,14 +761,14 @@ pub fn Tokenizer(cpu: CPU) type {
             const peek_source_str = try self.peek_arg(diags) orelse return error.MissingArg;
             const peek_source_lower = try lowercase_bounded(256, peek_source_str.str);
             // If the destination is osr, and the source is rxfifo_ or rxfifoy, then it's a mov (from) rx instruction
-            if (cpu == .RP2350 and std.mem.startsWith(u8, peek_source_lower.slice(), "rxfifo")) {
+            if (chip == .RP2350 and std.mem.startsWith(u8, peek_source_lower.slice(), "rxfifo")) {
                 // Need to unconsume first arg
                 self.unconsume(dest_str);
 
                 return try self.get_movrx(diags);
             }
 
-            const destination = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
+            const destination = std.meta.stringToEnum(Token(chip).Instruction.Mov.Destination, dest_lower.slice()) orelse return error.InvalidDestination;
 
             const second = try self.get_arg(diags) orelse return error.MissingArg;
             const op_prefixed: ?[]const u8 = if (std.mem.startsWith(u8, second, "!"))
@@ -789,8 +789,8 @@ pub fn Tokenizer(cpu: CPU) type {
                 second;
 
             const source_lower = try lowercase_bounded(256, source_str);
-            const source = std.meta.stringToEnum(Token(cpu).Instruction.Mov.Source, source_lower.slice()) orelse return error.InvalidSource;
-            const operation: Token(cpu).Instruction.Mov.Operation = if (op_prefixed) |op_str|
+            const source = std.meta.stringToEnum(Token(chip).Instruction.Mov.Source, source_lower.slice()) orelse return error.InvalidSource;
+            const operation: Token(chip).Instruction.Mov.Operation = if (op_prefixed) |op_str|
                 if (std.mem.eql(u8, "!", op_str))
                     .invert
                 else if (std.mem.eql(u8, "~", op_str))
@@ -802,7 +802,7 @@ pub fn Tokenizer(cpu: CPU) type {
             else
                 .none;
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .mov = .{
                     .destination = destination,
                     .source = source,
@@ -811,7 +811,7 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             // TODO: Assuming one space after opcode
             const dest_idx = self.index + 1;
             const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
@@ -829,7 +829,7 @@ pub fn Tokenizer(cpu: CPU) type {
                 }
                 const dest_index_char = dest_lower.slice()["rxfifo".len - 0 ..];
                 if (dest_index_char[0] == 'y') {
-                    return Token(cpu).Instruction.Payload{
+                    return Token(chip).Instruction.Payload{
                         .movtorx = .{
                             .idxl = true,
                             .idx = 0,
@@ -848,7 +848,7 @@ pub fn Tokenizer(cpu: CPU) type {
                         return error.InvalidDestination;
                     }
                     diags.* = null;
-                    return Token(cpu).Instruction.Payload{
+                    return Token(chip).Instruction.Payload{
                         .movtorx = .{
                             .idxl = false,
                             .idx = @intCast(value),
@@ -887,7 +887,7 @@ pub fn Tokenizer(cpu: CPU) type {
                     return error.InvalidSource;
                 }
                 diags.* = null;
-                return Token(cpu).Instruction.Payload{
+                return Token(chip).Instruction.Payload{
                     .movfromrx = .{
                         .idxl = idxl,
                         .idx = idx,
@@ -903,7 +903,7 @@ pub fn Tokenizer(cpu: CPU) type {
             }
         }
 
-        fn get_irq(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_irq(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             const first = (try self.get_arg(diags)) orelse return error.MissingArg;
 
             var clear = false;
@@ -934,7 +934,7 @@ pub fn Tokenizer(cpu: CPU) type {
                     first,
             };
 
-            switch (comptime cpu) {
+            switch (comptime chip) {
                 .RP2040 => {
                     const rel: bool = if (try self.peek_arg(diags)) |result| blk: {
                         const rel_lower = try lowercase_bounded(256, result.str);
@@ -945,7 +945,7 @@ pub fn Tokenizer(cpu: CPU) type {
                         break :blk is_rel;
                     } else false;
 
-                    return Token(cpu).Instruction.Payload{
+                    return Token(chip).Instruction.Payload{
                         .irq = .{
                             .clear = clear,
                             .wait = wait,
@@ -983,7 +983,7 @@ pub fn Tokenizer(cpu: CPU) type {
                     } else 0b00;
                     // } else .direct;
 
-                    return Token(cpu).Instruction.Payload{
+                    return Token(chip).Instruction.Payload{
                         .irq = .{
                             .clear = clear,
                             .wait = wait,
@@ -995,7 +995,7 @@ pub fn Tokenizer(cpu: CPU) type {
             }
         }
 
-        fn get_set(self: *Self, diags: *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload {
+        fn get_set(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
             const dest_str = (try self.get_arg(diags)) orelse {
                 diags.* = Diagnostics.init(0, "missing destination", .{});
                 return error.MissingArg;
@@ -1004,15 +1004,15 @@ pub fn Tokenizer(cpu: CPU) type {
 
             const dest_lower = try lowercase_bounded(256, dest_str);
 
-            return Token(cpu).Instruction.Payload{
+            return Token(chip).Instruction.Payload{
                 .set = .{
-                    .destination = std.meta.stringToEnum(Token(cpu).Instruction.Set.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
+                    .destination = std.meta.stringToEnum(Token(chip).Instruction.Set.Destination, dest_lower.slice()) orelse return error.InvalidDestination,
                     .value = value,
                 },
             };
         }
 
-        const instructions = std.StaticStringMap(*const fn (*Self, *?Diagnostics) TokenizeError!Token(cpu).Instruction.Payload).initComptime(.{
+        const instructions = std.StaticStringMap(*const fn (*Self, *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload).initComptime(.{
             .{ "nop", get_nop },
             .{ "jmp", get_jmp },
             .{ "wait", get_wait },
@@ -1025,7 +1025,7 @@ pub fn Tokenizer(cpu: CPU) type {
             .{ "set", get_set },
         });
 
-        fn get_instruction(self: *Self, name: Identifier, diags: *?Diagnostics) !Token(cpu) {
+        fn get_instruction(self: *Self, name: Identifier, diags: *?Diagnostics) !Token(chip) {
             const name_lower = try lowercase_bounded(256, name.str);
             const payload = if (instructions.get(name_lower.slice())) |handler|
                 try handler(self, diags)
@@ -1066,7 +1066,7 @@ pub fn Tokenizer(cpu: CPU) type {
             }
 
             self.skip_line();
-            return Token(cpu){
+            return Token(chip){
                 .index = name.index,
                 .data = .{
                     .instruction = .{
@@ -1078,7 +1078,7 @@ pub fn Tokenizer(cpu: CPU) type {
             };
         }
 
-        fn next(self: *Self, diags: *?assembler.Diagnostics) !?Token(cpu) {
+        fn next(self: *Self, diags: *?assembler.Diagnostics) !?Token(chip) {
             while (self.peek()) |p| {
                 switch (p) {
                     ' ', '\t', '\n', '\r', ',' => self.consume(1),
@@ -1107,7 +1107,7 @@ pub fn Tokenizer(cpu: CPU) type {
 
                         // definitely a label
                         return if (eql_lower("public", first.str))
-                            Token(cpu){
+                            Token(chip){
                                 .index = first.index,
                                 .data = .{
                                     .label = .{
@@ -1120,7 +1120,7 @@ pub fn Tokenizer(cpu: CPU) type {
                                 },
                             }
                         else if (std.mem.endsWith(u8, first.str, ":"))
-                            Token(cpu){
+                            Token(chip){
                                 .index = first.index,
                                 .data = .{
                                     .label = .{
@@ -1140,7 +1140,7 @@ pub fn Tokenizer(cpu: CPU) type {
     };
 }
 
-pub fn Token(comptime cpu: CPU) type {
+pub fn Token(comptime chip: Chip) type {
     return struct {
         const Self = @This();
         index: u32,
@@ -1157,7 +1157,7 @@ pub fn Token(comptime cpu: CPU) type {
             instruction: Instruction,
         },
 
-        pub const Tag = std.meta.Tag(std.meta.FieldType(Token(cpu), .data));
+        pub const Tag = std.meta.Tag(std.meta.FieldType(Token(chip), .data));
 
         pub const Label = struct {
             name: []const u8,
@@ -1181,8 +1181,8 @@ pub fn Token(comptime cpu: CPU) type {
                 push: Push,
                 pull: Pull,
                 mov: Mov,
-                movtorx: if (cpu == .RP2350) MovToRx else noreturn,
-                movfromrx: if (cpu == .RP2350) MovFromRx else noreturn,
+                movtorx: if (chip == .RP2350) MovToRx else noreturn,
+                movfromrx: if (chip == .RP2350) MovFromRx else noreturn,
                 irq: Irq,
                 set: Set,
             };
@@ -1209,7 +1209,7 @@ pub fn Token(comptime cpu: CPU) type {
                 num: Value,
                 rel: bool,
 
-                pub const Source = switch (cpu) {
+                pub const Source = switch (chip) {
                     .RP2040 => enum(u2) {
                         gpio = 0b00,
                         pin = 0b01,
@@ -1269,7 +1269,7 @@ pub fn Token(comptime cpu: CPU) type {
                 operation: Operation,
                 source: Source,
 
-                pub const Destination = switch (cpu) {
+                pub const Destination = switch (chip) {
                     .RP2040 => enum(u3) {
                         pins = 0b000,
                         x = 0b001,
@@ -1317,7 +1317,7 @@ pub fn Token(comptime cpu: CPU) type {
                 idx: u3,
             };
 
-            pub const Irq = switch (cpu) {
+            pub const Irq = switch (chip) {
                 .RP2040 => struct {
                     clear: bool,
                     wait: bool,
@@ -1381,15 +1381,15 @@ const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
-fn DirectiveTag(comptime cpu: CPU) type {
-    return @typeInfo(Token(cpu).Directive).Union.tag_type.?;
+fn DirectiveTag(comptime chip: Chip) type {
+    return @typeInfo(Token(chip).Directive).Union.tag_type.?;
 }
-fn PayloadTag(comptime cpu: CPU) type {
-    return @typeInfo(Token(cpu).Instruction.Payload).Union.tag_type.?;
+fn PayloadTag(comptime chip: Chip) type {
+    return @typeInfo(Token(chip).Instruction.Payload).Union.tag_type.?;
 }
 
-fn expect_program(comptime cpu: CPU, expected: []const u8, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.program, @as(Token(cpu).Tag, actual.data));
+fn expect_program(comptime chip: Chip, expected: []const u8, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.program, @as(Token(chip).Tag, actual.data));
     try expectEqualStrings(expected, actual.data.program);
 }
 
@@ -1410,8 +1410,8 @@ fn expect_opt_value(expected: ?Value, actual: ?Value) !void {
         };
 }
 
-fn expect_define(comptime cpu: CPU, expected: Token(cpu).Define, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.define, @as(Token(cpu).Tag, actual.data));
+fn expect_define(comptime chip: Chip, expected: Token(chip).Define, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.define, @as(Token(chip).Tag, actual.data));
 
     const define = actual.data.define;
     try expectEqualStrings(expected.name, define.name);
@@ -1419,13 +1419,13 @@ fn expect_define(comptime cpu: CPU, expected: Token(cpu).Define, actual: Token(c
     try expectEqual(expected.index, define.index);
 }
 
-fn expect_origin(comptime cpu: CPU, expected: Value, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.origin, @as(Token(cpu).Tag, actual.data));
+fn expect_origin(comptime chip: Chip, expected: Value, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.origin, @as(Token(chip).Tag, actual.data));
     try expect_value(expected, actual.data.origin);
 }
 
-fn expect_side_set(comptime cpu: CPU, expected: Token(cpu).SideSet, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.side_set, @as(Token(cpu).Tag, actual.data));
+fn expect_side_set(comptime chip: Chip, expected: Token(chip).SideSet, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.side_set, @as(Token(chip).Tag, actual.data));
 
     const side_set = actual.data.side_set;
     try expect_value(expected.count, side_set.count);
@@ -1433,16 +1433,16 @@ fn expect_side_set(comptime cpu: CPU, expected: Token(cpu).SideSet, actual: Toke
     try expectEqual(expected.pindir, side_set.pindir);
 }
 
-fn expect_wrap_target(comptime cpu: CPU, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.wrap_target, @as(Token(cpu).Tag, actual.data));
+fn expect_wrap_target(comptime chip: Chip, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.wrap_target, @as(Token(chip).Tag, actual.data));
 }
 
-fn expect_wrap(comptime cpu: CPU, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.wrap, @as(Token(cpu).Tag, actual.data));
+fn expect_wrap(comptime chip: Chip, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.wrap, @as(Token(chip).Tag, actual.data));
 }
 
-fn expect_lang_opt(comptime cpu: CPU, expected: Token(cpu).LangOpt, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.lang_opt, @as(Token(cpu).Tag, actual.data));
+fn expect_lang_opt(comptime chip: Chip, expected: Token(chip).LangOpt, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.lang_opt, @as(Token(chip).Tag, actual.data));
 
     const lang_opt = actual.data.lang_opt;
     try expectEqualStrings(expected.lang, lang_opt.lang);
@@ -1450,13 +1450,13 @@ fn expect_lang_opt(comptime cpu: CPU, expected: Token(cpu).LangOpt, actual: Toke
     try expectEqualStrings(expected.option, lang_opt.option);
 }
 
-fn expect_word(comptime cpu: CPU, expected: Value, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.word, @as(Token(cpu).Tag, actual.data));
+fn expect_word(comptime chip: Chip, expected: Value, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.word, @as(Token(chip).Tag, actual.data));
     try expect_value(expected, actual.data.word);
 }
 
-fn expect_label(comptime cpu: CPU, expected: Token(cpu).Label, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.label, @as(Token(cpu).Tag, actual.data));
+fn expect_label(comptime chip: Chip, expected: Token(chip).Label, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.label, @as(Token(chip).Tag, actual.data));
 
     const label = actual.data.label;
     try expectEqual(expected.public, label.public);
@@ -1468,27 +1468,27 @@ const ExpectedNopInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_nop(comptime cpu: CPU, expected: ExpectedNopInstr, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).nop, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_nop(comptime chip: Chip, expected: ExpectedNopInstr, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).nop, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
     try expect_opt_value(expected.side_set, instr.side_set);
 }
 
-fn ExpectedSetInstr(comptime cpu: CPU) type {
+fn ExpectedSetInstr(comptime chip: Chip) type {
     return struct {
-        dest: Token(cpu).Instruction.Set.Destination,
+        dest: Token(chip).Instruction.Set.Destination,
         value: Value,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_set(comptime cpu: CPU, expected: ExpectedSetInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).set, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_set(comptime chip: Chip, expected: ExpectedSetInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).set, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1499,18 +1499,18 @@ fn expect_instr_set(comptime cpu: CPU, expected: ExpectedSetInstr(cpu), actual: 
     try expect_value(expected.value, set.value);
 }
 
-fn ExpectedJmpInstr(comptime cpu: CPU) type {
+fn ExpectedJmpInstr(comptime chip: Chip) type {
     return struct {
-        cond: Token(cpu).Instruction.Jmp.Condition = .always,
+        cond: Token(chip).Instruction.Jmp.Condition = .always,
         target: []const u8,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_jmp(comptime cpu: CPU, expected: ExpectedJmpInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).jmp, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_jmp(comptime chip: Chip, expected: ExpectedJmpInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).jmp, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1521,10 +1521,10 @@ fn expect_instr_jmp(comptime cpu: CPU, expected: ExpectedJmpInstr(cpu), actual: 
     try expectEqualStrings(expected.target, jmp.target);
 }
 
-fn ExpectedWaitInstr(comptime cpu: CPU) type {
+fn ExpectedWaitInstr(comptime chip: Chip) type {
     return struct {
         polarity: u1,
-        source: Token(cpu).Instruction.Wait.Source,
+        source: Token(chip).Instruction.Wait.Source,
         num: Value,
         // only valid for irq source
         rel: bool = false,
@@ -1533,9 +1533,9 @@ fn ExpectedWaitInstr(comptime cpu: CPU) type {
     };
 }
 
-fn expect_instr_wait(comptime cpu: CPU, expected: ExpectedWaitInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).wait, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_wait(comptime chip: Chip, expected: ExpectedWaitInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).wait, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1547,18 +1547,18 @@ fn expect_instr_wait(comptime cpu: CPU, expected: ExpectedWaitInstr(cpu), actual
     try expect_value(expected.num, wait.num);
 }
 
-fn ExpectedInInstr(comptime cpu: CPU) type {
+fn ExpectedInInstr(comptime chip: Chip) type {
     return struct {
-        source: Token(cpu).Instruction.In.Source,
+        source: Token(chip).Instruction.In.Source,
         bit_count: u5,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_in(comptime cpu: CPU, expected: ExpectedInInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).in, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_in(comptime chip: Chip, expected: ExpectedInInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).in, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1569,18 +1569,18 @@ fn expect_instr_in(comptime cpu: CPU, expected: ExpectedInInstr(cpu), actual: To
     try expectEqual(expected.bit_count, in.bit_count);
 }
 
-fn ExpectedOutInstr(comptime cpu: CPU) type {
+fn ExpectedOutInstr(comptime chip: Chip) type {
     return struct {
-        destination: Token(cpu).Instruction.Out.Destination,
+        destination: Token(chip).Instruction.Out.Destination,
         bit_count: u5,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_out(comptime cpu: CPU, expected: ExpectedOutInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).out, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_out(comptime chip: Chip, expected: ExpectedOutInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).out, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1598,9 +1598,9 @@ const ExpectedPushInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_push(comptime cpu: CPU, expected: ExpectedPushInstr, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).push, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_push(comptime chip: Chip, expected: ExpectedPushInstr, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).push, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1618,9 +1618,9 @@ const ExpectedPullInstr = struct {
     side_set: ?Value = null,
 };
 
-fn expect_instr_pull(comptime cpu: CPU, expected: ExpectedPullInstr, actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).pull, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_pull(comptime chip: Chip, expected: ExpectedPullInstr, actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).pull, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1631,19 +1631,19 @@ fn expect_instr_pull(comptime cpu: CPU, expected: ExpectedPullInstr, actual: Tok
     try expectEqual(expected.ifempty, pull.ifempty);
 }
 
-fn ExpectedMovInstr(comptime cpu: CPU) type {
+fn ExpectedMovInstr(comptime chip: Chip) type {
     return struct {
-        source: Token(cpu).Instruction.Mov.Source,
-        destination: Token(cpu).Instruction.Mov.Destination,
-        operation: Token(cpu).Instruction.Mov.Operation = .none,
+        source: Token(chip).Instruction.Mov.Source,
+        destination: Token(chip).Instruction.Mov.Destination,
+        operation: Token(chip).Instruction.Mov.Operation = .none,
         delay: ?Value = null,
         side_set: ?Value = null,
     };
 }
 
-fn expect_instr_mov(comptime cpu: CPU, expected: ExpectedMovInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).mov, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_mov(comptime chip: Chip, expected: ExpectedMovInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).mov, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1655,8 +1655,8 @@ fn expect_instr_mov(comptime cpu: CPU, expected: ExpectedMovInstr(cpu), actual: 
     try expectEqual(expected.destination, mov.destination);
 }
 
-fn ExpectedIrqInstr(comptime cpu: CPU) type {
-    return switch (cpu) {
+fn ExpectedIrqInstr(comptime chip: Chip) type {
+    return switch (chip) {
         .RP2040 => struct {
             clear: bool,
             wait: bool,
@@ -1676,9 +1676,9 @@ fn ExpectedIrqInstr(comptime cpu: CPU) type {
     };
 }
 
-fn expect_instr_irq(comptime cpu: CPU, expected: ExpectedIrqInstr(cpu), actual: Token(cpu)) !void {
-    try expectEqual(Token(cpu).Tag.instruction, @as(Token(cpu).Tag, actual.data));
-    try expectEqual(PayloadTag(cpu).irq, @as(PayloadTag(cpu), actual.data.instruction.payload));
+fn expect_instr_irq(comptime chip: Chip, expected: ExpectedIrqInstr(chip), actual: Token(chip)) !void {
+    try expectEqual(Token(chip).Tag.instruction, @as(Token(chip).Tag, actual.data));
+    try expectEqual(PayloadTag(chip).irq, @as(PayloadTag(chip), actual.data.instruction.payload));
 
     const instr = actual.data.instruction;
     try expect_opt_value(expected.delay, instr.delay);
@@ -1687,7 +1687,7 @@ fn expect_instr_irq(comptime cpu: CPU, expected: ExpectedIrqInstr(cpu), actual: 
     const irq = instr.payload.irq;
     try expectEqual(expected.clear, irq.clear);
     try expectEqual(expected.wait, irq.wait);
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             try expectEqual(expected.rel, irq.rel);
         },
@@ -1697,47 +1697,47 @@ fn expect_instr_irq(comptime cpu: CPU, expected: ExpectedIrqInstr(cpu), actual: 
     }
 }
 
-fn bounded_tokenize(comptime cpu: CPU, source: []const u8) !std.BoundedArray(Token(cpu), 256) {
+fn bounded_tokenize(comptime chip: Chip, source: []const u8) !std.BoundedArray(Token(chip), 256) {
     var diags: ?assembler.Diagnostics = null;
-    return tokenize(cpu, source, &diags, .{}) catch |err| if (diags) |d| blk: {
-        std.log.err("error with cpu {s} at index {}: {s}", .{ @tagName(cpu), d.index, d.message.slice() });
+    return tokenize(chip, source, &diags, .{}) catch |err| if (diags) |d| blk: {
+        std.log.err("error with chip {s} at index {}: {s}", .{ @tagName(chip), d.index, d.message.slice() });
         break :blk err;
     } else err;
 }
 
 test "tokenize.empty string" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "");
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "");
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.whitespace" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, " \t\r\n");
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, " \t\r\n");
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.comma line comment" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "; this is a line comment");
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "; this is a line comment");
 
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.slash line comment" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "// this is a line comment");
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "// this is a line comment");
 
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.block comment" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu,
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip,
             \\/* this is
             \\   a block comment */
         );
@@ -1747,8 +1747,8 @@ test "tokenize.block comment" {
 }
 
 test "tokenize.code block" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu,
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip,
             \\% c-sdk {
             \\   int foo;
             \\%}
@@ -1759,16 +1759,16 @@ test "tokenize.code block" {
 }
 
 test "tokenize.directive.program" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".program arst");
-        try expect_program(cpu, "arst", tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".program arst");
+        try expect_program(chip, "arst", tokens.get(0));
     }
 }
 
 test "tokenize.directive.define" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".define symbol_name 1");
-        try expect_define(cpu, .{
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".define symbol_name 1");
+        try expect_define(chip, .{
             .name = "symbol_name",
             .value = .{ .expression = "1" },
             .index = 8,
@@ -1777,9 +1777,9 @@ test "tokenize.directive.define" {
 }
 
 test "tokenize.directive.define.public" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".define public symbol_name 0x1");
-        try expect_define(cpu, .{
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".define public symbol_name 0x1");
+        try expect_define(chip, .{
             .name = "symbol_name",
             .value = .{ .expression = "0x1" },
             .index = 15,
@@ -1788,19 +1788,19 @@ test "tokenize.directive.define.public" {
 }
 
 test "tokenize.directive.define.with expression" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu,
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip,
             \\.define symbol_name 0x1
             \\.define something (symbol_name * 2)
         );
 
-        try expect_define(cpu, .{
+        try expect_define(chip, .{
             .name = "symbol_name",
             .value = .{ .expression = "0x1" },
             .index = 8,
         }, tokens.get(0));
 
-        try expect_define(cpu, .{
+        try expect_define(chip, .{
             .name = "something",
             .value = .{ .expression = "(symbol_name * 2)" },
             .index = 32,
@@ -1809,99 +1809,99 @@ test "tokenize.directive.define.with expression" {
 }
 
 test "tokenize.directive.origin" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".origin 0x10");
-        try expect_origin(cpu, .{ .integer = 0x10 }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".origin 0x10");
+        try expect_origin(chip, .{ .integer = 0x10 }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".side_set 1");
-        try expect_side_set(cpu, .{ .count = .{ .integer = 1 } }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".side_set 1");
+        try expect_side_set(chip, .{ .count = .{ .integer = 1 } }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.opt" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".side_set 1 opt");
-        try expect_side_set(cpu, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".side_set 1 opt");
+        try expect_side_set(chip, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.pindirs" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".side_set 1 pindirs");
-        try expect_side_set(cpu, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".side_set 1 pindirs");
+        try expect_side_set(chip, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap_target" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".wrap_target");
-        try expect_wrap_target(cpu, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".wrap_target");
+        try expect_wrap_target(chip, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".wrap");
-        try expect_wrap(cpu, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".wrap");
+        try expect_wrap(chip, tokens.get(0));
     }
 }
 
 test "tokenize.directive.lang_opt" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".lang_opt c flag foo");
-        try expect_lang_opt(cpu, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".lang_opt c flag foo");
+        try expect_lang_opt(chip, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.word" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, ".word 0xaaaa");
-        try expect_word(cpu, .{ .integer = 0xaaaa }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, ".word 0xaaaa");
+        try expect_word(chip, .{ .integer = 0xaaaa }, tokens.get(0));
     }
 }
 
 test "tokenize.label" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "my_label:");
-        try expect_label(cpu, .{ .name = "my_label" }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "my_label:");
+        try expect_label(chip, .{ .name = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.label.public" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "public my_label:");
-        try expect_label(cpu, .{ .name = "my_label", .public = true }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "public my_label:");
+        try expect_label(chip, .{ .name = "my_label", .public = true }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.nop" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "nop");
-        try expect_instr_nop(cpu, .{}, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "nop");
+        try expect_instr_nop(chip, .{}, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.label" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "jmp my_label");
-        try expect_instr_jmp(cpu, .{ .target = "my_label" }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "jmp my_label");
+        try expect_instr_jmp(chip, .{ .target = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.value" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const tokens = try bounded_tokenize(cpu, "jmp 0x2");
-        try expect_instr_jmp(cpu, .{ .target = "0x2" }, tokens.get(0));
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const tokens = try bounded_tokenize(chip, "jmp 0x2");
+        try expect_instr_jmp(chip, .{ .target = "0x2" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.conditions" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-        const Condition = Token(cpu).Instruction.Jmp.Condition;
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        const Condition = Token(chip).Instruction.Jmp.Condition;
         const cases = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
             .{ "x--", .x_dec },
@@ -1913,20 +1913,20 @@ test "tokenize.instr.jmp.conditions" {
         });
 
         inline for (comptime cases.keys(), comptime cases.values()) |op, cond| {
-            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
+            const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("jmp {s} my_label", .{op}));
 
-            try expect_instr_jmp(cpu, .{ .cond = cond, .target = "my_label" }, tokens.get(0));
+            try expect_instr_jmp(chip, .{ .cond = cond, .target = "my_label" }, tokens.get(0));
         }
     }
 }
 
 test "tokenize.instr.wait" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
         inline for (.{ "gpio", "pin", "irq" }) |source| {
-            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
-            try expect_instr_wait(cpu, .{
+            const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
+            try expect_instr_wait(chip, .{
                 .polarity = 0,
-                .source = @field(Token(cpu).Instruction.Wait.Source, source),
+                .source = @field(Token(chip).Instruction.Wait.Source, source),
                 .num = .{ .integer = 1 },
             }, tokens.get(0));
         }
@@ -2053,7 +2053,7 @@ test "tokenize.instr.pull.ifempty" {
 }
 
 test "tokenize.instr.mov" {
-    inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
         inline for (.{
             "pins",
             "x",
@@ -2063,10 +2063,10 @@ test "tokenize.instr.mov" {
             "isr",
             "osr",
         }) |source| {
-            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
+            const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("mov x {s}", .{source}));
 
-            try expect_instr_mov(cpu, .{
-                .source = @field(Token(cpu).Instruction.Mov.Source, source),
+            try expect_instr_mov(chip, .{
+                .source = @field(Token(chip).Instruction.Mov.Source, source),
                 .destination = .x,
             }, tokens.get(0));
         }
@@ -2080,11 +2080,11 @@ test "tokenize.instr.mov" {
             "isr",
             "osr",
         }) |dest| {
-            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
+            const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("mov {s} x", .{dest}));
 
-            try expect_instr_mov(cpu, .{
+            try expect_instr_mov(chip, .{
                 .source = .x,
-                .destination = @field(Token(cpu).Instruction.Mov.Destination, dest),
+                .destination = @field(Token(chip).Instruction.Mov.Destination, dest),
             }, tokens.get(0));
         }
         // RP2350 also supports pindirs as dest
@@ -2097,7 +2097,7 @@ test "tokenize.instr.mov" {
             }, tokens.get(0));
         }
 
-        const Operation = Token(cpu).Instruction.Mov.Operation;
+        const Operation = Token(chip).Instruction.Mov.Operation;
         const operations = std.StaticStringMap(Operation).initComptime(.{
             .{ "!", .invert },
             .{ "~", .invert },
@@ -2106,12 +2106,12 @@ test "tokenize.instr.mov" {
 
         inline for (.{ "", " " }) |space| {
             inline for (comptime operations.keys(), comptime operations.values()) |str, operation| {
-                const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
+                const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("mov x {s}{s}y", .{
                     str,
                     space,
                 }));
 
-                try expect_instr_mov(cpu, .{
+                try expect_instr_mov(chip, .{
                     .destination = .x,
                     .operation = operation,
                     .source = .y,
@@ -2136,13 +2136,13 @@ test "tokenize.instr.irq" {
     });
 
     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
-        inline for (comptime .{ CPU.RP2040, CPU.RP2350 }) |cpu| {
-            const tokens = try bounded_tokenize(cpu, comptime std.fmt.comptimePrint("irq {s} {}", .{
+        inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+            const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("irq {s} {}", .{
                 key,
                 num,
             }));
 
-            try expect_instr_irq(cpu, .{
+            try expect_instr_irq(chip, .{
                 .clear = value.clear,
                 .wait = value.wait,
                 .num = num,

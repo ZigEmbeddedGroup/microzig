@@ -10,7 +10,7 @@ const Pin = gpio.Pin;
 
 /// The HAL provides a convenvience function for detecting which of the RP2XXX
 /// family you're currently compiling for.
-const cpu = rp2xxx.compatibility.cpu;
+const chip = rp2xxx.compatibility.chip;
 
 const xosc_freq = microzig.board.xosc_freq;
 
@@ -84,7 +84,7 @@ const system_clock_cfg: GlobalConfig = val: {
     };
 
     // GlobalConfig has a slight difference between RP2350 (has HSTX) and RP2040 (has RTC)
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             // Drive RTC off XOSC / 3 for a change of pace!
             temp.rtc = .{
