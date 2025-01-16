@@ -41,19 +41,6 @@ fn pio_comparison(comptime source: []const u8) !void {
 }
 
 fn pio_comparison_chip(comptime chip: Chip, comptime source: []const u8) !void {
-    // comptime var diags: ?assembler.Diagnostics = null;
-    // const output = comptime blk: {
-    //     const v = assembler.assemble_impl(chip, source, &diags, .{}) catch |err| {
-    //         @compileLog("err {}", err);
-    //         if (diags != null) {
-    //             std.log.debug("diag {}", .{diags});
-    //             @compileLog("Diag", diags);
-    //         }
-    //         // I want to return an error here but this is comptime?
-    //         break :blk err;
-    //     };
-    //     break :blk v;
-    // };
     const output = comptime assembler.assemble(chip, source, .{});
     try std.testing.expect(output.programs.len > 0);
 

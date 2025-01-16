@@ -953,9 +953,6 @@ pub fn Tokenizer(chip: Chip) type {
                     };
                 },
                 .RP2350 => {
-                    // This doesn't work: idx_mode's type only exists at comptime,
-                    // even though this is a comptime-only switch :/
-                    // Hardcoding the type
                     const IdxMode = Token(chip).Instruction.Irq.IdxMode;
                     const idx_mode: IdxMode = if (try self.peek_arg(diags)) |result| blk: {
                         const idxmode_lower = try lowercase_bounded(256, result.str);
@@ -969,7 +966,6 @@ pub fn Tokenizer(chip: Chip) type {
                             self.consume_peek(result);
                             break :blk .next;
                         } else {
-                            // Not specified: direct
                             break :blk .direct;
                         }
                     } else .direct;
@@ -2144,12 +2140,21 @@ test "tokenize.instr.irq" {
 
 test "tokenize.instr.irq.rel" {
     const tokens = try bounded_tokenize(.RP2040, "irq set 2 rel");
-    // TODO: rp2350 support
     try expect_instr_irq(.RP2040, .{
         .clear = false,
         .wait = false,
         .num = 2,
         .rel = true,
+    }, tokens.get(0));
+}
+
+test "tokenize.instr.irq.relnext" {
+    const tokens = try bounded_tokenize(.RP2350, "irq set 2 next");
+    try expect_instr_irq(.RP2350, .{
+        .clear = false,
+        .wait = false,
+        .num = 2,
+        .idxmode = @intFromEnum(Token(.RP2350).Instruction.Irq.IdxMode.next),
     }, tokens.get(0));
 }
 
