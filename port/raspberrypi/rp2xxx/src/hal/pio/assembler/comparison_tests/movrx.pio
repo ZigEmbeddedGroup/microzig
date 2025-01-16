@@ -8,8 +8,8 @@
     mov rxfifo3, isr
 
     mov osr, rxfifoy
-;    mov osr, rxfifo0
-;    mov osr, rxfifo1
-;    mov osr, rxfifo2
-;    mov osr, rxfifo3
+    mov osr, rxfifo0
+    mov osr, rxfifo1
+    mov osr, rxfifo2
+    mov osr, rxfifo3
 .wrap

@@ -874,6 +874,7 @@ pub fn Tokenizer(chip: Chip) type {
                         if (value > 3) {
                             return error.InvalidSource;
                         }
+                        idx = @intCast(value);
                     }
                 } else {
                     diags.* = Diagnostics.init(
