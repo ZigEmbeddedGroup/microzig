@@ -6,8 +6,16 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
   <name>CH32V30xxx</name>
   <version>1.0</version>
   <description>CH32V30xxx View File</description>
+  <cpu>
+    <name>QINGKEV4</name>
+    <revision>r0p0</revision>
+    <endian>little</endian>
+    <fpuPresent>false</fpuPresent>
+    <mpuPresent>false</mpuPresent>
+    <nvicPrioBits>2</nvicPrioBits>
+  </cpu>
   <!--Bus Interface Properties-->
-  <!--Cortex-M3 is byte addressable-->
+  <!--RISC-V is byte addressable-->
 
   <addressUnitBits>8</addressUnitBits>
   <!--the maximum data bit width accessible within a single transfer-->
@@ -1452,7 +1460,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>SLKIE</name>
-              <description>Sleep interrupt 
+              <description>Sleep interrupt
               enable</description>
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1460,7 +1468,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>WKUIE</name>
-              <description>Wakeup interrupt 
+              <description>Wakeup interrupt
               enable</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1468,7 +1476,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>ERRIE</name>
-              <description>Error interrupt 
+              <description>Error interrupt
               enable</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1476,7 +1484,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>LECIE</name>
-              <description>Last error code interrupt 
+              <description>Last error code interrupt
               enable</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1484,7 +1492,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>BOFIE</name>
-              <description>Bus-off interrupt 
+              <description>Bus-off interrupt
               enable</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1492,7 +1500,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EPVIE</name>
-              <description>Error passive interrupt 
+              <description>Error passive interrupt
               enable</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1500,7 +1508,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EWGIE</name>
-              <description>Error warning interrupt 
+              <description>Error warning interrupt
               enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1508,7 +1516,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FOVIE1</name>
-              <description>FIFO overrun interrupt 
+              <description>FIFO overrun interrupt
               enable</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1516,7 +1524,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FFIE1</name>
-              <description>FIFO full interrupt 
+              <description>FIFO full interrupt
               enable</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1524,7 +1532,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FMPIE1</name>
-              <description>FIFO message pending interrupt 
+              <description>FIFO message pending interrupt
               enable</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1532,7 +1540,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FOVIE0</name>
-              <description>FIFO overrun interrupt 
+              <description>FIFO overrun interrupt
               enable</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1540,7 +1548,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FFIE0</name>
-              <description>FIFO full interrupt 
+              <description>FIFO full interrupt
               enable</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1548,7 +1556,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FMPIE0</name>
-              <description>FIFO message pending interrupt 
+              <description>FIFO message pending interrupt
               enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1556,7 +1564,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>TMEIE</name>
-              <description>Transmit mailbox empty interrupt 
+              <description>Transmit mailbox empty interrupt
               enable</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1596,7 +1604,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>BOFF</name>
-              <description>Bus-off 
+              <description>Bus-off
               flag</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1604,7 +1612,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EPVF</name>
-              <description>Error passive 
+              <description>Error passive
               flag</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1612,7 +1620,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EWGF</name>
-              <description>Error warning 
+              <description>Error warning
               flag</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2183,7 +2191,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>RXMDTR0</name>
           <displayName>RXMDTR0</displayName>
-          <description>CAN receive FIFO mailbox data length control and time stamp 
+          <description>CAN receive FIFO mailbox data length control and time stamp
           register</description>
           <addressOffset>0x1B4</addressOffset>
           <size>0x20</size>
@@ -2333,7 +2341,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>RXMDTR1</name>
           <displayName>RXMDTR1</displayName>
-          <description>CAN receive FIFO mailbox data length control and time stamp 
+          <description>CAN receive FIFO mailbox data length control and time stamp
           register</description>
           <addressOffset>0x1C4</addressOffset>
           <size>0x20</size>
@@ -14309,7 +14317,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <description>CAN2 SCE interrupt</description>
         <value>82</value>
       </interrupt>
-    </peripheral>	
+    </peripheral>
 	<peripheral>
       <name>ETHERNET_MAC</name>
       <description>Ethernet: media access control</description>
@@ -14445,7 +14453,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>21</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			
             <field>
               <name>JD</name>
               <description>Jabber disable</description>
@@ -14458,7 +14465,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>23</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			
 			<field>
               <name>TCD</name>
               <description>SEND clock delay</description>
@@ -16708,14 +16714,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>TXFIFOHE</name>
-              <description>Transmit FIFO half empty: at least 8 words can be written into the 
+              <description>Transmit FIFO half empty: at least 8 words can be written into the
               FIFO</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFIFOHF</name>
-              <description>Receive FIFO half full: there are at least 8 words in the 
+              <description>Receive FIFO half full: there are at least 8 words in the
               FIFO</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
@@ -16871,168 +16877,168 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>CCRCFAILIE</name>
-              <description>Command CRC fail interrupt 
+              <description>Command CRC fail interrupt
               enable</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>DCRCFAILIE</name>
-              <description>Data CRC fail interrupt 
+              <description>Data CRC fail interrupt
               enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTIMEOUTIE</name>
-              <description>Command timeout interrupt 
+              <description>Command timeout interrupt
               enable</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>DTIMEOUTIE</name>
-              <description>Data timeout interrupt 
+              <description>Data timeout interrupt
               enable</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXUNDERRIE</name>
-              <description>Tx FIFO underrun error interrupt 
+              <description>Tx FIFO underrun error interrupt
               enable</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXOVERRIE</name>
-              <description>Rx FIFO overrun error interrupt 
+              <description>Rx FIFO overrun error interrupt
               enable</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CMDRENDIE</name>
-              <description>Command response received interrupt 
+              <description>Command response received interrupt
               enable</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CMDSENTIE</name>
-              <description>Command sent interrupt 
+              <description>Command sent interrupt
               enable</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>DATAENDIE</name>
-              <description>Data end interrupt 
+              <description>Data end interrupt
               enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STBITERRIE</name>
-              <description>Start bit error interrupt 
+              <description>Start bit error interrupt
               enable</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>DBACKENDIE</name>
-              <description>Data block end interrupt 
+              <description>Data block end interrupt
               enable</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CMDACTIE</name>
-              <description>Command acting interrupt 
+              <description>Command acting interrupt
               enable</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXACTIE</name>
-              <description>Data transmit acting interrupt 
+              <description>Data transmit acting interrupt
               enable</description>
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXACTIE</name>
-              <description>Data receive acting interrupt 
+              <description>Data receive acting interrupt
               enable</description>
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFIFOHEIE</name>
-              <description>Tx FIFO half empty interrupt 
+              <description>Tx FIFO half empty interrupt
               enable</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFIFOHFIE</name>
-              <description>Rx FIFO half full interrupt 
+              <description>Rx FIFO half full interrupt
               enable</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFIFOFIE</name>
-              <description>Tx FIFO full interrupt 
+              <description>Tx FIFO full interrupt
               enable</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFIFOFIE</name>
-              <description>Rx FIFO full interrupt 
+              <description>Rx FIFO full interrupt
               enable</description>
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXFIFOEIE</name>
-              <description>Tx FIFO empty interrupt 
+              <description>Tx FIFO empty interrupt
               enable</description>
               <bitOffset>18</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXFIFOEIE</name>
-              <description>Rx FIFO empty interrupt 
+              <description>Rx FIFO empty interrupt
               enable</description>
               <bitOffset>19</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>TXDAVLIE</name>
-              <description>Data available in Tx FIFO interrupt 
+              <description>Data available in Tx FIFO interrupt
               enable</description>
               <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>RXDAVLIE</name>
-              <description>Data available in Rx FIFO interrupt 
+              <description>Data available in Rx FIFO interrupt
               enable</description>
               <bitOffset>21</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>SDIOITIE</name>
-              <description>SDIO mode interrupt received interrupt 
+              <description>SDIO mode interrupt received interrupt
               enable</description>
               <bitOffset>22</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CEATENDIE</name>
-              <description>CE-ATA command completion signal received interrupt 
+              <description>CE-ATA command completion signal received interrupt
               enable</description>
               <bitOffset>23</bitOffset>
               <bitWidth>1</bitWidth>
@@ -17052,7 +17058,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>FIF0COUNT</name>
-              <description>Remaining number of words to be written to or read from the 
+              <description>Remaining number of words to be written to or read from the
               FIFO</description>
               <bitOffset>0</bitOffset>
               <bitWidth>32</bitWidth>
@@ -17398,28 +17404,28 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>MEMHIZx</name>
-              <description>Common memory x databus HiZ 
+              <description>Common memory x databus HiZ
               time</description>
               <bitOffset>24</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
             <field>
               <name>MEMHOLDx</name>
-              <description>Common memory x hold 
+              <description>Common memory x hold
               time</description>
               <bitOffset>16</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
             <field>
               <name>MEMWAITx</name>
-              <description>Common memory x wait 
+              <description>Common memory x wait
               time</description>
               <bitOffset>8</bitOffset>
               <bitWidth>8</bitWidth>
             </field>
             <field>
               <name>MEMSETx</name>
-              <description>Common memory x setup 
+              <description>Common memory x setup
               time</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
@@ -17545,7 +17551,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
   </addressBlock>
 	<interrupt>
         <name>DVP</name>
-        <description>DVP global Interrupt 
+        <description>DVP global Interrupt
         interrupt</description>
         <value>86</value>
   </interrupt>
@@ -17987,7 +17993,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				</field>
 			</fields>
 		</register>
-	</registers>	
+	</registers>
 	</peripheral>
 	<peripheral>
       <name>DAC</name>
@@ -18362,7 +18368,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
       </registers>
-    </peripheral>	
+    </peripheral>
     <peripheral>
       <name>PWR</name>
       <description>Power control</description>
@@ -18506,7 +18512,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
       </registers>
-    </peripheral>  
+    </peripheral>
 	<peripheral>
       <name>RCC</name>
       <description>Reset and clock control</description>
@@ -18971,7 +18977,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-
               <name>TIM1RST</name>
               <description>TIM1 timer reset</description>
               <bitOffset>11</bitOffset>
@@ -19348,7 +19353,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>USART1 clock enable</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>   
+            </field>
 			<field>
               <name>TIM9_EN</name>
               <description>TIM9 Timer clock enable</description>
@@ -19360,7 +19365,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>TIM10 Timer clock enable</description>
               <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>			
+            </field>
           </fields>
         </register>
         <register>
@@ -19420,13 +19425,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>USART 7 clock enable</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>  
+            </field>
             <field>
               <name>USART8_EN</name>
               <description>USART 8 clock enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>  			
+            </field>
             <field>
               <name>WWDGEN</name>
               <description>Window watchdog clock
@@ -19685,7 +19690,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>          
+            </field>
           </fields>
         </register>
 	<register>
@@ -19817,14 +19822,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
             <field>
               <name>USBDPU</name>
               <description>USBD pullup Enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
             <field>
               <name>ETH_10M_EN</name>
               <description>ETH 10M Enable</description>
@@ -19838,7 +19843,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
             <field>
               <name>PLL_HSI_PRE</name>
               <description>Whether HSI is divided </description>
@@ -19852,21 +19857,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
             <field>
               <name>LOCKUP_RSTF</name>
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>    
+            </field>
             <field>
               <name>ULLDO_TRIM</name>
               <description>ULLDO_TRIM</description>
               <bitOffset>8</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
             <field>
               <name>LDO_TRIM</name>
               <description>LDO_TRIM</description>
@@ -19880,11 +19885,11 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>    
+            </field>
           </fields>
         </register>
       </registers>
-    </peripheral>	
+    </peripheral>
 	<peripheral>
       <name>OPA</name>
       <description> OPA configuration</description>
@@ -19910,14 +19915,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                <field>
               <name>MODE1</name>
               <description>OPA MODE1</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                <field>
               <name>NSEL1</name>
               <description>OPA NSEL1</description>
@@ -19931,7 +19936,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                <field>
               <name>EN2</name>
               <description>OPA Enable2</description>
@@ -19952,21 +19957,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                <field>
               <name>PSEL2</name>
               <description>OPA PSEL2</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>    
+            </field>
                   <field>
               <name>EN3</name>
               <description>OPA Eable3</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>  
+            </field>
                  <field>
               <name>MODE3</name>
               <description>OPA MODE3</description>
@@ -19980,46 +19985,46 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                  <field>
               <name>PSEL3</name>
               <description>OPA PSEL3</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                  <field>
               <name>EN4</name>
               <description>OPA Enable4</description>
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 
+            </field>
                  <field>
               <name>MODE4</name>
               <description>OPA MODE4</description>
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 	
+            </field>
                  <field>
               <name>NSEL4</name>
               <description>OPA NSEL4 </description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 	
+            </field>
                  <field>
               <name>PSEL4</name>
               <description>OPA PSEL4</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field> 				
+            </field>
           </fields>
         </register>
       </registers>
-    </peripheral> 
+    </peripheral>
 	<peripheral>
       <name>GPIOA</name>
       <description>General purpose I/O</description>
@@ -25328,7 +25333,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>	
+        </register>
 		<register>
           <name>CFGR9</name>
           <displayName>CFGR9</displayName>
@@ -25751,7 +25756,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>	
+        </register>
 		<register>
           <name>EXTEN_INTFR</name>
           <displayName>INTFR</displayName>
@@ -25942,7 +25947,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			
 			<field>
               <name>CHTIF8</name>
               <description>Channel 8 Global interrupt
@@ -25971,7 +25975,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			
 			<field>
               <name>CTEIF8</name>
               <description>Channel 8 Global interrupt
@@ -26000,10 +26003,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			
-			
-			
-			
 		 </fields>
 		</register>
       </registers>
@@ -27103,7 +27102,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <offset>0x0</offset>
         <size>0x400</size>
         <usage>registers</usage>
-      </addressBlock>  
+      </addressBlock>
       <registers>
         <register>
           <name>CTLR</name>
@@ -27124,7 +27123,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>PSCR</name>  
+          <name>PSCR</name>
           <displayName>PSCR</displayName>
           <description>Prescaler register (IWDG_PSCR)</description>
           <addressOffset>0x4</addressOffset>
@@ -27301,7 +27300,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM1_UP_</name>
-        <description>TIM1 Update 
+        <description>TIM1 Update
         interrupt</description>
         <value>41</value>
       </interrupt>
@@ -28402,7 +28401,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM8_UP_</name>
-        <description>TIM8 Update 
+        <description>TIM8 Update
         interrupt</description>
         <value>60</value>
       </interrupt>
@@ -28428,7 +28427,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM9_UP_</name>
-        <description>TIM9 Update 
+        <description>TIM9 Update
         interrupt</description>
         <value>91</value>
       </interrupt>
@@ -28454,7 +28453,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM10_UP_</name>
-        <description>TIM10 Update 
+        <description>TIM10 Update
         interrupt</description>
         <value>95</value>
       </interrupt>
@@ -29399,7 +29398,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <description>TIM5 global interrupt</description>
         <value>66</value>
       </interrupt>
-    </peripheral>	
+    </peripheral>
 	<peripheral>
 <name>TIM6</name>
 <description>Basic timer</description>
@@ -29489,7 +29488,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>Update DMA request enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>   
+            </field>
             <field>
               <name>UIE</name>
               <description>Update interrupt enable</description>
@@ -29584,7 +29583,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
       </registers>
-    </peripheral>  
+    </peripheral>
 	<peripheral derivedFrom="TIM6">
       <name>TIM7</name>
       <baseAddress>0x40001400</baseAddress>
@@ -30297,7 +30296,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
               <access>read-only</access>
             </field>
-			
             <field>
               <name>TXE</name>
               <description>Transmit buffer empty</description>
@@ -30862,7 +30860,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <description>SPI3 global interrupt</description>
         <value>67</value>
       </interrupt>
-    </peripheral>	
+    </peripheral>
     <peripheral>
       <name>USART1</name>
       <description>Universal synchronous asynchronous receiver
@@ -33050,7 +33048,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>DEG_TIM1</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>                            
+            </field>
             <field>
               <name>DEG_TIM2</name>
               <description>DEG_TIM2</description>
@@ -33068,7 +33066,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>DEG_TIM4</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-            </field> 
+            </field>
           </fields>
         </register>
         <register>
@@ -33134,7 +33132,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<field>
 						<name>RB_UC_DMA_EN</name>
 						<description>DMA enable and DMA interrupt enable for USB</description>
-						<bitRange>[0:0]</bitRange>		
+						<bitRange>[0:0]</bitRange>
 					</field>
 					<field>
 						<name>RB_UC_CLR_ALL</name>
@@ -33301,7 +33299,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<description>USB_FRAME_NO</description>
 						<bitRange>[15:0]</bitRange>
 					</field>
-	
 				</fields>
 			</register>
 			<register>
@@ -33344,7 +33341,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 					</fields>
 			</register>
-			
 			<register>
 				<name>USB_MIS_ST</name>
 				<description>USB miscellaneous status</description>
@@ -33400,7 +33396,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<description>USB interrupt flag</description>
 				<addressOffset>0x0A</addressOffset>
 				<size>0x08</size>
-				
 				<resetValue>0x20</resetValue>
 				<fields>
 					<field>
@@ -33739,7 +33734,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			</field>
 			</fields>
 			</register>
-
 			<register>
 			<name>UEP12_RX_DMA</name>
 			<description>endpoint 12 DMA RX buffer address</description>
@@ -33965,7 +33959,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			</field>
 			</fields>
 			</register>
-
 			<register>
 			<name>UEP12_TX_DMA____UH_SPLIT_DATA</name>
 			<description>endpoint 12 DMA TX buffer address</description>
@@ -34025,7 +34018,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP0_MAX_LEN</name>
 			<description>endpoint 0 max acceptable length</description>
@@ -34206,7 +34199,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			</field>
 			</fields>
 			</register>
-
 			<register>
 			<name>UEP12_MAX_LEN</name>
 			<description>endpoint 12 max acceptable length</description>
@@ -34266,8 +34258,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP0_T_LEN</name>
 			<description>endpoint 0 send the length</description>
@@ -34282,7 +34273,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP0_T_CTRL</name>
 			<description>endpoint 0  send control</description>
@@ -34309,7 +34300,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP0_R_CTRL</name>
 			<description>endpoint 0  send control</description>
@@ -34336,8 +34327,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP1_T_LEN</name>
 			<description>endpoint 1 send the length</description>
@@ -34352,7 +34342,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP1_T_CTRL</name>
 			<description>endpoint 1  send control</description>
@@ -34379,7 +34369,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP1_R_CTRL</name>
 			<description>endpoint 1  send control</description>
@@ -34406,8 +34396,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP2_T_LEN__UH_EP_PID</name>
 			<description>endpoint 2 send the length</description>
@@ -34422,7 +34411,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP2_T_CTRL</name>
 			<description>endpoint 2  send control</description>
@@ -34449,7 +34438,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP2_R_CTRL__UH_RX_CTRL</name>
 			<description>endpoint 2 send control</description>
@@ -34488,8 +34477,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP3_T_LEN___UH_TX_LEN_H</name>
 			<description>endpoint 3 send the length</description>
@@ -34504,7 +34492,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP3_T_CTRL___UH_TX_CTRL</name>
 			<description>endpoint 3  send control</description>
@@ -34536,7 +34524,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
-			
 			<field>
 			<name>bUH_T_DATA_NO</name>
 					<description> bUH_T_DATA_NO</description>
@@ -34544,7 +34531,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP3_R_CTRL</name>
 			<description>endpoint 3  send control</description>
@@ -34571,8 +34558,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP4_T_LEN</name>
 			<description>endpoint 4 send the length</description>
@@ -34587,7 +34573,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP4_T_CTRL</name>
 			<description>endpoint 4  send control</description>
@@ -34614,7 +34600,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP4_R_CTRL</name>
 			<description>endpoint 4  send control</description>
@@ -34641,8 +34627,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP5_T_LEN</name>
 			<description>endpoint 5 send the length</description>
@@ -34657,7 +34642,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP5_T_CTRL</name>
 			<description>endpoint 5  send control</description>
@@ -34684,7 +34669,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP5_R_CTRL</name>
 			<description>endpoint 5  send control</description>
@@ -34711,8 +34696,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP6_T_LEN</name>
 			<description>endpoint 6 send the length</description>
@@ -34727,7 +34711,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP6_T_CTRL</name>
 			<description>endpoint 6  send control</description>
@@ -34754,7 +34738,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP6_R_CTRL</name>
 			<description>endpoint 6  send control</description>
@@ -34781,8 +34765,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 						<register>
 			<name>UEP7_T_LEN</name>
 			<description>endpoint 7 send the length</description>
@@ -34797,7 +34780,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP7_T_CTRL</name>
 			<description>endpoint 7  send control</description>
@@ -34824,7 +34807,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP7_R_CTRL</name>
 			<description>endpoint 7 send control</description>
@@ -34851,8 +34834,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 						<register>
 			<name>UEP8_T_LEN</name>
 			<description>endpoint 8 send the length</description>
@@ -34867,7 +34849,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP8_T_CTRL</name>
 			<description>endpoint 8  send control</description>
@@ -34894,7 +34876,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP8_R_CTRL</name>
 			<description>endpoint 8  send control</description>
@@ -34921,8 +34903,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 			<register>
 			<name>UEP9_T_LEN</name>
 			<description>endpoint9 send the length</description>
@@ -34937,7 +34918,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP9_T_CTRL</name>
 			<description>endpoint 9  send control</description>
@@ -34964,7 +34945,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP9_R_CTRL</name>
 			<description>endpoint 9  send control</description>
@@ -34991,8 +34972,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 						<register>
 			<name>UEP10_T_LEN</name>
 			<description>endpoint 10 send the length</description>
@@ -35007,7 +34987,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP10_T_CTRL</name>
 			<description>endpoint 10  send control</description>
@@ -35034,7 +35014,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP10_R_CTRL</name>
 			<description>endpoint 10  send control</description>
@@ -35061,8 +35041,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 						<register>
 			<name>UEP11_T_LEN</name>
 			<description>endpoint 11 send the length</description>
@@ -35077,7 +35056,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP11_T_CTRL</name>
 			<description>endpoint 11  send control</description>
@@ -35104,7 +35083,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP11_R_CTRL</name>
 			<description>endpoint 11 send control</description>
@@ -35131,8 +35110,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 						<register>
 			<name>UEP12_T_LEN</name>
 			<description>endpoint 12 send the length</description>
@@ -35147,7 +35125,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP12_T_CTRL</name>
 			<description>endpoint 12  send control</description>
@@ -35174,7 +35152,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP12_R_CTRL</name>
 			<description>endpoint 12 send control</description>
@@ -35201,8 +35179,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 		<register>
 			<name>UEP13_T_LEN</name>
 			<description>endpoint 13 send the length</description>
@@ -35217,7 +35194,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP13_T_CTRL</name>
 			<description>endpoint 13  send control</description>
@@ -35244,7 +35221,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP13_R_CTRL</name>
 			<description>endpoint 13  send control</description>
@@ -35271,8 +35248,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 		<register>
 			<name>UEP14_T_LEN</name>
 			<description>endpoint 14 send the length</description>
@@ -35287,7 +35263,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 		<register>
 			<name>UEP14_T_CTRL</name>
 			<description>endpoint 14  send control</description>
@@ -35314,7 +35290,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 		<register>
 			<name>UEP14_R_CTRL</name>
 			<description>endpoint 14 send control</description>
@@ -35341,8 +35317,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
-			
+			</register>
 		<register>
 			<name>UEP15_T_LEN</name>
 			<description>endpoint 15 send the length</description>
@@ -35357,7 +35332,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP15_T_CTRL</name>
 			<description>endpoint 15  send control</description>
@@ -35384,7 +35359,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 			<register>
 			<name>UEP15_R_CTRL</name>
 			<description>endpoint 15  send control</description>
@@ -35411,7 +35386,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>	
+			</register>
 		</registers>
 	</peripheral>
 	<peripheral>
@@ -35835,7 +35810,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<field>
 						<name>USBHD_UC_DMA_EN</name>
 						<description>DMA enable and DMA interrupt enable for USB</description>
-						<bitRange>[0:0]</bitRange>		
+						<bitRange>[0:0]</bitRange>
 					</field>
 					<field>
 						<name>USBHD_UC_CLR_ALL</name>
@@ -35880,7 +35855,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<field>
 						<name>USBHD_UH_PORT_EN__USBHD_UD_PORT_EN</name>
 						<description>enable USB port: 0=disable, 1=enable port, automatic disabled if USB device detached</description>
-						<bitRange>[0:0]</bitRange>		
+						<bitRange>[0:0]</bitRange>
 					</field>
 					<field>
 						<name>USBHD_UH_BUS_RESET__USBHD_UD_GP_BIT</name>
@@ -35922,31 +35897,26 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<name>USBHD_UIE_BUS_RST__USBHD_UIE_DETECT</name>
 						<description>enable interrupt for USB bus reset event for USB device mode</description>
 						<bitRange>[0:0]</bitRange>
-					
 					</field>
 					<field>
 						<name>USBHD_UIE_TRANSFER</name>
 						<description>enable interrupt for USB transfer completion</description>
 						<bitRange>[1:1]</bitRange>
-						
 					</field>
 					<field>
 						<name>USBHD_UIE_SUSPEND</name>
 						<description>enable interrupt for USB suspend or resume event</description>
 						<bitRange>[2:2]</bitRange>
-						
 					</field>
 					<field>
 						<name>USBHD_UIE_HST_SOF</name>
 						<description>enable interrupt for host SOF timer action for USB host mode</description>
 						<bitRange>[3:3]</bitRange>
-						
 					</field>
 					<field>
 						<name>USBHD_UIE_FIFO_OV</name>
 						<description>enable interrupt for FIFO overflow</description>
 						<bitRange>[4:4]</bitRange>
-					
 					</field>
 					<field>
 						<name>USBHD_UIE_DEV_NAK</name>
@@ -35957,7 +35927,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<name>USBHD_UIE_DEV_SOF</name>
 						<description>enable interrupt for SOF received for USB device mode</description>
 						<bitRange>[7:7]</bitRange>
-					
 					</field>
 				</fields>
 				</register>
@@ -36191,7 +36160,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 			</register>
-			<register>        
+			<register>
 				<name>R8_UEP5_6_MOD</name>
 				<description>endpoint 5/6 mode</description>
 				<addressOffset>0x0e</addressOffset>
@@ -36231,7 +36200,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 			</register>
-			<register>        
+			<register>
 				<name>R8_UEP7_MOD</name>
 				<description>endpoint 7 mode</description>
 				<addressOffset>0x0f</addressOffset>
@@ -36297,21 +36266,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<addressOffset>0x24</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-				</register>   
+				</register>
 			<register>
 				<name>R32_UEP6_DMA</name>
 				<description>endpoint 6 DMA buffer address</description>
 				<addressOffset>0x28</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-				</register>   
+				</register>
 			<register>
 				<name>R32_UEP7_DMA</name>
 				<description>endpoint 7 DMA buffer address</description>
 				<addressOffset>0x2c</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-			</register>  
+			</register>
 			<register>
 				<name>R8_UEP0_T_LEN</name>
 				<description>endpoint 0 transmittal length</description>
@@ -36368,7 +36337,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-			</register>			
+			</register>
 			<register>
 				<name>R8_UEP1_T_LEN</name>
 				<description>endpoint 1 transmittal length</description>
@@ -36562,7 +36531,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 				</register>
-				
 			<register>
 				<name>R8_UEP4_T_LEN</name>
 				<description>endpoint 4 transmittal length</description>
@@ -36620,7 +36588,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 				</register>
-				
 			<register>
 				<name>R8_UEP5_T_LEN</name>
 				<description>endpoint 5 transmittal length</description>
@@ -36678,7 +36645,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 				</register>
-			
 			<register>
 				<name>R8_UEP6_T_LEN</name>
 				<description>endpoint 6 transmittal length</description>
@@ -36735,7 +36701,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-				</register>				
+				</register>
 			<register>
 				<name>R8_UEP7_T_LEN</name>
 				<description>endpoint 7 transmittal length</description>
@@ -36792,7 +36758,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-				</register>		
+				</register>
 			<register>
 				<name>USB_OTG_CR</name>
 				<description>usb otg control</description>
@@ -36862,7 +36828,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[3:3]</bitRange>
 					</field>
 					</fields>
-				</register>	
+				</register>
 		</registers>
 	</peripheral>
 	<peripheral>
@@ -36873,7 +36839,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       <baseAddress>0xE000E000</baseAddress>
       <addressBlock>
         <offset>0x00</offset>
-        <size>0x1100</size>					
+        <size>0x1100</size>
         <usage>registers</usage>
       </addressBlock>
       <registers>
@@ -36886,7 +36852,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x20</size>
           <access>read-only</access>
           <resetValue>0x0000000C</resetValue>
-          <fields>		   
+          <fields>
             <field>
               <name>INTENSTA2_3</name>
               <description>Interrupt ID Status</description>
@@ -37052,7 +37018,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <displayName>CFGR</displayName>
           <description>Interrupt Config Register</description>
           <addressOffset>0x48</addressOffset>
-          <size>0x20</size>        
+          <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
 			<field>
@@ -37688,7 +37654,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR11</name>
           <displayName>IPRIOR11</displayName>
@@ -37779,7 +37744,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR21</name>
           <displayName>IPRIOR21</displayName>
@@ -37861,7 +37825,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR30</name>
           <displayName>IPRIOR30</displayName>
@@ -37952,7 +37915,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR40</name>
           <displayName>IPRIOR40</displayName>
@@ -38043,7 +38005,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-	
 			<register>
           <name>IPRIOR50</name>
           <displayName>IPRIOR50</displayName>
@@ -38134,7 +38095,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
 				<register>
           <name>IPRIOR60</name>
           <displayName>IPRIOR60</displayName>
@@ -38225,7 +38185,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR70</name>
           <displayName>IPRIOR70</displayName>
@@ -38316,7 +38275,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR80</name>
           <displayName>IPRIOR80</displayName>
@@ -38407,7 +38365,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR90</name>
           <displayName>IPRIOR90</displayName>
@@ -38497,7 +38454,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x8</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
-        </register>	
+        </register>
 				<register>
           <name>IPRIOR100</name>
           <displayName>IPRIOR100</displayName>
@@ -38597,7 +38554,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR111</name>
           <displayName>IPRIOR111</displayName>
@@ -38688,7 +38644,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR121</name>
           <displayName>IPRIOR121</displayName>
@@ -38770,7 +38725,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR130</name>
           <displayName>IPRIOR130</displayName>
@@ -38861,7 +38815,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR140</name>
           <displayName>IPRIOR140</displayName>
@@ -38952,7 +38905,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-	
 			<register>
           <name>IPRIOR150</name>
           <displayName>IPRIOR150</displayName>
@@ -39043,7 +38995,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
 				<register>
           <name>IPRIOR160</name>
           <displayName>IPRIOR160</displayName>
@@ -39134,7 +39085,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR170</name>
           <displayName>IPRIOR170</displayName>
@@ -39225,7 +39175,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR180</name>
           <displayName>IPRIOR180</displayName>
@@ -39316,7 +39265,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 				<register>
           <name>IPRIOR190</name>
           <displayName>IPRIOR190</displayName>
@@ -39406,7 +39354,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x8</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
-        </register>	
+        </register>
 				<register>
           <name>IPRIOR200</name>
           <displayName>IPRIOR200</displayName>
@@ -39416,7 +39364,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR201</name>
           <displayName>IPRIOR201</displayName>
@@ -39507,7 +39454,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR211</name>
           <displayName>IPRIOR211</displayName>
@@ -39598,7 +39544,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR221</name>
           <displayName>IPRIOR221</displayName>
@@ -39680,7 +39625,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR230</name>
           <displayName>IPRIOR230</displayName>
@@ -39771,7 +39715,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 		<register>
           <name>IPRIOR240</name>
           <displayName>IPRIOR240</displayName>
@@ -39862,7 +39805,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-	
 			<register>
           <name>IPRIOR250</name>
           <displayName>IPRIOR250</displayName>
@@ -39917,7 +39859,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-		
 			<register>
           <name>SCTLR</name>
           <displayName>SCTLR</displayName>
@@ -40023,7 +39964,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
           </fields>
-        </register> 
+        </register>
 	<register>
           <name>STK_SR</name>
           <description>System START</description>
@@ -40039,7 +39980,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
           </fields>
-        </register> 
+        </register>
     <register>
           <name>STK_CNTL</name>
           <description>System counter low register</description>
@@ -40055,7 +39996,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>   
+        </register>
     <register>
           <name>STK_CNTH</name>
           <description>System counter high register</description>
@@ -40071,7 +40012,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register> 
+        </register>
     <register>
           <name>STK_CMPLR</name>
           <description>System compare low register</description>
@@ -40087,7 +40028,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>    
+        </register>
         <register>
           <name>STK_CMPHR</name>
           <description>System compare high register</description>
@@ -40103,7 +40044,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>        
+        </register>
 		</registers>
 		</peripheral>
 	</peripherals>
