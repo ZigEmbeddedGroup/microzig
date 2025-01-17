@@ -231,6 +231,7 @@ fn get_bootrom(b: *std.Build, chip: microzig.Chip, rom: BootROM) std.Build.LazyP
     });
 
     //rom_exe.linkage = .static;
+    rom_exe.build_id = .none;
     rom_exe.setLinkerScript(b.path(b.fmt("src/bootroms/{s}/shared/stage2.ld", .{chip.name})));
     rom_exe.addAssemblyFile(b.path(b.fmt("src/bootroms/{s}/{s}.S", .{ chip.name, @tagName(rom) })));
     rom_exe.entry = .{ .symbol_name = "_stage2_boot" };
