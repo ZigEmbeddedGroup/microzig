@@ -629,7 +629,7 @@ fn chip_file_less_than(_: void, lhs: std.json.Parsed(ChipFile), rhs: std.json.Pa
 }
 
 // General function to handle inheritance
-fn resolve_inheritance_recursivly(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, accumulator: *std.json.ObjectMap) !void {
+fn resolve_inheritance_recursively(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, accumulator: *std.json.ObjectMap) !void {
     const child = json_data.object.get(child_full_name).?;
     const list_name = get_section(child_full_name);
 
@@ -650,7 +650,7 @@ fn resolve_inheritance_recursivly(allocator: std.mem.Allocator, json_data: *std.
         }
 
         if (parent.value_ptr.object.contains("extends")) {
-            try resolve_inheritance_recursivly(allocator, json_data, parent.key_ptr.*, accumulator);
+            try resolve_inheritance_recursively(allocator, json_data, parent.key_ptr.*, accumulator);
         }
     }
 }
@@ -709,23 +709,23 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
 
             // Get child value and kind holder of inherting items
             var child = root_json.object.get(item_name).?;
-            const listName = get_section(item_name);
+            const list_name = get_section(item_name);
 
             // Add child items to dictionary so they are not overwritten.
             for (child.object.get(listName).?.array.items) |childItem| {
-                const itemName = childItem.object.get("name").?.string;
-                try arr.put(itemName, childItem);
+                const item_name = child_item.object.get("name").?.string;
+                try arr.put(item_name, childItem);
             }
 
             // Handle all parents and grandparents of the current child.
             try resolve_inheritance_recursivly(allocator, root_json, item_name, &arr);
 
             // Replacement items will go here and should be released via the arena extends allocator
-            var newList = std.json.Array.init(extends_allocator);
+            var new_list = std.json.Array.init(extends_allocator);
             for (arr.values()) |value| {
-                try newList.append(value);
+                try new_list.append(value);
             }
-            try child.object.put(listName, std.json.Value{ .array = newList });
+            try child.object.put(list_name, std.json.Value{ .array = newList });
         }
     }
 }
