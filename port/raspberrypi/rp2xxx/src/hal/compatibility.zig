@@ -1,10 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
-
-pub const Chip = enum {
-    RP2040,
-    RP2350,
-};
+const Chip = @import("chip.zig").Chip;
 
 pub const chip: Chip = blk: {
     if (std.mem.eql(u8, microzig.config.chip_name, "RP2040")) {

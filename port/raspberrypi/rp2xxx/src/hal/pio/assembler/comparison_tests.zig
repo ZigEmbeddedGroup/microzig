@@ -1,6 +1,8 @@
 const std = @import("std");
 const assembler = @import("../assembler.zig");
 const tokenizer = @import("tokenizer.zig");
+const Chip = @import("../../chip.zig").Chip;
+
 const c = @cImport({
     @cDefine("PICO_NO_HARDWARE", "1");
     @cInclude("stdint.h");
@@ -12,7 +14,9 @@ const c = @cImport({
     @cInclude("comparison_tests/hello.pio.h");
     @cInclude("comparison_tests/hub75.pio.h");
     @cInclude("comparison_tests/i2c.pio.h");
+    @cInclude("comparison_tests/irq.pio.h");
     @cInclude("comparison_tests/manchester_encoding.pio.h");
+    @cInclude("comparison_tests/movrx.pio.h");
     @cInclude("comparison_tests/nec_carrier_burst.pio.h");
     @cInclude("comparison_tests/nec_carrier_control.pio.h");
     @cInclude("comparison_tests/nec_receive.pio.h");
@@ -31,7 +35,13 @@ const c = @cImport({
 });
 
 fn pio_comparison(comptime source: []const u8) !void {
-    const output = comptime assembler.assemble(source, .{});
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        try pio_comparison_chip(chip, source);
+    }
+}
+
+fn pio_comparison_chip(comptime chip: Chip, comptime source: []const u8) !void {
+    const output = comptime assembler.assemble(chip, source, .{});
     try std.testing.expect(output.programs.len > 0);
 
     inline for (output.programs) |program| {
@@ -87,9 +97,19 @@ test "pio.comparison.i2c" {
     try pio_comparison(@embedFile("comparison_tests/i2c.pio"));
 }
 
+test "pio.comparison.irq" {
+    @setEvalBranchQuota(22000);
+    try pio_comparison_chip(.RP2350, @embedFile("comparison_tests/irq.pio"));
+}
+
 test "pio.comparison.manchester_encoding" {
     @setEvalBranchQuota(11000);
     try pio_comparison(@embedFile("comparison_tests/manchester_encoding.pio"));
+}
+
+test "pio.comparison.movrx" {
+    @setEvalBranchQuota(11000);
+    try pio_comparison_chip(.RP2350, @embedFile("comparison_tests/movrx.pio"));
 }
 
 test "pio.comparison.nec_carrier_burst" {

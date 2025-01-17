@@ -1,0 +1,14 @@
+.program irq
+.side_set 1
+
+.wrap_target
+    irq set 1 prev side 0
+    irq set 1 rel side 0
+    irq set 1 next side 0
+    irq wait 1 prev side 0
+    irq wait 1 rel side 0
+    irq wait 1 next side 0
+    irq clear 1 prev side 0
+    irq clear 1 rel side 0
+    irq clear 1 next side 0
+.wrap
