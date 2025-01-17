@@ -210,10 +210,10 @@ pub fn main() !void {
     var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });
     defer registers_dir.close();
 
-    var extendsListArena = std.heap.ArenaAllocator.init(allocator);
-    defer extendsListArena.deinit();
-
-    const extendsListAllocator = extendsListArena.allocator();
+    //This holds extra data for extended registers
+    var extends_list_arena = std.heap.ArenaAllocator.init(allocator);
+    defer extends_list_arena.deinit();
+    const extends_list_allocator = extends_list_arena.allocator();
 
     it = registers_dir.iterate();
     while (try it.next()) |entry| {
@@ -239,7 +239,7 @@ pub fn main() !void {
         });
         errdefer register_file.deinit();
 
-        try HandleInherits(allocator, extendsListAllocator, &register_file.value);
+        try handle_extends(allocator, extends_list_allocator, &register_file.value);
 
         const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.fs.path.extension(entry.name).len]);
         try register_files.put(register_name, register_file);
@@ -629,81 +629,87 @@ fn chip_file_less_than(_: void, lhs: std.json.Parsed(ChipFile), rhs: std.json.Pa
 }
 
 // General function to handle inheritance
-fn resolveInheritance(allocator: std.mem.Allocator, jsonData: *std.json.Value, childFullName: []const u8, accumulator: *std.json.ObjectMap) !void {
-    const child = jsonData.object.get(childFullName).?;
-    const listName = GetSection(childFullName);
+fn resolve_inheritance_recursivly(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, accumulator: *std.json.ObjectMap) !void {
+    const child = json_data.object.get(child_full_name).?;
+    const list_name = get_section(child_full_name);
 
     //This element has a parent ! so it needs to be handled.
     const extended = child.object.get("extends");
-    if (extended) |parentLastName| {
+    if (extended) |parent_unqualified_name| {
 
         //Get access to the parent and its list of items.
-        const parent = try GetParent(allocator, jsonData, childFullName, parentLastName.string);
-        const parentArrayElement = parent.value_ptr.object.get(listName).?.array;
+        const parent = try get_parent(allocator, json_data, child_full_name, parent_unqualified_name.string);
+        const parent_section_array = parent.value_ptr.object.get(list_name).?.array;
 
         // If our dictionary doesn't contain an item present in the child add it to the list
-        for (parentArrayElement.items) |parentElement| {
-            const parentElementName = if (parentElement.object.get("name")) |name| name.string else @panic("No Name exist in array properties");
-            if (!accumulator.contains(parentElementName)) {
-                try accumulator.put(parentElementName, parentElement);
+        for (parent_section_array.items) |parent_element| {
+            const parent_element_name = if (parent_element.object.get("name")) |name| name.string else @panic("No Name exist in array properties");
+            if (!accumulator.contains(parent_element_name)) {
+                try accumulator.put(parent_element_name, parent_element);
             }
         }
 
         if (parent.value_ptr.object.contains("extends")) {
-            try resolveInheritance(allocator, jsonData, parent.key_ptr.*, accumulator);
+            try resolve_inheritance_recursivly(allocator, json_data, parent.key_ptr.*, accumulator);
         }
     }
 }
 
-fn GetParent(allocator: std.mem.Allocator, jsonData: *std.json.Value, childFullName: []const u8, parentName: []const u8) !std.json.ObjectMap.Entry {
+fn get_parent(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, parent_name: []const u8) !std.json.ObjectMap.Entry {
     //Get Family name eg Block, Fieldset
-    var itr = std.mem.splitScalar(u8, childFullName, '/');
-    const familyName = itr.first();
+    var name_iterator = std.mem.splitScalar(u8, child_full_name, '/');
+    const family_name = name_iterator.first();
 
     //Get qualified parent name
-    const parentFullName = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ familyName, parentName });
-    defer allocator.free(parentFullName);
+    const parent_full_name = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ family_name, parent_name });
+    defer allocator.free(parent_full_name);
 
-    return jsonData.object.getEntry(parentFullName).?;
+    return json_data.object.getEntry(parent_full_name).?;
 }
 
-fn GetSection(childFullName: []const u8) []const u8 {
+/// In the json data
+/// blocks inherit their "items"
+/// fieldsets inherit their "feilds"
+/// This picks the appropriate item based on its name.
+fn get_section(childFullName: []const u8) []const u8 {
     const Item_t = struct {
-        dType: []const u8,
+        data_type: []const u8,
         section: []const u8,
     };
 
-    const Items = [_]Item_t{
-        Item_t{ .dType = "block", .section = "items" },
-        Item_t{ .dType = "fieldset", .section = "fields" },
+    const items = [_]Item_t{
+        Item_t{ .data_type = "block", .section = "items" },
+        Item_t{ .data_type = "fieldset", .section = "fields" },
     };
 
     //Get Family name eg Block, Fieldset
-    var itr = std.mem.splitScalar(u8, childFullName, '/');
-    const familyName = itr.first();
+    var name_iterator = std.mem.splitScalar(u8, childFullName, '/');
+    const family_name = name_iterator.first();
 
-    inline for (Items) |item| {
-        if (std.mem.eql(u8, item.dType, familyName)) {
+    inline for (items) |item| {
+        if (std.mem.eql(u8, item.data_type, family_name)) {
             return item.section;
         }
     }
     @panic("Unhandled extends Type");
 }
 
-fn HandleInherits(allocator: std.mem.Allocator, newListAllocator: std.mem.Allocator, rootJson: *std.json.Value) !void {
-    var itr = rootJson.object.iterator();
+/// Reads throught the json data handles the "extends" inheritance.
+fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Allocator, root_json: *std.json.Value) !void {
+    var itr = root_json.object.iterator();
     while (itr.next()) |entry| {
         const item_name = entry.key_ptr.*;
         const item_value = entry.value_ptr;
 
         if (item_value.*.object.contains("extends")) {
+
             // This Collects unique items from the ancestors.
             var arr: std.json.ObjectMap = std.json.ObjectMap.init(allocator);
             defer arr.deinit();
 
             // Get child value and kind holder of inherting items
-            var child = rootJson.object.get(item_name).?;
-            const listName = GetSection(item_name);
+            var child = root_json.object.get(item_name).?;
+            const listName = get_section(item_name);
 
             // Add child items to dictionary so they are not overwritten.
             for (child.object.get(listName).?.array.items) |childItem| {
@@ -711,9 +717,9 @@ fn HandleInherits(allocator: std.mem.Allocator, newListAllocator: std.mem.Alloca
                 try arr.put(itemName, childItem);
             }
 
-            try resolveInheritance(allocator, rootJson, item_name, &arr);
+            try resolve_inheritance_recursivly(allocator, root_json, item_name, &arr);
 
-            var newList = std.json.Array.init(newListAllocator);
+            var newList = std.json.Array.init(extends_allocator);
 
             for (arr.values()) |value| {
                 try newList.append(value);
