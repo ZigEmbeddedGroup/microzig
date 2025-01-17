@@ -712,20 +712,20 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
             const list_name = get_section(item_name);
 
             // Add child items to dictionary so they are not overwritten.
-            for (child.object.get(listName).?.array.items) |childItem| {
-                const item_name = child_item.object.get("name").?.string;
-                try arr.put(item_name, childItem);
+            for (child.object.get(list_name).?.array.items) |child_item| {
+                const child_item_name = child_item.object.get("name").?.string;
+                try arr.put(child_item_name, child_item);
             }
 
             // Handle all parents and grandparents of the current child.
-            try resolve_inheritance_recursivly(allocator, root_json, item_name, &arr);
+            try resolve_inheritance_recursively(allocator, root_json, item_name, &arr);
 
             // Replacement items will go here and should be released via the arena extends allocator
             var new_list = std.json.Array.init(extends_allocator);
             for (arr.values()) |value| {
                 try new_list.append(value);
             }
-            try child.object.put(list_name, std.json.Value{ .array = newList });
+            try child.object.put(list_name, std.json.Value{ .array = new_list });
         }
     }
 }
