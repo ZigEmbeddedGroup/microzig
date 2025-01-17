@@ -671,7 +671,7 @@ fn get_parent(allocator: std.mem.Allocator, json_data: *std.json.Value, child_fu
 /// blocks inherit their "items"
 /// fieldsets inherit their "feilds"
 /// This picks the appropriate item based on its name.
-fn get_section(childFullName: []const u8) []const u8 {
+fn get_section(child_full_name: []const u8) []const u8 {
     const Item_t = struct {
         data_type: []const u8,
         section: []const u8,
@@ -683,7 +683,7 @@ fn get_section(childFullName: []const u8) []const u8 {
     };
 
     //Get Family name eg Block, Fieldset
-    var name_iterator = std.mem.splitScalar(u8, childFullName, '/');
+    var name_iterator = std.mem.splitScalar(u8, child_full_name, '/');
     const family_name = name_iterator.first();
 
     inline for (items) |item| {
@@ -717,10 +717,11 @@ fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Alloc
                 try arr.put(itemName, childItem);
             }
 
+            // Handle all parents and grandparents of the current child.
             try resolve_inheritance_recursivly(allocator, root_json, item_name, &arr);
 
+            // Replacement items will go here and should be released via the arena extends allocator
             var newList = std.json.Array.init(extends_allocator);
-
             for (arr.values()) |value| {
                 try newList.append(value);
             }
