@@ -809,11 +809,11 @@ pub fn Tokenizer(chip: Chip) type {
         }
 
         fn get_movrx(self: *Self, diags: *?Diagnostics) TokenizeError!Token(chip).Instruction.Payload {
-            // TODO: Assuming one space after opcode
+            // NOTE: Assuming there's one space after opcode
             const dest_idx = self.index + 1;
             const dest_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str);
-            // TODO: Assuming comma and one space
+            // NOTE: Assuming there's a comma and one space
             const source_idx = self.index + 2;
             const source_str = (try self.get_arg(diags)) orelse return error.MissingArg;
             const source_lower = try lowercase_bounded(256, source_str);
@@ -836,7 +836,6 @@ pub fn Tokenizer(chip: Chip) type {
                     // -- Parse out the index
                     diags.* = Diagnostics.init(
                         dest_idx,
-                        // @intCast(self.index - dest_str.len + 1),
                         "mov (to rx): destination must be rxfifoy or rxfifo[<index>]",
                         .{},
                     );
