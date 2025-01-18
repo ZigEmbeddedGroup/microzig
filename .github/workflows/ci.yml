@@ -113,7 +113,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - unit-test-ports
-      - build-examples
     strategy:
       matrix:
         example_dir:
