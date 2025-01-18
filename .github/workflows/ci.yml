@@ -6,7 +6,7 @@ on:
     branches: [main, zig-master]
 
 env:
-  ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
+  ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || vars.TARGET_ZIG_VERSION }}
 
 jobs:
   build:

@@ -23,7 +23,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
-          version: 0.13.0
+          version: ${{ vars.TARGET_ZIG_VERSION }}
 
       - name: Extract version
         run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
