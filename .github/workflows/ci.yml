@@ -4,6 +4,7 @@ on:
     branches: [main, zig-master]
   pull_request:
     branches: [main, zig-master]
+  workflow_dispatch:
 
 env:
   ZIG_VERSION: ${{ github.ref == 'refs/heads/zig-master' && 'master' || '0.13.0' }}
