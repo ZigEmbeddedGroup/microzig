@@ -19,7 +19,7 @@ const riscv = @import("arch/riscv.zig");
 
 const log = std.log.scoped(.gen);
 
-pub fn to_zig(db: *Database, out_writer: anytype) !void {
+pub fn to_zig(db: *Database, for_microzig: bool, out_writer: anytype) !void {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
@@ -29,11 +29,18 @@ pub fn to_zig(db: *Database, out_writer: anytype) !void {
     defer buffer.deinit();
 
     const writer = buffer.writer();
-    try writer.writeAll(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
-        \\
-    );
+    if (for_microzig) {
+        try writer.writeAll(
+            \\const micro = @import("microzig");
+            \\const mmio = micro.mmio;
+            \\
+        );
+    } else {
+        try writer.writeAll(
+            \\const mmio = @import("mmio");
+            \\
+        );
+    }
     try write_devices(db, allocator, writer);
     try write_types(db, allocator, writer);
     try writer.writeByte(0);
