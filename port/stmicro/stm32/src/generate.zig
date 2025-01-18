@@ -421,7 +421,7 @@ pub fn main() !void {
 
     try db.backup("stm32.regz");
 
-    db.to_zig(out_file.writer()) catch |err| {
+    db.to_zig(out_file.writer(), .{ .for_microzig = true }) catch |err| {
         std.log.err("Failed to write", .{});
         return err;
     };
