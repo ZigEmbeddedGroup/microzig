@@ -23,7 +23,7 @@ Assuming you've initialized a zig project with `zig init`, or have set one up
 yourself, you can add microzig as a dependency with the following command:
 
 ```sh
-zig fetch --save=microzig https://microzig.tech/downloads/microzig/0.13.1/microzig.tar.gz
+zig fetch --save=microzig https://microzig.tech/downloads/microzig/0.13.2/microzig.tar.gz
 ```
 
 Then in your `build.zig`:
