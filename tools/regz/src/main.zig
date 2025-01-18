@@ -181,6 +181,6 @@ fn main_impl() anyerror!void {
         std.io.getStdOut().writer();
 
     var buffered = std.io.bufferedWriter(raw_writer);
-    try db.to_zig(.{ .for_microzig = args.microzig }, buffered.writer());
+    try db.to_zig(buffered.writer(), .{ .for_microzig = args.microzig });
     try buffered.flush();
 }
