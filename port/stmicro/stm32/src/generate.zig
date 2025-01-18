@@ -210,6 +210,11 @@ pub fn main() !void {
     var registers_dir = try data_dir.openDir("registers", .{ .iterate = true });
     defer registers_dir.close();
 
+    //This holds extra data for extended registers
+    var extends_list_arena = std.heap.ArenaAllocator.init(allocator);
+    defer extends_list_arena.deinit();
+    const extends_list_allocator = extends_list_arena.allocator();
+
     it = registers_dir.iterate();
     while (try it.next()) |entry| {
         if (entry.kind != .file)
@@ -229,10 +234,12 @@ pub fn main() !void {
             std.log.err("Issue found at {}:{}", .{ diags.getLine(), diags.getColumn() });
         }
 
-        const register_file = try std.json.parseFromTokenSource(std.json.Value, allocator, &scanner, .{
+        var register_file = try std.json.parseFromTokenSource(std.json.Value, allocator, &scanner, .{
             .allocate = .alloc_always,
         });
         errdefer register_file.deinit();
+
+        try handle_extends(allocator, extends_list_allocator, &register_file.value);
 
         const register_name = try allocator.dupe(u8, entry.name[0 .. entry.name.len - std.fs.path.extension(entry.name).len]);
         try register_files.put(register_name, register_file);
@@ -619,4 +626,106 @@ fn generate_chips_file(
 
 fn chip_file_less_than(_: void, lhs: std.json.Parsed(ChipFile), rhs: std.json.Parsed(ChipFile)) bool {
     return std.ascii.lessThanIgnoreCase(lhs.value.name, rhs.value.name);
+}
+
+// General function to handle inheritance
+fn resolve_inheritance_recursively(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, accumulator: *std.json.ObjectMap) !void {
+    const child = json_data.object.get(child_full_name).?;
+    const list_name = get_section(child_full_name);
+
+    //This element has a parent ! so it needs to be handled.
+    const extended = child.object.get("extends");
+    if (extended) |parent_unqualified_name| {
+
+        //Get access to the parent and its list of items.
+        const parent = try get_parent(allocator, json_data, child_full_name, parent_unqualified_name.string);
+        const parent_section_array = parent.value_ptr.object.get(list_name).?.array;
+
+        // If our dictionary doesn't contain an item present in the child add it to the list
+        for (parent_section_array.items) |parent_element| {
+            const parent_element_name = if (parent_element.object.get("name")) |name| name.string else @panic("No Name exist in array properties");
+            if (!accumulator.contains(parent_element_name)) {
+                try accumulator.put(parent_element_name, parent_element);
+            }
+        }
+
+        if (parent.value_ptr.object.contains("extends")) {
+            try resolve_inheritance_recursively(allocator, json_data, parent.key_ptr.*, accumulator);
+        }
+    }
+}
+
+fn get_parent(allocator: std.mem.Allocator, json_data: *std.json.Value, child_full_name: []const u8, parent_name: []const u8) !std.json.ObjectMap.Entry {
+    //Get Family name eg Block, Fieldset
+    var name_iterator = std.mem.splitScalar(u8, child_full_name, '/');
+    const family_name = name_iterator.first();
+
+    //Get qualified parent name
+    const parent_full_name = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ family_name, parent_name });
+    defer allocator.free(parent_full_name);
+
+    return json_data.object.getEntry(parent_full_name).?;
+}
+
+/// In the json data
+/// blocks inherit their "items"
+/// fieldsets inherit their "feilds"
+/// This picks the appropriate item based on its name.
+fn get_section(child_full_name: []const u8) []const u8 {
+    const Item_t = struct {
+        data_type: []const u8,
+        section: []const u8,
+    };
+
+    const items = [_]Item_t{
+        Item_t{ .data_type = "block", .section = "items" },
+        Item_t{ .data_type = "fieldset", .section = "fields" },
+    };
+
+    //Get Family name eg Block, Fieldset
+    var name_iterator = std.mem.splitScalar(u8, child_full_name, '/');
+    const family_name = name_iterator.first();
+
+    inline for (items) |item| {
+        if (std.mem.eql(u8, item.data_type, family_name)) {
+            return item.section;
+        }
+    }
+    @panic("Unhandled extends Type");
+}
+
+/// Reads throught the json data handles the "extends" inheritance.
+fn handle_extends(allocator: std.mem.Allocator, extends_allocator: std.mem.Allocator, root_json: *std.json.Value) !void {
+    var itr = root_json.object.iterator();
+    while (itr.next()) |entry| {
+        const item_name = entry.key_ptr.*;
+        const item_value = entry.value_ptr;
+
+        if (item_value.*.object.contains("extends")) {
+
+            // This Collects unique items from the ancestors.
+            var arr: std.json.ObjectMap = std.json.ObjectMap.init(allocator);
+            defer arr.deinit();
+
+            // Get child value and kind holder of inherting items
+            var child = root_json.object.get(item_name).?;
+            const list_name = get_section(item_name);
+
+            // Add child items to dictionary so they are not overwritten.
+            for (child.object.get(list_name).?.array.items) |child_item| {
+                const child_item_name = child_item.object.get("name").?.string;
+                try arr.put(child_item_name, child_item);
+            }
+
+            // Handle all parents and grandparents of the current child.
+            try resolve_inheritance_recursively(allocator, root_json, item_name, &arr);
+
+            // Replacement items will go here and should be released via the arena extends allocator
+            var new_list = std.json.Array.init(extends_allocator);
+            for (arr.values()) |value| {
+                try new_list.append(value);
+            }
+            try child.object.put(list_name, std.json.Value{ .array = new_list });
+        }
+    }
 }
