@@ -2031,8 +2031,10 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
     }
 }
 
-pub fn to_zig(db: *Database, out_writer: anytype) !void {
-    try gen.to_zig(db, out_writer);
+pub const ToZigOptions = gen.ToZigOptions;
+
+pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
+    try gen.to_zig(db, out_writer, opts);
 }
 
 test "all" {
