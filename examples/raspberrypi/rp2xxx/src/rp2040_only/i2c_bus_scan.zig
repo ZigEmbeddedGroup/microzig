@@ -7,7 +7,7 @@ const gpio = rp2xxx.gpio;
 const peripherals = microzig.chip.peripherals;
 const chip = rp2xxx.compatibility.chip;
 
-pub const microzig_options = .{
+pub const microzig_options = microzig.Options{
     .log_level = .info,
     .logFn = rp2xxx.uart.logFn,
 };

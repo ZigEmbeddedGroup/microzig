@@ -100,7 +100,7 @@ pub fn GeneratorImpl(Generator: type, Source: type, IntegerDivisorType: type) ty
             assert(24 == @sizeOf([2]Regs));
         }
 
-        const generators = @as(*volatile [@typeInfo(Generator).Enum.fields.len]Regs, @ptrCast(CLOCKS));
+        const generators = @as(*volatile [@typeInfo(Generator).@"enum".fields.len]Regs, @ptrCast(CLOCKS));
 
         const CTRL_ENABLE_MASK = @as(u32, 1 << 11);
         const CTRL_SRC_MASK = @as(u32, 0x3);

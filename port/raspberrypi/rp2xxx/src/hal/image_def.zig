@@ -19,7 +19,7 @@ const cpu: Cpu = std.meta.stringToEnum(Cpu, @tagName(arch)).?;
 const image_def = init();
 
 comptime {
-    @export(image_def, .{
+    @export(&image_def, .{
         .name = "_image_def",
         .section = ".bootmeta",
         .linkage = .strong,
