@@ -44,7 +44,7 @@ pub fn build(b: *Build) void {
     const generate_linker_script_exe = b.addExecutable(.{
         .name = "generate_linker_script",
         .root_source_file = b.path("tools/generate_linker_script.zig"),
-        .target = b.host,
+        .target = b.graph.host,
         .optimize = optimize,
     });
 
