@@ -34,7 +34,7 @@ const Context = struct {
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
-        inline for (@typeInfo(RegisterProperties).Struct.fields) |field| {
+        inline for (@typeInfo(RegisterProperties).@"struct".fields) |field| {
             if (@field(register_props, field.name)) |value|
                 @field(base_register_props, field.name) = value;
         }

@@ -333,7 +333,7 @@ pub const StructLayout = enum {
 fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
     var buf = std.BoundedArray(u8, 4096).init(0) catch unreachable;
     const writer = buf.writer();
-    inline for (@typeInfo(T).Struct.fields, 0..) |field, i| {
+    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
         if (i != 0)
             writer.writeAll(", ") catch unreachable;
 
@@ -350,10 +350,10 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
 fn zig_type_to_sql_type(comptime T: type) []const u8 {
     const info = @typeInfo(T);
     return switch (info) {
-        .Int => "INTEGER",
-        .Pointer => |ptr| if (ptr.child == u8) "TEXT" else unreachable,
-        .Enum => zig_type_to_sql_type(T.BaseType),
-        .Optional => |opt| zig_type_to_sql_type(opt.child),
+        .int => "INTEGER",
+        .pointer => |ptr| if (ptr.child == u8) "TEXT" else unreachable,
+        .@"enum" => zig_type_to_sql_type(T.BaseType),
+        .optional => |opt| zig_type_to_sql_type(opt.child),
         else => {
             @compileLog(T);
             unreachable;
@@ -372,7 +372,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     var primary_key_found = T.sql_opts.primary_key == null;
 
     const info = @typeInfo(T);
-    inline for (info.Struct.fields) |field| {
+    inline for (info.@"struct".fields) |field| {
         if (T.sql_opts.primary_key) |primary_key| {
             if (std.mem.eql(u8, primary_key.name, field.name))
                 primary_key_found = true;
@@ -384,7 +384,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     const writer = buf.writer();
     try writer.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
-    inline for (info.Struct.fields) |field| {
+    inline for (info.@"struct".fields) |field| {
         if (first) {
             first = false;
         } else {
@@ -394,7 +394,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
         try writer.print(" {s}", .{zig_type_to_sql_type(field.type)});
 
         const field_type_info = @typeInfo(field.type);
-        if (field_type_info != .Optional)
+        if (field_type_info != .optional)
             try writer.writeAll(" NOT NULL");
 
         if (T.sql_opts.primary_key) |primary_key| {
@@ -410,7 +410,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try writer.writeAll(",\n");
 
-        const field = for (@typeInfo(T).Struct.fields) |field| {
+        const field = for (@typeInfo(T).@"struct".fields) |field| {
             if (std.mem.eql(u8, field.name, foreign_key.name))
                 break field;
         } else unreachable;
@@ -418,7 +418,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
         try writer.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
             foreign_key.name,
             (switch (@typeInfo(field.type)) {
-                .Optional => |opt| opt.child,
+                .optional => |opt| opt.child,
                 else => field.type,
             }).table,
             foreign_key.on_delete.to_string(),

@@ -53,7 +53,7 @@ const system_interrupts = struct {
 pub fn load_system_interrupts(db: *Database, device: *const Database.Device) !void {
     assert(device.arch.is_arm());
 
-    inline for (@typeInfo(Database.Arch).Enum.fields) |field| {
+    inline for (@typeInfo(Database.Arch).@"enum".fields) |field| {
         if (device.arch == @field(Database.Arch, field.name)) {
             if (@hasDecl(system_interrupts, field.name)) {
                 for (@field(system_interrupts, field.name)) |interrupt| {
