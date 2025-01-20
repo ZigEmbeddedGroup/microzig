@@ -15,9 +15,8 @@
             .hash = "122053ef8368ce881da81fb6bcb95db162dc358243d935bdc52c85996fd53ad46b5f",
         },
         .sqlite = .{
-            //.url = "git+https://github.com/vrischmann/zig-sqlite.git#18c42fb23ee1b02d52cc7999ceb27dcd13e819e1",
-            //.hash = "12204ecfb22b7109dd3400cbdae8885e31fc653f33424bf35fe5fa21ceeadc90fcf8",
-            .path = "../../../zig-sqlite",
+            .url = "git+https://github.com/mattnite/zig-sqlite.git#4e554ab43095859e153a5652667fd8a4d697b223",
+            .hash = "1220bbf36166a56f03ca55c2f455f70cdb3dd5f8dca1f7c78e57d9402add9635b2b9",
         },
     },
 }
