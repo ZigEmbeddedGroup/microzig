@@ -1368,10 +1368,10 @@ const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 
 fn DirectiveTag(comptime chip: Chip) type {
-    return @typeInfo(Token(chip).Directive).Union.tag_type.?;
+    return @typeInfo(Token(chip).Directive).@"union".tag_type.?;
 }
 fn PayloadTag(comptime chip: Chip) type {
-    return @typeInfo(Token(chip).Instruction.Payload).Union.tag_type.?;
+    return @typeInfo(Token(chip).Instruction.Payload).@"union".tag_type.?;
 }
 
 fn expect_program(comptime chip: Chip, expected: []const u8, actual: Token(chip)) !void {
@@ -2114,11 +2114,11 @@ test "tokenize.instr.irq" {
     };
 
     const modes = std.StaticStringMap(ClearWait).initComptime(.{
-        .{ "", .{ .clear = false, .wait = false } },
-        .{ "set", .{ .clear = false, .wait = false } },
-        .{ "nowait", .{ .clear = false, .wait = false } },
-        .{ "wait", .{ .clear = false, .wait = true } },
-        .{ "clear", .{ .clear = true, .wait = false } },
+        .{ "", ClearWait{ .clear = false, .wait = false } },
+        .{ "set", ClearWait{ .clear = false, .wait = false } },
+        .{ "nowait", ClearWait{ .clear = false, .wait = false } },
+        .{ "wait", ClearWait{ .clear = false, .wait = true } },
+        .{ "clear", ClearWait{ .clear = true, .wait = false } },
     });
 
     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
