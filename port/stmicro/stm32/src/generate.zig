@@ -334,35 +334,68 @@ pub fn main() !void {
                     for (fieldset_value.get("fields").?.array.items) |field| {
                         const field_name = field.object.get("name").?.string;
                         const field_description: ?[]const u8 = if (field.object.get("description")) |desc| desc.string else null;
-                        const bit_offset = switch (field.object.get("bit_offset").?) {
-                            .integer => |int| int,
+                        switch (field.object.get("bit_offset").?) {
+                            .integer => |int| {
+                                const bit_offset = int;
+                                const bit_size = field.object.get("bit_size").?.integer;
+                                const enum_id: ?regz.Database.EnumID = if (field.object.get("enum")) |enum_name|
+                                    if (enums.get(enum_name.string)) |enum_id| enum_id else null
+                                else
+                                    null;
+                                var array_count: ?u16 = null;
+                                var array_stride: ?u8 = null;
+                                if (field.object.get("array")) |array| {
+                                    array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
+                                    array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
+                                }
+
+                                try db.add_register_field(register_id, .{
+                                    .name = field_name,
+                                    .description = field_description,
+                                    .offset_bits = @intCast(bit_offset),
+                                    .size_bits = @intCast(bit_size),
+                                    .enum_id = enum_id,
+                                    .count = array_count,
+                                    .stride = array_stride,
+                                });
+                            },
+                            .array => |arr| {
+                                if (arr.items.len != 2) {
+                                    //This should never happen, because the input data as of yet doesn't contain this.
+                                    std.log.warn("skipping {s}, it's an non-consecutive field with more than two parts", .{field_name});
+                                    continue;
+                                }
+                                const cont_field = try std.fmt.allocPrint(allocator, "{s}_CONT", .{field_name});
+                                const field_names = [2][]const u8{ field_name, cont_field };
+
+                                for (arr.items, field_names) |non_contiguous_offset, non_contiguous_field_name| {
+                                    const bit_offset = non_contiguous_offset.object.get("start").?.integer;
+                                    const bit_size = non_contiguous_offset.object.get("end").?.integer - bit_offset + 1;
+
+                                    const enum_id = null; //These can't handle the ENUM size but it will still be avaiable to use.
+
+                                    var array_count: ?u16 = null;
+                                    var array_stride: ?u8 = null;
+                                    if (field.object.get("array")) |array| {
+                                        array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
+                                        array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
+                                    }
+
+                                    try db.add_register_field(register_id, .{
+                                        .name = non_contiguous_field_name,
+                                        .description = field_description,
+                                        .offset_bits = @intCast(bit_offset),
+                                        .size_bits = @intCast(bit_size),
+                                        .enum_id = enum_id,
+                                        .count = array_count,
+                                        .stride = array_stride,
+                                    });
+                                }
+                            },
                             else => |val| {
                                 std.log.warn("skipping {s}, it's a {}", .{ field_name, val });
-                                break :blk;
                             },
-                        };
-
-                        const bit_size = field.object.get("bit_size").?.integer;
-                        const enum_id: ?regz.Database.EnumID = if (field.object.get("enum")) |enum_name|
-                            if (enums.get(enum_name.string)) |enum_id| enum_id else null
-                        else
-                            null;
-                        var array_count: ?u16 = null;
-                        var array_stride: ?u8 = null;
-                        if (field.object.get("array")) |array| {
-                            array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
-                            array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
                         }
-
-                        try db.add_register_field(register_id, .{
-                            .name = field_name,
-                            .description = field_description,
-                            .offset_bits = @intCast(bit_offset),
-                            .size_bits = @intCast(bit_size),
-                            .enum_id = enum_id,
-                            .count = array_count,
-                            .stride = array_stride,
-                        });
                     }
                 }
             }
