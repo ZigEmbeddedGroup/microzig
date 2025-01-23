@@ -7,7 +7,7 @@ const Pio = rp2xxx.pio.Pio;
 const StateMachine = rp2xxx.pio.StateMachine;
 
 const squarewave_program = blk: {
-    @setEvalBranchQuota(2000);
+    @setEvalBranchQuota(3000);
     break :blk rp2xxx.pio.assemble(
         \\;
         \\; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.

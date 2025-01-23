@@ -5,63 +5,7 @@ const app = @import("app");
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-pub const VectorTableOptions = if (@hasDecl(microzig.chip, "VectorTable")) blk: {
-    const VectorTable = microzig.chip.VectorTable;
-    const fields_with_default = fields_with_default: {
-        var count = 0;
-        for (@typeInfo(VectorTable).Struct.fields) |field| {
-            if (field.default_value != null)
-                count += 1;
-        }
-
-        break :fields_with_default count;
-    };
-
-    var fields: [fields_with_default]std.builtin.Type.StructField = undefined;
-    var idx = 0;
-    for (@typeInfo(VectorTable).Struct.fields) |field| {
-        if (field.default_value == null)
-            continue;
-
-        fields[idx] = field;
-        idx += 1;
-    }
-
-    break :blk @Type(.{
-        .Struct = .{
-            .fields = &fields,
-            .layout = .auto,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-} else struct {};
-
-pub const Options = struct {
-    interrupts: VectorTableOptions = .{},
-    log_level: std.log.Level = std.log.default_level,
-    log_scope_levels: []const std.log.ScopeLevel = &.{},
-    logFn: fn (
-        comptime message_level: std.log.Level,
-        comptime scope: @TypeOf(.enum_literal),
-        comptime format: []const u8,
-        args: anytype,
-    ) void = struct {
-        fn log(
-            comptime message_level: std.log.Level,
-            comptime scope: @Type(.EnumLiteral),
-            comptime format: []const u8,
-            args: anytype,
-        ) void {
-            _ = message_level;
-            _ = scope;
-            _ = format;
-            _ = args;
-        }
-    }.log,
-};
-
-pub const microzig_options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
+pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
 
 // Conditionally provide a default no-op logFn if app does not have one
 // defined. Parts of microzig use the stdlib logging facility and
@@ -88,18 +32,18 @@ comptime {
     // that is either called (Cortex-M) or executed (AVR) when initalized.
 
     // Allow board and chip to override CPU vector table.
-    const export_opts = .{
+    const export_opts = std.builtin.ExportOptions{
         .name = "vector_table",
         .section = "microzig_flash_start",
         .linkage = .strong,
     };
 
     if ((microzig.board != void and @hasDecl(microzig.board, "vector_table")))
-        @export(microzig.board.vector_table, export_opts)
+        @export(&microzig.board.vector_table, export_opts)
     else if (@hasDecl(microzig.chip, "vector_table"))
-        @export(microzig.chip.vector_table, export_opts)
+        @export(&microzig.chip.vector_table, export_opts)
     else if (@hasDecl(microzig.cpu, "vector_table"))
-        @export(microzig.cpu.vector_table, export_opts)
+        @export(&microzig.cpu.vector_table, export_opts)
     else if (@hasDecl(app, "interrupts"))
         @compileError("interrupts not configured");
 }
@@ -121,12 +65,12 @@ export fn microzig_main() noreturn {
     const info: std.builtin.Type = @typeInfo(@TypeOf(main));
 
     const invalid_main_msg = "main must be either 'pub fn main() void' or 'pub fn main() !void'.";
-    if (info != .Fn or info.Fn.params.len > 0)
+    if (info != .@"fn" or info.@"fn".params.len > 0)
         @compileError(invalid_main_msg);
 
-    const return_type = info.Fn.return_type orelse @compileError(invalid_main_msg);
+    const return_type = info.@"fn".return_type orelse @compileError(invalid_main_msg);
 
-    if (info.Fn.calling_convention == .Async)
+    if (info.@"fn".calling_convention == .@"async")
         @compileError("TODO: Embedded event loop not supported yet. Please try again later.");
 
     // A hal can export a default init function that runs before main for
@@ -138,7 +82,7 @@ export fn microzig_main() noreturn {
     else if (microzig.hal != void and @hasDecl(microzig.hal, "init"))
         microzig.hal.init();
 
-    if (@typeInfo(return_type) == .ErrorUnion) {
+    if (@typeInfo(return_type) == .error_union) {
         main() catch |err| {
             // TODO:
             // - Compute maximum size on the type of "err"
@@ -168,8 +112,6 @@ pub const sections = struct {
 };
 
 pub fn initialize_system_memories() void {
-    @setCold(true);
-
     // fill .bss with zeroes
     {
         const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
