@@ -138,21 +138,21 @@ pub const MemoryProtectionUnit = extern struct {
         reserved0: u24,
     }),
     /// MPU Region Base Address Register.
-    RBAR: RBAR,
+    RBAR: RBAR_Register,
     /// MPU Region Limit Address Register.
-    RLAR: RLAR,
+    RLAR: RLAR_Register,
     /// MPU Region Base Address Register Alias 1.
-    RBAR_A1: RBAR,
+    RBAR_A1: RBAR_Register,
     /// MPU Region Base Address Register Alias 2.
-    RBAR_A2: RBAR,
+    RBAR_A2: RBAR_Register,
     /// MPU Region Base Address Register Alias 3.
-    RBAR_A3: RBAR,
+    RBAR_A3: RBAR_Register,
     /// MPU Region Limit Address Register Alias 1.
-    RLAR_A1: RLAR,
+    RLAR_A1: RLAR_Register,
     /// MPU Region Base Address Register Alias 2.
-    RLAR_A2: RLAR,
+    RLAR_A2: RLAR_Register,
     /// MPU Region Base Address Register Alias 3.
-    RLAR_A3: RLAR,
+    RLAR_A3: RLAR_Register,
     reserved0: [20]u8,
     /// MPU Memory Addribute Indirection Register 0.
     MPU_MAIR0: u32,
@@ -160,7 +160,7 @@ pub const MemoryProtectionUnit = extern struct {
     MPU_MAIR1: u32,
 
     /// MPU Region Address Register format.
-    pub const RBAR = mmio.Mmio(packed struct(u32) {
+    pub const RBAR_Register = mmio.Mmio(packed struct(u32) {
         /// Execute Never defines if code can be executed from this region.
         XN: u1,
         /// Access permissions.
@@ -173,7 +173,7 @@ pub const MemoryProtectionUnit = extern struct {
     });
 
     /// MPU Region Limit Address Register format.
-    pub const RLAR = mmio.Mmio(packed struct(u32) {
+    pub const RLAR_Register = mmio.Mmio(packed struct(u32) {
         /// Enable the region.
         EN: u1,
         /// Attribue Index associates a set of attributes in the MPU MAIR0 and MPU MAIR1 fields.

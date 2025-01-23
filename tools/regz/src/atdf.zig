@@ -12,6 +12,7 @@ const StructID = Database.StructID;
 const RegisterID = Database.RegisterID;
 
 const xml = @import("xml.zig");
+const Arch = @import("arch.zig").Arch;
 
 const log = std.log.scoped(.atdf);
 
@@ -158,7 +159,7 @@ fn load_interrupt_group(ctx: *Context, node: xml.Node, device_id: DeviceID) !voi
     }
 }
 
-fn arch_from_str(str: []const u8) Database.Arch {
+fn arch_from_str(str: []const u8) Arch {
     return if (std.mem.eql(u8, "ARM926EJ-S", str))
         .arm926ej_s
     else if (std.mem.eql(u8, "AVR8", str))

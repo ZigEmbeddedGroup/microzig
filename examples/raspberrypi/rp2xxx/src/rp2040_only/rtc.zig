@@ -10,7 +10,7 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
     },
 };
 
-pub const microzig_options = .{
+pub const microzig_options = microzig.Options{
     .interrupts = .{
         .RTC_IRQ = .{ .C = &rtc_isr },
     },

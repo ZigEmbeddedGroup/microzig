@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Database = @import("Database.zig");
+const Arch = @import("arch.zig").Arch;
 
 pub const Type = struct {
     pub const EnumField = struct {
@@ -20,7 +21,7 @@ pub const Type = struct {
 pub const Patch = union(enum) {
     override_arch: struct {
         device_name: []const u8,
-        arch: Database.Arch,
+        arch: Arch,
     },
     add_enum: struct {
         parent: []const u8,

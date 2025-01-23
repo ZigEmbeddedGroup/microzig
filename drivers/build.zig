@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
 
     const test_suite = b.addTest(.{
         .root_source_file = b.path("framework.zig"),
-        .target = b.host,
+        .target = b.graph.host,
         .optimize = .Debug,
     });
 
