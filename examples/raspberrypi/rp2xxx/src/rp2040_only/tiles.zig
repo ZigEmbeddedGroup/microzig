@@ -37,7 +37,7 @@ const sm: StateMachine = .sm0;
 const led_pin = gpio.num(16);
 
 const brightness: [256]u8 = blk: {
-    @setEvalBranchQuota(10_000);
+    @setEvalBranchQuota(25_000);
 
     const gamma = 2.2;
 

@@ -50,7 +50,7 @@ pub fn build(b: *Build) !void {
     const contextualize_fields = b.addExecutable(.{
         .name = "contextualize-fields",
         .root_source_file = b.path("src/contextualize-fields.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
     contextualize_fields.linkLibrary(libxml2_dep.artifact("xml2"));
     const contextualize_fields_run = b.addRunArtifact(contextualize_fields);
@@ -63,7 +63,7 @@ pub fn build(b: *Build) !void {
     const characterize = b.addExecutable(.{
         .name = "characterize",
         .root_source_file = b.path("src/characterize.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
     characterize.linkLibrary(libxml2_dep.artifact("xml2"));
     const characterize_run = b.addRunArtifact(characterize);

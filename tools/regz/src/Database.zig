@@ -14,6 +14,7 @@ const atdf = @import("atdf.zig");
 const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
+const Arch = @import("arch.zig").Arch;
 
 const log = std.log.scoped(.db);
 
@@ -333,7 +334,7 @@ pub const StructLayout = enum {
 fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null }) []const u8 {
     var buf = std.BoundedArray(u8, 4096).init(0) catch unreachable;
     const writer = buf.writer();
-    inline for (@typeInfo(T).Struct.fields, 0..) |field, i| {
+    inline for (@typeInfo(T).@"struct".fields, 0..) |field, i| {
         if (i != 0)
             writer.writeAll(", ") catch unreachable;
 
@@ -350,10 +351,10 @@ fn gen_field_list(comptime T: type, opts: struct { prefix: ?[]const u8 = null })
 fn zig_type_to_sql_type(comptime T: type) []const u8 {
     const info = @typeInfo(T);
     return switch (info) {
-        .Int => "INTEGER",
-        .Pointer => |ptr| if (ptr.child == u8) "TEXT" else unreachable,
-        .Enum => zig_type_to_sql_type(T.BaseType),
-        .Optional => |opt| zig_type_to_sql_type(opt.child),
+        .int => "INTEGER",
+        .pointer => |ptr| if (ptr.child == u8) "TEXT" else unreachable,
+        .@"enum" => zig_type_to_sql_type(T.BaseType),
+        .optional => |opt| zig_type_to_sql_type(opt.child),
         else => {
             @compileLog(T);
             unreachable;
@@ -372,7 +373,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     var primary_key_found = T.sql_opts.primary_key == null;
 
     const info = @typeInfo(T);
-    inline for (info.Struct.fields) |field| {
+    inline for (info.@"struct".fields) |field| {
         if (T.sql_opts.primary_key) |primary_key| {
             if (std.mem.eql(u8, primary_key.name, field.name))
                 primary_key_found = true;
@@ -384,7 +385,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     const writer = buf.writer();
     try writer.print("CREATE TABLE {s} (\n", .{name});
     var first = true;
-    inline for (info.Struct.fields) |field| {
+    inline for (info.@"struct".fields) |field| {
         if (first) {
             first = false;
         } else {
@@ -394,7 +395,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
         try writer.print(" {s}", .{zig_type_to_sql_type(field.type)});
 
         const field_type_info = @typeInfo(field.type);
-        if (field_type_info != .Optional)
+        if (field_type_info != .optional)
             try writer.writeAll(" NOT NULL");
 
         if (T.sql_opts.primary_key) |primary_key| {
@@ -410,7 +411,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
     for (T.sql_opts.foreign_keys) |foreign_key| {
         try writer.writeAll(",\n");
 
-        const field = for (@typeInfo(T).Struct.fields) |field| {
+        const field = for (@typeInfo(T).@"struct".fields) |field| {
             if (std.mem.eql(u8, field.name, foreign_key.name))
                 break field;
         } else unreachable;
@@ -418,7 +419,7 @@ fn gen_sql_table_impl(comptime name: []const u8, comptime T: type) ![]const u8 {
         try writer.print("  FOREIGN KEY ({s}) REFERENCES {s}(id) ON DELETE {s} ON UPDATE {s}\n", .{
             foreign_key.name,
             (switch (@typeInfo(field.type)) {
-                .Optional => |opt| opt.child,
+                .optional => |opt| opt.child,
                 else => field.type,
             }).table,
             foreign_key.on_delete.to_string(),
@@ -485,126 +486,6 @@ fn ID(comptime T: type, comptime table_name: []const u8) type {
         }
     };
 }
-
-// concrete arch's that we support in codegen, for stuff like interrupt
-// table generation
-pub const Arch = enum {
-    unknown,
-
-    // arm
-    arm_v81_mml,
-    arm_v8_mbl,
-    arm_v8_mml,
-    cortex_a15,
-    cortex_a17,
-    cortex_a5,
-    cortex_a53,
-    cortex_a57,
-    cortex_a7,
-    cortex_a72,
-    cortex_a8,
-    cortex_a9,
-    cortex_m0,
-    cortex_m0plus,
-    cortex_m1,
-    cortex_m23,
-    cortex_m3,
-    cortex_m33,
-    cortex_m35p,
-    cortex_m4,
-    cortex_m55,
-    cortex_m7,
-    sc000, // kindof like an m3
-    sc300,
-    // old
-    arm926ej_s,
-
-    // avr
-    avr8,
-    avr8l,
-    avr8x,
-    avr8xmega,
-
-    // mips
-    mips,
-
-    // riscv
-    qingke_v2,
-    qingke_v3,
-    qingke_v4,
-    hazard3,
-
-    pub const BaseType = []const u8;
-    pub const default = .unknown;
-
-    pub fn to_string(arch: Arch) []const u8 {
-        return inline for (@typeInfo(Arch).Enum.fields) |field| {
-            if (@field(Arch, field.name) == arch)
-                break field.name;
-        } else unreachable;
-    }
-
-    pub fn is_arm(arch: Arch) bool {
-        return switch (arch) {
-            .cortex_m0,
-            .cortex_m0plus,
-            .cortex_m1,
-            .sc000, // kindof like an m3
-            .cortex_m23,
-            .cortex_m3,
-            .cortex_m33,
-            .cortex_m35p,
-            .cortex_m55,
-            .sc300,
-            .cortex_m4,
-            .cortex_m7,
-            .arm_v8_mml,
-            .arm_v8_mbl,
-            .arm_v81_mml,
-            .cortex_a5,
-            .cortex_a7,
-            .cortex_a8,
-            .cortex_a9,
-            .cortex_a15,
-            .cortex_a17,
-            .cortex_a53,
-            .cortex_a57,
-            .cortex_a72,
-            .arm926ej_s,
-            => true,
-            else => false,
-        };
-    }
-
-    pub fn is_avr(arch: Arch) bool {
-        return switch (arch) {
-            .avr8,
-            .avr8l,
-            .avr8x,
-            .avr8xmega,
-            => true,
-            else => false,
-        };
-    }
-
-    pub fn is_mips(arch: Arch) bool {
-        return switch (arch) {
-            .mips => true,
-            else => false,
-        };
-    }
-
-    pub fn is_riscv(arch: Arch) bool {
-        return switch (arch) {
-            .qingke_v2,
-            .qingke_v3,
-            .qingke_v4,
-            .hazard3,
-            => true,
-            else => false,
-        };
-    }
-};
 
 fn init(db: *Database, allocator: Allocator) !void {
     const sql = try sqlite.Db.init(.{
