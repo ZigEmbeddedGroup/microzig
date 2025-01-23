@@ -133,7 +133,7 @@ test "pio.comparison.pio_serialiser" {
 }
 
 test "pio.comparison.pwm" {
-    @setEvalBranchQuota(5_000);
+    @setEvalBranchQuota(6_000);
     try pio_comparison(@embedFile("comparison_tests/pwm.pio"));
 }
 
@@ -168,7 +168,7 @@ test "pio.comparison.squarewave_wrap" {
 }
 
 test "pio.comparison.st7789_lcd" {
-    @setEvalBranchQuota(5_000);
+    @setEvalBranchQuota(6_000);
     try pio_comparison(@embedFile("comparison_tests/st7789_lcd.pio"));
 }
 
