@@ -64,6 +64,63 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     hang();
 }
 
+pub const VectorTableOptions = if (@hasDecl(chip, "VectorTable"))
+blk: {
+    const VectorTable = chip.VectorTable;
+    const fields_with_default = fields_with_default: {
+        var count = 0;
+        for (@typeInfo(VectorTable).@"struct".fields) |field| {
+            if (field.default_value_ptr != null)
+                count += 1;
+        }
+
+        break :fields_with_default count;
+    };
+
+    var fields: [fields_with_default]std.builtin.Type.StructField = undefined;
+    var idx = 0;
+    for (@typeInfo(VectorTable).@"struct".fields) |field| {
+        if (field.default_value_ptr == null)
+            continue;
+
+        fields[idx] = field;
+        idx += 1;
+    }
+
+    break :blk @Type(.{
+        .@"struct" = .{
+            .fields = &fields,
+            .layout = .auto,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
+} else struct {};
+
+pub const Options = struct {
+    interrupts: VectorTableOptions = .{},
+    log_level: std.log.Level = std.log.default_level,
+    log_scope_levels: []const std.log.ScopeLevel = &.{},
+    logFn: fn (
+        comptime message_level: std.log.Level,
+        comptime scope: @TypeOf(.enum_literal),
+        comptime format: []const u8,
+        args: anytype,
+    ) void = struct {
+        fn log(
+            comptime message_level: std.log.Level,
+            comptime scope: @Type(.enum_literal),
+            comptime format: []const u8,
+            args: anytype,
+        ) void {
+            _ = message_level;
+            _ = scope;
+            _ = format;
+            _ = args;
+        }
+    }.log,
+};
+
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
     cpu.disable_interrupts();
