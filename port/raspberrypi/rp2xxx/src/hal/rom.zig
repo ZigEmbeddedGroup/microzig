@@ -116,7 +116,7 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub inline fn _rom_func_lookup(code: Code) *anyopaque {
-    const rom_table_lookup = @as(*signatures.rom_table_lookup, @ptrCast(rom_hword_as_ptr(0x18)));
+    const rom_table_lookup = @as(*signatures.rom_table_lookup, @alignCast(@ptrCast(rom_hword_as_ptr(0x18))));
     const func_table = @as(*u16, @ptrCast(@alignCast(rom_hword_as_ptr(0x14))));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
@@ -230,7 +230,7 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 
     const n = if (dest.len <= src.len) dest.len else src.len;
 
-    if (S.f == null) S.f = @as(*signatures.memcpy, @ptrCast(_rom_func_lookup(Code.memcpy)));
+    if (S.f == null) S.f = @as(*signatures.memcpy, @alignCast(@ptrCast(_rom_func_lookup(Code.memcpy))));
     return S.f.?(dest.ptr, src.ptr, n)[0..n];
 }
 
@@ -242,7 +242,7 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 pub inline fn connect_internal_flash() *signatures.connect_internal_flash {
     return @as(
         *signatures.connect_internal_flash,
-        @ptrCast(_rom_func_lookup(Code.connect_internal_flash)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.connect_internal_flash))),
     );
 }
 
@@ -254,7 +254,7 @@ pub inline fn connect_internal_flash() *signatures.connect_internal_flash {
 pub inline fn flash_exit_xip() *signatures.flash_exit_xip {
     return @as(
         *signatures.flash_exit_xip,
-        @ptrCast(_rom_func_lookup(Code.flash_exit_xip)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.flash_exit_xip))),
     );
 }
 
@@ -266,7 +266,7 @@ pub inline fn flash_exit_xip() *signatures.flash_exit_xip {
 pub inline fn flash_range_erase() *signatures.flash_range_erase {
     return @as(
         *signatures.flash_range_erase,
-        @ptrCast(_rom_func_lookup(Code.flash_range_erase)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.flash_range_erase))),
     );
 }
 
@@ -276,7 +276,7 @@ pub inline fn flash_range_erase() *signatures.flash_range_erase {
 pub inline fn flash_range_program() *signatures.flash_range_program {
     return @as(
         *signatures.flash_range_program,
-        @ptrCast(_rom_func_lookup(Code.flash_range_program)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.flash_range_program))),
     );
 }
 
@@ -285,7 +285,7 @@ pub inline fn flash_range_program() *signatures.flash_range_program {
 pub inline fn flash_flush_cache() *signatures.flash_flush_cache {
     return @as(
         *signatures.flash_flush_cache,
-        @ptrCast(_rom_func_lookup(Code.flash_flush_cache)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.flash_flush_cache))),
     );
 }
 
@@ -298,6 +298,6 @@ pub inline fn flash_flush_cache() *signatures.flash_flush_cache {
 pub inline fn flash_enter_cmd_xip() *signatures.flash_enter_cmd_xip {
     return @as(
         *signatures.flash_enter_cmd_xip,
-        @ptrCast(_rom_func_lookup(Code.flash_enter_cmd_xip)),
+        @alignCast(@ptrCast(_rom_func_lookup(Code.flash_enter_cmd_xip))),
     );
 }

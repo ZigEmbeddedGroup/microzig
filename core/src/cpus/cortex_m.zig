@@ -85,7 +85,7 @@ pub const startup_logic = struct {
 };
 
 pub fn export_startup_logic() void {
-    @export(startup_logic._start, .{
+    @export(&startup_logic._start, .{
         .name = "_start",
     });
 }
@@ -106,7 +106,7 @@ pub const vector_table: VectorTable = blk: {
     };
 
     if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+        for (@typeInfo(microzig.VectorTableOptions).@"struct".fields) |field|
             @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
     }
 

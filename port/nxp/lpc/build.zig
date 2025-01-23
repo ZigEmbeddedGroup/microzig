@@ -63,7 +63,7 @@ pub fn build(b: *std.Build) void {
     const lpc176x5x_patch_elf_exe = b.addExecutable(.{
         .name = "lpc176x5x-patchelf",
         .root_source_file = b.path("src/tools/patchelf.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
     b.installArtifact(lpc176x5x_patch_elf_exe);
 }
