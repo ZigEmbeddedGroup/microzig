@@ -29,7 +29,7 @@ comptime {
 fn init() [5]u32 {
     return .{
         0xffffded3,
-        0x10010142 | (@as(u32, @intFromEnum(security)) << 20) | (@as(u32, @intFromEnum(cpu)) << 24),
+        0x10010142 | (@as(u32, @intFromEnum(security)) << 21) | (@as(u32, @intFromEnum(cpu)) << 24),
         0x000001ff,
         0x00000000,
         0xab123579,
