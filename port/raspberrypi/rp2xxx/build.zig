@@ -82,16 +82,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .cpu = std.Target.Query{
                 .cpu_arch = .riscv32,
                 .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-                // the commented ones are in the datasheet but for some reason they break the code
                 .cpu_features_add = std.Target.riscv.featureSet(&.{
-                    // std.Target.riscv.Feature.c,
                     std.Target.riscv.Feature.a,
                     std.Target.riscv.Feature.m,
+                    std.Target.riscv.Feature.c,
                     std.Target.riscv.Feature.zba,
                     std.Target.riscv.Feature.zbb,
                     std.Target.riscv.Feature.zbs,
-                    // std.Target.riscv.Feature.zcb,
-                    // std.Target.riscv.Feature.zcmp,
+                    std.Target.riscv.Feature.zcb,
+                    std.Target.riscv.Feature.zcmp,
                     std.Target.riscv.Feature.zbkb,
                     std.Target.riscv.Feature.zifencei,
                 }),

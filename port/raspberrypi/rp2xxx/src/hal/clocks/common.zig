@@ -256,13 +256,9 @@ fn busy_wait_at_least(delay_cycles: u32) void {
             \\bcs 1b
             ,
             .riscv =>
-            \\.option push
-            \\.option norvc
-            \\.p2align 2
             \\1:
             \\addi %[cycles], %[cycles], -2
             \\bgez %[cycles], 1b
-            \\.option pop
             ,
         }
         : [cycles] "+r" (_cycles),

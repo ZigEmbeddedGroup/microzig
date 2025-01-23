@@ -13,7 +13,7 @@ const Cpu = enum(u3) {
     riscv = 1,
 };
 
-const security: Security = if (@hasDecl(app, "image_def_security")) app.image_def_security else .non_secure;
+const security: Security = if (@hasDecl(app, "image_def_security")) app.image_def_security else .secure;
 const cpu: Cpu = std.meta.stringToEnum(Cpu, @tagName(arch)).?;
 
 const image_def = init();
