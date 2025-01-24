@@ -23,9 +23,12 @@ pub const A4988_Options = struct {
 };
 
 pub const MSPinsError = error.MSPinsError;
-pub const Speed_Profile = enum {
+pub const Speed_Profile = union(enum) {
     constant_speed,
-    linear_speed,
+    linear_speed: struct {
+        accel: u16 = 1000,
+        decel: u16 = 1000,
+    },
 };
 
 pub const State = enum {
@@ -51,19 +54,19 @@ pub const A4988 = struct {
 
     // Movement state
     profile: Speed_Profile = .constant_speed,
-    accel: u16 = 1000,
-    decel: u16 = 1000,
 
+    // Steps remaining in accel
     steps_to_cruise: u32 = 0,
+    // Steps remaining in current move
     steps_remaining: u32 = 0,
+    // Steps remaining in decel
     steps_to_brake: u32 = 0,
-    step_pulse: u32 = 0,
-    cruise_step_pulse: u32 = 0,
+    step_pulse: mdf.time.Duration = @enumFromInt(0),
+    cruise_step_pulse: mdf.time.Duration = @enumFromInt(0),
     rest: u32 = 0,
-    last_action_end: u32 = 0,
-    next_action_interval: u32 = 0,
+    last_action_end: mdf.time.Absolute = @enumFromInt(0),
+    next_action_interval: mdf.time.Duration = @enumFromInt(0),
     step_count: u32 = 0,
-    // TODO: Check this
     dir_state: mdf.base.Digital_IO.State = .low,
 
     const MAX_MICROSTEP = 16;
@@ -173,7 +176,7 @@ pub const A4988 = struct {
     pub fn move(self: *Self, steps: i32) !void {
         self.start_move(steps);
         var action = try self.next_action();
-        while (action != 0) : (action = try self.next_action()) {}
+        while (@intFromEnum(action) != 0) : (action = try self.next_action()) {}
     }
 
     pub fn rotate(self: *Self, deg: i32) !void {
@@ -192,10 +195,10 @@ pub const A4988 = struct {
         self.step_count = 0;
         self.rest = 0;
         switch (self.profile) {
-            .linear_speed => {
+            .linear_speed => |p| {
                 const microstep_f: f64 = @floatFromInt(self.microsteps);
-                const accel_f: f64 = @floatFromInt(self.accel);
-                const decel_f: f64 = @floatFromInt(self.decel);
+                const accel_f: f64 = @floatFromInt(p.accel);
+                const decel_f: f64 = @floatFromInt(p.decel);
                 // speed is in [steps/s]
                 var speed: f64 = self.rpm * Self.MOTOR_STEPS / 60;
                 if (time > 0) {
@@ -249,7 +252,7 @@ pub const A4988 = struct {
             switch (self.get_current_state()) {
                 .accelerating => {
                     if (self.step_count < self.steps_to_cruise) {
-                        self.step_pulse = self.step_pulse - (2 * self.step_pulse + self.rest) / (4 * self.step_count + 1);
+                        self.step_pulse = self.step_pulse.minus((2 * self.step_pulse + self.rest) / (4 * self.step_count + 1));
                         self.rest = (2 * self.step_pulse + self.rest) % (4 * self.step_count + 1);
                     } else {
                         // The series approximates target, set the final value to what it should be instead
@@ -268,33 +271,35 @@ pub const A4988 = struct {
     }
 
     // TODO: u32 is probably a bad idea (overflows in 4000 seconds?), but it's from the arduino library
-    fn delay_micros(self: Self, delay_us: u32, start_us: u32) void {
+    fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
         if (start_us == 0) {
             self.clock.sleep_us(@intCast(delay_us));
             return;
         }
         while (self.clock.get_time_since_boot().to_us() - start_us < delay_us) {}
     }
-    pub fn next_action(self: *Self) !u32 {
+    pub fn next_action(self: *Self) !mdf.time.Duration {
         if (self.steps_remaining > 0) {
             self.delay_micros(self.next_action_interval, self.last_action_end);
             //  DIR pin is sampled on rising STEP edge, so it is set first
             try self.dir_pin.write(self.dir_state);
             try self.step_pin.write(.high);
-            var m: u32 = @intCast(self.clock.get_time_since_boot().to_us());
+            // Absolute time now
+            const start = self.clock.get_time_since_boot();
+            // var m: u32 = @intCast(self.clock.get_time_since_boot().to_us());
             const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
             self.calc_step_pulse();
             // We should pull HIGH for at least 1-2us (step_high_min)
             self.clock.sleep_us(Self.STEP_HIGH_MIN);
             try self.step_pin.write(.low);
-            // account for calcStepPulse() execution time; sets ceiling for max rpm on slower MCUs
-            self.last_action_end = @intCast(self.clock.get_time_since_boot().to_us());
-            m = self.last_action_end - m;
-            self.next_action_interval = if (pulse > m) @intCast(pulse - m) else 1;
+            // account for calc_step_pulse() execution time; sets ceiling for max rpm on slower MCUs
+            self.last_action_end = self.clock.get_time_since_boot();
+            const elapsed = self.last_action_end.diff(start);
+            self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
         } else {
             // end of move
-            self.last_action_end = 0;
-            self.next_action_interval = 0;
+            self.last_action_end = @enumFromInt(0);
+            self.next_action_interval = @enumFromInt(0);
         }
         return self.next_action_interval;
     }
