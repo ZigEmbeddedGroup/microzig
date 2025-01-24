@@ -12,7 +12,7 @@ pub fn main() !void {
     const led = gpio.num(8);
     led.set_function(.sio);
     led.set_direction(.out);
-    var td = ClockDevice{};
+    var cd = ClockDevice{};
 
     const dir_pin = gpio.num(14);
     dir_pin.set_function(.sio);
@@ -38,14 +38,26 @@ pub fn main() !void {
         .ms1_pin = ms1.digital_io(),
         .ms2_pin = ms2.digital_io(),
         .ms3_pin = ms3.digital_io(),
-        .clock_device = td.clock_device(),
+        .clock_device = cd.clock_device(),
     });
-
+    // debugging. Slow blinking means init worked
+    // for (1..10) |_| {
+    //     led.toggle();
+    //     time.sleep_ms(250);
+    // }
     // microsteps set to 1 because I tied all ms pins to ground
     try stepper.begin(200, 1);
-
     // Only needed if you set the enable pin
     // try stepper.enable();
+
+    // debugging. Fast blinking means begin worked
+    // for (1..10) |_| {
+    //     led.toggle();
+    //     time.sleep_ms(125);
+    // }
+    stepper.set_speed_profile(
+        stepper_driver.a4988.Speed_Profile{ .linear_speed = .{ .accel = 200, .decel = 100 } },
+    );
 
     while (true) {
         for ([_]u8{ 1, 2, 4, 8, 16 }) |ms| {
