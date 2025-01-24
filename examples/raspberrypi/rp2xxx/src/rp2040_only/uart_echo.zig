@@ -1,10 +1,10 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const time = microzig.drivers.time;
 
 const rp2040 = microzig.hal;
 const uart = rp2040.uart;
 const gpio = rp2040.gpio;
-const time = rp2040.time;
 const clocks = rp2040.clocks;
 
 const echo_uart = uart.instance.num(0);

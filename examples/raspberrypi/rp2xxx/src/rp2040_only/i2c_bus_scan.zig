@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const time = microzig.drivers.time;
 
 const rp2xxx = microzig.hal;
 const i2c = rp2xxx.i2c;
@@ -54,7 +55,7 @@ pub fn main() !void {
         if (a.is_reserved()) continue;
 
         var rx_data: [1]u8 = undefined;
-        _ = i2c0.read_blocking(a, &rx_data, rp2xxx.time.Duration.from_ms(100)) catch continue;
+        _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;
 
         std.log.info("I2C device found at address {X}.", .{addr});
     }
