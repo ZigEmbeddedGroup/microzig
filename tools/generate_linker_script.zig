@@ -134,6 +134,11 @@ pub fn main() !void {
             \\      microzig_bss_end = .;
             \\  } > ram0
             \\
+            \\  .flash_end :
+            \\  {
+            \\      microzig_flash_end = .;
+            \\  } > flash0
+            \\
             \\  microzig_data_load_start = LOADADDR(.data);
             \\
         );
