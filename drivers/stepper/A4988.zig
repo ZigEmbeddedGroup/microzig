@@ -9,9 +9,6 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
-/// A4988 driver
-// pub const A4988;
-
 pub const A4988_Options = struct {
     ms1_pin: ?mdf.base.Digital_IO = undefined,
     ms2_pin: ?mdf.base.Digital_IO = undefined,
@@ -61,16 +58,17 @@ pub const A4988 = struct {
     steps_remaining: u32 = 0,
     // Steps remaining in decel
     steps_to_brake: u32 = 0,
-    step_pulse: mdf.time.Duration = @enumFromInt(0),
-    cruise_step_pulse: mdf.time.Duration = @enumFromInt(0),
-    rest: u32 = 0,
-    last_action_end: mdf.time.Absolute = @enumFromInt(0),
-    next_action_interval: mdf.time.Duration = @enumFromInt(0),
+    // TODO: Just `.from_us(0)` with zig 0.14!
+    step_pulse: mdf.time.Duration = mdf.time.Duration.from_us(0),
+    cruise_step_pulse: mdf.time.Duration = mdf.time.Duration.from_us(0),
+    remainder: mdf.time.Duration = mdf.time.Duration.from_us(0),
+    last_action_end: mdf.time.Absolute = mdf.time.Absolute.from_us(0),
+    next_action_interval: mdf.time.Duration = mdf.time.Duration.from_us(0),
     step_count: u32 = 0,
     dir_state: mdf.base.Digital_IO.State = .low,
+    motor_steps: u16 = 200,
 
     const MAX_MICROSTEP = 16;
-    const MOTOR_STEPS = 200;
     // tA STEP minimium, HIGH pulse width (1us)
     const STEP_HIGH_MIN = 1;
     // tB STEP minimium, LOW pulse width (1us)
@@ -184,60 +182,63 @@ pub const A4988 = struct {
     }
 
     pub fn start_move(self: *Self, steps: i32) void {
-        self.start_move_time(steps, 0);
+        self.start_move_time(steps, mdf.time.Duration.from_us(0));
     }
 
-    pub fn start_move_time(self: *Self, steps: i32, time: u32) void {
+    pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
         // set up new move
         self.dir_state = if (steps >= 0) .high else .low;
-        self.last_action_end = 0;
+        self.last_action_end = mdf.time.Absolute.from_us(0);
         self.steps_remaining = @abs(steps);
         self.step_count = 0;
-        self.rest = 0;
+        self.remainder = mdf.time.Duration.from_us(0);
         switch (self.profile) {
             .linear_speed => |p| {
                 const microstep_f: f64 = @floatFromInt(self.microsteps);
                 const accel_f: f64 = @floatFromInt(p.accel);
                 const decel_f: f64 = @floatFromInt(p.decel);
                 // speed is in [steps/s]
-                var speed: f64 = self.rpm * Self.MOTOR_STEPS / 60;
-                if (time > 0) {
+                var speed: f64 = (self.rpm * @as(f64, @floatFromInt(self.motor_steps))) / 60;
+                if (@intFromEnum(time) > 0) {
                     // Calculate a new speed to finish in the time requested
-                    const t: f64 = @as(f64, @floatFromInt(time)) / 1e+6; // convert to seconds
+                    const t: f64 = @as(f64, @floatFromInt(time.to_us())) / 1e+6; // convert to seconds
                     const d: f64 = @as(f64, @floatFromInt(self.steps_remaining)) / microstep_f; // convert to full steps
                     const a2: f64 = 1.0 / accel_f + 1.0 / decel_f;
                     const sqrt_candidate = t * t - 2 * a2 * d; // in √b^2-4ac
                     if (sqrt_candidate >= 0)
                         speed = @min(speed, (t - std.math.sqrt(sqrt_candidate)) / a2);
                 }
-                // how many microsteps from 0 to target speed
+                // How many microsteps from 0 to target speed
                 self.steps_to_cruise = @intFromFloat(@as(f64, microstep_f * (speed * speed)) / (2 * accel_f));
-                // how many microsteps are needed from cruise speed to a full stop
+                // How many microsteps are needed from cruise speed to a full stop
                 self.steps_to_brake = @intFromFloat(@as(f64, @floatFromInt(self.steps_to_cruise)) * accel_f / decel_f);
                 if (self.steps_remaining < self.steps_to_cruise + self.steps_to_brake) {
-                    // cannot reach max speed, will need to brake early
+                    // Hannot reach max speed, will need to brake early
                     self.steps_to_cruise = @intFromFloat(@as(f64, @floatFromInt(self.steps_remaining)) * decel_f / (accel_f + decel_f));
                     self.steps_to_brake = self.steps_remaining - self.steps_to_cruise;
                 }
                 // Initial pulse (c0) including error correction factor 0.676 [us]
-                self.step_pulse = @intFromFloat((1e+6) * 0.676 * std.math.sqrt(2.0 / accel_f / microstep_f));
+                self.step_pulse = @enumFromInt(@as(u64, @intFromFloat((1e+6) * 0.676 * std.math.sqrt(2.0 / accel_f / microstep_f))));
                 // Save cruise timing since we will no longer have the calculated target speed later
-                self.cruise_step_pulse = @intFromFloat(1e+6 / speed / microstep_f);
+                self.cruise_step_pulse = @enumFromInt(@as(u64, @intFromFloat(1e+6 / speed / microstep_f)));
             },
             .constant_speed => {
                 self.steps_to_cruise = 0;
                 self.steps_to_brake = 0;
-                self.cruise_step_pulse = step_pulse(Self.MOTOR_STEPS, self.microsteps, self.rpm);
+                self.cruise_step_pulse = step_pulse(self.motor_steps, self.microsteps, self.rpm);
                 self.step_pulse = self.cruise_step_pulse;
-                if (time > self.steps_remaining * self.step_pulse) {
-                    self.step_pulse = @intFromFloat(@as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(self.steps_remaining)));
+                if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+                    self.step_pulse = mdf.time.Duration.from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
+                        @as(f64, @floatFromInt(self.steps_remaining))));
                 }
             },
         }
     }
 
-    inline fn step_pulse(steps: i32, microsteps: u8, rpm: f64) u32 {
-        return @intFromFloat(60.0 * 1000000 / @as(f64, @floatFromInt(steps)) / @as(f64, @floatFromInt(microsteps)) / rpm);
+    inline fn step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
+        return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
+            @as(f64, @floatFromInt(steps)) /
+            @as(f64, @floatFromInt(microsteps)) / rpm)));
     }
 
     fn calc_step_pulse(self: *Self) void {
@@ -252,31 +253,43 @@ pub const A4988 = struct {
             switch (self.get_current_state()) {
                 .accelerating => {
                     if (self.step_count < self.steps_to_cruise) {
-                        self.step_pulse = self.step_pulse.minus((2 * self.step_pulse + self.rest) / (4 * self.step_count + 1));
-                        self.rest = (2 * self.step_pulse + self.rest) % (4 * self.step_count + 1);
+                        var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                        const denominator = 4 * self.step_count + 1;
+                        // Pulse shrinks as we are nearer to cruising speed, based on step_count
+                        self.step_pulse = self.step_pulse.minus(@enumFromInt(numerator / denominator));
+                        // Update based on new step_pulse
+                        numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                        self.remainder = @enumFromInt(numerator % denominator);
                     } else {
                         // The series approximates target, set the final value to what it should be instead
                         self.step_pulse = self.cruise_step_pulse;
-                        self.rest = 0;
+                        self.remainder = mdf.time.Duration.from_us(0);
                     }
                 },
                 .decelerating => {
-                    // NOTE: I changed the signs here to avoid using signed variables
-                    self.step_pulse = self.step_pulse + (2 * self.step_pulse + self.rest) / (4 * self.steps_remaining + 1);
-                    self.rest = (2 * self.step_pulse + self.rest) % (4 * self.steps_remaining + 1);
+                    var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                    const denominator = 4 * self.steps_remaining + 1;
+                    // Pulse grows as we are near stopped, based on steps_remaining
+                    self.step_pulse = self.step_pulse.plus(@enumFromInt(numerator / denominator));
+                    // Update based on new step_pulse
+                    numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
+                    self.remainder = @enumFromInt(numerator % denominator);
                 },
+                // If not accelerating or decelerating, we are either stopped
+                // or cruising, in which case, the step_pulse is already
+                // correct.
                 else => {},
             }
         }
     }
 
-    // TODO: u32 is probably a bad idea (overflows in 4000 seconds?), but it's from the arduino library
     fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
-        if (start_us == 0) {
-            self.clock.sleep_us(@intCast(delay_us));
+        if (@intFromEnum(start_us) == 0) {
+            self.clock.sleep_us(@intFromEnum(delay_us));
             return;
         }
-        while (self.clock.get_time_since_boot().to_us() - start_us < delay_us) {}
+        const deadline = mdf.time.Deadline.init_relative(start_us, delay_us);
+        while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
     }
     pub fn next_action(self: *Self) !mdf.time.Duration {
         if (self.steps_remaining > 0) {
@@ -298,8 +311,8 @@ pub const A4988 = struct {
             self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
         } else {
             // end of move
-            self.last_action_end = @enumFromInt(0);
-            self.next_action_interval = @enumFromInt(0);
+            self.last_action_end = mdf.time.Absolute.from_us(0);
+            self.next_action_interval = mdf.time.Duration.from_us(0);
         }
         return self.next_action_interval;
     }
@@ -341,7 +354,7 @@ pub const A4988 = struct {
     }
 
     fn calc_steps_for_rotation(self: Self, deg: i32) i32 {
-        return @divTrunc(deg * Self.MOTOR_STEPS * self.microsteps, 360);
+        return @divTrunc(deg * self.motor_steps * self.microsteps, 360);
     }
 };
 
