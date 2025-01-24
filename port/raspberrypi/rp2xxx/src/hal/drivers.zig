@@ -7,6 +7,7 @@ const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
 const drivers = microzig.drivers.base;
+const time = microzig.drivers.time;
 
 const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;

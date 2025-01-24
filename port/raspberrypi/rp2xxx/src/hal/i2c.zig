@@ -6,6 +6,7 @@
 //!
 const std = @import("std");
 const microzig = @import("microzig");
+const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
 const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
@@ -345,7 +346,7 @@ pub const I2C = enum(u1) {
     /// returning. The one exception is if timeout is hit, then return,
     /// potentially still leaving the I2C block in an "active" state.
     /// However, this avoids an infinite loop.
-    fn ensure_stop_condition(i2c: I2C, deadline: time.Deadline) void {
+    fn ensure_stop_condition(i2c: I2C, deadline: mdf.time.Deadline) void {
         const regs = i2c.get_regs();
 
         // From pico-sdk:
@@ -355,7 +356,7 @@ pub const I2C = enum(u1) {
         // As far as I can tell from the datasheet, no, this is not possible.
         while (regs.IC_RAW_INTR_STAT.read().STOP_DET == .INACTIVE) {
             hw.tight_loop_contents();
-            if (deadline.is_reached())
+            if (deadline.is_reached_by(time.get_time_since_boot()))
                 break;
         }
         _ = regs.IC_CLR_STOP_DET.read();
@@ -366,7 +367,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn write_blocking(i2c: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
         return i2c.writev_blocking(addr, &.{data}, timeout);
     }
 
@@ -380,7 +381,7 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
@@ -388,7 +389,7 @@ pub const I2C = enum(u1) {
         if (write_vec.size() == 0)
             return TransactionError.NoData;
 
-        var deadline = time.Deadline.init_relative(timeout);
+        var deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
@@ -414,7 +415,7 @@ pub const I2C = enum(u1) {
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
             // timeout is supplied!
             while (i2c.tx_fifo_available_spaces() == 0) {
-                if (deadline.is_reached()) {
+                if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
                 }
@@ -428,7 +429,7 @@ pub const I2C = enum(u1) {
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
         // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
         while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY == .INACTIVE) {
-            if (deadline.is_reached()) {
+            if (deadline.is_reached_by(time.get_time_since_boot())) {
                 timed_out = true;
                 break;
             }
@@ -445,7 +446,7 @@ pub const I2C = enum(u1) {
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn read_blocking(i2c: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         return try i2c.readv_blocking(addr, &.{dst}, timeout);
     }
 
@@ -459,7 +460,7 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
@@ -467,7 +468,7 @@ pub const I2C = enum(u1) {
         if (read_vec.size() == 0)
             return TransactionError.NoData;
 
-        const deadline = time.Deadline.init_relative(timeout);
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
@@ -490,7 +491,7 @@ pub const I2C = enum(u1) {
 
             while (true) {
                 try i2c.check_and_clear_abort();
-                if (deadline.is_reached()) {
+                if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
                 }
@@ -511,7 +512,7 @@ pub const I2C = enum(u1) {
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
     /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
-    pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn write_then_read_blocking(i2c: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         return i2c.writev_then_readv_blocking(addr, &.{src}, &.{dst}, timeout);
     }
 
@@ -528,7 +529,7 @@ pub const I2C = enum(u1) {
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
     ///
-    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?time.Duration) TransactionError!void {
+    pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
@@ -538,7 +539,7 @@ pub const I2C = enum(u1) {
         if (write_vec.size() == 0)
             return TransactionError.NoData;
 
-        const deadline = time.Deadline.init_relative(timeout);
+        const deadline = mdf.time.Deadline.init_relative(timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
@@ -566,7 +567,7 @@ pub const I2C = enum(u1) {
             // timeout is supplied!
             while (i2c.tx_fifo_available_spaces() == 0) {
                 hw.tight_loop_contents();
-                if (deadline.is_reached()) {
+                if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
                 }
@@ -594,7 +595,7 @@ pub const I2C = enum(u1) {
 
             while (true) {
                 try i2c.check_and_clear_abort();
-                if (deadline.is_reached()) {
+                if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break :recv_loop;
                 }
