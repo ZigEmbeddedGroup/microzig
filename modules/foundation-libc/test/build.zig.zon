@@ -1,0 +1,12 @@
+.{
+    .name = "foundation-libc/test",
+    .version = "0.0.0",
+    .dependencies = .{
+        .foundation_libc = .{ .path = ".." },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
