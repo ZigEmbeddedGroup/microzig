@@ -95,4 +95,15 @@ test Test_Device {
     try std.testing.expect(!td.is_reached(@enumFromInt(4)));
     ttd.elapse_time(2);
     try std.testing.expect(td.is_reached(@enumFromInt(4)));
+
+    // Timeouts
+    try std.testing.expectEqual(
+        54,
+        @intFromEnum(td.make_timeout(mdf.time.Duration.from_us(50))),
+    );
+    ttd.elapse_time(50);
+    try std.testing.expectEqual(
+        104,
+        @intFromEnum(td.make_timeout_us(50)),
+    );
 }
