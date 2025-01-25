@@ -129,7 +129,11 @@ pub fn Stepper(comptime Driver: type) type {
         pub fn enable(self: *Self) !void {
             if (self.enable_pin) |pin| {
                 try pin.write(self.enable_active_state);
-                self.clock.sleep_us(Driver.WAKEUP_TIME);
+                // We only need to wait if we are using the enable pin to
+                // enter/leave nSLEEP. If we are instead setting nEN, we can
+                // skip this.
+                if (self.enable_active_state == .high)
+                    self.clock.sleep_us(Driver.WAKEUP_TIME);
             }
         }
 
@@ -334,8 +338,8 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         // Configure what value to write to the enable pin to enable the
-        // driver. This is LOW when this pin is hooked up to EN(bar), but HIGH
-        // when hooked up to SLEEP(bar)
+        // driver. This is LOW when this pin is hooked up to nENABLE, but HIGH
+        // when hooked up to nSLEEP.
         pub fn set_enable_active_state(self: *Self, state: mdf.base.Digital_IO.State) void {
             self.enable_active_state = state;
         }
