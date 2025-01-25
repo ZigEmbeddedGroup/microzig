@@ -10,13 +10,13 @@ env:
   ZIG_VERSION: master
 
 jobs:
-  unit-test-regz:
-    name: Unit Test Regz
+  build_and_test:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,27 +24,70 @@ jobs:
         uses: mlugg/setup-zig@v1
         with:
           version: ${{ env.ZIG_VERSION }}
+
       - name: Unit Test Regz
         run: zig build test
         working-directory: tools/regz
 
-  unit-test-uf2:
-    name: Unit Test UF2
-    continue-on-error: true
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Unit Test UF2
         run: zig build test
         working-directory: tools/uf2
+
+      - name: Validate Foundation Libc
+        run: zig build validate
+        working-directory: modules/foundation-libc
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSmall
+
+      - name: Unit test port/gigadevice/gd32
+        run: zig build test
+        working-directory: port/gigadevice/gd32
+
+      - name: Unit test port/raspberrypi/rp2xxx
+        run: zig build test
+        working-directory: port/raspberrypi/rp2xxx
+
+      - name: Unit test port/stmicro/stm32
+        run: zig build test
+        working-directory: port/stmicro/stm32
+
+      - name: Build examples/espressif/esp
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/espressif/esp
+
+      - name: Build examples/gigadevice/gd32
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/gigadevice/gd32
+
+      - name: Build examples/microchip/avr
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/microchip/avr
+
+      - name: Build examples/microchip/atsam
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/microchip/atsam
+
+      - name: Build examples/nordic/nrf5x
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/nordic/nrf5x
+
+      - name: Build examples/nxp/lpc
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/nxp/lpc
+
+      - name: Build examples/stmicro/stm32
+        run: zig build -Doptimize=ReleaseSmall --summary all
+        working-directory: examples/stmicro/stm32
+
+      - name: Build examples/raspberrypi/rp2xxx
+        working-directory: examples/raspberrypi/rp2xxx
+        run: zig build -Doptimize=ReleaseSmall --summary all
+
+      - name: Build Website
+        run: zig build
+        working-directory: website
+
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
@@ -70,106 +113,6 @@ jobs:
           else
             echo "No code differences detected."
           fi
-
-  build:
-    name: Build
-    continue-on-error: true
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Build
-        run: zig build -Doptimize=ReleaseSmall
-
-  unit-test-ports:
-    name: Unit Test Ports
-    continue-on-error: true
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        port_dir: [gigadevice/gd32, raspberrypi/rp2xxx, stmicro/stm32]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Unit Test Ports
-        run: zig build test
-        working-directory: port/${{ matrix.port_dir }}
-
-  build-examples:
-    name: Build Examples
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example_dir:
-          [
-            espressif/esp,
-            gigadevice/gd32,
-            microchip/avr,
-            microchip/atsam,
-            nordic/nrf5x,
-            nxp/lpc,
-            stmicro/stm32,
-            raspberrypi/rp2xxx,
-            # TODO: investigate why these take up too much flash
-            #wch/ch32v,
-          ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Build Examples
-        run: zig build -Doptimize=ReleaseSmall --summary all
-        working-directory: examples/${{ matrix.example_dir }}
-
-  validate-foundation-libc:
-    name: Validate Foundation Libc
-    continue-on-error: true
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Generate and validate packages
-        working-directory: modules/foundation-libc
-        run: |
-          zig build validate
-
-  build-website:
-    name: Build Website
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Build Website
-        run: zig build
-        working-directory: website
 
   dry-run-packaging:
     name: Dry Run Packaging
