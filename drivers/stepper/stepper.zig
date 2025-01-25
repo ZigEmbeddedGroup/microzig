@@ -45,9 +45,9 @@ pub const A4988 = struct {
 
 pub const DRV8825 = struct {
     const MAX_MICROSTEP = 32;
-    const STEP_HIGH_MIN = 1;
-    const STEP_LOW_MIN = 1;
-    const WAKEUP_TIME = 1000;
+    const STEP_HIGH_MIN = 2; // Actually 1.9us
+    const STEP_LOW_MIN = 2; // Actually 1.9us
+    const WAKEUP_TIME = 1700;
     const MS_TABLE = [_]u3{ 0b000, 0b001, 0b010, 0b011, 0b100, 0b111 };
 };
 
