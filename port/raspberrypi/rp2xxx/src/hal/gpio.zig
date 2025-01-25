@@ -417,8 +417,7 @@ pub const Pin = enum(u6) {
                     else
                         0;
                 } else {
-                    // TODO: regz inconsistencies
-                    return if ((SIO.GPIO_IN & gpio.mask()) != 0)
+                    return if ((SIO.GPIO_IN.raw & gpio.mask()) != 0)
                         1
                     else
                         0;
