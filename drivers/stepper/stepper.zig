@@ -129,7 +129,7 @@ pub fn Stepper(comptime Driver: type) type {
         pub fn enable(self: *Self) !void {
             if (self.enable_pin) |pin| {
                 try pin.write(self.enable_active_state);
-                self.clock.sleep_us(2);
+                self.clock.sleep_us(Driver.WAKEUP_TIME);
             }
         }
 
