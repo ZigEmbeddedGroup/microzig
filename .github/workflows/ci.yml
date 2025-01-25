@@ -152,11 +152,9 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate and validate packages
-        working-directory: test
+        working-directory: modules/foundation-libc
         run: |
           zig build validate
-
-
 
   build-website:
     name: Build Website
