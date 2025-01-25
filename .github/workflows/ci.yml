@@ -8,6 +8,7 @@ on:
 
 env:
   ZIG_VERSION: master
+  CACHE_DIR: ${{ github.workspace }}/.zig-cache
 
 jobs:
   build_and_test:
@@ -26,66 +27,66 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
 
       - name: Unit Test Regz
-        run: zig build test
+        run: zig build --cache-dir $CACHE_DIR test
         working-directory: tools/regz
 
       - name: Unit Test UF2
-        run: zig build test
+        run: zig build --cache-dir $CACHE_DIR test
         working-directory: tools/uf2
 
       - name: Validate Foundation Libc
-        run: zig build validate
+        run: zig build --cache-dir $CACHE_DIR validate
         working-directory: modules/foundation-libc
 
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall
 
       - name: Unit test port/gigadevice/gd32
-        run: zig build test
+        run: zig build --cache-dir $CACHE_DIR test
         working-directory: port/gigadevice/gd32
 
       - name: Unit test port/raspberrypi/rp2xxx
-        run: zig build test
+        run: zig build --cache-dir $CACHE_DIR test
         working-directory: port/raspberrypi/rp2xxx
 
       - name: Unit test port/stmicro/stm32
-        run: zig build test
+        run: zig build --cache-dir $CACHE_DIR test
         working-directory: port/stmicro/stm32
 
       - name: Build examples/espressif/esp
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/espressif/esp
 
       - name: Build examples/gigadevice/gd32
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/gigadevice/gd32
 
       - name: Build examples/microchip/avr
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/microchip/avr
 
       - name: Build examples/microchip/atsam
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/microchip/atsam
 
       - name: Build examples/nordic/nrf5x
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/nordic/nrf5x
 
       - name: Build examples/nxp/lpc
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/nxp/lpc
 
       - name: Build examples/stmicro/stm32
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
         working-directory: examples/stmicro/stm32
 
       - name: Build examples/raspberrypi/rp2xxx
         working-directory: examples/raspberrypi/rp2xxx
-        run: zig build -Doptimize=ReleaseSmall --summary all
+        run: zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall --summary all
 
       - name: Build Website
-        run: zig build
+        run: zig build --cache-dir $CACHE_DIR
         working-directory: website
 
 
@@ -101,7 +102,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
-        run: zig build -Dgenerate
+        run: zig build --cache-dir $CACHE_DIR -Dgenerate
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |
@@ -127,14 +128,14 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Dry Run Packaging
         run: |
-          MICROZIG_VERSION=$(zig build package -- get-version)
+          MICROZIG_VERSION=$(zig build --cache-dir $CACHE_DIR package -- get-version)
           echo microzig version: $MICROZIG_VERSION
-          zig build package -- http://localhost:8000
+          zig build --cache-dir $CACHE_DIR package -- http://localhost:8000
           python3 -m http.server 8000 --directory boxzer-out &
           sleep 1
 
           cd tools/package-test
           zig fetch --save=microzig http://localhost:8000/${MICROZIG_VERSION}/microzig.tar.gz
-          zig build -Doptimize=ReleaseSmall
+          zig build --cache-dir $CACHE_DIR -Doptimize=ReleaseSmall
 
           jobs -p | xargs kill
