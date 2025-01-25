@@ -12,7 +12,7 @@
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // modules
-        "modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
+        .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
