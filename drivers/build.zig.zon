@@ -10,5 +10,6 @@
         "display",
         "input",
         "io_expander",
+        "stepper",
     },
 }

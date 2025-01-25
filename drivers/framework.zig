@@ -34,6 +34,8 @@ pub const input = struct {
     };
 };
 
+pub const stepper = @import("stepper/stepper.zig");
+
 pub const IO_expander = struct {
     pub const pcf8574 = @import("io_expander/pcf8574.zig");
     pub const PCF8574 = pcf8574.PCF8574;
@@ -168,6 +170,7 @@ pub const base = struct {
     pub const Datagram_Device = @import("base/Datagram_Device.zig");
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
+    pub const Clock_Device = @import("base/Clock_Device.zig");
 };
 
 test {
@@ -178,6 +181,8 @@ test {
     _ = input.keyboard_matrix;
     _ = input.debounced_button;
     _ = input.rotary_encoder;
+
+    _ = stepper;
 
     _ = IO_expander.pcf8574;
 
