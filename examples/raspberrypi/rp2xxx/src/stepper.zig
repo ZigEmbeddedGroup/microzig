@@ -1,12 +1,11 @@
-const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
 const ClockDevice = rp2xxx.drivers.ClockDevice;
-const drivers = microzig.drivers;
-const stepper_driver = drivers.stepper;
+const stepper_driver = microzig.drivers.stepper;
+const A4988 = stepper_driver.Stepper(stepper_driver.A4988);
 
 pub fn main() !void {
     const led = gpio.num(8);
@@ -32,7 +31,7 @@ pub fn main() !void {
     var ms2 = GPIO_Device.init(ms2_pin);
     var ms3 = GPIO_Device.init(ms3_pin);
 
-    var stepper = stepper_driver.A4988.init(.{
+    var stepper = A4988.init(.{
         .dir_pin = dp.digital_io(),
         .step_pin = sp.digital_io(),
         .ms1_pin = ms1.digital_io(),
@@ -40,31 +39,28 @@ pub fn main() !void {
         .ms3_pin = ms3.digital_io(),
         .clock_device = cd.clock_device(),
     });
-    // debugging. Slow blinking means init worked
-    // for (1..10) |_| {
-    //     led.toggle();
-    //     time.sleep_ms(250);
-    // }
-    // microsteps set to 1 because I tied all ms pins to ground
-    try stepper.begin(200, 1);
+
+    try stepper.begin(300, 1);
     // Only needed if you set the enable pin
     // try stepper.enable();
 
-    // debugging. Fast blinking means begin worked
-    // for (1..10) |_| {
-    //     led.toggle();
-    //     time.sleep_ms(125);
-    // }
-    stepper.set_speed_profile(
-        stepper_driver.a4988.Speed_Profile{ .linear_speed = .{ .accel = 200, .decel = 100 } },
-    );
-
     while (true) {
-        for ([_]u8{ 1, 2, 4, 8, 16 }) |ms| {
-            _ = try stepper.set_microstep(ms);
-            try stepper.rotate(180);
-            time.sleep_ms(250);
-            try stepper.rotate(-180);
+        const linear_profile = stepper_driver.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
+        const constant_profile = stepper_driver.Speed_Profile.constant_speed;
+        // Try both constant and linear acceleration profiles
+        inline for (.{ constant_profile, linear_profile }) |profile| {
+            stepper.set_speed_profile(
+                profile,
+            );
+            // Try different microsteps
+            inline for (.{ 2, 4, 8, 16 }) |ms| {
+                _ = try stepper.set_microstep(ms);
+                try stepper.rotate(360);
+                time.sleep_ms(250);
+                try stepper.rotate(-360);
+                time.sleep_ms(250);
+            }
+            time.sleep_ms(1000);
         }
     }
 }
