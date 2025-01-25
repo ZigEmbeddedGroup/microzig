@@ -1,9 +1,9 @@
 //!
-//! Generic driver for the A4988 stepped motor controller
+//! Generic driver for various stepper motor drivers
 //!
 //! Datasheet:
-//! https://www.allegromicro.com/~/media/Files/Datasheets/A4988-Datasheet.ashx
-//!
+//! * A4988: https://www.allegromicro.com/~/media/Files/Datasheets/A4988-Datasheet.ashx
+//! * DRV8825: https://www.ti.com/lit/ds/symlink/drv8825.pdf
 //!
 
 const std = @import("std");
