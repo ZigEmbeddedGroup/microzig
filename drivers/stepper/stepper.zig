@@ -221,7 +221,7 @@ pub fn Stepper(comptime Driver: type) type {
                     // How many microsteps are needed from cruise speed to a full stop
                     self.steps_to_brake = @intFromFloat(@as(f64, @floatFromInt(self.steps_to_cruise)) * accel_f / decel_f);
                     if (self.steps_remaining < self.steps_to_cruise + self.steps_to_brake) {
-                        // Hannot reach max speed, will need to brake early
+                        // Cannot reach max speed, will need to brake early
                         self.steps_to_cruise = @intFromFloat(@as(f64, @floatFromInt(self.steps_remaining)) * decel_f / (accel_f + decel_f));
                         self.steps_to_brake = self.steps_remaining - self.steps_to_cruise;
                     }
@@ -307,7 +307,6 @@ pub fn Stepper(comptime Driver: type) type {
                 try self.step_pin.write(.high);
                 // Absolute time now
                 const start = self.clock.get_time_since_boot();
-                // var m: u32 = @intCast(self.clock.get_time_since_boot().to_us());
                 const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
                 self.calc_step_pulse();
                 // We should pull HIGH for at least 1-2us (step_high_min)
