@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-host", .file = "src/rp2040_only/spi_host.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_spi-slave", .file = "src/rp2040_only/spi_slave.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-echo", .file = "src/rp2040_only/uart_echo.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-log", .file = "src/rp2040_only/uart_log.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
@@ -74,12 +75,14 @@ pub fn build(b: *std.Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
+        const rtt_mod = b.dependency("rtt", .{}).module("rtt");
         const firmware = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
         });
+        firmware.add_app_import("rtt", rtt_mod, .{});
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.

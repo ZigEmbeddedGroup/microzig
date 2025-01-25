@@ -162,6 +162,19 @@ pub const SPI = enum(u1) {
         spi_regs.SSPCPSR.modify(.{ .CPSDVSR = 0 });
     }
 
+    pub fn set_slave(spi: SPI, slave: bool) void {
+        const regs = spi.get_regs();
+        // Disable SPI
+        regs.SSPCR1.modify(.{ .SSE = 0 });
+
+        regs.SSPCR1.modify(.{
+            .MS = @as(u1, @bitCast(slave)),
+        });
+
+        // Re-enable SPI
+        spi.get_regs().SSPCR1.modify(.{ .SSE = 1 });
+    }
+
     pub inline fn is_writable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().TNF == 1;
     }
@@ -336,7 +349,7 @@ pub const SPI = enum(u1) {
     /// be 0, but some devices require a specific value here,
     /// e.g. SD cards expect 0xff
     ///
-    /// NOTE: This function is a vectored version of `write_blocking` and takes an array of arrays.
+    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
     ///       This pattern allows one to create better zero-copy send routines as message prefixes and
     ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
     ///       in a separate memory.
