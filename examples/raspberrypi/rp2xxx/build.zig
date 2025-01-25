@@ -28,7 +28,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_stepper", .file = "src/rp2040_only/stepper.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
@@ -49,6 +48,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
+        .{ .name = "pico_stepper", .file = "src/stepper.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
