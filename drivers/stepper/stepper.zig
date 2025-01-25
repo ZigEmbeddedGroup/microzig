@@ -51,7 +51,6 @@ pub const DRV8825 = struct {
     const MS_TABLE = [_]u3{ 0b000, 0b001, 0b010, 0b011, 0b100, 0b111 };
 };
 
-// TODO: Make generic? enum for driver e.g. A4988, DRV8824
 pub fn Stepper(comptime Driver: type) type {
     return struct {
         const Self = @This();
@@ -87,10 +86,7 @@ pub fn Stepper(comptime Driver: type) type {
         dir_state: mdf.base.Digital_IO.State = .low,
         motor_steps: u16 = 200,
 
-        // TODO: Error type?
         pub fn init(opts: Stepper_Options) Self {
-            // TODO: Validate args, optional ms pins
-            // TODO: If any ms pin is set, all must be set
             return Self{
                 .clock = opts.clock_device,
                 .ms1_pin = opts.ms1_pin,
@@ -337,7 +333,9 @@ pub fn Stepper(comptime Driver: type) type {
                 return .cruising;
         }
 
-        // TODO: Is this even configurable?
+        // Configure what value to write to the enable pin to enable the
+        // driver. This is LOW when this pin is hooked up to EN(bar), but HIGH
+        // when hooked up to SLEEP(bar)
         pub fn set_enable_active_state(self: *Self, state: mdf.base.Digital_IO.State) void {
             self.enable_active_state = state;
         }
