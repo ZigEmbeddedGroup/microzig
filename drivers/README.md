@@ -19,4 +19,5 @@ A collection of device drivers for the use with MicroZig.
 - Wireless
   - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
 - Stepper
-  - [ ] A4988
+  - [x] A4988
+  - [x] DRV8825 (Implemented but untested)
