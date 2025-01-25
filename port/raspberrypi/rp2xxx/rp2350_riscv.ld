@@ -48,6 +48,11 @@ SECTIONS
       *(.sbss*)
       microzig_bss_end = .;
   } > ram0
+  
+  .flash_end :
+  {
+    microzig_flash_end = .;
+  } > flash0
 
   microzig_data_load_start = LOADADDR(.data);
   PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
