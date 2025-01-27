@@ -21,7 +21,7 @@ examples will eventually be able to run on either chip with no changes due to th
   Routes the SYS clock divided by 1000 out to GPIO25.
 - [watchdog timer](src/watchdog_timer.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
   Enables a watchdog timer for 1 second, and demonstrates the chip resetting when the watchdog timer elapses
-- [usb device](src/usb_cdc.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
+- [usb device](src/usb_cdc.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) or [Pico2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) boards  
   A really basic example for a raw USB device. You can use the Python 3 script [`scripts/usb_device_loopback.py`](scripts/usb_device_loopback.py) to test the USB device.
 
 ### RP2040 Only
