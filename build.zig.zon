@@ -45,6 +45,7 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
     .boxzer_ignore_paths = .{
         "tools",
@@ -53,5 +54,6 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
 }
