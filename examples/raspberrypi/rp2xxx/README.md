@@ -42,7 +42,7 @@ examples will eventually be able to run on either chip with no changes due to th
   Showcases how to use the PIO to emit a basic square wave.
 - [uart](src/rp2040_only/uart.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   Showcases how to use the UART together with `std.log`.
-- [usb device](src/rp2040_only/usb_cdc.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
+- [usb device](src/usb_cdc.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   A really basic example for a raw USB device. You can use the Python 3 script [`scripts/usb_device_loopback.py`](scripts/usb_device_loopback.py) to test the USB device.
 - [usb hid](src/rp2040_only/usb_hid.zig) on the [Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/) board  
   A really basic example how to implement a USB HID device. You can use the Python 3 script [`scripts/hid_test.py`](scripts/hid_test.py) to test the HID device.

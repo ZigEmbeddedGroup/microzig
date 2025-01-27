@@ -11,17 +11,20 @@
 //! 4. Debugging Support Functions (TODO)
 //! 5. Miscellaneous Functions (TODO)
 
+const std = @import("std");
+const microzig = @import("microzig");
+const chip = microzig.hal.compatibility.chip;
+
 /// Function codes to lookup public functions that provide useful RP2040 functionality
 pub const Code = enum(u32) {
-    popcount32 = rom_table_code('P', '3'),
-    reverse32 = rom_table_code('R', '3'),
-    clz32 = rom_table_code('L', '3'),
-    ctz32 = rom_table_code('T', '3'),
-    memset = rom_table_code('M', 'S'),
-    memset4 = rom_table_code('S', '4'),
-    memcpy = rom_table_code('M', 'C'),
-    memcpy44 = rom_table_code('C', '4'),
-    reset_usb_boot = rom_table_code('U', 'B'),
+    popcount32 = rom_table_code('P', '3'),  // Only avaiable on: RP2040
+    reverse32 = rom_table_code('R', '3'),   // Only avaiable on: RP2040
+    clz32 = rom_table_code('L', '3'),       // Only avaiable on: RP2040
+    ctz32 = rom_table_code('T', '3'),       // Only avaiable on: RP2040
+    memset = rom_table_code('M', 'S'),      // Only avaiable on: RP2040
+    memset4 = rom_table_code('S', '4'),     // Only avaiable on: RP2040
+    memcpy = rom_table_code('M', 'C'),      // Only avaiable on: RP2040
+    memcpy44 = rom_table_code('C', '4'),    // Only avaiable on: RP2040
     connect_internal_flash = rom_table_code('I', 'F'),
     flash_exit_xip = rom_table_code('E', 'X'),
     flash_range_erase = rom_table_code('R', 'E'),
@@ -136,6 +139,11 @@ pub fn rom_func_lookup(code: Code) *anyopaque {
 
 /// Return a count of the number of 1 bits in value
 pub fn popcount32(value: u32) u32 {
+    if (chip == .RP2350) {
+        // RP2350, supports fast assembly version
+        return @popCount(value);
+    }
+
     const S = struct {
         var f: ?*signatures.popcount32 = null;
     };
@@ -146,6 +154,11 @@ pub fn popcount32(value: u32) u32 {
 
 /// Return a count of the number of 1 bits in value
 pub fn reverse32(value: u32) u32 {
+    if (chip == .RP2350) {
+        // RP2350, supports fast assembly version
+        return @bitReverse(value);
+    }
+
     const S = struct {
         var f: ?*signatures.reverse32 = null;
     };
@@ -156,6 +169,11 @@ pub fn reverse32(value: u32) u32 {
 
 /// Return the number of consecutive high order 0 bits of value
 pub fn clz32(value: u32) u32 {
+    if (chip == .RP2350) {
+        // RP2350, supports fast assembly version
+        return @clz(value);
+    }
+
     const S = struct {
         var f: ?*signatures.clz32 = null;
     };
@@ -166,6 +184,11 @@ pub fn clz32(value: u32) u32 {
 
 /// Return the number of consecutive low order 0 bits of value
 pub fn ctz32(value: u32) u32 {
+    if (chip == .RP2350) {
+        // RP2350, supports fast assembly version
+        return @ctz(value);
+    }
+
     const S = struct {
         var f: ?*signatures.ctz32 = null;
     };
@@ -180,6 +203,11 @@ pub fn ctz32(value: u32) u32 {
 
 /// Sets all bytes of dest to the value c and returns ptr
 pub fn memset(dest: []u8, c: u8) []u8 {
+    if (chip == .RP2350) {
+        @memset(dest, c);
+        return dest;
+    }
+
     const S = struct {
         var f: ?*signatures.memset = null;
     };
@@ -190,6 +218,12 @@ pub fn memset(dest: []u8, c: u8) []u8 {
 
 /// Copies n bytes from src to dest; The number of bytes copied is the size of the smaller slice
 pub fn memcpy(dest: []u8, src: []const u8) []u8 {
+    if (chip == .RP2350) {
+        // For some reason @memcpy crash chip with HardFault interrupt (UNALIGNED)
+        std.mem.copyForwards(u8, dest, src);
+        return dest;
+    }
+
     const S = struct {
         var f: ?*signatures.memcpy = null;
     };

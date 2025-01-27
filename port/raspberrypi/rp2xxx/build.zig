@@ -69,6 +69,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
+            .patches = @import("patches/rp2350.zig").patches,
         },
         .hal = hal,
         .linker_script = b.path("rp2350_arm.ld"),
