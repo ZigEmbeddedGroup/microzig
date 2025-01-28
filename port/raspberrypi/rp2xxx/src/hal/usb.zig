@@ -360,8 +360,8 @@ pub fn F(comptime config: UsbConfig) type {
             var setup_packet: [8]u8 = .{0} ** 8;
             const spl: u32 = peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw;
             const sph: u32 = peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw;
-            _ = rom.memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
-            _ = rom.memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
+            @memcpy(setup_packet[0..4], std.mem.asBytes(&spl));
+            @memcpy(setup_packet[4..8], std.mem.asBytes(&sph));
             // Reinterpret as setup packet
             return std.mem.bytesToValue(usb.types.SetupPacket, &setup_packet);
         }
