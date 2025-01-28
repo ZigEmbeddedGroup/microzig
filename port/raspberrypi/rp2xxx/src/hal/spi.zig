@@ -4,7 +4,6 @@ const peripherals = microzig.chip.peripherals;
 const SPI0_reg = peripherals.SPI0;
 const SPI1_reg = peripherals.SPI1;
 
-const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
@@ -167,19 +166,17 @@ pub const SPI = enum(u1) {
         // Disable SPI
         regs.SSPCR1.modify(.{ .SSE = 0 });
 
-        regs.SSPCR1.modify(.{
-            .MS = @as(u1, @bitCast(slave)),
-        });
+        regs.SSPCR1.modify(.{ .MS = @intFromBool(slave) });
 
         // Re-enable SPI
-        spi.get_regs().SSPCR1.modify(.{ .SSE = 1 });
+        regs.SSPCR1.modify(.{ .SSE = 1 });
     }
 
-    pub inline fn is_writable(spi: SPI) bool {
+    pub fn is_writable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().TNF == 1;
     }
 
-    pub inline fn is_readable(spi: SPI) bool {
+    pub fn is_readable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().RNE == 1;
     }
 

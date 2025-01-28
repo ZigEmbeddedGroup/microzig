@@ -4,65 +4,81 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
+const chip = rp2xxx.compatibility.chip;
 
-const BUF_LEN = 0x100;
-const spi = rp2xxx.spi.instance.SPI1;
+const BUF_LEN = 0x10;
+const spi = rp2xxx.spi.instance.SPI0;
 
 const led = gpio.num(25);
+const led_red = gpio.num(11);
+const led_green = gpio.num(12);
+const led_blue = gpio.num(13);
 // >>UART logging
 const uart = rp2xxx.uart.instance.num(1);
 const baud_rate = 115200;
-const uart_tx_pin = gpio.num(4);
-const uart_rx_pin = gpio.num(5);
+const uart_tx_pin = gpio.num(8);
+const uart_rx_pin = gpio.num(9);
 // <<UART logging
 
 // These will change depending on which GPIO pins you have your SPI device routed to.
-const CS_PIN = 1;
-const SCK_PIN = 2;
+const CS_PIN = 17;
+const SCK_PIN = 18;
+// TODO: rx/tx, e.g. is mosi just miso in slave mode?
 // -- Since this is the slave device, we read on MISO_PIN
-const MOSI_PIN = 0;
-const MISO_PIN = 3;
+const MOSI_PIN = 16;
+const MISO_PIN = 19;
+// const MOSI_PIN = 19;
+// const MISO_PIN = 16;
 
-const rtt = @import("rtt");
-const rtt_instance = rtt.RTT(.{});
-var rtt_logger: ?rtt_instance.Writer = null;
-
-pub fn log(
-    comptime level: std.log.Level,
-    comptime scope: @TypeOf(.EnumLiteral),
-    comptime format: []const u8,
-    args: anytype,
-) void {
-    const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
-    const prefix = comptime level_prefix ++ switch (scope) {
-        .default => ": ",
-        else => " (" ++ @tagName(scope) ++ "): ",
-    };
-
-    if (rtt_logger) |writer| {
-        const current_time = time.get_time_since_boot();
-        const seconds = current_time.to_us() / std.time.us_per_s;
-        const microseconds = current_time.to_us() % std.time.us_per_s;
-
-        writer.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
-    }
-}
+// const rtt = @import("rtt");
+// const rtt_instance = rtt.RTT(.{});
+// var rtt_logger: ?rtt_instance.Writer = null;
+//
+// pub fn rtt_log(
+//     comptime level: std.log.Level,
+//     comptime scope: @TypeOf(.EnumLiteral),
+//     comptime format: []const u8,
+//     args: anytype,
+// ) void {
+//     const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+//     const prefix = comptime level_prefix ++ switch (scope) {
+//         .default => ": ",
+//         else => " (" ++ @tagName(scope) ++ "): ",
+//     };
+//
+//     if (rtt_logger) |writer| {
+//         const current_time = time.get_time_since_boot();
+//         const seconds = current_time.to_us() / std.time.us_per_s;
+//         const microseconds = current_time.to_us() % std.time.us_per_s;
+//
+//         writer.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+//     }
+// }
 
 pub const microzig_options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    // .logFn = log,
+    // .logFn = rtt_log,
 };
 
 pub fn main() !void {
     led.set_function(.sio);
     led.set_direction(.out);
     led.put(1);
+    inline for (.{ led_red, led_green, led_blue }) |p| {
+        p.set_function(.sio);
+        p.set_direction(.out);
+        p.put(1);
+    }
     // Set pin functions for CS, SCK, MOSI, MISO
+    // TODO Should we wait on csn manually
     const csn = gpio.num(CS_PIN);
+    // csn.set_function(.sio);
+    // csn.set_direction(.in);
     const mosi = gpio.num(MOSI_PIN);
     const miso = gpio.num(MISO_PIN);
     const sck = gpio.num(SCK_PIN);
+    // inline for (&.{ mosi, miso, sck }) |pin| {
     inline for (&.{ csn, mosi, miso, sck }) |pin| {
         pin.set_function(.spi);
     }
@@ -75,7 +91,10 @@ pub fn main() !void {
 
     // >>UART logging
     inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
+        switch (chip) {
+            .RP2040 => pin.set_function(.uart),
+            .RP2350 => pin.set_function(.uart_first),
+        }
     }
     uart.apply(.{
         .baud_rate = baud_rate,
@@ -85,42 +104,51 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
     // <<UART logging
 
-    // try uart.write_blocking("Setting SPI as slave device\r\n", null); // DELETEME
+    // led.toggle();
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);
+    led_red.put(0);
+    led_green.put(1);
+    led_blue.put(1);
 
     // Back to 8 bit mode
-    try spi.apply(.{
+    spi.apply(.{
         .clock_config = rp2xxx.clock_config,
         .data_width = .eight,
-    });
-    // var buf: [1024]u8 = undefined;
+    }) catch {};
+    // led.toggle();
     var in_buf_eight: [BUF_LEN]u8 = undefined;
-    // try uart.write_blocking("Waiting!\r\n", null);
-    std.log.info("Waiting", .{});
-    // while (true) {
-    // const x = csn.read();
-    // led.put(x);
-    // }
-    // TODO: Wait on CS low
+    led_red.put(0);
+    led_green.put(0);
+    led_blue.put(1);
+    // Wait on CS low
+    // std.log.info("Waiting on CSn", .{});
+    // while (csn.read() != 0) {}
+    // std.log.info("cs low", .{});
+    led_red.put(1);
+    led_green.put(0);
+    led_blue.put(0);
+    std.log.info("Reading", .{});
     spi.read_blocking(u8, 0, &in_buf_eight);
-    led.put(0);
+    led_red.put(1);
+    led_green.put(1);
+    led_blue.put(1);
 
-    // var text = std.fmt.bufPrint(&buf, "Got: {any}\r\n", .{in_buf_eight}) catch &.{};
-    // try uart.write_blocking(text, null);
-    std.log.info("Got: {any}", .{in_buf_eight});
+    std.log.info("Got: {s}", .{in_buf_eight});
+    led_red.put(1);
+    led_green.put(0);
+    led_blue.put(1);
 
     // 12 bit data words
-    try spi.apply(.{
-        .clock_config = rp2xxx.clock_config,
-        .data_width = .twelve,
-    });
-    var in_buf_twelve: [BUF_LEN]u12 = undefined;
-    // TODO: Wait on CS low
-    spi.read_blocking(u12, 0, &in_buf_twelve);
-    // text = std.fmt.bufPrint(&buf, "Got: {any}\r\n", .{in_buf_twelve}) catch &.{};
-    // try uart.write_blocking(text, null);
-    std.log.info("Got: {any}\r\n", .{in_buf_twelve});
+    // try spi.apply(.{
+    //     .clock_config = rp2xxx.clock_config,
+    //     .data_width = .twelve,
+    // });
+    // var in_buf_twelve: [BUF_LEN]u12 = undefined;
+    // // Wait on CS low
+    // while (csn.read() != 0) {}
+    // spi.read_blocking(u12, 0, &in_buf_twelve);
+    // std.log.info("Got: {any}\r", .{in_buf_twelve});
 
     // Back to 8 bit mode
     try spi.apply(.{
@@ -129,10 +157,23 @@ pub fn main() !void {
     });
 
     while (true) {
-        // TODO: Wait on CS low
+        // led.put(0);
+        time.sleep_ms(250);
+        led_red.put(0);
+        led_green.put(0);
+        led_blue.put(1);
+        // Wait on CS low
+        // std.log.info("Waiting on CSn\n", .{});
+        // while (csn.read() != 0) {}
+        led_red.put(1);
+        led_green.put(0);
+        led_blue.put(0);
         spi.read_blocking(u8, 0, &in_buf_eight);
-        // text = std.fmt.bufPrint(&buf, "Got: {any}\r\n", .{in_buf_eight}) catch &.{};
-        // try uart.write_blocking(text, null);
-        std.log.info("Got: {any}\r\n", .{in_buf_eight});
+        led_red.put(1);
+        led_green.put(1);
+        led_blue.put(1);
+        // led.put(1);
+        std.log.info("Got: {s}", .{in_buf_eight});
+        time.sleep_ms(250);
     }
 }
