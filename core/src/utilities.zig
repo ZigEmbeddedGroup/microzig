@@ -1,4 +1,5 @@
 const std = @import("std");
+const microzig = @import("microzig.zig");
 
 /// A helper class that allows operating on a slice of slices
 /// with similar operations to those of a slice.
@@ -186,6 +187,60 @@ pub fn Slice_Vector(comptime Slice: type) type {
             };
         };
     };
+}
+
+pub fn max_enum_tag(T: type) @typeInfo(T).Enum.tag_type {
+    var max_tag: @typeInfo(T).Enum.tag_type = 0;
+    for (@typeInfo(T).Enum.fields) |field| {
+        if (field.value > max_tag) {
+            max_tag = field.value;
+        }
+    }
+    return max_tag;
+}
+
+pub fn GenerateInterruptEnum() type {
+    var fields: [microzig.chip.INTERRUPTS.len]std.builtin.Type.EnumField = undefined;
+
+    for (&fields, microzig.chip.INTERRUPTS) |*field, interrupt| {
+        field.* = .{
+            .name = interrupt.name,
+            .value = interrupt.index,
+        };
+    }
+
+    return @Type(.{ .Enum = .{
+        .tag_type = i16,
+        .fields = &fields,
+        .decls = &.{},
+        .is_exhaustive = true,
+    } });
+}
+
+pub fn GenerateInterruptOptions(HandlerType: type, sources: anytype) type {
+    const sources_type_info = @typeInfo(@TypeOf(sources)).Struct;
+    var ret_fields: []const std.builtin.Type.StructField = &.{};
+
+    for (sources_type_info.fields) |sources_field| {
+        for (@typeInfo(@field(sources, sources_field.name)).Enum.fields) |enum_field| {
+            ret_fields = ret_fields ++ .{.{
+                .name = enum_field.name,
+                .type = ?HandlerType,
+                .default_value = @as(*const anyopaque, @ptrCast(&@as(?HandlerType, null))),
+                .is_comptime = false,
+                .alignment = @alignOf(?HandlerType),
+            }};
+        }
+    }
+
+    return @Type(.{
+        .Struct = .{
+            .layout = .auto,
+            .fields = ret_fields,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
 }
 
 test Slice_Vector {
