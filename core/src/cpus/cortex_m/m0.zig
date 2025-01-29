@@ -163,4 +163,12 @@ pub const NestedVectorInterruptController = extern struct {
     /// field, bits [5:0] read as zero and ignore writes. This means writing 255 to a priority
     /// register saves value 192 to the register.
     IPR: [8]u32,
+
+    pub fn unmask(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        nvic.ISER |= 1 << num;
+    }
+
+    pub fn mask(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        nvic.ISER &= !(1 << num);
+    }
 };

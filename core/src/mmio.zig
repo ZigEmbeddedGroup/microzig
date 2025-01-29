@@ -32,7 +32,7 @@ pub fn Mmio(comptime PackedT: type) type {
             addr.write_raw(@bitCast(val));
         }
 
-        pub fn write_raw(addr: *volatile Self, val: IntT) void {
+        pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
             addr.raw = val;
         }
 

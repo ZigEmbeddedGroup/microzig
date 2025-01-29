@@ -19,6 +19,7 @@ pub fn write_interrupt_vector(
     assert(device.arch.is_riscv());
 
     try writer.writeAll(
+        \\
         \\pub const VectorTable = extern struct {
         \\    const Handler = micro.interrupt.Handler;
         \\    const unhandled = micro.interrupt.unhandled;
