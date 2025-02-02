@@ -1,38 +1,47 @@
-//! For now we keep all clock settings on the chip defaults.
-//! This code currently assumes the STM32F303xB / STM32F303xC clock configuration.
-//! TODO: Do something useful for other STM32f30x chips.
-//!
-//! Specifically, TIM6 is running on an 8 MHz clock,
-//! HSI = 8 MHz is the SYSCLK after reset
-//! default AHB prescaler = /1 (= values 0..7):
-//!
-//! ```
-//! RCC.CFGR.modify(.{ .HPRE = 0 });
-//! ```
-//!
-//! so also HCLK = 8 MHz.
-//! And with the default APB1 prescaler = /2:
-//!
-//! ```
-//! RCC.CFGR.modify(.{ .PPRE1 = 4 });
-//! ```
-//!
-//! results in PCLK1,
-//! and the resulting implicit factor *2 for TIM2/3/4/6/7
-//! makes TIM6 run at 8MHz/2*2 = 8 MHz.
-//!
-//! The above default configuration makes U(S)ART2..5
-//! (which use PCLK1 without that implicit *2 factor)
-//! run at 4 MHz by default.
-//!
-//! USART1 uses PCLK2, which uses the APB2 prescaler on HCLK,
-//! default APB2 prescaler = /1:
-//!
-//! ```
-//! RCC.CFGR.modify(.{ .PPRE2 = 0 });
-//! ```
-//!
-//! and therefore USART1 runs on 8 MHz.
+pub const pins = @import("STM32F303/pins.zig");
+
+// /--------
+// | THE CODE BELOW IS OLD HAL CODE FOR UART, I2C, AND SPI
+// | THAT HAS WORKED IN A PREVIOUS MICROZIG INCARNATION.
+// |
+// | IT SHOULD BE MOVED INTO SEPARATE FILES IN STM32F303/.
+// \--------
+//
+// For now we keep all clock settings on the chip defaults.
+// This code currently assumes the STM32F303xB / STM32F303xC clock configuration.
+// TODO: Do something useful for other STM32f30x chips.
+//
+// Specifically, TIM6 is running on an 8 MHz clock,
+// HSI = 8 MHz is the SYSCLK after reset
+// default AHB prescaler = /1 (= values 0..7):
+//
+// ```
+// RCC.CFGR.modify(.{ .HPRE = 0 });
+// ```
+//
+// so also HCLK = 8 MHz.
+// And with the default APB1 prescaler = /2:
+//
+// ```
+// RCC.CFGR.modify(.{ .PPRE1 = 4 });
+// ```
+//
+// results in PCLK1,
+// and the resulting implicit factor *2 for TIM2/3/4/6/7
+// makes TIM6 run at 8MHz/2*2 = 8 MHz.
+//
+// The above default configuration makes U(S)ART2..5
+// (which use PCLK1 without that implicit *2 factor)
+// run at 4 MHz by default.
+//
+// USART1 uses PCLK2, which uses the APB2 prescaler on HCLK,
+// default APB2 prescaler = /1:
+//
+// ```
+// RCC.CFGR.modify(.{ .PPRE2 = 0 });
+// ```
+//
+// and therefore USART1 runs on 8 MHz.
 
 const std = @import("std");
 const runtime_safety = std.debug.runtime_safety;
@@ -135,9 +144,9 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+pub fn Uart(comptime index: usize, comptime source_pins: micro.uart.Pins) type {
     if (!(index == 1)) @compileError("TODO: only USART1 is currently supported");
-    if (pins.tx != null or pins.rx != null)
+    if (source_pins.tx != null or source_pins.rx != null)
         @compileError("TODO: custom pins are not currently supported");
 
     return struct {
@@ -268,9 +277,9 @@ fn debug_print(comptime format: []const u8, args: anytype) void {
 }
 
 /// This implementation does not use AUTOEND=1
-pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
+pub fn I2CController(comptime index: usize, comptime source_pins: micro.i2c.Pins) type {
     if (!(index == 1)) @compileError("TODO: only I2C1 is currently supported");
-    if (pins.scl != null or pins.sda != null)
+    if (source_pins.scl != null or source_pins.sda != null)
         @compileError("TODO: custom pins are not currently supported");
 
     return struct {
@@ -286,15 +295,15 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             RCC.AHBENR.modify(.{ .IOPBEN = 1 });
             debug_print("I2C1 configuration step 1 complete\r\n", .{});
             // 2. Configure the I2C PINs for ALternate Functions
-            // 	a) Select Alternate Function in MODER Register
+            //  a) Select Alternate Function in MODER Register
             GPIOB.MODER.modify(.{ .MODER6 = 0b10, .MODER7 = 0b10 });
-            // 	b) Select Open Drain Output
+            //  b) Select Open Drain Output
             GPIOB.OTYPER.modify(.{ .OT6 = 1, .OT7 = 1 });
-            // 	c) Select High SPEED for the PINs
+            //  c) Select High SPEED for the PINs
             GPIOB.OSPEEDR.modify(.{ .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
-            // 	d) Select Pull-up for both the Pins
+            //  d) Select Pull-up for both the Pins
             GPIOB.PUPDR.modify(.{ .PUPDR6 = 0b01, .PUPDR7 = 0b01 });
-            // 	e) Configure the Alternate Function in AFR Register
+            //  e) Configure the Alternate Function in AFR Register
             GPIOB.AFRL.modify(.{ .AFRL6 = 4, .AFRL7 = 4 });
             debug_print("I2C1 configuration step 2 complete\r\n", .{});
 
@@ -492,11 +501,11 @@ pub fn SpiBus(comptime index: usize) type {
             RCC.AHBENR.modify(.{ .IOPAEN = 1 });
 
             // Configure the I2C PINs for ALternate Functions
-            // 	- Select Alternate Function in MODER Register
+            //  - Select Alternate Function in MODER Register
             GPIOA.MODER.modify(.{ .MODER5 = 0b10, .MODER6 = 0b10, .MODER7 = 0b10 });
-            // 	- Select High SPEED for the PINs
+            //  - Select High SPEED for the PINs
             GPIOA.OSPEEDR.modify(.{ .OSPEEDR5 = 0b11, .OSPEEDR6 = 0b11, .OSPEEDR7 = 0b11 });
-            // 	- Configure the Alternate Function in AFR Register
+            //  - Configure the Alternate Function in AFR Register
             GPIOA.AFRL.modify(.{ .AFRL5 = 5, .AFRL6 = 5, .AFRL7 = 5 });
 
             // Enable the SPI1 CLOCK
@@ -566,7 +575,7 @@ pub fn SpiBus(comptime index: usize) type {
             debug_print("SPI1 RXNE == 1\r\n", .{});
 
             // read
-            var data_read = SPI1.DR.raw;
+            const data_read = SPI1.DR.raw;
             _ = SPI1.SR.read(); // clear overrun flag
             const dr_lsb = @as([dr_byte_size]u8, @bitCast(data_read))[0];
             debug_print("Received: {X:2} (DR = {X:8}).\r\n", .{ dr_lsb, data_read });
