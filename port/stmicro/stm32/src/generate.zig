@@ -331,11 +331,12 @@ pub fn main() !void {
                 if (item.object.get("fieldset")) |fieldset| blk: {
                     const fieldset_key = try std.fmt.allocPrint(allocator, "fieldset/{s}", .{fieldset.string});
                     const fieldset_value = (register_file.value.object.get(fieldset_key) orelse break :blk).object;
-                    for (fieldset_value.get("fields").?.array.items) |field| {
+                    next_field: for (fieldset_value.get("fields").?.array.items) |field| {
                         const field_name = field.object.get("name").?.string;
                         const field_description: ?[]const u8 = if (field.object.get("description")) |desc| desc.string else null;
                         switch (field.object.get("bit_offset").?) {
                             .integer => |int| {
+                                // This is the standard bit offset case most items will be in this catigory
                                 const bit_offset = int;
                                 const bit_size = field.object.get("bit_size").?.integer;
                                 const enum_id: ?regz.Database.EnumID = if (field.object.get("enum")) |enum_name|
@@ -344,9 +345,34 @@ pub fn main() !void {
                                     null;
                                 var array_count: ?u16 = null;
                                 var array_stride: ?u8 = null;
-                                if (field.object.get("array")) |array| {
-                                    array_count = if (array.object.get("len")) |len| @intCast(len.integer) else null;
-                                    array_stride = if (array.object.get("stride")) |stride| @intCast(stride.integer) else null;
+                                if (field.object.get("array")) |array_obj| {
+                                    const object_map = array_obj.object;
+                                    // This is the typical case for array objects e.g., @"A[0]", @"A[1]" registers
+                                    // these are evenly spaced and much nicer to work with.
+
+                                    array_count = if (object_map.get("len")) |len| @intCast(len.integer) else null;
+                                    array_stride = if (object_map.get("stride")) |stride| @intCast(stride.integer) else null;
+
+                                    // This category where there is an array of items, but it is given by
+                                    // individual offsets as opposed to a count + stride. This is used when strides are
+                                    // inconsistent between elements
+
+                                    if (object_map.get("offsets")) |positions| {
+                                        for (positions.array.items, 0..) |position, idx| {
+                                            const field_name_irregular_stride = try std.fmt.allocPrint(allocator, "{s}[{}]", .{ field_name, idx });
+
+                                            try db.add_register_field(register_id, .{
+                                                .name = field_name_irregular_stride,
+                                                .description = field_description,
+                                                .offset_bits = @intCast(position.integer + bit_offset),
+                                                .size_bits = @intCast(bit_size),
+                                                .enum_id = enum_id,
+                                                .count = null,
+                                                .stride = null,
+                                            });
+                                        }
+                                        continue :next_field;
+                                    }
                                 }
 
                                 try db.add_register_field(register_id, .{
@@ -360,6 +386,8 @@ pub fn main() !void {
                                 });
                             },
                             .array => |arr| {
+                                // This case is for discontinuous fields where the first few bits are
+                                // separated from the rest of the field by padding or other fields
                                 if (arr.items.len != 2) {
                                     //This should never happen, because the input data as of yet doesn't contain this.
                                     std.log.warn("skipping {s}, it's an non-consecutive field with more than two parts", .{field_name});
