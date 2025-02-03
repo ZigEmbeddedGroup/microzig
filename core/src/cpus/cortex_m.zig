@@ -6,54 +6,56 @@ const root = @import("root");
 
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum();
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(fn () callconv(.C) void, .{Interrupt});
-const interrupts: InterruptOptions = if (@hasDecl(app, "interrupts")) app.interrupts else .{};
+const interrupt_options: InterruptOptions = if (@hasDecl(app, "interrupts")) app.interrupts else .{};
+
+pub const interrupts = struct {
+    pub fn are_globally_enabled() bool {
+        var mrs: u32 = undefined;
+        asm volatile ("mrs %[mrs], 16"
+            : [mrs] "+r" (mrs),
+        );
+        return mrs & 0x1 == 0;
+    }
+
+    pub fn globally_enable() void {
+        asm volatile ("cpsie i");
+    }
+
+    pub fn globally_disable() void {
+        asm volatile ("cpsid i");
+    }
+
+    pub fn enable(comptime interrupt: anytype) void {
+        const interrupt_name = @tagName(interrupt);
+        if (@hasField(Interrupt, interrupt_name)) {
+            const num = @intFromEnum(@field(Interrupt, interrupt_name));
+            if (num >= 0) {
+                peripherals.nvic.unmask(num);
+            } else {
+                @compileError("can't enable exception: " ++ interrupt_name);
+            }
+        } else {
+            @compileError("interrupt not found: " ++ interrupt_name);
+        }
+    }
+
+    pub fn disable(comptime interrupt: anytype) void {
+        const interrupt_name = @tagName(interrupt);
+        if (@hasField(Interrupt, interrupt_name)) {
+            const num = @intFromEnum(@field(Interrupt, interrupt_name));
+            if (num >= 0) {
+                peripherals.nvic.mask(num);
+            } else {
+                @compileError("can't disable exception: " ++ interrupt_name);
+            }
+        } else {
+            @compileError("interrupt not found: " ++ interrupt_name);
+        }
+    }
+};
 
 pub fn executing_isr() bool {
     return peripherals.scb.ICSR.read().VECTACTIVE != 0;
-}
-
-pub fn enable_interrupts() void {
-    asm volatile ("cpsie i");
-}
-
-pub fn disable_interrupts() void {
-    asm volatile ("cpsid i");
-}
-
-pub fn enable(comptime interrupt: anytype) void {
-    const interrupt_name = @tagName(interrupt);
-    if (@hasField(Interrupt, interrupt_name)) {
-        const num = @intFromEnum(@field(Interrupt, interrupt_name));
-        if (num >= 0) {
-            peripherals.nvic.unmask(num);
-        } else {
-            @compileError("can't enable exception: " ++ interrupt_name);
-        }
-    } else {
-        @compileError("interrupt not found: " ++ interrupt_name);
-    }
-}
-
-pub fn disable(comptime interrupt: anytype) void {
-    const interrupt_name = @tagName(interrupt);
-    if (@hasField(Interrupt, interrupt_name)) {
-        const num = @intFromEnum(@field(Interrupt, interrupt_name));
-        if (num >= 0) {
-            peripherals.nvic.mask(num);
-        } else {
-            @compileError("can't disable exception: " ++ interrupt_name);
-        }
-    } else {
-        @compileError("interrupt not found: " ++ interrupt_name);
-    }
-}
-
-pub fn globally_enabled() bool {
-    var mrs: u32 = undefined;
-    asm volatile ("mrs %[mrs], 16"
-        : [mrs] "+r" (mrs),
-    );
-    return mrs & 0x1 == 0;
 }
 
 pub fn enable_fault_irq() void {

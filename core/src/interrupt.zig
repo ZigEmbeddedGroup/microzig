@@ -4,12 +4,12 @@ const microzig = @import("microzig.zig");
 /// Unmasks the given interrupt and enables its execution.
 /// Note that interrupts must be globally enabled with `enable_interrupts()` as well.
 pub inline fn enable(comptime interrupt: anytype) void {
-    microzig.cpu.enable(interrupt);
+    microzig.cpu.interrupt.enable(interrupt);
 }
 
 /// Masks the given interrupt and disables its execution.
 pub inline fn disable(comptime interrupt: anytype) void {
-    microzig.cpu.disable(interrupt);
+    microzig.cpu.interrupt.disable(interrupt);
 }
 
 /// Returns true when the given interrupt is unmasked.
@@ -21,18 +21,18 @@ pub inline fn is_enabled(comptime interrupt: anytype) bool {
 /// *Set Enable Interrupt*, will enable interrupts globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub inline fn enable_interrupts() void {
-    microzig.cpu.enable_interrupts();
+    microzig.cpu.interrupt.enable_interrupts();
 }
 
 /// *Clear Enable Interrupt*, will disable interrupts globally, but keep the masking done via
 /// `enable` and `disable` intact.
 pub inline fn disable_interrupts() void {
-    microzig.cpu.disable_interrupts();
+    microzig.cpu.interrupt.disable_interrupts();
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
 pub inline fn globally_enabled() bool {
-    return microzig.cpu.globally_enabled();
+    return microzig.cpu.interrupt.globally_enabled();
 }
 
 /// Enters a critical section and disables interrupts globally.
