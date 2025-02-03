@@ -27,7 +27,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
-            .register_definition = .{ .json = b.path("src/chips/LPC176x5x.json") },
+            // Downloaded from http://ds.arm.com/media/resources/db/chip/nxp/lpc1768/LPC176x5x.svd
+            .register_definition = .{ .svd = b.path("src/chips/LPC176x5x.svd") },
             .memory_regions = &.{
                 .{ .offset = 0x00000000, .length = 512 * 1024, .kind = .flash },
                 .{ .offset = 0x10000000, .length = 32 * 1024, .kind = .ram },

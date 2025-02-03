@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
 const UART0_reg = peripherals.UART0;
 const UART1_reg = peripherals.UART1;
@@ -230,7 +231,7 @@ pub const UART = enum(u1) {
     ///
     /// Note that this does NOT disable reception while this is happening,
     /// so if this takes too long the RX FIFO can potentially overflow.
-    pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?time.Duration) TransmitError!void {
+    pub fn write_blocking(uart: UART, payload: []const u8, timeout: ?mdf.time.Duration) TransmitError!void {
         return try uart.writev_blocking(&.{payload}, timeout);
     }
 
@@ -243,16 +244,16 @@ pub const UART = enum(u1) {
     ///
     /// Note that this does NOT disable reception while this is happening,
     /// so if this takes too long the RX FIFO can potentially overflow.
-    pub fn writev_blocking(uart: UART, payloads: []const []const u8, timeout: ?time.Duration) TransmitError!void {
+    pub fn writev_blocking(uart: UART, payloads: []const []const u8, timeout: ?mdf.time.Duration) TransmitError!void {
         const uart_regs = uart.get_regs();
-        const deadline = time.Deadline.init_relative(timeout);
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         var iter = microzig.utilities.Slice_Vector([]const u8).init(payloads).iterator();
         while (iter.next_chunk(null)) |payload| {
             var offset: usize = uart.prime_tx_fifo(payload);
             while (offset < payload.len) {
                 while (!uart.is_writeable()) {
-                    try deadline.check();
+                    try deadline.check(time.get_time_since_boot());
                 }
                 uart_regs.UARTDR.write_raw(payload[offset]);
                 offset += 1;
@@ -260,7 +261,7 @@ pub const UART = enum(u1) {
         }
 
         while (uart.is_busy()) {
-            try deadline.check();
+            try deadline.check(time.get_time_since_boot());
         }
     }
 
@@ -324,7 +325,7 @@ pub const UART = enum(u1) {
     /// Returns a transaction error immediately if it occurs and doesn't
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
-    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?time.Duration) ReceiveError!void {
+    pub fn read_blocking(uart: UART, buffer: []u8, timeout: ?mdf.time.Duration) ReceiveError!void {
         return uart.readv_blocking(&.{buffer}, timeout);
     }
 
@@ -338,14 +339,14 @@ pub const UART = enum(u1) {
     /// Returns a transaction error immediately if it occurs and doesn't
     /// complete the transaction. Errors are preserved for further inspection,
     /// so must be cleared with clear_errors() before another transaction is attempted.
-    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?time.Duration) ReceiveError!void {
-        const deadline = time.Deadline.init_relative(timeout);
+    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?mdf.time.Duration) ReceiveError!void {
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         var iter = microzig.utilities.Slice_Vector([]u8).init(buffers).iterator();
         while (iter.next_chunk(null)) |buffer| {
             for (buffer) |*byte| {
                 while (!uart.is_readable()) {
-                    try deadline.check();
+                    try deadline.check(time.get_time_since_boot());
                 }
                 byte.* = try uart.read_rx_fifo_with_error_check();
             }
@@ -353,7 +354,7 @@ pub const UART = enum(u1) {
     }
 
     /// Convenience function for waiting for a single byte to come across the RX line.
-    pub fn read_word(uart: UART, timeout: ?time.Duration) ReceiveError!u8 {
+    pub fn read_word(uart: UART, timeout: ?mdf.time.Duration) ReceiveError!u8 {
         var byte: [1]u8 = undefined;
         try uart.read_blocking(&byte, timeout);
         return byte[0];

@@ -1,6 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 
+const Chip = @import("../chip.zig").Chip;
 const tokenizer = @import("assembler/tokenizer.zig");
 const encoder = @import("assembler/encoder.zig");
 
@@ -71,9 +72,9 @@ pub const Diagnostics = struct {
     }
 };
 
-pub fn assemble_impl(comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
-    const tokens = try tokenizer.tokenize(source, diags, options.tokenize);
-    const encoder_output = try encoder.encode(tokens.slice(), diags, options.encode);
+pub fn assemble_impl(comptime chip: Chip, comptime source: []const u8, diags: *?Diagnostics, options: AssembleOptions) !Output {
+    const tokens = try tokenizer.tokenize(chip, source, diags, options.tokenize);
+    const encoder_output = try encoder.encode(chip, tokens.slice(), diags, options.encode);
     var programs = std.BoundedArray(Program, options.encode.max_programs).init(0) catch unreachable;
     for (encoder_output.programs.slice()) |bounded|
         try programs.append(bounded.to_exported_program());
@@ -99,7 +100,7 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     var line_it = std.mem.tokenize(u8, source, "\n\r");
     while (line_it.next()) |line| : (line_num += 1) {
         line_str = line_str ++ "\n" ++ line;
-        if (line_it.index > index) {
+        if (line_it.index >= index) {
             column = line.len - (line_it.index - index);
             line_str = line;
             break;
@@ -121,12 +122,13 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     });
 }
 
-pub fn assemble(comptime source: []const u8, comptime options: AssembleOptions) Output {
+pub fn assemble(comptime chip: Chip, comptime source: []const u8, comptime options: AssembleOptions) Output {
     var diags: ?Diagnostics = null;
-    return assemble_impl(source, &diags, options) catch |err| if (diags) |d|
-        @compileError(format_compile_error(d.message.slice(), source, d.index))
-    else
-        @compileError(err);
+    return assemble_impl(chip, source, &diags, options) catch |err| {
+        if (diags) |d|
+            @compileError(format_compile_error(d.message.slice(), source, d.index));
+        @compileError(@errorName(err));
+    };
 }
 
 test "tokenizer and encoder" {

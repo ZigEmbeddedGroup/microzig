@@ -107,6 +107,10 @@ pub fn main() !void {
 
         switch (program_args.cpu_arch) {
             .arm, .thumb => try writer.writeAll(
+                \\  .ARM.extab : {
+                \\      *(.ARM.extab* .gnu.linkonce.armextab.*)
+                \\  } >flash0
+                \\
                 \\  .ARM.exidx : {
                 \\      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
                 \\  } >flash0
@@ -133,6 +137,11 @@ pub fn main() !void {
             \\      *(.sbss*)
             \\      microzig_bss_end = .;
             \\  } > ram0
+            \\
+            \\  .flash_end :
+            \\  {
+            \\      microzig_flash_end = .;
+            \\  } > flash0
             \\
             \\  microzig_data_load_start = LOADADDR(.data);
             \\

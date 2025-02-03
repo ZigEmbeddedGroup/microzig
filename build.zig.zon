@@ -1,6 +1,6 @@
 .{
     .name = "microzig",
-    .version = "0.13.0",
+    .version = "0.13.2",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
@@ -12,7 +12,7 @@
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
         // ports
-        // .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
+        .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
         .@"port/microchip/atsam" = .{ .path = "port/microchip/atsam", .lazy = true },
         .@"port/microchip/avr" = .{ .path = "port/microchip/avr", .lazy = true },
@@ -24,8 +24,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer#a23c802f15deb848e6019580c01ba5a342ce7bc9",
-            .hash = "12201941f33c88dfebeb894d6693b94501cca0d7ce1f3e268fe2825723085ab93ba7",
+            .url = "git+https://github.com/mattnite/boxzer#a6a9150c2638ebd079f83ee90c6f9fc6adb16dbf",
+            .hash = "12204586b437ba1057f5ad16eb0c7392bc9534602bf435bf6c9a41cc5a8747630e65",
         },
     },
     .paths = .{
@@ -36,5 +36,19 @@
         "design",
         "docs",
         "tools/generate_linker_script.zig",
+        "tools",
+        "port",
+        "examples",
+        "build-internals",
+        "core",
+        "drivers",
+    },
+    .boxzer_ignore_paths = .{
+        "tools",
+        "port",
+        "examples",
+        "build-internals",
+        "core",
+        "drivers",
     },
 }

@@ -1,0 +1,15 @@
+.program movrx
+
+.wrap_target
+    mov rxfifoy, isr
+    mov rxfifo0, isr
+    mov rxfifo1, isr
+    mov rxfifo2, isr
+    mov rxfifo3, isr
+
+    mov osr, rxfifoy
+    mov osr, rxfifo0
+    mov osr, rxfifo1
+    mov osr, rxfifo2
+    mov osr, rxfifo3
+.wrap

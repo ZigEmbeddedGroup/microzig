@@ -1,31 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title id="title"><super>
-      - Zig Embedded Group</title>
+    <title id="title"><super>MicroZig</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="$page.description">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:description" content="$page.description">
-    <meta name="twitter:title" content="$page.title.suffix(' - Zig Embedded Group')">
+    <meta name="twitter:title" content="$page.title.suffix(' - MicroZig')">
     <meta property="og:title" content="$page.title">
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="$site.asset('style.css').link()">
     <link rel="icon" href="$site.asset('favicon.ico').link()" type="image/x-icon">
+    <script>
+      function navigateToVersion() {
+        const version = document.getElementById('versionSelect').value;
+        if (version) {
+          window.location.href = version;
+        }
+      }
+    </script>
   </head>
   <body>
-    <nav>
-      <ul class="navbar">
-        <li><a href="$site.page('index').link()">Home</a></li>
-        <li><a href="$site.page('about').link()">About</a></li>
-        <li><a href="$site.page('community').link()">Community</a></li>
-      </ul>
-    </nav>
-    <div id="main">
-      <super>
+    <div class="container">
+      <nav>
+        <div class="upper-header">
+          <img class="logo" src="$site.asset('logo-text-brightmode.svg').link()">
+        </div>
+        <hr>
+        <div class="navbar">
+          <a class="navlink" href="$site.page('/').link()">Home</a>
+          <a class="navlink" href="$site.page('community').link()">Community</a>
+          <a class="navlink" href="https://github.com/ZigEmbeddedGroup/microzig">Source Code</a>
+        </div>
+      </nav>
+      <div id="main">
+        <super>
+      </div>
+      <footer>
+      </footer>
     </div>
-    <footer>
-    </footer>
   </body>
 </html>

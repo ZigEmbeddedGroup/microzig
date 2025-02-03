@@ -18,7 +18,7 @@ const port_list: []const struct {
     name: [:0]const u8,
     dep_name: [:0]const u8,
 } = &.{
-    // .{ .name = "esp", .dep_name = "port/espressif/esp" },
+    .{ .name = "esp", .dep_name = "port/espressif/esp" },
     .{ .name = "gd32", .dep_name = "port/gigadevice/gd32" },
     .{ .name = "atsam", .dep_name = "port/microchip/atsam" },
     .{ .name = "avr", .dep_name = "port/microchip/avr" },
@@ -27,6 +27,15 @@ const port_list: []const struct {
     .{ .name = "rp2xxx", .dep_name = "port/raspberrypi/rp2xxx" },
     .{ .name = "stm32", .dep_name = "port/stmicro/stm32" },
     .{ .name = "ch32v", .dep_name = "port/wch/ch32v" },
+};
+
+const exe_targets: []const std.Target.Query = &.{
+    .{ .cpu_arch = .aarch64, .os_tag = .macos },
+    .{ .cpu_arch = .aarch64, .os_tag = .linux },
+    .{ .cpu_arch = .aarch64, .os_tag = .windows },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos },
+    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
 pub fn build(b: *Build) void {
@@ -54,6 +63,51 @@ pub fn build(b: *Build) void {
 
     const package_step = b.step("package", "Package monorepo using boxzer");
     package_step.dependOn(&boxzer_run.step);
+
+    generate_release_steps(b);
+}
+
+fn generate_release_steps(b: *Build) void {
+    const release_regz_step = b.step("release-regz", "Generate the release binaries for regz");
+    const release_uf2_step = b.step("release-uf2", "Generate the release binaries for uf2");
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const regz_dep = b.dependency("tools/regz", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const regz_artifact = regz_dep.artifact("regz");
+        const regz_target_output = b.addInstallArtifact(regz_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_regz_step.dependOn(&regz_target_output.step);
+    }
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const uf2_dep = b.dependency("tools/uf2", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const uf2_artifact = uf2_dep.artifact("elf2uf2");
+        const uf2_target_output = b.addInstallArtifact(uf2_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_uf2_step.dependOn(&uf2_target_output.step);
+    }
 }
 
 pub const PortSelect = blk: {
@@ -168,7 +222,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
         ports: SelectedPorts,
 
         const InitReturnType = blk: {
-            // TODO: idk if this is idiomatic
             @setEvalBranchQuota(2000);
 
             var ok = true;
@@ -243,11 +296,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `bundle_compiler_rt` property of the target.
             bundle_compiler_rt: ?bool = null,
 
-            /// If set, overrides the `hal` module.
-            hal: ?*Build.Module = null,
+            /// If set, overrides the `hal` property of the target.
+            hal: ?HardwareAbstractionLayer = null,
 
-            /// If set, overrides the `board` module.
-            board: ?*Build.Module = null,
+            /// If set, overrides the `board` property of the target.
+            board: ?Board = null,
 
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LazyPath = null,
@@ -295,12 +348,16 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
 
+            const maybe_hal = options.hal orelse target.hal;
+            const maybe_board = options.board orelse target.board;
+
             const config = b.addOptions();
-            config.addOption(bool, "has_hal", options.hal != null or target.hal != null);
-            config.addOption(bool, "has_board", options.board != null or target.board != null);
+            config.addOption(bool, "has_hal", maybe_hal != null);
+            config.addOption(bool, "has_board", maybe_board != null);
 
             config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
+            config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
             config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
 
             const core_mod = b.createModule(.{
@@ -326,12 +383,13 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{}).artifact("regz");
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .json, .atdf, .svd => |file| blk: {
+                .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
-                    regz_run.addArg("--schema"); // Explicitly set schema type, one of: svd, atdf, json
+                    regz_run.addArg("--microzig");
+                    regz_run.addArg("--format");
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file
@@ -369,8 +427,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             chip_mod.addImport("microzig", core_mod);
             core_mod.addImport("chip", chip_mod);
 
-            if (target.hal) |hal| {
-                const hal_mod = options.hal orelse b.createModule(.{
+            if (maybe_hal) |hal| {
+                const hal_mod = b.createModule(.{
                     .root_source_file = hal.root_source_file,
                     .imports = hal.imports,
                 });
@@ -378,8 +436,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 core_mod.addImport("hal", hal_mod);
             }
 
-            if (target.board) |board| {
-                const board_mod = options.board orelse b.createModule(.{
+            if (maybe_board) |board| {
+                const board_mod = b.createModule(.{
                     .root_source_file = board.root_source_file,
                     .imports = board.imports,
                 });
@@ -392,6 +450,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .imports = options.imports,
             });
             app_mod.addImport("microzig", core_mod);
+            core_mod.addImport("app", app_mod);
 
             const fw = mb.builder.allocator.create(Firmware) catch @panic("out of memory");
             fw.* = .{
@@ -404,6 +463,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .linkage = .static,
                     .root_source_file = mb.core_dep.path("src/start.zig"),
                     .strip = options.strip,
+                    .unwind_tables = true,
                 }),
                 .app_mod = app_mod,
                 .target = target,

@@ -7,14 +7,14 @@ const SIO = peripherals.SIO;
 const PADS_BANK0 = peripherals.PADS_BANK0;
 const IO_BANK0 = peripherals.IO_BANK0;
 
-const cpu = @import("compatibility.zig").cpu;
+const chip = @import("compatibility.zig").chip;
 
 const resets = @import("resets.zig");
 
 const log = std.log.scoped(.gpio);
 
 pub const Function =
-    switch (cpu) {
+    switch (chip) {
     .RP2040 => enum(u5) {
         xip = 0,
         spi,
@@ -91,7 +91,7 @@ pub const Pull = enum {
 };
 
 pub fn num(n: u6) Pin {
-    switch (cpu) {
+    switch (chip) {
         .RP2040 => {
             if (n > 29)
                 @panic("the RP2040 only has GPIO 0-29");
@@ -105,7 +105,7 @@ pub fn num(n: u6) Pin {
     return @as(Pin, @enumFromInt(n));
 }
 
-pub const mask = switch (cpu) {
+pub const mask = switch (chip) {
     .RP2040 => struct {
         pub fn mask(m: u30) Mask {
             return @as(Mask, @enumFromInt(m));
@@ -119,7 +119,7 @@ pub const mask = switch (cpu) {
 };
 
 pub const Mask =
-    switch (cpu) {
+    switch (chip) {
     .RP2040 => enum(u30) {
         _,
 
@@ -260,74 +260,44 @@ pub const Pin = enum(u6) {
     _,
 
     pub const Regs =
-        switch (cpu) {
+        switch (chip) {
         .RP2040 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: packed union {
-                    raw: u5,
-                    value: Function,
-                },
+                FUNCSEL: Function,
                 reserved8: u3,
-                OUTOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OUTOVER: Override,
                 reserved12: u2,
-                OEOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OEOVER: Override,
                 reserved16: u2,
-                INOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                INOVER: Override,
                 reserved28: u10,
-                IRQOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                IRQOVER: Override,
                 padding: u2,
             }),
         },
         .RP2350 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: packed union {
-                    raw: u5,
-                    value: Function,
-                },
+                FUNCSEL: Function,
                 reserved12: u7,
-                OUTOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
-                OEOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
-                INOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                OUTOVER: Override,
+                OEOVER: Override,
+                INOVER: Override,
                 reserved28: u10,
-                IRQOVER: packed union {
-                    raw: u2,
-                    value: Override,
-                },
+                IRQOVER: Override,
                 padding: u2,
             }),
         },
     };
 
-    pub const RegsArray = switch (cpu) {
+    pub const RegsArray = switch (chip) {
         .RP2040 => *volatile [30]Regs,
         .RP2350 => *volatile [48]Regs,
     };
 
     pub const PadsReg = @TypeOf(PADS_BANK0.GPIO0);
-    pub const PadsRegArray = switch (cpu) {
+    pub const PadsRegArray = switch (chip) {
         .RP2040 => *volatile [30]PadsReg,
         .RP2350 => *volatile [48]PadsReg,
     };
@@ -348,7 +318,7 @@ pub const Pin = enum(u6) {
     }
 
     pub fn mask(gpio: Pin) u32 {
-        const bitshift_val: u5 = switch (cpu) {
+        const bitshift_val: u5 = switch (chip) {
             .RP2040 => @intCast(@intFromEnum(gpio)),
             .RP2350 =>
             // There are seperate copies of registers for GPIO32->47 on RP2350,
@@ -369,7 +339,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn set_direction(gpio: Pin, direction: Direction) void {
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {
                 switch (direction) {
                     .in => SIO.GPIO_OE_CLR.raw = gpio.mask(),
@@ -394,7 +364,7 @@ pub const Pin = enum(u6) {
 
     /// Drive a single GPIO high/low
     pub inline fn put(gpio: Pin, value: u1) void {
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {
                 switch (value) {
                     0 => SIO.GPIO_OUT_CLR.raw = gpio.mask(),
@@ -418,7 +388,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn toggle(gpio: Pin) void {
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {
                 SIO.GPIO_OUT_XOR.raw = gpio.mask();
             },
@@ -433,7 +403,7 @@ pub const Pin = enum(u6) {
     }
 
     pub inline fn read(gpio: Pin) u1 {
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {
                 return if ((SIO.GPIO_IN.raw & gpio.mask()) != 0)
                     1
@@ -447,8 +417,7 @@ pub const Pin = enum(u6) {
                     else
                         0;
                 } else {
-                    // TODO: regz inconsistencies
-                    return if ((SIO.GPIO_IN & gpio.mask()) != 0)
+                    return if ((SIO.GPIO_IN.raw & gpio.mask()) != 0)
                         1
                     else
                         0;
@@ -471,14 +440,14 @@ pub const Pin = enum(u6) {
 
         const regs = gpio.get_regs();
         regs.ctrl.modify(.{
-            .FUNCSEL = .{ .value = function },
-            .OUTOVER = .{ .value = .normal },
-            .INOVER = .{ .value = .normal },
-            .IRQOVER = .{ .value = .normal },
-            .OEOVER = .{ .value = .normal },
+            .FUNCSEL = function,
+            .OUTOVER = .normal,
+            .INOVER = .normal,
+            .IRQOVER = .normal,
+            .OEOVER = .normal,
         });
 
-        switch (cpu) {
+        switch (chip) {
             .RP2040 => {},
             .RP2350 => {
                 // RP2350 added pad isolation that must be removed to actually connect the GPIO

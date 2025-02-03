@@ -3,6 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },
+        .uf2 = .{ .path = "../tools/uf2" },
     },
     .paths = .{
         "LICENSE",

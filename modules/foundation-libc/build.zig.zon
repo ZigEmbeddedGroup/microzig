@@ -1,0 +1,12 @@
+.{
+    .name = "foundation-libc",
+    .version = "0.0.0",
+    .paths = .{
+        "LICENSE",
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "include",
+        "src",
+    },
+}

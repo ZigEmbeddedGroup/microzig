@@ -1,6 +1,7 @@
 //!
 //! The driver framework provides device-independent drivers for peripherials supported by MicroZig.
 //!
+const std = @import("std");
 
 pub const display = struct {
     pub const ssd1306 = @import("display/ssd1306.zig");
@@ -33,6 +34,8 @@ pub const input = struct {
     };
 };
 
+pub const stepper = @import("stepper/stepper.zig");
+
 pub const IO_expander = struct {
     pub const pcf8574 = @import("io_expander/pcf8574.zig");
     pub const PCF8574 = pcf8574.PCF8574;
@@ -42,10 +45,132 @@ pub const wireless = struct {
     // pub const sx1278 = @import("wireless/sx1278.zig");
 };
 
+pub const time = struct {
+    ///
+    /// An absolute point in time since the startup of the device.
+    ///
+    /// NOTE: Using an enum to make it a distinct type, the underlying number is
+    ///       time since boot in microseconds.
+    ///
+    pub const Absolute = enum(u64) {
+        _,
+
+        pub fn from_us(us: u64) Absolute {
+            return @as(Absolute, @enumFromInt(us));
+        }
+
+        pub fn to_us(abs: Absolute) u64 {
+            return @intFromEnum(abs);
+        }
+
+        pub fn is_reached_by(deadline: Absolute, point: Absolute) bool {
+            return deadline.to_us() <= point.to_us();
+        }
+
+        pub fn diff(future: Absolute, past: Absolute) Duration {
+            return Duration.from_us(future.to_us() - past.to_us());
+        }
+
+        pub fn add_duration(abs: Absolute, dur: Duration) Absolute {
+            return Absolute.from_us(abs.to_us() + dur.to_us());
+        }
+    };
+
+    ///
+    /// A duration with microsecond precision.
+    ///
+    /// NOTE: Using an `enum` type here prevents type confusion with other
+    ///       related or unrelated integer-like types.
+    ///
+    pub const Duration = enum(u64) {
+        _,
+
+        pub fn from_us(us: u64) Duration {
+            return @as(Duration, @enumFromInt(us));
+        }
+
+        pub fn from_ms(ms: u64) Duration {
+            return from_us(1000 * ms);
+        }
+
+        pub fn to_us(duration: Duration) u64 {
+            return @intFromEnum(duration);
+        }
+
+        pub fn less_than(self: Duration, other: Duration) bool {
+            return self.to_us() < other.to_us();
+        }
+
+        pub fn minus(self: Duration, other: Duration) Duration {
+            return from_us(self.to_us() - other.to_us());
+        }
+
+        pub fn plus(self: Duration, other: Duration) Duration {
+            return from_us(self.to_us() + other.to_us());
+        }
+    };
+
+    ///
+    /// The deadline construct is a construct to create optional timeouts.
+    ///
+    /// NOTE: Deadlines use maximum possible `Absolute` time for
+    ///       marking the deadline as "unreachable", as this would mean the device
+    ///       would ever reach an uptime of over 500.000 years.
+    ///
+    pub const Deadline = struct {
+        const disabled_sentinel = Absolute.from_us(std.math.maxInt(u64));
+
+        timeout: Absolute,
+
+        /// Create a new deadline with an absolute end point.
+        ///
+        /// NOTE: `abs` must not point to the absolute maximum time stamp, as this is
+        ///       used as a sentinel for "unset" deadlines.
+        pub fn init_absolute(abs: ?Absolute) Deadline {
+            if (abs) |a|
+                std.debug.assert(a != disabled_sentinel);
+            return .{ .timeout = abs orelse disabled_sentinel };
+        }
+
+        /// Create a new deadline with a certain duration from provided time.
+        pub fn init_relative(since: Absolute, dur: ?Duration) Deadline {
+            return init_absolute(if (dur) |d|
+                make_timeout(since, d)
+            else
+                null);
+        }
+
+        /// Returns `true` if the deadline can be reached.
+        pub fn can_be_reached(deadline: Deadline) bool {
+            return (deadline.timeout != disabled_sentinel);
+        }
+
+        /// Returns `true` if the deadline is reached.
+        pub fn is_reached_by(deadline: Deadline, now: Absolute) bool {
+            return deadline.can_be_reached() and deadline.timeout.is_reached_by(now);
+        }
+
+        /// Checks if the deadline is reached and returns an error if so,
+        pub fn check(deadline: Deadline, now: Absolute) error{Timeout}!void {
+            if (deadline.is_reached_by(now))
+                return error.Timeout;
+        }
+    };
+
+    pub fn make_timeout(since: Absolute, timeout: Duration) Absolute {
+        return @as(Absolute, @enumFromInt(since.to_us() + timeout.to_us()));
+    }
+
+    pub fn make_timeout_us(since: Absolute, timeout_us: u64) Absolute {
+        return @as(Absolute, @enumFromInt(since.to_us() + timeout_us));
+    }
+};
+
 pub const base = struct {
     pub const Datagram_Device = @import("base/Datagram_Device.zig");
     pub const Stream_Device = @import("base/Stream_Device.zig");
     pub const Digital_IO = @import("base/Digital_IO.zig");
+    pub const Clock_Device = @import("base/Clock_Device.zig");
 };
 
 test {
@@ -57,7 +182,11 @@ test {
     _ = input.debounced_button;
     _ = input.rotary_encoder;
 
+    _ = stepper;
+
     _ = IO_expander.pcf8574;
+
+    _ = time;
 
     _ = base.Datagram_Device;
     _ = base.Stream_Device;

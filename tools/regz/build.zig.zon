@@ -8,12 +8,15 @@
         "build.zig.zon",
         "characterized",
         "src",
-        "tests",
     },
     .dependencies = .{
         .libxml2 = .{
             .url = "https://github.com/mattnite/zig-build-libxml2/archive/fab68b5fb06704ef4bdaa221726493a4b6af04b5.tar.gz",
             .hash = "122084531ab8ba877a0178fb177a61f6dc9bed56bdcdfb11ad362f352680c04d84cb",
+        },
+        .sqlite = .{
+            .url = "git+https://github.com/vrischmann/zig-sqlite.git#e4afe26b30e03ee5d8b61946893b19c2585745f8",
+            .hash = "122019ea6e071dbd932c3e51d9631d99f007240e3e08d5436a1da20ad088343ca4a7",
         },
     },
 }

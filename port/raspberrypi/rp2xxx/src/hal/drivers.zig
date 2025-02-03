@@ -7,10 +7,12 @@ const microzig = @import("microzig");
 const hal = @import("../hal.zig");
 
 const drivers = microzig.drivers.base;
+const time = microzig.drivers.time;
 
 const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
+const Clock_Device = drivers.Clock_Device;
 
 ///
 /// A datagram device attached to an I²C bus.
@@ -296,5 +298,28 @@ pub const GPIO_Device = struct {
     fn read_fn(io: *anyopaque) ReadError!State {
         const gpio: *GPIO_Device = @ptrCast(@alignCast(io));
         return try gpio.read();
+    }
+};
+
+///
+/// Implementation of a time device
+///
+// TODO What do we call this concrete implementation?
+pub const ClockDevice = struct {
+    pub fn clock_device(td: *ClockDevice) Clock_Device {
+        _ = td;
+        return Clock_Device{
+            .object = undefined,
+            .vtable = &vtable,
+        };
+    }
+    const vtable = Clock_Device.VTable{
+        .get_time_since_boot = get_time_since_boot_fn,
+    };
+
+    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
+        _ = td;
+        const t = hal.time.get_time_since_boot().to_us();
+        return @enumFromInt(t);
     }
 };
