@@ -27,6 +27,12 @@ pub const Patch = union(enum) {
         of: []const u8,
         to: []const u8,
     },
+    add_interrupt: struct {
+        device_name: []const u8,
+        idx: i32,
+        name: []const u8,
+        description: ?[]const u8,
+    },
 
     pub fn from_json_str(allocator: Allocator, json_str: []const u8) !std.json.Parsed(Patch) {
         return std.json.parseFromSlice(Patch, allocator, json_str, .{});

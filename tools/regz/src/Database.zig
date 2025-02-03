@@ -1071,6 +1071,17 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                         db.destroy_entity(old_id);
                 }
             },
+            .add_interrupt => |add_interrupt| {
+                const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                _ = try db.create_interrupt(device_id, .{
+                    .name = add_interrupt.name,
+                    .description = add_interrupt.description,
+                    .idx = add_interrupt.idx,
+                });
+            },
         }
     }
 }
