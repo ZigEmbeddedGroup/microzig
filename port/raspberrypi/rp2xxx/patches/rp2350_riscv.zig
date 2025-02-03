@@ -48,6 +48,16 @@ pub const patches = &.{
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP15_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .add_interrupt = .{
         .device_name = "RP2350",
+        .idx = 40,
+        .name = "PROC0_IRQ_CTI",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 41,
+        .name = "PROC1_IRQ_CTI",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
         .idx = 46,
         .name = "SPAREIRQ_IRQ_0",
         .description = "Spare interrupt 0 (triggered only by software)",
