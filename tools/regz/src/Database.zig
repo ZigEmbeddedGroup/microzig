@@ -2027,6 +2027,17 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
                 try db.set_register_field_enum_id(register_id, field_name, enum_id);
                 try db.cleanup_unused_enums();
             },
+            .add_interrupt => |add_interrupt| {
+                const device_id = try db.get_device_id_by_name(add_interrupt.device_name) orelse {
+                    return error.DeviceNotFound;
+                };
+
+                _ = try db.create_interrupt(device_id, .{
+                    .name = add_interrupt.name,
+                    .description = add_interrupt.description,
+                    .idx = add_interrupt.idx,
+                });
+            },
         }
     }
 }

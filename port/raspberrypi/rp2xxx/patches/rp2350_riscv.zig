@@ -1,19 +1,21 @@
 pub const patches = &.{
-    .{
-        .add_enum = .{
-            .parent = "types.peripherals.USB_DPRAM",
-            .@"enum" = .{
-                .name = "EndpointType",
-                .bitsize = 2,
-                .fields = &.{
-                    .{ .value = 0x0, .name = "control" },
-                    .{ .value = 0x1, .name = "isochronous" },
-                    .{ .value = 0x2, .name = "bulk" },
-                    .{ .value = 0x3, .name = "interrupt" },
-                },
+    .{ .override_arch = .{
+        .device_name = "RP2350",
+        .arch = .hazard3,
+    } },
+    .{ .add_enum = .{
+        .parent = "types.peripherals.USB_DPRAM",
+        .@"enum" = .{
+            .name = "EndpointType",
+            .bitsize = 2,
+            .fields = &.{
+                .{ .value = 0x0, .name = "control" },
+                .{ .value = 0x1, .name = "isochronous" },
+                .{ .value = 0x2, .name = "bulk" },
+                .{ .value = 0x3, .name = "interrupt" },
             },
         },
-    },
+    } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP1_IN_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP1_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP2_IN_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
@@ -44,4 +46,50 @@ pub const patches = &.{
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP14_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP15_IN_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.USB_DPRAM.EP15_OUT_CONTROL.ENDPOINT_TYPE", .to = "types.peripherals.USB_DPRAM.EndpointType" } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 40,
+        .name = "PROC0_IRQ_CTI",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 41,
+        .name = "PROC1_IRQ_CTI",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 46,
+        .name = "SPAREIRQ_IRQ_0",
+        .description = "Spare interrupt 0 (triggered only by software)",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 47,
+        .name = "SPAREIRQ_IRQ_1",
+        .description = "Spare interrupt 1 (triggered only by software)",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 48,
+        .name = "SPAREIRQ_IRQ_2",
+        .description = "Spare interrupt 2 (triggered only by software)",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 49,
+        .name = "SPAREIRQ_IRQ_3",
+        .description = "Spare interrupt 3 (triggered only by software)",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 50,
+        .name = "SPAREIRQ_IRQ_4",
+        .description = "Spare interrupt 4 (triggered only by software)",
+    } },
+    .{ .add_interrupt = .{
+        .device_name = "RP2350",
+        .idx = 51,
+        .name = "SPAREIRQ_IRQ_5",
+        .description = "Spare interrupt 5 (triggered only by software)",
+    } },
 };

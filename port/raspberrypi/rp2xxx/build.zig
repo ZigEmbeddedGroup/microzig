@@ -62,14 +62,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .cpu_arch = .thumb,
                 .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
                 .os_tag = .freestanding,
-                .abi = .eabi,
+                .abi = .eabihf,
             },
             .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
-            .patches = @import("patches/rp2350.zig").patches,
+            .patches = @import("patches/rp2350_arm.zig").patches,
         },
         .hal = hal,
         .linker_script = b.path("rp2350_arm.ld"),
@@ -105,14 +105,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
             },
-            .patches = &.{
-                .{
-                    .override_arch = .{
-                        .device_name = "RP2350",
-                        .arch = .hazard3,
-                    },
-                },
-            },
+            .patches = @import("patches/rp2350_riscv.zig").patches,
         },
         .hal = hal,
         .linker_script = b.path("rp2350_riscv.ld"),
