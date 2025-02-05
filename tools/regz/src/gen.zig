@@ -45,6 +45,17 @@ pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
             \\
         );
     }
+
+    try writer.writeAll(
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
+    );
+
     try write_devices(db, allocator, writer);
     try write_types(db, allocator, writer);
     try writer.writeByte(0);
@@ -165,6 +176,9 @@ fn write_device(db: *Database, arena: Allocator, device: *const Database.Device,
         try writer.writeAll("};\n");
     }
 
+    write_interrupt_list(db, arena, device, writer) catch |err|
+        log.warn("failed to write interrupt list: {}", .{err});
+
     write_vector_table(db, arena, device, writer) catch |err|
         log.warn("failed to write vector table: {}", .{err});
 
@@ -257,6 +271,42 @@ fn types_reference(db: *Database, allocator: Allocator, type_id: TypeID) ![]cons
 
     log.debug("generated type ref: {s}", .{full_name.items});
     return full_name.toOwnedSlice();
+}
+
+fn write_interrupt_list(
+    db: *Database,
+    arena: Allocator,
+    device: *const Device,
+    out_writer: anytype,
+) !void {
+    var buffer = std.ArrayList(u8).init(arena);
+    defer buffer.deinit();
+
+    const writer = buffer.writer();
+
+    const interrupts = try db.get_interrupts(arena, device.id);
+
+    try writer.print(
+        \\
+        \\pub const INTERRUPTS: [{}]Interrupt = .{{
+        \\
+    , .{interrupts.len});
+
+    for (interrupts) |interrupt| {
+        try writer.writeAll(".{ .name = ");
+        try write_string(interrupt.name, writer);
+        try writer.print(", .index = {}, .description = ", .{interrupt.idx});
+        if (interrupt.description) |description| {
+            try write_string(description, writer);
+        } else {
+            try writer.writeAll("null");
+        }
+        try writer.writeAll(" },\n");
+    }
+
+    try writer.writeAll("};\n");
+
+    try out_writer.writeAll(buffer.items);
 }
 
 fn write_vector_table(

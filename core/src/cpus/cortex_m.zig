@@ -1,7 +1,12 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
+const app = microzig.app;
 const root = @import("root");
+
+pub const Interrupt = microzig.utilities.GenerateInterruptEnum();
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(fn () callconv(.C) void, .{Interrupt});
+const interrupts: InterruptOptions = if (@hasDecl(app, "interrupts")) app.interrupts else .{};
 
 pub fn executing_isr() bool {
     return peripherals.scb.ICSR.read().VECTACTIVE != 0;
@@ -13,6 +18,42 @@ pub fn enable_interrupts() void {
 
 pub fn disable_interrupts() void {
     asm volatile ("cpsid i");
+}
+
+pub fn enable(comptime interrupt: anytype) void {
+    const interrupt_name = @tagName(interrupt);
+    if (@hasField(Interrupt, interrupt_name)) {
+        const num = @intFromEnum(@field(Interrupt, interrupt_name));
+        if (num >= 0) {
+            peripherals.nvic.unmask(num);
+        } else {
+            @compileError("can't enable exception: " ++ interrupt_name);
+        }
+    } else {
+        @compileError("interrupt not found: " ++ interrupt_name);
+    }
+}
+
+pub fn disable(comptime interrupt: anytype) void {
+    const interrupt_name = @tagName(interrupt);
+    if (@hasField(Interrupt, interrupt_name)) {
+        const num = @intFromEnum(@field(Interrupt, interrupt_name));
+        if (num >= 0) {
+            peripherals.nvic.mask(num);
+        } else {
+            @compileError("can't disable exception: " ++ interrupt_name);
+        }
+    } else {
+        @compileError("interrupt not found: " ++ interrupt_name);
+    }
+}
+
+pub fn globally_enabled() bool {
+    var mrs: u32 = undefined;
+    asm volatile ("mrs %[mrs], 16"
+        : [mrs] "+r" (mrs),
+    );
+    return mrs & 0x1 == 0;
 }
 
 pub fn enable_fault_irq() void {
@@ -82,63 +123,34 @@ pub const startup_logic = struct {
 
         microzig_main();
     }
+
+    const VectorTable = microzig.chip.VectorTable;
+
+    // will be imported by microzig.zig to allow system startup.
+    pub const _vector_table: VectorTable = blk: {
+        var tmp: VectorTable = .{
+            .initial_stack_pointer = microzig.config.end_of_stack,
+            .Reset = microzig.cpu.startup_logic._start,
+        };
+
+        for (@typeInfo(@TypeOf(app.interrupts)).Struct.fields) |field| {
+            @field(tmp, field.name) = @field(app.interrupts, field.name);
+        }
+
+        break :blk tmp;
+    };
 };
 
 pub fn export_startup_logic() void {
     @export(startup_logic._start, .{
         .name = "_start",
     });
-}
 
-fn is_valid_field(field_name: []const u8) bool {
-    return !std.mem.startsWith(u8, field_name, "reserved") and
-        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
-        !std.mem.eql(u8, field_name, "reset");
-}
-
-const VectorTable = microzig.chip.VectorTable;
-
-// will be imported by microzig.zig to allow system startup.
-pub const vector_table: VectorTable = blk: {
-    var tmp: VectorTable = .{
-        .initial_stack_pointer = microzig.config.end_of_stack,
-        .Reset = .{ .C = microzig.cpu.startup_logic._start },
-    };
-
-    if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
-            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
-    }
-
-    break :blk tmp;
-};
-
-fn create_interrupt_vector(
-    comptime function: anytype,
-) microzig.interrupt.Handler {
-    const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
-    return switch (calling_convention) {
-        .C => .{ .C = function },
-        .Naked => .{ .Naked = function },
-        // for unspecified calling convention we are going to generate small wrapper
-        .Unspecified => .{
-            .C = struct {
-                fn wrapper() callconv(.C) void {
-                    if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
-                        @call(.always_inline, function, .{});
-                }
-            }.wrapper,
-        },
-
-        else => |val| {
-            const conv_name = inline for (std.meta.fields(std.builtin.CallingConvention)) |field| {
-                if (val == @field(std.builtin.CallingConvention, field.name))
-                    break field.name;
-            } else unreachable;
-
-            @compileError("unsupported calling convention for interrupt vector: " ++ conv_name);
-        },
-    };
+    @export(startup_logic._vector_table, .{
+        .name = "_vector_table",
+        .section = "microzig_flash_start",
+        .linkage = .strong,
+    });
 }
 
 const scs_base = 0xE000E000;
