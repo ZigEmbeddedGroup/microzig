@@ -295,7 +295,7 @@ const function_table = [@typeInfo(Function).Enum.fields.len][30]u1{
     list(&.{ 9, 13, 25, 29 }), // SPI1_CSn
     list(&.{ 10, 14, 26 }), // SPI1_SCK
     list(&.{ 11, 15, 27 }), // SPI1_TX
-    list(&.{ 0, 11, 16, 28 }), // UART0_TX
+    list(&.{ 0, 12, 16, 28 }), // UART0_TX
     list(&.{ 1, 13, 17, 29 }), // UART0_RX
     list(&.{ 2, 14, 18 }), // UART0_CTS
     list(&.{ 3, 15, 19 }), // UART0_RTS
