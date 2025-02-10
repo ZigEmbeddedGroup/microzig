@@ -12,8 +12,27 @@
 //! 5. Miscellaneous Functions
 
 const std = @import("std");
+const builtin = @import("builtin");
 const microzig = @import("microzig");
 const chip = microzig.hal.compatibility.chip;
+
+pub const rom_func_table_ptr: usize = switch (builtin.cpu.arch) {
+    .thumb => 0x00000014,
+    .riscv32 => 0x00007df6,
+    else => @compileError("unsupported architecture"),
+};
+
+pub const rom_table_lookup_val_ptr: usize = switch (builtin.cpu.arch) {
+    .thumb => 0x00000016,
+    .riscv32 => 0x00007df8,
+    else => @compileError("unsupported architecture"),
+};
+
+pub const rom_table_lookup_entry_ptr: usize = switch (builtin.cpu.arch) {
+    .thumb => 0x00000018,
+    .riscv32 => 0x00007dfa,
+    else => @compileError("unsupported architecture"),
+};
 
 /// Function codes to lookup public functions that provide useful RP2040 functionality
 pub const Code = enum(u16) {
@@ -179,7 +198,7 @@ pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub fn rom_func_lookup(code: Code) *RomFuncPtr {
-    const rom_table_lookup: *fn (table: [*]u16, code: u32) *RomFuncPtr = @ptrCast(rom_hword_as_ptr(0x18));
+    const rom_table_lookup: *fn (table: [*]u16, code: u32) *RomFuncPtr = @ptrCast(rom_hword_as_ptr(rom_table_lookup_entry_ptr));
     const func_table: [*]u16 = @ptrCast(@alignCast(rom_hword_as_ptr(0x14)));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
