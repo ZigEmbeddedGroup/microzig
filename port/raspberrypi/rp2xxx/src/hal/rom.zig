@@ -100,19 +100,19 @@ pub const Code = enum(u16) {
     /// This methods helps the debugger call ROM routines without setting hardware breakpoints. The function
     /// address is passed in r7 and args are passed through r0 … r3 as per ABI.
     /// This method does not return but executes a BKPT #0 at the end
-    debug_trampoline = rom_table_code('D', 'T'),
+    debug_trampoline = rom_table_code('D', 'T'), // Only avaiable on: RP2040
 
     /// This is the address of the final BKPT #0 instruction of debug_trampoline. This can be compared with the
     /// program counter to detect completion of the debug_trampoline call
-    debug_trampoline_end = rom_table_code('D', 'E'),
+    debug_trampoline_end = rom_table_code('D', 'E'), // Only avaiable on: RP2040
 
     /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
-    reset_to_usb_boot = rom_table_code('U', 'B'),
+    reset_to_usb_boot = rom_table_code('U', 'B'), // Only avaiable on: RP2040, a more capable alternative is available
 
     /// This is the method that is entered by core 1 on reset to wait to be launched by core 0. There are few
     /// cases where you should call this method (resetting core 1 is much better). This method does not return
     /// and should only ever be called on core 1
-    wait_for_vector = rom_table_code('W', 'V'),
+    wait_for_vector = rom_table_code('W', 'V'), // Only avaiable on: RP2040 (?)
 
     /// Signatures of all public bootrom functions
     pub fn signature(self: @This()) type {
@@ -377,13 +377,19 @@ pub inline fn flash_enter_cmd_xip() *const Code.flash_enter_cmd_xip.signature() 
 /// address is passed in r7 and args are passed through r0 … r3 as per ABI.
 /// This method does not return but executes a BKPT #0 at the end
 pub inline fn debug_trampoline() *const Code.debug_trampoline.signature() {
-    return _rom_func_lookup(Code.debug_trampoline);
+    switch (chip) {
+        .RP2040 => return _rom_func_lookup(Code.debug_trampoline),
+        .RP2350 => @compileError("not available on RP2350"),
+    }
 }
 
 /// This is the address of the final BKPT #0 instruction of debug_trampoline. This can be compared with the
 /// program counter to detect completion of the debug_trampoline call
 pub inline fn debug_trampoline_end() *const Code.debug_trampoline_end.signature() {
-    return _rom_func_lookup(Code.debug_trampoline_end);
+    switch (chip) {
+        .RP2040 => return _rom_func_lookup(Code.debug_trampoline_end),
+        .RP2350 => @compileError("not available on RP2350"),
+    }
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -392,12 +398,18 @@ pub inline fn debug_trampoline_end() *const Code.debug_trampoline_end.signature(
 
 /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
 pub inline fn reset_to_usb_boot() *const Code.reset_to_usb_boot.signature() {
-    return _rom_func_lookup(Code.reset_to_usb_boot);
+    switch (chip) {
+        .RP2040 => return _rom_func_lookup(Code.reset_to_usb_boot),
+        .RP2350 => @compileError("not available on RP2350"),
+    }
 }
 
 /// This is the method that is entered by core 1 on reset to wait to be launched by core 0. There are few
 /// cases where you should call this method (resetting core 1 is much better). This method does not return
 /// and should only ever be called on core 1
 pub inline fn wait_for_vector() *const Code.wait_for_vector.signature() {
-    return _rom_func_lookup(Code.wait_for_vector);
+    switch (chip) {
+        .RP2040 => return _rom_func_lookup(Code.wait_for_vector),
+        .RP2350 => @compileError("not available on RP2350"),
+    }
 }
