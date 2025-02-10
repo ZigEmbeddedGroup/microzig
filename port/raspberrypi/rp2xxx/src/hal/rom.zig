@@ -120,6 +120,7 @@ pub const Code = enum(u16) {
     }
 };
 
+/// Union of all possible function signatures returned by flash lookup
 pub const RomFuncPtr = blk: {
     var ret = @typeInfo(extern union {}).Union;
     for (@typeInfo(Code).Enum.fields) |fld| {
@@ -166,7 +167,7 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
-    return @ptrCast(@call(.always_inline, rom_func_lookup, .{code}));
+    return @field(@call(.always_inline, rom_func_lookup, .{code}), @tagName(code));
 }
 
 /// Lookup a bootrom function by code
