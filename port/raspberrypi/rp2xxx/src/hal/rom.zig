@@ -125,28 +125,18 @@ pub const Code = enum(u16) {
             .memset4 => fn (ptr: [*]u32, c: u8, n: u32) callconv(.C) [*]u32,
             .memcpy => fn (dest: [*]u8, src: [*]const u8, n: u32) callconv(.C) [*]u8,
             .memcpy44 => fn (dest: [*]u32, src: [*]const u32, n: u32) callconv(.C) [*]u8,
-            .connect_internal_flash => fn () callconv(.C) void,
-            .flash_exit_xip => fn () callconv(.C) void,
+            .connect_internal_flash => fn () void,
+            .flash_exit_xip => fn () void,
             .flash_range_erase => fn (addr: u32, count: usize, block_size: u32, block_cmd: u8) callconv(.C) void,
             .flash_range_program => fn (addr: u32, data: [*]const u8, count: usize) callconv(.C) void,
-            .flash_flush_cache => fn () callconv(.C) void,
-            .flash_enter_cmd_xip => fn () callconv(.C) void,
+            .flash_flush_cache => fn () void,
+            .flash_enter_cmd_xip => fn () void,
             .debug_trampoline => fn () callconv(.C) void,
             .debug_trampoline_end => fn () callconv(.C) void,
             .reset_to_usb_boot => fn (gpio_activity_pin_mask: u32, disable_interface_mask: DisableInterfaceMask) callconv(.C) noreturn,
             .wait_for_vector => fn () callconv(.C) noreturn,
         };
     }
-};
-
-/// Union of all possible function signatures returned by flash lookup
-pub const RomFuncPtr = blk: {
-    var ret = @typeInfo(extern union {}).Union;
-    for (@typeInfo(Code).Enum.fields) |fld| {
-        const sig = *const @field(Code, fld.name).signature();
-        ret.fields = ret.fields ++ .{.{ .name = fld.name, .type = sig, .alignment = @alignOf(sig) }};
-    }
-    break :blk @Type(.{ .Union = ret });
 };
 
 /// Return a bootrom lookup code based on two ASCII characters
@@ -172,21 +162,9 @@ pub fn rom_table_code(c1: u8, c2: u8) u16 {
 /// # Returns
 ///
 /// The converted pointer
-pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
+pub inline fn rom_hword_as_ptr(rom_addr: u32) *const anyopaque {
     const ptr_to_ptr: *u16 = @ptrFromInt(rom_addr);
     return @ptrFromInt(ptr_to_ptr.*);
-}
-
-/// Lookup a bootrom function by code (comptime)
-///
-/// # Parameters
-/// * `code` - code of the function (see codes)
-///
-/// # Returns
-///
-/// A anyopaque pointer to the function; must be cast by the caller
-pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
-    return @ptrCast(@call(.always_inline, rom_func_lookup, .{code}));
 }
 
 /// Lookup a bootrom function by code
@@ -197,9 +175,9 @@ pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
 /// # Returns
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
-pub fn rom_func_lookup(code: Code) *RomFuncPtr {
-    const rom_table_lookup: *fn (table: [*]u16, code: u32) *RomFuncPtr = @ptrCast(rom_hword_as_ptr(rom_table_lookup_entry_ptr));
-    const func_table: [*]u16 = @ptrCast(@alignCast(rom_hword_as_ptr(rom_func_table_ptr)));
+pub fn rom_func_lookup(code: Code) *const anyopaque {
+    const rom_table_lookup: *const fn (table: [*]const u16, code: u32) *const anyopaque = @ptrCast(rom_hword_as_ptr(rom_table_lookup_entry_ptr));
+    const func_table: [*]const u16 = @ptrCast(@alignCast(rom_hword_as_ptr(rom_func_table_ptr)));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
 
@@ -216,7 +194,11 @@ pub fn popcount32(value: u32) u32 {
     switch (chip) {
         .RP2040 => {
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.popcount32);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.popcount32},
+                ));
             return S.f.?(value);
         },
         .RP2350 => return @popCount(value),
@@ -232,7 +214,11 @@ pub fn reverse32(value: u32) u32 {
     switch (chip) {
         .RP2040 => {
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.reverse32);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.reverse32},
+                ));
             return S.f.?(value);
         },
         // RP2350, supports fast assembly version
@@ -249,7 +235,11 @@ pub fn clz32(value: u32) u32 {
     switch (chip) {
         .RP2040 => {
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.clz32);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.clz32},
+                ));
             return S.f.?(value);
         },
         // RP2350, supports fast assembly version
@@ -266,7 +256,11 @@ pub fn ctz32(value: u32) u32 {
     switch (chip) {
         .RP2040 => {
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.ctz32);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.ctz32},
+                ));
             return S.f.?(value);
         },
         // RP2350, supports fast assembly version
@@ -287,7 +281,11 @@ pub fn memset(dest: []u8, c: u8) []u8 {
     switch (chip) {
         .RP2040 => {
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.memset);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.memset},
+                ));
             return S.f.?(dest.ptr, c, dest.len)[0..dest.len];
         },
         .RP2350 => {
@@ -307,7 +305,11 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
         .RP2040 => {
             const n = @min(dest.len, src.len);
             if (S.f == null)
-                S.f = _rom_func_lookup(Code.memcpy);
+                S.f = @ptrCast(@call(
+                    .always_inline,
+                    rom_func_lookup,
+                    .{Code.memcpy},
+                ));
             return S.f.?(dest.ptr, src.ptr, n)[0..n];
         },
         // For some reason @memcpy crash chip with HardFault interrupt (UNALIGNED)
@@ -324,7 +326,7 @@ pub fn memcpy(dest: []u8, src: []const u8) []u8 {
 
 /// Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads
 pub inline fn connect_internal_flash() *const Code.connect_internal_flash.signature() {
-    return _rom_func_lookup(Code.connect_internal_flash);
+    return @ptrCast(rom_func_lookup(Code.connect_internal_flash));
 }
 
 /// First set up the SSI for serial-mode operations, then issue the fixed XIP exit
@@ -333,7 +335,7 @@ pub inline fn connect_internal_flash() *const Code.connect_internal_flash.signat
 /// SSI to XIP mode (e.g. by a call to _flash_flush_cache). This function configures
 /// the SSI with a fixed SCK clock divisor of /6.
 pub inline fn flash_exit_xip() *const Code.flash_exit_xip.signature() {
-    return _rom_func_lookup(Code.flash_exit_xip);
+    return @ptrCast(rom_func_lookup(Code.flash_exit_xip));
 }
 
 /// Erase a count bytes, starting at addr (offset from start of flash). Optionally,
@@ -342,20 +344,20 @@ pub inline fn flash_exit_xip() *const Code.flash_exit_xip.signature() {
 /// possible, for much higher erase speed. addr must be aligned to a 4096-byte sector,
 /// and count must be a multiple of 4096 bytes.
 pub inline fn flash_range_erase() *const Code.flash_range_erase.signature() {
-    return _rom_func_lookup(Code.flash_range_erase);
+    return @ptrCast(rom_func_lookup(Code.flash_range_erase));
 }
 
 /// Program data to a range of flash addresses starting at addr (offset from the
 /// start of flash) and count bytes in size. addr must be aligned to a 256-byte
 /// boundary, and the length of data must be a multiple of 256.
 pub inline fn flash_range_program() *const Code.flash_range_program.signature() {
-    return _rom_func_lookup(Code.flash_range_program);
+    return @ptrCast(rom_func_lookup(Code.flash_range_program));
 }
 
 /// Flush and enable the XIP cache. Also clears the IO forcing on QSPI CSn, so that
 /// the SSI can drive the flash chip select as normal.
 pub inline fn flash_flush_cache() *const Code.flash_flush_cache.signature() {
-    return _rom_func_lookup(Code.flash_flush_cache);
+    return @ptrCast(rom_func_lookup(Code.flash_flush_cache));
 }
 
 /// Configure the SSI to generate a standard 03h serial read command, with 24 address
@@ -365,7 +367,7 @@ pub inline fn flash_flush_cache() *const Code.flash_flush_cache.signature() {
 /// visible to the debug host, without having to know exactly what kind of flash
 /// device is connected.
 pub inline fn flash_enter_cmd_xip() *const Code.flash_enter_cmd_xip.signature() {
-    return _rom_func_lookup(Code.flash_enter_cmd_xip);
+    return @ptrCast(rom_func_lookup(Code.flash_enter_cmd_xip));
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -378,7 +380,7 @@ pub inline fn flash_enter_cmd_xip() *const Code.flash_enter_cmd_xip.signature() 
 /// This method does not return but executes a BKPT #0 at the end
 pub inline fn debug_trampoline() *const Code.debug_trampoline.signature() {
     switch (chip) {
-        .RP2040 => return _rom_func_lookup(Code.debug_trampoline),
+        .RP2040 => return @ptrCast(rom_func_lookup(Code.debug_trampoline)),
         .RP2350 => @compileError("not available on RP2350"),
     }
 }
@@ -387,7 +389,7 @@ pub inline fn debug_trampoline() *const Code.debug_trampoline.signature() {
 /// program counter to detect completion of the debug_trampoline call
 pub inline fn debug_trampoline_end() *const Code.debug_trampoline_end.signature() {
     switch (chip) {
-        .RP2040 => return _rom_func_lookup(Code.debug_trampoline_end),
+        .RP2040 => return @ptrCast(rom_func_lookup(Code.debug_trampoline_end)),
         .RP2350 => @compileError("not available on RP2350"),
     }
 }
@@ -399,7 +401,7 @@ pub inline fn debug_trampoline_end() *const Code.debug_trampoline_end.signature(
 /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
 pub inline fn reset_to_usb_boot() *const Code.reset_to_usb_boot.signature() {
     switch (chip) {
-        .RP2040 => return _rom_func_lookup(Code.reset_to_usb_boot),
+        .RP2040 => return @ptrCast(rom_func_lookup(Code.reset_to_usb_boot)),
         .RP2350 => @compileError("not available on RP2350"),
     }
 }
@@ -409,7 +411,7 @@ pub inline fn reset_to_usb_boot() *const Code.reset_to_usb_boot.signature() {
 /// and should only ever be called on core 1
 pub inline fn wait_for_vector() *const Code.wait_for_vector.signature() {
     switch (chip) {
-        .RP2040 => return _rom_func_lookup(Code.wait_for_vector),
+        .RP2040 => return @ptrCast(rom_func_lookup(Code.wait_for_vector)),
         .RP2350 => @compileError("not available on RP2350"),
     }
 }
