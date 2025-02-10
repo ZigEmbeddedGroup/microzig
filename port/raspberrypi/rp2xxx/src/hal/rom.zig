@@ -8,8 +8,8 @@
 //! 1. Fast Bit Counting / Manipulation Functions
 //! 2. Fast Bulk Memory Fill / Copy Functions
 //! 3. Flash Access Functions
-//! 4. Debugging Support Functions (TODO)
-//! 5. Miscellaneous Functions (TODO)
+//! 4. Debugging Support Functions
+//! 5. Miscellaneous Functions
 
 const std = @import("std");
 const microzig = @import("microzig");
@@ -17,6 +17,12 @@ const chip = microzig.hal.compatibility.chip;
 
 /// Function codes to lookup public functions that provide useful RP2040 functionality
 pub const Code = enum(u16) {
+    pub const DisableInterfaceMask = enum(u32) {
+        enable_all = 0,
+        disable_mass_storage = 1,
+        disable_picoboot = 2,
+    };
+
     /// Return a count of the number of 1 bits in value
     popcount32 = rom_table_code('P', '3'), // Only avaiable on: RP2040
 
@@ -71,6 +77,24 @@ pub const Code = enum(u16) {
     /// connected.
     flash_enter_cmd_xip = rom_table_code('C', 'X'),
 
+    /// Simple debugger trampoline for break-on-return.
+    /// This methods helps the debugger call ROM routines without setting hardware breakpoints. The function
+    /// address is passed in r7 and args are passed through r0 … r3 as per ABI.
+    /// This method does not return but executes a BKPT #0 at the end
+    debug_trampoline = rom_table_code('D', 'T'),
+
+    /// This is the address of the final BKPT #0 instruction of debug_trampoline. This can be compared with the
+    /// program counter to detect completion of the debug_trampoline call
+    debug_trampoline_end = rom_table_code('D', 'E'),
+
+    /// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
+    reset_to_usb_boot = rom_table_code('U', 'B'),
+
+    /// This is the method that is entered by core 1 on reset to wait to be launched by core 0. There are few
+    /// cases where you should call this method (resetting core 1 is much better). This method does not return
+    /// and should only ever be called on core 1
+    wait_for_vector = rom_table_code('W', 'V'),
+
     /// Signatures of all public bootrom functions
     pub fn signature(self: @This()) type {
         return switch (self) {
@@ -88,12 +112,15 @@ pub const Code = enum(u16) {
             .flash_range_program => fn (addr: u32, data: [*]const u8, count: usize) callconv(.C) void,
             .flash_flush_cache => fn () callconv(.C) void,
             .flash_enter_cmd_xip => fn () callconv(.C) void,
-            .reset_usb_boot => fn (u32, u32) callconv(.C) noreturn,
+            .debug_trampoline => fn () callconv(.C) void,
+            .debug_trampoline_end => fn () callconv(.C) void,
+            .reset_to_usb_boot => fn (gpio_activity_pin_mask: u32, disable_interface_mask: DisableInterfaceMask) callconv(.C) noreturn,
+            .wait_for_vector => fn () callconv(.C) noreturn,
         };
     }
 };
 
-const RomFuncPtr = blk: {
+pub const RomFuncPtr = blk: {
     var ret = @typeInfo(extern union {}).Union;
     for (@typeInfo(Code).Enum.fields) |fld| {
         const sig = *const @field(Code, fld.name).signature();
@@ -319,4 +346,38 @@ pub inline fn flash_flush_cache() *const Code.flash_flush_cache.signature() {
 /// device is connected.
 pub inline fn flash_enter_cmd_xip() *const Code.flash_enter_cmd_xip.signature() {
     return _rom_func_lookup(Code.flash_enter_cmd_xip);
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Debugging Support Functions (Datasheet p. 137)
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/// Simple debugger trampoline for break-on-return.
+/// This methods helps the debugger call ROM routines without setting hardware breakpoints. The function
+/// address is passed in r7 and args are passed through r0 … r3 as per ABI.
+/// This method does not return but executes a BKPT #0 at the end
+pub inline fn debug_trampoline() *const Code.debug_trampoline.signature() {
+    return _rom_func_lookup(Code.debug_trampoline);
+}
+
+/// This is the address of the final BKPT #0 instruction of debug_trampoline. This can be compared with the
+/// program counter to detect completion of the debug_trampoline call
+pub inline fn debug_trampoline_end() *const Code.debug_trampoline_end.signature() {
+    return _rom_func_lookup(Code.debug_trampoline_end);
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Miscellaneous Functions (Datasheet p. 137)
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/// Resets the RP2040 and uses the watchdog facility to re-start in BOOTSEL mode:
+pub inline fn reset_to_usb_boot() *const Code.reset_to_usb_boot.signature() {
+    return _rom_func_lookup(Code.reset_to_usb_boot);
+}
+
+/// This is the method that is entered by core 1 on reset to wait to be launched by core 0. There are few
+/// cases where you should call this method (resetting core 1 is much better). This method does not return
+/// and should only ever be called on core 1
+pub inline fn wait_for_vector() *const Code.wait_for_vector.signature() {
+    return _rom_func_lookup(Code.wait_for_vector);
 }
