@@ -186,7 +186,7 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
-    return @field(@call(.always_inline, rom_func_lookup, .{code}), @tagName(code));
+    return @ptrCast(@call(.always_inline, rom_func_lookup, .{code}));
 }
 
 /// Lookup a bootrom function by code
@@ -199,7 +199,7 @@ pub inline fn _rom_func_lookup(comptime code: Code) *const code.signature() {
 /// A anyopaque pointer to the function; must be cast by the caller
 pub fn rom_func_lookup(code: Code) *RomFuncPtr {
     const rom_table_lookup: *fn (table: [*]u16, code: u32) *RomFuncPtr = @ptrCast(rom_hword_as_ptr(rom_table_lookup_entry_ptr));
-    const func_table: [*]u16 = @ptrCast(@alignCast(rom_hword_as_ptr(0x14)));
+    const func_table: [*]u16 = @ptrCast(@alignCast(rom_hword_as_ptr(rom_func_table_ptr)));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
 
