@@ -159,9 +159,9 @@ pub const RomFuncPtr = blk: {
 ///
 /// # Returns
 ///
-/// A 32 bit address pointing into bootrom
+/// A 16 bit lookup code
 pub fn rom_table_code(c1: u8, c2: u8) u16 {
-    return @as(u32, c1) | (@as(u32, c2) << 8);
+    return @as(u16, c1) | (@as(u16, c2) << 8);
 }
 
 /// Convert a 16 bit pointer stored at the given rom address into a pointer
