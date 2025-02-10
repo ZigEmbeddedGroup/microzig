@@ -17,66 +17,79 @@ const chip = microzig.hal.compatibility.chip;
 
 /// Function codes to lookup public functions that provide useful RP2040 functionality
 pub const Code = enum(u16) {
+    /// Return a count of the number of 1 bits in value
     popcount32 = rom_table_code('P', '3'), // Only avaiable on: RP2040
-    reverse32 = rom_table_code('R', '3'), // Only avaiable on: RP2040
-    clz32 = rom_table_code('L', '3'), // Only avaiable on: RP2040
-    ctz32 = rom_table_code('T', '3'), // Only avaiable on: RP2040
-    memset = rom_table_code('M', 'S'), // Only avaiable on: RP2040
-    memset4 = rom_table_code('S', '4'), // Only avaiable on: RP2040
-    memcpy = rom_table_code('M', 'C'), // Only avaiable on: RP2040
-    memcpy44 = rom_table_code('C', '4'), // Only avaiable on: RP2040
-    connect_internal_flash = rom_table_code('I', 'F'),
-    flash_exit_xip = rom_table_code('E', 'X'),
-    flash_range_erase = rom_table_code('R', 'E'),
-    flash_range_program = rom_table_code('R', 'P'),
-    flash_flush_cache = rom_table_code('F', 'C'),
-    flash_enter_cmd_xip = rom_table_code('C', 'X'),
-};
 
-/// Signatures of all public bootrom functions
-pub const signatures = struct {
-    /// Returns the 32 bit pointer into the ROM if found or NULL otherwise
-    const rom_table_lookup = fn (table: [*]u16, code: u32) *anyopaque;
-    /// Signature for popcount32: Return a count of the number of 1 bits in value
-    const popcount32 = fn (value: u32) u32;
-    /// Signature for reverse32: Return the bits of value in the reverse order
-    const reverse32 = fn (value: u32) u32;
-    /// Signature for clz32: Return the number of consecutive high order 0 bits of value
-    const clz32 = fn (value: u32) u32;
-    /// Signature for ctz32: Return the number of consecutive low order 0 bits of value
-    const ctz32 = fn (value: u32) u32;
-    /// Signature of memset: Sets n bytes start at ptr to the value c and returns ptr
-    const memset = fn (ptr: [*]u8, c: u8, n: u32) [*]u8;
-    /// Signature of memset4: Sets n bytes start at ptr to the value c and returns ptr; must be word (32-bit) aligned!
-    const memset4 = fn (ptr: [*]u32, c: u8, n: u32) [*]u32;
-    /// Signature of memcpy: Copies n bytes starting at src to dest and returns dest. The results are undefined if the regions overlap.
-    const memcpy = fn (dest: [*]u8, src: [*]const u8, n: u32) [*]u8;
-    /// Signature of memcpy44: Copies n bytes starting at src to dest and returns dest; must be word (32-bit) aligned!
-    const memcpy44 = fn (dest: [*]u32, src: [*]const u32, n: u32) [*]u8;
-    /// Signature of connect_internal_flash: Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads
-    const connect_internal_flash = fn () void;
-    /// Signature of flash_exit_xip: First set up the SSI for serial-mode operations, then issue the fixed XIP exit sequence described in
+    /// Return the bits of value in the reverse order
+    reverse32 = rom_table_code('R', '3'), // Only avaiable on: RP2040
+
+    /// Return the number of consecutive high order 0 bits of value
+    clz32 = rom_table_code('L', '3'), // Only avaiable on: RP2040
+
+    /// Return the number of consecutive low order 0 bits of value
+    ctz32 = rom_table_code('T', '3'), // Only avaiable on: RP2040
+
+    /// Sets n bytes start at ptr to the value c and returns ptr
+    memset = rom_table_code('M', 'S'), // Only avaiable on: RP2040
+
+    /// Sets n bytes start at ptr to the value c and returns ptr; must be word (32-bit) aligned!
+    memset4 = rom_table_code('S', '4'), // Only avaiable on: RP2040
+
+    /// Copies n bytes starting at src to dest and returns dest. The results are undefined if the regions overlap.
+    memcpy = rom_table_code('M', 'C'), // Only avaiable on: RP2040
+
+    /// Copies n bytes starting at src to dest and returns dest; must be word (32-bit) aligned!
+    memcpy44 = rom_table_code('C', '4'), // Only avaiable on: RP2040
+
+    /// Restore all QSPI pad controls to their default state, and connect the SSI to the QSPI pads
+    connect_internal_flash = rom_table_code('I', 'F'),
+
+    /// First set up the SSI for serial-mode operations, then issue the fixed XIP exit sequence described in
     /// Section 2.8.1.2. Note that the bootrom code uses the IO forcing logic to drive the CS pin, which must be
     /// cleared before returning the SSI to XIP mode (e.g. by a call to _flash_flush_cache). This function
     /// configures the SSI with a fixed SCK clock divisor of /6.
-    const flash_exit_xip = fn () void;
-    /// Signature of flash_range_erase: Erase a count bytes, starting at addr (offset from start of flash). Optionally, pass a block erase command
+    flash_exit_xip = rom_table_code('E', 'X'),
+
+    /// Erase a count bytes, starting at addr (offset from start of flash). Optionally, pass a block erase command
     /// e.g. D8h block erase, and the size of the block erased by this command — this function will use the larger
     /// block erase where possible, for much higher erase speed. addr must be aligned to a 4096-byte sector, and
     /// count must be a multiple of 4096 bytes.
-    const flash_range_erase = fn (addr: u32, count: usize, block_size: u32, block_cmd: u8) void;
-    /// Signature of flash_range_program: Program data to a range of flash addresses starting at addr (offset from the start of flash) and count bytes
+    flash_range_erase = rom_table_code('R', 'E'),
+
+    /// Program data to a range of flash addresses starting at addr (offset from the start of flash) and count bytes
     /// in size. addr must be aligned to a 256-byte boundary, and count must be a multiple of 256.
-    const flash_range_program = fn (addr: u32, data: [*]const u8, count: usize) void;
-    /// Signature of flash_flush_cache: Flush and enable the XIP cache. Also clears the IO forcing on QSPI CSn, so that the SSI can drive the
+    flash_range_program = rom_table_code('R', 'P'),
+
+    /// Flush and enable the XIP cache. Also clears the IO forcing on QSPI CSn, so that the SSI can drive the
     /// flash chip select as normal.
-    const flash_flush_cache = fn () void;
-    /// Signature of flash_enter_cmd_xip: Configure the SSI to generate a standard 03h serial read command, with 24 address bits, upon each XIP
+    flash_flush_cache = rom_table_code('F', 'C'),
+
+    /// Configure the SSI to generate a standard 03h serial read command, with 24 address bits, upon each XIP
     /// access. This is a very slow XIP configuration, but is very widely supported. The debugger calls this
     /// function after performing a flash erase/programming operation, so that the freshly-programmed code
     /// and data is visible to the debug host, without having to know exactly what kind of flash device is
     /// connected.
-    const flash_enter_cmd_xip = fn () void;
+    flash_enter_cmd_xip = rom_table_code('C', 'X'),
+
+    /// Signatures of all public bootrom functions
+    pub fn signature(self: @This()) type {
+        switch (self) {
+            .popcount32 => fn (value: u32) u32,
+            .reverse32 => fn (value: u32) u32,
+            .clz32 => fn (value: u32) u32,
+            .ctz32 => fn (value: u32) u32,
+            .memset => fn (ptr: [*]u8, c: u8, n: u32) [*]u8,
+            .memset4 => fn (ptr: [*]u32, c: u8, n: u32) [*]u32,
+            .memcpy => fn (dest: [*]u8, src: [*]const u8, n: u32) [*]u8,
+            .memcpy44 => fn (dest: [*]u32, src: [*]const u32, n: u32) [*]u8,
+            .connect_internal_flash => fn () void,
+            .flash_exit_xip => fn () void,
+            .flash_range_erase => fn (addr: u32, count: usize, block_size: u32, block_cmd: u8) void,
+            .flash_range_program => fn (addr: u32, data: [*]const u8, count: usize) void,
+            .flash_flush_cache => fn () void,
+            .flash_enter_cmd_xip => fn () void,
+        }
+    }
 };
 
 /// Return a bootrom lookup code based on two ASCII characters
@@ -116,7 +129,7 @@ pub inline fn rom_hword_as_ptr(rom_addr: u32) *anyopaque {
 ///
 /// A anyopaque pointer to the function; must be cast by the caller
 pub inline fn _rom_func_lookup(code: Code) *anyopaque {
-    const rom_table_lookup: *signatures.rom_table_lookup = @ptrCast(rom_hword_as_ptr(0x18));
+    const rom_table_lookup: *fn (table: [*]u16, code: u32) *anyopaque = @ptrCast(rom_hword_as_ptr(0x18));
     const func_table: [*]u16 = @ptrCast(@alignCast(rom_hword_as_ptr(0x14)));
     return rom_table_lookup(func_table, @intFromEnum(code));
 }
