@@ -10,3 +10,4 @@ pub const i2c = @import("experimental/i2c.zig");
 pub const Pin = @import("experimental/pin.zig").Pin;
 pub const spi = @import("experimental/spi.zig");
 pub const uart = @import("experimental/uart.zig");
+pub const ARM_semihosting = @import("experimental/semihosting.zig");
