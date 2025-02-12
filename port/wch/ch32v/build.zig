@@ -11,6 +11,7 @@ chips: struct {
     ch32v103x8: *const microzig.Target,
     ch32v203x6: *const microzig.Target,
     ch32v203x8: *const microzig.Target,
+    ch32v307xc: *const microzig.Target,
 },
 
 boards: struct {
@@ -22,6 +23,9 @@ boards: struct {
     },
     ch32v203: struct {
         suzuduino_uno_v1b: *const microzig.Target,
+    },
+    ch32v307: struct {
+        ch32v307v_r1_1v0: *const microzig.Target,
     },
 },
 
@@ -36,6 +40,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
     };
     const hal_ch32v203: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hals/hal_ch32v203.zig"),
+    };
+    const hal_ch32v307: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hals/hal_ch32v307.zig"),
     };
 
     const qingkev2a = .{
@@ -72,6 +79,20 @@ pub fn init(dep: *std.Build.Dependency) Self {
             std.Target.riscv.Feature.c,
             std.Target.riscv.Feature.a,
             std.Target.riscv.Feature.m,
+        }),
+        .os_tag = .freestanding,
+        .abi = .eabi,
+    };
+
+    const qingkev4f = .{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+        // generic_rv32 has feature I.
+        .cpu_features_add = std.Target.riscv.featureSet(&.{
+            std.Target.riscv.Feature.c,
+            std.Target.riscv.Feature.a,
+            std.Target.riscv.Feature.m,
+            std.Target.riscv.Feature.f,
         }),
         .os_tag = .freestanding,
         .abi = .eabi,
@@ -168,6 +189,30 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v203,
     };
 
+    const chip_ch32v307xc = microzig.Target{
+        .dep = dep,
+        .preferred_binary_format = .bin,
+        .chip = .{
+            .name = "CH32V30xxx", // <name/> from SVD
+            .cpu = qingkev4f,
+            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
+            .memory_regions = &.{
+                // FLASH + RAM supports the following configuration
+                // FLASH-192K + RAM-128K
+                // FLASH-224K + RAM-96K
+                // FLASH-256K + RAM-64K
+                // FLASH-288K + RAM-32K
+                // FLASH-128K + RAM-192K
+                .{ .offset = 0x08000000, .length = 128 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 32 * KiB, .kind = .ram },
+            },
+            .register_definition = .{
+                .svd = b.path("src/chips/ch32v30x.svd"),
+            },
+        },
+        .hal = hal_ch32v307,
+    };
+
     const board_ch32v003f4p6_r0_1v1 = chip_ch32v003x4.derive(.{
         .board = .{
             .name = "WCH CH32V003F4P6-R0-1v1",
@@ -192,6 +237,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     });
 
+    const board_ch32v307v_r1_1v0 = chip_ch32v307xc.derive(.{
+        .board = .{
+            .name = "WCH CH32V307V-R1-1V0",
+            .url = "https://github.com/openwch/ch32v307/tree/main/SCHPCB/CH32V307V-R1-1v0",
+            .root_source_file = b.path("src/boards/CH32V307V-R1-1v0.zig"),
+        },
+    });
+
     return .{
         .chips = .{
             .ch32v003x4 = chip_ch32v003x4.derive(.{}),
@@ -199,6 +252,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .ch32v103x8 = chip_ch32v103x8.derive(.{}),
             .ch32v203x6 = chip_ch32v203x6.derive(.{}),
             .ch32v203x8 = chip_ch32v203x8.derive(.{}),
+            .ch32v307xc = chip_ch32v307xc.derive(.{}),
         },
 
         .boards = .{
@@ -210,6 +264,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .ch32v203 = .{
                 .suzuduino_uno_v1b = board_suzuduino_uno_v1b,
+            },
+            .ch32v307 = .{
+                .ch32v307v_r1_1v0 = board_ch32v307v_r1_1v0,
             },
         },
     };
