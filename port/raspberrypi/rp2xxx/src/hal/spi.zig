@@ -85,7 +85,7 @@ pub const ConfigError = error{
 pub const SPI = enum(u1) {
     _,
 
-    fn get_regs(spi: SPI) *volatile SpiRegs {
+    pub inline fn get_regs(spi: SPI) *volatile SpiRegs {
         return switch (@intFromEnum(spi)) {
             0 => SPI0_reg,
             1 => SPI1_reg,
