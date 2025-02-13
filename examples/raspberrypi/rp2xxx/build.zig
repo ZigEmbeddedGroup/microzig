@@ -47,6 +47,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
+        .{ .name = "interrupts", .file = "src/interrupts.zig" },
         .{ .name = "pico_stepper", .file = "src/stepper.zig" },
         .{ .name = "pico_usb-cdc", .file = "src/usb_cdc.zig" },
     };
