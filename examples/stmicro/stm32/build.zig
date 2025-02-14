@@ -15,6 +15,8 @@ pub fn build(b: *std.Build) void {
     const available_examples = [_]Example{
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },
         .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1_semihost", .file = "src/semihosting.zig" },
+        .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3_semihost", .file = "src/semihosting.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
@@ -41,7 +43,7 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(fw, .{});
+        mb.install_firmware(fw, .{ .format = .bin });
 
         // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(fw, .{ .format = .elf });
