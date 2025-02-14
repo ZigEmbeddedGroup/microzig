@@ -30,35 +30,9 @@ const MISO_PIN = 19;
 // const MOSI_PIN = 19;
 // const MISO_PIN = 16;
 
-// const rtt = @import("rtt");
-// const rtt_instance = rtt.RTT(.{});
-// var rtt_logger: ?rtt_instance.Writer = null;
-//
-// pub fn rtt_log(
-//     comptime level: std.log.Level,
-//     comptime scope: @TypeOf(.EnumLiteral),
-//     comptime format: []const u8,
-//     args: anytype,
-// ) void {
-//     const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
-//     const prefix = comptime level_prefix ++ switch (scope) {
-//         .default => ": ",
-//         else => " (" ++ @tagName(scope) ++ "): ",
-//     };
-//
-//     if (rtt_logger) |writer| {
-//         const current_time = time.get_time_since_boot();
-//         const seconds = current_time.to_us() / std.time.us_per_s;
-//         const microseconds = current_time.to_us() % std.time.us_per_s;
-//
-//         writer.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
-//     }
-// }
-
 pub const microzig_options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    // .logFn = rtt_log,
 };
 
 pub fn main() !void {
@@ -82,12 +56,6 @@ pub fn main() !void {
     inline for (&.{ csn, mosi, miso, sck }) |pin| {
         pin.set_function(.spi);
     }
-
-    // >>RTT logging
-    // rtt_instance.init();
-    // rtt_logger = rtt_instance.writer(0);
-    // std.log.info("Hello from std.log!\n", .{});
-    // <<RTT logging
 
     // >>UART logging
     inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
