@@ -34,9 +34,14 @@ pub const Debug = struct {
 pub const fs = struct {
     pub const FileError = error{
         OpenFail,
-        CloseFail,
         RenameFail,
         RemoveFail,
+        InvalidFile,
+    };
+
+    pub const FType = enum {
+        FIle,
+        Device,
     };
     pub const OpenMode = enum(usize) {
         R,
@@ -69,6 +74,11 @@ pub const fs = struct {
         len: usize,
     };
 
+    pub const Seek = extern struct {
+        file: File,
+        seek: usize,
+    };
+
     pub const File = enum(usize) {
         _,
         const Writer = std.io.Writer(File, anyerror, writefn);
@@ -95,11 +105,11 @@ pub const fs = struct {
             return out.len - ret;
         }
 
-        pub fn get_writer(file: File) Writer {
+        pub fn writer(file: File) Writer {
             return Writer{ .context = file };
         }
 
-        pub fn get_reader(file: File) Reader {
+        pub fn reader(file: File) Reader {
             return Reader{ .context = file };
         }
 
@@ -114,8 +124,25 @@ pub const fs = struct {
 
         //util Functions
 
+        pub fn get_type(file: File) FileError!FType {
+            return switch (sys_istty(&file)) {
+                0 => FType.FIle,
+                1 => FType.Device,
+                else => FileError.InvalidFile,
+            };
+        }
+
+        pub fn seek(file: File, offset: usize) FileError!void {
+            return if (sys_seek(&Seek{ .file = file, .seek = offset }) != 0) FileError.InvalidFile else {};
+        }
+
+        pub fn size(file: File) FileError!usize {
+            const ret = sys_flen(&file);
+            return if (ret < 0) FileError.InvalidFile else @as(usize, @bitCast(ret));
+        }
+
         pub fn close(file: File) FileError!void {
-            return if (sys_close(&file) < 0) FileError.CloseFail else {};
+            return if (sys_close(&file) < 0) FileError.InvalidFile else {};
         }
     };
 
@@ -203,10 +230,22 @@ pub inline fn sys_read(file: *const fs.RWFile) isize {
     return call(.SYS_READ, file);
 }
 
+pub inline fn sys_seek(file: *const fs.Seek) isize {
+    return call(.SYS_SEEK, file);
+}
+
+pub inline fn sys_flen(file: *const fs.File) isize {
+    return call(.SYS_FLEN, file);
+}
+
 pub inline fn sys_remove(file: *const fs.Path) isize {
     return call(.SYS_REMOVE, file);
 }
 
 pub inline fn sys_rename(file: [*]const fs.Path) isize {
     return call(.SYS_RENAME, file);
+}
+
+pub inline fn sys_istty(file: *const fs.File) isize {
+    return call(.SYS_ISTTY, file);
 }
