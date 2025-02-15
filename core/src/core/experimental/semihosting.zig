@@ -1,7 +1,7 @@
 const std = @import("std");
 
-//this WriteC and Write0 write direct to the Debug terminal, no context need
 pub const Debug = struct {
+    //WriteC and Write0 write direct to the Debug terminal, no context need
     const Writer = std.io.Writer(void, anyerror, writerfn);
 
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
@@ -28,6 +28,39 @@ pub const Debug = struct {
     pub fn print(comptime fmt: []const u8, args: anytype) void {
         const dbg_w = Writer{ .context = {} };
         dbg_w.print(fmt, args) catch return;
+    }
+};
+
+pub const Time = struct {
+    pub const TimeError = error{
+        ReadTicksFail,
+        UnknownTickFreq,
+    };
+    pub const Elapsed = extern struct {
+        low: u32,
+        high: u32,
+    };
+
+    ///return the host time in epoch
+    pub fn system_time() usize {
+        return @as(usize, @bitCast(sys_time()));
+    }
+    ///return the corrent tick counter value in centiseconds
+    pub fn absolute() TimeError!usize {
+        const ret = sys_clock();
+        return if (ret == -1) TimeError.ReadTicksFail else @as(usize, @bitCast(ret));
+    }
+
+    ///return the corrent tick counter value in "tick_freg"
+    pub fn elapsed() TimeError!u64 {
+        var ticks = Elapsed{ .low = 0, .high = 0 };
+        const ret = sys_elapsed(&ticks);
+        return if (ret == -1) TimeError.ReadTicksFail else @as(u64, @bitCast(ticks));
+    }
+
+    pub fn get_tick_freq() TimeError!usize {
+        const ret = sys_tickfreq();
+        return if (ret == -1) TimeError.UnknownTickFreq else @as(usize, @bitCast(ret));
     }
 };
 
@@ -95,14 +128,15 @@ pub const fs = struct {
         }
 
         fn readfn(ctx: File, out: []u8) anyerror!usize {
-            const r_file = RWFile{
+            var r_file = RWFile{
                 .file = ctx,
                 .buf = out.ptr,
                 .buf_len = out.len,
             };
 
-            const ret: usize = @bitCast(sys_read(&r_file));
-            return out.len - ret;
+            const ret = sys_read(&r_file);
+            if (ret == -1) return error.ReadFail;
+            return out.len - @as(usize, @bitCast(ret));
         }
 
         pub fn writer(file: File) Writer {
@@ -189,6 +223,10 @@ pub const Syscalls = enum(usize) {
     SYS_FLEN = 0x0C,
     SYS_REMOVE = 0x0E,
     SYS_RENAME = 0x0F,
+    SYS_CLOCK = 0x10,
+    SYS_TIME = 0x11,
+    SYS_ELAPSED = 0x30,
+    SYS_TICKFREQ = 0x31,
 };
 
 fn call(number: Syscalls, param: *const anyopaque) isize {
@@ -226,7 +264,7 @@ pub inline fn sys_write(file: *const fs.RWFile) isize {
     return call(.SYS_WRITE, file);
 }
 
-pub inline fn sys_read(file: *const fs.RWFile) isize {
+pub inline fn sys_read(file: *fs.RWFile) isize {
     return call(.SYS_READ, file);
 }
 
@@ -248,4 +286,20 @@ pub inline fn sys_rename(file: [*]const fs.Path) isize {
 
 pub inline fn sys_istty(file: *const fs.File) isize {
     return call(.SYS_ISTTY, file);
+}
+
+pub inline fn sys_clock() isize {
+    return call(.SYS_CLOCK, &0);
+}
+
+pub inline fn sys_time() isize {
+    return call(.SYS_TIME, &0);
+}
+
+pub inline fn sys_elapsed(time: *Time.Elapsed) isize {
+    return call(.SYS_ELAPSED, time);
+}
+
+pub inline fn sys_tickfreq() isize {
+    return call(.SYS_TICKFREQ, &0);
 }
