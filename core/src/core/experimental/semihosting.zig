@@ -4,6 +4,13 @@ pub const Debug = struct {
     //WriteC and Write0 write direct to the Debug terminal, no context need
     const Writer = std.io.Writer(void, anyerror, writerfn);
 
+    pub const Argv = extern struct {
+        buffer: [*]u8,
+        len: usize,
+    };
+
+    pub const EXTFeatures = enum {}{};
+
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
     fn writerfn(_: void, data: []const u8) anyerror!usize {
         var len = data.len;
@@ -29,6 +36,23 @@ pub const Debug = struct {
         const dbg_w = Writer{ .context = {} };
         dbg_w.print(fmt, args) catch return;
     }
+
+    //get C errno value
+    pub fn get_errno() usize {
+        resume @as(usize, @bitCast(sys_errno()));
+    }
+    ///get ARGV from the command line
+    /// Note:
+    /// The semihosting implementation might impose limits on the maximum length of the string that can be transferred.
+    /// However, the implementation must be able to support a command-line length of at least 80 bytes.
+    pub fn get_cmd_args(buffer: []u8) anyerror![]const u8 {
+        var cmd = Argv{
+            .buffer = buffer.ptr,
+            .len = buffer.len,
+        };
+        const ret = sys_cmd_line(&cmd);
+        return if (ret == 0) cmd.buffer[0..cmd.len] else error.Fail;
+    }
 };
 
 pub const Time = struct {
@@ -52,12 +76,14 @@ pub const Time = struct {
     }
 
     ///return the corrent tick counter value in "tick_freg"
+    /// This function is optional and if not implemented it always returns an error.
     pub fn elapsed() TimeError!u64 {
         var ticks = Elapsed{ .low = 0, .high = 0 };
         const ret = sys_elapsed(&ticks);
         return if (ret == -1) TimeError.ReadTicksFail else @as(u64, @bitCast(ticks));
     }
 
+    /// This function is optional and if not implemented it always returns an error.
     pub fn get_tick_freq() TimeError!usize {
         const ret = sys_tickfreq();
         return if (ret == -1) TimeError.UnknownTickFreq else @as(usize, @bitCast(ret));
@@ -225,10 +251,13 @@ pub const Syscalls = enum(usize) {
     SYS_RENAME = 0x0F,
     SYS_CLOCK = 0x10,
     SYS_TIME = 0x11,
+    SYS_ERRNO = 0x13,
+    SYS_GET_CMD_LINE = 0x15,
     SYS_ELAPSED = 0x30,
     SYS_TICKFREQ = 0x31,
 };
 
+///ARM-M SEMIHOST CALL
 fn call(number: Syscalls, param: *const anyopaque) isize {
     return asm volatile (
         \\mov r0, %[num]
@@ -294,6 +323,14 @@ pub inline fn sys_clock() isize {
 
 pub inline fn sys_time() isize {
     return call(.SYS_TIME, &0);
+}
+
+pub inline fn sys_errno() isize {
+    return call(.SYS_ERRNO, &0);
+}
+
+pub inline fn sys_cmd_line(args: *Debug.Argv) isize {
+    return call(.SYS_GET_CMD_LINE, args);
 }
 
 pub inline fn sys_elapsed(time: *Time.Elapsed) isize {
