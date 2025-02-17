@@ -172,11 +172,11 @@ pub const SPI = enum(u1) {
         regs.SSPCR1.modify(.{ .SSE = 1 });
     }
 
-    pub fn is_writable(spi: SPI) bool {
+    pub inline fn is_writable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().TNF == 1;
     }
 
-    pub fn is_readable(spi: SPI) bool {
+    pub inline fn is_readable(spi: SPI) bool {
         return spi.get_regs().SSPSR.read().RNE == 1;
     }
 

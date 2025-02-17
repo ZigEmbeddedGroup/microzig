@@ -75,14 +75,12 @@ pub fn build(b: *std.Build) void {
         //
         // The target will convey all necessary information on the chip,
         // cpu and potentially the board as well.
-        const rtt_mod = b.dependency("rtt", .{}).module("rtt");
         const firmware = mb.add_firmware(.{
             .name = example.name,
             .target = example.target,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
         });
-        firmware.add_app_import("rtt", rtt_mod, .{});
 
         // `install_firmware()` is the MicroZig pendant to `Build.installArtifact()`
         // and allows installing the firmware as a typical firmware file.

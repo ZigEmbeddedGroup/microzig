@@ -9,7 +9,6 @@ const peripherals = microzig.chip.peripherals;
 
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
-// const led = gpio.num(14);
 
 // These will change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 5;
@@ -21,9 +20,6 @@ const MISO_PIN = 4;
 // TODO Remove this once working!
 // No device implementation yet in Zig, see Rpi Pico SDK for an example: https://github.com/raspberrypi/pico-examples/blob/master/spi/spi_master_slave/spi_slave/spi_slave.c
 pub fn main() !void {
-    // led.set_function(.sio);
-    // led.set_direction(.out);
-    // led.put(1);
 
     // Note that CSN pin is manually controlled here rather than by the SPI peripheral.
     // If CSN is configured to "SPI" function, it will get toggled after every data packet by the RP2040's
@@ -49,8 +45,6 @@ pub fn main() !void {
         .baud_rate = 500_000,
     });
     var out_buf_eight: [BUF_LEN]u8 = .{ 'h', 'e', 'l', 'o' } ** (BUF_LEN / 4);
-    // var out_buf_eight: [BUF_LEN]u8 = .{ 0xAA, 0xBB, 0xCC, 0xDD } ** (BUF_LEN / 4);
-    // var in_buf_eight: [BUF_LEN]u8 = undefined;
     csn.put(0);
     spi.write_blocking(u8, out_buf_eight[0..4]);
     csn.put(1);
@@ -74,12 +68,10 @@ pub fn main() !void {
         .baud_rate = 500_000,
     });
     while (true) {
-        // led.put(1);
         csn.put(0);
         std.log.info("Sending some data\n", .{});
         spi.write_blocking(u8, &out_buf_eight);
         csn.put(1);
-        // led.put(0);
-        time.sleep_ms(1 * 500);
+        time.sleep_ms(1 * 1000);
     }
 }

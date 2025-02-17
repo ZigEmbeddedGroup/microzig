@@ -16,8 +16,9 @@ const uart_tx_pin = gpio.num(0);
 // These will change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
 const SCK_PIN = 18;
-// NOTE: rp2040 doesn't label pins for master/slave in/out, rather a pin is always for either
-// receiving or sending SPI data, no matter whether the chip is in master or slave mode.
+// NOTE: rp2xxx doesn't label pins as MOSI/MISO. Instead a pin is always for
+// either receiving or transmitting SPI data, no matter whether the chip is in
+// master or slave mode.
 const RX_PIN = 16;
 
 pub const microzig_options = .{
