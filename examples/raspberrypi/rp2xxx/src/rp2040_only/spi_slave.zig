@@ -6,7 +6,7 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const chip = rp2xxx.compatibility.chip;
 
-const BUF_LEN = 0x10;
+const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
 const led = gpio.num(25);
@@ -14,26 +14,32 @@ const led_red = gpio.num(11);
 const led_green = gpio.num(12);
 const led_blue = gpio.num(13);
 // >>UART logging
-const uart = rp2xxx.uart.instance.num(1);
+// Using the 'default' pins makes it closer to the pico-examples behaviour and thus more one-to-one comparable.
+const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
-const uart_tx_pin = gpio.num(8);
-const uart_rx_pin = gpio.num(9);
+const uart_tx_pin = gpio.num(0);
+const uart_rx_pin = gpio.num(1);
 // <<UART logging
 
 // These will change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
 const SCK_PIN = 18;
-// TODO: rx/tx, e.g. is mosi just miso in slave mode?
-// -- Since this is the slave device, we read on MISO_PIN
-const MOSI_PIN = 16;
-const MISO_PIN = 19;
-// const MOSI_PIN = 19;
-// const MISO_PIN = 16;
+// NOTE: rp2040 doesn't label pins for master/slave in/out, rather a pin is
+// always for either receiving or sending SPI data.
+const RX_PIN = 16;
 
 pub const microzig_options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
 };
+
+pub fn printHex(data: []const u8) void {
+    for (data) |byte| {
+        // Print each byte as hex with leading zeros and uppercase letters
+        std.log.info("{X:0>2}", .{byte});
+    }
+    std.log.info("\n", .{});
+}
 
 pub fn main() !void {
     led.set_function(.sio);
@@ -49,8 +55,7 @@ pub fn main() !void {
     const csn = gpio.num(CS_PIN);
     // csn.set_function(.sio);
     // csn.set_direction(.in);
-    const mosi = gpio.num(MOSI_PIN);
-    const miso = gpio.num(MISO_PIN);
+    const mosi = gpio.num(RX_PIN);
     const sck = gpio.num(SCK_PIN);
     // inline for (&.{ mosi, miso, sck }) |pin| {
     inline for (&.{ csn, mosi, miso, sck }) |pin| {
@@ -102,7 +107,8 @@ pub fn main() !void {
     led_green.put(1);
     led_blue.put(1);
 
-    std.log.info("Got: {s}", .{in_buf_eight});
+    // std.log.info("Got: {s}", .{in_buf_eight});
+    printHex(&in_buf_eight);
     led_red.put(1);
     led_green.put(0);
     led_blue.put(1);
@@ -141,7 +147,8 @@ pub fn main() !void {
         led_green.put(1);
         led_blue.put(1);
         // led.put(1);
-        std.log.info("Got: {s}", .{in_buf_eight});
+        // std.log.info("Got: {s}", .{in_buf_eight});
+        printHex(&in_buf_eight);
         time.sleep_ms(250);
     }
 }
