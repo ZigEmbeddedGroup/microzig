@@ -234,7 +234,7 @@ pub fn Stepper(comptime Driver: type) type {
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
-                    self.cruise_step_pulse = step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
                     self.step_pulse = self.cruise_step_pulse;
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
                         self.step_pulse = mdf.time.Duration.from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
@@ -244,7 +244,7 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        inline fn step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
+        inline fn get_step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
             return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
                 @as(f64, @floatFromInt(steps)) /
                 @as(f64, @floatFromInt(microsteps)) / rpm)));
