@@ -15,8 +15,7 @@ pub fn build(b: *std.Build) void {
     const available_examples = [_]Example{
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },
         .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
-        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1_semihost", .file = "src/semihosting.zig" },
-        .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3_semihost", .file = "src/semihosting.zig" },
+        .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1_semihost", .file = "src/semihosting.zig" }, //set a valid qemu target for test semihosting
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
