@@ -49,16 +49,14 @@ pub fn main() !void {
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);
 
-    spi.apply(.{
-        .clock_config = rp2xxx.clock_config,
-        .data_width = .eight,
-    }) catch {};
-    var in_buf_eight: [BUF_LEN]u8 = undefined;
+    try spi.apply(.{ .clock_config = rp2xxx.clock_config });
+    var in_buf: [BUF_LEN]u8 = undefined;
+
     std.log.info("Reading", .{});
 
     while (true) {
-        spi.read_blocking(u8, 0, &in_buf_eight);
-        std.log.info("Got: {s}", .{in_buf_eight});
+        spi.read_blocking(u8, 0, &in_buf);
+        std.log.info("Got: {s}", .{in_buf});
         time.sleep_ms(1 * 1000);
     }
 }
