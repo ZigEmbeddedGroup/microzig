@@ -10,10 +10,10 @@ const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
 const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
+const uart_baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
 
-// These will change depending on which GPIO pins you have your SPI device routed to.
+// These may change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
 const SCK_PIN = 18;
 // NOTE: rp2xxx doesn't label pins as MOSI/MISO. Instead a pin is always for
@@ -42,7 +42,7 @@ pub fn main() !void {
         }
     }
     uart.apply(.{
-        .baud_rate = baud_rate,
+        .baud_rate = uart_baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
 
@@ -51,22 +51,12 @@ pub fn main() !void {
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);
 
-    // Back to 8 bit mode
     spi.apply(.{
         .clock_config = rp2xxx.clock_config,
         .data_width = .eight,
     }) catch {};
     var in_buf_eight: [BUF_LEN]u8 = undefined;
     std.log.info("Reading", .{});
-    spi.read_blocking(u8, 0, &in_buf_eight);
-
-    std.log.info("Got: {s}", .{in_buf_eight});
-
-    // Back to 8 bit mode
-    try spi.apply(.{
-        .clock_config = rp2xxx.clock_config,
-        .data_width = .eight,
-    });
 
     while (true) {
         spi.read_blocking(u8, 0, &in_buf_eight);
