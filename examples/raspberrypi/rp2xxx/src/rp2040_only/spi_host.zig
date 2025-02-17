@@ -11,34 +11,6 @@ const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 // const led = gpio.num(14);
 
-const rtt = @import("rtt");
-const rtt_instance = rtt.RTT(.{});
-var rtt_logger: ?rtt_instance.Writer = null;
-pub fn log(
-    comptime level: std.log.Level,
-    comptime scope: @TypeOf(.EnumLiteral),
-    comptime format: []const u8,
-    args: anytype,
-) void {
-    const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
-    const prefix = comptime level_prefix ++ switch (scope) {
-        .default => ": ",
-        else => " (" ++ @tagName(scope) ++ "): ",
-    };
-
-    if (rtt_logger) |writer| {
-        const current_time = time.get_time_since_boot();
-        const seconds = current_time.to_us() / std.time.us_per_s;
-        const microseconds = current_time.to_us() % std.time.us_per_s;
-
-        writer.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
-    }
-}
-pub const microzig_options = .{
-    .log_level = .debug,
-    .logFn = log,
-};
-
 // These will change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 5;
 const SCK_PIN = 2;
@@ -52,12 +24,6 @@ pub fn main() !void {
     // led.set_function(.sio);
     // led.set_direction(.out);
     // led.put(1);
-
-    // >>RTT logging
-    rtt_instance.init();
-    rtt_logger = rtt_instance.writer(0);
-    std.log.info("Hello in spi master\n", .{});
-    // <<RTT logging
 
     // Note that CSN pin is manually controlled here rather than by the SPI peripheral.
     // If CSN is configured to "SPI" function, it will get toggled after every data packet by the RP2040's

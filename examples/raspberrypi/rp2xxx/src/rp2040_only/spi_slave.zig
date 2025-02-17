@@ -9,23 +9,15 @@ const chip = rp2xxx.compatibility.chip;
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
-const led = gpio.num(25);
-const led_red = gpio.num(11);
-const led_green = gpio.num(12);
-const led_blue = gpio.num(13);
-// >>UART logging
-// Using the 'default' pins makes it closer to the pico-examples behaviour and thus more one-to-one comparable.
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
-// <<UART logging
 
 // These will change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
 const SCK_PIN = 18;
-// NOTE: rp2040 doesn't label pins for master/slave in/out, rather a pin is
-// always for either receiving or sending SPI data.
+// NOTE: rp2040 doesn't label pins for master/slave in/out, rather a pin is always for either
+// receiving or sending SPI data, no matter whether the chip is in master or slave mode.
 const RX_PIN = 16;
 
 pub const microzig_options = .{
@@ -33,37 +25,16 @@ pub const microzig_options = .{
     .logFn = rp2xxx.uart.logFn,
 };
 
-pub fn printHex(data: []const u8) void {
-    for (data) |byte| {
-        // Print each byte as hex with leading zeros and uppercase letters
-        std.log.info("{X:0>2}", .{byte});
-    }
-    std.log.info("\n", .{});
-}
-
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-    inline for (.{ led_red, led_green, led_blue }) |p| {
-        p.set_function(.sio);
-        p.set_direction(.out);
-        p.put(1);
-    }
-    // Set pin functions for CS, SCK, MOSI, MISO
-    // TODO Should we wait on csn manually
+    // Set pin functions for CS, SCK, RX
     const csn = gpio.num(CS_PIN);
-    // csn.set_function(.sio);
-    // csn.set_direction(.in);
     const mosi = gpio.num(RX_PIN);
     const sck = gpio.num(SCK_PIN);
-    // inline for (&.{ mosi, miso, sck }) |pin| {
-    inline for (&.{ csn, mosi, miso, sck }) |pin| {
+    inline for (&.{ csn, mosi, sck }) |pin| {
         pin.set_function(.spi);
     }
 
-    // >>UART logging
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+    inline for (&.{uart_tx_pin}) |pin| {
         switch (chip) {
             .RP2040 => pin.set_function(.uart),
             .RP2350 => pin.set_function(.uart_first),
@@ -75,54 +46,20 @@ pub fn main() !void {
     });
 
     rp2xxx.uart.init_logger(uart);
-    // <<UART logging
 
-    // led.toggle();
     std.log.info("Setting SPI as slave device", .{});
     spi.set_slave(true);
-    led_red.put(0);
-    led_green.put(1);
-    led_blue.put(1);
 
     // Back to 8 bit mode
     spi.apply(.{
         .clock_config = rp2xxx.clock_config,
         .data_width = .eight,
     }) catch {};
-    // led.toggle();
     var in_buf_eight: [BUF_LEN]u8 = undefined;
-    led_red.put(0);
-    led_green.put(0);
-    led_blue.put(1);
-    // Wait on CS low
-    // std.log.info("Waiting on CSn", .{});
-    // while (csn.read() != 0) {}
-    // std.log.info("cs low", .{});
-    led_red.put(1);
-    led_green.put(0);
-    led_blue.put(0);
     std.log.info("Reading", .{});
     spi.read_blocking(u8, 0, &in_buf_eight);
-    led_red.put(1);
-    led_green.put(1);
-    led_blue.put(1);
 
-    // std.log.info("Got: {s}", .{in_buf_eight});
-    printHex(&in_buf_eight);
-    led_red.put(1);
-    led_green.put(0);
-    led_blue.put(1);
-
-    // 12 bit data words
-    // try spi.apply(.{
-    //     .clock_config = rp2xxx.clock_config,
-    //     .data_width = .twelve,
-    // });
-    // var in_buf_twelve: [BUF_LEN]u12 = undefined;
-    // // Wait on CS low
-    // while (csn.read() != 0) {}
-    // spi.read_blocking(u12, 0, &in_buf_twelve);
-    // std.log.info("Got: {any}\r", .{in_buf_twelve});
+    std.log.info("Got: {s}", .{in_buf_eight});
 
     // Back to 8 bit mode
     try spi.apply(.{
@@ -131,24 +68,8 @@ pub fn main() !void {
     });
 
     while (true) {
-        // led.put(0);
-        time.sleep_ms(250);
-        led_red.put(0);
-        led_green.put(0);
-        led_blue.put(1);
-        // Wait on CS low
-        // std.log.info("Waiting on CSn\n", .{});
-        // while (csn.read() != 0) {}
-        led_red.put(1);
-        led_green.put(0);
-        led_blue.put(0);
         spi.read_blocking(u8, 0, &in_buf_eight);
-        led_red.put(1);
-        led_green.put(1);
-        led_blue.put(1);
-        // led.put(1);
-        // std.log.info("Got: {s}", .{in_buf_eight});
-        printHex(&in_buf_eight);
-        time.sleep_ms(250);
+        std.log.info("Got: {s}", .{in_buf_eight});
+        time.sleep_ms(1 * 1000);
     }
 }
