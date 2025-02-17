@@ -39,8 +39,8 @@ pub fn build(b: *std.Build) void {
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
-        .{ .name = "spi-host", .file = "src/rp2040_only/spi_host.zig" },
-        .{ .name = "spi-slave", .file = "src/rp2040_only/spi_slave.zig" },
+        .{ .name = "spi-master", .file = "src/spi_master.zig" },
+        .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
         .{ .name = "squarewave", .file = "src/squarewave.zig" },
         .{ .name = "ws2812", .file = "src/ws2812.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },

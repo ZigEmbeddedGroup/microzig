@@ -8,7 +8,7 @@ const gpio = rp2xxx.gpio;
 const BUF_LEN = 0x100;
 const spi = rp2xxx.spi.instance.SPI0;
 
-// These will change depending on which GPIO pins you have your SPI device routed to.
+// These may change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
 const SCK_PIN = 18;
 // NOTE: rp2xxx doesn't label pins as MOSI/MISO. Instead a pin is always for
