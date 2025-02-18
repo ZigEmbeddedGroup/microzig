@@ -1,6 +1,35 @@
 const std = @import("std");
 
 pub const Debug = struct {
+    pub const PanicCodes = enum(usize) {
+        //Hardware vector reason codes: 0x0..0x7
+        BranchThroughZero,
+        UndefinedInstr,
+        SoftwareInterrupt,
+        PrefetchAbort,
+        DataAbort,
+        AddressException,
+        IRQ,
+        FIQ,
+
+        //Software reason codes (0x20 - 0x29)
+        BreakPoint = 0x20,
+        WatchPoint,
+        StepComplete,
+        RunTimeErrorUnknown,
+        InternalError,
+        UserInterruption,
+        ApplicationExit,
+        StackOverflow,
+        DivisionByZero,
+        OSSpecific,
+    };
+
+    pub const PanicData = extern struct {
+        reason: usize,
+        subcode: usize,
+    };
+
     //WriteC and Write0 write direct to the Debug terminal, no context need
     const Writer = std.io.Writer(void, anyerror, writerfn);
 
@@ -8,8 +37,6 @@ pub const Debug = struct {
         buffer: [*]u8,
         len: usize,
     };
-
-    pub const EXTFeatures = enum {}{};
 
     //this is ssssssslow but WriteC is even more slow and Write0 requires '\0' sentinel
     fn writerfn(_: void, data: []const u8) anyerror!usize {
@@ -32,6 +59,8 @@ pub const Debug = struct {
         return 1;
     }
 
+    ///writes to the Debug terminal.
+    ///NOTE: if available, always use `stdout`
     pub fn print(comptime fmt: []const u8, args: anytype) void {
         const dbg_w = Writer{ .context = {} };
         dbg_w.print(fmt, args) catch return;
@@ -41,9 +70,8 @@ pub const Debug = struct {
     pub fn get_errno() usize {
         resume @as(usize, @bitCast(sys_errno()));
     }
-    ///get ARGV from the command line
-    /// Note:
-    /// The semihosting implementation might impose limits on the maximum length of the string that can be transferred.
+    ///get ARGV from the command line.
+    /// NOTE: The semihosting implementation might impose limits on the maximum length of the string that can be transferred.
     /// However, the implementation must be able to support a command-line length of at least 80 bytes.
     pub fn get_cmd_args(buffer: []u8) anyerror![]const u8 {
         var cmd = Argv{
@@ -52,6 +80,64 @@ pub const Debug = struct {
         };
         const ret = sys_cmd_line(&cmd);
         return if (ret == 0) cmd.buffer[0..cmd.len] else error.Fail;
+    }
+
+    pub fn check_extensions(feature_byte: usize, feature_bit: u3) bool {
+        const MAGIC: [4]u8 = .{ 0x53, 0x48, 0x46, 0x42 };
+        var magic_buffer: [4]u8 = undefined;
+
+        //try open extension file
+        const ext_file = fs.open(":semihosting-features", .R) catch return false;
+
+        //check the size
+        const byte_size = ext_file.size() catch return false;
+        if (byte_size < (MAGIC.len + feature_byte + 1)) return false;
+
+        _ = ext_file.reader().read(&magic_buffer) catch return false;
+
+        //check the magic number
+        for (magic_buffer, MAGIC) |number, magic| {
+            if (number != magic) return false;
+        }
+
+        //get feature byte and check feature bit
+        ext_file.seek(feature_byte + 4) catch return false;
+
+        const ext_byte = ext_file.reader().readByte() catch return false;
+        return (ext_byte & @as(u8, 1) << feature_bit) != 0;
+    }
+
+    ///get the stdout stream.
+    ///NOTE: this feature is an extension of semihosting and if not implemented by the host it always results in an error
+    pub fn stdout() fs.FileError!fs.File {
+        if (!check_extensions(0, 1)) return error.InvalidFile;
+        return try fs.open(":tt", .@"W+");
+    }
+
+    ///get the stderr stream.
+    ///NOTE: this feature is an extension of semihosting and if not implemented by the host it always results in an error
+    pub fn stderr() fs.FileError!fs.File {
+        if (!check_extensions(0, 1)) return error.InvalidFile;
+        return try fs.open(":tt", .@"A+");
+    }
+
+    pub fn panic(reason: PanicCodes, subcode: usize) void {
+        const data = PanicData{
+            .reason = @intFromEnum(reason) + 0x20000,
+            .subcode = subcode,
+        };
+        //check for EXIT_EXT
+
+        if (check_extensions(0, 0)) {
+            _ = sys_exit_ext(&data);
+        } else {
+            //ARM-A/M 32bit only
+            _ = sys_exit(@ptrFromInt(data.reason));
+        }
+    }
+
+    pub fn exit(code: usize) void {
+        panic(.ApplicationExit, code);
     }
 };
 
@@ -253,6 +339,8 @@ pub const Syscalls = enum(usize) {
     SYS_TIME = 0x11,
     SYS_ERRNO = 0x13,
     SYS_GET_CMD_LINE = 0x15,
+    SYS_EXIT = 0x18,
+    SYS_EXIT_EXTENDED = 0x20,
     SYS_ELAPSED = 0x30,
     SYS_TICKFREQ = 0x31,
 };
@@ -331,6 +419,14 @@ pub inline fn sys_errno() isize {
 
 pub inline fn sys_cmd_line(args: *Debug.Argv) isize {
     return call(.SYS_GET_CMD_LINE, args);
+}
+
+pub inline fn sys_exit(args: *const Debug.PanicData) isize {
+    return call(.SYS_EXIT, args);
+}
+
+pub inline fn sys_exit_ext(args: *const Debug.PanicData) isize {
+    return call(.SYS_EXIT_EXTENDED, args);
 }
 
 pub inline fn sys_elapsed(time: *Time.Elapsed) isize {
