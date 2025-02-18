@@ -3,9 +3,9 @@ const microzig = @import("microzig");
 const semihosting = microzig.core.experimental.ARM_semihosting;
 
 pub fn main() void {
-    const patch = "";
-    const file_name = patch ++ "foo.txt";
-    const new_name = patch ++ "bar.txt";
+    const path = "";
+    const file_name = path ++ "foo.txt";
+    const new_name = path ++ "bar.txt";
     var some_buf: [80]u8 = undefined;
 
     //debug features
