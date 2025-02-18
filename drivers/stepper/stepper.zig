@@ -17,6 +17,7 @@ pub const Stepper_Options = struct {
     step_pin: mdf.base.Digital_IO,
     enable_pin: ?mdf.base.Digital_IO = undefined,
     clock_device: mdf.base.Clock_Device,
+    motor_steps: u16 = 200,
 };
 
 pub const MSPinsError = error.MSPinsError;
@@ -69,7 +70,6 @@ pub fn Stepper(comptime Driver: type) type {
 
         // Movement state
         profile: Speed_Profile = .constant_speed,
-
         // Steps remaining in accel
         steps_to_cruise: u32 = 0,
         // Steps remaining in current move
@@ -84,7 +84,7 @@ pub fn Stepper(comptime Driver: type) type {
         next_action_interval: mdf.time.Duration = mdf.time.Duration.from_us(0),
         step_count: u32 = 0,
         dir_state: mdf.base.Digital_IO.State = .low,
-        motor_steps: u16 = 200,
+        motor_steps: u16,
 
         pub fn init(opts: Stepper_Options) Self {
             return Self{
@@ -95,6 +95,7 @@ pub fn Stepper(comptime Driver: type) type {
                 .dir_pin = opts.dir_pin,
                 .step_pin = opts.step_pin,
                 .enable_pin = opts.enable_pin,
+                .motor_steps = opts.motor_steps,
             };
         }
 
@@ -299,6 +300,7 @@ pub fn Stepper(comptime Driver: type) type {
             const deadline = mdf.time.Deadline.init_relative(start_us, delay_us);
             while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
         }
+
         pub fn next_action(self: *Self) !mdf.time.Duration {
             if (self.steps_remaining > 0) {
                 self.delay_micros(self.next_action_interval, self.last_action_end);
@@ -344,17 +346,27 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         pub fn start_brake(self: *Self) void {
-            _ = self;
+            switch (self.get_current_state()) {
+                .cruising => self.steps_remaining = self.steps_to_brake,
+                .accelerating => self.steps_remaining = self.step_count * self.profile.accel / self.profile.decel,
+                else => {}, // Do nothing, already decelerating or stopped.
+            }
         }
+
         pub fn stop(self: *Self) void {
-            _ = self;
+            const rv = self.steps_remaining;
+            self.steps_remaining = 0;
+            return rv;
         }
+
         pub fn get_steps_completed(self: Self) u32 {
             return self.step_count;
         }
+
         pub fn get_steps_remaining(self: Self) u32 {
             return self.steps_remaining;
         }
+
         pub fn get_direction(self: Self) i2 {
             return switch (self.dir_state) {
                 .low => 1,
