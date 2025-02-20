@@ -30,6 +30,13 @@ pub const Debug = struct {
         subcode: usize,
     };
 
+    pub const MemInfo = extern struct {
+        heap_base: *anyopaque,
+        heap_limit: *anyopaque,
+        stack_base: *anyopaque,
+        stack_limit: *anyopaque,
+    };
+
     //WriteC and Write0 write direct to the Debug terminal, no context need
     const Writer = std.io.Writer(void, anyerror, writerfn);
 
@@ -66,11 +73,12 @@ pub const Debug = struct {
         dbg_w.print(fmt, args) catch return;
     }
 
-    //get C errno value
+    ///get C errno value
     pub fn get_errno() usize {
         resume @as(usize, @bitCast(sys_errno()));
     }
-    ///get ARGV from the command line.
+
+    ///get data from the command line.
     /// NOTE: The semihosting implementation might impose limits on the maximum length of the string that can be transferred.
     /// However, the implementation must be able to support a command-line length of at least 80 bytes.
     pub fn get_cmd_args(buffer: []u8) anyerror![]const u8 {
@@ -82,6 +90,7 @@ pub const Debug = struct {
         return if (ret == 0) cmd.buffer[0..cmd.len] else error.Fail;
     }
 
+    //currently the semihost specification defines only 2 extensions, where both belong to the same extension byte.
     pub fn check_extensions(feature_byte: usize, feature_bit: u3) bool {
         const MAGIC: [4]u8 = .{ 0x53, 0x48, 0x46, 0x42 };
         var magic_buffer: [4]u8 = undefined;
@@ -121,17 +130,29 @@ pub const Debug = struct {
         return try fs.open(":tt", .@"A+");
     }
 
+    pub fn system_memory() MemInfo {
+        var mem: MemInfo = undefined;
+        sys_heapinfo(&mem);
+        return mem;
+    }
+
+    ///Signals an exception to the debugger
+    /// NOTE: Not all semihosting client implementations will necessarily trap every corresponding event.
+    /// NOTE: It is possible for the debugger to request that the application continues by performing an RDI_Execute request or equivalent.
     pub fn panic(reason: PanicCodes, subcode: usize) void {
         const data = PanicData{
             .reason = @intFromEnum(reason) + 0x20000,
             .subcode = subcode,
         };
-        //check for EXIT_EXT
 
+        //check for EXIT_EXT
+        //when the exit extension is not implemented on 32bit targets
+        //sys_exit does not receive "exit code"
         if (check_extensions(0, 0)) {
             _ = sys_exit_ext(&data);
         } else {
             //ARM-A/M 32bit only
+            //on 32bit targets sys_exit receives data by value and not by reference
             _ = sys_exit(@ptrFromInt(data.reason));
         }
     }
@@ -330,6 +351,7 @@ pub const Syscalls = enum(usize) {
     WRITE0 = 0x04,
     SYS_WRITE = 0x05,
     SYS_READ = 0x06,
+    SYS_ISERROR = 0x08,
     SYS_ISTTY = 0x09,
     SYS_SEEK = 0x0A,
     SYS_FLEN = 0x0C,
@@ -339,6 +361,7 @@ pub const Syscalls = enum(usize) {
     SYS_TIME = 0x11,
     SYS_ERRNO = 0x13,
     SYS_GET_CMD_LINE = 0x15,
+    SYS_HEAPINFO = 0x16,
     SYS_EXIT = 0x18,
     SYS_EXIT_EXTENDED = 0x20,
     SYS_ELAPSED = 0x30,
@@ -401,6 +424,11 @@ pub inline fn sys_rename(file: [*]const fs.Path) isize {
     return call(.SYS_RENAME, file);
 }
 
+//only useful when using syscalls directly
+pub inline fn sys_iserror(ret_code: *const isize) bool {
+    return call(.SYS_ISERROR, ret_code) != 0;
+}
+
 pub inline fn sys_istty(file: *const fs.File) isize {
     return call(.SYS_ISTTY, file);
 }
@@ -419,6 +447,10 @@ pub inline fn sys_errno() isize {
 
 pub inline fn sys_cmd_line(args: *Debug.Argv) isize {
     return call(.SYS_GET_CMD_LINE, args);
+}
+
+pub inline fn sys_heapinfo(args: *Debug.MemInfo) void {
+    _ = call(.SYS_HEAPINFO, args);
 }
 
 pub inline fn sys_exit(args: *const Debug.PanicData) isize {
