@@ -110,7 +110,7 @@ fn PortConfiguration() type {
                 .is_comptime = false,
                 .name = std.fmt.comptimePrint("P{c}{d}", .{ gpio_port_id, gpio_pin_number_int }),
                 .type = ?PinConfiguration,
-                .default_value = &@as(?PinConfiguration, null),
+                .default_value_ptr = &@as(?PinConfiguration, null),
                 .alignment = @alignOf(?PinConfiguration),
             }};
         }
