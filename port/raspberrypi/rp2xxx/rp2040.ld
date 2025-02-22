@@ -31,6 +31,10 @@ SECTIONS
      *(.rodata*)
   } > flash0
 
+  .ARM.extab : {
+      *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } >flash0
+
   .ARM.exidx : {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } >flash0
@@ -54,7 +58,7 @@ SECTIONS
       *(.bss*)
       microzig_bss_end = .;
   } > ram0
-  
+
   .flash_end :
   {
     microzig_flash_end = .;
