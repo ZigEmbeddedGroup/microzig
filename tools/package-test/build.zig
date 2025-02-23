@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "rp2xxx" },
         .{ .target = mb.ports.gd32.boards.sipeed.longan_nano, .name = "gd32" },
         .{ .target = mb.ports.atsam.chips.atsamd51j19, .name = "atsam" },
-        .{ .target = mb.ports.avr.boards.arduino.nano, .name = "avr" },
+        //.{ .target = mb.ports.avr.boards.arduino.nano, .name = "avr" },
         .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_dongle, .name = "nrf5x" },
         .{ .target = mb.ports.lpc.boards.mbed.lpc1768, .name = "lpc" },
         .{ .target = mb.ports.stm32.boards.stm32f3discovery, .name = "stm32" },
