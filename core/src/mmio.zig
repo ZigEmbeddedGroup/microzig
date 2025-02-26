@@ -58,10 +58,10 @@ pub fn Mmio(comptime PackedT: type) type {
         inline fn toggle_field(val: anytype, comptime field_name: []const u8, value: anytype) void {
             const FieldType = @TypeOf(@field(val, field_name));
             switch (@typeInfo(FieldType)) {
-                .Int => {
+                .int => {
                     @field(val, field_name) = @field(val, field_name) ^ value;
                 },
-                .Enum => |enum_info| {
+                .@"enum" => |enum_info| {
                     // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
                     const U = enum_info.tag_type;
                     @field(val, field_name) =

@@ -84,7 +84,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev4f = .{
+    const qingkev4f = std.Target.Query{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
