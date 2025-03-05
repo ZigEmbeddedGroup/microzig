@@ -62,7 +62,7 @@ pub fn main() !void {
         else
             std.meta.stringToEnum(uf2.FamilyId, family_id_str) orelse {
                 std.log.err("invalid family id: {s}, valid family names are:", .{family_id_str});
-                inline for (@typeInfo(uf2.FamilyId).Enum.fields) |field|
+                inline for (@typeInfo(uf2.FamilyId).@"enum".fields) |field|
                     std.log.err(" - {s}", .{field.name});
 
                 return error.InvalidFamilyId;

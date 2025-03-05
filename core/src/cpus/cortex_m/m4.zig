@@ -132,23 +132,23 @@ pub const MemoryProtectionUnit = extern struct {
         reserved0: u24,
     }),
     /// MPU Region Base Address Register.
-    RBAR: RBAR,
+    RBAR: RBAR_Register,
     /// MPU Region Attribute and Size Register.
-    RASR: RASR,
+    RASR: RASR_Register,
     /// MPU Alias 1 Region Base Address Register.
-    RBAR_A1: RBAR,
+    RBAR_A1: RBAR_Register,
     /// MPU Alias 1 Region Attribute and Size Register.
-    RASR_A1: RASR,
+    RASR_A1: RASR_Register,
     /// MPU Alias 2 Region Base Address Register.
-    RBAR_A2: RBAR,
+    RBAR_A2: RBAR_Register,
     /// MPU Alias 2 Region Attribute and Size Register.
-    RASR_A2: RASR,
+    RASR_A2: RASR_Register,
     /// MPU Alias 3 Region Base Address Register.
-    RBAR_A3: RBAR,
+    RBAR_A3: RBAR_Register,
     /// MPU Alias 3 Region Attribute and Size Register.
-    RASR_A3: RASR,
+    RASR_A3: RASR_Register,
 
-    pub const RBAR = mmio.Mmio(packed struct(u32) {
+    pub const RBAR_Register = mmio.Mmio(packed struct(u32) {
         /// MPU region field.
         REGION: u4,
         /// MPU region number valid bit.
@@ -157,7 +157,7 @@ pub const MemoryProtectionUnit = extern struct {
         ADDR: u27,
     });
 
-    pub const RASR = mmio.Mmio(packed struct(u32) {
+    pub const RASR_Register = mmio.Mmio(packed struct(u32) {
         /// Region enable bit.
         ENABLE: u1,
         /// Specifies the size of the MPU protection region.

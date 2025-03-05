@@ -45,7 +45,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .root_source_file = b.path("src/hals/hal_ch32v307.zig"),
     };
 
-    const qingkev2a = .{
+    const qingkev2a = std.Target.Query{
         // QingKe V2C is RV32EC
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic },
@@ -58,7 +58,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev3 = .{
+    const qingkev3 = std.Target.Query{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
@@ -71,7 +71,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev4b = .{
+    const qingkev4b = std.Target.Query{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
@@ -84,7 +84,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev4f = .{
+    const qingkev4f = std.Target.Query{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.

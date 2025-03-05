@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const xml = @import("xml.zig");
+const Arch = @import("arch.zig").Arch;
 
 const Database = @import("Database.zig");
 const Access = Database.Access;
@@ -34,7 +35,7 @@ const Context = struct {
     ) !RegisterProperties {
         const register_props = try RegisterProperties.parse(node);
         var base_register_props = ctx.register_props.get(from) orelse unreachable;
-        inline for (@typeInfo(RegisterProperties).Struct.fields) |field| {
+        inline for (@typeInfo(RegisterProperties).@"struct".fields) |field| {
             if (@field(register_props, field.name)) |value|
                 @field(base_register_props, field.name) = value;
         }
@@ -61,7 +62,7 @@ pub fn load_into_db(db: *Database, doc: xml.Doc) !void {
 
     const name = root.get_value("name") orelse return error.MissingDeviceName;
     const description = root.get_value("description");
-    const arch: Database.Arch = blk: {
+    const arch: Arch = blk: {
         var cpu_it = root.iterate(&.{}, &.{"cpu"});
         if (cpu_it.next()) |cpu| {
             if (cpu.get_value("name")) |cpu_name| {
@@ -203,7 +204,7 @@ fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
     }
 }
 
-fn arch_from_str(str: []const u8) Database.Arch {
+fn arch_from_str(str: []const u8) Arch {
     return if (std.mem.eql(u8, "CM0", str))
         .cortex_m0
     else if (std.mem.eql(u8, "CM0PLUS", str))

@@ -11,6 +11,9 @@
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
 
+        // modules
+        .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
+
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
@@ -24,8 +27,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer#a6a9150c2638ebd079f83ee90c6f9fc6adb16dbf",
-            .hash = "12204586b437ba1057f5ad16eb0c7392bc9534602bf435bf6c9a41cc5a8747630e65",
+            .url = "git+https://github.com/mattnite/boxzer.git#59da7d6bcbecb8cb7e76236ea9d18a7a6bcb4d00",
+            .hash = "1220457e3991f346f2eb4c7adfc1fcd60d71b10a127468949dd91e924e1ec44956f1",
         },
     },
     .paths = .{
@@ -42,6 +45,7 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
     .boxzer_ignore_paths = .{
         "tools",
@@ -50,5 +54,6 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
 }

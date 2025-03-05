@@ -66,11 +66,11 @@ pub const startup_logic = struct {
 pub const vector_table = wrap_trap_handler(startup_logic.trap_handler);
 
 pub fn export_startup_logic() void {
-    @export(startup_logic._start, .{
+    @export(&startup_logic._start, .{
         .name = "_start",
     });
 
-    @export(startup_logic._start_c, .{
+    @export(&startup_logic._start_c, .{
         .name = "_start_c",
     });
 }
@@ -80,7 +80,7 @@ pub inline fn wrap_trap_handler(inner: fn () callconv(.C) void) fn () callconv(.
         const unique_call_inner_export_name = @typeName(@This()) ++ "_call_inner";
 
         comptime {
-            @export(call_inner, .{
+            @export(&call_inner, .{
                 .name = unique_call_inner_export_name,
             });
         }
