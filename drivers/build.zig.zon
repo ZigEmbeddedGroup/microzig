@@ -1,5 +1,6 @@
 .{
     .name = .microzig_driver_framework,
+    .fingerprint = 0x79d4e933bd21c6de,
     .version = "0.0.1",
     .paths = .{
         "LICENSE",

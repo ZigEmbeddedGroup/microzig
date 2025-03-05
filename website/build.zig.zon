@@ -1,5 +1,6 @@
 .{
     .name = .website,
+    .fingerprint = 0x476f5de7bbfb249a,
     .version = "0.2.0",
     .paths = .{"."},
     .dependencies = .{
