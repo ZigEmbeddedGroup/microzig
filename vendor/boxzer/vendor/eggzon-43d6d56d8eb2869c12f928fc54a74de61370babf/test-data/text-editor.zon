@@ -1,0 +1,11 @@
+.{
+    .name = "text-editor",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .ziglyph = .{
+            .url = "https://github.com/MasterQ32/ziglyph/archive/492d364a395cd2f243cbd416571d3f12d97823e1.tar.gz",
+            .hash = "1220c892b709f43fac99c3ea7876fd0333274c8bec5fee62f7a341b523687e85d722",
+        },
+    },
+}

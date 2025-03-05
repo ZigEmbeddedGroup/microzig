@@ -1,5 +1,5 @@
 .{
-    .name = "port/wch/ch32v",
+    .name = .port_wch_ch32v,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

@@ -1,5 +1,5 @@
 .{
-    .name = "examples/wch/ch32v",
+    .name = .examples_wch_ch32v,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

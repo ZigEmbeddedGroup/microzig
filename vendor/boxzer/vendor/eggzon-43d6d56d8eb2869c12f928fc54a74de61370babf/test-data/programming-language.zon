@@ -1,0 +1,15 @@
+.{
+    .name = "ashet-pl",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .parser_toolkit = .{
+            .url = "https://github.com/MasterQ32/parser-toolkit/archive/808d4360a96de73f51c54e81c6ecf252edf9a800.tar.gz",
+            .hash = "122035a324a6a46bc367ecd79dfb0bf666bda97cb64ab4f5d20e6d7e88972f608d84",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/8dca20383cefe908121eec7311dc78f65f3a425e.tar.gz",
+            .hash = "1220888bb3e0830e3120f1a079c8aa7054de8dcf20f11b49fb8979414b5b9f701734",
+        },
+    },
+}

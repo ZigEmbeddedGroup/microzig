@@ -1,5 +1,6 @@
 .{
-    .name = "examples/espressif/esp",
+    .name = .examples_espressif_esp,
+    .fingerprint = 0xa568458fa3375cb1,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

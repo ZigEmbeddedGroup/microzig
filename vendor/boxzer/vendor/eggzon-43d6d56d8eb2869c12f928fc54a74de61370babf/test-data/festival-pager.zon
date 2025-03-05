@@ -1,0 +1,14 @@
+.{
+    .name = "festival-pager",
+    .version = "0.1.0",
+    .dependencies = .{
+        .rp2040 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/raspberrypi-rp2040/archive/591d9e83006768e1404dc2aa3f51a23e8c44b463.tar.gz",
+            .hash = "122046e2c13bc1d50cffe5ca0a84356634ae79bc9738c96ac76cd15200f6e09c33fc",
+        },
+        .uf2 = .{
+            .url = "https://github.com/ZigEmbeddedGroup/uf2/archive/e3b869d571f7b92c79be9a35964041de9bbfae01.tar.gz",
+            .hash = "1220d55e8a90b9e5ecf99549f8d87c0a7c90518a7d10da1908d19dbddd0bbc408729",
+        },
+    },
+}

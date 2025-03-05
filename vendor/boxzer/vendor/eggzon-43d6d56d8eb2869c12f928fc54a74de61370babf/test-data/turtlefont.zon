@@ -1,0 +1,15 @@
+.{
+    .name = "turtlefont",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .proxy_head = .{
+            .url = "https://github.com/MasterQ32/proxy-head/archive/9250354c2667a0b080380b2df051c3b7c9a7559a.tar.gz",
+            .hash = "1220accd76a0d8371817082d0e4c1ec9f86b59d13642ada81aa3693511fd63c676f8",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/cce1b8987723c155d1fa61c4e6cac717074a2e74.tar.gz",
+            .hash = "122087f17682383feb354fecb2505788fdced06639f34e750cf641909fc6dcd76801",
+        },
+    },
+}

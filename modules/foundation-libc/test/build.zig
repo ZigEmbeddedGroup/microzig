@@ -128,7 +128,7 @@ fn target_can_multithread(target: Build.ResolvedTarget) bool {
     };
 }
 
-const validation_target_list = [_]std.zig.CrossTarget{
+const validation_target_list = [_]std.Target.Query{
     .{}, // regular host platform
     .{ .os_tag = .freestanding }, // host platform, but no OS
 

@@ -1,0 +1,47 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [
+          ubuntu-latest,
+          windows-latest,
+          macos-latest,
+        ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.12.0
+
+      - name: Build
+        run: zig build
+
+      - name: Unit Test
+        run: zig build test
+
+      - name: Dry run packaging
+        shell: bash
+        run: |
+          cd test/monorepo
+          ../../zig-out/bin/boxzer http://localhost:8000
+          python3 -m http.server 8000 --directory boxzer-out &
+          sleep 1
+
+          cd ../workbench/a
+          zig fetch --save=b http://localhost:8000/0.0.0/b.tar.gz
+          zig build
+
+          # clean up server
+          jobs -p | xargs kill

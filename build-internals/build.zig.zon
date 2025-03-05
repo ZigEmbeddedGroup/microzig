@@ -1,5 +1,5 @@
 .{
-    .name = "build-internals",
+    .name = .build_internals,
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },

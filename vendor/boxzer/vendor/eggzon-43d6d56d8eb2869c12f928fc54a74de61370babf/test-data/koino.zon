@@ -1,0 +1,11 @@
+.{
+    .name = "koino",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .interface = .{
+            .url = "https://github.com/MasterQ32/interface.zig/archive/08db064d77dcd0aef2456f17fadd7906db79a92b.tar.gz",
+            .hash = "12209dce7212e98557b3fd1344573c3821b6ae183928f9be0a18dceee3e39769dede",
+        },
+    },
+}

@@ -1,5 +1,6 @@
 .{
-    .name = "examples/gigadevice/gd32",
+    .name = .examples_gigadevice_gd32,
+    .fingerprint = 0x108c715b1d663409,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

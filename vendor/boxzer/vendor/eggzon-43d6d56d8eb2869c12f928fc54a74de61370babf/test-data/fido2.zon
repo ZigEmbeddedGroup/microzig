@@ -1,0 +1,19 @@
+.{
+    .name = "fido2",
+    .version = "0.11.2",
+
+    .dependencies = .{
+        .zbor = .{
+            .url = "https://github.com/r4gus/zbor/archive/master.tar.gz",
+            .hash = "1220025bd0001235698dd22fed095f5a1c1cafbe51939f02fcaa3a19fc897717457a",
+        },
+        .hidapi = .{
+            .url = "https://github.com/r4gus/hidapi/archive/master.tar.gz",
+            .hash = "1220905f5a1e792ad8aaf45c570786882faaecee19bf87130324e4a5af090fb70859",
+        },
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/master.tar.gz",
+            .hash = "1220ae43eccd3940d287e9e62bf84897040d0cc9e82c970b59c5703d7fd733d0213f",
+        },
+    },
+}

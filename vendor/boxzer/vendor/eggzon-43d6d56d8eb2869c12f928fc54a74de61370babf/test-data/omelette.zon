@@ -1,0 +1,14 @@
+.{
+    .name = "omelette",
+    .version = "0.1.0",
+    .dependencies = .{
+        .lola = .{
+            .url = "https://github.com/MasterQ32/LoLa/archive/41c16a9554b193a86c63f6d70962b01b9a7b7c88.tar.gz",
+            .hash = "1220174be50e33f9a2012f123ab6f4c486e5a0e1f95ee1141d6484519bfdb7d793bd",
+        },
+        .raylib = .{
+            .url = "https://github.com/MasterQ32/raylib-zig/archive/da09b9579881cd99be2c294fa688b60fc0087081.tar.gz",
+            .hash = "1220eb4b60ab6cdf6d38bc62a41d3249c38aa9e553f8bc6ab1cf5a7634ec478f620b",
+        },
+    },
+}

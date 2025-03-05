@@ -1,5 +1,6 @@
 .{
-    .name = "port/stmicro/stm32",
+    .name = .port_stmicro_stm32,
+    .fingerprint = 0x58c5bf1b628dcc9,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
