@@ -1,11 +1,12 @@
 .{
     .name = .website,
+    .fingerprint = 0x476f5de7bbfb249a,
     .version = "0.2.0",
     .paths = .{"."},
     .dependencies = .{
         .zine = .{
             .url = "git+https://github.com/kristoff-it/zine.git#e59e4a933e92eb522582155f2fd765940bc33e2c",
-            .hash = "1220415ab2115a927a6bfb1a1a21cda2ab10f01fdae9f781af12284ea06fcf04648b",
+            .hash = "zine-0.0.0-AAAAAArZBQBBWrIRWpJ6a_saGiHNoqsQ8B_a6feBrxIo",
         },
     },
 }

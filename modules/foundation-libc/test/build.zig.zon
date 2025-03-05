@@ -1,5 +1,6 @@
 .{
     .name = .foundation_libc_test,
+    .fingerprint = 0x4b1b90f309c060d3,
     .version = "0.0.0",
     .dependencies = .{
         .foundation_libc = .{ .path = ".." },

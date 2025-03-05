@@ -1,5 +1,6 @@
 .{
     .name = .port_gigadevice_gd32,
+    .fingerprint = 0x581d90a3331f3c5a,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
