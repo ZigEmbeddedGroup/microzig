@@ -76,12 +76,11 @@ pub fn Stepper(comptime Driver: type) type {
         steps_remaining: u32 = 0,
         // Steps remaining in decel
         steps_to_brake: u32 = 0,
-        // TODO: Just `.from_us(0)` with zig 0.14!
-        step_pulse: mdf.time.Duration = mdf.time.Duration.from_us(0),
-        cruise_step_pulse: mdf.time.Duration = mdf.time.Duration.from_us(0),
-        remainder: mdf.time.Duration = mdf.time.Duration.from_us(0),
-        last_action_end: mdf.time.Absolute = mdf.time.Absolute.from_us(0),
-        next_action_interval: mdf.time.Duration = mdf.time.Duration.from_us(0),
+        step_pulse: mdf.time.Duration = .from_us(0),
+        cruise_step_pulse: mdf.time.Duration = .from_us(0),
+        remainder: mdf.time.Duration = .from_us(0),
+        last_action_end: mdf.time.Absolute = .from_us(0),
+        next_action_interval: mdf.time.Duration = .from_us(0),
         step_count: u32 = 0,
         dir_state: mdf.base.Digital_IO.State = .low,
         motor_steps: u16,
@@ -191,16 +190,16 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         pub fn start_move(self: *Self, steps: i32) void {
-            self.start_move_time(steps, mdf.time.Duration.from_us(0));
+            self.start_move_time(steps, .from_us(0));
         }
 
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
             self.dir_state = if (steps >= 0) .high else .low;
-            self.last_action_end = mdf.time.Absolute.from_us(0);
+            self.last_action_end = .from_us(0);
             self.steps_remaining = @abs(steps);
             self.step_count = 0;
-            self.remainder = mdf.time.Duration.from_us(0);
+            self.remainder = .from_us(0);
             switch (self.profile) {
                 .linear_speed => |p| {
                     const microstep_f: f64 = @floatFromInt(self.microsteps);
@@ -237,7 +236,7 @@ pub fn Stepper(comptime Driver: type) type {
                     self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
                     self.step_pulse = self.cruise_step_pulse;
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
-                        self.step_pulse = mdf.time.Duration.from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
+                        self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                             @as(f64, @floatFromInt(self.steps_remaining))));
                     }
                 },
@@ -272,7 +271,7 @@ pub fn Stepper(comptime Driver: type) type {
                         } else {
                             // The series approximates target, set the final value to what it should be instead
                             self.step_pulse = self.cruise_step_pulse;
-                            self.remainder = mdf.time.Duration.from_us(0);
+                            self.remainder = .from_us(0);
                         }
                     },
                     .decelerating => {
@@ -297,7 +296,7 @@ pub fn Stepper(comptime Driver: type) type {
                 self.clock.sleep_us(@intFromEnum(delay_us));
                 return;
             }
-            const deadline = mdf.time.Deadline.init_relative(start_us, delay_us);
+            const deadline: mdf.time.Deadline = .init_relative(start_us, delay_us);
             while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
         }
 
@@ -320,8 +319,8 @@ pub fn Stepper(comptime Driver: type) type {
                 self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
             } else {
                 // end of move
-                self.last_action_end = mdf.time.Absolute.from_us(0);
-                self.next_action_interval = mdf.time.Duration.from_us(0);
+                self.last_action_end = .from_us(0);
+                self.next_action_interval = .from_us(0);
             }
             return self.next_action_interval;
         }
