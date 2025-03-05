@@ -1,5 +1,5 @@
 .{
-    .name = "port/gigadevice/gd32",
+    .name = .port_gigadevice_gd32,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

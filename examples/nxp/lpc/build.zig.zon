@@ -1,5 +1,5 @@
 .{
-    .name = "examples/nxp/lpc",
+    .name = .examples_nxp_lpc,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

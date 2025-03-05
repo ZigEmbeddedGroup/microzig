@@ -1,5 +1,7 @@
 .{
-    .name = "microzig",
+    .name = .microzig,
+    // Note: This should be changed if you fork microzig!
+    .fingerprint = 0x605a83a849186d0f,
     .version = "0.13.2",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{

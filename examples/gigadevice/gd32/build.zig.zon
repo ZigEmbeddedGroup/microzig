@@ -1,5 +1,5 @@
 .{
-    .name = "examples/gigadevice/gd32",
+    .name = .examples_gigadevice_gd32,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

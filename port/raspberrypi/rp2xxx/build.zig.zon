@@ -1,5 +1,5 @@
 .{
-    .name = "port/raspberrypi/rp2xxx",
+    .name = .port_raspberrypi_rp2xxx,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

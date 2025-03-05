@@ -1,5 +1,5 @@
 .{
-    .name = "microzig_driver_framework",
+    .name = .microzig_driver_framework,
     .version = "0.0.1",
     .paths = .{
         "LICENSE",

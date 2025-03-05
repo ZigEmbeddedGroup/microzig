@@ -1,5 +1,5 @@
 .{
-    .name = "examples/espressif/esp",
+    .name = .examples_espressif_esp,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

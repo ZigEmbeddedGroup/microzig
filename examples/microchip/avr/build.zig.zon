@@ -1,5 +1,5 @@
 .{
-    .name = "examples/microchip/avr",
+    .name = .examples_microchip_avr,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

@@ -1,5 +1,5 @@
 .{
-    .name = "examples/microchip/atsam",
+    .name = .examples_microchip_atsam,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

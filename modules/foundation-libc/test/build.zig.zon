@@ -1,5 +1,5 @@
 .{
-    .name = "foundation-libc/test",
+    .name = .foundation_libc_test,
     .version = "0.0.0",
     .dependencies = .{
         .foundation_libc = .{ .path = ".." },

@@ -1,5 +1,5 @@
 .{
-    .name = "package-test",
+    .name = .package-test,
     .version = "0.0.0",
     .paths = .{
         "build.zig",
