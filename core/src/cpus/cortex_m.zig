@@ -1,15 +1,15 @@
 const std = @import("std");
+const root = @import("root");
+const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
-const root = @import("root");
 
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum();
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(fn () callconv(.C) void, .{Interrupt});
-const interrupt_options: InterruptOptions = if (@hasDecl(app, "interrupts")) app.interrupts else .{};
 
-pub const interrupts = struct {
-    pub fn are_globally_enabled() bool {
+pub const interrupt = struct {
+    pub fn globally_enabled() bool {
         var mrs: u32 = undefined;
         asm volatile ("mrs %[mrs], 16"
             : [mrs] "+r" (mrs),
@@ -17,40 +17,33 @@ pub const interrupts = struct {
         return mrs & 0x1 == 0;
     }
 
-    pub fn globally_enable() void {
+    pub fn enable_interrupts() void {
         asm volatile ("cpsie i");
     }
 
-    pub fn globally_disable() void {
+    pub fn disable_interrupts() void {
         asm volatile ("cpsid i");
     }
 
-    pub fn enable(comptime interrupt: anytype) void {
-        const interrupt_name = @tagName(interrupt);
-        if (@hasField(Interrupt, interrupt_name)) {
-            const num = @intFromEnum(@field(Interrupt, interrupt_name));
-            if (num >= 0) {
-                peripherals.nvic.unmask(num);
-            } else {
-                @compileError("can't enable exception: " ++ interrupt_name);
-            }
-        } else {
-            @compileError("interrupt not found: " ++ interrupt_name);
+    fn assert_not_exception(comptime int: Interrupt) void {
+        if (@intFromEnum(int) < 0) {
+            @compileError("expected interrupt, got exception: " ++ @tagName(int));
         }
     }
 
-    pub fn disable(comptime interrupt: anytype) void {
-        const interrupt_name = @tagName(interrupt);
-        if (@hasField(Interrupt, interrupt_name)) {
-            const num = @intFromEnum(@field(Interrupt, interrupt_name));
-            if (num >= 0) {
-                peripherals.nvic.mask(num);
-            } else {
-                @compileError("can't disable exception: " ++ interrupt_name);
-            }
-        } else {
-            @compileError("interrupt not found: " ++ interrupt_name);
-        }
+    pub fn is_enabled(comptime int: Interrupt) void {
+        assert_not_exception(int);
+        return peripherals.nvic.is_enabled(@intFromEnum(int));
+    }
+
+    pub fn enable(comptime int: Interrupt) void {
+        assert_not_exception(int);
+        peripherals.nvic.enable(@intFromEnum(int));
+    }
+
+    pub fn disable(comptime int: Interrupt) void {
+        assert_not_exception(int);
+        peripherals.nvic.disable(@intFromEnum(int));
     }
 };
 
@@ -135,8 +128,11 @@ pub const startup_logic = struct {
             .Reset = microzig.cpu.startup_logic._start,
         };
 
-        for (@typeInfo(@TypeOf(app.interrupts)).Struct.fields) |field| {
-            @field(tmp, field.name) = @field(app.interrupts, field.name);
+        for (@typeInfo(@TypeOf(microzig_options.interrupts)).Struct.fields) |field| {
+            const maybe_handler = @field(microzig_options.interrupts, field.name);
+            if (maybe_handler) |handler| {
+                @field(tmp, field.name) = handler;
+            }
         }
 
         break :blk tmp;

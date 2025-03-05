@@ -1,7 +1,7 @@
 const std = @import("std");
 const root = @import("root");
+const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
-const app = microzig.app;
 
 pub const Exception = enum(comptime_int) {
     InstructionMisaligned = 0x0,
@@ -33,8 +33,6 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(
     },
 );
 
-const interrupt_options: InterruptOptions = if (@hasDecl(app, "interrupts")) app.interrupts else .{};
-
 pub const interrupt = struct {
     pub fn globally_enabled() bool {
         return csr.mstatus.read().mie == 1;
@@ -49,132 +47,101 @@ pub const interrupt = struct {
     }
 
     pub fn is_enabled(comptime int: anytype) bool {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            return csr.mie.read() & (1 << @intFromEnum(@field(CoreInterrupt, name))) != 0;
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            return csr.meiea.read_set(.{ .index = index }).window & mask != 0;
-        } else {
-            @compileError("interrupt not found: " ++ name);
-        }
+        return csr.mie.read() & (1 << @intFromEnum(@field(CoreInterrupt, @tagName(int)))) != 0;
     }
 
     pub fn enable(comptime int: anytype) void {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            csr.mie.set(1 << @intFromEnum(@field(CoreInterrupt, name)));
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        csr.mie.set(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    }
+
+    pub fn disable(comptime int: anytype) void {
+        csr.mie.clear(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    }
+
+    pub fn is_pending(comptime int: anytype) bool {
+        return csr.mip.read() & (1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    }
+
+    pub fn set_pending(comptime int: anytype) void {
+        csr.mip.set(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    }
+
+    pub fn clear_pending(comptime int: anytype) void {
+        csr.mip.clear(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    }
+
+    pub const external = struct {
+        pub fn is_enabled(comptime int: ExternalInterrupt) bool {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const index: u32 = num / 16;
+            const mask: u32 = 1 << (num % 16);
+            return csr.meiea.read_set(.{ .index = index }).window & mask != 0;
+        }
+
+        pub fn enable(comptime int: ExternalInterrupt) void {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
             csr.meiea.set(.{
                 .index = index,
                 .window = mask,
             });
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub fn disable(comptime int: anytype) void {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            csr.mie.clear(1 << @intFromEnum(@field(CoreInterrupt, name)));
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn disable(comptime int: ExternalInterrupt) void {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
             csr.meiea.clear(.{
                 .index = index,
                 .window = mask,
             });
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub fn is_pending(comptime int: anytype) bool {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            return csr.mip.read() & (1 << @intFromEnum(@field(CoreInterrupt, name)));
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn is_pending(comptime int: ExternalInterrupt) bool {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
             return csr.meipa.read_set(.{ .index = index }).window & mask != 0;
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub fn set_pending(comptime int: anytype) void {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            csr.mip.set(1 << @intFromEnum(@field(CoreInterrupt, name)));
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn set_pending(comptime int: ExternalInterrupt) void {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
             csr.meifa.set(.{ .index = index, .window = mask });
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub fn clear_pending(comptime int: anytype) void {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            csr.mip.clear(1 << @intFromEnum(@field(CoreInterrupt, name)));
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn clear_pending(comptime int: ExternalInterrupt) void {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
             csr.meifa.clear(.{ .index = index, .window = mask });
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub const Priority = enum(u4) {
-        pub const highest: Priority = 15;
-        pub const lowest: Priority = 0;
+        pub const Priority = enum(u4) {
+            pub const highest: Priority = 15;
+            pub const lowest: Priority = 0;
 
-        _,
-    };
+            _,
+        };
 
-    pub fn set_priority(comptime int: anytype, priority: Priority) void {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            @compileError("can't set priority of core interrupts");
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 4;
             const set_mask: u32 = @as(u16, @intFromEnum(priority)) << (4 * (num % 4));
             const clear_mask: u32 = 0xf << (4 * (num % 4));
             csr.meifa.clear(.{ .index = index, .window = clear_mask });
             csr.meifa.set(.{ .index = index, .window = set_mask });
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
 
-    pub fn get_priority(comptime int: anytype) Priority {
-        const name = @tagName(int);
-        if (@hasField(CoreInterrupt, name)) {
-            // here technically we can return the
-            @compileError("can't get priority of core interrupts");
-        } else if (@hasField(ExternalInterrupt, name)) {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, name)));
+        pub fn get_priority(comptime int: ExternalInterrupt) Priority {
+            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
             const index: u32 = num / 4;
             const mask: u32 = 0xf << (4 * (num % 4));
             return @enumFromInt((csr.meifa.read_set(.{ .index = index }) & mask) >> (4 * (num % 4)));
-        } else {
-            @compileError("interrupt not found: " ++ name);
         }
-    }
+    };
 };
 
 pub fn wfi() void {
@@ -250,12 +217,12 @@ pub const startup_logic = struct {
         );
     }
 
-    pub fn unhandled() callconv(.C) noreturn {
+    fn unhandled() callconv(.C) noreturn {
         @panic("unhandled interrupt");
     }
 
     pub export fn _exception_handler() callconv(.Naked) noreturn {
-        const handler = interrupt_options.Exception orelse unhandled;
+        const handler = microzig_options.interrupts.Exception orelse unhandled;
         @export(handler, .{ .name = "_exception_handler_c" });
 
         push_interrupt_state();
@@ -267,7 +234,7 @@ pub const startup_logic = struct {
     }
 
     pub export fn _machine_software_handler() callconv(.Naked) noreturn {
-        const handler = interrupt_options.MachineSoftware orelse unhandled;
+        const handler = microzig_options.interrupts.MachineSoftware orelse unhandled;
         @export(handler, .{ .name = "_machine_software_handler_c" });
 
         push_interrupt_state();
@@ -279,7 +246,7 @@ pub const startup_logic = struct {
     }
 
     pub export fn _machine_timer_handler() callconv(.Naked) noreturn {
-        const handler = interrupt_options.MachineTimer orelse unhandled;
+        const handler = microzig_options.interrupts.MachineTimer orelse unhandled;
         @export(handler, .{ .name = "_machine_timer_handler_c" });
 
         push_interrupt_state();
@@ -293,7 +260,7 @@ pub const startup_logic = struct {
     pub export fn _machine_external_handler() callconv(.Naked) noreturn {
         push_interrupt_state();
 
-        if (interrupt_options.MachineExternal) |handler| {
+        if (microzig_options.interrupts.MachineExternal) |handler| {
             @export(handler, .{ .name = "_machine_external_handler_c" });
 
             asm volatile ("jal _machine_external_handler_c");
@@ -305,7 +272,7 @@ pub const startup_logic = struct {
                     var external_interrupt_table: [count]Handler = [1]Handler{unhandled} ** count;
 
                     for (@typeInfo(ExternalInterrupt).Enum.fields) |field| {
-                        if (@field(interrupt_options, field.name)) |handler| {
+                        if (@field(microzig_options.interrupts, field.name)) |handler| {
                             external_interrupt_table[field.value] = handler;
                         }
                     }

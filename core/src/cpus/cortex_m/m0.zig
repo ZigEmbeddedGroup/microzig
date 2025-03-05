@@ -164,11 +164,15 @@ pub const NestedVectorInterruptController = extern struct {
     /// register saves value 192 to the register.
     IPR: [8]u32,
 
-    pub fn unmask(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+    pub fn is_enabled(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        return nvic.ISER & (1 << num) != 0;
+    }
+
+    pub fn enable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
         nvic.ISER |= 1 << num;
     }
 
-    pub fn mask(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+    pub fn disable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
         nvic.ISER &= !(1 << num);
     }
 };
