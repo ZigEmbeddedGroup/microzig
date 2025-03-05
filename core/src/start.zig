@@ -5,7 +5,7 @@ const app = @import("app");
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-const InterruptOptions = if (@hasDecl(microzig.cpu, "InterruptOptions") microzig.cpu.InterruptOptions else struct {};
+const InterruptOptions = if (@hasDecl(microzig.cpu, "InterruptOptions")) microzig.cpu.InterruptOptions else struct {};
 
 pub const Options = struct {
     log_level: std.log.Level = std.log.default_level,
