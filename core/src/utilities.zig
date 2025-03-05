@@ -205,6 +205,8 @@ pub fn max_enum_tag(T: type) @typeInfo(T).Enum.tag_type {
 pub fn GenerateInterruptEnum(TagType: type) type {
     if (@typeInfo(TagType) != .Int) @compileError("expected an int type");
 
+    if (microzig.chip.interrupts.len == 0) return enum {};
+
     var fields: [microzig.chip.interrupts.len]std.builtin.Type.EnumField = undefined;
 
     for (&fields, microzig.chip.interrupts) |*field, interrupt| {
