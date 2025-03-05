@@ -1,0 +1,15 @@
+.{
+    .name = "proxy:head",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .sdl2 = .{
+            .url = "https://github.com/MasterQ32/SDL.zig/archive/3804a7660f54110e5571b7640ce0f0562b4cc0e5.tar.gz",
+            .hash = "1220088956cfbdda4a5775a7df27f9772d2534453dd9331006b97a1310487867f95c",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/cce1b8987723c155d1fa61c4e6cac717074a2e74.tar.gz",
+            .hash = "122087f17682383feb354fecb2505788fdced06639f34e750cf641909fc6dcd76801",
+        },
+    },
+}

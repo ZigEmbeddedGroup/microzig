@@ -1,0 +1,14 @@
+.{
+    .name = "zcom",
+    .version = "0.1.0",
+    .dependencies = .{
+        .serial = .{
+            .url = "https://github.com/ZigEmbeddedGroup/serial/archive/refs/heads/master.tar.gz",
+            .hash = "12205a4c45778a0e3c33e49488d2b9565802639ca682ce85b5559fbdc336de7090fe",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/refs/heads/master.tar.gz",
+            .hash = "12203d04cafc97f952d74cdb077e74c0ab3414f9f6b5fbd159112c62bfa584a0dbed",
+        },
+    },
+}

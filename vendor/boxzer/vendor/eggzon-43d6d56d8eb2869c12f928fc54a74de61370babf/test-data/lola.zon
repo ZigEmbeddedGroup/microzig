@@ -1,0 +1,19 @@
+.{
+    .name = "lola",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/91d1e89fb89a4d01dec7c9aec95b0a324080ebcc.tar.gz",
+            .hash = "12203d04cafc97f952d74cdb077e74c0ab3414f9f6b5fbd159112c62bfa584a0dbed",
+        },
+        .any_pointer = .{
+            .url = "https://github.com/MasterQ32/any-pointer/archive/f1e46bd8482e439346f19ef193928f9d1d3a887c.tar.gz",
+            .hash = "1220effe396ff365d1c5b3c2ca658f1b5b946d8b539b523a131ab65cc106d4c70241",
+        },
+        .interface = .{
+            .url = "https://github.com/MasterQ32/interface.zig/archive/a9fcc958e5e0387d3cc6212858cda3d34b933e56.tar.gz",
+            .hash = "122080904d2975b1a46f61fdd4e865b81d69c74abe5d4103fa5bf1709ab1aa64a0a8",
+        },
+    },
+}

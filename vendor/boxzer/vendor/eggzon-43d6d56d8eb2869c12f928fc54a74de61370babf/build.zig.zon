@@ -1,0 +1,14 @@
+.{
+    .name = .eggzon,
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .@"parser-toolkit" = .{
+            .url = "git+https://github.com/mattnite/parser-toolkit.git#214ca0526eaec121d18f55266319fcded4518b64",
+            .hash = "1220cca4a378cce8cee3a6c44117c9c201bf62426142f92f52447f9d28be486325e2",
+        },
+    },
+    .paths = .{
+        "",
+    },
+}

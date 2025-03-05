@@ -1,0 +1,14 @@
+.{
+    .name = "zig-rocket",
+    .version = "0.0.0",
+    .dependencies = .{
+        .sdl = .{
+            .url = "https://github.com/MasterQ32/SDL.zig/archive/6e8736936e6a5a93ff8535ee881a4a991206d0d2.tar.gz",
+            .hash = "12201aeffafaaa6766c4dd778037e54417c89afb2e44d93b96fd2076fb0ddd3995ed",
+        },
+        .network = .{
+            .url = "https://github.com/MasterQ32/zig-network/archive/7b5f76ea09626b96755c027bf4bd5b7e45297027.tar.gz",
+ .hash = "122090e7cb4459c2224399a45c56f47462733b919aa547c96b8c14ee705bfa22976e",
+        },
+    },
+}

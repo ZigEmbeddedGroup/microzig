@@ -1,0 +1,34 @@
+.{
+    .name = "ashet-os",
+    .version = "0.1.0",
+    .dependencies = .{
+        .@"text-editor" = .{
+            .url = "https://github.com/MasterQ32/TextEditor/archive/c51bf94c87ac7e0faced817144abce0226b86653.tar.gz",
+            .hash = "1220d5a0c8550e317ff28c54cbcc2ebc2b86bbcd25c17a36cf53d620ed079d1be6e7",
+        },
+        .zigimg = .{
+            .url = "https://github.com/zigimg/zigimg/archive/b64004bfacd59489bcc4420afdf59fabc3eb7c04.tar.gz",
+            .hash = "1220336370d55d863646a7c26dc8dfe6da77e1aac5243342f392960293dce7069026",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/53f9b53d7bebe9baad52ed4d505b480540344946.tar.gz",
+            .hash = "122032821c42293e5175112c2519d8820a351ce41a335d6352d563db0624c38349ce",
+        },
+        .hyperdoc = .{
+            .url = "https://github.com/MasterQ32/hyperdoc/archive/3d52bf3981dfb40bf98a568573c75c901e9d2ab8.tar.gz",
+            .hash = "1220755ee9d65a23b1861bf58fe18cd7dfe6a97e7b7fb31cfae2b7b5b7e58d3a3389",
+        },
+        .lua = .{
+            .url = "https://github.com/MasterQ32/lua/archive/f4961d6655d0ea0e849ec5ac007747f725d17804.tar.gz",
+            .hash = "122062883cd056cfd1f06a106dd742b63bf355f3b8e07e8a74befbda20b1ae0d616f",
+        },
+        .turtlefont = .{
+            .url = "https://github.com/MasterQ32/turtlefont/archive/2e7e60602ca305defec942a551842d716e90a3b7.tar.gz",
+            .hash = "1220ff1f7651506471e5a486a4fd4b19c3f294c49cffec9092458c4a1ad2c8835d4b",
+        },
+        .fraxinus = .{
+            .url = "https://github.com/MasterQ32/fraxinus/archive/dac75f30046d2fb7eeed893d505722f5f781d832.tar.gz",
+            .hash = "1220b54f999bed8a965d0978cb3375083e9038286c5414cb06726318b4f3917a01d2",
+        },
+    },
+}

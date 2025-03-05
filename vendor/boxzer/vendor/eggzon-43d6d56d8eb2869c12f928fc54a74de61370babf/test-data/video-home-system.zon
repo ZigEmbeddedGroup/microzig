@@ -1,0 +1,23 @@
+.{
+    .name = "video-home-system",
+    .version = "0.1.0",
+
+    .dependencies = .{
+        .sdl = .{
+            .url = "https://github.com/MasterQ32/SDL.zig/archive/34a0391668b18f4f96751b9bdb7666552bb49b5d.tar.gz",
+            .hash = "1220088956cfbdda4a5775a7df27f9772d2534453dd9331006b97a1310487867f95c",
+        },
+        .args = .{
+            .url = "https://github.com/MasterQ32/zig-args/archive/c84f9709405b31ef3e72ab26b20ba3c37826f8ec.tar.gz",
+            .hash = "1220e4ae687b355b164d986c6400eef6cfc2b1020718eaa72914865d344b2f192141",
+        },
+        .network = .{
+            .url = "https://github.com/MasterQ32/zig-network/archive/86c315be67c7567195cc426615d81202a39bbb91.tar.gz",
+            .hash = "1220746fef79fb9774d76a0a5d746ccf30cfc847bce4a3a7388c3451817b7ab92869",
+        },
+        .serial = .{
+            .url = "https://github.com/ZigEmbeddedGroup/serial/archive/ee1478b38675b5ae1192a688610a9da638c662f0.tar.gz",
+            .hash = "12206ee24d0d3aeb86ac894a36026d1b2a2df89f0c74795d38a74161e67e9189bc17",
+        },
+    },
+}
