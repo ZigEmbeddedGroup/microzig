@@ -24,6 +24,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     .name = "STM32F3DISCOVERY",
                     .root_source_file = b.path("src/boards/STM32F3DISCOVERY.zig"),
                 },
+                .hal = microzig.HardwareAbstractionLayer{
+                    .root_source_file = b.path("src/hals/STM32F303.zig"),
+                },
             }),
             .stm32f4discovery = chips.STM32F407VG.derive(.{
                 .board = .{

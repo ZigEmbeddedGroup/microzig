@@ -107,6 +107,10 @@ pub fn main() !void {
 
         switch (program_args.cpu_arch) {
             .arm, .thumb => try writer.writeAll(
+                \\  .ARM.extab : {
+                \\      *(.ARM.extab* .gnu.linkonce.armextab.*)
+                \\  } >flash0
+                \\
                 \\  .ARM.exidx : {
                 \\      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
                 \\  } >flash0

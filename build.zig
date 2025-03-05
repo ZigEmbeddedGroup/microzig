@@ -357,6 +357,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
+            config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
             config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
 
             const core_mod = b.createModule(.{
@@ -462,6 +463,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .linkage = .static,
                     .root_source_file = mb.core_dep.path("src/start.zig"),
                     .strip = options.strip,
+                    .unwind_tables = true,
                 }),
                 .app_mod = app_mod,
                 .target = target,

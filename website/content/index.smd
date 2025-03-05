@@ -15,7 +15,8 @@ Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/). This hardware
 is by far the best supported in MicroZig. It's a fairly alpha project based on
 a fairly new and breaking language so your mileage may vary. That being said,
 it does support other hardware, such as Microchip's `ATSAMD51J19` which was
-used for the [2024 SYCL](https://sycl.it) Badge.
+used for the [2024 SYCL](https://sycl.it)
+[Badge](https://github.com/ZigEmbeddedGroup/sycl-badge/blob/main/docs/introduction/).
 
 ## Let's Begin
 

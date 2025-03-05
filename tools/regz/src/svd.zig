@@ -267,6 +267,11 @@ fn arch_from_str(str: []const u8) Database.Arch {
 pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void {
     const db = ctx.db;
 
+    // load interrupts regardless of the fact that the peripheral is derived
+    var interrupt_it = node.iterate(&.{}, &.{"interrupt"});
+    while (interrupt_it.next()) |interrupt_node|
+        try load_interrupt(db, interrupt_node, device_id);
+
     if (node.get_attribute("derivedFrom")) |derived_from| {
         try ctx.derived_peripherals.put(ctx.arena.allocator(), node, derived_from);
         return;
@@ -303,10 +308,6 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
             return error.PeripheralMissingBaseAddress,
     });
     _ = instance_id;
-
-    var interrupt_it = node.iterate(&.{}, &.{"interrupt"});
-    while (interrupt_it.next()) |interrupt_node|
-        try load_interrupt(db, interrupt_node, device_id);
 
     //if (node.get_value("version")) |version|
     //    try db.add_version(instance_id, version);
