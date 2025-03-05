@@ -92,6 +92,24 @@ pub const NestedVectorInterruptController = extern struct {
     reserved6: [584]u32,
     /// Software Trigger Interrupt Register.
     STIR: u32,
+
+    pub fn is_enabled(nvic: *volatile NestedVectorInterruptController, num: comptime_int) bool {
+        const bank = num / 32;
+        const index = num % 32;
+        return nvic.ISER[bank] & (1 << index) != 0;
+    }
+
+    pub fn enable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        const bank = num / 32;
+        const index = num % 32;
+        nvic.ISER[bank] |= 1 << index;
+    }
+
+    pub fn disable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        const bank = num / 32;
+        const index = num % 32;
+        nvic.ISER[bank] &= !(1 << index);
+    }
 };
 
 pub const SecurityAttributionUnit = extern struct {

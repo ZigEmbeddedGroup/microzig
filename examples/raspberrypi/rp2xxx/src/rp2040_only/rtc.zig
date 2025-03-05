@@ -12,7 +12,7 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
 
 pub const microzig_options = .{
     .interrupts = .{
-        .RTC_IRQ = .{ .C = &rtc_isr },
+        .RTC_IRQ = rtc_isr,
     },
 };
 
@@ -54,14 +54,14 @@ pub fn main() !void {
     rp2xxx.rtc.irq.enable();
 
     // Enable top level NVIC alarm
-    rp2xxx.irq.enable(.RTC_IRQ);
+    microzig.cpu.interrupt.enable(.RTC_IRQ);
 
     while (true) {
 
         // Disable interrupts during volatile read of fast_blink to prevent data races
-        microzig.cpu.disable_interrupts();
+        microzig.cpu.interrupt.disable_interrupts();
         const fast_blink = fast_blink_vp.*;
-        microzig.cpu.enable_interrupts();
+        microzig.cpu.interrupt.enable_interrupts();
 
         pins.led.toggle();
         time.sleep_ms(if (fast_blink) 500 else 1000);

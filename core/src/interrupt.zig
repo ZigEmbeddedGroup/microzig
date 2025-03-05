@@ -1,40 +1,38 @@
 const std = @import("std");
-const micro = @import("microzig.zig");
+const microzig = @import("microzig.zig");
 
 /// Unmasks the given interrupt and enables its execution.
-/// Note that interrupts must be globally enabled with `sei()` as well.
-pub fn enable(comptime interrupt: anytype) void {
-    _ = interrupt;
-    @compileError("not implemented yet!");
+/// Note that interrupts must be globally enabled with `enable_interrupts()` as well.
+pub inline fn enable(comptime interrupt: anytype) void {
+    microzig.cpu.interrupt.enable(interrupt);
 }
 
 /// Masks the given interrupt and disables its execution.
-pub fn disable(comptime interrupt: anytype) void {
-    _ = interrupt;
-    @compileError("not implemented yet!");
+pub inline fn disable(comptime interrupt: anytype) void {
+    microzig.cpu.interrupt.disable(interrupt);
 }
 
 /// Returns true when the given interrupt is unmasked.
-pub fn is_enabled(comptime interrupt: anytype) bool {
+pub inline fn is_enabled(comptime interrupt: anytype) bool {
     _ = interrupt;
     @compileError("not implemented yet!");
 }
 
-/// *Set Enable Interrupt*, will enable IRQs globally, but keep the masking done via
+/// *Set Enable Interrupt*, will enable interrupts globally, but keep the masking done via
 /// `enable` and `disable` intact.
-pub fn enable_interrupts() void {
-    micro.cpu.enable_interrupts();
+pub inline fn enable_interrupts() void {
+    microzig.cpu.interrupt.enable_interrupts();
 }
 
-/// *Clear Enable Interrupt*, will disable IRQs globally, but keep the masking done via
+/// *Clear Enable Interrupt*, will disable interrupts globally, but keep the masking done via
 /// `enable` and `disable` intact.
-pub fn disable_interrupts() void {
-    micro.cpu.disable_interrupts();
+pub inline fn disable_interrupts() void {
+    microzig.cpu.interrupt.disable_interrupts();
 }
 
 /// Returns true, when interrupts are globally enabled via `sei()`.
-pub fn globally_enabled() bool {
-    @compileError("not implemented yet!");
+pub inline fn globally_enabled() bool {
+    return microzig.cpu.interrupt.globally_enabled();
 }
 
 /// Enters a critical section and disables interrupts globally.
@@ -60,17 +58,9 @@ const CriticalSection = struct {
     }
 };
 
-// TODO: update with arch specifics
-pub const Handler = extern union {
-    C: *const fn () callconv(.C) void,
-    Naked: *const fn () callconv(.Naked) void,
-    // Interrupt is not supported on arm
-};
+// TODO: remove this once the vector table uses its own implementation
+pub const Handler = *const fn () callconv(.C) void;
 
-pub const unhandled = Handler{
-    .C = struct {
-        fn tmp() callconv(.C) noreturn {
-            @panic("unhandled interrupt");
-        }
-    }.tmp,
-};
+pub fn unhandled() callconv(.C) void {
+    @panic("unhandled interrupt");
+}

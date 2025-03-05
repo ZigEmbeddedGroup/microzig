@@ -1,4 +1,5 @@
 const std = @import("std");
+const microzig = @import("microzig.zig");
 
 /// A helper class that allows operating on a slice of slices
 /// with similar operations to those of a slice.
@@ -186,6 +187,74 @@ pub fn Slice_Vector(comptime Slice: type) type {
             };
         };
     };
+}
+
+pub fn max_enum_tag(T: type) @typeInfo(T).Enum.tag_type {
+    if (@typeInfo(T) != .Enum) @compileError("expected an enum type");
+
+    const tag_type = @typeInfo(T).Enum.tag_type;
+    var max_tag: tag_type = std.math.minInt(tag_type);
+    for (@typeInfo(T).Enum.fields) |field| {
+        if (field.value > max_tag) {
+            max_tag = field.value;
+        }
+    }
+    return max_tag;
+}
+
+pub fn GenerateInterruptEnum(TagType: type) type {
+    if (@typeInfo(TagType) != .Int) @compileError("expected an int type");
+
+    if (microzig.chip.interrupts.len == 0) return enum {};
+
+    var fields: [microzig.chip.interrupts.len]std.builtin.Type.EnumField = undefined;
+
+    for (&fields, microzig.chip.interrupts) |*field, interrupt| {
+        field.* = .{
+            .name = interrupt.name,
+            .value = interrupt.index,
+        };
+    }
+
+    return @Type(.{ .Enum = .{
+        .tag_type = TagType,
+        .fields = &fields,
+        .decls = &.{},
+        .is_exhaustive = true,
+    } });
+}
+
+pub const Source = struct {
+    InterruptEnum: type,
+    HandlerFn: type,
+};
+
+pub fn GenerateInterruptOptions(sources: []const Source) type {
+    var ret_fields: []const std.builtin.Type.StructField = &.{};
+
+    for (sources) |source| {
+        if (@typeInfo(source.InterruptEnum) != .Enum) @compileError("expected an enum type");
+        if (@typeInfo(source.HandlerFn) != .Fn) @compileError("expected a function type");
+
+        for (@typeInfo(source.InterruptEnum).Enum.fields) |enum_field| {
+            ret_fields = ret_fields ++ .{.{
+                .name = enum_field.name,
+                .type = ?source.HandlerFn,
+                .default_value = @as(*const anyopaque, @ptrCast(&@as(?source.HandlerFn, null))),
+                .is_comptime = false,
+                .alignment = @alignOf(?source.HandlerFn),
+            }};
+        }
+    }
+
+    return @Type(.{
+        .Struct = .{
+            .layout = .auto,
+            .fields = ret_fields,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
 }
 
 test Slice_Vector {
