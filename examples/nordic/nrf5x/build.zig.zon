@@ -1,5 +1,6 @@
 .{
     .name = .examples_nordic_nrf5x,
+    .fingerprint = 0x485c8762b6f2f539,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
