@@ -286,25 +286,27 @@ fn write_interrupt_list(
 
     const interrupts = try db.get_interrupts(arena, device.id);
 
-    try writer.print(
-        \\
-        \\pub const interrupts: [{}]Interrupt = .{{
-        \\
-    , .{interrupts.len});
+    if (interrupts.len > 0) {
+        try writer.print(
+            \\
+            \\pub const interrupts: [{}]Interrupt = .{{
+            \\
+        , .{interrupts.len});
 
-    for (interrupts) |interrupt| {
-        try writer.writeAll(".{ .name = ");
-        try write_string(interrupt.name, writer);
-        try writer.print(", .index = {}, .description = ", .{interrupt.idx});
-        if (interrupt.description) |description| {
-            try write_string(description, writer);
-        } else {
-            try writer.writeAll("null");
+        for (interrupts) |interrupt| {
+            try writer.writeAll(".{ .name = ");
+            try write_string(interrupt.name, writer);
+            try writer.print(", .index = {}, .description = ", .{interrupt.idx});
+            if (interrupt.description) |description| {
+                try write_string(description, writer);
+            } else {
+                try writer.writeAll("null");
+            }
+            try writer.writeAll(" },\n");
         }
-        try writer.writeAll(" },\n");
-    }
 
-    try writer.writeAll("};\n");
+        try writer.writeAll("};\n");
+    }
 
     try out_writer.writeAll(buffer.items);
 }
@@ -905,6 +907,12 @@ test "gen.peripheral instantiation" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
         \\        pub const peripherals = struct {
@@ -938,6 +946,12 @@ test "gen.peripherals with a shared type" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const devices = struct {
         \\    pub const TEST_DEVICE = struct {
@@ -973,6 +987,12 @@ test "gen.peripheral with modes" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
@@ -1036,6 +1056,12 @@ test "gen.peripheral with enum" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
@@ -1065,6 +1091,12 @@ test "gen.peripheral with enum, enum is exhausted of values" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
@@ -1092,6 +1124,12 @@ test "gen.field with named enum" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
@@ -1125,6 +1163,12 @@ test "gen.field with anonymous enum" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
@@ -1154,6 +1198,12 @@ test "gen.namespaced register groups" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
@@ -1197,6 +1247,12 @@ test "gen.peripheral with reserved register" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
@@ -1230,6 +1286,12 @@ test "gen.peripheral with count" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
@@ -1262,6 +1324,12 @@ test "gen.peripheral with count, padding required" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
@@ -1297,6 +1365,12 @@ test "gen.register with count" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
         \\        pub const peripherals = struct {
@@ -1329,6 +1403,12 @@ test "gen.register with count and fields" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
@@ -1366,6 +1446,12 @@ test "gen.field with count, width of one, offset, and padding" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
@@ -1402,6 +1488,12 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
@@ -1432,8 +1524,19 @@ test "gen.interrupts.avr" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
+        \\        pub const interrupts: [2]Interrupt = .{
+        \\            .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
+        \\            .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
+        \\        };
+        \\
         \\        pub const VectorTable = extern struct {
         \\            const Handler = micro.interrupt.Handler;
         \\            const unhandled = micro.interrupt.unhandled;
@@ -1460,6 +1563,12 @@ test "gen.peripheral type with register and field" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
@@ -1489,6 +1598,12 @@ test "gen.name collisions in enum name cause them to be anonymous" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
@@ -1526,6 +1641,12 @@ test "gen.pick one enum field in value collisions" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
@@ -1555,6 +1676,12 @@ test "gen.pick one enum field in name collisions" {
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
         \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
+        \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
@@ -1583,6 +1710,12 @@ test "gen.register fields with name collision" {
     try std.testing.expectEqualStrings(
         \\const micro = @import("microzig");
         \\const mmio = micro.mmio;
+        \\
+        \\pub const Interrupt = struct {
+        \\    name: [:0]const u8,
+        \\    index: i16,
+        \\    description: ?[:0]const u8,
+        \\};
         \\
         \\pub const types = struct {
         \\    pub const peripherals = struct {
