@@ -56,14 +56,14 @@ pub fn from_text(allocator: Allocator, text: []const u8) !Manifest {
 
     const root = doc.root.object;
     const name = root.get("name") orelse return error.ProjectMissingName;
-    if (name != .string)
-        return error.ProjectNameNotString;
+    if (name != .@"enum")
+        return error.ProjectNameNotEnum;
 
     const version = root.get("version") orelse return error.ProjectMissingVersion;
     if (version != .string)
         return error.VersionIsNotString;
 
-    const name_copy = try allocator.dupe(u8, name.string);
+    const name_copy = try allocator.dupe(u8, name.@"enum");
     const semver = try std.SemanticVersion.parse(version.string);
 
     var paths = std.StringArrayHashMap(void).init(allocator);
