@@ -5,8 +5,10 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
 
-pub const Interrupt = microzig.utilities.GenerateInterruptEnum();
-pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(fn () callconv(.C) void, .{Interrupt});
+pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
+    .{ .InterruptEnum = Interrupt, .HandlerFn = fn () callconv(.C) void },
+});
 
 pub const interrupt = struct {
     pub fn globally_enabled() bool {

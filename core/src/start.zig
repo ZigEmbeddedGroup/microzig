@@ -28,7 +28,7 @@ pub const Options = struct {
             _ = args;
         }
     }.log,
-    interrupts: microzig.cpu.InterruptOptions = .{},
+    interrupts: InterruptOptions = .{},
 };
 
 pub const microzig_options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};

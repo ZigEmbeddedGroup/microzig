@@ -288,7 +288,7 @@ fn write_interrupt_list(
 
     try writer.print(
         \\
-        \\pub const INTERRUPTS: [{}]Interrupt = .{{
+        \\pub const interrupts: [{}]Interrupt = .{{
         \\
     , .{interrupts.len});
 

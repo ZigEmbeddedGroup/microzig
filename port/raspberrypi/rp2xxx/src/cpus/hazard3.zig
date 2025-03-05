@@ -3,7 +3,7 @@ const root = @import("root");
 const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 
-pub const Exception = enum(comptime_int) {
+pub const Exception = enum(u32) {
     InstructionMisaligned = 0x0,
     InstructionFault = 0x1,
     IllegalInstruction = 0x2,
@@ -16,22 +16,19 @@ pub const Exception = enum(comptime_int) {
     MachineEnvCall = 0xb,
 };
 
-pub const CoreInterrupt = enum(comptime_int) {
+pub const CoreInterrupt = enum(u32) {
     MachineSoftware = 0x3,
     MachineTimer = 0x7,
     MachineExternal = 0xb,
 };
 
-pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum();
+pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
-pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(
-    fn () callconv(.C) void,
-    .{
-        enum { Exception },
-        CoreInterrupt,
-        ExternalInterrupt,
-    },
-);
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
+    .{ .InterruptEnum = enum { Exception }, .HandlerFn = fn () callconv(.C) void },
+    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = fn () callconv(.C) void },
+    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = fn () callconv(.C) void },
+});
 
 pub const interrupt = struct {
     pub fn globally_enabled() bool {
@@ -46,77 +43,77 @@ pub const interrupt = struct {
         csr.mstatus.clear(.{ .mie = 1 });
     }
 
-    pub fn is_enabled(comptime int: anytype) bool {
-        return csr.mie.read() & (1 << @intFromEnum(@field(CoreInterrupt, @tagName(int)))) != 0;
+    pub fn is_enabled(comptime int: CoreInterrupt) bool {
+        return csr.mie.read() & (1 << @intFromEnum(int)) != 0;
     }
 
-    pub fn enable(comptime int: anytype) void {
-        csr.mie.set(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    pub fn enable(comptime int: CoreInterrupt) void {
+        csr.mie.set(1 << @intFromEnum(int));
     }
 
-    pub fn disable(comptime int: anytype) void {
-        csr.mie.clear(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    pub fn disable(comptime int: CoreInterrupt) void {
+        csr.mie.clear(1 << @intFromEnum(int));
     }
 
-    pub fn is_pending(comptime int: anytype) bool {
-        return csr.mip.read() & (1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    pub fn is_pending(comptime int: CoreInterrupt) bool {
+        return csr.mip.read() & (1 << @intFromEnum(int));
     }
 
-    pub fn set_pending(comptime int: anytype) void {
-        csr.mip.set(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    pub fn set_pending(comptime int: CoreInterrupt) void {
+        csr.mip.set(1 << @intFromEnum(int));
     }
 
-    pub fn clear_pending(comptime int: anytype) void {
-        csr.mip.clear(1 << @intFromEnum(@field(CoreInterrupt, @tagName(int))));
+    pub fn clear_pending(comptime int: CoreInterrupt) void {
+        csr.mip.clear(1 << @intFromEnum(int));
     }
 
     pub const external = struct {
         pub fn is_enabled(comptime int: ExternalInterrupt) bool {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            return csr.meiea.read_set(.{ .index = index }).window & mask != 0;
+            return csr.xh3irq.meiea.read_set(.{ .index = index }).window & mask != 0;
         }
 
         pub fn enable(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            csr.meiea.set(.{
+            csr.xh3irq.meiea.set(.{
                 .index = index,
                 .window = mask,
             });
         }
 
         pub fn disable(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            csr.meiea.clear(.{
+            csr.xh3irq.meiea.clear(.{
                 .index = index,
                 .window = mask,
             });
         }
 
         pub fn is_pending(comptime int: ExternalInterrupt) bool {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            return csr.meipa.read_set(.{ .index = index }).window & mask != 0;
+            return csr.xh3irq.meipa.read_set(.{ .index = index }).window & mask != 0;
         }
 
         pub fn set_pending(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            csr.meifa.set(.{ .index = index, .window = mask });
+            csr.xh3irq.meifa.set(.{ .index = index, .window = mask });
         }
 
         pub fn clear_pending(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 16;
             const mask: u32 = 1 << (num % 16);
-            csr.meifa.clear(.{ .index = index, .window = mask });
+            csr.xh3irq.meifa.clear(.{ .index = index, .window = mask });
         }
 
         pub const Priority = enum(u4) {
@@ -127,19 +124,19 @@ pub const interrupt = struct {
         };
 
         pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 4;
             const set_mask: u32 = @as(u16, @intFromEnum(priority)) << (4 * (num % 4));
             const clear_mask: u32 = 0xf << (4 * (num % 4));
-            csr.meifa.clear(.{ .index = index, .window = clear_mask });
-            csr.meifa.set(.{ .index = index, .window = set_mask });
+            csr.xh3irq.meifa.clear(.{ .index = index, .window = clear_mask });
+            csr.xh3irq.meifa.set(.{ .index = index, .window = set_mask });
         }
 
         pub fn get_priority(comptime int: ExternalInterrupt) Priority {
-            const num: u32 = @intCast(@intFromEnum(@field(ExternalInterrupt, @tagName(int))));
+            const num: u32 = @intFromEnum(int);
             const index: u32 = num / 4;
             const mask: u32 = 0xf << (4 * (num % 4));
-            return @enumFromInt((csr.meifa.read_set(.{ .index = index }) & mask) >> (4 * (num % 4)));
+            return @enumFromInt((csr.xh3irq.meifa.read_set(.{ .index = index }) & mask) >> (4 * (num % 4)));
         }
     };
 };
@@ -190,14 +187,6 @@ pub const startup_logic = struct {
         root.initialize_system_memories();
 
         microzig_main();
-    }
-
-    fn max_enum_value(Enum: type) @typeInfo(Enum).Enum.tag_type {
-        var max_value: @typeInfo(Enum).Enum.tag_type = 0;
-        for (@typeInfo(Enum).Enum.fields) |field| {
-            max_value = @max(max_value, field.value);
-        }
-        return max_value;
     }
 
     pub export fn _vector_table() align(64) callconv(.Naked) noreturn {
@@ -488,27 +477,28 @@ pub const csr = struct {
     pub const dpc = CSR(0x7B1, u32);
     pub const dscratch = CSR(0x7B2, u32);
 
-    // hazard3 specific
-    pub const meiea = CSR(0xbe0, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
-    });
-    pub const meipa = CSR(0xbe1, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
-    });
-    pub const meifa = CSR(0xbe2, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
-    });
-    pub const meipra = CSR(0xbe2, packed struct {
-        index: u5,
-        reserved0: u11,
-        window: u16,
-    });
+    pub const xh3irq = struct {
+        pub const meiea = CSR(0xbe0, packed struct {
+            index: u5,
+            reserved0: u11,
+            window: u16,
+        });
+        pub const meipa = CSR(0xbe1, packed struct {
+            index: u5,
+            reserved0: u11,
+            window: u16,
+        });
+        pub const meifa = CSR(0xbe2, packed struct {
+            index: u5,
+            reserved0: u11,
+            window: u16,
+        });
+        pub const meipra = CSR(0xbe2, packed struct {
+            index: u5,
+            reserved0: u11,
+            window: u16,
+        });
+    };
 
     // TODO: maybe this should be relocated somewhere else
     pub fn CSR(addr: u24, T: type) type {

@@ -65,13 +65,13 @@ pub fn build(b: *std.Build) void {
 
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-            .name = b.fmt("pico2_{s}", .{example.name}),
+            .name = b.fmt("pico2_arm_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
 
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
-            .name = b.fmt("pico2_{s}", .{example.name}),
+            .name = b.fmt("pico2_riscv_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
     }
