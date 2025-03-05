@@ -1,6 +1,8 @@
 .{
-    .name = .package-test,
+    .name = .package_test,
+    .fingerprint = 0x63321bc42367f374,
     .version = "0.0.0",
+    .dependencies = .{},
     .paths = .{
         "build.zig",
         "build.zig.zon",
