@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.avr.boards.arduino.nano, .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
-        .{ .target = mb.ports.avr.boards.arduino.uno_rev3, .name = "arduino-nano_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.avr.boards.arduino.uno_rev3, .name = "arduino-uno_blinky", .file = "src/blinky.zig" },
     };
 
     for (available_examples) |example| {
