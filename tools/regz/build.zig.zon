@@ -1,5 +1,6 @@
 .{
-    .name = "tools/regz",
+    .name = .tools_regz,
+    .fingerprint = 0xf89cb48cac38901f,
     .version = "0.0.0",
     .paths = .{
         "LICENSE",
@@ -12,11 +13,11 @@
     .dependencies = .{
         .libxml2 = .{
             .url = "git+https://github.com/mattnite/zig-build-libxml2.git#ab99b56cc3709d2008ebc005b096d85d2a03b462",
-            .hash = "122053ef8368ce881da81fb6bcb95db162dc358243d935bdc52c85996fd53ad46b5f",
+            .hash = "N-V-__8AAF9angBT74NozogdqB-2vLldsWLcNYJD2TW9xSyF",
         },
         .sqlite = .{
             .url = "git+https://github.com/mattnite/zig-sqlite.git#4e554ab43095859e153a5652667fd8a4d697b223",
-            .hash = "1220bbf36166a56f03ca55c2f455f70cdb3dd5f8dca1f7c78e57d9402add9635b2b9",
+            .hash = "sqlite-3.47.2-AAAAACdIpQC782FmpW8DylXC9FX3DNs91fjcoffHjlfZ",
         },
     },
 }

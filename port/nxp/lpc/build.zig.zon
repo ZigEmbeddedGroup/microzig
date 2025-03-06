@@ -1,5 +1,6 @@
 .{
-    .name = "port/nxp/lpc",
+    .name = .port_nxp_lpc,
+    .fingerprint = 0xa34b3f0c0a15a836,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
