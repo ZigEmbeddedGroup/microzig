@@ -69,16 +69,16 @@ fn PinDescription(comptime spec: []const u8) type {
 pub fn Pins(comptime config: GlobalConfiguration) type {
     comptime {
         var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).Struct.fields) |port_field| {
+        for (@typeInfo(GlobalConfiguration).@"struct".fields) |port_field| {
             if (@field(config, port_field.name)) |port_config| {
-                for (@typeInfo(PortConfiguration()).Struct.fields) |field| {
+                for (@typeInfo(PortConfiguration()).@"struct".fields) |field| {
                     if (@field(port_config, field.name)) |pin_config| {
                         const D = PinDescription(field.name);
                         fields = fields ++ &[_]StructField{.{
                             .is_comptime = false,
                             .name = pin_config.name orelse field.name,
                             .type = GPIO(D.gpio_port_id, D.gpio_pin_number_str, pin_config.mode orelse .{ .input = .floating }),
-                            .default_value = null,
+                            .default_value_ptr = null,
                             .alignment = @alignOf(field.type),
                         }};
                     }
@@ -87,7 +87,7 @@ pub fn Pins(comptime config: GlobalConfiguration) type {
         }
 
         return @Type(.{
-            .Struct = .{
+            .@"struct" = .{
                 .layout = .auto,
                 .is_tuple = false,
                 .fields = fields,
@@ -110,14 +110,14 @@ fn PortConfiguration() type {
                 .is_comptime = false,
                 .name = std.fmt.comptimePrint("P{c}{d}", .{ gpio_port_id, gpio_pin_number_int }),
                 .type = ?PinConfiguration,
-                .default_value = &@as(?PinConfiguration, null),
+                .default_value_ptr = &@as(?PinConfiguration, null),
                 .alignment = @alignOf(?PinConfiguration),
             }};
         }
     }
 
     return @Type(.{
-        .Struct = .{
+        .@"struct" = .{
             .layout = .auto,
             .is_tuple = false,
             .fields = fields,
@@ -136,12 +136,12 @@ pub const GlobalConfiguration = struct {
     pub fn apply(comptime config: @This()) Pins(config) {
         const pins: Pins(config) = undefined; // Later: something seems incomplete here...
 
-        inline for (@typeInfo(@This()).Struct.fields) |port_field| {
+        inline for (@typeInfo(@This()).@"struct".fields) |port_field| {
             const gpio_port_name = port_field.name;
             if (@field(config, gpio_port_name)) |port_config| {
                 peripherals.RCC.AHBENR.modify_one(gpio_port_name ++ "EN", 1);
 
-                inline for (@typeInfo(PortConfiguration()).Struct.fields) |pin_field| {
+                inline for (@typeInfo(PortConfiguration()).@"struct".fields) |pin_field| {
                     if (@field(port_config, pin_field.name)) |pin_config| {
                         @field(pins, pin_field.name).configure(pin_config);
                     }

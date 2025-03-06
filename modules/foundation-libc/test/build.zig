@@ -30,7 +30,7 @@ pub fn build(b: *Build) void {
                     // Check if the syntax of all of our header files is valid:
                     const syntax_validator = b.addStaticLibrary(.{
                         .name = "syntax-validator",
-                        .target = b.host,
+                        .target = b.graph.host,
                         .optimize = .Debug,
                     });
                     syntax_validator.addCSourceFile(.{
@@ -84,7 +84,7 @@ pub fn build(b: *Build) void {
                     // Check if the syntax of all of our header files is valid:
                     const assert_validator = b.addStaticLibrary(.{
                         .name = "assert-validator",
-                        .target = b.host,
+                        .target = b.graph.host,
                         .optimize = .Debug,
                     });
                     assert_validator.addCSourceFile(.{
@@ -94,7 +94,7 @@ pub fn build(b: *Build) void {
                     assert_validator.linkLibrary(foundation);
                     _ = assert_validator.getEmittedBin();
 
-                    assert_validator.defineCMacro("FOUNDATION_LIBC_ASSERT", assert_mode);
+                    assert_validator.root_module.addCMacro("FOUNDATION_LIBC_ASSERT", assert_mode);
 
                     // Just compile, do not install:
                     validation_step.dependOn(&assert_validator.step);
@@ -128,7 +128,7 @@ fn target_can_multithread(target: Build.ResolvedTarget) bool {
     };
 }
 
-const validation_target_list = [_]std.zig.CrossTarget{
+const validation_target_list = [_]std.Target.Query{
     .{}, // regular host platform
     .{ .os_tag = .freestanding }, // host platform, but no OS
 
@@ -160,7 +160,6 @@ const validation_target_list = [_]std.zig.CrossTarget{
     // sparc:
     .{ .cpu_arch = .sparc, .os_tag = .freestanding },
     .{ .cpu_arch = .sparc64, .os_tag = .freestanding },
-    .{ .cpu_arch = .sparcel, .os_tag = .freestanding },
 
     // power:
     .{ .cpu_arch = .powerpc, .os_tag = .freestanding },

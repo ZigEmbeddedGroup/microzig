@@ -4,7 +4,7 @@ const LazyPath = Build.LazyPath;
 const Module = Build.Module;
 
 const regz = @import("regz");
-const Patch = regz.patch.Patch;
+pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
 const FamilyId = uf2.FamilyId;
 

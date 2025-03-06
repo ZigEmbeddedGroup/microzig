@@ -1,5 +1,6 @@
 .{
-    .name = "tools/uf2",
+    .name = .tools_uf2,
+    .fingerprint = 0xc41375bcba522365,
     .version = "0.0.0",
     .paths = .{
         "LICENSE",

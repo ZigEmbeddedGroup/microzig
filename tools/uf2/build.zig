@@ -57,7 +57,7 @@ pub fn build(b: *std.Build) void {
     const gen = b.addExecutable(.{
         .name = "gen",
         .root_source_file = b.path("src/gen.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
     const gen_run_step = b.addRunArtifact(gen);
     const gen_step = b.step("gen", "Generate family id enum");
@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) void {
     const example = b.addExecutable(.{
         .name = "example",
         .root_source_file = b.path("src/example.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
     b.installArtifact(example);
 }
