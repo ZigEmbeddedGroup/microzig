@@ -47,6 +47,41 @@ pub const interrupt = struct {
         assert_not_exception(int);
         peripherals.nvic.disable(@intFromEnum(int));
     }
+
+    // TODO: also for exceptions
+    pub fn is_pending(comptime int: Interrupt) bool {
+        assert_not_exception(int);
+        peripherals.nvic.is_pending(@intFromEnum(int));
+    }
+
+    // TODO: also for exceptions
+    pub fn set_pending(comptime int: Interrupt) void {
+        assert_not_exception(int);
+        peripherals.nvic.set_pending(@intFromEnum(int));
+    }
+
+    // TODO: also for exceptions
+    pub fn clear_pending(comptime int: Interrupt) void {
+        assert_not_exception(int);
+        peripherals.nvic.clear_pending(@intFromEnum(int));
+    }
+
+    pub const Priority = enum(u8) {
+        pub const highest: Priority = 0;
+        pub const lowest: Priority = 0xff;
+
+        _,
+    };
+
+    // TODO: also for exceptions
+    pub fn set_priority(comptime int: Interrupt, priority: Priority) void {
+        peripherals.nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
+    }
+
+    // TODO: also for exceptions
+    pub fn get_priority(comptime int: Interrupt) Priority {
+        return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
+    }
 };
 
 pub fn executing_isr() bool {

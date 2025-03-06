@@ -162,7 +162,7 @@ pub const NestedVectorInterruptController = extern struct {
     /// priority of the corresponding interrupt. The processor implements only bits [7:6] of each
     /// field, bits [5:0] read as zero and ignore writes. This means writing 255 to a priority
     /// register saves value 192 to the register.
-    IPR: [8]u32,
+    IPR: [32]u8,
 
     pub fn is_enabled(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
         return nvic.ISER & (1 << num) != 0;
@@ -173,6 +173,18 @@ pub const NestedVectorInterruptController = extern struct {
     }
 
     pub fn disable(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
-        nvic.ISER &= !(1 << num);
+        nvic.ICER |= 1 << num;
+    }
+
+    pub fn is_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        return nvic.ISPR & (1 << num) != 0;
+    }
+
+    pub fn set_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        nvic.ISPR |= 1 << num;
+    }
+
+    pub fn clear_pending(nvic: *volatile NestedVectorInterruptController, num: comptime_int) void {
+        nvic.ICPR |= 1 << num;
     }
 };
