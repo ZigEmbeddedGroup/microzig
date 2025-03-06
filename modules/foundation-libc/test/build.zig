@@ -160,7 +160,6 @@ const validation_target_list = [_]std.Target.Query{
     // sparc:
     .{ .cpu_arch = .sparc, .os_tag = .freestanding },
     .{ .cpu_arch = .sparc64, .os_tag = .freestanding },
-    // .{ .cpu_arch = .sparcel, .os_tag = .freestanding },
 
     // power:
     .{ .cpu_arch = .powerpc, .os_tag = .freestanding },
