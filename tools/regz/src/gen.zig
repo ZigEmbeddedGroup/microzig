@@ -1563,7 +1563,7 @@ test "gen.interrupts.avr" {
         \\
         \\pub const devices = struct {
         \\    pub const ATmega328P = struct {
-        \\        pub const interrupts: [2]Interrupt = .{
+        \\        pub const interrupts: []Interrupt = &.{
         \\            .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
         \\            .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
         \\        };
