@@ -13,7 +13,6 @@ pub fn build(b: *std.Build) void {
 
     const rp2040_only_examples: []const Example = &.{
         // RaspberryPi Boards:
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_adc", .file = "src/rp2040_only/adc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c-bus-scan", .file = "src/rp2040_only/i2c_bus_scan.zig" },
@@ -37,6 +36,7 @@ pub fn build(b: *std.Build) void {
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
+        .{ .name = "adc", .file = "src/adc.zig" },
         .{ .name = "uart-echo", .file = "src/uart_echo.zig" },
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
         .{ .name = "spi-master", .file = "src/spi_master.zig" },
