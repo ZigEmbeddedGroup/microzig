@@ -21,13 +21,8 @@ const uart_rx_pin = gpio.num(1);
 const i2c0 = i2c.instance.num(0);
 
 pub fn main() !void {
-    switch (chip) {
-        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart);
-        },
-        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart_second);
-        },
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+        pin.set_function(.uart);
     }
 
     uart.apply(.{

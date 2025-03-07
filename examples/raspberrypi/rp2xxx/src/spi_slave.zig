@@ -35,10 +35,7 @@ pub fn main() !void {
         pin.set_function(.spi);
     }
 
-    switch (chip) {
-        .RP2040 => uart_tx_pin.set_function(.uart),
-        .RP2350 => uart_tx_pin.set_function(.uart_first),
-    }
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = uart_baud_rate,
         .clock_config = rp2xxx.clock_config,

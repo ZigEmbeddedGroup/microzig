@@ -31,8 +31,7 @@ pub const Function =
     .RP2350 => enum(u5) {
         hstx = 0,
         spi,
-        // TODO: Not in love with this naming
-        uart_first,
+        uart,
         i2c,
         pwm,
         sio,
@@ -41,7 +40,7 @@ pub const Function =
         pio2,
         gpck,
         usb,
-        uart_second,
+        uart_secondary,
         disabled = 0x1f,
     },
 };
