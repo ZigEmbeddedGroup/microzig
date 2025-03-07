@@ -21,7 +21,6 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_random", .file = "src/rp2040_only/random.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_rtc", .file = "src/rp2040_only/rtc.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-echo", .file = "src/rp2040_only/uart_echo.zig" },
-        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_uart-log", .file = "src/rp2040_only/uart_log.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_usb-hid", .file = "src/rp2040_only/usb_hid.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
@@ -39,6 +38,7 @@ pub fn build(b: *std.Build) void {
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
+        .{ .name = "uart-log", .file = "src/uart_log.zig" },
         .{ .name = "spi-master", .file = "src/spi_master.zig" },
         .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
         .{ .name = "squarewave", .file = "src/squarewave.zig" },
