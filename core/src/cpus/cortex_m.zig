@@ -1,18 +1,207 @@
 const std = @import("std");
+const root = @import("root");
+const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
-const root = @import("root");
+const app = microzig.app;
+
+const Core = enum {
+    cortex_m0,
+    cortex_m0plus,
+    cortex_m3,
+    cortex_m33,
+    cortex_m4,
+    cortex_m7,
+};
+
+const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
+    @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+
+pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
+pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
+    .{ .InterruptEnum = Interrupt, .HandlerFn = fn () callconv(.C) void },
+});
+
+pub const interrupt = struct {
+    pub fn globally_enabled() bool {
+        var mrs: u32 = undefined;
+        asm volatile ("mrs %[mrs], 16"
+            : [mrs] "+r" (mrs),
+        );
+        return mrs & 0x1 == 0;
+    }
+
+    pub fn enable_interrupts() void {
+        asm volatile ("cpsie i");
+    }
+
+    pub fn disable_interrupts() void {
+        asm volatile ("cpsid i");
+    }
+
+    fn assert_not_exception(comptime int: Interrupt) void {
+        if (@intFromEnum(int) < 0) {
+            @compileError("expected interrupt, got exception: " ++ @tagName(int));
+        }
+    }
+
+    const nvic = peripherals.nvic;
+
+    pub fn is_enabled(comptime int: Interrupt) void {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                return nvic.ISER & (1 << num) != 0;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                return nvic.ISER[bank] & (1 << index) != 0;
+            },
+        }
+    }
+
+    pub fn enable(comptime int: Interrupt) void {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ISER |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ISER[bank] |= 1 << index;
+            },
+        }
+    }
+
+    pub fn disable(comptime int: Interrupt) void {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ICER |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ICER[bank] |= 1 << index;
+            },
+        }
+    }
+
+    // TODO: also for exceptions
+    pub fn is_pending(comptime int: Interrupt) bool {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                return nvic.ISPR & (1 << num) != 0;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                return nvic.ISPR[bank] & (1 << index) != 0;
+            },
+        }
+    }
+
+    // TODO: also for exceptions
+    pub fn set_pending(comptime int: Interrupt) void {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ISPR |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ISPR[bank] |= 1 << index;
+            },
+        }
+    }
+
+    // TODO: also for exceptions
+    pub fn clear_pending(comptime int: Interrupt) void {
+        assert_not_exception(int);
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ICPR |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ICPR[bank] |= 1 << index;
+            },
+        }
+    }
+
+    pub const Priority = enum(u8) {
+        pub const highest: Priority = 0;
+        pub const lowest: Priority = 0xff;
+
+        _,
+    };
+
+    // TODO: also for exceptions
+    pub fn set_priority(comptime int: Interrupt, priority: Priority) void {
+        peripherals.nvic.IPR[@intFromEnum(int)] = @intFromEnum(priority);
+    }
+
+    // TODO: also for exceptions
+    pub fn get_priority(comptime int: Interrupt) Priority {
+        return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
+    }
+};
 
 pub fn executing_isr() bool {
     return peripherals.scb.ICSR.read().VECTACTIVE != 0;
-}
-
-pub fn enable_interrupts() void {
-    asm volatile ("cpsie i");
-}
-
-pub fn disable_interrupts() void {
-    asm volatile ("cpsid i");
 }
 
 pub fn enable_fault_irq() void {
@@ -82,63 +271,37 @@ pub const startup_logic = struct {
 
         microzig_main();
     }
+
+    const VectorTable = microzig.chip.VectorTable;
+
+    // will be imported by microzig.zig to allow system startup.
+    pub const _vector_table: VectorTable = blk: {
+        var tmp: VectorTable = .{
+            .initial_stack_pointer = microzig.config.end_of_stack,
+            .Reset = microzig.cpu.startup_logic._start,
+        };
+
+        for (@typeInfo(@TypeOf(microzig_options.interrupts)).Struct.fields) |field| {
+            const maybe_handler = @field(microzig_options.interrupts, field.name);
+            if (maybe_handler) |handler| {
+                @field(tmp, field.name) = handler;
+            }
+        }
+
+        break :blk tmp;
+    };
 };
 
 pub fn export_startup_logic() void {
     @export(startup_logic._start, .{
         .name = "_start",
     });
-}
 
-fn is_valid_field(field_name: []const u8) bool {
-    return !std.mem.startsWith(u8, field_name, "reserved") and
-        !std.mem.eql(u8, field_name, "initial_stack_pointer") and
-        !std.mem.eql(u8, field_name, "reset");
-}
-
-const VectorTable = microzig.chip.VectorTable;
-
-// will be imported by microzig.zig to allow system startup.
-pub const vector_table: VectorTable = blk: {
-    var tmp: VectorTable = .{
-        .initial_stack_pointer = microzig.config.end_of_stack,
-        .Reset = .{ .C = microzig.cpu.startup_logic._start },
-    };
-
-    if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
-            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
-    }
-
-    break :blk tmp;
-};
-
-fn create_interrupt_vector(
-    comptime function: anytype,
-) microzig.interrupt.Handler {
-    const calling_convention = @typeInfo(@TypeOf(function)).Fn.calling_convention;
-    return switch (calling_convention) {
-        .C => .{ .C = function },
-        .Naked => .{ .Naked = function },
-        // for unspecified calling convention we are going to generate small wrapper
-        .Unspecified => .{
-            .C = struct {
-                fn wrapper() callconv(.C) void {
-                    if (calling_convention == .Unspecified) // TODO: workaround for some weird stage1 bug
-                        @call(.always_inline, function, .{});
-                }
-            }.wrapper,
-        },
-
-        else => |val| {
-            const conv_name = inline for (std.meta.fields(std.builtin.CallingConvention)) |field| {
-                if (val == @field(std.builtin.CallingConvention, field.name))
-                    break field.name;
-            } else unreachable;
-
-            @compileError("unsupported calling convention for interrupt vector: " ++ conv_name);
-        },
-    };
+    @export(startup_logic._vector_table, .{
+        .name = "_vector_table",
+        .section = "microzig_flash_start",
+        .linkage = .strong,
+    });
 }
 
 const scs_base = 0xE000E000;
@@ -154,18 +317,6 @@ const mpu_base = scs_base + 0x0D90;
 const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
 const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
-
-const Core = enum {
-    cortex_m0,
-    cortex_m0plus,
-    cortex_m3,
-    cortex_m33,
-    cortex_m4,
-    cortex_m7,
-};
-
-const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
-    @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
 
 const core = blk: {
     break :blk switch (cortex_m) {

@@ -5,40 +5,9 @@ const app = @import("app");
 // Use microzig panic handler if not defined by an application
 pub const panic = if (!@hasDecl(app, "panic")) microzig.panic else app.panic;
 
-pub const VectorTableOptions = if (@hasDecl(microzig.chip, "VectorTable")) blk: {
-    const VectorTable = microzig.chip.VectorTable;
-    const fields_with_default = fields_with_default: {
-        var count = 0;
-        for (@typeInfo(VectorTable).Struct.fields) |field| {
-            if (field.default_value != null)
-                count += 1;
-        }
-
-        break :fields_with_default count;
-    };
-
-    var fields: [fields_with_default]std.builtin.Type.StructField = undefined;
-    var idx = 0;
-    for (@typeInfo(VectorTable).Struct.fields) |field| {
-        if (field.default_value == null)
-            continue;
-
-        fields[idx] = field;
-        idx += 1;
-    }
-
-    break :blk @Type(.{
-        .Struct = .{
-            .fields = &fields,
-            .layout = .auto,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-} else struct {};
+const InterruptOptions = if (@hasDecl(microzig.cpu, "InterruptOptions")) microzig.cpu.InterruptOptions else struct {};
 
 pub const Options = struct {
-    interrupts: VectorTableOptions = .{},
     log_level: std.log.Level = std.log.default_level,
     log_scope_levels: []const std.log.ScopeLevel = &.{},
     logFn: fn (
@@ -59,6 +28,7 @@ pub const Options = struct {
             _ = args;
         }
     }.log,
+    interrupts: InterruptOptions = .{},
 };
 
 pub const microzig_options: Options = if (@hasDecl(app, "microzig_options")) app.microzig_options else .{};
@@ -82,26 +52,6 @@ comptime {
     // can just index flash, while harvard or flash-less architectures need
     // to copy .rodata into RAM).
     microzig.cpu.export_startup_logic();
-
-    // Export the vector table to flash start if we have any.
-    // For a lot of systems, the vector table provides a reset vector
-    // that is either called (Cortex-M) or executed (AVR) when initalized.
-
-    // Allow board and chip to override CPU vector table.
-    const export_opts = .{
-        .name = "vector_table",
-        .section = "microzig_flash_start",
-        .linkage = .strong,
-    };
-
-    if ((microzig.board != void and @hasDecl(microzig.board, "vector_table")))
-        @export(microzig.board.vector_table, export_opts)
-    else if (@hasDecl(microzig.chip, "vector_table"))
-        @export(microzig.chip.vector_table, export_opts)
-    else if (@hasDecl(microzig.cpu, "vector_table"))
-        @export(microzig.cpu.vector_table, export_opts)
-    else if (@hasDecl(app, "interrupts"))
-        @compileError("interrupts not configured");
 }
 
 /// This is the logical entry point for microzig.

@@ -66,7 +66,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
-    cpu.disable_interrupts();
+    cpu.interrupt.disable_interrupts();
     while (true) {
         // "this loop has side effects, don't optimize the endless loop away please. thanks!"
         asm volatile ("" ::: "memory");

@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "changing-system-clocks", .file = "src/changing_system_clocks.zig" },
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
+        .{ .name = "interrupts", .file = "src/interrupts.zig" },
         .{ .name = "stepper", .file = "src/stepper.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
     };
@@ -64,7 +65,13 @@ pub fn build(b: *std.Build) void {
 
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-            .name = b.fmt("pico2_{s}", .{example.name}),
+            .name = b.fmt("pico2_arm_{s}", .{example.name}),
+            .file = example.file,
+        }) catch @panic("out of memory");
+
+        available_examples.append(.{
+            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
+            .name = b.fmt("pico2_riscv_{s}", .{example.name}),
             .file = example.file,
         }) catch @panic("out of memory");
     }

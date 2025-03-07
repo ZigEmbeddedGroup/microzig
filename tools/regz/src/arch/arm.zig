@@ -101,6 +101,7 @@ pub fn write_interrupt_vector(
 
     if (interrupts.len > 0) {
         try writer.writeAll(
+            \\
             \\pub const VectorTable = extern struct {
             \\    const Handler = micro.interrupt.Handler;
             \\    const unhandled = micro.interrupt.unhandled;
