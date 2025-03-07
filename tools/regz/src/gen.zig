@@ -285,15 +285,46 @@ fn write_interrupt_list(
     const writer = buffer.writer();
 
     const interrupts = try db.get_interrupts(arena, device.id);
+    defer {
+        for (interrupts) |interrupt| interrupt.deinit(arena);
+        arena.free(interrupts);
+    }
 
     if (interrupts.len > 0) {
-        try writer.print(
+        // HACK: Temporary solution and very very hacky way to ensure that interrupt names and indices
+        // are unique. A proper solution should reside in the database.
+
+        const NameSet = std.StringHashMapUnmanaged(void);
+        var name_set: NameSet = .{};
+        defer name_set.deinit(arena);
+
+        const IdxSet = std.AutoHashMapUnmanaged(i32, void);
+        var idx_set: IdxSet = .{};
+        defer idx_set.deinit(arena);
+
+        try writer.writeAll(
             \\
-            \\pub const interrupts: [{}]Interrupt = .{{
+            \\pub const interrupts: []const Interrupt = &.{
             \\
-        , .{interrupts.len});
+        );
 
         for (interrupts) |interrupt| {
+            {
+                const gop = try name_set.getOrPut(arena, interrupt.name);
+                if (gop.found_existing) {
+                    log.warn("skipping interrupt: {s}", .{interrupt.name});
+                    continue;
+                }
+            }
+
+            {
+                const gop = try idx_set.getOrPut(arena, interrupt.idx);
+                if (gop.found_existing) {
+                    log.warn("skipping interrupt: {s}", .{interrupt.name});
+                    continue;
+                }
+            }
+
             try writer.writeAll(".{ .name = ");
             try write_string(interrupt.name, writer);
             try writer.print(", .index = {}, .description = ", .{interrupt.idx});
