@@ -5,6 +5,18 @@ const microzig = @import("microzig");
 const mmio = microzig.mmio;
 const app = microzig.app;
 
+const Core = enum {
+    cortex_m0,
+    cortex_m0plus,
+    cortex_m3,
+    cortex_m33,
+    cortex_m4,
+    cortex_m7,
+};
+
+const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
+    @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
+
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = Interrupt, .HandlerFn = fn () callconv(.C) void },
@@ -33,37 +45,141 @@ pub const interrupt = struct {
         }
     }
 
+    const nvic = peripherals.nvic;
+
     pub fn is_enabled(comptime int: Interrupt) void {
         assert_not_exception(int);
-        return peripherals.nvic.is_enabled(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                return nvic.ISER & (1 << num) != 0;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                return nvic.ISER[bank] & (1 << index) != 0;
+            },
+        }
     }
 
     pub fn enable(comptime int: Interrupt) void {
         assert_not_exception(int);
-        peripherals.nvic.enable(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ISER |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ISER[bank] |= 1 << index;
+            },
+        }
     }
 
     pub fn disable(comptime int: Interrupt) void {
         assert_not_exception(int);
-        peripherals.nvic.disable(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ICER |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ICER[bank] |= 1 << index;
+            },
+        }
     }
 
     // TODO: also for exceptions
     pub fn is_pending(comptime int: Interrupt) bool {
         assert_not_exception(int);
-        peripherals.nvic.is_pending(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                return nvic.ISPR & (1 << num) != 0;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                return nvic.ISPR[bank] & (1 << index) != 0;
+            },
+        }
     }
 
     // TODO: also for exceptions
     pub fn set_pending(comptime int: Interrupt) void {
         assert_not_exception(int);
-        peripherals.nvic.set_pending(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ISPR |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ISPR[bank] |= 1 << index;
+            },
+        }
     }
 
     // TODO: also for exceptions
     pub fn clear_pending(comptime int: Interrupt) void {
         assert_not_exception(int);
-        peripherals.nvic.clear_pending(@intFromEnum(int));
+
+        const num: comptime_int = @intFromEnum(int);
+        switch (cortex_m) {
+            .cortex_m0,
+            .cortex_m0plus,
+            => {
+                nvic.ICPR |= 1 << num;
+            },
+            .cortex_m3,
+            .cortex_m33,
+            .cortex_m4,
+            .cortex_m7,
+            => {
+                const bank = num / 32;
+                const index = num % 32;
+                nvic.ICPR[bank] |= 1 << index;
+            },
+        }
     }
 
     pub const Priority = enum(u8) {
@@ -201,18 +317,6 @@ const mpu_base = scs_base + 0x0D90;
 const properties = microzig.chip.properties;
 // TODO: will have to standardize this with regz code generation
 const mpu_present = @hasDecl(properties, "__MPU_PRESENT") and std.mem.eql(u8, properties.__MPU_PRESENT, "1");
-
-const Core = enum {
-    cortex_m0,
-    cortex_m0plus,
-    cortex_m3,
-    cortex_m33,
-    cortex_m4,
-    cortex_m7,
-};
-
-const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
-    @compileError(std.fmt.comptimePrint("Unrecognized Cortex-M core name: {s}", .{microzig.config.cpu_name}));
 
 const core = blk: {
     break :blk switch (cortex_m) {
