@@ -499,7 +499,7 @@ pub const GlobalConfiguration = struct {
                 // pio2 (rp2350 only)
                 // gpck,
                 // usb,
-                // uart_secondary (rp2350 only)
+                // uart_alt (rp2350 only)
                 // @"null" = 0x1f,
 
                 if (func == .SIO) {
