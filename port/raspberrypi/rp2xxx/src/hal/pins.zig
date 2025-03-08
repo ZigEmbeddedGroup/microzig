@@ -512,7 +512,7 @@ pub const GlobalConfiguration = struct {
                     pin.set_pull(.disabled);
                     pin.set_input_enabled(false);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
-                    // TODO: Handle pins that can be used as uart on their secondary pinsel
+                    // TODO: Handle pins that can be used with an alternate uart function
                     pin.set_function(.uart);
                 } else if (comptime func.is_spi()) {
                     pin.set_function(.spi);
