@@ -19,7 +19,7 @@ pub const clock = struct {
     };
 };
 
-pub fn parsePin(comptime spec: []const u8) type {
+pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
     if (spec.len != 3)
@@ -63,18 +63,17 @@ pub const gpio = struct {
         cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
-    pub fn read(comptime pin: type) micro.gpio.State {
+    pub fn read(comptime pin: type) micro.core.experimental.gpio.State {
         return if ((regs(pin).pin.* & (1 << pin.pin)) != 0)
             .high
         else
             .low;
     }
 
-    pub fn write(comptime pin: type, state: micro.gpio.State) void {
-        if (state == .high) {
-            cpu.sbi(regs(pin).port_addr, pin.pin);
-        } else {
-            cpu.cbi(regs(pin).port_addr, pin.pin);
+    pub fn write(comptime pin: type, state: micro.core.experimental.gpio.State) void {
+        switch (state) {
+            .high => cpu.sbi(regs(pin).port_addr, pin.pin),
+            .low => cpu.cbi(regs(pin).port_addr, pin.pin),
         }
     }
 

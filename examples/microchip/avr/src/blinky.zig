@@ -1,15 +1,17 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-// LED is PB5
-const port = microzig.chip.peripherals.PORTB;
+const led_pin = microzig.core.experimental.Pin("PB5");
 
 pub fn main() void {
-    port.DDRB |= (1 << 5);
-    port.PORTB |= 0x00;
+    const led = microzig.core.experimental.gpio.Gpio(led_pin, .{
+        .mode = .output,
+        .initial_state = .low,
+    });
+    led.init();
 
     while (true) {
-        microzig.core.experimental.debug.busy_sleep(1_000);
-        port.PINB |= (1 << 5);
+        microzig.core.experimental.debug.busy_sleep(20_000);
+        led.toggle();
     }
 }
