@@ -40,7 +40,7 @@ pub const Function =
         pio2,
         gpck,
         usb,
-        uart_secondary,
+        uart_alt,
         disabled = 0x1f,
     },
 };
