@@ -4,9 +4,9 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 
 const pin_config = rp2xxx.pins.GlobalConfiguration{
-    .GPIO0 = .{
-        .name = "uart",
-        .function = .UART0_TX,
+    .GPIO25 = .{
+        .name = "led",
+        .direction = .out,
     },
 };
 
@@ -16,7 +16,7 @@ pub fn main() !void {
     pin_config.apply();
 
     while (true) {
-        // pins.uart.toggle();
+        pins.led.toggle();
         time.sleep_ms(250);
     }
 }
