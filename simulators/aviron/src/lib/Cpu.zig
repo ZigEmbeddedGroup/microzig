@@ -1,11 +1,11 @@
 const std = @import("std");
 const isa = @import("decoder.zig");
-const io = @import("io.zig");
+const io_mod = @import("io.zig");
 
-const Flash = io.Flash;
-const RAM = io.RAM;
-const EEPROM = io.EEPROM;
-const IO = io.IO;
+const Flash = io_mod.Flash;
+const RAM = io_mod.RAM;
+const EEPROM = io_mod.EEPROM;
+const IO = io_mod.IO;
 
 const Cpu = @This();
 
@@ -1673,7 +1673,7 @@ fn formatInstruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.Format
         inline else => |args| {
             const T = @TypeOf(args);
             if (T != void) {
-                const info = @typeInfo(T).Struct;
+                const info = @typeInfo(T).@"struct";
 
                 inline for (info.fields, 0..) |fld, i| {
                     if (i > 0) {

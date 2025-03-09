@@ -1,10 +1,11 @@
 .{
-    .name = "aviron",
+    .name = .aviron,
     .version = "0.1.0",
+    .fingerprint = 0x5dcc57b3c9d31477,
     .dependencies = .{
         .args = .{
-            .url = "git+https://github.com/MasterQ32/zig-args#c5f79a133c1eeab38298493c2f4a2b4bd9a9c791",
-            .hash = "1220904d2fdcd970dd0d216211d092eb3ef6da01117163cc9393ab845a1d66c029d9",
+            .url = "git+https://github.com/MasterQ32/zig-args#9425b94c103a031777fdd272c555ce93a7dea581",
+            .hash = "args-0.0.0-CiLiqv_NAAC97fGpk9hS2K681jkiqPsWP6w3ucb_ctGH",
         },
     },
     .paths = .{
