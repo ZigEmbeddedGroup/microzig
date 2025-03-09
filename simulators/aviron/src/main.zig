@@ -31,7 +31,7 @@ pub fn main() !u8 {
     var eeprom = aviron.EEPROM.Static(1024){};
     var io = IO{
         .sreg = undefined,
-        .sp = 2047,
+        .sp = sram.data.len - 1,
     };
 
     var cpu = aviron.Cpu{
@@ -66,8 +66,8 @@ pub fn main() !u8 {
         try stdout.print("Information for {s}:\n", .{@tagName(cli.options.mcu)});
         try stdout.print("  Generation: {s: >11}\n", .{@tagName(cpu.instruction_set)});
         try stdout.print("  Code Model: {s: >11}\n", .{@tagName(cpu.code_model)});
-        try stdout.print("  RAM:        {d: >5} bytes\n", .{cpu.flash.size});
-        try stdout.print("  Flash:      {d: >5} bytes\n", .{cpu.sram.size});
+        try stdout.print("  Flash:      {d: >5} bytes\n", .{cpu.flash.size});
+        try stdout.print("  RAM:        {d: >5} bytes\n", .{cpu.sram.size});
         try stdout.print("  EEPROM:     {d: >5} bytes\n", .{cpu.eeprom.size});
         return 0;
     }

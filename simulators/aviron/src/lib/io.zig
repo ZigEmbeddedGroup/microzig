@@ -109,7 +109,7 @@ pub const RAM = struct {
                 return RAM{
                     .ctx = self,
                     .vtable = &vtable,
-                    .size = @divExact(size, 2),
+                    .size = size,
                 };
             }
 
