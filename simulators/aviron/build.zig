@@ -9,7 +9,7 @@ const samples = [_][]const u8{
     "math",
 };
 
-const avr_target_query = std.zig.CrossTarget{
+const avr_target_query = std.Target.Query{
     .cpu_arch = .avr,
     .cpu_model = .{ .explicit = &std.Target.avr.cpu.atmega328p },
     .os_tag = .freestanding,
@@ -86,7 +86,7 @@ pub fn build(b: *Build) !void {
             .strip = false,
         });
         sample.bundle_compiler_rt = false;
-        sample.setLinkerScriptPath(b.path("linker.ld"));
+        sample.setLinkerScript(b.path("linker.ld"));
 
         // install to the prefix:
         const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
@@ -191,14 +191,19 @@ fn addTestSuite(
                     const config = try parseTestSuiteConfig(b, file);
 
                     const custom_target = if (config.cpu) |cpu|
-                        b.resolveTargetQuery(std.zig.CrossTarget.parse(.{
+                        b.resolveTargetQuery(std.Target.Query.parse(.{
                             .arch_os_abi = "avr-freestanding-eabi",
                             .cpu_features = cpu,
                         }) catch @panic(cpu))
                     else
                         avr_target;
 
-                    const is_zig_test = std.mem.eql(u8, std.fs.path.extension(entry.path), ".zig");
+                    const file_ext = std.fs.path.extension(entry.path);
+                    const is_zig_test = std.mem.eql(u8, file_ext, ".zig");
+                    const is_c_test = std.mem.eql(u8, file_ext, ".c");
+                    const is_asm_test = std.mem.eql(u8, file_ext, ".S");
+
+                    std.debug.assert(is_zig_test or is_c_test or is_asm_test);
 
                     const source_file = b.path(b.fmt("testsuite/{s}", .{entry.path}));
                     const root_file = if (is_zig_test)
@@ -211,24 +216,33 @@ fn addTestSuite(
                         .target = custom_target,
                         .optimize = config.optimize,
                         .strip = false,
-                        .root_source_file = root_file,
+                        .root_source_file = if (is_zig_test) root_file else null,
                         .link_libc = false,
                     });
                     test_payload.want_lto = false; // AVR has no LTO support!
                     test_payload.verbose_link = true;
                     test_payload.verbose_cc = true;
-                    if (!is_zig_test) {
+                    test_payload.bundle_compiler_rt = false;
+
+                    test_payload.setLinkerScript(b.path("linker.ld"));
+
+                    if (is_c_test or is_asm_test) {
+                        test_payload.addIncludePath(b.path("testsuite"));
+                    }
+                    if (is_c_test) {
                         test_payload.addCSourceFile(.{
                             .file = source_file,
                             .flags = &.{},
                         });
                     }
-                    test_payload.bundle_compiler_rt = false;
-                    test_payload.addIncludePath(b.path("testsuite"));
-                    test_payload.setLinkerScriptPath(b.path("linker.ld"));
-                    test_payload.root_module.addAnonymousImport("testsuite", .{
-                        .root_source_file = b.path("src/libtestsuite/lib.zig"),
-                    });
+                    if (is_asm_test) {
+                        test_payload.addAssemblyFile(source_file);
+                    }
+                    if (is_zig_test) {
+                        test_payload.root_module.addAnonymousImport("testsuite", .{
+                            .root_source_file = b.path("src/libtestsuite/lib.zig"),
+                        });
+                    }
 
                     debug_step.dependOn(&b.addInstallFile(
                         test_payload.getEmittedBin(),
@@ -261,7 +275,7 @@ fn addTestSuite(
 
             const test_run = b.addRunArtifact(testrunner_exe);
             test_run.addArg("--config");
-            test_run.addFileArg(write_file.files.items[0].getPath());
+            test_run.addFileArg(write_file.getDirectory().path(b, "config.json"));
             test_run.addArg("--name");
             test_run.addArg(entry.path);
 
@@ -282,7 +296,7 @@ fn addTestSuiteUpdate(
         .cwd_relative = path,
     } else |_| b.addExecutable(.{
         .name = "no-avr-gcc",
-        .target = b.host,
+        .target = b.graph.host,
         .root_source_file = b.path("tools/no-avr-gcc.zig"),
     }).getEmittedBin();
 
@@ -347,7 +361,7 @@ fn addTestSuiteUpdate(
                     const write_file = b.addWriteFile("config.json", config.toString(b));
 
                     const copy_file = b.addSystemCommand(&.{"cp"}); // todo make this cross-platform!
-                    copy_file.addFileArg(write_file.files.items[0].getPath());
+                    copy_file.addFileArg(write_file.getDirectory().path(b, "config.json"));
                     copy_file.addArg(b.fmt("testsuite/{s}/{s}.elf.json", .{ std.fs.path.dirname(entry.path).?, std.fs.path.stem(entry.basename) }));
 
                     invoke_step.dependOn(&gcc_invocation.step);
@@ -396,7 +410,7 @@ fn generateIsaTables(b: *Build, isa_mod: *Build.Module) LazyPath {
     const generate_tables_exe = b.addExecutable(.{
         .name = "aviron-generate-tables",
         .root_source_file = b.path("tools/generate-tables.zig"),
-        .target = b.host,
+        .target = b.graph.host,
         .optimize = .Debug,
     });
     generate_tables_exe.root_module.addImport("isa", isa_mod);
