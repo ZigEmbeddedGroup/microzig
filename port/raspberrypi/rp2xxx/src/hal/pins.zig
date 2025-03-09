@@ -76,6 +76,7 @@ pub const Function = enum {
 
     PIO0,
     PIO1,
+    // TODO: PIO2 for RP2350
 
     SPI0_RX,
     SPI0_CSn,
@@ -426,12 +427,12 @@ pub const GlobalConfiguration = struct {
                 if (pin_config.function == .SIO) {
                     @field(ret, pin_config.name orelse field.name) = gpio.num(@intFromEnum(@field(Pin, field.name)));
                 } else if (pin_config.function.is_pwm()) {
-                    @field(ret, pin_config.name orelse field.name) = pwm.Pwm {
+                    @field(ret, pin_config.name orelse field.name) = pwm.Pwm{
                         .slice_number = pin_config.function.pwm_slice(),
                         .channel = pin_config.function.pwm_channel(),
                     };
                 } else if (pin_config.function.is_adc()) {
-                    @field(ret, pin_config.name orelse field.name) = @as(adc.Input, @enumFromInt(switch(pin_config.function) {
+                    @field(ret, pin_config.name orelse field.name) = @as(adc.Input, @enumFromInt(switch (pin_config.function) {
                         .ADC0 => 0,
                         .ADC1 => 1,
                         .ADC2 => 2,
@@ -495,8 +496,10 @@ pub const GlobalConfiguration = struct {
                 // i2c,
                 // pio0,
                 // pio1,
+                // pio2 (rp2350 only)
                 // gpck,
                 // usb,
+                // uart_alt (rp2350 only)
                 // @"null" = 0x1f,
 
                 if (func == .SIO) {
@@ -509,6 +512,7 @@ pub const GlobalConfiguration = struct {
                     pin.set_pull(.disabled);
                     pin.set_input_enabled(false);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
+                    // TODO: Handle pins that can be used with an alternate uart function
                     pin.set_function(.uart);
                 } else if (comptime func.is_spi()) {
                     pin.set_function(.spi);

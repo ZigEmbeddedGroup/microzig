@@ -4,8 +4,6 @@ const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const clocks = rp2xxx.clocks;
-const GlobalConfig = clocks.config.Global;
-const Pin = rp2xxx.gpio.Pin;
 
 /// The HAL provides a convenvience function for detecting which of the RP2XXX
 /// family you're currently compiling for.

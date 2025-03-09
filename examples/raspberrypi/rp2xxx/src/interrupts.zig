@@ -7,7 +7,6 @@ const led = rp2xxx.gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = rp2xxx.gpio.num(0);
-const uart_rx_pin = rp2xxx.gpio.num(1);
 
 pub const microzig_options = .{
     .log_level = .debug,
@@ -48,14 +47,7 @@ pub fn set_alarm(us: u32) void {
 
 pub fn main() !void {
     // init uart logging
-    switch (rp2xxx.compatibility.chip) {
-        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart);
-        },
-        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart_first);
-        },
-    }
+    uart_tx_pin.set_function(.uart);
 
     uart.apply(.{
         .baud_rate = baud_rate,
