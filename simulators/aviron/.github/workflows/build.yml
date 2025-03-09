@@ -20,5 +20,12 @@ jobs:
       - name: Build
         run: zig build install
         
-      - name: Test Suite
+      - name: Run Test Suite
         run: zig build test
+
+      - name: Run Samples
+        run: |
+          ./zig-out/bin/aviron --info
+          ./zig-out/bin/aviron --trace zig-out/samples/math.elf
+          ./zig-out/bin/aviron zig-out/samples/hello-world.elf
+          

@@ -224,7 +224,7 @@ pub fn main() !u8 {
 const IO = struct {
     config: testconfig.TestSuiteConfig,
 
-    scratch_regs: [16]u8 = .{0} ** 16,
+    scratch_regs: [16]u8 = @splat(0),
 
     sp: u16,
     sreg: *aviron.Cpu.SREG,

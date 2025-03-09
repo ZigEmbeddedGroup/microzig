@@ -9,7 +9,9 @@ pub export fn _start() callconv(.C) noreturn {
         a += k;
     }
 
-    @as(*const fn () void, @ptrFromInt(a))();
+    // @as(*const fn () void, @ptrFromInt(a))();
 
-    while (true) {}
+    asm volatile ("out 0x00, 0x00");
+
+    unreachable;
 }
