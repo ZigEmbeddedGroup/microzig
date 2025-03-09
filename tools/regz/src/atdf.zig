@@ -676,7 +676,10 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
                     .size_bits = 1,
                     .offset_bits = i,
                     .enum_id = if (node.get_attribute("values")) |values| blk: {
-                        const e = try db.get_enum_by_name(arena, peripheral_struct_id, values);
+                        const e = db.get_enum_by_name(arena, peripheral_struct_id, values) catch |err| {
+                            log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
+                            return err;
+                        };
                         break :blk e.id;
                     } else null,
                 });
@@ -722,7 +725,10 @@ fn load_field(ctx: *Context, node: xml.Node, peripheral_struct_id: StructID, par
             .size_bits = width,
             .offset_bits = offset,
             .enum_id = if (node.get_attribute("values")) |values| blk: {
-                const e = try db.get_enum_by_name(arena, peripheral_struct_id, values);
+                const e = db.get_enum_by_name(arena, peripheral_struct_id, values) catch |err| {
+                    log.warn("{s} failed to get_enum_by_name: {s}", .{ name, values });
+                    return err;
+                };
                 break :blk e.id;
             } else null,
         });
