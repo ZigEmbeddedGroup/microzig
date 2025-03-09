@@ -1347,7 +1347,42 @@ pub fn get_enum_by_name(
     return db.one_alloc(Enum, allocator, query, .{
         .struct_id = struct_id,
         .name = name,
+    }) catch |err| switch (err) {
+        error.MissingEntity => {
+            // lookup the enum among the parents
+            var parent_id = struct_id;
+            var i: u8 = 0;
+            const max_depth = 10;
+            while (i <= max_depth) : (i += 1) {
+                parent_id = db.get_parent_struct_id(parent_id) catch {
+                    return err;
+                };
+
+                log.debug("get_enum_by_name: parent_id={} name='{s}'", .{ parent_id, name });
+                return db.one_alloc(Enum, allocator, query, .{
+                    .struct_id = parent_id,
+                    .name = name,
+                }) catch {
+                    continue;
+                };
+            }
+            return err;
+        },
+        else => {
+            return err;
+        },
+    };
+}
+
+fn get_parent_struct_id(db: *Database, struct_id: StructID) !StructID {
+    var stmt = try db.sql.prepare("SELECT parent_id FROM struct_decls WHERE struct_id = ?");
+    defer stmt.deinit();
+
+    const row = try stmt.one(StructID, .{}, .{
+        .struct_id = struct_id,
     });
+
+    return if (row) |parent_id| parent_id else error.MissingEntity;
 }
 
 fn one_alloc(
