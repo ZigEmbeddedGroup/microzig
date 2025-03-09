@@ -2,10 +2,11 @@
 
 AVR simulator in Zig.
 
-> DISCLAIMER: This is work in project and can currently emulate a good amount of the AVR instruction set
->             without cycle counting.
+> DISCLAIMER: This is work in project and can currently emulate a good amount of the AVR instruction set without cycle counting.
 
 ## Development
+
+Use [Zig 0.14.0](https://ziglang.org/download/#release-0.14.0) to compile AViRon.
 
 ### Repo Architecture
 
