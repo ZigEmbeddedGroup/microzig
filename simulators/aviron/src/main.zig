@@ -141,7 +141,7 @@ const Cli = struct {
 };
 
 const IO = struct {
-    scratch_regs: [16]u8 = .{0} ** 16,
+    scratch_regs: [16]u8 = @splat(0),
 
     sp: u16,
     sreg: *aviron.Cpu.SREG,

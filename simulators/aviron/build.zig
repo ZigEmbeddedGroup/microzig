@@ -7,6 +7,7 @@ const TestSuiteConfig = @import("src/testconfig.zig").TestSuiteConfig;
 
 const samples = [_][]const u8{
     "math",
+    "hello-world",
 };
 
 const avr_target_query = std.Target.Query{
@@ -56,6 +57,10 @@ pub fn build(b: *Build) !void {
         },
     });
 
+    const testsuite_module = b.addModule("aviron-testsuite", .{
+        .root_source_file = b.path("src/libtestsuite/lib.zig"),
+    });
+
     // Main emulator executable
     const aviron_exe = b.addExecutable(.{
         .name = "aviron",
@@ -87,6 +92,7 @@ pub fn build(b: *Build) !void {
         });
         sample.bundle_compiler_rt = false;
         sample.setLinkerScript(b.path("linker.ld"));
+        sample.root_module.addImport("testsuite", testsuite_module);
 
         // install to the prefix:
         const install_elf_sample = b.addInstallFile(sample.getEmittedBin(), b.fmt("samples/{s}.elf", .{sample_name}));
