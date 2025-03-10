@@ -109,8 +109,8 @@ fn translate_baudrate(baud_rate: u32, freq_in: u32) ConfigError!TimingRegisterVa
     // that means the input clock frequency is too low (not granular enough).
     // This also serves as a nice sanity check that we're still in spec no matter
     // the baud rate.
-    const scl_low_ns = (1_000_000_000.0 / @as(f64, @floatFromInt(freq_in))) * @as(f64, @floatFromInt(scl_lcnt_with_additions));
-    const scl_high_ns = (1_000_000_000.0 / @as(f64, @floatFromInt(freq_in))) * @as(f64, @floatFromInt(scl_hcnt_with_additions));
+    const scl_low_ns: u64 = @as(u64, scl_lcnt_with_additions) * 1_000_000_000 / freq_in;
+    const scl_high_ns: u64 = @as(u64, scl_hcnt_with_additions) * 1_000_000_000 / freq_in;
     switch (baud_rate) {
         1...100_000 => {
             const i2c_normal_scl_low_min_ns = 4700;
