@@ -5,7 +5,6 @@ const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const flash = rp2xxx.flash;
-const chip = rp2xxx.compatibility.chip;
 
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
@@ -24,13 +23,8 @@ pub const std_options = struct {
 };
 
 pub fn main() !void {
-    switch (chip) {
-        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart);
-        },
-        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart_second);
-        },
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+        pin.set_function(.uart);
     }
 
     uart.apply(.{

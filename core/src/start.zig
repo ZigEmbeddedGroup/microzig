@@ -26,6 +26,7 @@ comptime {
     // can just index flash, while harvard or flash-less architectures need
     // to copy .rodata into RAM).
     microzig.cpu.export_startup_logic();
+<<<<<<< HEAD
 
     // Export the vector table to flash start if we have any.
     // For a lot of systems, the vector table provides a reset vector
@@ -46,6 +47,8 @@ comptime {
         @export(&microzig.cpu.vector_table, export_opts)
     else if (@hasDecl(app, "interrupts"))
         @compileError("interrupts not configured");
+=======
+>>>>>>> upstream/main
 }
 
 /// This is the logical entry point for microzig.

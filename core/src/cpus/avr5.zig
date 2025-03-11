@@ -2,13 +2,15 @@ const std = @import("std");
 const microzig = @import("microzig");
 const root = @import("root");
 
-pub fn enable_interrupts() void {
-    asm volatile ("sei");
-}
+pub const interrupt = struct {
+    pub fn enable_interrupts() void {
+        asm volatile ("sei");
+    }
 
-pub fn disable_interrupts() void {
-    asm volatile ("cli");
-}
+    pub fn disable_interrupts() void {
+        asm volatile ("cli");
+    }
+};
 
 pub inline fn sbi(comptime reg: u5, comptime bit: u3) void {
     asm volatile ("sbi %[reg], %[bit]"

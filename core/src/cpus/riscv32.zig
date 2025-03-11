@@ -2,15 +2,17 @@ const std = @import("std");
 const root = @import("root");
 const microzig = @import("microzig");
 
-pub fn enable_interrupts() void {
-    @panic("TODO");
-    // asm volatile ("sei");
-}
+pub const interrupt = struct {
+    pub fn enable_interrupts() void {
+        @panic("TODO");
+        // asm volatile ("sei");
+    }
 
-pub fn disable_interrupts() void {
-    @panic("TODO");
-    // asm volatile ("cli");
-}
+    pub fn disable_interrupts() void {
+        @panic("TODO");
+        // asm volatile ("cli");
+    }
+};
 
 pub fn wfi() void {
     asm volatile ("wfi");
