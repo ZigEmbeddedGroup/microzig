@@ -56,7 +56,7 @@ pub fn Mmio(comptime PackedT: type) type {
 
         /// In field `field_name` of struct `val`, toggle (only) all bits that are set in `value`.
         inline fn toggle_field(val: anytype, comptime field_name: []const u8, value: anytype) void {
-            const FieldType = @FieldType(@TypeOf(val), field_name);
+            const FieldType = @TypeOf(@field(val, field_name));
             switch (@typeInfo(FieldType)) {
                 .int => {
                     @field(val, field_name) = @field(val, field_name) ^ value;
