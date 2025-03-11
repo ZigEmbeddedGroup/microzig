@@ -10,7 +10,7 @@ const BootromData = if (chip == .RP2040) struct {
     fn prepare_boot_sector(comptime stage2_rom: []const u8) [256]u8 {
         @setEvalBranchQuota(10_000);
 
-        var bootrom: [256]u8 = .{0xFF} ** 256;
+        var bootrom: [256]u8 = @splat(0xFF);
         @memcpy(bootrom[0..stage2_rom.len], stage2_rom);
 
         // 2.8.1.3.1. Checksum

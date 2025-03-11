@@ -109,8 +109,8 @@ fn translate_baudrate(baud_rate: u32, freq_in: u32) ConfigError!TimingRegisterVa
     // that means the input clock frequency is too low (not granular enough).
     // This also serves as a nice sanity check that we're still in spec no matter
     // the baud rate.
-    const scl_low_ns = (1_000_000_000 / freq_in) * scl_lcnt_with_additions;
-    const scl_high_ns = (1_000_000_000 / freq_in) * scl_hcnt_with_additions;
+    const scl_low_ns: u64 = @as(u64, scl_lcnt_with_additions) * 1_000_000_000 / freq_in;
+    const scl_high_ns: u64 = @as(u64, scl_hcnt_with_additions) * 1_000_000_000 / freq_in;
     switch (baud_rate) {
         1...100_000 => {
             const i2c_normal_scl_low_min_ns = 4700;
@@ -171,16 +171,22 @@ fn translate_baudrate(baud_rate: u32, freq_in: u32) ConfigError!TimingRegisterVa
     if ((sda_tx_hold_count > scl_lcnt - 2) or (sda_tx_hold_count > std.math.maxInt(u16))) return ConfigError.HoldCountViolation;
 
     return .{
-        .scl_hcnt = @as(u16, @intCast(scl_hcnt)),
-        .scl_lcnt = @as(u16, @intCast(scl_lcnt)),
-        .sda_tx_hold_count = @as(u16, @intCast(sda_tx_hold_count)),
+        .scl_hcnt = @intCast(scl_hcnt),
+        .scl_lcnt = @intCast(scl_lcnt),
+        .sda_tx_hold_count = @intCast(sda_tx_hold_count),
         .spklen = spklen,
     };
 }
 
 test "i2c.translate_baudrate" {
-    try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 486, .scl_lcnt = 749, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(100_000, 125_000_000));
-    try std.testing.expectEqualDeep(TimingRegisterValues{ .scl_hcnt = 112, .scl_lcnt = 186, .sda_tx_hold_count = 38, .spklen = 7 }, translate_baudrate(400_000, 125_000_000));
+    try std.testing.expectEqualDeep(
+        TimingRegisterValues{ .scl_hcnt = 486, .scl_lcnt = 749, .sda_tx_hold_count = 38, .spklen = 7 },
+        translate_baudrate(100_000, 125_000_000),
+    );
+    try std.testing.expectEqualDeep(
+        TimingRegisterValues{ .scl_hcnt = 112, .scl_lcnt = 186, .sda_tx_hold_count = 38, .spklen = 7 },
+        translate_baudrate(400_000, 125_000_000),
+    );
     try std.testing.expectError(ConfigError.UnsupportedBaudRate, translate_baudrate(0, 125_000_000));
     // Taken directly from Table 450 to confirm our calculations match the datasheet's expectations
     try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(100_000, 2_600_000));

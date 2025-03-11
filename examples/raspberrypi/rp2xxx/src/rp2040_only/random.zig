@@ -9,7 +9,6 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
 const rand = rp2xxx.rand;
-const chip = rp2xxx.compatibility.chip;
 
 const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -33,13 +32,8 @@ pub fn main() !void {
     led.set_direction(.out);
     led.put(1);
 
-    switch (chip) {
-        .RP2040 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart);
-        },
-        .RP2350 => inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-            pin.set_function(.uart_second);
-        },
+    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
+        pin.set_function(.uart);
     }
 
     uart.apply(.{
@@ -53,7 +47,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     var buffer: [8]u8 = undefined;
-    var dist: [256]usize = .{0} ** 256;
+    var dist: [256]usize = @splat(0);
     var counter: usize = 0;
 
     while (true) {

@@ -122,7 +122,7 @@ extern var code_end: c_void;
 extern var data_begin: c_void;
 extern var data_end: c_void;
 
-extern fn _start() callconv(.Naked) noreturn {
+extern fn _start() callconv(.naked) noreturn {
   // first, gather both source and destination addresses:
   const src_ptr = @ptrCast([*]const u8, &code_end);
   const dst_ptr = @ptrCast([*]u8, &data_begin);

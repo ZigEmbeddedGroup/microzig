@@ -29,13 +29,15 @@ pub inline fn clearStatusBit(comptime reg: StatusRegister, bits: u32) void {
     );
 }
 
-pub inline fn disable_interrupts() void {
-    clearStatusBit(.mstatus, 0x08);
-}
+pub const interrupt = struct {
+    pub inline fn disable_interrupts() void {
+        clearStatusBit(.mstatus, 0x08);
+    }
 
-pub inline fn enable_interrupts() void {
-    setStatusBit(.mstatus, 0x08);
-}
+    pub inline fn enable_interrupts() void {
+        setStatusBit(.mstatus, 0x08);
+    }
+};
 
 pub const startup_logic = struct {
     comptime {
@@ -61,8 +63,8 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    pub fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
-        microzig.cpu.disable_interrupts();
+    pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
+        microzig.cpu.interrupt.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
@@ -78,11 +80,11 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    export fn _rv32_trap() callconv(.C) noreturn {
+    export fn _rv32_trap() callconv(.c) noreturn {
         while (true) {}
     }
 
-    const vector_table = [_]fn () callconv(.C) noreturn{
+    const vector_table = [_]fn () callconv(.c) noreturn{
         _rv32_trap,
         _rv32_trap,
         _rv32_trap,

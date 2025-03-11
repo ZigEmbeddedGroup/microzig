@@ -98,7 +98,7 @@ pub const Archive = struct {
                             else
                                 @as(FamilyId, @enumFromInt(0)),
                         },
-                        .data = .{0} ** 476,
+                        .data = @splat(0),
                     });
                     first = false;
                 }

@@ -26,26 +26,6 @@ comptime {
     // can just index flash, while harvard or flash-less architectures need
     // to copy .rodata into RAM).
     microzig.cpu.export_startup_logic();
-
-    // Export the vector table to flash start if we have any.
-    // For a lot of systems, the vector table provides a reset vector
-    // that is either called (Cortex-M) or executed (AVR) when initalized.
-
-    // Allow board and chip to override CPU vector table.
-    const export_opts = std.builtin.ExportOptions{
-        .name = "vector_table",
-        .section = "microzig_flash_start",
-        .linkage = .strong,
-    };
-
-    if ((microzig.board != void and @hasDecl(microzig.board, "vector_table")))
-        @export(&microzig.board.vector_table, export_opts)
-    else if (@hasDecl(microzig.chip, "vector_table"))
-        @export(&microzig.chip.vector_table, export_opts)
-    else if (@hasDecl(microzig.cpu, "vector_table"))
-        @export(&microzig.cpu.vector_table, export_opts)
-    else if (@hasDecl(app, "interrupts"))
-        @compileError("interrupts not configured");
 }
 
 /// This is the logical entry point for microzig.

@@ -31,8 +31,7 @@ pub const Function =
     .RP2350 => enum(u5) {
         hstx = 0,
         spi,
-        // TODO: Not in love with this naming
-        uart_first,
+        uart,
         i2c,
         pwm,
         sio,
@@ -41,7 +40,7 @@ pub const Function =
         pio2,
         gpck,
         usb,
-        uart_second,
+        uart_alt,
         disabled = 0x1f,
     },
 };
@@ -58,7 +57,7 @@ pub const IrqLevel = enum(u2) {
     rise,
 };
 
-pub const IrqCallback = fn (gpio: u32, events: u32) callconv(.C) void;
+pub const IrqCallback = fn (gpio: u32, events: u32) callconv(.c) void;
 
 pub const Override = enum(u2) {
     normal,

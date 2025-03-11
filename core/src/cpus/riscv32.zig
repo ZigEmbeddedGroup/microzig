@@ -2,15 +2,17 @@ const std = @import("std");
 const root = @import("root");
 const microzig = @import("microzig");
 
-pub fn enable_interrupts() void {
-    @panic("TODO");
-    // asm volatile ("sei");
-}
+pub const interrupt = struct {
+    pub fn enable_interrupts() void {
+        @panic("TODO");
+        // asm volatile ("sei");
+    }
 
-pub fn disable_interrupts() void {
-    @panic("TODO");
-    // asm volatile ("cli");
-}
+    pub fn disable_interrupts() void {
+        @panic("TODO");
+        // asm volatile ("cli");
+    }
+};
 
 pub fn wfi() void {
     asm volatile ("wfi");
@@ -56,7 +58,7 @@ pub const startup_logic = struct {
     extern var microzig_bss_end: u8;
     extern const microzig_data_load_start: u8;
 
-    pub fn _start() callconv(.C) noreturn {
+    pub fn _start() callconv(.c) noreturn {
 
         // fill .bss with zeroes
         {

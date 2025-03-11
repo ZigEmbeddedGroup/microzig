@@ -162,5 +162,5 @@ pub const NestedVectorInterruptController = extern struct {
     /// priority of the corresponding interrupt. The processor implements only bits [7:6] of each
     /// field, bits [5:0] read as zero and ignore writes. This means writing 255 to a priority
     /// register saves value 192 to the register.
-    IPR: [8]u32,
+    IPR: [32]u8,
 };
