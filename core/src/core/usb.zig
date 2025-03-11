@@ -125,7 +125,13 @@ pub fn Usb(comptime f: anytype) type {
         }
 
         fn device() types.UsbDevice {
-            return .{ .fn_ready = device_ready, .fn_control_transfer = device_control_transfer, .fn_control_ack = device_control_ack, .fn_endpoint_open = device_endpoint_open, .fn_endpoint_transfer = device_endpoint_transfer };
+            return .{
+                .fn_ready = device_ready,
+                .fn_control_transfer = device_control_transfer,
+                .fn_control_ack = device_control_ack,
+                .fn_endpoint_open = device_endpoint_open,
+                .fn_endpoint_transfer = device_endpoint_transfer,
+            };
         }
 
         fn device_ready() bool {
@@ -504,7 +510,13 @@ pub fn Usb(comptime f: anytype) type {
 // Driver support stuctures
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 
-pub const DeviceConfiguration = struct { device_descriptor: *const types.DeviceDescriptor, config_descriptor: []const u8, lang_descriptor: []const u8, descriptor_strings: []const []const u8, drivers: []types.UsbClassDriver };
+pub const DeviceConfiguration = struct {
+    device_descriptor: *const types.DeviceDescriptor,
+    config_descriptor: []const u8,
+    lang_descriptor: []const u8,
+    descriptor_strings: []const []const u8,
+    drivers: []types.UsbClassDriver,
+};
 
 /// USB interrupt status
 ///

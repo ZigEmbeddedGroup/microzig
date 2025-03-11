@@ -1,5 +1,4 @@
-const microzig = @import("microzig/build-internals");
-const Patch = microzig.Patch;
+const Patch = @import("microzig/build-internals").Patch;
 
 pub const patches: []const Patch = &.{
     .{
