@@ -47,7 +47,7 @@ pub fn main() !void {
     rp2xxx.uart.init_logger(uart);
 
     var buffer: [8]u8 = undefined;
-    var dist: [256]usize = .{0} ** 256;
+    var dist: [256]usize = @splat(0);
     var counter: usize = 0;
 
     while (true) {

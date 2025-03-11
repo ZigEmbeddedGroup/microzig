@@ -52,8 +52,8 @@ pub fn Usb(comptime f: anytype) type {
         var usb_config: ?*DeviceConfiguration = null;
         /// The clock has been initialized [Y/n]
         var clk_init: bool = false;
-        var itf_to_drv: [f.cfg_max_interfaces_count]u8 = .{0} ** f.cfg_max_interfaces_count;
-        var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = .{.{0} ** 2} ** f.cfg_max_endpoints_count;
+        var itf_to_drv: [f.cfg_max_interfaces_count]u8 = @splat(0);
+        var ep_to_drv: [f.cfg_max_endpoints_count][2]u8 = @splat(@splat(0));
         pub const max_packet_size = if (f.high_speed) 512 else 64;
         const drvid_invalid = 0xff;
 
@@ -77,7 +77,7 @@ pub fn Usb(comptime f: anytype) type {
             var started = false;
             // Some scratch space that we'll use for things like preparing string
             // descriptors for transmission.
-            var tmp: [128]u8 = .{0} ** 128;
+            var tmp: [128]u8 = @splat(0);
             // Keeps track of sent data from tmp buffer
             var buffer_reader = BufferReader{ .buffer = &.{} };
             // Last setup packet request
@@ -642,7 +642,7 @@ pub const UsbUtils = struct {
     /// Convert an utf8 into an utf16 (little endian) string
     pub fn utf8ToUtf16Le(comptime s: []const u8) [s.len << 1]u8 {
         const l = s.len << 1;
-        var ret: [l]u8 = .{0} ** l;
+        var ret: [l]u8 = @splat(0);
         var i: usize = 0;
         while (i < s.len) : (i += 1) {
             ret[i << 1] = s[i];

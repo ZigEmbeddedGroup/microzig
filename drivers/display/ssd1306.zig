@@ -195,7 +195,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
                 const chunk_size = 16;
 
-                const chunk: [chunk_size]u8 = .{color} ** chunk_size;
+                const chunk: [chunk_size]u8 = @splat(color);
 
                 const count = comptime @divExact(128 * 8, chunk.len);
                 for (0..count) |_| {
