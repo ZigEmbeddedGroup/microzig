@@ -59,8 +59,8 @@ const CriticalSection = struct {
 };
 
 // TODO: remove this once the vector table uses its own implementation
-pub const Handler = *const fn () callconv(.C) void;
+pub const Handler = *const fn () callconv(.c) void;
 
-pub fn unhandled() callconv(.C) void {
+pub fn unhandled() callconv(.c) void {
     @panic("unhandled interrupt");
 }

@@ -19,7 +19,7 @@ const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
 
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    .{ .InterruptEnum = Interrupt, .HandlerFn = *const fn () callconv(.C) void },
+    .{ .InterruptEnum = Interrupt, .HandlerFn = *const fn () callconv(.c) void },
 });
 
 pub const interrupt = struct {
@@ -248,7 +248,7 @@ pub const startup_logic = struct {
     extern var microzig_bss_end: u8;
     extern const microzig_data_load_start: u8;
 
-    pub fn _start() callconv(.C) noreturn {
+    pub fn _start() callconv(.c) noreturn {
 
         // fill .bss with zeroes
         {

@@ -53,7 +53,7 @@ pub const vector_table_asm = blk: {
     break :blk asm_str;
 };
 
-fn vector_table() callconv(.Naked) noreturn {
+fn vector_table() callconv(.naked) noreturn {
     asm volatile (vector_table_asm);
 }
 
@@ -95,13 +95,13 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 }
 
 pub const startup_logic = struct {
-    export fn microzig_unhandled_vector() callconv(.C) noreturn {
+    export fn microzig_unhandled_vector() callconv(.c) noreturn {
         @panic("Unhandled interrupt");
     }
 
     extern fn microzig_main() noreturn;
 
-    export fn microzig_start() callconv(.C) noreturn {
+    export fn microzig_start() callconv(.c) noreturn {
         // At startup the stack pointer is at the end of RAM
         // so, no need to set it manually!
 

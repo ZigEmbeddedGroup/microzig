@@ -49,7 +49,7 @@ pub const IrqLevel = enum(u2) {
     rise,
 };
 
-pub const IrqCallback = fn (gpio: u32, events: u32) callconv(.C) void;
+pub const IrqCallback = fn (gpio: u32, events: u32) callconv(.c) void;
 
 pub const Enabled = enum {
     disabled,

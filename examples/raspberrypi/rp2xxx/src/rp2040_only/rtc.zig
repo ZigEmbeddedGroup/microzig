@@ -20,7 +20,7 @@ var _fast_blink: bool = false;
 /// Access underlying _sleep_time via volatile * to prevent reads from being optimized away
 var fast_blink_vp: *volatile bool = &_fast_blink;
 
-fn rtc_isr() callconv(.C) void {
+fn rtc_isr() callconv(.c) void {
 
     // Important to disable + re-enable the RTC alarm so that the interrupt doesn't
     // continue firing for the entire time the alarm condition is met

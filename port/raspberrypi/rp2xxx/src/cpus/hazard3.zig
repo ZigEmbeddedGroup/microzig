@@ -24,14 +24,14 @@ pub const CoreInterrupt = enum(u32) {
 
 pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
-const CInterruptHandler = *const fn () callconv(.c) void;
+const InterruptHandler = *const fn () callconv(.c) void;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    // TODO: change to interrupt callconv
-    .{ .InterruptEnum = enum { Exception }, .HandlerFn = CInterruptHandler },
-    // TODO: change to interrupt callconv
-    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = CInterruptHandler },
-    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = CInterruptHandler },
+    // TODO: maybe change to interrupt callconv
+    .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
+    // TODO: maybe change to interrupt callconv
+    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
+    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = InterruptHandler },
 });
 
 pub const interrupt = struct {
@@ -215,7 +215,7 @@ pub const startup_logic = struct {
     }
 
     pub export fn _exception_handler() callconv(.naked) noreturn {
-        const handler: CInterruptHandler = microzig_options.interrupts.Exception orelse unhandled;
+        const handler: InterruptHandler = microzig_options.interrupts.Exception orelse unhandled;
         @export(handler, .{ .name = "_exception_handler_c" });
 
         push_interrupt_state();
@@ -227,7 +227,7 @@ pub const startup_logic = struct {
     }
 
     pub export fn _machine_software_handler() callconv(.naked) noreturn {
-        const handler: CInterruptHandler = microzig_options.interrupts.MachineSoftware orelse unhandled;
+        const handler: InterruptHandler = microzig_options.interrupts.MachineSoftware orelse unhandled;
         @export(handler, .{ .name = "_machine_software_handler_c" });
 
         push_interrupt_state();
@@ -239,7 +239,7 @@ pub const startup_logic = struct {
     }
 
     pub export fn _machine_timer_handler() callconv(.naked) noreturn {
-        const handler: CInterruptHandler = microzig_options.interrupts.MachineTimer orelse unhandled;
+        const handler: InterruptHandler = microzig_options.interrupts.MachineTimer orelse unhandled;
         @export(handler, .{ .name = "_machine_timer_handler_c" });
 
         push_interrupt_state();
@@ -261,7 +261,7 @@ pub const startup_logic = struct {
             _ = struct {
                 export const _external_interrupt_table = blk: {
                     const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
-                    var external_interrupt_table: [count]CInterruptHandler = @splat(unhandled);
+                    var external_interrupt_table: [count]InterruptHandler = @splat(unhandled);
 
                     for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
                         if (@field(microzig_options.interrupts, field.name)) |handler| {

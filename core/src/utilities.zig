@@ -234,7 +234,8 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
 
     for (sources) |source| {
         if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
-        // if (@typeInfo(source.HandlerFn) != .@"fn") @compileError("expected a function type");
+        if (@typeInfo(source.HandlerFn) != .pointer) @compileError("expected a pointer to a function");
+        if (@typeInfo(@typeInfo(source.HandlerFn).pointer.child) != .@"fn") @compileError("expected a pointer to a function");
 
         for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
             ret_fields = ret_fields ++ .{std.builtin.Type.StructField{

@@ -21,7 +21,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-fn timer_interrupt() callconv(.C) void {
+fn timer_interrupt() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
