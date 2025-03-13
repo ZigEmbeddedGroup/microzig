@@ -315,6 +315,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             ///     exe.link_function_sections = true;
             strip_unused_symbols: bool = true,
 
+            /// Unwind tables option for the firmware executable
+            unwind_tables: ?std.builtin.UnwindTables = null,
+
             /// Additional patches the user may apply to the generated register
             /// code. This does not override the chip's existing patches.
             patches: []const regz.patch.Patch = &.{},
@@ -458,12 +461,14 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .core_mod = core_mod,
                 .artifact = mb.builder.addExecutable(.{
                     .name = options.name,
-                    .optimize = options.optimize,
-                    .target = zig_target,
+                    .root_module = b.createModule(.{
+                        .optimize = options.optimize,
+                        .target = zig_target,
+                        .root_source_file = mb.core_dep.path("src/start.zig"),
+                        .strip = options.strip,
+                        .unwind_tables = options.unwind_tables,
+                    }),
                     .linkage = .static,
-                    .root_source_file = mb.core_dep.path("src/start.zig"),
-                    .strip = options.strip,
-                    .unwind_tables = .sync,
                 }),
                 .app_mod = app_mod,
                 .target = target,

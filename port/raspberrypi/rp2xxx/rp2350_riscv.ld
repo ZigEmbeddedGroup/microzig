@@ -48,7 +48,7 @@ SECTIONS
       *(.sbss*)
       microzig_bss_end = .;
   } > ram0
-  
+
   .flash_end :
   {
     microzig_flash_end = .;
