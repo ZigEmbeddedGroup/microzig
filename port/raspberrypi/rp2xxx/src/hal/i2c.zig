@@ -544,8 +544,7 @@ pub const I2C = enum(u1) {
 
         if (write_vec.size() == 0)
             return TransactionError.NoData;
-
-        const deadline = mdf.time.Deadline.init_relative(timeout);
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         i2c.set_address(addr);
         const regs = i2c.get_regs();
