@@ -67,7 +67,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
     // TODO: disable SIO interrupts
 
     const wrapper = &struct {
-        fn wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.C) void {
+        fn wrapper(_: u32, _: u32, _: u32, _: u32, entry: u32, stack_base: [*]u32) callconv(.c) void {
             // TODO: protect stack using MPU
             _ = stack_base;
             @as(*const fn () void, @ptrFromInt(entry))();

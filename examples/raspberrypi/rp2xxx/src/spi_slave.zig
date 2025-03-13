@@ -21,7 +21,7 @@ const SCK_PIN = 18;
 // master or slave mode.
 const RX_PIN = 16;
 
-pub const microzig_options = .{
+pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
 };

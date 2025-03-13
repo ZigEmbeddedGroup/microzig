@@ -1,5 +1,5 @@
 .{
-    .name = "port/espressif/esp",
+    .name = .port_espressif_esp,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

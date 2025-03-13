@@ -1,4 +1,6 @@
-pub const patches = &.{
+const Patch = @import("microzig/build-internals").Patch;
+
+pub const patches: []const Patch = &.{
     .{
         .add_enum = .{
             .parent = "types.peripherals.USB_DPRAM",

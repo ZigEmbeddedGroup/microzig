@@ -76,7 +76,7 @@ pub const Pio = enum(u1) {
     pub fn sm_clear_fifos(self: Pio, sm: common.StateMachine) void {
         const sm_regs = self.get_sm_regs(sm);
         const xor_shiftctrl = hw.xor_alias(&sm_regs.shiftctrl);
-        const mask = .{
+        const mask = @TypeOf(common.PIO0.SM0_SHIFTCTRL).underlying_type{
             .FJOIN_TX = 1,
             .FJOIN_RX = 1,
 

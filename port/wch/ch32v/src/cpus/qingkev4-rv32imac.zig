@@ -27,7 +27,7 @@ pub inline fn wfe() void {
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn _start() callconv(.C) noreturn {
+    pub fn _start() callconv(.c) noreturn {
         // set global pointer
         asm volatile (
             \\.option push
@@ -51,13 +51,13 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.Naked) void {
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
         asm volatile ("j _start");
     }
 };
 
 pub fn export_startup_logic() void {
-    @export(startup_logic._start, .{
+    @export(&startup_logic._start, .{
         .name = "_start",
     });
 }
@@ -66,7 +66,7 @@ const VectorTable = microzig.chip.VectorTable;
 pub const vector_table: VectorTable = blk: {
     var tmp: VectorTable = .{};
     if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+        for (@typeInfo(microzig.VectorTableOptions).@"struct".fields) |field|
             @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
     }
 

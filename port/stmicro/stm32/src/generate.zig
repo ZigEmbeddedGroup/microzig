@@ -435,7 +435,7 @@ pub fn main() !void {
         const device_id = try db.create_device(.{
             .name = chip_file.value.name,
             // TODO
-            .arch = std.meta.stringToEnum(regz.Database.Arch, core_to_cpu.get(core.name).?).?,
+            .arch = std.meta.stringToEnum(regz.Arch, core_to_cpu.get(core.name).?).?,
         });
 
         const device = try db.get_device_by_name(arena.allocator(), chip_file.value.name);
@@ -601,7 +601,7 @@ fn generate_chips_file(
             var flash_bank: ?ChipFile.Memory = null;
             for (chip_file.memory) |memory| {
                 if (memory.kind == .flash) {
-                    var part_iter = std.mem.splitBackwards(u8, memory.name, "_");
+                    var part_iter = std.mem.splitBackwardsScalar(u8, memory.name, '_');
 
                     // Ignore the region id.
                     _ = part_iter.next() orelse return error.InvalidMemoryName;

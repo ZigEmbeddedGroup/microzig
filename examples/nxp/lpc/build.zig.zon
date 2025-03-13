@@ -1,5 +1,6 @@
 .{
-    .name = "examples/nxp/lpc",
+    .name = .examples_nxp_lpc,
+    .fingerprint = 0xde14b1aa923e4b02,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

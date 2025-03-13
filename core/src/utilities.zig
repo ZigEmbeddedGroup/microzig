@@ -5,28 +5,28 @@ const microzig = @import("microzig.zig");
 /// with similar operations to those of a slice.
 pub fn Slice_Vector(comptime Slice: type) type {
     const type_info = @typeInfo(Slice);
-    if (type_info != .Pointer)
+    if (type_info != .pointer)
         @compileError("Slice must have a slice type!");
-    if (type_info.Pointer.size != .Slice)
+    if (type_info.pointer.size != .slice)
         @compileError("Slice must have a slice type!");
 
     const item_ptr_info: std.builtin.Type = .{
-        .Pointer = .{
-            .alignment = @min(type_info.Pointer.alignment, @alignOf(type_info.Pointer.child)),
-            .size = .One,
-            .child = type_info.Pointer.child,
-            .address_space = type_info.Pointer.address_space,
-            .is_const = type_info.Pointer.is_const,
-            .is_volatile = type_info.Pointer.is_volatile,
-            .is_allowzero = type_info.Pointer.is_allowzero,
-            .sentinel = null,
+        .pointer = .{
+            .alignment = @min(type_info.pointer.alignment, @alignOf(type_info.pointer.child)),
+            .size = .one,
+            .child = type_info.pointer.child,
+            .address_space = type_info.pointer.address_space,
+            .is_const = type_info.pointer.is_const,
+            .is_volatile = type_info.pointer.is_volatile,
+            .is_allowzero = type_info.pointer.is_allowzero,
+            .sentinel_ptr = null,
         },
     };
 
     return struct {
         const Vector = @This();
 
-        pub const Item = type_info.Pointer.child;
+        pub const Item = type_info.pointer.child;
         pub const ItemPtr = @Type(item_ptr_info);
 
         /// The slice of slices. The first and the last slice of this slice must
@@ -189,12 +189,12 @@ pub fn Slice_Vector(comptime Slice: type) type {
     };
 }
 
-pub fn max_enum_tag(T: type) @typeInfo(T).Enum.tag_type {
-    if (@typeInfo(T) != .Enum) @compileError("expected an enum type");
+pub fn max_enum_tag(T: type) @typeInfo(T).@"enum".tag_type {
+    if (@typeInfo(T) != .@"enum") @compileError("expected an enum type");
 
-    const tag_type = @typeInfo(T).Enum.tag_type;
+    const tag_type = @typeInfo(T).@"enum".tag_type;
     var max_tag: tag_type = std.math.minInt(tag_type);
-    for (@typeInfo(T).Enum.fields) |field| {
+    for (@typeInfo(T).@"enum".fields) |field| {
         if (field.value > max_tag) {
             max_tag = field.value;
         }
@@ -203,7 +203,7 @@ pub fn max_enum_tag(T: type) @typeInfo(T).Enum.tag_type {
 }
 
 pub fn GenerateInterruptEnum(TagType: type) type {
-    if (@typeInfo(TagType) != .Int) @compileError("expected an int type");
+    if (@typeInfo(TagType) != .int) @compileError("expected an int type");
 
     if (microzig.chip.interrupts.len == 0) return enum {};
 
@@ -216,7 +216,7 @@ pub fn GenerateInterruptEnum(TagType: type) type {
         };
     }
 
-    return @Type(.{ .Enum = .{
+    return @Type(.{ .@"enum" = .{
         .tag_type = TagType,
         .fields = &fields,
         .decls = &.{},
@@ -233,14 +233,15 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
     var ret_fields: []const std.builtin.Type.StructField = &.{};
 
     for (sources) |source| {
-        if (@typeInfo(source.InterruptEnum) != .Enum) @compileError("expected an enum type");
-        if (@typeInfo(source.HandlerFn) != .Fn) @compileError("expected a function type");
+        if (@typeInfo(source.InterruptEnum) != .@"enum") @compileError("expected an enum type");
+        if (@typeInfo(source.HandlerFn) != .pointer) @compileError("expected a pointer to a function");
+        if (@typeInfo(@typeInfo(source.HandlerFn).pointer.child) != .@"fn") @compileError("expected a pointer to a function");
 
-        for (@typeInfo(source.InterruptEnum).Enum.fields) |enum_field| {
-            ret_fields = ret_fields ++ .{.{
+        for (@typeInfo(source.InterruptEnum).@"enum".fields) |enum_field| {
+            ret_fields = ret_fields ++ .{std.builtin.Type.StructField{
                 .name = enum_field.name,
                 .type = ?source.HandlerFn,
-                .default_value = @as(*const anyopaque, @ptrCast(&@as(?source.HandlerFn, null))),
+                .default_value_ptr = @as(*const anyopaque, @ptrCast(&@as(?source.HandlerFn, null))),
                 .is_comptime = false,
                 .alignment = @alignOf(?source.HandlerFn),
             }};
@@ -248,7 +249,7 @@ pub fn GenerateInterruptOptions(sources: []const Source) type {
     }
 
     return @Type(.{
-        .Struct = .{
+        .@"struct" = .{
             .layout = .auto,
             .fields = ret_fields,
             .decls = &.{},

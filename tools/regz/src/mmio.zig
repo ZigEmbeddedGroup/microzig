@@ -26,13 +26,13 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
             // This is a workaround for a compiler bug related to miscompilation
             // If the tmp var is not used, result location will fuck things up
-            var tmp = @as(IntT, @bitCast(val));
+            const tmp = @as(IntT, @bitCast(val));
             addr.raw = tmp;
         }
 
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
             write(addr, val);
@@ -40,7 +40,7 @@ pub fn Mmio(comptime size: u8, comptime PackedT: type) type {
 
         pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(val, field.name) ^ @field(fields, field.name);
             }
             write(addr, val);

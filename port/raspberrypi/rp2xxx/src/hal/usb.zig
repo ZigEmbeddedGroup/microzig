@@ -357,7 +357,7 @@ pub fn F(comptime config: UsbConfig) type {
             // which is, like, not _wrong_ but slightly awkward since it means
             // we can't just treat it as bytes. Instead, copy it out to a byte
             // array.
-            var setup_packet: [8]u8 = .{0} ** 8;
+            var setup_packet: [8]u8 = @splat(0);
             const spl: u32 = peripherals.USB_DPRAM.SETUP_PACKET_LOW.raw;
             const sph: u32 = peripherals.USB_DPRAM.SETUP_PACKET_HIGH.raw;
             @memcpy(setup_packet[0..4], std.mem.asBytes(&spl));

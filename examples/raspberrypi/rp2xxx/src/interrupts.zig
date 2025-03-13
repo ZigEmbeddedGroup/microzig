@@ -8,7 +8,7 @@ const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = rp2xxx.gpio.num(0);
 
-pub const microzig_options = .{
+pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
     .interrupts = switch (rp2xxx.compatibility.chip) {
@@ -21,7 +21,7 @@ pub const microzig_options = .{
     },
 };
 
-fn timer_interrupt() callconv(.C) void {
+fn timer_interrupt() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 

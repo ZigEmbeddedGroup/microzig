@@ -63,7 +63,7 @@ pub const startup_logic = struct {
 
     extern fn microzig_main() noreturn;
 
-    pub fn _start() linksection("microzig_flash_start") callconv(.C) noreturn {
+    pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
         microzig.cpu.interrupt.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
@@ -80,11 +80,11 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    export fn _rv32_trap() callconv(.C) noreturn {
+    export fn _rv32_trap() callconv(.c) noreturn {
         while (true) {}
     }
 
-    const vector_table = [_]fn () callconv(.C) noreturn{
+    const vector_table = [_]fn () callconv(.c) noreturn{
         _rv32_trap,
         _rv32_trap,
         _rv32_trap,
@@ -110,7 +110,7 @@ pub const startup_logic = struct {
 };
 
 pub fn export_startup_logic() void {
-    @export(startup_logic._start, .{
+    @export(&startup_logic._start, .{
         .name = "_start",
     });
 }

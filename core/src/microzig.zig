@@ -64,6 +64,32 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
     hang();
 }
 
+pub const InterruptOptions = if (@hasDecl(cpu, "InterruptOptions")) cpu.InterruptOptions else struct {};
+
+pub const Options = struct {
+    log_level: std.log.Level = std.log.default_level,
+    log_scope_levels: []const std.log.ScopeLevel = &.{},
+    logFn: fn (
+        comptime message_level: std.log.Level,
+        comptime scope: @TypeOf(.enum_literal),
+        comptime format: []const u8,
+        args: anytype,
+    ) void = struct {
+        fn log(
+            comptime message_level: std.log.Level,
+            comptime scope: @Type(.enum_literal),
+            comptime format: []const u8,
+            args: anytype,
+        ) void {
+            _ = message_level;
+            _ = scope;
+            _ = format;
+            _ = args;
+        }
+    }.log,
+    interrupts: InterruptOptions = .{},
+};
+
 /// Hangs the processor and will stop doing anything useful. Use with caution!
 pub fn hang() noreturn {
     cpu.interrupt.disable_interrupts();

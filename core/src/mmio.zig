@@ -48,7 +48,7 @@ pub fn Mmio(comptime PackedT: type) type {
         /// Set field `Field` of this register to `value`.
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
             write(addr, val);
@@ -58,10 +58,10 @@ pub fn Mmio(comptime PackedT: type) type {
         inline fn toggle_field(val: anytype, comptime field_name: []const u8, value: anytype) void {
             const FieldType = @TypeOf(@field(val, field_name));
             switch (@typeInfo(FieldType)) {
-                .Int => {
+                .int => {
                     @field(val, field_name) = @field(val, field_name) ^ value;
                 },
-                .Enum => |enum_info| {
+                .@"enum" => |enum_info| {
                     // same as for the .Int case, but casting to and from the u... tag type U of the enum FieldType
                     const U = enum_info.tag_type;
                     @field(val, field_name) =
@@ -86,7 +86,7 @@ pub fn Mmio(comptime PackedT: type) type {
         /// In field `F` of this register, toggle (only) all bits that are set in `value`.
         pub inline fn toggle(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
-            inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+            inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 toggle_field(&val, field.name, @field(fields, field.name));
             }
             write(addr, val);

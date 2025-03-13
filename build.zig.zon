@@ -1,5 +1,7 @@
 .{
-    .name = "microzig",
+    .name = .microzig,
+    // Note: This should be changed if you fork microzig!
+    .fingerprint = 0x605a83a849186d0f,
     .version = "0.13.2",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
@@ -10,6 +12,9 @@
         // tools
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
+
+        // modules
+        .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
@@ -24,8 +29,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer#a6a9150c2638ebd079f83ee90c6f9fc6adb16dbf",
-            .hash = "12204586b437ba1057f5ad16eb0c7392bc9534602bf435bf6c9a41cc5a8747630e65",
+            .url = "git+https://github.com/mattnite/boxzer.git#ba48dc0beed520d3fd91738e3717776ac02df175",
+            .hash = "boxzer-0.1.0-UECMFB7WAAAOQio_OOb84Tmeft26gQ6Ec6jL5MUU_h1r",
         },
     },
     .paths = .{
@@ -42,6 +47,7 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
     .boxzer_ignore_paths = .{
         "tools",
@@ -50,5 +56,6 @@
         "build-internals",
         "core",
         "drivers",
+        "modules",
     },
 }

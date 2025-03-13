@@ -24,10 +24,14 @@ pub const CoreInterrupt = enum(u32) {
 
 pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
+const InterruptHandler = *const fn () callconv(.c) void;
+
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    .{ .InterruptEnum = enum { Exception }, .HandlerFn = fn () callconv(.C) void },
-    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = fn () callconv(.C) void },
-    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = fn () callconv(.C) void },
+    // TODO: maybe change to interrupt callconv
+    .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
+    // TODO: maybe change to interrupt callconv
+    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
+    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = InterruptHandler },
 });
 
 pub const interrupt = struct {
@@ -154,7 +158,7 @@ pub fn wfe() void {
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub export fn _start() linksection("microzig_flash_start") callconv(.Naked) noreturn {
+    pub export fn _start() linksection("microzig_flash_start") callconv(.naked) noreturn {
         asm volatile (
             \\.option push
             \\.option norelax
@@ -183,13 +187,13 @@ pub const startup_logic = struct {
         );
     }
 
-    pub export fn _start_c() callconv(.C) noreturn {
+    pub export fn _start_c() callconv(.c) noreturn {
         root.initialize_system_memories();
 
         microzig_main();
     }
 
-    pub export fn _vector_table() align(64) callconv(.Naked) noreturn {
+    pub export fn _vector_table() align(64) callconv(.naked) noreturn {
         asm volatile (
             \\j _exception_handler
             \\.word 0
@@ -206,12 +210,12 @@ pub const startup_logic = struct {
         );
     }
 
-    fn unhandled() callconv(.C) noreturn {
+    fn unhandled() callconv(.c) noreturn {
         @panic("unhandled interrupt");
     }
 
-    pub export fn _exception_handler() callconv(.Naked) noreturn {
-        const handler = microzig_options.interrupts.Exception orelse unhandled;
+    pub export fn _exception_handler() callconv(.naked) noreturn {
+        const handler: InterruptHandler = microzig_options.interrupts.Exception orelse unhandled;
         @export(handler, .{ .name = "_exception_handler_c" });
 
         push_interrupt_state();
@@ -222,8 +226,8 @@ pub const startup_logic = struct {
         asm volatile ("mret");
     }
 
-    pub export fn _machine_software_handler() callconv(.Naked) noreturn {
-        const handler = microzig_options.interrupts.MachineSoftware orelse unhandled;
+    pub export fn _machine_software_handler() callconv(.naked) noreturn {
+        const handler: InterruptHandler = microzig_options.interrupts.MachineSoftware orelse unhandled;
         @export(handler, .{ .name = "_machine_software_handler_c" });
 
         push_interrupt_state();
@@ -234,8 +238,8 @@ pub const startup_logic = struct {
         asm volatile ("mret");
     }
 
-    pub export fn _machine_timer_handler() callconv(.Naked) noreturn {
-        const handler = microzig_options.interrupts.MachineTimer orelse unhandled;
+    pub export fn _machine_timer_handler() callconv(.naked) noreturn {
+        const handler: InterruptHandler = microzig_options.interrupts.MachineTimer orelse unhandled;
         @export(handler, .{ .name = "_machine_timer_handler_c" });
 
         push_interrupt_state();
@@ -246,7 +250,7 @@ pub const startup_logic = struct {
         asm volatile ("mret");
     }
 
-    pub export fn _machine_external_handler() callconv(.Naked) noreturn {
+    pub export fn _machine_external_handler() callconv(.naked) noreturn {
         push_interrupt_state();
 
         if (microzig_options.interrupts.MachineExternal) |handler| {
@@ -256,11 +260,10 @@ pub const startup_logic = struct {
         } else {
             _ = struct {
                 export const _external_interrupt_table = blk: {
-                    const Handler = *const fn () callconv(.C) void;
                     const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
-                    var external_interrupt_table: [count]Handler = [1]Handler{unhandled} ** count;
+                    var external_interrupt_table: [count]InterruptHandler = @splat(unhandled);
 
-                    for (@typeInfo(ExternalInterrupt).Enum.fields) |field| {
+                    for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
                         if (@field(microzig_options.interrupts, field.name)) |handler| {
                             external_interrupt_table[field.value] = handler;
                         }
@@ -535,14 +538,14 @@ pub const csr = struct {
 
             pub inline fn modify(modifier: anytype) void {
                 switch (@typeInfo(T)) {
-                    .Struct => {
+                    .@"struct" => {
                         var value = read();
                         inline for (@typeInfo(@TypeOf(modifier)).Struct.fields) |field| {
                             @field(value, field.name) = @field(modifier, field.name);
                         }
                         write(value);
                     },
-                    .Int => write(modifier),
+                    .int => write(modifier),
                     else => @compileError("unsupported type"),
                 }
             }
@@ -593,14 +596,14 @@ pub const csr = struct {
 
             inline fn get_bits(fields: anytype) u32 {
                 return switch (@typeInfo(T)) {
-                    .Struct => blk: {
+                    .@"struct" => blk: {
                         var bits: T = @bitCast(@as(u32, 0));
-                        inline for (@typeInfo(@TypeOf(fields)).Struct.fields) |field| {
+                        inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                             @field(bits, field.name) = @field(fields, field.name);
                         }
                         break :blk @bitCast(bits);
                     },
-                    .Int => fields,
+                    .int => fields,
                     else => @compileError("unsupported type"),
                 };
             }

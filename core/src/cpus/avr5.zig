@@ -33,7 +33,7 @@ pub const vector_table_asm = blk: {
     const asm_str: []const u8 = "jmp microzig_start\n";
 
     //const has_interrupts = @hasDecl(root, "microzig_options");
-    //for (@typeInfo(root.VectorTableOptions).Struct.fields) |field| {
+    //for (@typeInfo(root.VectorTableOptions).@"struct".fields) |field| {
     //    const new_insn = if (has_interrupts) overload: {
     //        const interrupts = root.microzig_options.interrupts;
     //        if (@hasDecl(interrupts, field.name)) {
@@ -53,7 +53,7 @@ pub const vector_table_asm = blk: {
     break :blk asm_str;
 };
 
-fn vector_table() callconv(.Naked) noreturn {
+fn vector_table() callconv(.naked) noreturn {
     asm volatile (vector_table_asm);
 }
 
@@ -64,7 +64,7 @@ export fn abort() noreturn {
 
 pub fn export_startup_logic() void {
     _ = startup_logic;
-    @export(vector_table, .{
+    @export(&vector_table, .{
         .name = "_start",
     });
 }
@@ -89,19 +89,19 @@ fn make_isr_handler(comptime name: []const u8, comptime func: anytype) type {
 
         comptime {
             const options = .{ .name = exported_name, .linkage = .Strong };
-            @export(isr_vector, options);
+            @export(&isr_vector, options);
         }
     };
 }
 
 pub const startup_logic = struct {
-    export fn microzig_unhandled_vector() callconv(.C) noreturn {
+    export fn microzig_unhandled_vector() callconv(.c) noreturn {
         @panic("Unhandled interrupt");
     }
 
     extern fn microzig_main() noreturn;
 
-    export fn microzig_start() callconv(.C) noreturn {
+    export fn microzig_start() callconv(.c) noreturn {
         // At startup the stack pointer is at the end of RAM
         // so, no need to set it manually!
 

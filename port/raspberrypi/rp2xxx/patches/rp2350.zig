@@ -1,8 +1,6 @@
-pub const patches = &.{
-    .{ .override_arch = .{
-        .device_name = "RP2350",
-        .arch = .hazard3,
-    } },
+const Patch = @import("microzig/build-internals").Patch;
+
+pub const patches: []const Patch = &.{
     .{ .add_enum = .{
         .parent = "types.peripherals.USB_DPRAM",
         .@"enum" = .{
@@ -60,7 +58,6 @@ pub const patches = &.{
         .device_name = "RP2350",
         .idx = 46,
         .name = "SPAREIRQ_IRQ_0",
-        .description = "Spare interrupt 0 (triggered only by software)",
     } },
     .{ .add_interrupt = .{
         .device_name = "RP2350",

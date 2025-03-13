@@ -284,7 +284,7 @@ fn single(gpio_num: u5) [30]u1 {
     return ret;
 }
 
-const function_table = [@typeInfo(Function).Enum.fields.len][30]u1{
+const function_table = [@typeInfo(Function).@"enum".fields.len][30]u1{
     all(), // SIO
     all(), // PIO0
     all(), // PIO1
@@ -372,19 +372,19 @@ pub const GlobalConfiguration = struct {
     GPIO29: ?Pin.Configuration = null,
 
     comptime {
-        const pin_field_count = @typeInfo(Pin).Enum.fields.len;
-        const config_field_count = @typeInfo(GlobalConfiguration).Struct.fields.len;
+        const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
+        const config_field_count = @typeInfo(GlobalConfiguration).@"struct".fields.len;
         if (pin_field_count != config_field_count)
             @compileError(comptimePrint("{} {}", .{ pin_field_count, config_field_count }));
     }
 
     pub fn PinsType(self: GlobalConfiguration) type {
         var fields: []const StructField = &.{};
-        for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
+        for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
                 var pin_field = StructField{
                     .is_comptime = false,
-                    .default_value = null,
+                    .default_value_ptr = null,
 
                     // initialized below:
                     .name = undefined,
@@ -410,7 +410,7 @@ pub const GlobalConfiguration = struct {
         }
 
         return @Type(.{
-            .Struct = .{
+            .@"struct" = .{
                 .layout = .auto,
                 .is_tuple = false,
                 .fields = fields,
@@ -422,7 +422,7 @@ pub const GlobalConfiguration = struct {
     // Can be called at comptime or runtime
     pub fn pins(comptime self: GlobalConfiguration) self.PinsType() {
         var ret: self.PinsType() = undefined;
-        inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
+        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(self, field.name)) |pin_config| {
                 if (pin_config.function == .SIO) {
                     @field(ret, pin_config.name orelse field.name) = gpio.num(@intFromEnum(@field(Pin, field.name)));
@@ -454,7 +454,7 @@ pub const GlobalConfiguration = struct {
 
         // validate selected function
         comptime {
-            for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
+            for (@typeInfo(GlobalConfiguration).@"struct".fields) |field|
                 if (@field(config, field.name)) |pin_config| {
                     const gpio_num = @intFromEnum(@field(Pin, field.name));
                     if (0 == function_table[@intFromEnum(pin_config.function)][gpio_num])
@@ -485,7 +485,7 @@ pub const GlobalConfiguration = struct {
             SIO.GPIO_OUT_CLR.raw = used_gpios;
         }
 
-        inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field| {
+        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(config, field.name)) |pin_config| {
                 const pin = gpio.num(@intFromEnum(@field(Pin, field.name)));
                 const func = pin_config.function;
@@ -531,7 +531,7 @@ pub const GlobalConfiguration = struct {
             SIO.GPIO_OE_SET.raw = output_gpios;
 
         if (input_gpios != 0) {
-            inline for (@typeInfo(GlobalConfiguration).Struct.fields) |field|
+            inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field|
                 if (@field(config, field.name)) |pin_config| {
                     const gpio_num = @intFromEnum(@field(Pin, field.name));
                     const pull = pin_config.pull orelse continue;

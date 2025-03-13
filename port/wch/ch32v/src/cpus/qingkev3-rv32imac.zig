@@ -27,7 +27,7 @@ pub inline fn wfe() void {
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
-    pub fn _start() callconv(.C) noreturn {
+    pub fn _start() callconv(.c) noreturn {
         // set global pointer
         asm volatile (
             \\.option push
@@ -51,7 +51,7 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.Naked) void {
+    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
         // CH32V103 starts from 0x000_0004 but the top of the microzig_flash_start is 0x000_0000.
         // So, two nops are required to make 4 bytes padding. The nop in RV32C is two bytes.
         asm volatile (
@@ -63,7 +63,7 @@ pub const startup_logic = struct {
 };
 
 pub fn export_startup_logic() void {
-    @export(startup_logic._start, .{
+    @export(&startup_logic._start, .{
         .name = "_start",
     });
 }
@@ -72,7 +72,7 @@ const VectorTable = microzig.chip.VectorTable;
 pub const vector_table: VectorTable = blk: {
     var tmp: VectorTable = .{};
     if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(root.VectorTableOptions).Struct.fields) |field|
+        for (@typeInfo(microzig.VectorTableOptions).@"struct".fields) |field|
             @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
     }
 

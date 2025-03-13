@@ -74,7 +74,7 @@ pub fn panic(msg: []const u8, maybe_error_return_trace: ?*std.builtin.StackTrace
 }
 
 /// default implementation for `foundation_libc_panic_handler`.
-fn fallback_panic_handler(msg_ptr: [*]const u8, msg_len: usize) callconv(.C) noreturn {
+fn fallback_panic_handler(msg_ptr: [*]const u8, msg_len: usize) callconv(.c) noreturn {
     _ = msg_ptr;
     _ = msg_len;
     @trap();
