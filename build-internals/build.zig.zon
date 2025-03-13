@@ -1,5 +1,6 @@
 .{
-    .name = .build_internals,
+    .name = .buildinternals,
+    .fingerprint = 0x48ef72ba051e13e8,
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },
