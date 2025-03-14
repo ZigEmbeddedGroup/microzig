@@ -12,9 +12,9 @@ const Datagram_Device = @This();
 
 /// Pointer to the object implementing the driver.
 ///
-/// If the implementation requires no `object` pointer,
+/// If the implementation requires no `ptr` pointer,
 /// you can safely use `undefined` here.
-object: *anyopaque,
+ptr: *anyopaque,
 
 /// Virtual table for the datagram device functions.
 vtable: *const VTable,
@@ -27,14 +27,14 @@ pub const ConnectError = BaseError || error{DeviceBusy};
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
 pub fn connect(dd: Datagram_Device) ConnectError!void {
     if (dd.vtable.connect_fn) |connectFn| {
-        return connectFn(dd.object);
+        return connectFn(dd.ptr);
     }
 }
 
 /// Releases a device from the connection.
 pub fn disconnect(dd: Datagram_Device) void {
     if (dd.vtable.disconnect_fn) |disconnectFn| {
-        return disconnectFn(dd.object);
+        return disconnectFn(dd.ptr);
     }
 }
 
@@ -48,7 +48,7 @@ pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
 /// Writes a single `datagram` to the device.
 pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!void {
     const writev_fn = dd.vtable.writev_fn orelse return error.Unsupported;
-    return writev_fn(dd.object, datagrams);
+    return writev_fn(dd.ptr, datagrams);
 }
 
 pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
@@ -71,7 +71,7 @@ pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
 /// will be discarded.
 pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
     const readv_fn = dd.vtable.readv_fn orelse return error.Unsupported;
-    return readv_fn(dd.object, datagrams);
+    return readv_fn(dd.ptr, datagrams);
 }
 
 pub const VTable = struct {
@@ -134,7 +134,7 @@ pub const Test_Device = struct {
 
     pub fn datagram_device(td: *Test_Device) Datagram_Device {
         return Datagram_Device{
-            .object = td,
+            .ptr = td,
             .vtable = &vtable,
         };
     }

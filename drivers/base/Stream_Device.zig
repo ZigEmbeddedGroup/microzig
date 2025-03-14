@@ -11,9 +11,9 @@ const Stream_Device = @This();
 
 /// Pointer to the object implementing the driver.
 ///
-/// If the implementation requires no `object` pointer,
+/// If the implementation requires no `ptr` pointer,
 /// you can safely use `undefined` here.
-object: *anyopaque,
+ptr: *anyopaque,
 
 /// Virtual table for the stream device functions.
 vtable: *const VTable,
@@ -28,13 +28,13 @@ pub const ReadError = BaseError || error{ Unsupported, NotConnected };
 /// NOTE: Call `.disconnect()` when the usage of the device is done to release it.
 pub fn connect(sd: Stream_Device) ConnectError!void {
     const connect_fn = sd.vtable.connect_fn orelse return;
-    return connect_fn(sd.object);
+    return connect_fn(sd.ptr);
 }
 
 /// Releases a device from the connection.
 pub fn disconnect(sd: Stream_Device) void {
     const disconnect_fn = sd.vtable.disconnect_fn orelse return;
-    return disconnect_fn(sd.object);
+    return disconnect_fn(sd.ptr);
 }
 
 /// Writes some `bytes` to the device and returns the number of bytes written.
@@ -45,7 +45,7 @@ pub fn write(sd: Stream_Device, bytes: []const u8) WriteError!usize {
 /// Writes some `bytes` to the device and returns the number of bytes written.
 pub fn writev(sd: Stream_Device, bytes_vec: []const []const u8) WriteError!usize {
     const writev_fn = sd.vtable.writev_fn orelse return error.Unsupported;
-    return writev_fn(sd.object, bytes_vec);
+    return writev_fn(sd.ptr, bytes_vec);
 }
 
 /// Reads some `bytes` to the device and returns the number of bytes read.
@@ -56,7 +56,7 @@ pub fn read(sd: Stream_Device, bytes: []u8) ReadError!usize {
 /// Reads some `bytes` to the device and returns the number of bytes read.
 pub fn readv(sd: Stream_Device, bytes_vec: []const []u8) ReadError!usize {
     const readv_fn = sd.vtable.readv_fn orelse return error.Unsupported;
-    return readv_fn(sd.object, bytes_vec);
+    return readv_fn(sd.ptr, bytes_vec);
 }
 
 pub const Reader = std.io.Reader(Stream_Device, ReadError, reader_read);
@@ -118,7 +118,7 @@ pub const Test_Device = struct {
 
     pub fn stream_device(td: *Test_Device) Stream_Device {
         return Stream_Device{
-            .object = td,
+            .ptr = td,
             .vtable = &vtable,
         };
     }

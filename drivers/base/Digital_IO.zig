@@ -10,9 +10,9 @@ const Digital_IO = @This();
 
 /// Pointer to the object implementing the driver.
 ///
-/// If the implementation requires no `object` pointer,
+/// If the implementation requires no `ptr` pointer,
 /// you can safely use `undefined` here.
-object: *anyopaque,
+ptr: *anyopaque,
 
 /// Virtual table for the digital i/o functions.
 vtable: *const VTable,
@@ -40,23 +40,23 @@ pub const Direction = enum { input, output };
 
 /// Sets the direction of the pin.
 pub fn set_direction(dio: Digital_IO, dir: Direction) SetDirError!void {
-    return dio.vtable.set_direction_fn(dio.object, dir);
+    return dio.vtable.set_direction_fn(dio.ptr, dir);
 }
 
 /// Sets if the pin has a bias towards either `low` or `high` or no bias at all.
 /// Bias is usually implemented with pull-ups and pull-downs.
 pub fn set_bias(dio: Digital_IO, bias: ?State) SetBiasError!void {
-    return dio.vtable.set_bias_fn(dio.object, bias);
+    return dio.vtable.set_bias_fn(dio.ptr, bias);
 }
 
 /// Changes the state of the pin.
 pub fn write(dio: Digital_IO, state: State) WriteError!void {
-    return dio.vtable.write_fn(dio.object, state);
+    return dio.vtable.write_fn(dio.ptr, state);
 }
 
 /// Reads the state state of the pin.
 pub fn read(dio: Digital_IO) ReadError!State {
-    return dio.vtable.read_fn(dio.object);
+    return dio.vtable.read_fn(dio.ptr);
 }
 
 pub const VTable = struct {
@@ -79,7 +79,7 @@ pub const Test_Device = struct {
 
     pub fn digital_io(dev: *Test_Device) Digital_IO {
         return Digital_IO{
-            .object = dev,
+            .ptr = dev,
             .vtable = &vtable,
         };
     }
