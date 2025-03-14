@@ -11,9 +11,9 @@ const Clock_Device = @This();
 
 /// Pointer to the object implementing the driver.
 ///
-/// If the implementation requires no `object` pointer,
+/// If the implementation requires no `ptr` pointer,
 /// you can safely use `undefined` here.
-object: *anyopaque,
+ptr: *anyopaque,
 
 /// Virtual table for the digital i/o functions.
 vtable: *const VTable,
@@ -43,7 +43,7 @@ pub fn sleep_us(td: Clock_Device, time_us: u64) void {
 
 /// VTable methods
 pub fn get_time_since_boot(td: Clock_Device) mdf.time.Absolute {
-    return td.vtable.get_time_since_boot(td.object);
+    return td.vtable.get_time_since_boot(td.ptr);
 }
 
 pub const VTable = struct {
@@ -67,7 +67,7 @@ pub const Test_Device = struct {
 
     pub fn clock_device(dev: *Test_Device) Clock_Device {
         return Clock_Device{
-            .object = dev,
+            .ptr = dev,
             .vtable = &vtable,
         };
     }

@@ -88,7 +88,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
 
         pub fn digital_IO(self: *Self, pin: u3) Digital_IO {
             return Digital_IO{
-                .object = &self.pin_arr[pin],
+                .ptr = &self.pin_arr[pin],
                 .vtable = &vtable,
             };
         }

@@ -37,7 +37,7 @@ pub const I2C_Device = struct {
 
     pub fn datagram_device(dev: *I2C_Device) Datagram_Device {
         return .{
-            .object = dev,
+            .ptr = dev,
             .vtable = &vtable,
         };
     }
@@ -152,7 +152,7 @@ pub const SPI_Device = struct {
 
     pub fn datagram_device(dev: *SPI_Device) Datagram_Device {
         return .{
-            .object = dev,
+            .ptr = dev,
             .vtable = &vtable,
         };
     }
@@ -244,7 +244,7 @@ pub const GPIO_Device = struct {
 
     pub fn digital_io(dio: *GPIO_Device) Digital_IO {
         return Digital_IO{
-            .object = dio,
+            .ptr = dio,
             .vtable = &vtable,
         };
     }
@@ -309,7 +309,7 @@ pub const ClockDevice = struct {
     pub fn clock_device(td: *ClockDevice) Clock_Device {
         _ = td;
         return Clock_Device{
-            .object = undefined,
+            .ptr = undefined,
             .vtable = &vtable,
         };
     }
