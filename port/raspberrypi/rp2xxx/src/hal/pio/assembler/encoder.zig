@@ -462,20 +462,25 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
         }
 
         fn calc_delay_side_set(
-            program_settings: ?SideSet,
+            sideset_settings: ?SideSet,
             side_set_opt: ?u5,
             delay_opt: ?u5,
         ) !u5 {
-            // TODO: error for side_set/delay collision
             const delay: u5 = if (delay_opt) |delay| delay else 0;
-            return if (program_settings) |settings|
-                if (settings.optional)
-                    if (side_set_opt) |side_set|
-                        0x10 | (side_set << @as(u3, 4) - settings.count) | delay
+            const bits_needed = std.math.log2_int_ceil(u64, delay + 1);
+
+            return if (sideset_settings) |sideset|
+                if (sideset.optional)
+                    if ((4 - bits_needed) < sideset.count)
+                        error.SideSetDelayCollision
+                    else if (side_set_opt) |side_set|
+                        0x10 | (side_set << @as(u3, 4) - sideset.count) | delay
                     else
                         delay
+                else if ((5 - bits_needed) < sideset.count)
+                    error.SideSetDelayCollision
                 else
-                    (side_set_opt.? << @as(u3, 5) - settings.count) | delay
+                    (side_set_opt.? << @as(u3, 5) - sideset.count) | delay
             else
                 delay;
         }
@@ -680,6 +685,7 @@ pub fn Instruction(comptime chip: Chip) type {
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
+const expectError = std.testing.expectError;
 
 fn encode_bounded_output_impl(comptime chip: Chip, source: []const u8, diags: *?assembler.Diagnostics) !Encoder(chip, .{}).Output {
     const tokens = try tokenizer.tokenize(chip, source, diags, .{});
@@ -1102,6 +1108,36 @@ test "encode.jmp.label origin" {
         try expectEqual(Token(.RP2040).Instruction.Jmp.Condition.always, instr.payload.jmp.condition);
         try expectEqual(@as(u5, 22), instr.payload.jmp.address);
     }
+}
+
+test "encode.error.sideset delay collision" {
+    const collision = encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 2
+        \\nop side 3 [8]
+    );
+    try expectError(error.SideSetDelayCollision, collision);
+
+    _ = try encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 2
+        \\nop side 3 [7]
+    );
+}
+
+test "encode.error.sideset opt delay collision" {
+    const collision = encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 2, opt
+        \\nop side 3 [4]
+    );
+    try expectError(error.SideSetDelayCollision, collision);
+
+    _ = try encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 2, opt
+        \\nop side 3 [3]
+    );
 }
 
 //test "encode.error.duplicated program name" {}
