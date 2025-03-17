@@ -194,7 +194,15 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                         );
                     }
 
-                    return @as(T, @intCast(result));
+                    return std.math.cast(T, result) orelse blk: {
+                        diags.* = Diagnostics.init(
+                            index,
+                            "{s}'s value is too large to fit in {} bits",
+                            .{ expr_str, @bitSizeOf(T) },
+                        );
+
+                        break :blk error.TooBig;
+                    };
                 },
             };
         }
