@@ -467,7 +467,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             delay_opt: ?u5,
         ) !u5 {
             const delay: u5 = if (delay_opt) |delay| delay else 0;
-            const bits_needed = std.math.log2_int_ceil(u64, delay + 1);
+            const bits_needed = std.math.log2_int_ceil(u6, @as(u6, delay) + 1);
 
             return if (sideset_settings) |sideset|
                 if (sideset.optional)
@@ -1122,6 +1122,11 @@ test "encode.error.sideset delay collision" {
         \\.program sideset_delay_collision
         \\.side_set 2
         \\nop side 3 [7]
+    );
+
+    _ = try encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\nop [31]
     );
 }
 
