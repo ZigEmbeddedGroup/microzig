@@ -1035,6 +1035,14 @@ test "encode.evaluate.bit reversal" {
     try expectEqual(@as(i128, 0x80000000), output.global_defines.get(0).value);
 }
 
+test "encode.evaluate.value size" {
+    const bits = encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\nop [32]
+    );
+    try expectError(error.TooBig, bits);
+}
+
 test "encode.jmp.label" {
     const output = try encode_bounded_output(.RP2040,
         \\.program arst
