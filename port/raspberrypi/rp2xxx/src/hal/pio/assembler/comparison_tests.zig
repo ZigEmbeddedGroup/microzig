@@ -41,6 +41,7 @@ fn pio_comparison(comptime source: []const u8) !void {
 }
 
 fn pio_comparison_chip(comptime chip: Chip, comptime source: []const u8) !void {
+    @setEvalBranchQuota(100_000);
     const output = comptime assembler.assemble(chip, source, .{});
     try std.testing.expect(output.programs.len > 0);
 
@@ -58,131 +59,105 @@ fn pio_comparison_chip(comptime chip: Chip, comptime source: []const u8) !void {
 }
 
 test "pio.comparison.addition" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/addition.pio"));
 }
 
 test "pio.comparison.apa102" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/apa102.pio"));
 }
 
 test "pio.comparison.blink" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/blink.pio"));
 }
 
 test "pio.comparison.clocked_input" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/clocked_input.pio"));
 }
 
 test "pio.comparison.differential_manchester" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/differential_manchester.pio"));
 }
 
 test "pio.comparison.hello" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/hello.pio"));
 }
 
 test "pio.comparison.hub75" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/hub75.pio"));
 }
 
 test "pio.comparison.i2c" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/i2c.pio"));
 }
 
 test "pio.comparison.irq" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison_chip(.RP2350, @embedFile("comparison_tests/irq.pio"));
 }
 
 test "pio.comparison.manchester_encoding" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/manchester_encoding.pio"));
 }
 
 test "pio.comparison.movrx" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison_chip(.RP2350, @embedFile("comparison_tests/movrx.pio"));
 }
 
 test "pio.comparison.nec_carrier_burst" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/nec_carrier_burst.pio"));
 }
 
 test "pio.comparison.nec_carrier_control" {
-    @setEvalBranchQuota(100_000);
     try pio_comparison(@embedFile("comparison_tests/nec_carrier_control.pio"));
 }
 
 test "pio.comparison.nec_receive" {
-    @setEvalBranchQuota(12_000);
     try pio_comparison(@embedFile("comparison_tests/nec_receive.pio"));
 }
 
 test "pio.comparison.pio_serialiser" {
-    @setEvalBranchQuota(3_000);
     try pio_comparison(@embedFile("comparison_tests/pio_serialiser.pio"));
 }
 
 test "pio.comparison.pwm" {
-    @setEvalBranchQuota(6_000);
     try pio_comparison(@embedFile("comparison_tests/pwm.pio"));
 }
 
 test "pio.comparison.quadrature_encoder" {
-    @setEvalBranchQuota(21_000);
     try pio_comparison(@embedFile("comparison_tests/quadrature_encoder.pio"));
 }
 
 test "pio.comparison.resistor_dac" {
-    @setEvalBranchQuota(3_000);
     try pio_comparison(@embedFile("comparison_tests/resistor_dac.pio"));
 }
 
 test "pio.comparison.spi" {
-    @setEvalBranchQuota(26_000);
     try pio_comparison(@embedFile("comparison_tests/spi.pio"));
 }
 
 test "pio.comparison.squarewave" {
-    @setEvalBranchQuota(3_000);
     try pio_comparison(@embedFile("comparison_tests/squarewave.pio"));
 }
 
 test "pio.comparison.squarewave_fast" {
-    @setEvalBranchQuota(3_000);
     try pio_comparison(@embedFile("comparison_tests/squarewave_fast.pio"));
 }
 
 test "pio.comparison.squarewave_wrap" {
-    @setEvalBranchQuota(3_000);
     try pio_comparison(@embedFile("comparison_tests/squarewave_wrap.pio"));
 }
 
 test "pio.comparison.st7789_lcd" {
-    @setEvalBranchQuota(6_000);
     try pio_comparison(@embedFile("comparison_tests/st7789_lcd.pio"));
 }
 
 test "pio.comparison.uart_rx" {
-    @setEvalBranchQuota(12_000);
     try pio_comparison(@embedFile("comparison_tests/uart_rx.pio"));
 }
 
 test "pio.comparison.uart_tx" {
-    @setEvalBranchQuota(7_000);
     try pio_comparison(@embedFile("comparison_tests/uart_tx.pio"));
 }
 
 test "pio.comparison.ws2812" {
-    @setEvalBranchQuota(12_000);
     try pio_comparison(@embedFile("comparison_tests/ws2812.pio"));
 }
