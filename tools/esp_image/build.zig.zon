@@ -1,0 +1,18 @@
+.{
+    .name = .tools_esp_image,
+    .fingerprint = 0x8c3a8bf1bd71f47d,
+    .version = "0.0.0",
+    .dependencies = .{
+        .clap = .{
+            .url = "git+https://github.com/Hejsil/zig-clap.git#e47028deaefc2fb396d3d9e9f7bd776ae0b2a43a",
+            .hash = "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0",
+        },
+    },
+    .paths = .{
+        "LICENSE",
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

@@ -12,6 +12,7 @@
         // tools
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
+        .@"tools/esp_image" = .{ .path = "tools/esp_image" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },

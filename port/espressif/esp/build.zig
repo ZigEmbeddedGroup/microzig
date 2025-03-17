@@ -15,10 +15,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hals/ESP32_C3.zig"),
     };
-    const chip_esp32c3: microzig.Target = .{
+    const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
-        // TODO: Exchange FLAT format with .esp format
-        .preferred_binary_format = .bin,
+        .preferred_binary_format = .{ .esp = .{
+            .chip_id = .esp32c3,
+            .flash_mode = .dio,
+        } },
         .chip = .{
             .name = "ESP32-C3",
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
@@ -38,15 +40,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 // external memory, ibus
                 .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
                 // sram 1, data bus
-                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
+                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0005_0000 },
             },
         },
         .hal = hal,
+        .linker_script = b.path("linker.ld"),
     };
 
     return .{
         .chips = .{
-            .esp32_c3 = chip_esp32c3.derive(.{}),
+            .esp32_c3 = chip_esp32_c3.derive(.{}),
         },
         .boards = .{},
     };

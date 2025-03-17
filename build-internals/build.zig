@@ -6,7 +6,8 @@ const Module = Build.Module;
 const regz = @import("regz");
 pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
-const FamilyId = uf2.FamilyId;
+pub const FamilyId = uf2.FamilyId;
+const esp_image = @import("esp_image");
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
@@ -161,6 +162,15 @@ pub const ModuleImports = struct {
 /// A lot of embedded systems don't use plain ELF files, thus we provide means
 /// to convert the resulting ELF into other common formats.
 pub const BinaryFormat = union(enum) {
+    pub const EspOptions = struct {
+        chip_id: esp_image.ChipId,
+        min_rev: ?u16 = null,
+        max_rev: ?u16 = null,
+        flash_freq: ?esp_image.FlashFreq = null,
+        flash_mode: ?esp_image.FlashMode = null,
+        flash_size: ?esp_image.FlashSize = null,
+    };
+
     /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.
     elf,
 
@@ -178,7 +188,7 @@ pub const BinaryFormat = union(enum) {
     uf2: uf2.FamilyId,
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
-    esp,
+    esp: EspOptions,
 
     /// Custom option for non-standard formats.
     custom: *Custom,
