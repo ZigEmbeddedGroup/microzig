@@ -466,7 +466,6 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
             delay_opt: ?u5,
         ) !u5 {
             const delay: u5 = if (delay_opt) |delay| delay else 0;
-            // const bits_needed = if (delay == 0) 0 else std.math.log2_int_ceil(u6, @as(u6, delay));
             const bits_needed = std.math.log2_int_ceil(u6, @as(u6, delay) + 1);
 
             return if (sideset_settings) |sideset|
