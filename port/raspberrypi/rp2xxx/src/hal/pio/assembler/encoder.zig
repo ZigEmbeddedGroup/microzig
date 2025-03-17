@@ -470,7 +470,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
             return if (sideset_settings) |sideset|
                 if (sideset.optional)
-                    if ((4 - bits_needed) < sideset.count)
+                    if ((4 - @as(i7, bits_needed)) < sideset.count)
                         error.SideSetDelayCollision
                     else if (side_set_opt) |side_set|
                         0x10 | (side_set << @as(u3, 4) - sideset.count) | delay
@@ -1131,6 +1131,13 @@ test "encode.error.sideset delay collision" {
         \\nop side 3 [31]
     );
     try expectError(error.SideSetDelayCollision, collision2);
+
+    const collision3 = encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 1 opt
+        \\nop side 3 [31]
+    );
+    try expectError(error.SideSetDelayCollision, collision3);
 
     _ = try encode_bounded_output(.RP2040,
         \\.program sideset_delay_collision
