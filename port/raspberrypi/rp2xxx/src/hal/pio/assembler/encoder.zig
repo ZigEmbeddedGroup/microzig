@@ -188,21 +188,12 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                         diags.* = Diagnostics.init(
                             index,
                             "value of {} does not fit in a u{}",
-                            .{
-                                result, @bitSizeOf(T),
-                            },
+                            .{ result, @bitSizeOf(T) },
                         );
+                        return error.TooBig;
                     }
 
-                    return std.math.cast(T, result) orelse blk: {
-                        diags.* = Diagnostics.init(
-                            index,
-                            "{s}'s value is too large to fit in {} bits",
-                            .{ expr_str, @bitSizeOf(T) },
-                        );
-
-                        break :blk error.TooBig;
-                    };
+                    return @as(T, @intCast(result));
                 },
             };
         }
