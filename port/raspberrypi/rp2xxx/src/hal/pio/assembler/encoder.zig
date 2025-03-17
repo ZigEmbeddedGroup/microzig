@@ -181,7 +181,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
 
                     break :outer error.DefineNotFound;
                 },
-                .expression => |expr_str| {
+                .expression => |expr_str| outer: {
                     const expr = try Expression.tokenize(expr_str, index, diags);
                     const result = try expr.evaluate(define_lists, diags);
                     if (result < 0 or result > std.math.maxInt(T)) {
@@ -190,10 +190,10 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                             "value of {} does not fit in a u{}",
                             .{ result, @bitSizeOf(T) },
                         );
-                        return error.TooBig;
+                        break :outer error.TooBig;
                     }
 
-                    return @as(T, @intCast(result));
+                    break :outer @as(T, @intCast(result));
                 },
             };
         }
@@ -695,7 +695,7 @@ fn encode_bounded_output_impl(comptime chip: Chip, source: []const u8, diags: *?
 fn encode_bounded_output(comptime chip: Chip, source: []const u8) !Encoder(chip, .{}).Output {
     var diags: ?assembler.Diagnostics = null;
     return encode_bounded_output_impl(chip, source, &diags) catch |err| if (diags) |d| blk: {
-        std.log.err("error at index {}: {s}", .{ d.index, d.message.slice() });
+        std.log.info("error at index {}: {s}", .{ d.index, d.message.slice() });
         break :blk err;
     } else err;
 }
@@ -1028,7 +1028,7 @@ test "encode.evaluate.bit reversal" {
 
 test "encode.evaluate.value size" {
     const bits = encode_bounded_output(.RP2040,
-        \\.program sideset_delay_collision
+        \\.program delay_too_big
         \\nop [32]
     );
     try expectError(error.TooBig, bits);
@@ -1124,6 +1124,13 @@ test "encode.error.sideset delay collision" {
         \\nop side 3 [8]
     );
     try expectError(error.SideSetDelayCollision, collision);
+
+    const collision2 = encode_bounded_output(.RP2040,
+        \\.program sideset_delay_collision
+        \\.side_set 1
+        \\nop side 3 [31]
+    );
+    try expectError(error.SideSetDelayCollision, collision2);
 
     _ = try encode_bounded_output(.RP2040,
         \\.program sideset_delay_collision
