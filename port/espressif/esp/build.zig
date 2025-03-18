@@ -44,7 +44,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = b.path("linker.ld"),
+        .linker_script = b.path("esp32c3.ld"),
     };
 
     return .{

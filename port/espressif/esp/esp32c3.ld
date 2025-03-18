@@ -28,7 +28,7 @@ SECTIONS
      *(.data*)
      *(.rodata*)
      microzig_data_end = .;
-  } > ram0 AT> flash0
+  } > ram0
 
   .bss (NOLOAD) :
   {
@@ -44,4 +44,5 @@ SECTIONS
   } > flash0
 
   microzig_data_load_start = LOADADDR(.data);
-  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);}
+  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+}

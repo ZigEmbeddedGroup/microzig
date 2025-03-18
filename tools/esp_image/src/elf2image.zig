@@ -81,14 +81,14 @@ pub fn main() !void {
         var info_list: std.ArrayListUnmanaged(SegmentInfo) = .empty;
         defer info_list.deinit(allocator);
 
-        var it = elf_header.section_header_iterator(elf_file);
+        var it = elf_header.program_header_iterator(elf_file);
         while (try it.next()) |hdr| {
-            if (hdr.sh_size > 0) {
+            if (hdr.p_type == std.elf.PT_LOAD and hdr.p_memsz > 0 and hdr.p_filesz > 0) {
                 std.log.debug("segment: {}", .{hdr});
                 try info_list.append(allocator, .{
-                    .addr = @as(u32, @intCast(hdr.sh_addr)),
-                    .file_offset = @as(u32, @intCast(hdr.sh_offset)),
-                    .size = @as(u32, @intCast(hdr.sh_size)),
+                    .addr = @as(u32, @intCast(hdr.p_paddr)),
+                    .file_offset = @as(u32, @intCast(hdr.p_offset)),
+                    .size = @as(u32, @intCast(hdr.p_filesz)),
                 });
             }
         }
