@@ -422,7 +422,7 @@ fn load_register(
         load_field(ctx, field_node, register_id) catch |err| {
             const reg_name = if (node.get_value("name")) |nm| nm else "EMPTY";
             const field_name = if (field_node.get_value("name")) |nm| nm else "EMPTY";
-            log.warn("    failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
+            log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
         };
     // TODO: derivision
     //if (node.get_attribute("derivedFrom")) |derived_from|
@@ -490,11 +490,6 @@ fn load_enumerated_values(ctx: *Context, node: xml.Node, enum_size_bits: u8) !En
         .size_bits = enum_size_bits,
     });
 
-    // TODO:
-    // - Enumerated values are allowed to have an enumeratedValue element with isDefault: true and NO value field to allow
-    //   setting a name and description for "all other" unused possible values for the bitfield
-    // - Currently this generates an error.EnumFieldMissingValue, since there is no value field in these items
-    // - Ultimately, this "name" and "description" belongs in a comment over the non-exhaustive enum "_" field, but unsure how to make that happen
     var value_it = node.iterate(&.{}, &.{"enumeratedValue"});
     while (value_it.next()) |value_node|
         try load_enumerated_value(ctx, value_node, enum_id);
@@ -515,6 +510,13 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
             } else {
                 break :v try std.fmt.parseInt(u32, value_str, 0);
             }
+        } else if (node.get_value("isDefault")) |is_default_str| {
+            // TODO:
+            // - Enumerated values are allowed to have an enumeratedValue element with isDefault: true and NO value field to allow
+            //   setting a name and description for "all other" unused possible values for the bitfield
+            // - Ultimately, this "name" and "description" belongs in a comment over the non-exhaustive enum "_" field, but unsure how to make that happen
+            if (is_default_str.len == 0) return error.EnumFieldMalformed;
+            if (try parse_bool(is_default_str)) return error.TodoIsDefaultEnumValue else return error.EnumFieldMalformed;
         } else {
             return error.EnumFieldMissingValue;
         }
