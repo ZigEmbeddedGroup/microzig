@@ -318,8 +318,11 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
 
     var register_it = node.iterate(&.{"registers"}, &.{"register"});
     while (register_it.next()) |register_node|
-        load_register(ctx, register_node, struct_id) catch |err|
-            log.warn("failed to load register: {}", .{err});
+        load_register(ctx, register_node, struct_id) catch |err| {
+            const periph_name = if (node.get_value("name")) |nm| nm else "EMPTY";
+            const reg_name = if (register_node.get_value("name")) |nm| nm else "EMPTY";
+            log.warn("failed to load register: {s}.{s}: {}", .{ periph_name, reg_name, err });
+        };
 
     // TODO: handle errors when implemented
     var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
@@ -416,9 +419,11 @@ fn load_register(
 
     var field_it = node.iterate(&.{"fields"}, &.{"field"});
     while (field_it.next()) |field_node|
-        load_field(ctx, field_node, register_id) catch |err|
-            log.warn("failed to load register: {}", .{err});
-
+        load_field(ctx, field_node, register_id) catch |err| {
+            const reg_name = if (node.get_value("name")) |nm| nm else "EMPTY";
+            const field_name = if (field_node.get_value("name")) |nm| nm else "EMPTY";
+            log.warn("    failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
+        };
     // TODO: derivision
     //if (node.get_attribute("derivedFrom")) |derived_from|
     //    try ctx.add_derived_entity(id, derived_from);
@@ -485,6 +490,11 @@ fn load_enumerated_values(ctx: *Context, node: xml.Node, enum_size_bits: u8) !En
         .size_bits = enum_size_bits,
     });
 
+    // TODO:
+    // - Enumerated values are allowed to have an enumeratedValue element with isDefault: true and NO value field to allow
+    //   setting a name and description for "all other" unused possible values for the bitfield
+    // - Currently this generates an error.EnumFieldMissingValue, since there is no value field in these items
+    // - Ultimately, this "name" and "description" belongs in a comment over the non-exhaustive enum "_" field, but unsure how to make that happen
     var value_it = node.iterate(&.{}, &.{"enumeratedValue"});
     while (value_it.next()) |value_node|
         try load_enumerated_value(ctx, value_node, enum_id);
@@ -495,6 +505,21 @@ fn load_enumerated_values(ctx: *Context, node: xml.Node, enum_size_bits: u8) !En
 fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
     const db = ctx.db;
 
+    const value = v: {
+        if (node.get_value("value")) |value_str| {
+            if (value_str.len == 0) return error.EnumFieldMalformed;
+            if (value_str[0] == '#') {
+                if (value_str.len <= 1) return error.EnumFieldMalformed;
+                // A preceeding '#' indicates binary format per spec
+                break :v try std.fmt.parseInt(u32, value_str[1..], 2);
+            } else {
+                break :v try std.fmt.parseInt(u32, value_str, 0);
+            }
+        } else {
+            return error.EnumFieldMissingValue;
+        }
+    };
+
     try db.add_enum_field(enum_id, .{
         .name = if (node.get_value("name")) |name|
             if (std.mem.eql(u8, "_", name))
@@ -504,10 +529,7 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
         else
             return error.EnumFieldMissingName,
         .description = node.get_value("description"),
-        .value = if (node.get_value("value")) |value_str|
-            try std.fmt.parseInt(u32, value_str, 0)
-        else
-            return error.EnumFieldMissingValue,
+        .value = value,
     });
 }
 
