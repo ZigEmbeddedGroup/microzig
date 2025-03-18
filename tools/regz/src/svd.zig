@@ -319,8 +319,8 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
     var register_it = node.iterate(&.{"registers"}, &.{"register"});
     while (register_it.next()) |register_node|
         load_register(ctx, register_node, struct_id) catch |err| {
-            const periph_name = if (node.get_value("name")) |nm| nm else "EMPTY";
-            const reg_name = if (register_node.get_value("name")) |nm| nm else "EMPTY";
+            const periph_name = node.get_value("name") orelse "EMPTY";
+            const reg_name = register_node.get_value("name") orelse "EMPTY";
             log.warn("failed to load register: {s}.{s}: {}", .{ periph_name, reg_name, err });
         };
 
@@ -420,8 +420,8 @@ fn load_register(
     var field_it = node.iterate(&.{"fields"}, &.{"field"});
     while (field_it.next()) |field_node|
         load_field(ctx, field_node, register_id) catch |err| {
-            const reg_name = if (node.get_value("name")) |nm| nm else "EMPTY";
-            const field_name = if (field_node.get_value("name")) |nm| nm else "EMPTY";
+            const reg_name = node.get_value("name") orelse "EMPTY";
+            const field_name = field_node.get_value("name") orelse "EMPTY";
             log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
         };
     // TODO: derivision
