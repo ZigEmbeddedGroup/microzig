@@ -1,5 +1,5 @@
 const std = @import("std");
-const micro = @import("microzig");
+const microzig = @import("microzig");
 const chips = @import("chips.zig");
 
 fn root_dir() []const u8 {

@@ -1,21 +1,21 @@
 pub const chip = @import("chip");
-pub const micro = @import("microzig");
+pub const microzig = @import("microzig");
 
 pub const clock_frequencies = .{
     .cpu = 100_000_000, // 100 Mhz
 };
 
 pub fn debug_write(string: []const u8) void {
-    const clk_pin = micro.Pin("DIP5");
-    const dat_pin = micro.Pin("DIP6");
+    const clk_pin = microzig.Pin("DIP5");
+    const dat_pin = microzig.Pin("DIP6");
 
-    const clk = micro.core.experimental.Gpio(clk_pin, .{ .mode = .output, .initial_state = .low });
-    const dat = micro.core.experimental.Gpio(dat_pin, .{ .mode = .output, .initial_state = .low });
+    const clk = microzig.core.experimental.Gpio(clk_pin, .{ .mode = .output, .initial_state = .low });
+    const dat = microzig.core.experimental.Gpio(dat_pin, .{ .mode = .output, .initial_state = .low });
 
     clk.init();
     dat.init();
 
-    micro.debug.busy_sleep(1_000);
+    microzig.debug.busy_sleep(1_000);
 
     for (string) |c| {
         comptime var i: usize = 128;
@@ -26,9 +26,9 @@ pub fn debug_write(string: []const u8) void {
                 dat.write(.low);
             }
             clk.write(.high);
-            micro.debug.busy_sleep(1_000);
+            microzig.debug.busy_sleep(1_000);
             clk.write(.low);
-            micro.debug.busy_sleep(1_000);
+            microzig.debug.busy_sleep(1_000);
         }
     }
     dat.write(.low);

@@ -1,9 +1,9 @@
 const std = @import("std");
-const micro = @import("microzig");
-const peripherals = micro.chip.peripherals;
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
 const USART0 = peripherals.USART0;
 
-pub const cpu = micro.cpu;
+pub const cpu = microzig.cpu;
 const Port = enum(u8) {
     B = 1,
     C = 2,
@@ -53,14 +53,14 @@ pub const gpio = struct {
         cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
-    pub fn read(comptime pin: type) micro.core.experimental.gpio.State {
+    pub fn read(comptime pin: type) microzig.core.experimental.gpio.State {
         return if ((regs(pin).pin.* & (1 << pin.pin)) != 0)
             .high
         else
             .low;
     }
 
-    pub fn write(comptime pin: type, state: micro.core.experimental.gpio.State) void {
+    pub fn write(comptime pin: type, state: microzig.core.experimental.gpio.State) void {
         switch (state) {
             .high => cpu.sbi(regs(pin).port_addr, pin.pin),
             .low => cpu.cbi(regs(pin).port_addr, pin.pin),
@@ -92,7 +92,7 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     if (index != 0) @compileError("Atmega328p only has a single uart!");
     if (pins.tx != null or pins.rx != null)
         @compileError("Atmega328p has fixed pins for uart!");
@@ -101,17 +101,17 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         const Self = @This();
 
         fn computeDivider(baud_rate: u32) !u12 {
-            const pclk = micro.clock.get().cpu;
+            const pclk = microzig.clock.get().cpu;
             const divider = ((pclk + (8 * baud_rate)) / (16 * baud_rate)) - 1;
 
             return std.math.cast(u12, divider) orelse return error.UnsupportedBaudRate;
         }
 
         fn computeBaudRate(divider: u12) u32 {
-            return micro.clock.get().cpu / (16 * @as(u32, divider) + 1);
+            return microzig.clock.get().cpu / (16 * @as(u32, divider) + 1);
         }
 
-        pub fn init(config: micro.uart.Config) !Self {
+        pub fn init(config: microzig.uart.Config) !Self {
             const ucsz: u3 = switch (config.data_bits) {
                 .five => 0b000,
                 .six => 0b001,
