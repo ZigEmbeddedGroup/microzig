@@ -516,7 +516,7 @@ fn load_enumerated_value(ctx: *Context, node: xml.Node, enum_id: EnumID) !void {
             //   setting a name and description for "all other" unused possible values for the bitfield
             // - Ultimately, this "name" and "description" belongs in a comment over the non-exhaustive enum "_" field, but unsure how to make that happen
             if (is_default_str.len == 0) return error.EnumFieldMalformed;
-            if (try parse_bool(is_default_str)) return error.TodoIsDefaultEnumValue else return error.EnumFieldMalformed;
+            if (try parse_bool(is_default_str)) return else return error.EnumFieldMalformed;
         } else {
             return error.EnumFieldMissingValue;
         }
