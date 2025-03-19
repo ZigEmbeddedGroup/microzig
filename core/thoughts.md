@@ -20,11 +20,11 @@ root
 Declaring `panic` in the root file will cause `builtin` to reference the proper package which will then instantiate microzig which will reference `mcu` package which will instantiate `reset` (or similar) which will invoke `microzig.main()` which will invoke `root.main()`. Oh boy :laughing:
 
 ```zig
-const micro = @import("micro");
+const microzig = @import("microzig");
 
-pub const panic = micro.panic; // this will instantiate microzig
+pub const panic = microzig.panic; // this will instantiate microzig
 
-comptime { _ = micro };  // this should not be necessary
+comptime { _ = microzig };  // this should not be necessary
 
 pub fn main() void {
 
@@ -59,18 +59,18 @@ A symbol can be a function `fn() void`, or a anonymous enum literal `.hang` or `
 
 ```zig
 pub fn main() void {
-  micro.interrupts.enable(.WDT);  // enables the WDT interrupt
-  micro.interrupts.disable(.WDT); // enables the WDT interrupt
-  micro.interrupts.enable(.WTF); // yields compile error "WTF is not a valid interrupt"
-  micro.interrupts.enable(.PCINT0); // yields compile error "PCINT0 has no defined interrupt handler"
-  micro.interrupts.enable(.NMI); // yields compile error "NMI cannot be masked"
-  micro.interrupts.enableAll();
-  micro.interrupts.batchEnable(.{ .NMI, .WDT  });
+  microzig.interrupts.enable(.WDT);  // enables the WDT interrupt
+  microzig.interrupts.disable(.WDT); // enables the WDT interrupt
+  microzig.interrupts.enable(.WTF); // yields compile error "WTF is not a valid interrupt"
+  microzig.interrupts.enable(.PCINT0); // yields compile error "PCINT0 has no defined interrupt handler"
+  microzig.interrupts.enable(.NMI); // yields compile error "NMI cannot be masked"
+  microzig.interrupts.enableAll();
+  microzig.interrupts.batchEnable(.{ .NMI, .WDT  });
   
-  micro.interrupts.cli(); // set interrupt enabled (global enable)
+  microzig.interrupts.cli(); // set interrupt enabled (global enable)
   
   { // critical section
-    var crit = micro.interrupts.enterCriticalSection();
+    var crit = microzig.interrupts.enterCriticalSection();
     defer crit.leave();
   }
 }
@@ -100,7 +100,7 @@ pub const interrupt_handlers = struct {
 microzig should allow having a general purpose timer mechanism
 
 ```zig
-pub var cpu_frequency = 16.0 * micro.clock.mega_hertz;
+pub var cpu_frequency = 16.0 * microzig.clock.mega_hertz;
 
 pub const sleep_mode = .timer; // timer, busyloop, whatever
 
@@ -109,7 +109,7 @@ pub fn main() !void {
 
   while(true) {
     led.toggle();
-    micro.sleep(100_000); // sleep 100ms
+    microzig.sleep(100_000); // sleep 100ms
   }
 }
 ```
@@ -121,18 +121,18 @@ pub fn main() !void {
 
 ```zig
 
-// micro.Pin returns a type containing all relevant pin information
-const status_led_pin = micro.Pin("PA3");
+// microzig.Pin returns a type containing all relevant pin information
+const status_led_pin = microzig.Pin("PA3");
 
 // generate a runtime possible pin that cannot be used in all APIs
-var generic_pic: micro.RuntimePin.init(status_led_pin);
+var generic_pic: microzig.RuntimePin.init(status_led_pin);
 
 // 4 Bit IEEE-488 bit banging register
-const serial_out = micro.GpioOutputRegister(.{
-  micro.Pin("PA0"),
-  micro.Pin("PA1"),
-  micro.Pin("PA3"), // whoopsies, i miswired, let the software fix that
-  micro.Pin("PA2"),
+const serial_out = microzig.GpioOutputRegister(.{
+  microzig.Pin("PA0"),
+  microzig.Pin("PA1"),
+  microzig.Pin("PA3"), // whoopsies, i miswired, let the software fix that
+  microzig.Pin("PA2"),
 });
 
 pub fn bitBang(nibble: u4) void {
@@ -150,9 +150,9 @@ pub fn main() !void {
 	// route that pin to UART.RXD
   status_led_pin.route(.uart0_rxd); 
   
-  //var uart_read_dma_channel = micro.Dma.init(.{.channel = 1});
+  //var uart_read_dma_channel = microzig.Dma.init(.{.channel = 1});
   
-  const status_led = micro.Gpio(status_led_pin, .{
+  const status_led = microzig.Gpio(status_led_pin, .{
     .mode          = .output,       // { input, output, input_output, open_drain, generic }
     .initial_state = .unspecificed, // { unspecified, low, high, floating, driven }
   });
@@ -206,17 +206,17 @@ pub fn main() !void {
 
 ```zig
 const std = @import("std");
-const micro = @import("µzig");
+const microzig = @import("µzig");
 
 // if const it can be comptime-optimized
-pub var cpu_frequency = 100.0 * micro.clock.mega_hertz;
+pub var cpu_frequency = 100.0 * microzig.clock.mega_hertz;
 
 // if this is enabled, a event loop will run
 // in microzig.main() that allows using `async`/`await` "just like that" *grin*
 pub const io_mode = .evented;
 
 pub fn main() !void {
-  var debug_port = micro.Uart.init(0, .{
+  var debug_port = microzig.Uart.init(0, .{
     .baud_rate = 9600,
     .stop_bits = .@"2",
     .parity = .none, // { none, even, odd, mark, space }
@@ -239,7 +239,7 @@ pub fn main() !void {
 
 ## Initialization
 
-somewhere inside micro.zig
+somewhere inside microzig.zig
 ```zig
 extern fn reset() noreturn {
   if(@hasDecl(mcu, "mcu_reset")) {
