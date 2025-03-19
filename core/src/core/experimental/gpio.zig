@@ -1,5 +1,4 @@
 const std = @import("std");
-const microzig = @import("microzig");
 const hal = @import("hal");
 
 pub const Mode = enum {
