@@ -1,49 +1,49 @@
-const micro = @import("microzig");
+const microzig = @import("microzig");
 
 // Configures the led_pin and uart index
-const cfg = if (micro.config.has_board)
-    switch (micro.config.board_name) {
+const cfg = if (microzig.config.has_board)
+    switch (microzig.config.board_name) {
         .@"mbed LPC1768" => .{
-            .led_pin = micro.Pin("LED-1"),
+            .led_pin = microzig.Pin("LED-1"),
             .uart_idx = 1,
             .pins = .{},
         },
         .STM32F3DISCOVERY => .{
-            .led_pin = micro.Pin("LD3"),
+            .led_pin = microzig.Pin("LD3"),
             .uart_idx = 1,
             .pins = .{},
         },
         .STM32F4DISCOVERY => .{
-            .led_pin = micro.Pin("LD5"),
+            .led_pin = microzig.Pin("LD5"),
             .uart_idx = 2,
-            .pins = .{ .tx = micro.Pin("PA2"), .rx = micro.Pin("PA3") },
+            .pins = .{ .tx = microzig.Pin("PA2"), .rx = microzig.Pin("PA3") },
         },
         .@"Longan Nano" => .{
-            .led_pin = micro.Pin("PA2"),
+            .led_pin = microzig.Pin("PA2"),
             .uart_idx = 1,
             .pins = .{ .tx = null, .rx = null },
         },
         .@"Arduino Uno" => .{
-            .led_pin = micro.Pin("D13"),
+            .led_pin = microzig.Pin("D13"),
             .uart_idx = 0,
             .pins = .{},
         },
         else => @compileError("unknown board"),
     }
-else switch (micro.config.chip_name) {
-    .@"NXP LPC1768" => .{ .led_pin = micro.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
-    .GD32VF103x8 => .{ .led_pin = micro.Pin("PA2"), .uart_idx = 1, .pins = .{} },
+else switch (microzig.config.chip_name) {
+    .@"NXP LPC1768" => .{ .led_pin = microzig.Pin("P1.18"), .uart_idx = 1, .pins = .{} },
+    .GD32VF103x8 => .{ .led_pin = microzig.Pin("PA2"), .uart_idx = 1, .pins = .{} },
     else => @compileError("unknown chip"),
 };
 
 pub fn main() !void {
-    const led = micro.Gpio(cfg.led_pin, .{
+    const led = microzig.Gpio(cfg.led_pin, .{
         .mode = .output,
         .initial_state = .low,
     });
     led.init();
 
-    var uart = micro.Uart(cfg.uart_idx, cfg.pins).init(.{
+    var uart = microzig.Uart(cfg.uart_idx, cfg.pins).init(.{
         .baud_rate = 9600,
         .stop_bits = .one,
         .parity = null,
@@ -51,7 +51,7 @@ pub fn main() !void {
     }) catch |err| {
         blinkError(led, err);
 
-        micro.hang();
+        microzig.hang();
     };
 
     var out = uart.writer();
@@ -60,11 +60,11 @@ pub fn main() !void {
         led.setToHigh();
         try out.writeAll("Hello microzig!\r\n");
         led.setToLow();
-        micro.debug.busySleep(100_000);
+        microzig.debug.busySleep(100_000);
     }
 }
 
-fn blinkError(led: anytype, err: micro.uart.InitError) void {
+fn blinkError(led: anytype, err: microzig.uart.InitError) void {
     var blinks: u3 =
         switch (err) {
         error.UnsupportedBaudRate => 1,
@@ -75,8 +75,8 @@ fn blinkError(led: anytype, err: micro.uart.InitError) void {
 
     while (blinks > 0) : (blinks -= 1) {
         led.setToHigh();
-        micro.debug.busySleep(1_000_000);
+        microzig.debug.busySleep(1_000_000);
         led.setToLow();
-        micro.debug.busySleep(1_000_000);
+        microzig.debug.busySleep(1_000_000);
     }
 }

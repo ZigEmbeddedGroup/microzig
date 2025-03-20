@@ -1,4 +1,4 @@
-pub const micro = @import("microzig");
+pub const microzig = @import("microzig");
 
 pub const cpu_frequency = 8_000_000;
 
@@ -24,7 +24,7 @@ pub const pin_map = .{
 };
 
 pub fn debug_write(string: []const u8) void {
-    const uart1 = micro.core.experimental.Uart(1, .{}).get_or_init(.{
+    const uart1 = microzig.core.experimental.Uart(1, .{}).get_or_init(.{
         .baud_rate = 9600,
         .data_bits = .eight,
         .parity = null,

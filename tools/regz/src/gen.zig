@@ -35,8 +35,8 @@ pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
     const writer = buffer.writer();
     if (opts.for_microzig) {
         try writer.writeAll(
-            \\const micro = @import("microzig");
-            \\const mmio = micro.mmio;
+            \\const microzig = @import("microzig");
+            \\const mmio = microzig.mmio;
             \\
         );
     } else {
@@ -935,8 +935,8 @@ test "gen.peripheral instantiation" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -975,8 +975,8 @@ test "gen.peripherals with a shared type" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1016,8 +1016,8 @@ test "gen.peripheral with modes" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1084,8 +1084,8 @@ test "gen.peripheral with enum" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1119,8 +1119,8 @@ test "gen.peripheral with enum, enum is exhausted of values" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1153,8 +1153,8 @@ test "gen.field with named enum" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1191,8 +1191,8 @@ test "gen.field with anonymous enum" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1227,8 +1227,8 @@ test "gen.namespaced register groups" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1275,8 +1275,8 @@ test "gen.peripheral with reserved register" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1314,8 +1314,8 @@ test "gen.peripheral with count" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1353,8 +1353,8 @@ test "gen.peripheral with count, padding required" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1393,8 +1393,8 @@ test "gen.register with count" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1432,8 +1432,8 @@ test "gen.register with count and fields" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1474,8 +1474,8 @@ test "gen.field with count, width of one, offset, and padding" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1516,8 +1516,8 @@ test "gen.field with count, multi-bit width, offset, and padding" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1552,8 +1552,8 @@ test "gen.interrupts.avr" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1569,8 +1569,8 @@ test "gen.interrupts.avr" {
         \\        };
         \\
         \\        pub const VectorTable = extern struct {
-        \\            const Handler = micro.interrupt.Handler;
-        \\            const unhandled = micro.interrupt.unhandled;
+        \\            const Handler = microzig.interrupt.Handler;
+        \\            const unhandled = microzig.interrupt.unhandled;
         \\
         \\            RESET: Handler,
         \\            TEST_VECTOR1: Handler = unhandled,
@@ -1592,8 +1592,8 @@ test "gen.peripheral type with register and field" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1627,8 +1627,8 @@ test "gen.name collisions in enum name cause them to be anonymous" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1669,8 +1669,8 @@ test "gen.pick one enum field in value collisions" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1704,8 +1704,8 @@ test "gen.pick one enum field in name collisions" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
@@ -1739,8 +1739,8 @@ test "gen.register fields with name collision" {
 
     try db.to_zig(buffer.writer(), .{ .for_microzig = true });
     try std.testing.expectEqualStrings(
-        \\const micro = @import("microzig");
-        \\const mmio = micro.mmio;
+        \\const microzig = @import("microzig");
+        \\const mmio = microzig.mmio;
         \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,

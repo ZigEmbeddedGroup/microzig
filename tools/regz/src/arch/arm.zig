@@ -103,8 +103,8 @@ pub fn write_interrupt_vector(
         try writer.writeAll(
             \\
             \\pub const VectorTable = extern struct {
-            \\    const Handler = micro.interrupt.Handler;
-            \\    const unhandled = micro.interrupt.unhandled;
+            \\    const Handler = microzig.interrupt.Handler;
+            \\    const unhandled = microzig.interrupt.unhandled;
             \\
             \\    initial_stack_pointer: u32,
             \\    Reset: Handler,
