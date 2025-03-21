@@ -5,44 +5,62 @@
  * Target Chip: ESP32-C3
  */
 
-ENTRY(microzig_main);
+ENTRY(_start);
 
 MEMORY
 {
-  flash0    (rx!w) : ORIGIN = 0x42000000, LENGTH = 0x00800000
-  ram0      (rw!x) : ORIGIN = 0x3FC80000, LENGTH = 0x00060000
+    irom (rx) : ORIGIN = 0x42000020, LENGTH = 0x800000 - 0x20
+    drom (r) : ORIGIN = 0x3C000020, LENGTH = 0x800000 - 0x20
+    iram (rwx) : ORIGIN = 0x40380000, LENGTH = 313K
+    dram (rw) : ORIGIN = 0x3FC80000, LENGTH = 313K
 }
 
 SECTIONS
 {
-  .text :
-  {
-     KEEP(*(microzig_flash_start))
-     *(.text*)
-  } > flash0
+    .irom.text :
+    {
+        KEEP(*(.microzig_flash_start))
+        *(.text*)
+        . += 16;
+    } > irom
 
-  .data :
-  {
-     microzig_data_start = .;
-     *(.sdata*)
-     *(.data*)
-     *(.rodata*)
-     microzig_data_end = .;
-  } > ram0
+    .drom.dummy (NOLOAD) :
+    {
+        . = ALIGN(ALIGNOF(.irom.text)) + SIZEOF(.irom.text);
+        . = ALIGN(0x10000) + 0x20;
+    } > drom
 
-  .bss (NOLOAD) :
-  {
-      microzig_bss_start = .;
-      *(.bss*)
-      *(.sbss*)
-      microzig_bss_end = .;
-  } > ram0
+    .drom.rodata : ALIGN(0x10)
+    {
+        KEEP(*(.app_desc))
+        *(.rodata*) /* should we leave this here? */
+    } > drom
 
-  .flash_end :
-  {
-      microzig_flash_end = .;
-  } > flash0
+    /* .iram.rwtext : */
+    /* { */
+    /*     *(.rwtext*) */
+    /* } > irom */
+    /**/
+    /* .dram.dummy (NOLOAD) : */
+    /* { */
+    /*     . = ALIGN(ALIGNOF(.iram.rwtext)) + SIZEOF(.iram.rwtext); */
+    /* } > drom */
 
-  microzig_data_load_start = LOADADDR(.data);
-  PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
+    .dram.data :
+    {
+        microzig_data_start = .;
+        *(.sdata*)
+        *(.data*)
+
+    } > dram
+
+    .dram.bss (NOLOAD) :
+    {
+        microzig_bss_start = .;
+        *(.bss*)
+        *(.sbss*)
+        microzig_bss_end = .;
+    } > dram
+
+    PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }

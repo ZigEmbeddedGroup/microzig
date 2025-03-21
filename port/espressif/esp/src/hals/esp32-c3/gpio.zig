@@ -146,30 +146,30 @@ pub const Pin = struct {
 };
 
 pub const instance = struct {
-    pub const GPIO0 = Pin{ .number = 0 };
-    pub const GPIO1 = Pin{ .number = 1 };
-    pub const GPIO2 = Pin{ .number = 2 };
-    pub const GPIO3 = Pin{ .number = 3 };
-    pub const GPIO4 = Pin{ .number = 4 };
-    pub const GPIO5 = Pin{ .number = 5 };
-    pub const GPIO6 = Pin{ .number = 6 };
-    pub const GPIO7 = Pin{ .number = 7 };
-    pub const GPIO8 = Pin{ .number = 8 };
-    pub const GPIO9 = Pin{ .number = 9 };
-    pub const GPIO10 = Pin{ .number = 10 };
-    pub const GPIO11 = Pin{ .number = 11 };
-    pub const GPIO12 = Pin{ .number = 12 };
-    pub const GPIO13 = Pin{ .number = 13 };
-    pub const GPIO14 = Pin{ .number = 14 };
-    pub const GPIO15 = Pin{ .number = 15 };
-    pub const GPIO16 = Pin{ .number = 16 };
-    pub const GPIO17 = Pin{ .number = 17 };
-    pub const GPIO18 = Pin{ .number = 18 };
-    pub const GPIO19 = Pin{ .number = 19 };
-    pub const GPIO20 = Pin{ .number = 20 };
+    pub const GPIO0: Pin = .{ .number = 0 };
+    pub const GPIO1: Pin = .{ .number = 1 };
+    pub const GPIO2: Pin = .{ .number = 2 };
+    pub const GPIO3: Pin = .{ .number = 3 };
+    pub const GPIO4: Pin = .{ .number = 4 };
+    pub const GPIO5: Pin = .{ .number = 5 };
+    pub const GPIO6: Pin = .{ .number = 6 };
+    pub const GPIO7: Pin = .{ .number = 7 };
+    pub const GPIO8: Pin = .{ .number = 8 };
+    pub const GPIO9: Pin = .{ .number = 9 };
+    pub const GPIO10: Pin = .{ .number = 10 };
+    pub const GPIO11: Pin = .{ .number = 11 };
+    pub const GPIO12: Pin = .{ .number = 12 };
+    pub const GPIO13: Pin = .{ .number = 13 };
+    pub const GPIO14: Pin = .{ .number = 14 };
+    pub const GPIO15: Pin = .{ .number = 15 };
+    pub const GPIO16: Pin = .{ .number = 16 };
+    pub const GPIO17: Pin = .{ .number = 17 };
+    pub const GPIO18: Pin = .{ .number = 18 };
+    pub const GPIO19: Pin = .{ .number = 19 };
+    pub const GPIO20: Pin = .{ .number = 20 };
 
     pub fn num(instance_number: u5) Pin {
         std.debug.assert(instance_number < 21);
-        return Pin{ .number = instance_number };
+        return .{ .number = instance_number };
     }
 };

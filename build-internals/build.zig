@@ -166,9 +166,11 @@ pub const BinaryFormat = union(enum) {
         chip_id: esp_image.ChipId,
         min_rev: ?u16 = null,
         max_rev: ?u16 = null,
+        dont_append_digest: ?bool = null,
         flash_freq: ?esp_image.FlashFreq = null,
         flash_mode: ?esp_image.FlashMode = null,
         flash_size: ?esp_image.FlashSize = null,
+        use_segments: ?bool = null,
     };
 
     /// [Executable and Linkable Format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format), the standard output from the compiler.

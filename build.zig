@@ -659,6 +659,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
                                 convert.addArg(rev_buf[0..n]);
                             }
 
+                            if (options.dont_append_digest) |dont_append_digest| {
+                                if (dont_append_digest) {
+                                    convert.addArg("--dont-append-digest");
+                                }
+                            }
                             if (options.flash_freq) |flash_freq| {
                                 convert.addArg("--flash-freq");
                                 convert.addArg(@tagName(flash_freq));
@@ -672,6 +677,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                             if (options.flash_size) |flash_size| {
                                 convert.addArg("--flash-size");
                                 convert.addArg(@tagName(flash_size));
+                            }
+
+                            if (options.use_segments) |use_segments| {
+                                if (use_segments) {
+                                    convert.addArg("--use-segments");
+                                }
                             }
 
                             convert.addArg("--output");
