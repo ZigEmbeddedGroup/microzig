@@ -19,7 +19,7 @@ SECTIONS
 {
     .irom.text :
     {
-        KEEP(*(.microzig_flash_start))
+        KEEP(*(microzig_flash_start))
         *(.text*)
         . += 16;
     } > irom
@@ -34,6 +34,7 @@ SECTIONS
     {
         KEEP(*(.app_desc))
         *(.rodata*) /* should we leave this here? */
+        . = ALIGN(0x10);
     } > drom
 
     /* .iram.rwtext : */
@@ -51,7 +52,6 @@ SECTIONS
         microzig_data_start = .;
         *(.sdata*)
         *(.data*)
-
     } > dram
 
     .dram.bss (NOLOAD) :

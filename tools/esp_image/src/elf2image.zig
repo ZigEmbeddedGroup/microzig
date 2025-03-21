@@ -123,6 +123,8 @@ pub fn main() !void {
         }
     }
 
+    // TODO: maybe also check if sections overlap
+
     // merge segments
     try do_segment_merge(allocator, &flash_segments);
     try do_segment_merge(allocator, &ram_segments);
@@ -187,7 +189,7 @@ pub fn main() !void {
     };
 
     const extended_file_header: ExtendedFileHeader = .{
-        .wp = .disabled, // TODO: should we make this configurable
+        .wp = .disabled,
         .flash_pins_drive_settings = 0, // TODO: should we make this configurable + packed struct?
         .chip_id = chip_id,
         .min_rev = min_rev,
@@ -219,7 +221,7 @@ fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayListUn
             if (seg_a.addr + seg_a.size == seg_b.addr) {
                 try seg_a.merge(allocator, seg_b);
                 seg_b.deinit(allocator);
-                segment_list.items.len -= 1;
+                _ = segment_list.orderedRemove(i);
             }
         }
     }
@@ -408,7 +410,7 @@ const Segment = struct {
             const remaining_len = self.size - consume_len;
             std.mem.copyBackwards(u8, self.data[0..remaining_len], self.data[consume_len..self.size]);
             if (allocator.resize(self.data, remaining_len)) {
-                self.data.len -= consume_len;
+                self.data.len = remaining_len;
             }
 
             self.addr += consume_len;
