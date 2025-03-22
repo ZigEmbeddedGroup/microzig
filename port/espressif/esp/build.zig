@@ -13,7 +13,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const hal: microzig.HardwareAbstractionLayer = .{
-        .root_source_file = b.path("src/hals/ESP32_C3.zig"),
+        .root_source_file = b.path("src/hal.zig"),
     };
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
@@ -44,7 +44,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = b.path("esp32c3.ld"),
+        .linker_script = b.path("esp32_c3.ld"),
     };
 
     return .{

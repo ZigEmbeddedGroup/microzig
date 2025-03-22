@@ -29,8 +29,8 @@ fn timer_interrupt() callconv(.c) void {
     led.toggle();
 
     switch (rp2xxx.compatibility.chip) {
-        .RP2040 => microzig.chip.peripherals.TIMER.INTR.toggle(.{ .ALARM_0 = 0 }),
-        .RP2350 => microzig.chip.peripherals.TIMER0.INTR.toggle(.{ .ALARM_0 = 0 }),
+        .RP2040 => microzig.chip.peripherals.TIMER.INTR.modify(.{ .ALARM_0 = 1 }),
+        .RP2350 => microzig.chip.peripherals.TIMER0.INTR.modify(.{ .ALARM_0 = 1 }),
     }
     set_alarm(1_000_000);
 }

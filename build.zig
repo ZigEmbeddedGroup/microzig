@@ -664,6 +664,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                                     convert.addArg("--dont-append-digest");
                                 }
                             }
+
                             if (options.flash_freq) |flash_freq| {
                                 convert.addArg("--flash-freq");
                                 convert.addArg(@tagName(flash_freq));
