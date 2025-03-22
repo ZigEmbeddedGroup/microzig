@@ -2,9 +2,9 @@ const std = @import("std");
 const Sha256 = std.crypto.hash.sha2.Sha256;
 const clap = @import("clap");
 
-pub const std_options: std.Options = .{
-    .log_level = .debug,
-};
+// pub const std_options: std.Options = .{
+//     .log_level = .debug,
+// };
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
@@ -141,12 +141,12 @@ pub fn main() !void {
     defer segment_data.deinit(allocator);
 
     var segment_count: u8 = 0;
-    var checksum: u8 = 0xEF;
+    var checksum: u8 = checksum_xor_byte;
     {
         const writer = segment_data.writer(allocator);
 
         for (flash_segments.items) |*segment| {
-            while (segment.get_padding_len(segment_data.items.len + image_header_len)) |pad_len| {
+            while (segment.get_flash_align_padding_len(segment_data.items.len + image_header_len)) |pad_len| {
                 if (ram_segments.items.len > 0 and pad_len > segment_header_len) {
                     const ram_seg = &ram_segments.items[ram_segments.items.len - 1];
                     try ram_seg.write_to(allocator, writer, pad_len, &checksum);
@@ -202,6 +202,8 @@ pub fn main() !void {
 
     try multi_writer_writer.writeAll(segment_data.items);
 
+    // TODO: secure pad
+
     const position = try output_file.getPos();
     const padding: [16]u8 = @splat(0);
     try multi_writer_writer.writeAll(padding[0 .. 15 - position % 16]);
@@ -230,6 +232,7 @@ fn do_segment_merge(allocator: std.mem.Allocator, segment_list: *std.ArrayListUn
 const irom_align = 0x10000;
 const segment_header_len = 0x8;
 const image_header_len = 0x18;
+const checksum_xor_byte = 0xEF;
 
 pub const FlashMode = enum(u8) {
     qio = 0,
@@ -373,7 +376,7 @@ const Segment = struct {
         allocator.free(self.data);
     }
 
-    pub fn get_padding_len(self: Segment, file_pos: usize) ?usize {
+    pub fn get_flash_align_padding_len(self: Segment, file_pos: usize) ?usize {
         const align_past: i32 = @as(i32, @intCast(self.addr % irom_align)) - segment_header_len;
         var pad_len: i32 = (irom_align - @as(i32, @intCast(file_pos % irom_align))) + align_past;
         if (pad_len == 0 or pad_len == irom_align) {
@@ -418,3 +421,76 @@ const Segment = struct {
         }
     }
 };
+
+test "Segment.get_padding_len" {
+    var allocator = std.testing.allocator;
+    const segment: Segment = .{
+        .addr = 0x42000020,
+        .size = 0x20,
+        .data = try allocator.alloc(u8, 0x20),
+    };
+    defer segment.deinit(allocator);
+
+    try std.testing.expectEqual(segment.get_flash_align_padding_len(0x9900), 0x6710);
+    try std.testing.expectEqual(segment.get_flash_align_padding_len(0xfff8), 0x18);
+    try std.testing.expectEqual(segment.get_flash_align_padding_len(0x10018), null);
+}
+
+test "do_segment_merge" {
+    var allocator = std.testing.allocator;
+
+    var segment_list: std.ArrayListUnmanaged(Segment) = .empty;
+    defer segment_list.deinit(allocator);
+    defer for (segment_list.items) |segment| {
+        segment.deinit(allocator);
+    };
+
+    try segment_list.append(allocator, .{
+        .addr = 0x42000020,
+        .size = 0x20,
+        .data = try allocator.alloc(u8, 0x20),
+    });
+    try segment_list.append(allocator, .{
+        .addr = 0x42000040,
+        .size = 0x20,
+        .data = try allocator.alloc(u8, 0x20),
+    });
+
+    @memset(segment_list.items[0].data, 'a');
+    @memset(segment_list.items[1].data, 'b');
+
+    try do_segment_merge(allocator, &segment_list);
+
+    try std.testing.expectEqual(segment_list.items.len, 1);
+    try std.testing.expectEqual(segment_list.items[0].addr, 0x42000020);
+    try std.testing.expectEqual(segment_list.items[0].size, 0x40);
+    try std.testing.expectEqualStrings(segment_list.items[0].data, &(@as([0x20]u8, @splat('a')) ++ @as([0x20]u8, @splat('b'))));
+}
+
+test "Segment.write_to" {
+    var allocator = std.testing.allocator;
+    var segment: Segment = .{
+        .addr = 0x42000020,
+        .size = 0x20,
+        .data = try allocator.alloc(u8, 0x20),
+    };
+    defer segment.deinit(allocator);
+
+    @memset(segment.data, 'a');
+
+    var segment_data: std.ArrayListUnmanaged(u8) = .empty;
+    defer segment_data.deinit(allocator);
+    const writer = segment_data.writer(allocator);
+
+    var checksum: u8 = checksum_xor_byte;
+    try segment.write_to(allocator, writer, 0x10, &checksum);
+    try segment.write_to(allocator, writer, null, &checksum);
+
+    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[0..4], .little), 0x42000020);
+    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[4..8], .little), 0x10);
+    try std.testing.expectEqualStrings(segment_data.items[8..24], &@as([16]u8, @splat('a')));
+    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[24..28], .little), 0x42000030);
+    try std.testing.expectEqual(std.mem.readInt(u32, segment_data.items[28..32], .little), 0x10);
+    try std.testing.expectEqualStrings(segment_data.items[32..48], &@as([16]u8, @splat('a')));
+    try std.testing.expectEqual(segment.size, 0);
+}
