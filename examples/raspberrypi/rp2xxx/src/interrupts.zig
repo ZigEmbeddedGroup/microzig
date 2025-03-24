@@ -13,15 +13,21 @@ pub const microzig_options: microzig.Options = .{
     .logFn = rp2xxx.uart.logFn,
     .interrupts = switch (rp2xxx.compatibility.chip) {
         .RP2040 => .{
-            .TIMER_IRQ_0 = timer_interrupt,
+            .TIMER_IRQ_0 = .{ .c = timer_interrupt },
         },
         .RP2350 => .{
-            .TIMER0_IRQ_0 = timer_interrupt,
+            .TIMER0_IRQ_0 = switch (rp2xxx.compatibility.arch) {
+                .arm => .{ .c = timer_interrupt },
+                .riscv => timer_interrupt,
+            },
         },
     },
 };
 
-fn timer_interrupt() callconv(.c) void {
+fn timer_interrupt() callconv(switch (rp2xxx.compatibility.arch) {
+    .arm => .c,
+    .riscv => .auto,
+}) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 

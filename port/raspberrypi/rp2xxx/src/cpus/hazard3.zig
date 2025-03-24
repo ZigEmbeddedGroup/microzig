@@ -24,14 +24,18 @@ pub const CoreInterrupt = enum(u32) {
 
 pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
-const InterruptHandler = *const fn () callconv(.c) void;
+const InterruptHandler = extern union {
+    naked: *const fn () callconv(.naked) noreturn,
+    riscv: *const fn () callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void,
+};
+const ExternalInterruptHandler = *const fn () void;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     // TODO: maybe change to interrupt callconv
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
     // TODO: maybe change to interrupt callconv
     .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
-    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = InterruptHandler },
+    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = ExternalInterruptHandler },
 });
 
 pub const interrupt = struct {
@@ -210,117 +214,47 @@ pub const startup_logic = struct {
         );
     }
 
-    fn unhandled() callconv(.c) noreturn {
+    fn unhandled_interrupt() callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void {
         @panic("unhandled interrupt");
     }
 
-    pub export fn _exception_handler() callconv(.naked) noreturn {
-        const handler: InterruptHandler = microzig_options.interrupts.Exception orelse unhandled;
-        @export(handler, .{ .name = "_exception_handler_c" });
-
-        push_interrupt_state();
-
-        asm volatile ("jal _exception_handler_c");
-
-        pop_interrupt_state();
-        asm volatile ("mret");
+    comptime {
+        @export(@as(InterruptHandler, microzig_options.interrupts.Exception orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_exception_handler" });
+        @export(@as(InterruptHandler, microzig_options.interrupts.MachineSoftware orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_machine_software_handler" });
+        @export(@as(InterruptHandler, microzig_options.interrupts.MachineTimer orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_machine_timer_handler" });
+        @export(@as(InterruptHandler, microzig_options.interrupts.MachineExternal orelse .{ .riscv = machine_external_interrupt }).naked, .{ .name = "_machine_external_handler" });
     }
 
-    pub export fn _machine_software_handler() callconv(.naked) noreturn {
-        const handler: InterruptHandler = microzig_options.interrupts.MachineSoftware orelse unhandled;
-        @export(handler, .{ .name = "_machine_software_handler_c" });
+    pub fn machine_external_interrupt() callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void {
+        const static = struct {
+            fn unhandled_external_interrupt() void {
+                @panic("unhandled external interrupt");
+            }
 
-        push_interrupt_state();
+            pub const external_interrupt_table = blk: {
+                const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
+                var table: [count]ExternalInterruptHandler = @splat(unhandled_external_interrupt);
 
-        asm volatile ("jal _machine_software_handler_c");
-
-        pop_interrupt_state();
-        asm volatile ("mret");
-    }
-
-    pub export fn _machine_timer_handler() callconv(.naked) noreturn {
-        const handler: InterruptHandler = microzig_options.interrupts.MachineTimer orelse unhandled;
-        @export(handler, .{ .name = "_machine_timer_handler_c" });
-
-        push_interrupt_state();
-
-        asm volatile ("jal _machine_timer_handler_c");
-
-        pop_interrupt_state();
-        asm volatile ("mret");
-    }
-
-    pub export fn _machine_external_handler() callconv(.naked) noreturn {
-        push_interrupt_state();
-
-        if (microzig_options.interrupts.MachineExternal) |handler| {
-            @export(handler, .{ .name = "_machine_external_handler_c" });
-
-            asm volatile ("jal _machine_external_handler_c");
-        } else {
-            _ = struct {
-                export const _external_interrupt_table = blk: {
-                    const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
-                    var external_interrupt_table: [count]InterruptHandler = @splat(unhandled);
-
-                    for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
-                        if (@field(microzig_options.interrupts, field.name)) |handler| {
-                            external_interrupt_table[field.value] = handler;
-                        }
+                for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
+                    if (@field(microzig_options.interrupts, field.name)) |handler| {
+                        table[field.value] = handler;
                     }
+                }
 
-                    break :blk external_interrupt_table;
-                };
+                break :blk table;
             };
+        };
 
-            asm volatile (
-                \\csrrsi a0, 0xbe4, 1
-                \\bltz a0, no_more_irqs
-                \\
-                \\dispatch_irq:
-                \\lui a1, %hi(_external_interrupt_table)
-                \\add a1, a1, a0
-                \\lw a1, %lo(_external_interrupt_table)(a1)
-                \\jalr ra, a1
-                \\
-                \\get_next_irq:
-                \\csrr a0, 0xbe4
-                \\bgez a0, dispatch_irq
-                \\
-                \\no_more_irqs:
-            );
+        var meinext = csr.xh3irq.meinext.read_set(.{ .update = 1 });
+        while (meinext.noirq != 0) {
+            static.external_interrupt_table[meinext.irq]();
+            meinext = csr.xh3irq.meinext.read();
         }
-
-        pop_interrupt_state();
-        asm volatile ("mret");
     }
 };
 
 pub fn export_startup_logic() void {
     std.testing.refAllDecls(startup_logic);
-}
-
-const registers = [_][]const u8{
-    "ra", "t0", "t1", "t2", "t3", "t4", "t5", "t6",
-    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
-};
-
-// TODO: maybe this should be relocated somewhere else
-inline fn push_interrupt_state() void {
-    asm volatile (std.fmt.comptimePrint("addi sp, sp, -{}", .{registers.len * @sizeOf(u32)}));
-
-    inline for (registers, 0..) |reg, i| {
-        asm volatile (std.fmt.comptimePrint("sw {s}, 4*{}(sp)", .{ reg, i }));
-    }
-}
-
-// TODO: maybe this should be relocated somewhere else
-inline fn pop_interrupt_state() void {
-    inline for (registers, 0..) |reg, i| {
-        asm volatile (std.fmt.comptimePrint("lw {s}, 4*{}(sp)", .{ reg, i }));
-    }
-
-    asm volatile (std.fmt.comptimePrint("addi sp, sp, {}", .{registers.len * @sizeOf(u32)}));
 }
 
 pub const csr = struct {
@@ -496,10 +430,17 @@ pub const csr = struct {
             reserved0: u11,
             window: u16,
         });
-        pub const meipra = CSR(0xbe2, packed struct {
+        pub const meipra = CSR(0xbe3, packed struct {
             index: u5,
             reserved0: u11,
             window: u16,
+        });
+        pub const meinext = CSR(0xbe4, packed struct {
+            update: u1,
+            reserved0: u1,
+            irq: u9,
+            reserved1: u20,
+            noirq: u1,
         });
     };
 
