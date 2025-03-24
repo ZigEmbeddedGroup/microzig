@@ -24,10 +24,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-fn timer_interrupt() callconv(switch (rp2xxx.compatibility.arch) {
-    .arm => .c,
-    .riscv => .auto,
-}) void {
+fn timer_interrupt() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 

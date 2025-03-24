@@ -24,16 +24,16 @@ pub const CoreInterrupt = enum(u32) {
 
 pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
+const riscv_calling_convention: std.builtin.CallingConvention = .{ .riscv32_interrupt = .{ .mode = .machine } };
+
 const InterruptHandler = extern union {
     naked: *const fn () callconv(.naked) noreturn,
-    riscv: *const fn () callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void,
+    riscv: *const fn () callconv(riscv_calling_convention) void,
 };
-const ExternalInterruptHandler = *const fn () void;
+const ExternalInterruptHandler = *const fn () callconv(.c) void;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    // TODO: maybe change to interrupt callconv
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
-    // TODO: maybe change to interrupt callconv
     .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
     .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = ExternalInterruptHandler },
 });
@@ -197,7 +197,19 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
+    fn unhandled_interrupt() callconv(riscv_calling_convention) void {
+        @panic("unhandled interrupt");
+    }
+
     pub export fn _vector_table() align(64) callconv(.naked) noreturn {
+        comptime {
+            // NOTE: using the union variant .naked here is fine because both variants have the same layout
+            @export(if (microzig_options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
+            @export(if (microzig_options.interrupts.MachineSoftware) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_software_handler" });
+            @export(if (microzig_options.interrupts.MachineTimer) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_timer_handler" });
+            @export(if (microzig_options.interrupts.MachineExternal) |handler| handler.naked else &machine_external_interrupt, .{ .name = "_machine_external_handler" });
+        }
+
         asm volatile (
             \\j _exception_handler
             \\.word 0
@@ -214,42 +226,42 @@ pub const startup_logic = struct {
         );
     }
 
-    fn unhandled_interrupt() callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void {
-        @panic("unhandled interrupt");
-    }
-
-    comptime {
-        @export(@as(InterruptHandler, microzig_options.interrupts.Exception orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_exception_handler" });
-        @export(@as(InterruptHandler, microzig_options.interrupts.MachineSoftware orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_machine_software_handler" });
-        @export(@as(InterruptHandler, microzig_options.interrupts.MachineTimer orelse .{ .riscv = unhandled_interrupt }).naked, .{ .name = "_machine_timer_handler" });
-        @export(@as(InterruptHandler, microzig_options.interrupts.MachineExternal orelse .{ .riscv = machine_external_interrupt }).naked, .{ .name = "_machine_external_handler" });
-    }
-
-    pub fn machine_external_interrupt() callconv(.{ .riscv32_interrupt = .{ .mode = .machine } }) void {
-        const static = struct {
-            fn unhandled_external_interrupt() void {
+    pub export fn machine_external_interrupt() callconv(riscv_calling_convention) void {
+        _ = struct {
+            fn external_unhandled_interrupt() callconv(.c) void {
                 @panic("unhandled external interrupt");
             }
 
-            pub const external_interrupt_table = blk: {
+            export const _external_interrupt_table = blk: {
                 const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
-                var table: [count]ExternalInterruptHandler = @splat(unhandled_external_interrupt);
+                var external_interrupt_table: [count]ExternalInterruptHandler = @splat(external_unhandled_interrupt);
 
                 for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
                     if (@field(microzig_options.interrupts, field.name)) |handler| {
-                        table[field.value] = handler;
+                        external_interrupt_table[field.value] = handler;
                     }
                 }
 
-                break :blk table;
+                break :blk external_interrupt_table;
             };
         };
 
-        var meinext = csr.xh3irq.meinext.read_set(.{ .update = 1 });
-        while (meinext.noirq != 0) {
-            static.external_interrupt_table[meinext.irq]();
-            meinext = csr.xh3irq.meinext.read();
-        }
+        asm volatile (
+            \\csrrsi a0, 0xbe4, 1
+            \\bltz a0, no_more_irqs
+            \\
+            \\dispatch_irq:
+            \\lui a1, %hi(_external_interrupt_table)
+            \\add a1, a1, a0
+            \\lw a1, %lo(_external_interrupt_table)(a1)
+            \\jalr ra, a1
+            \\
+            \\get_next_irq:
+            \\csrr a0, 0xbe4
+            \\bgez a0, dispatch_irq
+            \\
+            \\no_more_irqs:
+        );
     }
 };
 
