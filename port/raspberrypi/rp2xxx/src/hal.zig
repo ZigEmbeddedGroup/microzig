@@ -22,6 +22,7 @@ pub const rtc = switch (compatibility.chip) {
 };
 pub const spi = @import("hal/spi.zig");
 pub const i2c = @import("hal/i2c.zig");
+pub const i2c_slave = @import("hal/i2c_slave.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
