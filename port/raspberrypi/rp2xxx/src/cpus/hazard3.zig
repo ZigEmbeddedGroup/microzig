@@ -24,6 +24,7 @@ pub const CoreInterrupt = enum(u32) {
 
 pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
 
+// NOTE: there is no way to use a custom incoming_stack_alignment with this way of doing things
 const riscv_calling_convention: std.builtin.CallingConvention = .{ .riscv32_interrupt = .{ .mode = .machine } };
 
 const InterruptHandler = extern union {
