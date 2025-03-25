@@ -443,17 +443,10 @@ pub const csr = struct {
             reserved0: u11,
             window: u16,
         });
-        pub const meipra = CSR(0xbe3, packed struct {
+        pub const meipra = CSR(0xbe2, packed struct {
             index: u5,
             reserved0: u11,
             window: u16,
-        });
-        pub const meinext = CSR(0xbe4, packed struct {
-            update: u1,
-            reserved0: u1,
-            irq: u9,
-            reserved1: u20,
-            noirq: u1,
         });
     };
 
@@ -468,9 +461,11 @@ pub const csr = struct {
             const Self = @This();
 
             pub inline fn read_raw() u32 {
-                return asm volatile ("csrr %[value], " ++ ident
-                    : [value] "=r" (-> u32),
+                var value: u32 = undefined;
+                asm volatile ("csrr %[value], " ++ ident
+                    : [value] "+r" (value),
                 );
+                return value;
             }
 
             pub inline fn read() T {
@@ -526,7 +521,7 @@ pub const csr = struct {
 
             pub inline fn read_set_raw(bits: u32) u32 {
                 return asm volatile ("csrrs %[value], " ++ ident ++ ", %[bits]"
-                    : [value] "=r" (-> u32),
+                    : [value] "r" (-> u32),
                     : [bits] "r" (bits),
                 );
             }
@@ -537,7 +532,7 @@ pub const csr = struct {
 
             pub inline fn read_clear_raw(bits: u32) u32 {
                 return asm volatile ("csrrc %[value], " ++ ident ++ ", %[bits]"
-                    : [value] "=r" (-> u32),
+                    : [value] "r" (-> u32),
                     : [bits] "r" (bits),
                 );
             }
