@@ -5,27 +5,51 @@
 //!     (Unofficial) I²C Reference: https://www.i2c-bus.org/
 //!
 //! To use this driver, you must open the I²C slave connection
-//! using `I2C_Slave.open()`.  Once the connection is open, and the
-//! appropriate ISR is set up, the driver will listen for I²C transactions.
+//! using `I2C_Slave.open()` with the following parameters:
+//!
+//! * `addr` - The I²C slave address to listen to
+//! * `transfer_buffer` - A buffer to use to transfer data
+//! * `callback` - The callback to use for handling requests
+//! * `param` - The parameter to pass to the callback
+//!
+//! The transfer buffer SHOULD be sized to hold the maximum amount of data
+//! that will be transferred in a single transaction, but it is not required
+//! to be.
+//!
+//! Once the connection is open, and the appropriate ISR is set up,
+//! the driver will listen for I²C transactions.
+//!
+//! ## Master Read / Slave Write
 //!
 //! If the master requests a read, the driver will call the registered
 //! callback with the `mode` set to `.read`.  The  `data` parameter will
-//! be a slice into the transfer buffer that the callback function should copy
-//! data to.  Since I²C has no means of indicating how much data will be read,
-//! the user must add an appropriate amount of data to the buffer.  If more data
-//! is requested than will fit in the buffer, the driver will call the callback
-//! again with the `mode` set to `.read_more`.
+//! be a slice that the callback function should copy data to. Since I²C has no
+//! means of indicating how much data will be read, this slice's
+//! length will the length of the transfer buffer passed to `I2C_Slave.open()`).
+//! The user MUST add at least one byte to the buffer, and return the number of
+//! bytes added.  If more data is provided that actually needed, the extra data
+//! will be ignored.  If insufficient data is provided, the driver will call the
+//! callback again with the `mode` set to `.read_more` until all needed data is
+//! supplied.
+//!
+//! ## Master Write / Slave Read
 //!
 //! If the master requests a write, the driver will call the registered
 //! callback with the `mode` set to `.write` and the `data` parameter
-//! containing the data sent.  If more data is sent than will fit in the buffer,
-//! the driver will return additional data with the `mode` set to
-//! `.write_more`.
+//! containing a slice with the data sent.  If more data is sent by the master
+//! than will fit in the buffer, the driver will make one or more calls to the
+//! callback with the `mode` set to `.write_part` before making the final call
+//! with the `mode` set to `.write`.
 //!
-//! A general call is requested is handled like a write but the `mode`
-//! will be `.gen_call` or `.gen_call_more`.
+//! The user SHOULD return the number of bytes consumed, but at present this
+//! return value is ignored.
 //!
-//! The callback operates at interrupt time, so it should not block or
+//! A general call request is handled like a write but the `mode`
+//! will be `.gen_call` or `.gen_call_part`.
+//!
+//! ## Notes
+//!
+//! The callback operates at interrupt time, so it SHOULD not block or
 //! perform any time-consuming operations.
 //!
 //! The callback will be called with the `param` parameter passed to
@@ -45,8 +69,8 @@ const fifo_length = 16;
 
 const gpio = @import("gpio.zig");
 
-pub const CallbackMode = enum { read, read_more, write, write_more, gen_call, gen_call_more };
-pub const Callback = *const fn (mode: CallbackMode, data: []u8, param: ?*anyopaque) void;
+pub const CallbackMode = enum { read, read_more, write, write_part, gen_call, gen_call_part };
+pub const Callback = *const fn (mode: CallbackMode, data: []u8, param: ?*anyopaque) usize;
 
 const Self = @This();
 
@@ -63,7 +87,7 @@ transfer_index: usize = 0,
 transfer_length: usize = 0,
 data_received: bool = false,
 read_mode: CallbackMode = .read,
-write_mode: CallbackMode = .write,
+gen_call: bool = false,
 
 pub fn isr0() callconv(.c) void {
     i2cs[0].isr_common();
@@ -79,10 +103,11 @@ pub fn isr1() callconv(.c) void {
 ///
 /// * `addr` - The I²C slave address to use
 /// * `transfer_buffer` - A buffer to use to transfer data
-/// * `callback` - The callback to use for handling received data
+/// * `callback` - The callback to use for handling requests
 /// * `param` - The parameter to pass to the callback
 pub fn open(self: *Self, addr: u7, transfer_buffer: []u8, callback: Callback, param: ?*anyopaque) void {
     self.transfer_buffer = transfer_buffer;
+    self.transfer_length = 0;
     self.callback = callback;
     self.param = param;
 
@@ -104,24 +129,28 @@ pub fn open(self: *Self, addr: u7, transfer_buffer: []u8, callback: Callback, pa
         .padding = 0,
     });
 
-    self.regs.IC_INTR_MASK.write(.{
-        .M_RD_REQ = .ENABLED,
-        .M_RX_FULL = .ENABLED,
-        .M_STOP_DET = .ENABLED,
-        .M_RESTART_DET = .ENABLED,
-        .M_TX_ABRT = .ENABLED,
+    // Be careful when setting the mask.  Due to vagrancies of the RP2040.svd file
+    // the values are the opposite of what you might expect.  When setting the mask:
+    //  .ENABLED    is 0 (masked)   which means the interrupt is disabled, and
+    //  .DISABLED   is 1 (unmasked) which means the interrupt is enabled.
 
-        .M_GEN_CALL = .DISABLED,
-        .M_START_DET = .DISABLED,
-        .M_ACTIVITY = .DISABLED,
-        .M_RX_DONE = .DISABLED,
-        .M_TX_EMPTY = .DISABLED,
-        .M_TX_OVER = .DISABLED,
-        .M_RX_OVER = .DISABLED,
-        .M_RX_UNDER = .DISABLED,
+    self.regs.IC_INTR_MASK.write(.{
+        .M_RD_REQ = .DISABLED,
+        .M_RX_FULL = .DISABLED,
+        .M_STOP_DET = .DISABLED,
+        .M_RESTART_DET = .DISABLED,
+        .M_TX_ABRT = .DISABLED,
+
+        .M_GEN_CALL = .ENABLED,
+        .M_START_DET = .ENABLED,
+        .M_ACTIVITY = .ENABLED,
+        .M_RX_DONE = .ENABLED,
+        .M_TX_EMPTY = .ENABLED,
+        .M_TX_OVER = .ENABLED,
+        .M_RX_OVER = .ENABLED,
+        .M_RX_UNDER = .ENABLED,
         .padding = 0,
     });
-
 
     // ### TODO ### Set up the ISR at runtime
     // Ideally, MicroZig would have a way to set up the ISR at runtime,
@@ -137,7 +166,7 @@ pub fn open(self: *Self, addr: u7, transfer_buffer: []u8, callback: Callback, pa
     //   } ;
 
     self.enable();
-    irq.enable( .I2C1_IRQ );
+    irq.enable(.I2C1_IRQ);
 }
 
 /// Close the I²C slave driver
@@ -187,33 +216,12 @@ pub fn set_slave_address(self: *Self, addr: u7) void {
 ///
 /// * `self` - The I2C0 or I2C1 slave driver to use
 ///
-
-var x : u32 = 0;
-var y : u32 = 0;
-
 fn isr_common(self: *Self) void {
-
-    x += 1;
-    if (x > 1_000_000) {
-        gpio.num(15).toggle(); // red
-        x = 0;
-    }
 
     // Save the interrupt status and clear it
 
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
     _ = self.regs.IC_CLR_INTR.read();
-
-
-
-    // if (@as(u32, @bitCast(interruptStatus)) & 0xFFFFFFEF != 0) {
-    if (interruptStatus.TX_EMPTY == .ACTIVE) {
-        y += 1;
-        if (y > 200_000) {
-            gpio.num(14).toggle(); // green
-            y = 0;
-        }
-    }
 
     //  RESTART_DET +
     //  GEN_CALL    -
@@ -225,9 +233,9 @@ fn isr_common(self: *Self) void {
     //  RD_REQ      +
     //  TX_EMPTY    -
     //  TX_OVER     -
-    // RX_FULL     +
-    // RX_OVER     -
-    // RX_UNDER    -
+    //  RX_FULL     +
+    //  RX_OVER     -
+    //  RX_UNDER    -
 
     // // -- Transmit Abort --
 
@@ -236,49 +244,36 @@ fn isr_common(self: *Self) void {
     //     // i2c_abort_source_debug = self.i2c.get_regs().IC_TX_ABRT_SOURCE.read();
     // }
 
-    // --- We have a RESTART or STOP ---
-    // Send any received data we have buffered to the callback and initialize
-    // the read and write modes and the transfer buffer.
-
-    if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
-        if (self.data_received) {
-            self.callback(self.write_mode, self.transfer_buffer[0..self.transfer_index], self.param);
-
-            self.data_received = false;
-        }
-
-        self.read_mode = .read;
-        self.write_mode = .write;
-
-        self.transfer_index = 0;
-        self.transfer_length = 0;
-    }
-
     // --- We need to transmit data (Read Request) ---
     // Move data from the transfer buffer to the TX FIFO until all data is sent
     // or the TX FIFO is full.  Call the callback as needed to get data from
     // the user.
 
     if (interruptStatus.RD_REQ == .ACTIVE) {
-        // If we don't have any data yet, use the registered
-        // callback to get the data we need.
+        // If we don't have any data in the transfer buffer, use the registered
+        // callback to get some.
 
         if (self.transfer_index >= self.transfer_length) {
-            self.callback(self.read_mode, self.transfer_buffer, self.param);
-
             self.transfer_index = 0;
-            self.transfer_length = self.transfer_buffer.len;
+            self.transfer_length = self.callback(self.read_mode, self.transfer_buffer, self.param);
+
+            if (self.transfer_length == 0) @panic("I2C read callback returned 0");
+            if (self.transfer_length > self.transfer_buffer.len) @panic("I2C read callback returned too much data");
 
             self.read_mode = .read_more;
         }
 
         // Send the data
 
-        while (self.transfer_index < self.transfer_length and self.regs.IC_TXFLR.read().TXFLR < fifo_length) {
+        while (self.transfer_index < self.transfer_length and self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
             self.regs.IC_DATA_CMD.write_raw(@intCast(self.transfer_buffer[self.transfer_index]));
             self.transfer_index += 1;
         }
     }
+
+    // -- General Call --
+
+    if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
 
     // -- We are receiving data (Write Request) --
     // Move data from the receive FIFO to the transfer buffer until all data is received
@@ -287,42 +282,45 @@ fn isr_common(self: *Self) void {
 
     if (interruptStatus.RX_FULL == .ACTIVE) {
         // Process any bytes in the receive FIFO
-
         // Automatically cleared by hardware when fifo is empty.
 
-        while (self.regs.IC_RXFLR.read().RXFLR > 0) {
+        while (self.regs.IC_STATUS.read().RFNE == .NOT_EMPTY) {
             // Read a byte and associated flags from the RX FIFO.
 
             const dataCmd = self.regs.IC_DATA_CMD.read();
 
-            // If it's the first byte in a transfer initialize the
-            // transfer index.
-            if (dataCmd.FIRST_DATA_BYTE == .ACTIVE) {
-                self.transfer_index = 0;
-                self.data_received = true;
+            if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
 
-                if (interruptStatus.GEN_CALL == .ACTIVE) {
-                    self.write_mode = .gen_call;
-                } else {
-                    self.write_mode = .write;
-                }
-            }
+            // If the transfer buffer is full, call the callback to process the partial data
 
-            // If the transfer buffer is full, call the callback to process the data
-            if (self.transfer_index >= self.transfer_length) {
-                self.callback(self.write_mode, self.transfer_buffer, self.param);
-                self.transfer_length = self.transfer_buffer.len;
-                if (self.write_mode == .gen_call or self.write_mode == .gen_call_more) {
-                    self.write_mode = .gen_call_more;
-                } else {
-                    self.write_mode = .write_more;
-                }
+            if (self.transfer_index >= self.transfer_buffer.len) {
+                _ = self.callback(if (self.gen_call) .gen_call_part else .write_part, self.transfer_buffer, self.param);
                 self.transfer_index = 0;
             }
 
             // Copy the byte to the transfer buffer
+
             self.transfer_buffer[self.transfer_index] = dataCmd.DAT;
             self.transfer_index += 1;
+            self.data_received = true;
         }
+    }
+
+    // --- We have a RESTART or STOP ---
+    // Send any received data we have buffered to the callback and initialize
+    // the read and write modes and the transfer buffer.
+
+    if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
+        if (self.data_received) {
+            _ = self.callback(if (self.gen_call) .gen_call else .write, self.transfer_buffer[0..self.transfer_index], self.param);
+
+            self.data_received = false;
+        }
+
+        self.read_mode = .read;
+        self.gen_call = false;
+
+        self.transfer_index = 0;
+        self.transfer_length = 0;
     }
 }
