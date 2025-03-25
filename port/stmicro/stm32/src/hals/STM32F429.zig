@@ -21,8 +21,8 @@
 //! TODO: add more clock calculations when adding Uart
 
 const std = @import("std");
-const micro = @import("microzig");
-const peripherals = micro.peripherals;
+const microzig = @import("microzig");
+const peripherals = microzig.peripherals;
 const RCC = peripherals.RCC;
 
 pub const clock = struct {
@@ -77,13 +77,13 @@ pub const gpio = struct {
         setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
     }
 
-    pub fn read(comptime pin: type) micro.gpio.State {
+    pub fn read(comptime pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(micro.gpio.State, @enumFromInt(reg_value));
+        return @as(microzig.gpio.State, @enumFromInt(reg_value));
     }
 
-    pub fn write(comptime pin: type, state: micro.gpio.State) void {
+    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         switch (state) {
             .low => setRegField(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
             .high => setRegField(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
