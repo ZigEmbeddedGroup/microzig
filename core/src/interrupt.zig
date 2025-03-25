@@ -58,12 +58,13 @@ const CriticalSection = struct {
     }
 };
 
-// TODO: remove this once the vector table uses its own implementation
+// defined for regz
 pub const Handler = extern union {
     naked: *const fn () callconv(.naked) void,
     c: *const fn () callconv(.c) void,
 };
 
+// defined for regz
 pub const unhandled: Handler = .{
     .c = struct {
         pub fn unhandled() callconv(.c) void {
