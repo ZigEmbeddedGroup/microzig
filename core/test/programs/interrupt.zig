@@ -1,4 +1,3 @@
-const micro = @import("microzig");
 const builtin = @import("builtin");
 
 pub const interrupts = switch (builtin.cpu.arch) {

@@ -1,6 +1,6 @@
 const std = @import("std");
-const micro = @import("microzig");
-const peripherals = micro.chip.peripherals;
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
 const GPIO = peripherals.GPIO;
 const PINCONNECT = peripherals.PINCONNECT;
 const UART0 = peripherals.UART0;
@@ -75,14 +75,14 @@ pub const gpio = struct {
         pin.regs.dir.raw &= ~pin.gpio_mask;
     }
 
-    pub fn read(comptime pin: type) micro.gpio.State {
+    pub fn read(comptime pin: type) microzig.gpio.State {
         return if ((pin.regs.pin.raw & pin.gpio_mask) != 0)
-            micro.gpio.State.high
+            microzig.gpio.State.high
         else
-            micro.gpio.State.low;
+            microzig.gpio.State.low;
     }
 
-    pub fn write(comptime pin: type, state: micro.gpio.State) void {
+    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         if (state == .high) {
             pin.regs.set.raw = pin.gpio_mask;
         } else {
@@ -119,7 +119,7 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     if (pins.tx != null or pins.rx != null)
         @compileError("TODO: custom pins are not currently supported");
 
@@ -133,8 +133,8 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         };
         const Self = @This();
 
-        pub fn init(config: micro.uart.Config) !Self {
-            micro.debug.write("0");
+        pub fn init(config: microzig.uart.Config) !Self {
+            microzig.debug.write("0");
             switch (index) {
                 0 => {
                     SYSCON.PCONP.modify(.{ .PCUART0 = 1 });
@@ -154,7 +154,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
                 },
                 else => unreachable,
             }
-            micro.debug.write("1");
+            microzig.debug.write("1");
 
             UARTn.LCR.modify(.{
                 // 8N1
@@ -165,17 +165,17 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
                 .BC = 0,
                 .DLAB = 1,
             });
-            micro.debug.write("2");
+            microzig.debug.write("2");
 
             // TODO: UARTN_FIFOS_ARE_DISA is not available in all uarts
             //UARTn.FCR.modify(.{ .FIFOEN = .UARTN_FIFOS_ARE_DISA });
 
-            micro.debug.writer().print("clock: {} baud: {} ", .{
-                micro.clock.get().cpu,
+            microzig.debug.writer().print("clock: {} baud: {} ", .{
+                microzig.clock.get().cpu,
                 config.baud_rate,
             }) catch {};
 
-            const pclk = micro.clock.get().cpu / 4;
+            const pclk = microzig.clock.get().cpu / 4;
             const divider = (pclk / (16 * config.baud_rate));
 
             const regval = std.math.cast(u16, divider) orelse return error.UnsupportedBaudRate;
