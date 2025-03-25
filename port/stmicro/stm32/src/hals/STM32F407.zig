@@ -33,8 +33,8 @@
 //!
 
 const std = @import("std");
-const micro = @import("microzig");
-const peripherals = micro.peripherals;
+const microzig = @import("microzig");
+const peripherals = microzig.peripherals;
 const RCC = peripherals.RCC;
 
 pub const clock = struct {
@@ -117,13 +117,13 @@ pub const gpio = struct {
         }
     }
 
-    pub fn read(comptime pin: type) micro.gpio.State {
+    pub fn read(comptime pin: type) microzig.gpio.State {
         const idr_reg = pin.gpio_port.IDR;
         const reg_value = @field(idr_reg.read(), "IDR" ++ pin.suffix); // TODO extract to getRegField()?
-        return @as(micro.gpio.State, @enumFromInt(reg_value));
+        return @as(microzig.gpio.State, @enumFromInt(reg_value));
     }
 
-    pub fn write(comptime pin: type, state: micro.gpio.State) void {
+    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         switch (state) {
             .low => set_reg_field(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
             .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
@@ -152,7 +152,7 @@ pub const uart = struct {
         odd = 1,
     };
 
-    const PinDirection = std.meta.FieldEnum(micro.uart.Pins);
+    const PinDirection = std.meta.FieldEnum(microzig.uart.Pins);
 
     /// Checks if a pin is valid for a given uart index and direction
     pub fn is_valid_pin(comptime pin: type, comptime index: usize, comptime direction: PinDirection) bool {
@@ -182,7 +182,7 @@ pub const uart = struct {
     }
 };
 
-pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     if (index < 1 or index > 6) @compileError("Valid USART index are 1..6");
 
     const usart_name = std.fmt.comptimePrint("USART{d}", .{index});
@@ -194,12 +194,12 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             @compileError(std.fmt.comptimePrint("Tx pin {s} is not valid for UART{}", .{ tx.name, index }))
     else switch (index) {
         // Provide default tx pins if no pin is specified
-        1 => micro.Pin("PA9"),
-        2 => micro.Pin("PA2"),
-        3 => micro.Pin("PB10"),
-        4 => micro.Pin("PA0"),
-        5 => micro.Pin("PC12"),
-        6 => micro.Pin("PC6"),
+        1 => microzig.Pin("PA9"),
+        2 => microzig.Pin("PA2"),
+        3 => microzig.Pin("PB10"),
+        4 => microzig.Pin("PA0"),
+        5 => microzig.Pin("PC12"),
+        6 => microzig.Pin("PC6"),
         else => unreachable,
     };
 
@@ -211,23 +211,23 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             @compileError(std.fmt.comptimePrint("Rx pin {s} is not valid for UART{}", .{ rx.name, index }))
     else switch (index) {
         // Provide default rx pins if no pin is specified
-        1 => micro.Pin("PA10"),
-        2 => micro.Pin("PA3"),
-        3 => micro.Pin("PB11"),
-        4 => micro.Pin("PA1"),
-        5 => micro.Pin("PD2"),
-        6 => micro.Pin("PC7"),
+        1 => microzig.Pin("PA10"),
+        2 => microzig.Pin("PA3"),
+        3 => microzig.Pin("PB11"),
+        4 => microzig.Pin("PA1"),
+        5 => microzig.Pin("PD2"),
+        6 => microzig.Pin("PC7"),
         else => unreachable,
     };
 
     // USART1..3 are AF7, USART 4..6 are AF8
     const alternate_function = if (index <= 3) .af7 else .af8;
 
-    const tx_gpio = micro.Gpio(tx_pin, .{
+    const tx_gpio = microzig.Gpio(tx_pin, .{
         .mode = .alternate_function,
         .alternate_function = alternate_function,
     });
-    const rx_gpio = micro.Gpio(rx_pin, .{
+    const rx_gpio = microzig.Gpio(rx_pin, .{
         .mode = .alternate_function,
         .alternate_function = alternate_function,
     });
@@ -237,7 +237,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 
         const Self = @This();
 
-        pub fn init(config: micro.uart.Config) !Self {
+        pub fn init(config: microzig.uart.Config) !Self {
             // The following must all be written when the USART is disabled (UE=0).
             if (@field(peripherals, usart_name).CR1.read().UE == 1)
                 @panic("Trying to initialize " ++ usart_name ++ " while it is already enabled");
@@ -291,7 +291,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             // TODO: We assume the default OVER8=0 configuration above (i.e. 16x oversampling).
             // TODO: Do some checks to see if the baud rate is too high (or perhaps too low)
             // TODO: Do a rounding div, instead of a truncating div?
-            const clocks = micro.clock.get();
+            const clocks = microzig.clock.get();
             const bus_frequency = switch (index) {
                 1, 6 => clocks.apb2,
                 2...5 => clocks.apb1,
@@ -311,7 +311,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
             return read_from_registers();
         }
 
-        pub fn get_or_init(config: micro.uart.Config) !Self {
+        pub fn get_or_init(config: microzig.uart.Config) !Self {
             if (@field(peripherals, usart_name).CR1.read().UE == 1) {
                 // UART1 already enabled, don't reinitialize and disturb things;
                 // instead read and use the actual configuration.
@@ -361,7 +361,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
 }
 
 pub const i2c = struct {
-    const PinLine = std.meta.FieldEnum(micro.i2c.Pins);
+    const PinLine = std.meta.FieldEnum(microzig.i2c.Pins);
 
     /// Checks if a pin is valid for a given i2c index and line
     pub fn is_valid_pin(comptime pin: type, comptime index: usize, comptime line: PinLine) bool {
@@ -385,7 +385,7 @@ pub const i2c = struct {
     }
 };
 
-pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type {
+pub fn I2CController(comptime index: usize, comptime pins: microzig.i2c.Pins) type {
     if (index < 1 or index > 3) @compileError("Valid I2C index are 1..3");
 
     const i2c_name = std.fmt.comptimePrint("I2C{d}", .{index});
@@ -397,9 +397,9 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             @compileError(std.fmt.comptimePrint("SCL pin {s} is not valid for I2C{}", .{ scl.name, index }))
     else switch (index) {
         // Provide default scl pins if no pin is specified
-        1 => micro.Pin("PB6"),
-        2 => micro.Pin("PB10"),
-        3 => micro.Pin("PA8"),
+        1 => microzig.Pin("PB6"),
+        2 => microzig.Pin("PB10"),
+        3 => microzig.Pin("PA8"),
         else => unreachable,
     };
 
@@ -411,17 +411,17 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             @compileError(std.fmt.comptimePrint("SDA pin {s} is not valid for UART{}", .{ sda.name, index }))
     else switch (index) {
         // Provide default sda pins if no pin is specified
-        1 => micro.Pin("PB7"),
-        2 => micro.Pin("PB11"),
-        3 => micro.Pin("PC9"),
+        1 => microzig.Pin("PB7"),
+        2 => microzig.Pin("PB11"),
+        3 => microzig.Pin("PC9"),
         else => unreachable,
     };
 
-    const scl_gpio = micro.Gpio(scl_pin, .{
+    const scl_gpio = microzig.Gpio(scl_pin, .{
         .mode = .alternate_function,
         .alternate_function = .af4,
     });
-    const sda_gpio = micro.Gpio(sda_pin, .{
+    const sda_gpio = microzig.Gpio(sda_pin, .{
         .mode = .alternate_function,
         .alternate_function = .af4,
     });
@@ -432,7 +432,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
     return struct {
         const Self = @This();
 
-        pub fn init(config: micro.i2c.Config) !Self {
+        pub fn init(config: microzig.i2c.Config) !Self {
             // Configure I2C
 
             // 1. Enable the I2C CLOCK and GPIO CLOCK
@@ -462,7 +462,7 @@ pub fn I2CController(comptime index: usize, comptime pins: micro.i2c.Pins) type 
             while (i2c_base.CR1.read().PE == 1) {}
 
             // 4. Configure I2C timing
-            const bus_frequency_hz = micro.clock.get().apb1;
+            const bus_frequency_hz = microzig.clock.get().apb1;
             const bus_frequency_mhz: u6 = @as(u6, @intCast(@divExact(bus_frequency_hz, 1_000_000)));
 
             if (bus_frequency_mhz < 2 or bus_frequency_mhz > 50) {
