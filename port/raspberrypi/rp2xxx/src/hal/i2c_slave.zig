@@ -223,27 +223,6 @@ fn isr_common(self: *Self) void {
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
     _ = self.regs.IC_CLR_INTR.read();
 
-    //  RESTART_DET +
-    //  GEN_CALL    -
-    //  START_DET   -
-    //  STOP_DET    +
-    //  ACTIVITY    -
-    //  RX_DONE     -
-    //  TX_ABRT     +
-    //  RD_REQ      +
-    //  TX_EMPTY    -
-    //  TX_OVER     -
-    //  RX_FULL     +
-    //  RX_OVER     -
-    //  RX_UNDER    -
-
-    // // -- Transmit Abort --
-
-    // if (interruptStatus.TX_ABRT == .ACTIVE) {
-    //     // i2c_abort_count_debug += 1;
-    //     // i2c_abort_source_debug = self.i2c.get_regs().IC_TX_ABRT_SOURCE.read();
-    // }
-
     // --- We need to transmit data (Read Request) ---
     // Move data from the transfer buffer to the TX FIFO until all data is sent
     // or the TX FIFO is full.  Call the callback as needed to get data from
