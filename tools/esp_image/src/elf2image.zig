@@ -258,17 +258,17 @@ pub const FlashFreq = enum(u4) {
 
 pub const ChipId = enum(u16) {
     esp32 = 0x0000,
-    esp32s2 = 0x0002,
-    esp32c3 = 0x0005,
-    esp32s3 = 0x0009,
-    esp32c2 = 0x000c,
-    esp32c6 = 0x000d,
-    esp32h2 = 0x0010,
-    esp32p4 = 0x0012,
+    esp32_s2 = 0x0002,
+    esp32_c3 = 0x0005,
+    esp32_s3 = 0x0009,
+    esp32_c2 = 0x000c,
+    esp32_c6 = 0x000d,
+    esp32_h2 = 0x0010,
+    esp32_p4 = 0x0012,
 };
 
 pub const chips: std.enums.EnumMap(ChipId, Chip) = .init(.{
-    .esp32c3 = .{
+    .esp32_c3 = .{
         .irom_map_start = 0x42000000,
         .irom_map_end = 0x42800000,
         .drom_map_start = 0x3C000000,
