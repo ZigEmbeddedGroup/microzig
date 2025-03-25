@@ -19,7 +19,7 @@ const cortex_m = std.meta.stringToEnum(Core, microzig.config.cpu_name) orelse
 
 pub const Interrupt = microzig.utilities.GenerateInterruptEnum(i32);
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    .{ .InterruptEnum = Interrupt, .HandlerFn = *const fn () callconv(.c) void },
+    .{ .InterruptEnum = Interrupt, .HandlerFn = microzig.interrupt.Handler },
 });
 
 pub const interrupt = struct {
@@ -278,7 +278,7 @@ pub const startup_logic = struct {
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            .Reset = microzig.cpu.startup_logic._start,
+            .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
         for (@typeInfo(@TypeOf(microzig_options.interrupts)).@"struct".fields) |field| {
