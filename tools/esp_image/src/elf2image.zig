@@ -2,9 +2,9 @@ const std = @import("std");
 const Sha256 = std.crypto.hash.sha2.Sha256;
 const clap = @import("clap");
 
-// pub const std_options: std.Options = .{
-//     .log_level = .debug,
-// };
+pub const std_options: std.Options = .{
+    .log_level = .warn,
+};
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
@@ -58,6 +58,7 @@ pub fn main() !void {
     const use_segments = res.args.@"use-segments" != 0;
 
     const chip = chips.get(chip_id) orelse {
+        std.log.err("support for chip `{}` is not implemented yet", .{@tagName(chip_id)});
         return error.UnimplementedChip;
     };
 
@@ -108,6 +109,7 @@ pub fn main() !void {
         }
 
         if (info_list.items.len == 0) {
+            std.log.err("no segments found in elf");
             return error.NoSegments;
         }
         std.sort.insertion(SegmentInfo, info_list.items, {}, SegmentInfo.lessThan);
@@ -190,7 +192,7 @@ pub fn main() !void {
 
     const extended_file_header: ExtendedFileHeader = .{
         .wp = .disabled,
-        .flash_pins_drive_settings = 0,
+        .flash_pins_drive_settings = 0, // TODO: idk much about this. maybe it should be configurable?
         .chip_id = chip_id,
         .min_rev = min_rev,
         .max_rev = max_rev,

@@ -20,6 +20,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .preferred_binary_format = .{ .esp = .{
             .chip_id = .esp32_c3,
             .flash_mode = .dio,
+            .flash_size = .@"4mb",
+            .flash_freq = .@"40m",
         } },
         .chip = .{
             .name = "ESP32-C3",
