@@ -190,7 +190,7 @@ pub fn main() !void {
 
     const extended_file_header: ExtendedFileHeader = .{
         .wp = .disabled,
-        .flash_pins_drive_settings = 0, // TODO: should we make this configurable + packed struct?
+        .flash_pins_drive_settings = 0,
         .chip_id = chip_id,
         .min_rev = min_rev,
         .max_rev = max_rev,
