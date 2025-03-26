@@ -58,9 +58,17 @@ const CriticalSection = struct {
     }
 };
 
-// TODO: remove this once the vector table uses its own implementation
-pub const Handler = *const fn () callconv(.c) void;
+// defined for regz
+pub const Handler = extern union {
+    naked: *const fn () callconv(.naked) void,
+    c: *const fn () callconv(.c) void,
+};
 
-pub fn unhandled() callconv(.c) void {
-    @panic("unhandled interrupt");
-}
+// defined for regz
+pub const unhandled: Handler = .{
+    .c = struct {
+        pub fn unhandled() callconv(.c) void {
+            @panic("unhandled interrupt");
+        }
+    }.unhandled,
+};

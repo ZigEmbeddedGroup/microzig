@@ -1,5 +1,5 @@
-const micro = @import("microzig");
-const peripherals = micro.chip.peripherals;
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
 const UART3 = peripherals.UART3;
 const UART4 = peripherals.UART4;
 
@@ -40,13 +40,13 @@ pub const gpio = struct {
         // TODO: check if pin is already configured as input
     }
 
-    pub fn read(comptime pin: type) micro.gpio.State {
+    pub fn read(comptime pin: type) microzig.gpio.State {
         _ = pin;
         // TODO: check if pin is configured as input
         return .low;
     }
 
-    pub fn write(comptime pin: type, state: micro.gpio.State) void {
+    pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         _ = pin;
         _ = state;
         // TODO: check if pin is configured as output
@@ -74,7 +74,7 @@ pub const uart = struct {
     };
 };
 
-pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
+pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     if (pins.tx != null or pins.rx != null)
         @compileError("TODO: custom pins are not currently supported");
 
@@ -86,7 +86,7 @@ pub fn Uart(comptime index: usize, comptime pins: micro.uart.Pins) type {
         };
         const Self = @This();
 
-        pub fn init(config: micro.uart.Config) !Self {
+        pub fn init(config: microzig.uart.Config) !Self {
             _ = config;
             return Self{};
         }

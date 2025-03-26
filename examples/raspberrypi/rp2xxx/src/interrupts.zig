@@ -2,6 +2,8 @@ const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
+const peripherals = microzig.chip.peripherals;
+const interrupt = microzig.cpu.interrupt;
 
 const led = rp2xxx.gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
@@ -13,10 +15,13 @@ pub const microzig_options: microzig.Options = .{
     .logFn = rp2xxx.uart.logFn,
     .interrupts = switch (rp2xxx.compatibility.chip) {
         .RP2040 => .{
-            .TIMER_IRQ_0 = timer_interrupt,
+            .TIMER_IRQ_0 = .{ .c = timer_interrupt },
         },
         .RP2350 => .{
-            .TIMER0_IRQ_0 = timer_interrupt,
+            .TIMER0_IRQ_0 = switch (rp2xxx.compatibility.arch) {
+                .arm => .{ .c = timer_interrupt },
+                .riscv => timer_interrupt,
+            },
         },
     },
 };
@@ -29,8 +34,9 @@ fn timer_interrupt() callconv(.c) void {
     led.toggle();
 
     switch (rp2xxx.compatibility.chip) {
-        .RP2040 => microzig.chip.peripherals.TIMER.INTR.modify(.{ .ALARM_0 = 1 }),
-        .RP2350 => microzig.chip.peripherals.TIMER0.INTR.modify(.{ .ALARM_0 = 1 }),
+        // These registers are write-to-clear
+        .RP2040 => peripherals.TIMER.INTR.modify(.{ .ALARM_0 = 1 }),
+        .RP2350 => peripherals.TIMER0.INTR.modify(.{ .ALARM_0 = 1 }),
     }
     set_alarm(1_000_000);
 }
@@ -40,8 +46,8 @@ pub fn set_alarm(us: u32) void {
     const current = time.get_time_since_boot();
     const target = current.add_duration(Duration.from_us(us));
     switch (rp2xxx.compatibility.chip) {
-        .RP2040 => microzig.chip.peripherals.TIMER.ALARM0.write_raw(@intCast(@intFromEnum(target) & 0xffffffff)),
-        .RP2350 => microzig.chip.peripherals.TIMER0.ALARM0.write_raw(@intCast(@intFromEnum(target) & 0xffffffff)),
+        .RP2040 => peripherals.TIMER.ALARM0.write_raw(@intCast(@intFromEnum(target) & 0xffffffff)),
+        .RP2350 => peripherals.TIMER0.ALARM0.write_raw(@intCast(@intFromEnum(target) & 0xffffffff)),
     }
 }
 
@@ -63,16 +69,16 @@ pub fn main() !void {
 
     switch (rp2xxx.compatibility.chip) {
         .RP2040 => {
-            microzig.chip.peripherals.TIMER.INTE.toggle(.{ .ALARM_0 = 1 });
-            microzig.cpu.interrupt.enable(.TIMER_IRQ_0);
+            peripherals.TIMER.INTE.toggle(.{ .ALARM_0 = 1 });
+            interrupt.enable(.TIMER_IRQ_0);
         },
         .RP2350 => {
-            microzig.chip.peripherals.TIMER0.INTE.toggle(.{ .ALARM_0 = 1 });
+            peripherals.TIMER0.INTE.toggle(.{ .ALARM_0 = 1 });
             switch (rp2xxx.compatibility.arch) {
-                .arm => microzig.cpu.interrupt.enable(.TIMER0_IRQ_0),
+                .arm => interrupt.enable(.TIMER0_IRQ_0),
                 .riscv => {
-                    microzig.cpu.interrupt.enable(.MachineExternal);
-                    microzig.cpu.interrupt.external.enable(.TIMER0_IRQ_0);
+                    interrupt.enable(.MachineExternal);
+                    interrupt.external.enable(.TIMER0_IRQ_0);
                 },
             }
         },
