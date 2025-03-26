@@ -109,7 +109,7 @@ pub fn main() !void {
         }
 
         if (info_list.items.len == 0) {
-            std.log.err("no segments found in elf");
+            std.log.err("no segments found in elf", .{});
             return error.NoSegments;
         }
         std.sort.insertion(SegmentInfo, info_list.items, {}, SegmentInfo.lessThan);
