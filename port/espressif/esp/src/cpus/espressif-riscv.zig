@@ -2,37 +2,6 @@ const std = @import("std");
 const microzig = @import("microzig");
 const root = @import("root");
 
-pub const Exception = enum(u32) {
-    InstructionMisaligned = 0x0,
-    InstructionFault = 0x1,
-    IllegalInstruction = 0x2,
-    Breakpoint = 0x3,
-    LoadMisaligned = 0x4,
-    LoadFault = 0x5,
-    StoreMisaligned = 0x6,
-    StoreFault = 0x7,
-    UserEnvCall = 0x8,
-    MachineEnvCall = 0xb,
-};
-
-pub const CoreInterrupt = enum(u32) {
-    MachineSoftware = 0x3,
-    MachineTimer = 0x7,
-    MachineExternal = 0xb,
-};
-
-// pub const ExternalInterrupt = microzig.utilities.GenerateInterruptEnum(u32);
-
-const InterruptHandler = *const fn () callconv(.c) void;
-
-pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
-    // TODO: maybe change to interrupt callconv
-    .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
-    // TODO: maybe change to interrupt callconv
-    .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
-    // .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = InterruptHandler },
-});
-
 pub const interrupt = struct {
     pub fn globally_enabled() bool {
         return csr.mstatus.read().mie == 1;
@@ -44,30 +13,6 @@ pub const interrupt = struct {
 
     pub fn disable_interrupts() void {
         csr.mstatus.clear(.{ .mie = 1 });
-    }
-
-    pub fn is_enabled(comptime int: CoreInterrupt) bool {
-        return csr.mie.read() & (1 << @intFromEnum(int)) != 0;
-    }
-
-    pub fn enable(comptime int: CoreInterrupt) void {
-        csr.mie.set(1 << @intFromEnum(int));
-    }
-
-    pub fn disable(comptime int: CoreInterrupt) void {
-        csr.mie.clear(1 << @intFromEnum(int));
-    }
-
-    pub fn is_pending(comptime int: CoreInterrupt) bool {
-        return csr.mip.read() & (1 << @intFromEnum(int));
-    }
-
-    pub fn set_pending(comptime int: CoreInterrupt) void {
-        csr.mip.set(1 << @intFromEnum(int));
-    }
-
-    pub fn clear_pending(comptime int: CoreInterrupt) void {
-        csr.mip.clear(1 << @intFromEnum(int));
     }
 };
 
@@ -99,7 +44,7 @@ pub const startup_logic = struct {
     }
 
     pub fn _start_c() callconv(.c) noreturn {
-        microzig.cpu.interrupt.disable_interrupts();
+        interrupt.disable_interrupts();
 
         asm volatile (
             \\.option push
