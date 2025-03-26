@@ -244,11 +244,9 @@ pub const csr = struct {
             const Self = @This();
 
             pub inline fn read_raw() u32 {
-                var value: u32 = undefined;
-                asm volatile ("csrr %[value], " ++ ident
-                    : [value] "+r" (value),
+                return asm volatile ("csrr %[value], " ++ ident
+                    : [value] "=r" (-> u32),
                 );
-                return value;
             }
 
             pub inline fn read() T {
@@ -304,7 +302,7 @@ pub const csr = struct {
 
             pub inline fn read_set_raw(bits: u32) u32 {
                 return asm volatile ("csrrs %[value], " ++ ident ++ ", %[bits]"
-                    : [value] "r" (-> u32),
+                    : [value] "=r" (-> u32),
                     : [bits] "r" (bits),
                 );
             }
@@ -315,7 +313,7 @@ pub const csr = struct {
 
             pub inline fn read_clear_raw(bits: u32) u32 {
                 return asm volatile ("csrrc %[value], " ++ ident ++ ", %[bits]"
-                    : [value] "r" (-> u32),
+                    : [value] "=r" (-> u32),
                     : [bits] "r" (bits),
                 );
             }
