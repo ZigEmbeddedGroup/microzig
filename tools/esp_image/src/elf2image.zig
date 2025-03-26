@@ -58,7 +58,7 @@ pub fn main() !void {
     const use_segments = res.args.@"use-segments" != 0;
 
     const chip = chips.get(chip_id) orelse {
-        std.log.err("support for chip `{}` is not implemented yet", .{@tagName(chip_id)});
+        std.log.err("support for chip `{s}` is not implemented yet", .{@tagName(chip_id)});
         return error.UnimplementedChip;
     };
 
