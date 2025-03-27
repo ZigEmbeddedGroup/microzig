@@ -653,62 +653,11 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                         .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
 
-                        .esp => |options| blk: {
-                            const elf2image_exe = fw.mb.dep.builder.dependency("tools/esp_image", .{ .optimize = .ReleaseSafe }).artifact("elf2image");
-
-                            const convert = fw.mb.builder.addRunArtifact(elf2image_exe);
-
-                            convert.addFileArg(elf_file);
-
-                            convert.addArg("--chip-id");
-                            convert.addArg(@tagName(options.chip_id));
-
-                            var rev_buf: [5]u8 = undefined;
-
-                            if (options.min_rev) |min_rev| {
-                                const n = std.fmt.formatIntBuf(&rev_buf, min_rev, 10, .lower, .{});
-
-                                convert.addArg("--min-rev-full");
-                                convert.addArg(rev_buf[0..n]);
-                            }
-
-                            if (options.max_rev) |max_rev| {
-                                const n = std.fmt.formatIntBuf(&rev_buf, max_rev, 10, .lower, .{});
-
-                                convert.addArg("--max-rev-full");
-                                convert.addArg(rev_buf[0..n]);
-                            }
-
-                            if (options.dont_append_digest) |dont_append_digest| {
-                                if (dont_append_digest) {
-                                    convert.addArg("--dont-append-digest");
-                                }
-                            }
-
-                            if (options.flash_freq) |flash_freq| {
-                                convert.addArg("--flash-freq");
-                                convert.addArg(@tagName(flash_freq));
-                            }
-
-                            if (options.flash_mode) |flash_mode| {
-                                convert.addArg("--flash-mode");
-                                convert.addArg(@tagName(flash_mode));
-                            }
-
-                            if (options.flash_size) |flash_size| {
-                                convert.addArg("--flash-size");
-                                convert.addArg(@tagName(flash_size));
-                            }
-
-                            if (options.use_segments) |use_segments| {
-                                if (use_segments) {
-                                    convert.addArg("--use-segments");
-                                }
-                            }
-
-                            convert.addArg("--output");
-                            break :blk convert.addOutputFileArg(basename);
-                        },
+                        .esp => |options| @import("tools/esp_image").from_elf(
+                            fw.mb.dep.builder.dependency("tools/esp_image", .{}),
+                            elf_file,
+                            options,
+                        ),
 
                         .custom => |generator| generator.convert(fw.target.dep, elf_file),
                     };

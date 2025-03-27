@@ -192,7 +192,7 @@ pub fn main() !void {
 
     const extended_file_header: ExtendedFileHeader = .{
         .wp = .disabled,
-        .flash_pins_drive_settings = 0, // TODO: idk much about this. maybe it should be configurable?
+        .flash_pins_drive_settings = 0, // TODO: figure out what to set this to
         .chip_id = chip_id,
         .min_rev = min_rev,
         .max_rev = max_rev,
@@ -204,7 +204,7 @@ pub fn main() !void {
 
     try multi_writer_writer.writeAll(segment_data.items);
 
-    // TODO: secure pad
+    // TODO: Add secure boot option (v1 or v2) and append a signature if enabled.
 
     const position = try output_file.getPos();
     const padding: [16]u8 = @splat(0);

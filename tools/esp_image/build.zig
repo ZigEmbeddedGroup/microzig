@@ -5,6 +5,74 @@ pub const FlashMode = elf2image.FlashMode;
 pub const FlashFreq = elf2image.FlashFreq;
 pub const FlashSize = elf2image.FlashSize;
 
+pub const Options = struct {
+    chip_id: ChipId,
+    min_rev: ?u16 = null,
+    max_rev: ?u16 = null,
+    dont_append_digest: ?bool = null,
+    flash_freq: ?FlashFreq = null,
+    flash_mode: ?FlashMode = null,
+    flash_size: ?FlashSize = null,
+    use_segments: ?bool = null,
+};
+
+pub fn from_elf(dep: *std.Build.Dependency, elf_file: std.Build.LazyPath, options: Options) std.Build.LazyPath {
+    const elf2image_exe = dep.artifact("elf2image");
+
+    const run = dep.builder.addRunArtifact(elf2image_exe);
+
+    run.addFileArg(elf_file);
+
+    run.addArg("--chip-id");
+    run.addArg(@tagName(options.chip_id));
+
+    var rev_buf: [5]u8 = undefined;
+
+    if (options.min_rev) |min_rev| {
+        const n = std.fmt.formatIntBuf(&rev_buf, min_rev, 10, .lower, .{});
+
+        run.addArg("--min-rev-full");
+        run.addArg(rev_buf[0..n]);
+    }
+
+    if (options.max_rev) |max_rev| {
+        const n = std.fmt.formatIntBuf(&rev_buf, max_rev, 10, .lower, .{});
+
+        run.addArg("--max-rev-full");
+        run.addArg(rev_buf[0..n]);
+    }
+
+    if (options.dont_append_digest) |dont_append_digest| {
+        if (dont_append_digest) {
+            run.addArg("--dont-append-digest");
+        }
+    }
+
+    if (options.flash_freq) |flash_freq| {
+        run.addArg("--flash-freq");
+        run.addArg(@tagName(flash_freq));
+    }
+
+    if (options.flash_mode) |flash_mode| {
+        run.addArg("--flash-mode");
+        run.addArg(@tagName(flash_mode));
+    }
+
+    if (options.flash_size) |flash_size| {
+        run.addArg("--flash-size");
+        run.addArg(@tagName(flash_size));
+    }
+
+    if (options.use_segments) |use_segments| {
+        if (use_segments) {
+            run.addArg("--use-segments");
+        }
+    }
+
+    run.addArg("--output");
+    return run.addOutputFileArg("output.bin");
+}
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
