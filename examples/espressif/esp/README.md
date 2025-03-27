@@ -11,7 +11,7 @@
 esptool --chip esp32c3 -b 460800 --before default_reset --after hard_reset write_flash \
         0x0 bootloader.bin 0x8000 partition_table.bin 0x10000 zig-out/firmware/esp32_c3_blinky.bin
 ```
-NOTE: you have to provide the [bootloader](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/bootloader.html) and a [partition table](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html).
+NOTE: you have to provide a [bootloader](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/bootloader.html) and a [partition table](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/partition-tables.html).
 
 - direct boot image
 
