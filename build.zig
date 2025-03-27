@@ -70,6 +70,7 @@ pub fn build(b: *Build) void {
 fn generate_release_steps(b: *Build) void {
     const release_regz_step = b.step("release-regz", "Generate the release binaries for regz");
     const release_uf2_step = b.step("release-uf2", "Generate the release binaries for uf2");
+    const release_esp_image_step = b.step("release-esp-image", "Generate the release binaries for esp image");
 
     for (exe_targets) |t| {
         const release_target = b.resolveTargetQuery(t);
@@ -107,6 +108,25 @@ fn generate_release_steps(b: *Build) void {
             },
         });
         release_uf2_step.dependOn(&uf2_target_output.step);
+    }
+
+    for (exe_targets) |t| {
+        const release_target = b.resolveTargetQuery(t);
+
+        const esp_image_dep = b.dependency("tools/esp_image", .{
+            .optimize = .ReleaseSafe,
+            .target = release_target,
+        });
+
+        const elf2image_artifact = esp_image_dep.artifact("elf2image");
+        const elf2image_target_output = b.addInstallArtifact(elf2image_artifact, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = t.zigTriple(b.allocator) catch unreachable,
+                },
+            },
+        });
+        release_esp_image_step.dependOn(&elf2image_target_output.step);
     }
 }
 
@@ -632,7 +652,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         },
 
                         .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
-                        .esp => @panic("ESP firmware image is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/146 for more details!"),
+
+                        .esp => |options| @import("tools/esp_image").from_elf(
+                            fw.mb.dep.builder.dependency("tools/esp_image", .{}),
+                            elf_file,
+                            options,
+                        ),
 
                         .custom => |generator| generator.convert(fw.target.dep, elf_file),
                     };

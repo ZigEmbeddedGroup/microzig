@@ -6,7 +6,8 @@ const Module = Build.Module;
 const regz = @import("regz");
 pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
-const FamilyId = uf2.FamilyId;
+pub const FamilyId = uf2.FamilyId;
+const esp_image = @import("esp_image");
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{
@@ -178,7 +179,7 @@ pub const BinaryFormat = union(enum) {
     uf2: uf2.FamilyId,
 
     /// The [firmware format](https://docs.espressif.com/projects/esptool/en/latest/esp32/advanced-topics/firmware-image-format.html) used by the [esptool](https://github.com/espressif/esptool) bootloader.
-    esp,
+    esp: esp_image.Options,
 
     /// Custom option for non-standard formats.
     custom: *Custom,
