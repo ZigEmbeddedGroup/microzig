@@ -38,7 +38,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
-            .cpu_module_file = b.path("src/cpus/esp-riscv-image.zig"),
+            .cpu_module_file = b.path("src/cpus/esp_riscv_image.zig"),
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
                 // external memory, ibus
@@ -67,7 +67,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .os_tag = .freestanding,
                 .abi = .eabi,
             },
-            .cpu_module_file = b.path("src/cpus/esp-riscv-direct-boot.zig"),
+            .cpu_module_file = b.path("src/cpus/esp_riscv_direct_boot.zig"),
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
                 // external memory, ibus

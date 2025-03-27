@@ -2,31 +2,12 @@ const std = @import("std");
 const microzig = @import("microzig");
 const root = @import("root");
 
-pub const interrupt = struct {
-    pub fn globally_enabled() bool {
-        return asm volatile ("csrr %[value], mstatus"
-            : [value] "=r" (-> u32),
-        ) & 0x8 != 0;
-    }
+const common = @import("esp_riscv_common.zig");
 
-    pub fn enable_interrupts() void {
-        asm volatile ("csrs mstatus, 0x8");
-    }
+const interrupt = common.interrupt;
 
-    pub fn disable_interrupts() void {
-        asm volatile ("csrc mstatus, 0x8");
-    }
-};
-
-pub fn wfi() void {
-    asm volatile ("wfi");
-}
-
-pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
-    wfi();
-    asm volatile ("csrs 0x810, 0x1");
-}
+const wfi = common.wfi;
+const wfe = common.wfe;
 
 pub const startup_logic = struct {
     comptime {
