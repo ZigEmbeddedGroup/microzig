@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 
 const gpio = rp2xxx.gpio;
-const i2c_slave = rp2xxx.i2c_slave;
+const i2c = rp2xxx.i2c;
 const time = rp2xxx.time;
 const uart = rp2xxx.uart.instance.num(0);
 
@@ -25,10 +25,11 @@ const pin_config = rp2xxx.pins.GlobalConfiguration{
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    .interrupts = .{ .I2C0_IRQ = .{ .c = i2c_slave.isr1 } },
+    .interrupts = .{ .I2C0_IRQ = .{ .c = i2c.slave.isr1 } },
 };
 
 var i2c_buffer: [10]u8 = undefined;
+var slave_addr: i2c.Address = @enumFromInt(0x42);
 
 pub fn main() !void {
     pin_config.apply();
@@ -42,7 +43,7 @@ pub fn main() !void {
 
     std.log.info("Hello from i2c_slave.", .{});
 
-    i2c_slave.i2c0.open(0x42, &i2c_buffer, i2cRXCallback, i2cTXCallback, null);
+    i2c.slave.i2c0.open(slave_addr, &i2c_buffer, i2cRXCallback, i2cTXCallback, null);
 
     std.log.debug("Setup Complete", .{});
 

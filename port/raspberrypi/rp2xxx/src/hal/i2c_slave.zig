@@ -47,6 +47,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const irq = @import("irq.zig");
+const i2c = @import("i2c.zig");
 
 const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
@@ -97,7 +98,7 @@ pub fn isr1() callconv(.c) void {
 /// * `rxCallback` - The callback to use for handling data received from i2c
 /// * `txCallback` - The callback to use for providing data sent to i2c
 /// * `param` - An optional parameter to pass to the callback
-pub fn open(self: *Self, addr: u7, transfer_buffer: []u8, rxCallback: RXCallback, txCallback: TXCallback, param: ?*anyopaque) void {
+pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: RXCallback, txCallback: TXCallback, param: ?*anyopaque) void {
     self.transfer_buffer = transfer_buffer;
     self.transfer_length = 0;
     self.txCallback = txCallback;
@@ -106,7 +107,7 @@ pub fn open(self: *Self, addr: u7, transfer_buffer: []u8, rxCallback: RXCallback
 
     self.disable();
 
-    self.regs.IC_SAR.write(.{ .IC_SAR = addr, .padding = 0 });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @intFromEnum(addr), .padding = 0 });
 
     self.regs.IC_CON.write(.{
         .MASTER_MODE = .DISABLED,
@@ -172,7 +173,6 @@ pub fn close(self: *Self) void {
     self.disable();
 }
 
-//------------------------------------------------------------------------------
 /// Disable the I2C slave
 inline fn disable(self: *Self) void {
     self.regs.IC_ENABLE.write(.{
@@ -183,7 +183,6 @@ inline fn disable(self: *Self) void {
     });
 }
 
-//------------------------------------------------------------------------------
 /// Enable the I2C slave
 inline fn enable(self: *Self) void {
     self.regs.IC_ENABLE.write(.{
@@ -194,7 +193,6 @@ inline fn enable(self: *Self) void {
     });
 }
 
-//------------------------------------------------------------------------------
 /// Set the I2C slave address
 ///
 /// ## Parameters
@@ -208,7 +206,6 @@ pub fn set_slave_address(self: *Self, addr: u7) void {
     self.enable();
 }
 
-//------------------------------------------------------------------------------
 /// Common ISR for the I2C0 and I2C1 slave driver
 ///
 /// ## Parameters
