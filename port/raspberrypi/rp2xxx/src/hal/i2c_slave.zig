@@ -46,8 +46,8 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const irq = @import("irq.zig");
-const i2c = @import("i2c.zig");
+const irq = microzig.hal.irq;
+const i2c = microzig.hal.i2c;
 
 const mdf = microzig.drivers;
 const peripherals = microzig.chip.peripherals;
