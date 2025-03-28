@@ -46,6 +46,24 @@ jobs:
         run: zig build test
         working-directory: tools/uf2
 
+  unit-test-esp-image:
+    name: Unit Test ESP Image
+    continue-on-error: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Unit Test ESP Image
+        run: zig build test
+        working-directory: tools/esp_image
+
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
     continue-on-error: true

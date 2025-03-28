@@ -2,42 +2,31 @@ const std = @import("std");
 const microzig = @import("microzig");
 const root = @import("root");
 
-pub const StatusRegister = enum(u8) {
-    // machine information
-    mvendorid,
-    marchid,
-    mimpid,
-    mhartid,
-
-    // machine trap setup
-    mstatus,
-    misa,
-    mtvec,
-};
-
-pub inline fn setStatusBit(comptime reg: StatusRegister, bits: u32) void {
-    asm volatile ("csrrs zero, " ++ @tagName(reg) ++ ", %[value]"
-        :
-        : [value] "r" (bits),
-    );
-}
-
-pub inline fn clearStatusBit(comptime reg: StatusRegister, bits: u32) void {
-    asm volatile ("csrrc zero, " ++ @tagName(reg) ++ ", %[value]"
-        :
-        : [value] "r" (bits),
-    );
-}
-
 pub const interrupt = struct {
-    pub inline fn disable_interrupts() void {
-        clearStatusBit(.mstatus, 0x08);
+    pub fn globally_enabled() bool {
+        return asm volatile ("csrr %[value], mstatus"
+            : [value] "=r" (-> u32),
+        ) & 0x8 != 0;
     }
 
-    pub inline fn enable_interrupts() void {
-        setStatusBit(.mstatus, 0x08);
+    pub fn enable_interrupts() void {
+        asm volatile ("csrs mstatus, 0x8");
+    }
+
+    pub fn disable_interrupts() void {
+        asm volatile ("csrc mstatus, 0x8");
     }
 };
+
+pub fn wfi() void {
+    asm volatile ("wfi");
+}
+
+pub fn wfe() void {
+    asm volatile ("csrs 0x810, 0x1");
+    wfi();
+    asm volatile ("csrs 0x810, 0x1");
+}
 
 pub const startup_logic = struct {
     comptime {
@@ -64,7 +53,7 @@ pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
     pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
-        microzig.cpu.interrupt.disable_interrupts();
+        interrupt.disable_interrupts();
         asm volatile ("mv sp, %[eos]"
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
@@ -75,38 +64,11 @@ pub const startup_logic = struct {
             \\la gp, __global_pointer$
             \\.option pop
         );
-        microzig.cpu.setStatusBit(.mtvec, microzig.config.end_of_stack);
         root.initialize_system_memories();
         microzig_main();
     }
 
-    export fn _rv32_trap() callconv(.c) noreturn {
-        while (true) {}
-    }
-
-    const vector_table = [_]fn () callconv(.c) noreturn{
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-        _rv32_trap,
-    };
+    // TODO: implement interrupts
 };
 
 pub fn export_startup_logic() void {
