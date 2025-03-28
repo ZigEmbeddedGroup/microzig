@@ -34,13 +34,13 @@
 //! callback for a transaction, and the `gen_call` parameter will be set to
 //! `true` for a general call and `false` if the transaction was addressed to us.
 //!
-//! ## Master Write / Slave Read
+//! ## Master Read / Slave Write
 //!
 //! If the master requests data from us we call the tx_callback with the `first`
 //! parameter set to `true`.  The user should add data to `data` and return the
 //! number of bytes added.
 //!
-//! If the master request more data, we call the tx_callback with the `first`
+//! If the master requests more data, we call the tx_callback with the `first`
 //! parameter set to `false`.  The user can return 0 if no more data is available.
 //!
 
