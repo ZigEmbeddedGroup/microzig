@@ -38,11 +38,9 @@ pub fn build(b: *std.Build) void {
 
     for (available_examples) |example| {
         // If we specify example, only select the ones that match
-        if (maybe_example) |selected_example| {
-            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example)) {
+        if (maybe_example) |selected_example|
+            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
                 continue;
-            }
-        }
 
         // `add_firmware` basically works like addExecutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
