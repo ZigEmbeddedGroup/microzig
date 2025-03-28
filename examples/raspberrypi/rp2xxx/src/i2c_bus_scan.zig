@@ -31,8 +31,8 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    const scl_pin = gpio.num(4);
-    const sda_pin = gpio.num(5);
+    const sda_pin = gpio.num(4);
+    const scl_pin = gpio.num(5);
     inline for (&.{ scl_pin, sda_pin }) |pin| {
         pin.set_slew_rate(.slow);
         pin.set_schmitt_trigger(.enabled);
