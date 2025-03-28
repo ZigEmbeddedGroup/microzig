@@ -36,7 +36,7 @@ pub fn main() !void {
 
     const led_r_pin = gpio.instance.GPIO3;
     const led_g_pin = gpio.instance.GPIO4;
-    const led_b_pin = gpio.instance.GPIO8;
+    const led_b_pin = gpio.instance.GPIO5;
 
     led_r_pin.apply(pin_config);
     led_g_pin.apply(pin_config);
