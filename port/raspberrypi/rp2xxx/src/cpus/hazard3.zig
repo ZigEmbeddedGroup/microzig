@@ -227,7 +227,7 @@ pub const startup_logic = struct {
         );
     }
 
-    pub export fn machine_external_interrupt() callconv(riscv_calling_convention) void {
+    fn machine_external_interrupt() callconv(riscv_calling_convention) void {
         _ = struct {
             fn external_unhandled_interrupt() callconv(.c) void {
                 @panic("unhandled external interrupt");

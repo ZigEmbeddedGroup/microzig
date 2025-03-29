@@ -4,10 +4,14 @@ const root = @import("root");
 
 const common = @import("esp_riscv_common.zig");
 
-const interrupt = common.interrupt;
+pub const Interrupt = common.Interrupt;
+pub const InterruptHandler = common.InterruptHandler;
+pub const InterruptOptions = common.InterruptOptions;
 
-const wfi = common.wfi;
-const wfe = common.wfe;
+pub const interrupt = common.interrupt;
+
+pub const wfi = common.wfi;
+pub const wfe = common.wfe;
 
 pub const startup_logic = struct {
     comptime {
@@ -45,15 +49,18 @@ pub const startup_logic = struct {
             \\la gp, __global_pointer$
             \\.option pop
         );
+
+        @export(&common._vector_table, .{ .name = "_vector_table" });
+        asm volatile (
+            \\la a0, _vector_table
+            \\csrw mtvec, a0
+        );
+
         root.initialize_system_memories();
         microzig_main();
     }
-
-    // TODO: implement interrupts
 };
 
 pub fn export_startup_logic() void {
-    @export(&startup_logic._start, .{
-        .name = "_start",
-    });
+    @export(&startup_logic._start, .{ .name = "_start" });
 }
