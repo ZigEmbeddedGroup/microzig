@@ -8,7 +8,6 @@ pub const rom = @import("hal/rom.zig");
 pub const clocks = @import("hal/clocks.zig");
 
 pub fn init() void {
-    const cpu_clk_freq = 80_000_000;
-    const config: clocks.Config = .init_from_cpu_frequency(cpu_clk_freq);
+    const config: clocks.Config = .init_from_cpu_clock_source(.{ .pll_clk = .@"80mhz" });
     config.apply();
 }

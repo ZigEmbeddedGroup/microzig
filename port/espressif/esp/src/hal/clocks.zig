@@ -96,6 +96,9 @@ pub const Config = struct {
 
     /// Applies the current clock configuration.
     pub fn apply(config: Config) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
         switch (config.cpu_clk_source) {
             .pll_clk => |pll_freq| {
                 {
@@ -202,12 +205,7 @@ pub const Config = struct {
             (((config.apb_clk_freq >> 12) & @as(u32, std.math.maxInt(u16))) << 16);
         RTC_CNTL.STORE5.modify(.{ .RTC_SCRATCH5 = value });
 
-        {
-            const cs = microzig.interrupt.enter_critical_section();
-            defer cs.leave();
-
-            maybe_active = config;
-        }
+        maybe_active = config;
     }
 };
 
