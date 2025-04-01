@@ -34,6 +34,11 @@ pub const input = struct {
     };
 };
 
+pub const sensor = struct {
+    const _TMP117 = @import("sensor/TMP117.zig");
+    pub const TMP117 = _TMP117.TMP117;
+};
+
 pub const stepper = @import("stepper/stepper.zig");
 
 pub const IO_expander = struct {
