@@ -141,18 +141,18 @@ pub const Spinlock = struct {
 
     /// Lock the spinlock.  If the spinlock is already locked, busy wait until
     /// it is release by the other core.
-    pub fn lock(self: *Spinlock) void {
+    pub fn lock(self: Spinlock) void {
         while (self.lock_reg.* == 0) {}
     }
 
     /// Returns true if the spinlock is locked
-    pub fn isLocked(self: *Spinlock) bool {
+    pub fn isLocked(self: Spinlock) bool {
         const bit = @as(u32, 1) << self.number();
         return (Spinlock.lockStatus() & bit) != 0;
     }
 
     /// Unlock the spinlock
-    pub fn unlock(self: *Spinlock) void {
+    pub fn unlock(self: Spinlock) void {
         self.lock_reg.* = 0;
     }
 
