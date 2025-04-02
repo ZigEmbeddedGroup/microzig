@@ -108,6 +108,25 @@ pub const TMP117 = struct {
         return Self.c_to_f(temp_c);
     }
 
+    pub fn unlock_eeprom(self: *const Self) !void {
+        try self.write_raw(Self.register.EEPROM_UL, 0xFFFF);
+    }
+
+    pub fn is_eeprom_busy(self: *const Self) !bool {
+        return (try self.read_configuration()).EEPROM_BUSY;
+    }
+
+    pub fn write_eeprom(self: *const Self, index: u8, v: u16) !void {
+        if (index < 1 or index > 3) return error.BadIndex;
+        const reg = switch (index) {
+            1 => Self.register.EEPROM1,
+            2 => Self.register.EEPROM2,
+            3 => Self.register.EEPROM3,
+            else => unreachable,
+        };
+        return self.write_raw(reg, v);
+    }
+
     pub fn read_eeprom(self: *const Self, index: u8) !u16 {
         if (index < 1 or index > 3) return error.BadIndex;
         const reg = switch (index) {
