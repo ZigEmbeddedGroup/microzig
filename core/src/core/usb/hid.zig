@@ -263,6 +263,9 @@ pub const LocalItem = enum(u4) {
 };
 
 pub const UsageTable = struct {
+    const desktop: [1]u8 = "\x01".*;
+    const keyboard: [1]u8 = "\x07".*;
+    const led: [1]u8 = "\x08".*;
     const fido: [2]u8 = "\xD0\xF1".*;
     const vendor: [2]u8 = "\x00\xFF".*;
 };
@@ -271,6 +274,10 @@ pub const FidoAllianceUsage = struct {
     const u2fhid: [1]u8 = "\x01".*;
     const data_in: [1]u8 = "\x20".*;
     const data_out: [1]u8 = "\x21".*;
+};
+
+pub const DesktopUsage = struct {
+    const keyboard: [1]u8 = "\x06".*;
 };
 
 const HID_DATA: u8 = 0 << 0;
@@ -373,6 +380,24 @@ pub fn hid_usage_page(comptime n: u2, usage: [n]u8) [n + 1]u8 {
     );
 }
 
+pub fn hid_usage_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
+    return hid_report_item(
+        n,
+        @intFromEnum(ReportItemTypes.Local),
+        @intFromEnum(LocalItem.UsageMin),
+        data,
+    );
+}
+
+pub fn hid_usage_max(comptime n: u2, data: [n]u8) [n + 1]u8 {
+    return hid_report_item(
+        n,
+        @intFromEnum(ReportItemTypes.Local),
+        @intFromEnum(LocalItem.UsageMax),
+        data,
+    );
+}
+
 pub fn hid_logical_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
@@ -462,6 +487,48 @@ pub const ReportDescriptorGenericInOut = hid_usage_page(2, UsageTable.vendor) //
 ++ hid_report_size(1, "\x08".*) //
 ++ hid_report_count(1, "\x40".*) //
 ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+// End
+++ hid_collection_end();
+
+/// Common keyboard report format, conforming to the boot protocol.
+/// See Appendix B.1 of the USB HID specification:
+/// https://usb.org/sites/default/files/hid1_11.pdf
+pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
+++ hid_usage(1, DesktopUsage.keyboard) //
+++ hid_collection(.Application) //
+// Input: modifier key bitmap
+++ hid_usage_page(1, UsageTable.keyboard) //
+++ hid_usage_min(1, "\xe0".*) //
+++ hid_usage_max(1, "\xe7".*) //
+++ hid_logical_min(1, "\x00".*) //
+++ hid_logical_max(1, "\x01".*) //
+++ hid_report_count(1, "\x08".*) //
+++ hid_report_size(1, "\x01".*) //
+++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+// Reserved 8 bits
+++ hid_report_count(1, "\x01".*) //
+++ hid_report_size(1, "\x08".*) //
+++ hid_input(HID_CONSTANT) //
+// Output: indicator LEDs
+++ hid_usage_page(1, UsageTable.led) //
+++ hid_usage_min(1, "\x01".*) //
+++ hid_usage_max(1, "\x05".*) //
+++ hid_report_count(1, "\x05".*) //
+++ hid_report_size(1, "\x01".*) //
+++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+// Padding
+++ hid_report_count(1, "\x01".*) //
+++ hid_report_size(1, "\x03".*) //
+++ hid_output(HID_CONSTANT) //
+// Input: up to 6 pressed key codes
+++ hid_usage_page(1, UsageTable.keyboard) //
+++ hid_usage_min(1, "\x00".*) //
+++ hid_usage_max(2, "\xff\x00".*) //
+++ hid_logical_min(1, "\x00".*) //
+++ hid_logical_max(2, "\xff\x00".*) //
+++ hid_report_count(1, "\x06".*) //
+++ hid_report_size(1, "\x08".*) //
+++ hid_output(HID_DATA | HID_ARRAY | HID_ABSOLUTE) //
 // End
 ++ hid_collection_end();
 
