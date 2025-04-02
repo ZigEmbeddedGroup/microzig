@@ -11,6 +11,7 @@
         "display",
         "input",
         "io_expander",
+        "sensor",
         "stepper",
     },
 }
