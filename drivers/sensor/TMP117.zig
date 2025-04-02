@@ -1,16 +1,17 @@
 //!
-//! Generic driver for the Texas Instruments TMP117 Temperature Sensor
+//! Generic driver for the Texas Instruments TMP117 Temperature Sensor.
+//! Works with the TPM116 sensor as well.
 //!
 //! Datasheet:
 //! * TMP117: https://www.ti.com/lit/ds/symlink/tmp117.pdf
 //!
 const std = @import("std");
 const mdf = @import("../framework.zig");
-const Datagram_Device = mdf.base.Datagram_Device;
 
-// TMP116 is the same, just less accurate. Exact same interface
 pub const TMP117 = struct {
     const Self = @This();
+    dev: mdf.base.Datagram_Device,
+
     const register = enum(u8) {
         temp_result = 0x00,
         configuration = 0x01,
@@ -19,13 +20,10 @@ pub const TMP117 = struct {
         EEPROM_UL = 0x04,
         EEPROM1 = 0x05,
         EEPROM2 = 0x06,
-        // Used to add/subtract from read temperature for calibration
         temp_offset = 0x07,
         EEPROM3 = 0x08,
         device_id = 0x0F,
     };
-
-    channel: Datagram_Device,
 
     pub const Configuration = packed struct {
         reserved0: u1 = 0,
@@ -48,18 +46,16 @@ pub const TMP117 = struct {
     };
 
     pub fn init(
-        // TODO: Does channel make sense?
-        channel: mdf.base.Datagram_Device,
+        dev: mdf.base.Datagram_Device,
     ) !Self {
-        return Self{ .channel = channel };
+        return Self{ .dev = dev };
     }
 
     pub inline fn read_raw(self: *const Self, reg: Self.register) !u16 {
-        try self.channel.write(&[_]u8{@intFromEnum(reg)});
+        try self.dev.write(&[_]u8{@intFromEnum(reg)});
         var buf: [2]u8 = undefined;
-        const size = try self.channel.read(&buf);
-        // TODO: Better error name
-        if (size != 2) return error.BadRead;
+        const size = try self.dev.read(&buf);
+        if (size != 2) return error.ReadError;
         return std.mem.readInt(u16, &buf, .big);
     }
 
@@ -67,10 +63,9 @@ pub const TMP117 = struct {
         // TODO endian-aware int to slice
         var buf: [2]u8 = undefined;
         std.mem.writeInt(u16, &buf, v, .big);
-        return self.channel.writev(&[_][]const u8{ &.{@intFromEnum(reg)}, &buf });
+        return self.dev.writev(&[_][]const u8{ &.{@intFromEnum(reg)}, &buf });
     }
 
-    // TODO: Nuke?
     pub fn configure_raw(self: *const Self, config: u16) !void {
         return self.write_raw(Self.register.configuration, config);
     }
