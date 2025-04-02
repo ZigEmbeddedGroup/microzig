@@ -45,9 +45,7 @@ pub const TMP117 = struct {
         revision: u4,
     };
 
-    pub fn init(
-        dev: mdf.base.Datagram_Device,
-    ) !Self {
+    pub fn init(dev: mdf.base.Datagram_Device) !Self {
         return Self{ .dev = dev };
     }
 
