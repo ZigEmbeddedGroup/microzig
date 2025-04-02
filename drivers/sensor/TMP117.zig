@@ -108,6 +108,17 @@ pub const TMP117 = struct {
         return Self.c_to_f(temp_c);
     }
 
+    pub fn read_eeprom(self: *const Self, index: u8) !u16 {
+        if (index < 1 or index > 3) return error.BadIndex;
+        const reg = switch (index) {
+            1 => Self.register.EEPROM1,
+            2 => Self.register.EEPROM2,
+            3 => Self.register.EEPROM3,
+            else => unreachable,
+        };
+        return self.read_raw(reg);
+    }
+
     pub fn set_temperature_offset(self: *const Self, degrees_c: f32) !void {
         if (degrees_c > 256 or degrees_c < -256)
             return error.TemperatureOutOfRange;
