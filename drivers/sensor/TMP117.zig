@@ -87,14 +87,14 @@ pub const TMP117 = struct {
     pub fn set_high_limit(self: *const Self, temp_c: f32) !void {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
-        const limit = try from_temp(temp_c);
+        const limit = try to_temp_units(temp_c);
         try self.write_raw(Self.register.thigh_limit, limit);
     }
 
     pub fn set_low_limit(self: *const Self, temp_c: f32) !void {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
-        const limit = try from_temp(temp_c);
+        const limit = try to_temp_units(temp_c);
         try self.write_raw(Self.register.tlow_limit, limit);
     }
 
@@ -108,12 +108,19 @@ pub const TMP117 = struct {
         return Self.c_to_f(temp_c);
     }
 
+    pub fn set_temperature_offset(self: *const Self, degrees_c: f32) !void {
+        if (degrees_c > 256 or degrees_c < -256)
+            return error.TemperatureOutOfRange;
+        const limit = try to_temp_units(degrees_c);
+        try self.write_raw(Self.register.temp_offset, limit);
+    }
+
     pub fn read_device_id(self: *const Self) !DeviceId {
         const did = try self.read_raw(Self.register.device_id);
         return @bitCast(did);
     }
 
-    fn from_temp(temp_c: f32) !u16 {
+    fn to_temp_units(temp_c: f32) !u16 {
         return @intFromFloat(temp_c / 7.8125E-3);
     }
 
