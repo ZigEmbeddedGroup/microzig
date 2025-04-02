@@ -58,10 +58,9 @@ pub const TMP117 = struct {
     }
 
     pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
-        // TODO endian-aware int to slice
-        var buf: [2]u8 = undefined;
-        std.mem.writeInt(u16, &buf, v, .big);
-        return self.dev.writev(&[_][]const u8{ &.{@intFromEnum(reg)}, &buf });
+        return self.dev.write(
+            &([1]u8{@intFromEnum(reg)} ++ @as([2]u8, @bitCast(std.mem.nativeToBig(u16, v)))),
+        );
     }
 
     pub fn configure_raw(self: *const Self, config: u16) !void {
