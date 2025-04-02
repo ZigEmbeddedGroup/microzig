@@ -54,7 +54,7 @@ pub const TMP117 = struct {
         return Self{ .channel = channel };
     }
 
-    pub fn read_raw(self: *const Self, reg: Self.register) !u16 {
+    pub inline fn read_raw(self: *const Self, reg: Self.register) !u16 {
         try self.channel.write(&[_]u8{@intFromEnum(reg)});
         var buf: [2]u8 = undefined;
         const size = try self.channel.read(&buf);
@@ -63,11 +63,11 @@ pub const TMP117 = struct {
         return std.mem.readInt(u16, &buf, .big);
     }
 
-    pub fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
+    pub inline fn write_raw(self: *const Self, reg: Self.register, v: u16) !void {
         // TODO endian-aware int to slice
         var buf: [2]u8 = undefined;
         std.mem.writeInt(u16, &buf, v, .big);
-        try self.channel.writev(&[_][]const u8{ &.{@intFromEnum(reg)}, &buf });
+        return self.channel.writev(&[_][]const u8{ &.{@intFromEnum(reg)}, &buf });
     }
 
     // TODO: Nuke?
@@ -76,7 +76,7 @@ pub const TMP117 = struct {
     }
 
     pub fn write_configuration(self: *const Self, config: Configuration) !void {
-        try self.write_raw(Self.register.configuration, @bitCast(config));
+        return self.write_raw(Self.register.configuration, @bitCast(config));
     }
 
     pub fn read_configuration(self: *const Self) !Configuration {
@@ -87,14 +87,14 @@ pub const TMP117 = struct {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
         const limit = try to_temp_units(temp_c);
-        try self.write_raw(Self.register.thigh_limit, limit);
+        return self.write_raw(Self.register.thigh_limit, limit);
     }
 
     pub fn set_low_limit(self: *const Self, temp_c: f32) !void {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
         const limit = try to_temp_units(temp_c);
-        try self.write_raw(Self.register.tlow_limit, limit);
+        return self.write_raw(Self.register.tlow_limit, limit);
     }
 
     pub fn read_temperature(self: *const Self) !f32 {
@@ -107,7 +107,7 @@ pub const TMP117 = struct {
     }
 
     pub fn unlock_eeprom(self: *const Self) !void {
-        try self.write_raw(Self.register.EEPROM_UL, 0xFFFF);
+        return self.write_raw(Self.register.EEPROM_UL, 0xFFFF);
     }
 
     pub fn is_eeprom_busy(self: *const Self) !bool {
@@ -115,23 +115,21 @@ pub const TMP117 = struct {
     }
 
     pub fn write_eeprom(self: *const Self, index: u8, v: u16) !void {
-        if (index < 1 or index > 3) return error.BadIndex;
         const reg = switch (index) {
             1 => Self.register.EEPROM1,
             2 => Self.register.EEPROM2,
             3 => Self.register.EEPROM3,
-            else => unreachable,
+            else => return error.BadIndex,
         };
         return self.write_raw(reg, v);
     }
 
     pub fn read_eeprom(self: *const Self, index: u8) !u16 {
-        if (index < 1 or index > 3) return error.BadIndex;
         const reg = switch (index) {
             1 => Self.register.EEPROM1,
             2 => Self.register.EEPROM2,
             3 => Self.register.EEPROM3,
-            else => unreachable,
+            else => return error.BadIndex,
         };
         return self.read_raw(reg);
     }
@@ -139,7 +137,7 @@ pub const TMP117 = struct {
     pub fn set_temperature_offset(self: *const Self, degrees_c: f32) !void {
         if (degrees_c > 256 or degrees_c < -256)
             return error.TemperatureOutOfRange;
-        try self.write_raw(Self.register.temp_offset, try to_temp_units(degrees_c));
+        return self.write_raw(Self.register.temp_offset, try to_temp_units(degrees_c));
     }
 
     pub fn read_device_id(self: *const Self) !DeviceId {
