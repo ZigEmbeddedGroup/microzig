@@ -80,14 +80,14 @@ pub const TMP117 = struct {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
         const limit = try to_temp_units(temp_c);
-        return self.write_raw(Self.register.thigh_limit, limit);
+        return self.write_raw(Self.register.thigh_limit, @bitCast(limit));
     }
 
     pub fn set_low_limit(self: *const Self, temp_c: f32) !void {
         if (temp_c > 256 or temp_c < -256)
             return error.TemperatureOutOfRange;
         const limit = try to_temp_units(temp_c);
-        return self.write_raw(Self.register.tlow_limit, limit);
+        return self.write_raw(Self.register.tlow_limit, @bitCast(limit));
     }
 
     pub fn read_temperature(self: *const Self) !f32 {
@@ -137,7 +137,7 @@ pub const TMP117 = struct {
         return @bitCast(try self.read_raw(Self.register.device_id));
     }
 
-    fn to_temp_units(temp_c: f32) !u16 {
+    fn to_temp_units(temp_c: f32) !i16 {
         return @intFromFloat(temp_c / 7.8125E-3);
     }
 
@@ -149,3 +149,21 @@ pub const TMP117 = struct {
         return (temp_c * 9 / 5) + 32;
     }
 };
+
+test "temp conversions C to F" {
+    try std.testing.expectEqual(-40, TMP117.c_to_f(-40));
+    try std.testing.expectEqual(32, TMP117.c_to_f(0));
+    try std.testing.expectEqual(86, TMP117.c_to_f(30));
+}
+
+test "unit conversions to temp" {
+    try std.testing.expectEqual(0, TMP117.to_temp(0));
+    try std.testing.expectEqual(7.8125E-3, TMP117.to_temp(1));
+    try std.testing.expectEqual(-7.8125E-3, TMP117.to_temp(-1));
+}
+
+test "temp conversions to units" {
+    try std.testing.expectEqual(0, TMP117.to_temp_units(0));
+    try std.testing.expectEqual(32640, TMP117.to_temp_units(255));
+    try std.testing.expectEqual(-32640, TMP117.to_temp_units(-255));
+}

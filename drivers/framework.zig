@@ -186,7 +186,7 @@ test {
     _ = input.debounced_button;
     _ = input.rotary_encoder;
 
-    _ = sensor;
+    _ = sensor.TMP117;
 
     _ = stepper;
 
