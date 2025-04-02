@@ -131,7 +131,7 @@ pub const Spinlock = struct {
     /// Parameters:
     ///   lock_num - the index of the hardware spinlock to use
     pub fn init(lock_num: u5) Spinlock {
-        return .{ .lock_reg = @ptrFromInt(spinlock_base + 4 * lock_num) };
+        return .{ .lock_reg = @ptrFromInt(spinlock_base + 4 * @as(usize, @intCast(lock_num))) };
     }
 
     /// Returns the index of the spinlock.
