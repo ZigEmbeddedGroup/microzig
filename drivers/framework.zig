@@ -35,8 +35,7 @@ pub const input = struct {
 };
 
 pub const sensor = struct {
-    const _TMP117 = @import("sensor/TMP117.zig");
-    pub const TMP117 = _TMP117.TMP117;
+    pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
 };
 
 pub const stepper = @import("stepper/stepper.zig");
@@ -186,6 +185,8 @@ test {
     _ = input.keyboard_matrix;
     _ = input.debounced_button;
     _ = input.rotary_encoder;
+
+    _ = sensor;
 
     _ = stepper;
 
