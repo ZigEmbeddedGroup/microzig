@@ -102,8 +102,8 @@ pub const TMP117 = struct {
     }
 
     pub const DeviceId = packed struct {
-        revision: u4,
         device_id: u12,
+        revision: u4,
     };
 
     pub fn read_device_id(self: *const Self) !DeviceId {
