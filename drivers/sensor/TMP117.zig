@@ -80,8 +80,7 @@ pub const TMP117 = struct {
     }
 
     pub fn read_configuration(self: *const Self) !Configuration {
-        const v = try self.read_raw(Self.register.configuration);
-        return @bitCast(v);
+        return @bitCast(try self.read_raw(Self.register.configuration));
     }
 
     pub fn set_high_limit(self: *const Self, temp_c: f32) !void {
@@ -104,8 +103,7 @@ pub const TMP117 = struct {
     }
 
     pub fn read_temperature_f(self: *const Self) !f32 {
-        const temp_c = try self.read_temperature();
-        return Self.c_to_f(temp_c);
+        return Self.c_to_f(try self.read_temperature());
     }
 
     pub fn unlock_eeprom(self: *const Self) !void {
@@ -141,13 +139,11 @@ pub const TMP117 = struct {
     pub fn set_temperature_offset(self: *const Self, degrees_c: f32) !void {
         if (degrees_c > 256 or degrees_c < -256)
             return error.TemperatureOutOfRange;
-        const limit = try to_temp_units(degrees_c);
-        try self.write_raw(Self.register.temp_offset, limit);
+        try self.write_raw(Self.register.temp_offset, try to_temp_units(degrees_c));
     }
 
     pub fn read_device_id(self: *const Self) !DeviceId {
-        const did = try self.read_raw(Self.register.device_id);
-        return @bitCast(did);
+        return @bitCast(try self.read_raw(Self.register.device_id));
     }
 
     fn to_temp_units(temp_c: f32) !u16 {
