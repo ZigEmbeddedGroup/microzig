@@ -1,6 +1,6 @@
 //!
 //! Generic driver for the Texas Instruments TMP117 Temperature Sensor.
-//! Works with the TPM116 sensor as well.
+//! Works with the TMP116 sensor as well.
 //!
 //! Datasheet:
 //! * TMP117: https://www.ti.com/lit/ds/symlink/tmp117.pdf
