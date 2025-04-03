@@ -56,6 +56,10 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 
+    // Copy the vector table to RAM
+
+    irq.copyVtor();
+
     // Clear all spinlocks as they may be left in a locked state following a
     // soft reset
 
