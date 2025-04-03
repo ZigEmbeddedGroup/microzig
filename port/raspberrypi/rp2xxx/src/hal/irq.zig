@@ -1,12 +1,45 @@
-/// Implements the ARM processor level IRQ enable/disable functionality on the RP2040
+/// Implements the ARM processor level IRQ enable/disable functionality and
+/// runtime setting of interrupt handlers on the RP2xxx.
 ///
 /// Note: Interrupts generally also have to be enabled at the peripheral level for specific peripheral functions,
 /// this is only to control the NVIC enable/disable of the actual processor.
+const std = @import("std");
 const microzig = @import("microzig");
+const root = @import("root");
 const rp2xxx = microzig.hal;
 const chip = rp2xxx.compatibility.chip;
 const PPB = microzig.chip.peripherals.PPB;
 
+const microzig_options = if (@hasDecl(root, "microzig_options")) root.microzig_options else microzig.Options{};
+
+/// Supported Exception Vectors
+pub const Exception = switch (chip) {
+    .RP2040 => enum(u4) {
+        InitialStackPointer = 0,
+        Reset = 1,
+        NMI = 2,
+        Hardfault = 3,
+        SVCall = 11,
+        PendSV = 14,
+        SysTick = 15,
+    },
+    .RP2350 => enum(u4) {
+        InitialStackPointer = 0,
+        Reset = 1,
+        NMI = 2,
+        Hardfault = 3,
+        MemManageFault = 4,
+        Busfault = 5,
+        Usagefault = 6,
+        Securefault = 7,
+        SVCall = 11,
+        DebugMonitor = 12,
+        PendSV = 14,
+        SysTick = 15,
+    },
+};
+
+/// Supported Interrupts
 pub const Mask = switch (chip) {
     // RP2040 only has a single set of registers for interrupts
     .RP2040 => enum(u5) {
@@ -138,4 +171,59 @@ pub fn disable(mask: Mask) void {
             NVIC_ICER_REGs[reg_index] = @as(u32, 1) << @as(u5, @truncate(@intFromEnum(mask)));
         },
     }
+}
+
+const VectorFunction = extern union {
+    c: *const fn () callconv(.c) void,
+    naked: *const fn () callconv(.naked) noreturn,
+};
+
+const nvic_interrupt_count = switch (chip) {
+    .RP2040 => 25,
+    .RP2350 => 51,
+};
+
+pub var ram_vectors: [16 + nvic_interrupt_count]VectorFunction align(256) = undefined;
+
+/// Copy the vector table from flash to RAM
+pub fn copyVectorTable() void {
+    const src: [*]VectorFunction = @ptrFromInt(PPB.VTOR.raw);
+    std.mem.copyForwards(VectorFunction, &ram_vectors, src[0 .. 16 + nvic_interrupt_count]);
+    PPB.VTOR.raw = @intFromPtr(&ram_vectors);
+}
+
+/// Set the handler for a specific exception
+/// Parameters:
+///   exception - The exception to set the handler for
+///   handler - The handler to set
+/// Returns:
+///   The previous handler
+pub fn setExceptionHandler(exception: Exception, handler: VectorFunction) VectorFunction {
+    if (!@hasField(@TypeOf(microzig_options.platform), "ram_vectors") or !microzig_options.platform.ram_vectors) {
+        @compileError("RAM vectors are disabled. Try adding .platform = .{ .ram_vectors = true } to your microzig_options");
+    }
+
+    if (exception == .InitialStackPointer) @panic("InitialStackPointer cannot be set");
+    // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[@intFromEnum(exception)], .Xchg, handler, .Acquire);
+    const old = ram_vectors[@intFromEnum(exception)];
+    ram_vectors[@intFromEnum(exception)] = handler;
+    return old;
+}
+
+/// Set the handler for a specific interrupt
+/// Parameters:
+///   interrupt - The interrupt to set the handler for
+///   handler - The handler to set
+/// Returns:
+///   The previous handler
+pub fn setInterruptHandler(interrupt: Mask, handler: VectorFunction) VectorFunction {
+    if (!@hasField(@TypeOf(microzig_options.platform), "ram_vectors") or !microzig_options.platform.ram_vectors) {
+        @compileError("RAM vectors are disabled. Try adding .platform = .{ .ram_vectors = true } to your microzig_options");
+    }
+
+    const index = @as(usize, @intFromEnum(interrupt)) + 16;
+    // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[index], .Xchg, handler, .Acquire);
+    const old = ram_vectors[index];
+    ram_vectors[index] = handler;
+    return old;
 }
