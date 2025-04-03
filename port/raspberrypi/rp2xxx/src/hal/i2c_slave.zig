@@ -219,6 +219,25 @@ fn isr_common(self: *Self) void {
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
     _ = self.regs.IC_CLR_INTR.read();
 
+    // --- We have a RESTART or STOP ---
+    // Send any received data we have buffered to the callback and initialize
+    // the read and write modes and the transfer buffer.
+
+    if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
+        if (self.data_received) {
+            self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, true, self.gen_call, self.param);
+
+            self.data_received = false;
+        }
+
+        self.first_call = true;
+        self.gen_call = false;
+        self.tx_end = false;
+
+        self.transfer_index = 0;
+        self.transfer_length = 0;
+    }
+
     // --- We need to transmit data (Read Request) ---
     // Move data from the transfer buffer to the TX FIFO until all data is sent
     // or the TX FIFO is full.  Call the callback as needed to get data from
@@ -289,24 +308,5 @@ fn isr_common(self: *Self) void {
             self.transfer_index += 1;
             self.data_received = true;
         }
-    }
-
-    // --- We have a RESTART or STOP ---
-    // Send any received data we have buffered to the callback and initialize
-    // the read and write modes and the transfer buffer.
-
-    if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
-        if (self.data_received) {
-            self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, true, self.gen_call, self.param);
-
-            self.data_received = false;
-        }
-
-        self.first_call = true;
-        self.gen_call = false;
-        self.tx_end = false;
-
-        self.transfer_index = 0;
-        self.transfer_length = 0;
     }
 }
