@@ -170,20 +170,23 @@ pub fn disable(mask: Mask) void {
     }
 }
 
-const VtorFunction = *const fn () callconv(.C) void;
+const VectorFunction = extern union {
+    c: *const fn () callconv(.c) void,
+    naked: *const fn () callconv(.naked) noreturn,
+};
 
 const nvic_interrupt_count = switch (chip) {
     .RP2040 => 25,
     .RP2350 => 51,
 };
 
-pub var ram_vtor: [16 + nvic_interrupt_count]VtorFunction align(256) = undefined;
+pub var ram_vectors: [16 + nvic_interrupt_count]VectorFunction align(256) = undefined;
 
 /// Copy the vector table from flash to RAM
 pub fn copyVectorTable() void {
-    const src: [*]VtorFunction = @ptrFromInt(PPB.VTOR.raw);
-    std.mem.copyForwards(VtorFunction, &ram_vtor, src[0 .. 16 + nvic_interrupt_count]);
-    PPB.VTOR.raw = @intFromPtr(&ram_vtor);
+    const src: [*]VectorFunction = @ptrFromInt(PPB.VTOR.raw);
+    std.mem.copyForwards(VectorFunction, &ram_vectors, src[0 .. 16 + nvic_interrupt_count]);
+    PPB.VTOR.raw = @intFromPtr(&ram_vectors);
 }
 
 /// Set the handler for a specific exception
@@ -192,11 +195,11 @@ pub fn copyVectorTable() void {
 ///   handler - The handler to set
 /// Returns:
 ///   The previous handler
-pub fn setExceptionHandler(exception: Exception, handler: VtorFunction) VtorFunction {
+pub fn setExceptionHandler(exception: Exception, handler: VectorFunction) VectorFunction {
     if (exception == .InitialStackPointer) @panic("InitialStackPointer cannot be set");
-    // TODO: when atomics work -> return @atomicRmw(?VtorFunction, &ram_vtor[@intFromEnum(exception)], .Xchg, handler, .Acquire);
-    const old = ram_vtor[@intFromEnum(exception)];
-    ram_vtor[@intFromEnum(exception)] = handler;
+    // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[@intFromEnum(exception)], .Xchg, handler, .Acquire);
+    const old = ram_vectors[@intFromEnum(exception)];
+    ram_vectors[@intFromEnum(exception)] = handler;
     return old;
 }
 
@@ -206,11 +209,11 @@ pub fn setExceptionHandler(exception: Exception, handler: VtorFunction) VtorFunc
 ///   handler - The handler to set
 /// Returns:
 ///   The previous handler
-pub fn setInterruptHandler(interrupt: Mask, handler: VtorFunction) VtorFunction {
+pub fn setInterruptHandler(interrupt: Mask, handler: VectorFunction) VectorFunction {
     const index = @as(usize, @intFromEnum(interrupt)) + 16;
-    // TODO: when atomics work -> return @atomicRmw(?VtorFunction, &ram_vtor[index], .Xchg, handler, .Acquire);
-    const old = ram_vtor[index];
-    ram_vtor[index] = handler;
+    // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[index], .Xchg, handler, .Acquire);
+    const old = ram_vectors[index];
+    ram_vectors[index] = handler;
     return old;
 
 }
