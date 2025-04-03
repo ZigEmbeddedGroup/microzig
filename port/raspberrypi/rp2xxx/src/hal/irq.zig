@@ -5,9 +5,12 @@
 /// this is only to control the NVIC enable/disable of the actual processor.
 const std = @import("std");
 const microzig = @import("microzig");
+const root = @import("root");
 const rp2xxx = microzig.hal;
 const chip = rp2xxx.compatibility.chip;
 const PPB = microzig.chip.peripherals.PPB;
+
+const microzig_options = if (@hasDecl(root, "microzig_options")) root.microzig_options else microzig.Options{};
 
 /// Supported Exception Vectors
 pub const Exception = switch (chip) {
@@ -196,6 +199,10 @@ pub fn copyVectorTable() void {
 /// Returns:
 ///   The previous handler
 pub fn setExceptionHandler(exception: Exception, handler: VectorFunction) VectorFunction {
+    if (!@hasField(@TypeOf(microzig_options.platform), "ram_vectors") or !microzig_options.platform.ram_vectors) {
+        @compileError("RAM vectors are disabled. Try adding .platform = .{ .ram_vectors = true } to your microzig_options");
+    }
+
     if (exception == .InitialStackPointer) @panic("InitialStackPointer cannot be set");
     // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[@intFromEnum(exception)], .Xchg, handler, .Acquire);
     const old = ram_vectors[@intFromEnum(exception)];
@@ -210,10 +217,13 @@ pub fn setExceptionHandler(exception: Exception, handler: VectorFunction) Vector
 /// Returns:
 ///   The previous handler
 pub fn setInterruptHandler(interrupt: Mask, handler: VectorFunction) VectorFunction {
+    if (!@hasField(@TypeOf(microzig_options.platform), "ram_vectors") or !microzig_options.platform.ram_vectors) {
+        @compileError("RAM vectors are disabled. Try adding .platform = .{ .ram_vectors = true } to your microzig_options");
+    }
+
     const index = @as(usize, @intFromEnum(interrupt)) + 16;
     // TODO: when atomics work -> return @atomicRmw(?VectorFunction, &ram_vectors[index], .Xchg, handler, .Acquire);
     const old = ram_vectors[index];
     ram_vectors[index] = handler;
     return old;
-
 }

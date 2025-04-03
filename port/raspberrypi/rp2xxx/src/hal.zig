@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 const std = @import("std");
+const root = @import("root");
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
@@ -30,6 +31,8 @@ pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const image_def = @import("hal/image_def.zig");
 
+const microzig_options = if (@hasDecl(root, "microzig_options")) root.microzig_options else microzig.Options{};
+
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test) {
@@ -56,9 +59,13 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 
-    // Copy the vector table to RAM
+    // Copy the vector table to RAM if requested
 
-    irq.copyVectorTable();
+    if (@hasField(@TypeOf(microzig_options.platform), "ram_vectors")) {
+        if (microzig_options.platform.ram_vectors) {
+            irq.copyVectorTable();
+        }
+    }
 
     // Clear all spinlocks as they may be left in a locked state following a
     // soft reset

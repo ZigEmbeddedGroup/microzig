@@ -22,6 +22,10 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = Interrupt, .HandlerFn = microzig.interrupt.Handler },
 });
 
+pub const PlatformOptions = struct {
+    ram_vectors: bool = false,
+};
+
 pub const interrupt = struct {
     pub fn globally_enabled() bool {
         var mrs: u32 = undefined;
