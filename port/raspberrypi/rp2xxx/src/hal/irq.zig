@@ -180,11 +180,9 @@ const nvic_interrupt_count = switch (chip) {
 pub var ram_vtor: [16 + nvic_interrupt_count]VtorFunction align(256) = undefined;
 
 /// Copy the vector table from flash to RAM
-pub fn copyVtor() void {
+pub fn copyVectorTable() void {
     const src: [*]VtorFunction = @ptrFromInt(PPB.VTOR.raw);
-
     std.mem.copyForwards(VtorFunction, &ram_vtor, src[0 .. 16 + nvic_interrupt_count]);
-
     PPB.VTOR.raw = @intFromPtr(&ram_vtor);
 }
 

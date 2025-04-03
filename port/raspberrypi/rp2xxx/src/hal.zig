@@ -58,7 +58,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 
     // Copy the vector table to RAM
 
-    irq.copyVtor();
+    irq.copyVectorTable();
 
     // Clear all spinlocks as they may be left in a locked state following a
     // soft reset
