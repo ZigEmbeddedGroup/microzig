@@ -4,6 +4,8 @@ const peripherals = microzig.chip.peripherals;
 const IO_MUX = peripherals.IO_MUX;
 const GPIO = peripherals.GPIO;
 
+// TODO: chip independent. currently specific to esp32c3.
+
 pub const Level = enum(u1) {
     low = 0,
     high = 1,
