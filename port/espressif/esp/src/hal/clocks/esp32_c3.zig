@@ -126,14 +126,7 @@ fn rom_cpu_frequency_update(freq: u32) void {
 }
 
 fn get_xtal_clk_freq() u32 {
-    const xtal_freq_reg = RTC_CNTL.STORE4.read().RTC_SCRATCH4;
-    if ((xtal_freq_reg & 0xFFFF) == ((xtal_freq_reg >> 16) & 0xFFFF) and
-        xtal_freq_reg != 0 and xtal_freq_reg != std.math.maxInt(u32))
-    {
-        return xtal_freq_reg & ~@as(u32, (1 << 0) | (1 << 16)) & std.math.maxInt(u16);
-    }
-
-    @panic("invalid format of xtal register");
+    return 40_000_000;
 }
 
 fn bbpll_enable() void {

@@ -43,5 +43,5 @@ pub const CpuClockSource = chip_specific.CpuClockSource;
 pub const Config = chip_specific.Config;
 
 const chip_specific = switch (compatibility.chip) {
-    .esp32_c3 => @import("clocks/esp32c3.zig"),
+    .esp32_c3 => @import("clocks/esp32_c3.zig"),
 };

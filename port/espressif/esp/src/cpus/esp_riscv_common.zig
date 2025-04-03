@@ -96,7 +96,7 @@ pub const interrupt = struct {
     pub const Priority = enum(u4) {
         pub const highest: Priority = @enumFromInt(15);
         pub const lowest: Priority = @enumFromInt(1);
-        /// Interrupt is masked with this priority.
+        /// Setting this priority masks the interrupt.
         pub const zero: Priority = @enumFromInt(0);
 
         _,

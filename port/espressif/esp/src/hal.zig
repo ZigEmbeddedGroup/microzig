@@ -6,7 +6,7 @@ pub const clocks = @import("hal/clocks.zig");
 
 pub fn init() void {
     const default_clock_frequency: u32 = switch (compatibility.chip) {
-        .esp32_c3 => 80_000_000,
+        .esp32_c3 => 20_000_000,
     };
 
     const config = clocks.Config.init(default_clock_frequency) catch unreachable; // guaranteed to not fail
