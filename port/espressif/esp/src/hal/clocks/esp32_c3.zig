@@ -10,32 +10,40 @@ const clocks = microzig.hal.clocks;
 // - https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/port/esp32c3/rtc_clk.c
 // - https://github.com/esp-rs/esp-hal/blob/main/esp-hal/src/clock/mod.rs
 
+pub const xtal_clk_freq = 40_000_000;
+
 pub const CpuClockSource = union(enum) {
-    pub const PllFreq = enum {
-        @"80mhz",
-        @"160mhz",
+    pub const PllClock = struct {
+        pub const PllFreq = enum {
+            @"320mhz",
+            @"480mhz",
+        };
+
+        pub const CpuFreq = enum {
+            @"80mhz",
+            @"160mhz",
+        };
+
+        pll_freq: PllFreq,
+        cpu_freq: CpuFreq,
     };
 
-    pll_clk: PllFreq,
+    pll_clk: PllClock,
     xtal_clk: u10,
     // TODO: add support for rc_fast_clk source
 };
 
 pub const Config = struct {
+    /// Default clock config.
+    pub const default: Config = .init_comptime(80_000_000);
+
     cpu_clk_source: CpuClockSource,
 
     cpu_clk_freq: u32,
-    xtal_clk_freq: u32,
     apb_clk_freq: u32,
 
-    /// Initializes a clock config for the given cpu frequency.
+    /// Initializes a clock config for this cpu frequency.
     pub fn init(cpu_clk_freq: u32) clocks.Error!Config {
-        if (@inComptime()) {
-            @compileError("A clock configuration can only be created at runtime");
-        }
-
-        const xtal_clk_freq = get_xtal_clk_freq();
-
         const cpu_clk_source: CpuClockSource = if (cpu_clk_freq <= xtal_clk_freq and cpu_clk_freq != 0) blk: {
             const div: u10 = @intCast(xtal_clk_freq / cpu_clk_freq);
             const real_freq = (xtal_clk_freq + div / 2) / div;
@@ -48,11 +56,38 @@ pub const Config = struct {
                 .xtal_clk = div,
             };
         } else if (cpu_clk_freq == 80_000_000) .{
-            .pll_clk = .@"80mhz",
+            .pll_clk = .{
+                .pll_freq = .@"480mhz",
+                .cpu_freq = .@"80mhz",
+            },
         } else if (cpu_clk_freq == 160_000_000) .{
-            .pll_clk = .@"160mhz",
+            .pll_clk = .{
+                .pll_freq = .@"480mhz",
+                .cpu_freq = .@"160mhz",
+            },
         } else {
             return error.InvalidCpuClockFrequency;
+        };
+
+        return init_from_cpu_clock_source(cpu_clk_source);
+    }
+
+    /// Initializes a clock config for this cpu frequency at comptime. Triggers a compilation error
+    /// if the frequency is invalid.
+    pub fn init_comptime(cpu_clk_freq: u32) Config {
+        return init(cpu_clk_freq) catch {
+            @compileError(std.fmt.comptimePrint("Invalid cpu clock frequency: {}", .{cpu_clk_freq}));
+        };
+    }
+
+    /// Initializes a clock config from a cpu clock source.
+    pub fn init_from_cpu_clock_source(cpu_clk_source: CpuClockSource) Config {
+        const cpu_clk_freq: u32 = switch (cpu_clk_source) {
+            .pll_clk => |pll_clk| switch (pll_clk.cpu_freq) {
+                .@"80mhz" => 80_000_000,
+                .@"160mhz" => 80_000_000,
+            },
+            .xtal_clk => |div| xtal_clk_freq / div,
         };
 
         const apb_clk_freq: u32 = switch (cpu_clk_source) {
@@ -63,18 +98,20 @@ pub const Config = struct {
         return .{
             .cpu_clk_source = cpu_clk_source,
             .cpu_clk_freq = cpu_clk_freq,
-            .xtal_clk_freq = xtal_clk_freq,
             .apb_clk_freq = apb_clk_freq,
         };
     }
 
-    /// Applies this clock configuration. Internal use only. Use `hal.clocks.apply()` instead.
+    /// Applies this clock config.
     pub fn apply(config: Config) void {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
         switch (config.cpu_clk_source) {
-            .pll_clk => |pll_freq| {
+            .pll_clk => |pll_clk| {
                 bbpll_enable();
-                bbpll_configure();
-                switch_to_pll(pll_freq);
+                bbpll_configure(pll_clk.pll_freq);
+                switch_to_pll(pll_clk.cpu_freq);
             },
             .xtal_clk => |div| {
                 switch_to_xtal(div);
@@ -86,7 +123,7 @@ pub const Config = struct {
     }
 };
 
-fn switch_to_pll(pll_freq: CpuClockSource.PllFreq) void {
+fn switch_to_pll(pll_freq: CpuClockSource.PllClock.CpuFreq) void {
     SYSTEM.SYSCLK_CONF.modify(.{
         .PRE_DIV_CNT = 0,
         .SOC_CLK_SEL = 1,
@@ -125,10 +162,6 @@ fn rom_cpu_frequency_update(freq: u32) void {
     rom.functions.ets_update_cpu_frequency(freq / 1_000_000);
 }
 
-fn get_xtal_clk_freq() u32 {
-    return 40_000_000;
-}
-
 fn bbpll_enable() void {
     RTC_CNTL.OPTIONS0.modify(.{
         .BB_I2C_FORCE_PD = 0,
@@ -137,9 +170,12 @@ fn bbpll_enable() void {
     });
 }
 
-fn bbpll_configure() void {
+fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
     SYSTEM.CPU_PER_CONF.modify(.{
-        .PLL_FREQ_SEL = 1, // 480mhz
+        .PLL_FREQ_SEL = @as(u1, switch (pll_freq) {
+            .@"320mhz" => 0,
+            .@"480mhz" => 1,
+        }),
     });
 
     I2C_ANA_MST.ANA_CONF0.modify(.{
@@ -147,24 +183,47 @@ fn bbpll_configure() void {
         .BBPLL_STOP_FORCE_LOW = 1,
     });
 
-    // specific for 480mhz pll
     const i2c_bbpll_oc_dchgp_lsb: u32 = 4;
     const i2c_bbpll_oc_dlref_sel_lsb: u32 = 6;
     const i2c_bbpll_oc_dhref_sel_lsb: u32 = 4;
 
-    const div_ref: u8 = 0;
-    const div7_0: u8 = 8;
-    const dr1: u8 = 0;
-    const dr3: u8 = 0;
-    const dchgp: u8 = 5;
-    const dcur: u8 = 3;
-    const dbias: u8 = 2;
+    var div_ref: u8 = undefined;
+    var div7_0: u8 = undefined;
+    var dr1: u8 = undefined;
+    var dr3: u8 = undefined;
+    var dchgp: u8 = undefined;
+    var dcur: u8 = undefined;
+    var dbias: u8 = undefined;
 
-    const i2c_bbpll_lref = (dchgp << i2c_bbpll_oc_dchgp_lsb) | div_ref;
-    const i2c_bbpll_dcur =
+    // specific to 40mhz xtal freq
+    switch (pll_freq) {
+        .@"320mhz" => {
+            div_ref = 0;
+            div7_0 = 4;
+            dr1 = 0;
+            dr3 = 0;
+            dchgp = 5;
+            dcur = 3;
+            dbias = 2;
+
+            rom.functions.rom_i2c_writeReg(0x66, 0, 4, 0x69);
+        },
+        .@"480mhz" => {
+            div_ref = 0;
+            div7_0 = 8;
+            dr1 = 0;
+            dr3 = 0;
+            dchgp = 5;
+            dcur = 3;
+            dbias = 2;
+
+            rom.functions.rom_i2c_writeReg(0x66, 0, 4, 0x6b);
+        },
+    }
+
+    const i2c_bbpll_lref: u8 = (dchgp << i2c_bbpll_oc_dchgp_lsb) | div_ref;
+    const i2c_bbpll_dcur: u8 =
         (2 << i2c_bbpll_oc_dlref_sel_lsb) | (1 << i2c_bbpll_oc_dhref_sel_lsb) | dcur;
-
-    rom.functions.rom_i2c_writeReg(0x66, 0, 4, 0x6b);
 
     rom.functions.rom_i2c_writeReg(0x66, 0, 2, i2c_bbpll_lref);
     rom.functions.rom_i2c_writeReg(0x66, 0, 3, div7_0);
