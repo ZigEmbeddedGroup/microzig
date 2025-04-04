@@ -1,4 +1,4 @@
-movw 0000 0001 dddd rrrr
+movw 0000 0001 DDDD RRRR
 muls 0000 0010 dddd rrrr
 nop 0000 0000 0000 0000
 mulsu 0000 0011 0ddd 0rrr

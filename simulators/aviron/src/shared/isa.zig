@@ -116,6 +116,7 @@ pub const opinfo = struct {
     pub const d5r5 = struct { d: Register, r: Register };
     pub const d4k8 = struct { d: Register4, k: u8 };
     pub const d4r4 = struct { d: Register4, r: Register4 };
+    pub const D4R4 = struct { D: Register4_pair, R: Register4_pair };
     pub const d3r3 = struct { d: Register3, r: Register3 };
     pub const d2k6 = struct { d: u2, k: u6 };
     pub const k4 = struct { k: u4 };
@@ -198,6 +199,48 @@ pub const Register4 = enum(u4) {
     }
 
     pub fn reg(r4: Register4) Register {
+        return @enumFromInt(r4.num());
+    }
+};
+
+pub const Register4_pair = enum(u4) {
+    r1_r0 = 0,
+    r3_r2 = 1,
+    r5_r4 = 2,
+    r7_r6 = 3,
+    r9_r8 = 4,
+    r11_r10 = 5,
+    r13_r12 = 6,
+    r15_r14 = 7,
+    r17_r16 = 8,
+    r19_r18 = 9,
+    r21_r20 = 10,
+    r23_r22 = 11,
+    r25_r24 = 12,
+    r27_r26 = 13,
+    r29_r28 = 14,
+    r31_r30 = 15,
+
+    pub fn format(reg4: Register4_pair, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = opt;
+        _ = fmt;
+        try writer.print("r{}:r{}", .{
+            @as(u32, @intFromEnum(reg4)) * 2 + 1,
+            @as(u32, @intFromEnum(reg4)) * 2,
+        });
+    }
+
+    /// Returns the numeric value of this value.
+    pub fn int(r4: Register4_pair) u4 {
+        return @intFromEnum(r4);
+    }
+
+    /// Returns the lower register number of the pair
+    pub fn num(r4: Register4_pair) u5 {
+        return @as(u5, @intFromEnum(r4)) * 2;
+    }
+
+    pub fn reg(r4: Register4_pair) Register {
         return @enumFromInt(r4.num());
     }
 };

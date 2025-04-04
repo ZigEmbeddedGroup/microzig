@@ -256,10 +256,10 @@ const instructions = struct {
     /// This instruction makes a copy of one register pair into another register pair. The source register pair Rr
     /// +1:Rr is left unchanged, while the destination register pair Rd+1:Rd is loaded with a copy of Rr + 1:Rr.
     /// This instruction is not available in all devices. Refer to the device specific instruction set summary.
-    inline fn movw(cpu: *Cpu, info: isa.opinfo.d4r4) void {
+    inline fn movw(cpu: *Cpu, info: isa.opinfo.D4R4) void {
         // d ∈ {0,2,...,30}, r ∈ {0,2,...,30
-        const Rd = @as(u5, info.d.int()) << 1;
-        const Rr = @as(u5, info.r.int()) << 1;
+        const Rd = info.D.num();
+        const Rr = info.R.num();
 
         // Rd+1:Rd ← Rr+1:Rr
         cpu.regs[Rd + 0] = cpu.regs[Rr + 0];
