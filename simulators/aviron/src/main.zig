@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const aviron = @import("aviron");
 const args_parser = @import("args");
+const ihex = @import("ihex");
 
 pub fn main() !u8 {
     const allocator = std.heap.page_allocator;
@@ -74,27 +75,39 @@ pub fn main() !u8 {
 
     // Load all provided executables:
     for (cli.positionals) |file_path| {
-        var elf_file = try std.fs.cwd().openFile(file_path, .{});
-        defer elf_file.close();
+        var file = try std.fs.cwd().openFile(file_path, .{});
+        defer file.close();
 
-        var source = std.io.StreamSource{ .file = elf_file };
-        var header = try std.elf.Header.read(&source);
+        switch (cli.options.format) {
+            .elf => {
+                var source = std.io.StreamSource{ .file = file };
+                var header = try std.elf.Header.read(&source);
 
-        var pheaders = header.program_header_iterator(&source);
-        while (try pheaders.next()) |phdr| {
-            if (phdr.p_type != std.elf.PT_LOAD)
-                continue; // Header isn't lodead
+                var pheaders = header.program_header_iterator(&source);
+                while (try pheaders.next()) |phdr| {
+                    if (phdr.p_type != std.elf.PT_LOAD)
+                        continue; // Header isn't lodead
 
-            const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
-                &sram.data
-            else
-                &flash_storage.data;
+                    const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
+                        &sram.data
+                    else
+                        &flash_storage.data;
 
-            const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+                    const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
 
-            try source.seekTo(phdr.p_offset);
-            try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
-            @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                    try source.seekTo(phdr.p_offset);
+                    try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
+                    @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                }
+            },
+            .binary, .bin => {
+                const size = try file.readAll(&flash_storage.data);
+                std.debug.assert(size <= flash_storage.data.len);
+                @memset(flash_storage.data[size..], 0);
+            },
+            .ihex, .hex => {
+                _ = try ihex.parseData(file.reader(), .{ .pedantic = true }, &flash_storage, anyerror, process_ihex_data);
+            },
         }
     }
 
@@ -105,9 +118,20 @@ pub fn main() !u8 {
     return 0;
 }
 
+fn process_ihex_data(flash: *aviron.Flash.Static(131072), offset: u32, data: []const u8) !void {
+    @memcpy(flash.data[offset .. offset + data.len], data);
+}
 // not actually marvel cinematic universe, but microcontroller unit ;
 pub const MCU = enum {
     atmega328p,
+};
+
+pub const FileFormat = enum {
+    elf,
+    bin,
+    binary,
+    ihex,
+    hex,
 };
 
 const Cli = struct {
@@ -115,15 +139,17 @@ const Cli = struct {
     trace: bool = false,
     mcu: MCU = .atmega328p,
     info: bool = false,
+    format: FileFormat = .elf,
 
     pub const shorthands = .{
         .h = "help",
         .t = "trace",
         .m = "mcu",
         .I = "info",
+        .f = "format",
     };
     pub const meta = .{
-        .summary = "[-h] [-t] [-m <mcu>] <elf> ...",
+        .summary = "[-h] [-t] [-m <mcu>] <file> ...",
         .full_text =
         \\AViRon is a simulator for the AVR cpu architecture as well as an basic emulator for several microcontrollers from Microchip/Atmel.
         \\
@@ -136,6 +162,7 @@ const Cli = struct {
             .trace = "Trace all executed instructions.",
             .mcu = "Selects the emulated MCU.",
             .info = "Prints information about the given MCUs memory.",
+            .format = "Specify file format.",
         },
     };
 };

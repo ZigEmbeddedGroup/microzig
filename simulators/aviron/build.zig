@@ -29,10 +29,12 @@ pub fn build(b: *Build) !void {
 
     // Deps
     const args_dep = b.dependency("args", .{});
+    const ihex_dep = b.dependency("ihex", .{});
 
     // Dep modules
 
     const args_module = args_dep.module("args");
+    const ihex_module = ihex_dep.module("ihex");
 
     // Options
     const target = b.standardTargetOptions(.{});
@@ -69,6 +71,7 @@ pub fn build(b: *Build) !void {
         .optimize = optimize,
     });
     aviron_exe.root_module.addImport("args", args_module);
+    aviron_exe.root_module.addImport("ihex", ihex_module);
     aviron_exe.root_module.addImport("aviron", aviron_module);
     b.installArtifact(aviron_exe);
 
