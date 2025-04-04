@@ -219,11 +219,48 @@ fn isr_common(self: *Self) void {
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
     _ = self.regs.IC_CLR_INTR.read();
 
+    // -- General Call --
+
+    if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
+
+    // -- We are receiving data (Write Request) --
+    // Move data from the receive FIFO to the transfer buffer until all data is received
+    // or the receive FIFO is empty.  Call the callback to send data to the user if the
+    // transfer buffer is full.
+
+    if (interruptStatus.RX_FULL == .ACTIVE) {
+        // Process any bytes in the receive FIFO
+        // Automatically cleared by hardware when fifo is empty.
+
+        while (self.regs.IC_STATUS.read().RFNE == .NOT_EMPTY) {
+            // Read a byte and associated flags from the RX FIFO.
+
+            const dataCmd = self.regs.IC_DATA_CMD.read();
+
+            if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
+
+            // If the transfer buffer is full, call the callback to process the partial data
+
+            if (self.transfer_index >= self.transfer_buffer.len) {
+                self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, false, self.gen_call, self.param);
+                self.transfer_index = 0;
+                self.first_call = false;
+            }
+
+            // Copy the byte to the transfer buffer
+
+            self.transfer_buffer[self.transfer_index] = dataCmd.DAT;
+            self.transfer_index += 1;
+            self.data_received = true;
+        }
+    }
+
     // --- We have a RESTART or STOP ---
     // Send any received data we have buffered to the callback and initialize
     // the read and write modes and the transfer buffer.
 
     if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
+
         if (self.data_received) {
             self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, true, self.gen_call, self.param);
 
@@ -274,39 +311,4 @@ fn isr_common(self: *Self) void {
         }
     }
 
-    // -- General Call --
-
-    if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
-
-    // -- We are receiving data (Write Request) --
-    // Move data from the receive FIFO to the transfer buffer until all data is received
-    // or the receive FIFO is empty.  Call the callback to send data to the user if the
-    // transfer buffer is full.
-
-    if (interruptStatus.RX_FULL == .ACTIVE) {
-        // Process any bytes in the receive FIFO
-        // Automatically cleared by hardware when fifo is empty.
-
-        while (self.regs.IC_STATUS.read().RFNE == .NOT_EMPTY) {
-            // Read a byte and associated flags from the RX FIFO.
-
-            const dataCmd = self.regs.IC_DATA_CMD.read();
-
-            if (interruptStatus.GEN_CALL == .ACTIVE) self.gen_call = true;
-
-            // If the transfer buffer is full, call the callback to process the partial data
-
-            if (self.transfer_index >= self.transfer_buffer.len) {
-                self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, false, self.gen_call, self.param);
-                self.transfer_index = 0;
-                self.first_call = false;
-            }
-
-            // Copy the byte to the transfer buffer
-
-            self.transfer_buffer[self.transfer_index] = dataCmd.DAT;
-            self.transfer_index += 1;
-            self.data_received = true;
-        }
-    }
 }
