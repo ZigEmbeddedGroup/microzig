@@ -748,7 +748,7 @@ fn write_registers_base(
 
         log.debug("offset={}, size={}", .{ offset, size });
         if (offset != size)
-            try writer.print("padding: [{}]u8,\n", .{
+            try writer.print("padding: [{}]u8 = 0,\n", .{
                 size - offset,
             });
     }
@@ -919,7 +919,7 @@ fn write_fields(
 
     assert(offset <= register_size_bits);
     if (offset < register_size_bits)
-        try writer.print("padding: u{},\n", .{register_size_bits - offset});
+        try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
 
     try out_writer.writeAll(buffer.items);
 }
