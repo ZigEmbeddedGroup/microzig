@@ -867,7 +867,7 @@ fn write_fields(
             continue;
         }
         if (offset < field.offset_bits) {
-            try writer.print("reserved{}: u{},\n", .{ field.offset_bits, field.offset_bits - offset });
+            try writer.print("reserved{}: u{} = 0,\n", .{ field.offset_bits, field.offset_bits - offset });
             offset = field.offset_bits;
         }
         assert(offset == field.offset_bits);
@@ -919,7 +919,7 @@ fn write_fields(
 
     assert(offset <= register_size_bits);
     if (offset < register_size_bits)
-        try writer.print("padding: u{},\n", .{register_size_bits - offset});
+        try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
 
     try out_writer.writeAll(buffer.items);
 }
