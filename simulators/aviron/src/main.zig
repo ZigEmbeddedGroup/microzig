@@ -102,11 +102,15 @@ pub fn main() !u8 {
             },
             .binary, .bin => {
                 const size = try file.readAll(&flash_storage.data);
-                std.debug.assert(size <= flash_storage.data.len);
                 @memset(flash_storage.data[size..], 0);
             },
             .ihex, .hex => {
-                _ = try ihex.parseData(file.reader(), .{ .pedantic = true }, &flash_storage, anyerror, process_ihex_data);
+                const ihex_processor = struct {
+                    fn process(flash: *@TypeOf(flash_storage), offset: u32, data: []const u8) !void {
+                        @memcpy(flash.data[offset .. offset + data.len], data);
+                    }
+                };
+                _ = try ihex.parseData(file.reader(), .{ .pedantic = true }, &flash_storage, anyerror, ihex_processor.process);
             },
         }
     }
@@ -118,9 +122,6 @@ pub fn main() !u8 {
     return 0;
 }
 
-fn process_ihex_data(flash: *aviron.Flash.Static(131072), offset: u32, data: []const u8) !void {
-    @memcpy(flash.data[offset .. offset + data.len], data);
-}
 // not actually marvel cinematic universe, but microcontroller unit ;
 pub const MCU = enum {
     atmega328p,
