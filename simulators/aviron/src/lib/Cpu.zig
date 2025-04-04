@@ -187,15 +187,16 @@ fn popCodeLoc(cpu: *Cpu) u24 {
     const mask = @intFromEnum(cpu.code_model);
 
     var pc: u24 = 0;
-    if ((mask & 0x0000FF) != 0) {
-        pc |= (@as(u24, cpu.pop()) << 0);
+    if ((mask & 0xFF0000) != 0) {
+        pc |= (@as(u24, cpu.pop()) << 16);
     }
     if ((mask & 0x00FF00) != 0) {
         pc |= (@as(u24, cpu.pop()) << 8);
     }
-    if ((mask & 0xFF0000) != 0) {
-        pc |= (@as(u24, cpu.pop()) << 16);
+    if ((mask & 0x0000FF) != 0) {
+        pc |= (@as(u24, cpu.pop()) << 0);
     }
+
     return pc;
 }
 
