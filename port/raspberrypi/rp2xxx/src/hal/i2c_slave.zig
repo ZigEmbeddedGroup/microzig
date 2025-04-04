@@ -217,6 +217,14 @@ fn isr_common(self: *Self) void {
     // Save the interrupt status and clear it
 
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
+
+    // -- Clear Abort --
+    // IC_CLR_INTR does not do this correctly.
+
+    if (interruptStatus.TX_ABRT == .ACTIVE) {
+        self.regs.IC_CLR_TX_ABRT.raw = 0;
+    }
+
     _ = self.regs.IC_CLR_INTR.read();
 
     // -- General Call --
