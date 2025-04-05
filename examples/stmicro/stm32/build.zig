@@ -24,6 +24,8 @@ pub fn build(b: *std.Build) void {
         // .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8_gpio", .file = "src/stm32f10x/gpio.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8_uart", .file = "src/stm32f10x/uart.zig" },
     };
 
     for (available_examples) |example| {
@@ -48,7 +50,7 @@ pub fn build(b: *std.Build) void {
         // and allows installing the firmware as a typical firmware file.
         //
         // This will also install into `$prefix/firmware` instead of `$prefix/bin`.
-        mb.install_firmware(fw, .{ .format = .bin });
+        mb.install_firmware(fw, .{});
 
         // For debugging, we also always install the firmware as an ELF file
         mb.install_firmware(fw, .{ .format = .elf });
