@@ -17,7 +17,6 @@ pub const vendor = usb.vendor;
 pub const templates = usb.templates.DescriptorsConfigTemplates;
 pub const utils = usb.UsbUtils;
 
-const rom = @import("rom.zig");
 const resets = @import("resets.zig");
 
 pub const RP2XXX_MAX_ENDPOINTS_COUNT = 16;
@@ -256,7 +255,7 @@ pub fn F(comptime config: UsbConfig) type {
 
             const ep = hardware_endpoint_get_by_address(ep_addr);
 
-            _ = rom.memcpy(ep.data_buffer[0..buffer.len], buffer);
+            @memcpy(ep.data_buffer[0..buffer.len], buffer);
 
             // Configure the IN:
             const np: u1 = if (ep.next_pid_1) 1 else 0;
