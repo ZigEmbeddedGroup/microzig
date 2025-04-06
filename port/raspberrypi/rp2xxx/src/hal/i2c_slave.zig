@@ -160,7 +160,12 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
     //   } ;
 
     self.enable();
-    irq.enable(.I2C1_IRQ);
+
+    if (self.regs == I2C0) {
+        irq.enable(.I2C0_IRQ);
+    } else {
+        irq.enable(.I2C1_IRQ);
+    }
 }
 
 /// Close the I2C slave driver
