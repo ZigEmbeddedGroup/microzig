@@ -1,5 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const mdf = microzig.drivers;
 
 const peripherals = microzig.chip.peripherals;
 const UartReg = *volatile microzig.chip.types.peripherals.usart_v1.USART;
@@ -9,7 +10,7 @@ const STOP = microzig.chip.types.peripherals.usart_v1.STOP;
 
 pub const WordBits = enum {
     eight,
-    nine,
+    //nine,
 };
 
 pub const StopBits = enum {
@@ -52,7 +53,7 @@ pub const TransmitError = error{
 
 pub const ReceiveError = error{
     OverrunError,
-    BreakError,
+    NoiseError,
     ParityError,
     FramingError,
     Timeout,
@@ -60,7 +61,7 @@ pub const ReceiveError = error{
 
 pub const ErrorStates = packed struct(u4) {
     overrun_error: bool = false,
-    break_error: bool = false,
+    noise_error: bool = false,
     parity_error: bool = false,
     framing_error: bool = false,
 };
@@ -75,6 +76,9 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
 
 pub const UART = enum(u3) {
     _,
+
+    pub const Writer = std.io.GenericWriter(UART, TransmitError, generic_writer_fn);
+    pub const Reader = std.io.GenericReader(UART, ReceiveError, generic_reader_fn);
 
     /// Returns an error at runtime, and raises a compile error at comptime.
     fn validate_baudrate(baud_rate: u32, peri_freq: u32) ConfigError!void {
@@ -195,13 +199,92 @@ pub const UART = enum(u3) {
         });
     }
 
-    pub fn write_blocking(uart: UART, data: []const u8) TransmitError!void {
-        const regs = get_regs(uart);
-        for (data) |bytes| {
-            regs.DR.raw = @intCast(bytes);
-            while (regs.SR.read().TXE == 0) {
-                asm volatile ("nop");
+    pub inline fn is_readable(uart: UART) bool {
+        return (0 != get_regs(uart).SR.read().RXNE);
+    }
+
+    pub inline fn is_writeable(uart: UART) bool {
+        return (0 != get_regs(uart).SR.read().TXE);
+    }
+
+    //TODO: add timeout
+    pub fn writev_blocking(uart: UART, payloads: []const []const u8, _: ?mdf.time.Duration) TransmitError!void {
+        const regs = uart.get_regs();
+        //const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        for (payloads) |pkgs| {
+            for (pkgs) |byte| {
+                while (!uart.is_writeable()) {
+                    asm volatile ("nop");
+                }
+                regs.DR.raw = @intCast(byte);
             }
         }
+    }
+
+    pub fn readv_blocking(uart: UART, buffers: []const []u8, _: ?mdf.time.Duration) ReceiveError!void {
+        //const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        const regs = uart.get_regs();
+        for (buffers) |buf| {
+            for (buf) |*bytes| {
+                while (!uart.is_readable()) {
+                    asm volatile ("nop");
+                }
+                const rx = regs.DR.raw;
+                bytes.* = @intCast(0xFF & rx);
+                const SR = regs.SR.read();
+
+                if (SR.ORE != 0) {
+                    return error.OverrunError;
+                } else if (SR.NE != 0) {
+                    return error.NoiseError;
+                } else if (SR.FE != 0) {
+                    return error.FramingError;
+                } else if (SR.PE != 0) {
+                    return error.ParityError;
+                }
+            }
+        }
+    }
+
+    pub fn get_errors(uart: UART) ErrorStates {
+        const regs = uart.get_regs();
+        const read_val = regs.SR.read();
+        return .{
+            .overrun_error = read_val.ORE == 1,
+            .noise_error = read_val.NE == 1,
+            .parity_error = read_val.PE == 1,
+            .framing_error = read_val.FE == 1,
+        };
+    }
+
+    pub inline fn clear_errors(uart: UART) void {
+        const regs = uart.get_regs();
+        std.mem.doNotOptimizeAway(regs.SR.raw);
+        std.mem.doNotOptimizeAway(regs.DR.raw);
+    }
+
+    pub fn write_blocking(uart: UART, data: []const u8, _: ?mdf.time.Duration) TransmitError!void {
+        try uart.writev_blocking(&.{data}, null);
+    }
+
+    pub fn read_blocking(uart: UART, data: []u8, _: ?mdf.time.Duration) ReceiveError!void {
+        try uart.readv_blocking(&.{data}, null);
+    }
+
+    pub fn writer(uart: UART) Writer {
+        return .{ .context = uart };
+    }
+
+    pub fn reader(uart: UART) Reader {
+        return .{ .context = uart };
+    }
+    fn generic_writer_fn(uart: UART, buffer: []const u8) TransmitError!usize {
+        try uart.write_blocking(buffer, null);
+        return buffer.len;
+    }
+
+    fn generic_reader_fn(uart: UART, buffer: []u8) ReceiveError!usize {
+        try uart.read_blocking(buffer, null);
+        return buffer.len;
     }
 };
