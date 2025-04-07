@@ -371,7 +371,6 @@ const instructions = struct {
         const src = cpu.regs[info.d.num()];
 
         const res = src -% 1;
-
         cpu.regs[info.d.num()] = res;
 
         cpu.sreg.z = (res == 0);
@@ -387,6 +386,7 @@ const instructions = struct {
         const Rr: Bits8 = @bitCast(rhs);
 
         const res: u8 = lhs +% rhs +% @intFromBool(c);
+        cpu.regs[info.d.num()] = res;
 
         const R: Bits8 = @bitCast(res);
 
