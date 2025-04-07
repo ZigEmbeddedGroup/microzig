@@ -229,8 +229,6 @@ pub const UART = enum(u3) {
                 while (!uart.is_readable()) {
                     asm volatile ("nop");
                 }
-                const rx = regs.DR.raw;
-                bytes.* = @intCast(0xFF & rx);
                 const SR = regs.SR.read();
 
                 if (SR.ORE != 0) {
@@ -242,6 +240,9 @@ pub const UART = enum(u3) {
                 } else if (SR.PE != 0) {
                     return error.ParityError;
                 }
+                const rx = regs.DR.raw;
+
+                bytes.* = @intCast(0xFF & rx);
             }
         }
     }
