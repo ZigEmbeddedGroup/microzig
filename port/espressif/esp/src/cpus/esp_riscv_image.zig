@@ -6,6 +6,7 @@ const common = @import("esp_riscv_common.zig");
 pub const Interrupt = common.Interrupt;
 pub const InterruptHandler = common.InterruptHandler;
 pub const InterruptOptions = common.InterruptOptions;
+pub const InterruptStack = common.InterruptStack;
 
 pub const interrupt = common.interrupt;
 
@@ -39,11 +40,7 @@ pub const startup_logic = struct {
             \\.option pop
         );
 
-        @export(&common._vector_table, .{ .name = "_vector_table" });
-        asm volatile (
-            \\la a0, _vector_table
-            \\csrw mtvec, a0
-        );
+        common.init_interrupts();
 
         // fill .bss with zeroes
         {

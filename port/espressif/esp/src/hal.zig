@@ -8,7 +8,14 @@ pub const clocks = @import("hal/clocks.zig");
 pub const clock_config: clocks.Config = .default;
 
 pub fn init() void {
-    clock_config.apply();
+    default_startup_procedure(clock_config);
+}
 
-    // TODO: reset peripherals
+/// A standard startup procedure for the system. To be used when providing a custom `init()` function.
+pub fn default_startup_procedure(cfg: clocks.Config) void {
+    // TODO: disable watchdogs
+
+    cfg.apply();
+
+    // TODO: reset peripheral clocks
 }

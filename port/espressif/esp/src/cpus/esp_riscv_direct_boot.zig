@@ -7,6 +7,7 @@ const common = @import("esp_riscv_common.zig");
 pub const Interrupt = common.Interrupt;
 pub const InterruptHandler = common.InterruptHandler;
 pub const InterruptOptions = common.InterruptOptions;
+pub const InterruptStack = common.InterruptStack;
 
 pub const interrupt = common.interrupt;
 
@@ -39,10 +40,12 @@ pub const startup_logic = struct {
 
     pub fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
         interrupt.disable_interrupts();
+
         asm volatile ("mv sp, %[eos]"
             :
             : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
         );
+
         asm volatile (
             \\.option push
             \\.option norelax
@@ -50,13 +53,10 @@ pub const startup_logic = struct {
             \\.option pop
         );
 
-        @export(&common._vector_table, .{ .name = "_vector_table" });
-        asm volatile (
-            \\la a0, _vector_table
-            \\csrw mtvec, a0
-        );
-
         root.initialize_system_memories();
+
+        common.init_interrupts();
+
         microzig_main();
     }
 };
