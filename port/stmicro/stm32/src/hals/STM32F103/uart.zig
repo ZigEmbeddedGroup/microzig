@@ -126,9 +126,9 @@ pub const UART = enum(u3) {
         };
     }
 
-    pub fn apply(uart: UART, comptime config: Config) void {
+    pub fn apply(comptime uart: UART, comptime config: Config) void {
         comptime validate_baudrate(config.baud_rate, config.clock_speed) catch unreachable;
-        comptime validate_config(uart, config);
+        comptime validate_config(uart, config) catch unreachable;
         uart.apply_internal(config);
     }
 

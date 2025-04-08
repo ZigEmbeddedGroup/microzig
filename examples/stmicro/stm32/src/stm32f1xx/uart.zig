@@ -29,7 +29,7 @@ pub fn main() !void {
     try usart2.write_blocking("START UART ECHO\n", null);
     while (true) {
         usart2.read_blocking(&byte, null) catch |err| {
-            usart2.writer().print("Got error {any}", .{err}) catch unreachable;
+            usart2.writer().print("Got error {any}\n", .{err}) catch unreachable;
             usart2.clear_errors();
             continue;
         };
