@@ -1,3 +1,6 @@
+//TODO: Half-Duplex (Single-Wire mode)
+//TODO: Synchronous mode (For USART only)
+
 const std = @import("std");
 const microzig = @import("microzig");
 const mdf = microzig.drivers;
@@ -35,7 +38,9 @@ pub const FlowControl = enum {
 
 //TODO: add error for UART4/5 invalid features
 pub const ConfigError = error{
+    InvalidUartNum,
     UnsupportedBaudRate,
+    UnsupportedFlowControl,
 };
 
 pub const Config = struct {
@@ -98,6 +103,18 @@ pub const UART = enum(u3) {
         }
     }
 
+    //the only difference between UART 4 ​​and 5 and USARTs in asynchronous mode is
+    // the lack of hardware control flow
+    fn validate_config(uart: UART, config: Config) ConfigError!void {
+        const uart_num = @intFromEnum(uart);
+        if (uart_num > 4) {
+            return comptime_fail_or_error("SMT32F1xxx only have up to 5 uarts (0..4)", .{}, ConfigError.InvalidUartNum);
+        }
+        if ((config.flow_control != .none) and (uart_num > 2)) {
+            return comptime_fail_or_error("UART 4/5 does no have Hardware control flow", .{}, ConfigError.UnsupportedFlowControl);
+        }
+    }
+
     fn get_regs(uart: UART) UartReg {
         return switch (@intFromEnum(uart)) {
             0 => if (@hasDecl(peripherals, "USART1")) peripherals.USART1 else @panic("Invalid UART"),
@@ -105,17 +122,19 @@ pub const UART = enum(u3) {
             2 => if (@hasDecl(peripherals, "USART3")) peripherals.USART3 else @panic("Invalid UART"),
             3 => if (@hasDecl(peripherals, "UART4")) peripherals.UART4 else @panic("Invalid UART"),
             4 => if (@hasDecl(peripherals, "UART5")) peripherals.UART5 else @panic("Invalid UART"),
-            else => @panic("Invalid UART"),
+            else => unreachable, //check in apply
         };
     }
 
     pub fn apply(uart: UART, comptime config: Config) void {
         comptime validate_baudrate(config.baud_rate, config.clock_speed) catch unreachable;
+        comptime validate_config(uart, config);
         uart.apply_internal(config);
     }
 
-    pub fn apply_runtime(uart: UART, comptime config: Config) void {
+    pub fn apply_runtime(uart: UART, comptime config: Config) !void {
         try validate_baudrate(config.baud_rate, config.clock_speed);
+        try validate_config(uart, config);
         uart.apply_internal(config);
     }
 
