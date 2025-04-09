@@ -10,15 +10,16 @@ pub const clocks = @import("hal/clocks.zig");
 pub const clock_config: clocks.Config = .default;
 
 pub fn init() void {
-    default_startup_procedure(clock_config);
+    init_sequence(clock_config);
 }
 
-/// A standard startup procedure for the system. To be used when providing a custom `init()` function.
-pub fn default_startup_procedure(clk_cfg: clocks.Config) void {
+/// Allows you to easily swap the clock config while using the recommended init sequence. To be used
+/// with a custom `init()` function.
+pub fn init_sequence(clock_cfg: clocks.Config) void {
     // TODO: disable watchdogs in a more elegant way (with a hal).
     disable_watchdogs();
 
-    clk_cfg.apply();
+    clock_cfg.apply();
 
     // TODO: reset peripherals
     // TODO: disable peripheral clocks

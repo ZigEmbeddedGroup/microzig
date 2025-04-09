@@ -10,7 +10,7 @@ const clocks = microzig.hal.clocks;
 // - https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/port/esp32c3/rtc_clk.c
 // - https://github.com/esp-rs/esp-hal/blob/main/esp-hal/src/clock/mod.rs
 
-pub const xtal_clk_freq = 40_000_000;
+pub const xtal_clk_freq: u32 = 40_000_000;
 
 pub const CpuClockSource = union(enum) {
     pub const PllClock = struct {
@@ -46,7 +46,7 @@ pub const Config = struct {
     pub fn init(cpu_clk_freq: u32) clocks.Error!Config {
         const cpu_clk_source: CpuClockSource = if (cpu_clk_freq <= xtal_clk_freq and cpu_clk_freq != 0) blk: {
             const div: u10 = @intCast(xtal_clk_freq / cpu_clk_freq);
-            const real_freq = (xtal_clk_freq + div / 2) / div;
+            const real_freq: u32 = (xtal_clk_freq + div / 2) / div;
 
             if (real_freq != cpu_clk_freq) {
                 return error.InvalidCpuClockFrequency;
