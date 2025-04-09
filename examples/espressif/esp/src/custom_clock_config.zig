@@ -15,7 +15,7 @@ pub fn init() void {
 
 pub fn main() !void {
     while (true) {
-        uart.write(0, "Hello from zig!\n");
+        uart.write(0, "Hello from zig!\r\n");
         hal.rom.delay_us(1_000_000);
     }
 }

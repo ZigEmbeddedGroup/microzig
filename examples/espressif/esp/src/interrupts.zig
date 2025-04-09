@@ -14,7 +14,7 @@ pub const microzig_options: microzig.Options = .{
 
 // the `.trap` link section is placed in iram in image boot mode or irom in direct boot mode.
 fn timer_interrupt(_: *microzig.cpu.InterruptStack) linksection(".trap") callconv(.c) void {
-    uart.write(0, "timer interrupt!\n");
+    uart.write(0, "timer interrupt!\r\n");
 
     SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 });
 }
