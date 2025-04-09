@@ -4,6 +4,8 @@ const peripherals = microzig.chip.peripherals;
 const IO_MUX = peripherals.IO_MUX;
 const GPIO = peripherals.GPIO;
 
+// TODO: chip independent. currently specific to esp32c3.
+
 pub const Level = enum(u1) {
     low = 0,
     high = 1,
@@ -28,6 +30,7 @@ pub const Pin = struct {
         input_filter_enable: bool = false,
         output_invert: bool = false,
         drive_strength: DriveStrength = DriveStrength.@"5mA",
+        output_signal: OutputSignal = .gpio,
     };
 
     pub fn apply(self: Pin, config: Config) void {
@@ -42,7 +45,7 @@ pub const Pin = struct {
         });
 
         GPIO.FUNC_OUT_SEL_CFG[self.number].write(.{
-            .OUT_SEL = 0x80,
+            .OUT_SEL = @intFromEnum(config.output_signal),
             .OEN_SEL = @intFromBool(config.output_enable),
             .INV_SEL = @intFromBool(config.output_invert),
             .OEN_INV_SEL = 0,
@@ -143,6 +146,11 @@ pub const Pin = struct {
             Level.high => write(self, Level.low),
         }
     }
+};
+
+pub const OutputSignal = enum(u8) {
+    ledc_ls_sig_out0 = 45,
+    gpio = 128,
 };
 
 pub const instance = struct {

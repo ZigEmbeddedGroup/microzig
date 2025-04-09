@@ -1,32 +1,17 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const root = @import("root");
 
-pub const interrupt = struct {
-    pub fn globally_enabled() bool {
-        return asm volatile ("csrr %[value], mstatus"
-            : [value] "=r" (-> u32),
-        ) & 0x8 != 0;
-    }
+const common = @import("esp_riscv_common.zig");
 
-    pub fn enable_interrupts() void {
-        asm volatile ("csrs mstatus, 0x8");
-    }
+pub const Interrupt = common.Interrupt;
+pub const InterruptHandler = common.InterruptHandler;
+pub const InterruptOptions = common.InterruptOptions;
+pub const InterruptStack = common.InterruptStack;
 
-    pub fn disable_interrupts() void {
-        asm volatile ("csrc mstatus, 0x8");
-    }
-};
+pub const interrupt = common.interrupt;
 
-pub fn wfi() void {
-    asm volatile ("wfi");
-}
-
-pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
-    wfi();
-    asm volatile ("csrs 0x810, 0x1");
-}
+pub const wfi = common.wfi;
+pub const wfe = common.wfe;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -64,18 +49,13 @@ pub const startup_logic = struct {
             @memset(bss_start[0..bss_len], 0);
         }
 
+        common.init_interrupts();
+
         microzig_main();
     }
-
-    // TODO: implement interrupts
 };
 
 pub fn export_startup_logic() void {
-    @export(&startup_logic._start, .{
-        .name = "_start",
-    });
-
-    @export(&startup_logic._start_c, .{
-        .name = "_start_c",
-    });
+    @export(&startup_logic._start, .{ .name = "_start" });
+    @export(&startup_logic._start_c, .{ .name = "_start_c" });
 }
