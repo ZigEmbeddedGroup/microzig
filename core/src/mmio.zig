@@ -2,6 +2,9 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 pub fn Mmio(comptime PackedT: type) type {
+
+    @setEvalBranchQuota(2_000);
+
     const size = @bitSizeOf(PackedT);
     if ((size % 8) != 0)
         @compileError("size must be divisible by 8!");

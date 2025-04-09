@@ -668,6 +668,6 @@ test "tests" {
 }
 
 test "utf8 to utf16" {
-    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8Toutf16Le("My Vendor"));
-    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8Toutf16Le("Raspberry Pi"));
+    try std.testing.expectEqualSlices(u8, "M\x00y\x00 \x00V\x00e\x00n\x00d\x00o\x00r\x00", &UsbUtils.utf8ToUtf16Le("My Vendor"));
+    try std.testing.expectEqualSlices(u8, "R\x00a\x00s\x00p\x00b\x00e\x00r\x00r\x00y\x00 \x00P\x00i\x00", &UsbUtils.utf8ToUtf16Le("Raspberry Pi"));
 }

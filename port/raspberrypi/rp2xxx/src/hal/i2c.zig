@@ -17,6 +17,8 @@ const resets = @import("resets.zig");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
 
+pub const slave = @import("i2c_slave.zig");
+
 const I2cRegs = microzig.chip.types.peripherals.I2C0;
 
 pub const Config = struct {
