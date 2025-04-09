@@ -40,8 +40,6 @@ pub const startup_logic = struct {
             \\.option pop
         );
 
-        common.init_interrupts();
-
         // fill .bss with zeroes
         {
             const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
@@ -50,6 +48,8 @@ pub const startup_logic = struct {
 
             @memset(bss_start[0..bss_len], 0);
         }
+
+        common.init_interrupts();
 
         microzig_main();
     }

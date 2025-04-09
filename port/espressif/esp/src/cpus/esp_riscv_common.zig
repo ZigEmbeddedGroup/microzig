@@ -89,10 +89,10 @@ pub const interrupt = struct {
     }
 
     pub const Priority = enum(u4) {
-        pub const highest: Priority = @enumFromInt(15);
-        pub const lowest: Priority = @enumFromInt(1);
         /// Setting this priority masks the interrupt.
-        pub const zero: Priority = @enumFromInt(0);
+        zero = 0,
+        lowest = 1,
+        highest = 15,
 
         _,
     };
@@ -281,13 +281,19 @@ pub const InterruptStack = extern struct {
     mtval: usize,
 };
 
+/// Gets interrupts into a known state after the bootloader.
 pub fn init_interrupts() void {
+    // unmap all sources
     for (std.enums.values(interrupt.Source)) |source| {
         interrupt.map(source, null);
     }
 
+    interrupt.set_priority_threshold(.zero);
+
     for (std.enums.values(Interrupt)) |int| {
-        interrupt.set_priority(int, .zero);
+        interrupt.set_type(int, .level);
+        interrupt.set_priority(int, .lowest);
+        interrupt.disable(int);
     }
 
     @export(&_vector_table, .{ .name = "_vector_table" });
@@ -298,14 +304,14 @@ pub fn init_interrupts() void {
     );
 }
 
-fn _vector_table() align(256) linksection(".rwtext") callconv(.naked) void {
+fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
     comptime {
+        // TODO: make a better default exception handler
         @export(
             microzig_options.interrupts.Exception orelse &unhandled,
             .{ .name = "_exception_handler" },
         );
 
-        // TODO: make a complete exception handler
         for (std.meta.fieldNames(Interrupt)) |field_name| {
             @export(
                 @field(microzig_options.interrupts, field_name) orelse &unhandled,
@@ -593,7 +599,7 @@ fn _vector_table() align(256) linksection(".rwtext") callconv(.naked) void {
     );
 }
 
-fn unhandled() linksection(".rwtext") callconv(.c) void {
+fn unhandled() linksection(".trap") callconv(.c) void {
     // TODO: replace with friendly csr struct after we make a common riscv implementation.
     const mcause = asm volatile ("csrr %[mcause], mcause"
         : [mcause] "=r" (-> u32),
@@ -607,7 +613,7 @@ fn unhandled() linksection(".rwtext") callconv(.c) void {
     @panic("unhandled interrupt");
 }
 
-fn _update_priority() linksection(".rwtext") callconv(.c) u32 {
+fn _update_priority() linksection(".trap") callconv(.c) u32 {
     // TODO: replace with friendly csr struct after we make a common riscv implementation.
     const mcause = asm volatile ("csrr %[mcause], mcause"
         : [mcause] "=r" (-> u32),
@@ -631,7 +637,7 @@ fn _update_priority() linksection(".rwtext") callconv(.c) u32 {
     return @intFromEnum(prev_priority);
 }
 
-fn _restore_priority(priority_raw: u32) linksection(".rwtext") callconv(.c) void {
+fn _restore_priority(priority_raw: u32) linksection(".trap") callconv(.c) void {
     interrupt.disable_interrupts();
     interrupt.set_priority_threshold(@enumFromInt(priority_raw));
 }

@@ -39,6 +39,7 @@ SECTIONS
 
     .iram.rwtext :
     {
+        KEEP(*(.trap))
         *(.rwtext*)
     } > iram
 

@@ -3,39 +3,60 @@ const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 const gpio = microzig.hal.gpio;
 const uart = microzig.hal.uart;
-const TIMG0 = peripherals.TIMG0;
-const RTC_CNTL = peripherals.RTC_CNTL;
-const INTERRUPT_CORE0 = peripherals.INTERRUPT_CORE0;
+const SYSTEM = peripherals.SYSTEM;
+const SYSTIMER = peripherals.SYSTIMER;
 
-const dogfood: u32 = 0x50D83AA1;
-const super_dogfood: u32 = 0x8F1D312A;
+pub const microzig_options: microzig.Options = .{
+    .interrupts = .{
+        .interrupt1 = timer_interrupt,
+    },
+};
+
+// the `.trap` link section is placed in iram in image boot mode or irom in direct boot mode.
+fn timer_interrupt(_: *microzig.cpu.InterruptStack) linksection(".trap") callconv(.c) void {
+    uart.write(0, "timer interrupt!\n");
+
+    SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 });
+}
 
 pub fn main() !void {
-    // Feed and disable watchdog 0
-    TIMG0.WDTWPROTECT.raw = dogfood;
-    TIMG0.WDTCONFIG0.raw = 0;
-    TIMG0.WDTWPROTECT.raw = 0;
+    SYSTEM.PERIP_CLK_EN0.modify(.{
+        .SYSTIMER_CLK_EN = 1,
+    });
 
-    // Feed and disable rtc watchdog
-    RTC_CNTL.WDTWPROTECT.raw = dogfood;
-    RTC_CNTL.WDTCONFIG0.raw = 0;
-    RTC_CNTL.WDTWPROTECT.raw = 0;
+    SYSTIMER.CONF.modify(.{
+        .TIMER_UNIT0_WORK_EN = 1,
+        .TIMER_UNIT0_CORE0_STALL_EN = 0,
+    });
 
-    // Feed and disable rtc super watchdog
-    RTC_CNTL.SWD_WPROTECT.raw = super_dogfood;
-    RTC_CNTL.SWD_CONF.modify(.{ .SWD_DISABLE = 1 });
-    RTC_CNTL.SWD_WPROTECT.raw = 0;
+    SYSTIMER.TARGET0_CONF.modify(.{
+        .TARGET0_PERIOD = 16_000_000,
+        .TARGET0_PERIOD_MODE = 0,
+        .TARGET0_TIMER_UNIT_SEL = 0,
+    });
 
-    uart.write(0, "Hello from Zig!\n");
+    SYSTIMER.COMP0_LOAD.write(.{
+        .TIMER_COMP0_LOAD = 1,
+        .padding = 0,
+    });
 
-    microzig.cpu.interrupt.set_type(.Interrupt1, .level);
-    _ = microzig.cpu.interrupt.get_type(.Interrupt1);
-    _ = microzig.cpu.interrupt.is_pending(.Interrupt1);
-    microzig.cpu.interrupt.disable(.Interrupt1);
-    microzig.cpu.interrupt.enable(.Interrupt1);
-    _ = microzig.cpu.interrupt.get_priority(.Interrupt1);
-    microzig.cpu.interrupt.set_priority(.Interrupt1, .lowest);
+    SYSTIMER.TARGET0_CONF.modify(.{
+        .TARGET0_PERIOD_MODE = 1,
+    });
+
+    SYSTIMER.CONF.modify(.{ .TARGET0_WORK_EN = 1 });
+    SYSTIMER.INT_ENA.modify(.{ .TARGET0_INT_ENA = 1 });
+
+    microzig.cpu.interrupt.set_priority_threshold(.zero);
+
+    microzig.cpu.interrupt.set_type(.interrupt1, .level);
+    microzig.cpu.interrupt.set_priority(.interrupt1, .highest);
+    microzig.cpu.interrupt.map(.systimer_target0, .interrupt1);
+    microzig.cpu.interrupt.enable(.interrupt1);
+
     microzig.cpu.interrupt.enable_interrupts();
 
-    while (true) {}
+    while (true) {
+        microzig.cpu.wfi();
+    }
 }

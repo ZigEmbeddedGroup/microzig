@@ -77,6 +77,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
+        .linker_script = b.path("esp32_c3_direct_boot.ld"),
     };
 
     return .{
