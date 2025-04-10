@@ -4,6 +4,7 @@ const LazyPath = Build.LazyPath;
 
 const internals = @import("build-internals");
 pub const Target = internals.Target;
+pub const Cpu = internals.Cpu;
 pub const Chip = internals.Chip;
 pub const HardwareAbstractionLayer = internals.HardwareAbstractionLayer;
 pub const Board = internals.Board;
@@ -359,8 +360,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const b = mb.dep.builder;
 
             const target = options.target;
-            const zig_target = b.resolveTargetQuery(target.chip.cpu);
-            const cpu = Cpu.init(zig_target.result);
+            const zig_target_resolved = b.resolveTargetQuery(target.zig_target);
+            const cpu = target.cpu orelse get_default_cpu(zig_target_resolved.result, mb.core_dep);
 
             // TODO: let the user override which ram section to use the stack on,
             // for now just using the first ram section in the memory region list
@@ -378,7 +379,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption(bool, "has_hal", maybe_hal != null);
             config.addOption(bool, "has_board", maybe_board != null);
 
-            config.addOption([]const u8, "cpu_name", zig_target.result.cpu.model.name);
+            config.addOption([]const u8, "cpu_name", cpu.name);
             config.addOption([]const u8, "chip_name", target.chip.name);
             config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
             config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
@@ -397,12 +398,10 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 },
             });
 
-            const cpu_mod = if (target.chip.cpu_module_file) |root_source_file|
-                b.createModule(.{
-                    .root_source_file = root_source_file,
-                })
-            else
-                cpu.create_module(b, mb.core_dep);
+            const cpu_mod = b.createModule(.{
+                .root_source_file = cpu.root_source_file,
+                .imports = cpu.imports,
+            });
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
@@ -483,7 +482,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .name = options.name,
                     .root_module = b.createModule(.{
                         .optimize = options.optimize,
-                        .target = zig_target,
+                        .target = zig_target_resolved,
                         .root_source_file = mb.core_dep.path("src/start.zig"),
                         .strip = options.strip,
                         .unwind_tables = options.unwind_tables,
@@ -511,8 +510,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
 
                 const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = zig_target.result.cpu.model.name,
-                    .cpu_arch = zig_target.result.cpu.arch,
+                    .cpu_name = zig_target_resolved.result.cpu.model.name,
+                    .cpu_arch = zig_target_resolved.result.cpu.arch,
                     .chip_name = target.chip.name,
                     .memory_regions = target.chip.memory_regions,
                 };
@@ -707,34 +706,29 @@ pub fn MicroBuild(port_select: PortSelect) type {
     };
 }
 
-const Cpu = enum {
-    avr5,
-    cortex_m,
-    riscv32,
-
-    // TODO: to be verified
-    pub fn init(target: std.Target) Cpu {
-        if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
-            return .avr5;
-        } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
-            return .cortex_m;
-        } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
-            return .riscv32;
-        }
-
-        @panic("unrecognized cpu configuration");
+fn get_default_cpu(target: std.Target, core_dep: *Build.Dependency) Cpu {
+    if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
+        return .{
+            .name = "avr5",
+            .root_source_file = core_dep.namedLazyPath("cpu_avr5"),
+        };
+    } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
+        return .{
+            .name = target.cpu.model.name,
+            .root_source_file = core_dep.namedLazyPath("cpu_cortex_m"),
+        };
+    } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
+        return .{
+            .name = "riscv32",
+            .root_source_file = core_dep.namedLazyPath("cpu_riscv32"),
+        };
     }
 
-    pub fn create_module(cpu: Cpu, b: *Build, core_dep: *Build.Dependency) *Build.Module {
-        return b.createModule(.{
-            .root_source_file = switch (cpu) {
-                .avr5 => core_dep.path("src/cpus/avr5.zig"),
-                .cortex_m => core_dep.path("src/cpus/cortex_m.zig"),
-                .riscv32 => core_dep.path("src/cpus/riscv32.zig"),
-            },
-        });
-    }
-};
+    std.debug.panic(
+        "No default cpu configuration for `{s}`. Please specify a cpu in `microzig.Target`.",
+        .{target.cpu.model.name},
+    );
+}
 
 pub inline fn custom_lazy_import(
     comptime dep_name: []const u8,
