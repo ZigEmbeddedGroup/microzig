@@ -39,11 +39,9 @@ SECTIONS
       microzig_bss_end = .;
   } > ram0
 
-  /* NOTE: fixes large binaries issue for direct boot. if this should be NOLOAD then we should also
-   * change `generate_linker_script.zig` */
-  .flash_end (NOLOAD) :
+  .flash_end :
   {
-      microzig_flash_end = .;
+      PROVIDE(microzig_flash_end = .);
   } > flash0
 
   microzig_data_load_start = LOADADDR(.data);
