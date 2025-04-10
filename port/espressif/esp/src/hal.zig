@@ -5,6 +5,7 @@ pub const uart = @import("hal/uart.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const rom = @import("hal/rom.zig");
 pub const clocks = @import("hal/clocks.zig");
+pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;

@@ -1,8 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
-const gpio = microzig.hal.gpio;
-const uart = microzig.hal.uart;
+const hal = microzig.hal;
+const gpio = hal.gpio;
+const usb_serial_jtag = hal.usb_serial_jtag;
+
+pub const microzig_options: microzig.Options = .{
+    .log_level = .debug,
+    .logFn = usb_serial_jtag.logger.logFn,
+};
 
 pub fn main() !void {
     const pin_config = gpio.Pin.Config{
@@ -18,25 +24,25 @@ pub fn main() !void {
     led_g_pin.apply(pin_config);
     led_b_pin.apply(pin_config);
 
-    uart.write(0, "Hello from Zig!\r\n");
+    std.log.info("Hello from Zig!", .{});
 
     while (true) {
         led_r_pin.write(gpio.Level.high);
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.low);
-        uart.write(0, "R");
+        std.log.info("R", .{});
         microzig.hal.rom.delay_us(500_000);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.high);
         led_b_pin.write(gpio.Level.low);
-        uart.write(0, "G");
+        std.log.info("G", .{});
         microzig.hal.rom.delay_us(500_000);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.high);
-        uart.write(0, "B");
+        std.log.info("B", .{});
         microzig.hal.rom.delay_us(500_000);
     }
 }

@@ -41,7 +41,7 @@ SECTIONS
 
   .flash_end :
   {
-      microzig_flash_end = .;
+      PROVIDE(microzig_flash_end = .);
   } > flash0
 
   microzig_data_load_start = LOADADDR(.data);
