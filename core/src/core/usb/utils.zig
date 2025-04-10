@@ -19,10 +19,10 @@ pub const BosConfig = struct {
 
     pub fn get_data_u16(bos_cfg: []const u8, offset: u16) u16 {
         const low_byte: u16 = bos_cfg[offset];
-        const high_byte: u16 = bos_cfg[offset+1];
+        const high_byte: u16 = bos_cfg[offset + 1];
         return (high_byte << 8) | low_byte;
     }
-    
+
     /// Only for temporal u8 fields use as u16 fields will have wrong values because BOS endianness
     pub fn get_desc_as(comptime T: type, bos_cfg: []const u8) *const T {
         return @ptrCast(@constCast(bos_cfg.ptr));
@@ -35,8 +35,7 @@ pub const BosConfig = struct {
         const cfg_desc_type = bos_cfg[DESC_OFFSET_TYPE];
         if (cfg_desc_type != @intFromEnum(exp_desc_type)) {
             return null;
-        }
-        else {
+        } else {
             return @constCast(@ptrCast(bos_cfg.ptr));
         }
     }

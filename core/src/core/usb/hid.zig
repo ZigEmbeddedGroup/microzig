@@ -75,8 +75,8 @@ const bos = utils.BosConfig;
 //      -----------------------     ---------------------
 
 pub const HidDescType = enum(u8) {
-    Hid      = 0x21,
-    Report   = 0x22,
+    Hid = 0x21,
+    Report = 0x22,
     Physical = 0x23,
 
     pub fn from_u8(v: u8) ?@This() {
@@ -85,11 +85,11 @@ pub const HidDescType = enum(u8) {
 };
 
 pub const HidRequestType = enum(u8) {
-    GetReport   = 0x01,
-    GetIdle     = 0x02,
+    GetReport = 0x01,
+    GetIdle = 0x02,
     GetProtocol = 0x03,
-    SetReport   = 0x09,
-    SetIdle     = 0x0a,
+    SetReport = 0x09,
+    SetIdle = 0x0a,
     SetProtocol = 0x0b,
 
     pub fn from_u8(v: u8) ?@This() {
@@ -451,89 +451,88 @@ pub fn hid_usage(comptime n: u2, data: [n]u8) [n + 1]u8 {
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 
 pub const ReportDescriptorFidoU2f = hid_usage_page(2, UsageTable.fido) //
-++ hid_usage(1, FidoAllianceUsage.u2fhid) //
-++ hid_collection(CollectionItem.Application) //
-// Usage Data In
-++ hid_usage(1, FidoAllianceUsage.data_in) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(2, "\xff\x00".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_report_count(1, "\x40".*) //
-++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// Usage Data Out
-++ hid_usage(1, FidoAllianceUsage.data_out) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(2, "\xff\x00".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_report_count(1, "\x40".*) //
-++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// End
-++ hid_collection_end();
+    ++ hid_usage(1, FidoAllianceUsage.u2fhid) //
+    ++ hid_collection(CollectionItem.Application) //
+    // Usage Data In
+    ++ hid_usage(1, FidoAllianceUsage.data_in) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(2, "\xff\x00".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_report_count(1, "\x40".*) //
+    ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // Usage Data Out
+    ++ hid_usage(1, FidoAllianceUsage.data_out) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(2, "\xff\x00".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_report_count(1, "\x40".*) //
+    ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // End
+    ++ hid_collection_end();
 
 pub const ReportDescriptorGenericInOut = hid_usage_page(2, UsageTable.vendor) //
-++ hid_usage(1, "\x01".*) //
-++ hid_collection(CollectionItem.Application) //
-// Usage Data In
-++ hid_usage(1, "\x02".*) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(2, "\xff\x00".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_report_count(1, "\x40".*) //
-++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// Usage Data Out
-++ hid_usage(1, "\x03".*) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(2, "\xff\x00".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_report_count(1, "\x40".*) //
-++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// End
-++ hid_collection_end();
+    ++ hid_usage(1, "\x01".*) //
+    ++ hid_collection(CollectionItem.Application) //
+    // Usage Data In
+    ++ hid_usage(1, "\x02".*) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(2, "\xff\x00".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_report_count(1, "\x40".*) //
+    ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // Usage Data Out
+    ++ hid_usage(1, "\x03".*) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(2, "\xff\x00".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_report_count(1, "\x40".*) //
+    ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // End
+    ++ hid_collection_end();
 
 /// Common keyboard report format, conforming to the boot protocol.
 /// See Appendix B.1 of the USB HID specification:
 /// https://usb.org/sites/default/files/hid1_11.pdf
 pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
-++ hid_usage(1, DesktopUsage.keyboard) //
-++ hid_collection(.Application) //
-// Input: modifier key bitmap
-++ hid_usage_page(1, UsageTable.keyboard) //
-++ hid_usage_min(1, "\xe0".*) //
-++ hid_usage_max(1, "\xe7".*) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(1, "\x01".*) //
-++ hid_report_count(1, "\x08".*) //
-++ hid_report_size(1, "\x01".*) //
-++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// Reserved 8 bits
-++ hid_report_count(1, "\x01".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_input(HID_CONSTANT) //
-// Output: indicator LEDs
-++ hid_usage_page(1, UsageTable.led) //
-++ hid_usage_min(1, "\x01".*) //
-++ hid_usage_max(1, "\x05".*) //
-++ hid_report_count(1, "\x05".*) //
-++ hid_report_size(1, "\x01".*) //
-++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
-// Padding
-++ hid_report_count(1, "\x01".*) //
-++ hid_report_size(1, "\x03".*) //
-++ hid_output(HID_CONSTANT) //
-// Input: up to 6 pressed key codes
-++ hid_usage_page(1, UsageTable.keyboard) //
-++ hid_usage_min(1, "\x00".*) //
-++ hid_usage_max(2, "\xff\x00".*) //
-++ hid_logical_min(1, "\x00".*) //
-++ hid_logical_max(2, "\xff\x00".*) //
-++ hid_report_count(1, "\x06".*) //
-++ hid_report_size(1, "\x08".*) //
-++ hid_output(HID_DATA | HID_ARRAY | HID_ABSOLUTE) //
-// End
-++ hid_collection_end();
+    ++ hid_usage(1, DesktopUsage.keyboard) //
+    ++ hid_collection(.Application) //
+    // Input: modifier key bitmap
+    ++ hid_usage_page(1, UsageTable.keyboard) //
+    ++ hid_usage_min(1, "\xe0".*) //
+    ++ hid_usage_max(1, "\xe7".*) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(1, "\x01".*) //
+    ++ hid_report_count(1, "\x08".*) //
+    ++ hid_report_size(1, "\x01".*) //
+    ++ hid_input(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // Reserved 8 bits
+    ++ hid_report_count(1, "\x01".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_input(HID_CONSTANT) //
+    // Output: indicator LEDs
+    ++ hid_usage_page(1, UsageTable.led) //
+    ++ hid_usage_min(1, "\x01".*) //
+    ++ hid_usage_max(1, "\x05".*) //
+    ++ hid_report_count(1, "\x05".*) //
+    ++ hid_report_size(1, "\x01".*) //
+    ++ hid_output(HID_DATA | HID_VARIABLE | HID_ABSOLUTE) //
+    // Padding
+    ++ hid_report_count(1, "\x01".*) //
+    ++ hid_report_size(1, "\x03".*) //
+    ++ hid_output(HID_CONSTANT) //
+    // Input: up to 6 pressed key codes
+    ++ hid_usage_page(1, UsageTable.keyboard) //
+    ++ hid_usage_min(1, "\x00".*) //
+    ++ hid_usage_max(2, "\xff\x00".*) //
+    ++ hid_logical_min(1, "\x00".*) //
+    ++ hid_logical_max(2, "\xff\x00".*) //
+    ++ hid_report_count(1, "\x06".*) //
+    ++ hid_report_size(1, "\x08".*) //
+    ++ hid_output(HID_DATA | HID_ARRAY | HID_ABSOLUTE) //
+    // End
+    ++ hid_collection_end();
 
 pub const HidClassDriver = struct {
-
     device: ?types.UsbDevice = null,
     ep_in: u8 = 0,
     ep_out: u8 = 0,
@@ -566,8 +565,8 @@ pub const HidClassDriver = struct {
         for (0..2) |_| {
             if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
                 switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                    .In => { self.ep_in = desc_ep.endpoint_address; },
-                    .Out => { self.ep_out = desc_ep.endpoint_address; },
+                    .In => self.ep_in = desc_ep.endpoint_address,
+                    .Out => self.ep_out = desc_ep.endpoint_address,
                 }
                 self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                 curr_cfg = bos.get_desc_next(curr_cfg);
@@ -602,7 +601,7 @@ pub const HidClassDriver = struct {
             .Class => {
                 const hid_request_type = HidRequestType.from_u8(setup.request);
                 if (hid_request_type == null) return false;
-                
+
                 switch (hid_request_type.?) {
                     .SetIdle => {
                         if (stage == .Setup) {
@@ -611,19 +610,18 @@ pub const HidClassDriver = struct {
                     },
                     else => {
                         return false;
-                    }
+                    },
                 }
             },
             else => {
                 return false;
-            }
+            },
         }
 
         return true;
     }
 
-    fn transfer(_: *anyopaque, _: u8, _: []u8) void {
-    }
+    fn transfer(_: *anyopaque, _: u8, _: []u8) void {}
 
     pub fn driver(self: *@This()) types.UsbClassDriver {
         return .{
@@ -631,7 +629,7 @@ pub const HidClassDriver = struct {
             .fn_init = init,
             .fn_open = open,
             .fn_class_control = class_control,
-            .fn_transfer = transfer
+            .fn_transfer = transfer,
         };
     }
 };
