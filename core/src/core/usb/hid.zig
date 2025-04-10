@@ -565,12 +565,8 @@ pub const HidClassDriver = struct {
         for (0..2) |_| {
             if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
                 switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                    .In => {
-                        self.ep_in = desc_ep.endpoint_address;
-                    },
-                    .Out => {
-                        self.ep_out = desc_ep.endpoint_address;
-                    },
+                    .In => self.ep_in = desc_ep.endpoint_address,
+                    .Out => self.ep_out = desc_ep.endpoint_address,
                 }
                 self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                 curr_cfg = bos.get_desc_next(curr_cfg);
