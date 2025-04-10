@@ -1,12 +1,15 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
-const gpio = microzig.hal.gpio;
-const uart = microzig.hal.uart;
+const hal = microzig.hal;
+const gpio = hal.gpio;
+const usb_serial_jtag = hal.usb_serial_jtag;
 const SYSTEM = peripherals.SYSTEM;
 const SYSTIMER = peripherals.SYSTIMER;
 
 pub const microzig_options: microzig.Options = .{
+    .log_level = .debug,
+    .logFn = usb_serial_jtag.logger.logFn,
     .interrupts = .{
         .interrupt1 = timer_interrupt,
     },
@@ -14,7 +17,7 @@ pub const microzig_options: microzig.Options = .{
 
 // the `.trap` link section is placed in iram in image boot mode or irom in direct boot mode.
 fn timer_interrupt(_: *microzig.cpu.InterruptStack) linksection(".trap") callconv(.c) void {
-    uart.write(0, "timer interrupt!\r\n");
+    std.log.info("timer interrupt!", .{});
 
     SYSTIMER.INT_CLR.modify(.{ .TARGET0_INT_CLR = 1 });
 }

@@ -2,7 +2,12 @@ const std = @import("std");
 const microzig = @import("microzig");
 const hal = microzig.hal;
 const clocks = hal.clocks;
-const uart = hal.uart;
+const usb_serial_jtag = hal.usb_serial_jtag;
+
+pub const microzig_options: microzig.Options = .{
+    .log_level = .debug,
+    .logFn = usb_serial_jtag.logger.logFn,
+};
 
 // Clock config with a cpu speed of 20mhz.
 const clock_config: clocks.Config = .init_comptime(20_000_000);
@@ -14,8 +19,11 @@ pub fn init() void {
 }
 
 pub fn main() !void {
+    var ticks: u32 = 0;
     while (true) {
-        uart.write(0, "Hello from zig!\r\n");
+        std.log.info("Hello from Zig! Tick number {}.", .{ticks});
+        ticks += 1;
+
         hal.rom.delay_us(1_000_000);
     }
 }
