@@ -7,10 +7,10 @@ const DescType = types.DescType;
 const bos = utils.BosConfig;
 
 pub const DescSubType = enum(u8) {
-    Header         = 0x00,
+    Header = 0x00,
     CallManagement = 0x01,
-    ACM            = 0x02,
-    Union          = 0x06,
+    ACM = 0x02,
+    Union = 0x06,
 
     pub fn from_u16(v: u16) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -18,10 +18,10 @@ pub const DescSubType = enum(u8) {
 };
 
 pub const CdcManagementRequestType = enum(u8) {
-    SetLineCoding       = 0x20,
-    GetLineCoding       = 0x21,
+    SetLineCoding = 0x20,
+    GetLineCoding = 0x21,
     SetControlLineState = 0x22,
-    SendBreak           = 0x23,
+    SendBreak = 0x23,
 
     pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -29,7 +29,7 @@ pub const CdcManagementRequestType = enum(u8) {
 };
 
 pub const CdcCommSubClassType = enum(u8) {
-    AbstractControlModel = 2
+    AbstractControlModel = 2,
 };
 
 pub const CdcHeaderDescriptor = extern struct {
@@ -145,7 +145,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
             return self.rx.readableLength();
         }
 
-        pub fn read(self: *@This(), dst: [] u8) usize {
+        pub fn read(self: *@This(), dst: []u8) usize {
             const read_count = self.rx.read(dst);
             self.prep_out_transaction();
             return read_count;
@@ -156,7 +156,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
             if (write_count > 0) {
                 self.tx.writeAssumeCapacity(data[0..write_count]);
-            } else { 
+            } else {
                 return data[0..];
             }
 
@@ -189,11 +189,11 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
         fn init(ptr: *anyopaque, device: types.UsbDevice) void {
             var self: *@This() = @ptrCast(@alignCast(ptr));
             self.device = device;
-            self.line_coding = .{ 
+            self.line_coding = .{
                 .bit_rate = 115200,
                 .stop_bits = 0,
                 .parity = 0,
-                .data_bits = 8
+                .data_bits = 8,
             };
         }
 
@@ -225,8 +225,12 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                     for (0..2) |_| {
                         if (bos.try_get_desc_as(types.EndpointDescriptor, curr_cfg)) |desc_ep| {
                             switch (types.Endpoint.dir_from_address(desc_ep.endpoint_address)) {
-                                .In => { self.ep_in = desc_ep.endpoint_address; },
-                                .Out => { self.ep_out = desc_ep.endpoint_address; },
+                                .In => {
+                                    self.ep_in = desc_ep.endpoint_address;
+                                },
+                                .Out => {
+                                    self.ep_out = desc_ep.endpoint_address;
+                                },
                             }
                             self.device.?.endpoint_open(curr_cfg[0..desc_ep.length]);
                             curr_cfg = bos.get_desc_next(curr_cfg);
@@ -249,7 +253,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                                 // HACK, we should handle data phase somehow to read sent line_coding
                                 self.device.?.control_ack(setup);
                             },
-                            else => {}
+                            else => {},
                         }
                     },
                     .GetLineCoding => {
@@ -262,7 +266,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                             .Setup => {
                                 self.device.?.control_ack(setup);
                             },
-                            else => {}
+                            else => {},
                         }
                     },
                     .SendBreak => {
@@ -270,9 +274,9 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                             .Setup => {
                                 self.device.?.control_ack(setup);
                             },
-                            else => {}
+                            else => {},
                         }
-                    }
+                    },
                 }
             }
 
@@ -289,7 +293,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
 
             if (ep_addr == self.ep_in) {
                 if (self.write_flush() == 0) {
-                    // If there is no data left, a empty packet should be sent if 
+                    // If there is no data left, a empty packet should be sent if
                     // data len is multiple of EP Packet size and not zero
                     if (self.tx.readableLength() == 0 and data.len > 0 and data.len == usb.max_packet_size) {
                         self.device.?.endpoint_transfer(self.ep_in, &.{});
@@ -304,7 +308,7 @@ pub fn CdcClassDriver(comptime usb: anytype) type {
                 .fn_init = init,
                 .fn_open = open,
                 .fn_class_control = class_control,
-                .fn_transfer = transfer
+                .fn_transfer = transfer,
             };
         }
     };

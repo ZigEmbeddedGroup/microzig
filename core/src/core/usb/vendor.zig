@@ -3,9 +3,7 @@ const std = @import("std");
 const types = @import("types.zig");
 
 pub const VendorClassDriver = struct {
-    
-    fn init(_: *anyopaque, _: types.UsbDevice) void {
-    }
+    fn init(_: *anyopaque, _: types.UsbDevice) void {}
 
     fn open(_: *anyopaque, _: []const u8) !usize {
         return 0;
@@ -20,7 +18,7 @@ pub const VendorClassDriver = struct {
             .ptr = self,
             .fn_init = init,
             .fn_open = open,
-            .fn_class_control = class_control
+            .fn_class_control = class_control,
         };
     }
 };
