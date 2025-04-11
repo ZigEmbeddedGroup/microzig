@@ -30,20 +30,7 @@ fn get_systimer_counter(counter_id: u32) u64 {
     const OP = &SYSTIMER.UNIT0_OP;
     const LO = &SYSTIMER.UNIT0_VALUE_LO;
     const HI = &SYSTIMER.UNIT0_VALUE_HI;
-    // TODO: this doesn't work well because the fields also have the id in the name
-    // switch (counter_id) {
-    //     0 => {
-    //         const OP = SYSTIMER.UNIT0_OP;
-    //         const LO = SYSTIMER.UNIT0_VALUE_LO;
-    //         const HI = SYSTIMER.UNIT0_VALUE_HI;
-    //     },
-    //     1 => {
-    //         const OP = SYSTIMER.UNIT1_OP;
-    //         const LO = SYSTIMER.UNIT1_VALUE_LO;
-    //         const HI = SYSTIMER.UNIT1_VALUE_HI;
-    //     },
-    //     _ => unreachable,
-    // }
+
     var lo: u32 = 1; // Make it not match for now in case lo_start raeds as 0
     var lo_start: u32 = 0;
     var hi: u20 = 0;
