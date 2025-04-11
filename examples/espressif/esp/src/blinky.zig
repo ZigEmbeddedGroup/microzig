@@ -17,7 +17,7 @@ pub fn main() !void {
         .drive_strength = gpio.DriveStrength.@"40mA",
     };
 
-    const led_r_pin = gpio.instance.GPIO8;
+    const led_r_pin = gpio.instance.GPIO3;
     const led_g_pin = gpio.instance.GPIO4;
     const led_b_pin = gpio.instance.GPIO5;
 
@@ -32,21 +32,18 @@ pub fn main() !void {
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.low);
         std.log.info("R", .{});
-        // microzig.hal.rom.delay_us(500_000);
-        time.sleep_ms(1500);
+        time.sleep_ms(500);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.high);
         led_b_pin.write(gpio.Level.low);
         std.log.info("G", .{});
-        // microzig.hal.rom.delay_us(500_000);
-        time.sleep_ms(1500);
+        time.sleep_ms(500);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.high);
         std.log.info("B", .{});
-        // microzig.hal.rom.delay_us(500_000);
-        time.sleep_ms(1500);
+        time.sleep_ms(500);
     }
 }
