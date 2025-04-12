@@ -11,6 +11,7 @@ const Core = enum {
     cortex_m3,
     cortex_m33,
     cortex_m4,
+    cortex_m55,
     cortex_m7,
 };
 
@@ -138,27 +139,22 @@ pub const interrupt = struct {
 
         const ppb = microzig.chip.peripherals.PPB;
 
-        // 1  -15 ->
-        // 2  -14 -> NMI
-        // 3  -13 -> HardFault
-        // 4  -12 -> MemManageFault
-        // 5  -11 -> BusFault
-        // 6  -10 -> UsageFault
-        // 7   -9 -> SecureFault
-        // 8   -8 ->
-        // 9   -7 ->
-        // 10  -6 ->
-        // 11  -5 -> SVCall
-        // 12  -4 -> DebugMonitor
-        // 13  -3 ->
-        // 14  -2 -> PendSV
-        // 15  -1 -> SysTick
-
-        // ### TODO ### Add code for other chips
-
         pub fn is_enabled(comptime excpt: Exception) bool {
             switch (cortex_m) {
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    const raw = ppb.SHCSR.raw;
+                    switch (excpt) {
+                        .UsageFault => return (raw & 0x0004_0000) != 0,
+                        .BusFault => return (raw & 0x0002_0000) != 0,
+                        .MemManageFault => return (raw & 0x0001_0000) != 0,
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
@@ -175,7 +171,19 @@ pub const interrupt = struct {
 
         pub fn enable(comptime excpt: Exception) void {
             switch (cortex_m) {
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    switch (excpt) {
+                        .UsageFault => ppb.SHCSR.raw |= 0x0004_0000,
+                        .BusFault => ppb.SHCSR.raw |= 0x0002_0000,
+                        .MemManageFault => ppb.SHCSR.raw |= 0x0001_0000,
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     switch (excpt) {
                         .SecureFault => ppb.SHCSR.raw |= 0x0008_0000,
@@ -191,7 +199,19 @@ pub const interrupt = struct {
 
         pub fn disable(comptime excpt: Exception) void {
             switch (cortex_m) {
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    switch (excpt) {
+                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0004_0000),
+                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0002_0000),
+                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0001_0000),
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     switch (excpt) {
                         .SecureFault => ppb.SHCSR.raw &= ~@as(u32, 0x0008_0000),
@@ -212,7 +232,21 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) return (ppb.SHCSR.raw & 0x0000_8000) != 0;
                     @compileError("not supported on this platform");
                 },
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    const raw = ppb.SHCSR.raw;
+                    switch (excpt) {
+                        .SVCall => return (raw & 0x0000_8000) != 0,
+                        .BusFault => return (raw & 0x0000_4000) != 0,
+                        .MemManageFault => return (raw & 0x0000_2000) != 0,
+                        .UsageFault => return (raw & 0x0000_1000) != 0,
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
@@ -236,7 +270,20 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw |= 0x0000_8000;
                     @compileError("not supported on this platform");
                 },
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    switch (excpt) {
+                        .SVCall => ppb.SHCSR.raw |= 0x0000_8000,
+                        .BusFault => ppb.SHCSR.raw |= 0x0000_4000,
+                        .MemManageFault => ppb.SHCSR.raw |= 0x0000_2000,
+                        .UsageFault => ppb.SHCSR.raw |= 0x0000_1000,
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     switch (excpt) {
                         .HardFault => ppb.SHCSR.raw |= 0x0020_0000,
@@ -259,7 +306,20 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
                     @compileError("not supported on this platform");
                 },
+                .cortex_m3,
+                .cortex_m4,
+                .cortex_m7
+                => {
+                    switch (excpt) {
+                        .SVCall => ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000),
+                        .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_4000),
+                        .MemManageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_2000),
+                        .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_1000),
+                        else => @compileError("not supported on this platform"),
+                    }
+                },
                 .cortex_m33,
+                .cortex_m55,
                 => {
                     switch (excpt) {
                         .HardFault => ppb.SHCSR.raw &= ~@as(u32, 0x0020_0000),
@@ -349,6 +409,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -369,6 +430,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -389,6 +451,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -409,6 +472,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -429,6 +493,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -450,6 +515,7 @@ pub const interrupt = struct {
             .cortex_m3,
             .cortex_m33,
             .cortex_m4,
+            .cortex_m55,
             .cortex_m7,
             => {
                 const bank = num / 32;
@@ -643,6 +709,7 @@ const core = blk: {
         .cortex_m3 => @import("cortex_m/m3.zig"),
         .cortex_m33 => @import("cortex_m/m33.zig"),
         .cortex_m4 => @import("cortex_m/m4.zig"),
+        .cortex_m55 => @import("cortex_m/m55.zig"),
         .cortex_m7 => @import("cortex_m/m7.zig"),
     };
 };
