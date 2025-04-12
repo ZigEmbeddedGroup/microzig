@@ -48,7 +48,7 @@ pub fn disable(comptime int: cpu.ExternalInterrupt) void {
 }
 
 /// Returns true, when setting interrupt handlers at runtime is possible.
-pub fn can_set_handler() bool {
+pub inline fn can_set_handler() bool {
   return interrupt.has_ram_vectors();
 }
 

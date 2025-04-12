@@ -4,7 +4,7 @@ const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 
 pub const PlatformOptions = struct {
-    ram_vectors: bool = false,
+    ram_vectors: bool = true,
     has_ram_vectors_section: bool = false,
 };
 

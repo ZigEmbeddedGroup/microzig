@@ -477,7 +477,7 @@ pub const interrupt = struct {
 
     pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
         if (!has_ram_vectors()) {
-            @panic("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
+            @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
         }
 
         var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
