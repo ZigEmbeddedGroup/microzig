@@ -13,15 +13,8 @@ const uart_tx_pin = rp2xxx.gpio.num(0);
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    .interrupts = switch (rp2xxx.compatibility.chip) {
-        .RP2040 => .{
+    .interrupts = .{
             .TIMER_IRQ_0 = .{ .c = timer_interrupt },
-        },
-        .RP2350 => .{
-            .TIMER0_IRQ_0 = switch (rp2xxx.compatibility.arch) {
-                .arm => .{ .c = timer_interrupt },
-                .riscv => timer_interrupt,
-            },
         },
     },
 };

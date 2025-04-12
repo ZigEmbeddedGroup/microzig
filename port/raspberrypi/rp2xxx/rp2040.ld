@@ -59,6 +59,11 @@ SECTIONS
       microzig_bss_end = .;
   } > ram0
 
+  .ram_vectors (NOLOAD) :
+  {
+    KEEP(*(ram_vectors))
+  } > ram0
+
   .flash_end :
   {
     microzig_flash_end = .;
