@@ -14,8 +14,7 @@ pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
     .interrupts = .{
-            .TIMER_IRQ_0 = .{ .c = timer_interrupt },
-        },
+        .TIMER_IRQ_0 = .{ .c = timer_interrupt },
     },
 };
 
