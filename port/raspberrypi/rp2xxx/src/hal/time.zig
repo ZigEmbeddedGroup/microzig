@@ -7,7 +7,7 @@ const TIMER = @field(
     microzig.chip.peripherals,
     switch (chip) {
         .RP2040 => "TIMER",
-        .RP2350 => "TIMER0",
+        RP2350, .RP2350_QFN80 => "TIMER0",
     },
 );
 

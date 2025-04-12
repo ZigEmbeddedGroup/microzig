@@ -61,7 +61,7 @@ pub fn apply(config: Config) void {
             .reserved16 = 0,
             .padding = 0,
         }),
-        .RP2350 => ADC.CS.write(.{
+        .RP2350, .RP2350_QFN80 => ADC.CS.write(.{
             .EN = 0,
             .TS_EN = @intFromBool(config.temp_sensor_enabled),
             .START_ONCE = 0,

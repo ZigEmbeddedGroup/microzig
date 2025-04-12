@@ -581,7 +581,7 @@ pub fn Tokenizer(chip: Chip) type {
                     else
                         return error.InvalidSource;
                 },
-                .RP2350 => {
+                .RP2350, .RP2350_QFN80 => {
                     source = if (std.mem.eql(u8, "gpio", source_lower))
                         .gpio
                     else if (std.mem.eql(u8, "jmppin", source_lower))
@@ -745,7 +745,7 @@ pub fn Tokenizer(chip: Chip) type {
             const dest_str = try self.peek_arg(diags) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str.str);
             // If the destination is rxfifo_ or rxfifoy, then it's a mov (to) rx instruction
-            if (chip == .RP2350 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
+            if (chip != .RP2040 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 return try self.get_movrx(diags);
             }
 
@@ -1167,8 +1167,8 @@ pub fn Token(comptime chip: Chip) type {
                 push: Push,
                 pull: Pull,
                 mov: Mov,
-                movtorx: if (chip == .RP2350) MovToRx else noreturn,
-                movfromrx: if (chip == .RP2350) MovFromRx else noreturn,
+                movtorx: if (chip == RP2350, .RP2350_QFN80) MovToRx else noreturn,
+                movfromrx: if (chip == RP2350, .RP2350_QFN80) MovFromRx else noreturn,
                 irq: Irq,
                 set: Set,
             };
@@ -1201,7 +1201,7 @@ pub fn Token(comptime chip: Chip) type {
                         pin = 0b01,
                         irq = 0b10,
                     },
-                    .RP2350 => enum(u2) {
+                    RP2350, .RP2350_QFN80 => enum(u2) {
                         gpio = 0b00,
                         pin = 0b01,
                         irq = 0b10,
@@ -1265,7 +1265,7 @@ pub fn Token(comptime chip: Chip) type {
                         isr = 0b110,
                         osr = 0b111,
                     },
-                    .RP2350 => enum(u3) {
+                    .RP2350, .RP2350_QFN80 => enum(u3) {
                         pins = 0b000,
                         x = 0b001,
                         y = 0b010,
@@ -1310,7 +1310,7 @@ pub fn Token(comptime chip: Chip) type {
                     num: Value,
                     rel: bool,
                 },
-                .RP2350 => struct {
+                .RP2350, .RP2350_QFN80 => struct {
                     clear: bool,
                     wait: bool,
                     num: Value,
@@ -1651,7 +1651,7 @@ fn ExpectedIrqInstr(comptime chip: Chip) type {
             delay: ?Value = null,
             side_set: ?Value = null,
         },
-        .RP2350 => struct {
+        .RP2350, .RP2350_QFN80 => struct {
             clear: bool,
             wait: bool,
             num: u5,
@@ -1677,7 +1677,7 @@ fn expect_instr_irq(comptime chip: Chip, expected: ExpectedIrqInstr(chip), actua
         .RP2040 => {
             try expectEqual(expected.rel, irq.rel);
         },
-        .RP2350 => {
+        .RP2350, .RP2350_QFN80 => {
             // try expectEqual(expected.idxmode, irq.idxmode);
         },
     }
@@ -1692,21 +1692,21 @@ fn bounded_tokenize(comptime chip: Chip, source: []const u8) !std.BoundedArray(T
 }
 
 test "tokenize.empty string" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "");
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.whitespace" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, " \t\r\n");
         try expectEqual(@as(usize, 0), tokens.len);
     }
 }
 
 test "tokenize.comma line comment" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "; this is a line comment");
 
         try expectEqual(@as(usize, 0), tokens.len);
@@ -1714,7 +1714,7 @@ test "tokenize.comma line comment" {
 }
 
 test "tokenize.slash line comment" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "// this is a line comment");
 
         try expectEqual(@as(usize, 0), tokens.len);
@@ -1722,7 +1722,7 @@ test "tokenize.slash line comment" {
 }
 
 test "tokenize.block comment" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip,
             \\/* this is
             \\   a block comment */
@@ -1733,7 +1733,7 @@ test "tokenize.block comment" {
 }
 
 test "tokenize.code block" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip,
             \\% c-sdk {
             \\   int foo;
@@ -1745,14 +1745,14 @@ test "tokenize.code block" {
 }
 
 test "tokenize.directive.program" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".program arst");
         try expect_program(chip, "arst", tokens.get(0));
     }
 }
 
 test "tokenize.directive.define" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".define symbol_name 1");
         try expect_define(chip, .{
             .name = "symbol_name",
@@ -1763,7 +1763,7 @@ test "tokenize.directive.define" {
 }
 
 test "tokenize.directive.define.public" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".define public symbol_name 0x1");
         try expect_define(chip, .{
             .name = "symbol_name",
@@ -1774,7 +1774,7 @@ test "tokenize.directive.define.public" {
 }
 
 test "tokenize.directive.define.with expression" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip,
             \\.define symbol_name 0x1
             \\.define something (symbol_name * 2)
@@ -1795,98 +1795,98 @@ test "tokenize.directive.define.with expression" {
 }
 
 test "tokenize.directive.origin" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".origin 0x10");
         try expect_origin(chip, .{ .integer = 0x10 }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".side_set 1");
         try expect_side_set(chip, .{ .count = .{ .integer = 1 } }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.opt" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".side_set 1 opt");
         try expect_side_set(chip, .{ .count = .{ .integer = 1 }, .opt = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.side_set.pindirs" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".side_set 1 pindirs");
         try expect_side_set(chip, .{ .count = .{ .integer = 1 }, .pindir = true }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap_target" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".wrap_target");
         try expect_wrap_target(chip, tokens.get(0));
     }
 }
 
 test "tokenize.directive.wrap" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".wrap");
         try expect_wrap(chip, tokens.get(0));
     }
 }
 
 test "tokenize.directive.lang_opt" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".lang_opt c flag foo");
         try expect_lang_opt(chip, .{ .lang = "c", .name = "flag", .option = "foo" }, tokens.get(0));
     }
 }
 
 test "tokenize.directive.word" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, ".word 0xaaaa");
         try expect_word(chip, .{ .integer = 0xaaaa }, tokens.get(0));
     }
 }
 
 test "tokenize.label" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "my_label:");
         try expect_label(chip, .{ .name = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.label.public" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "public my_label:");
         try expect_label(chip, .{ .name = "my_label", .public = true }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.nop" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "nop");
         try expect_instr_nop(chip, .{}, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.label" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "jmp my_label");
         try expect_instr_jmp(chip, .{ .target = "my_label" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.value" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const tokens = try bounded_tokenize(chip, "jmp 0x2");
         try expect_instr_jmp(chip, .{ .target = "0x2" }, tokens.get(0));
     }
 }
 
 test "tokenize.instr.jmp.conditions" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         const Condition = Token(chip).Instruction.Jmp.Condition;
         const cases = std.StaticStringMap(Condition).initComptime(.{
             .{ "!x", .x_is_zero },
@@ -1907,7 +1907,7 @@ test "tokenize.instr.jmp.conditions" {
 }
 
 test "tokenize.instr.wait" {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, ChipRP2350, .RP2350_QFN80 }) |chip| {
         inline for (.{ "gpio", "pin", "irq" }) |source| {
             const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("wait 0 {s} 1", .{source}));
             try expect_instr_wait(chip, .{
@@ -1931,7 +1931,7 @@ test "tokenize.instr.wait.irq.rel" {
 
 test "tokenize.instr.wait.jmppin" {
     // JMPPIN is a valid source on RP2350
-    const tokens = try bounded_tokenize(.RP2350, "wait 1 jmppin 1");
+    const tokens = try bounded_tokenize(RP2350, "wait 1 jmppin 1");
     try expect_instr_wait(.RP2350, .{
         .polarity = 1,
         .source = .jmppin,
@@ -2122,7 +2122,7 @@ test "tokenize.instr.irq" {
     });
 
     inline for (comptime modes.keys(), comptime modes.values(), 0..) |key, value, num| {
-        inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+        inline for (comptime .{ Chip.RP2040, Chip.RP2350, .RP2350_QFN80 }) |chip| {
             const tokens = try bounded_tokenize(chip, comptime std.fmt.comptimePrint("irq {s} {}", .{
                 key,
                 num,

@@ -167,7 +167,7 @@ pub fn F(comptime config: UsbConfig) type {
         }
 
         pub fn usb_init_device(_: *usb.DeviceConfiguration) void {
-            if (chip == .RP2350) {
+            if (chip == RP2350, .RP2350_QFN80) {
                 peripherals.USB.MAIN_CTRL.modify(.{
                     .PHY_ISO = 0,
                 });

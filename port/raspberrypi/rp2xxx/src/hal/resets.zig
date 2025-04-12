@@ -36,7 +36,7 @@ pub const Mask =
         usbctrl: bool = true,
         padding: u7 = 0,
     },
-    .RP2350 => packed struct(u32) {
+    RP2350, .RP2350_QFN80 => packed struct(u32) {
         adc: bool = true,
         busctrl: bool = true,
         dma: bool = true,
@@ -144,7 +144,7 @@ pub const masks = struct {
             .RP2040 => {
                 tmp.rtc = false;
             },
-            .RP2350 => {
+            RP2350, .RP2350_QFN80 => {
                 tmp.hstx = false;
             },
         }

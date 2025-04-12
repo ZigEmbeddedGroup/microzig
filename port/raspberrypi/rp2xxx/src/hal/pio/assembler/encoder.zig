@@ -389,7 +389,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                                 },
                             };
                         },
-                        .RP2350 => {
+                        RP2350, .RP2350_QFN80 => {
                             const irq_num = try self.evaluate(u3, program.*, irq.num, token_index, diags);
                             break :blk .{
                                 .irq = .{
@@ -649,7 +649,7 @@ pub fn Instruction(comptime chip: Chip) type {
                 clear: u1,
                 reserved: u1 = 0,
             },
-            .RP2350 => packed struct(u8) {
+            .RP2350, .RP2350_QFN80 => packed struct(u8) {
                 index: u3,
                 idxmode: u2,
                 wait: u1,

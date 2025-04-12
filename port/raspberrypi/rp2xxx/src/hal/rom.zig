@@ -139,7 +139,7 @@ pub fn rom_func_lookup(code: Code) *anyopaque {
 
 /// Return a count of the number of 1 bits in value
 pub fn popcount32(value: u32) u32 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         // RP2350, supports fast assembly version
         return @popCount(value);
     }
@@ -154,7 +154,7 @@ pub fn popcount32(value: u32) u32 {
 
 /// Return a count of the number of 1 bits in value
 pub fn reverse32(value: u32) u32 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         // RP2350, supports fast assembly version
         return @bitReverse(value);
     }
@@ -169,7 +169,7 @@ pub fn reverse32(value: u32) u32 {
 
 /// Return the number of consecutive high order 0 bits of value
 pub fn clz32(value: u32) u32 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         // RP2350, supports fast assembly version
         return @clz(value);
     }
@@ -184,7 +184,7 @@ pub fn clz32(value: u32) u32 {
 
 /// Return the number of consecutive low order 0 bits of value
 pub fn ctz32(value: u32) u32 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         // RP2350, supports fast assembly version
         return @ctz(value);
     }
@@ -203,7 +203,7 @@ pub fn ctz32(value: u32) u32 {
 
 /// Sets all bytes of dest to the value c and returns ptr
 pub fn memset(dest: []u8, c: u8) []u8 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         @memset(dest, c);
         return dest;
     }
@@ -218,7 +218,7 @@ pub fn memset(dest: []u8, c: u8) []u8 {
 
 /// Copies n bytes from src to dest; The number of bytes copied is the size of the smaller slice
 pub fn memcpy(dest: []u8, src: []const u8) []u8 {
-    if (chip == .RP2350) {
+    if (chip == RP2350, .RP2350_QFN80) {
         // For some reason @memcpy crash chip with HardFault interrupt (UNALIGNED)
         std.mem.copyForwards(u8, dest, src);
         return dest;

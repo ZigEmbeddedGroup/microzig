@@ -22,7 +22,7 @@ fn UsedInstructionSpace(chip: Chip) type {
         .RP2040 => return struct {
             pub var val = [_]u32{ 0, 0 };
         },
-        .RP2350 => return struct {
+        RP2350, .RP2350_QFN80 => return struct {
             pub var val = [_]u32{ 0, 0, 0 };
         },
     }
@@ -32,7 +32,7 @@ fn ClaimedStateMachines(chip: Chip) type {
         .RP2040 => return struct {
             pub var val = [_]u4{ 0, 0 };
         },
-        .RP2350 => return struct {
+        RP2350, .RP2350_QFN80 => return struct {
             pub var val = [_]u4{ 0, 0, 0 };
         },
     }
@@ -583,7 +583,7 @@ pub fn ShiftOptions(chip: Chip) type {
                 right,
             };
         },
-        .RP2350 => struct {
+        RP2350, .RP2350_QFN80 => struct {
             autopush: bool = false,
             autopull: bool = false,
             in_shiftdir: Direction = .right,

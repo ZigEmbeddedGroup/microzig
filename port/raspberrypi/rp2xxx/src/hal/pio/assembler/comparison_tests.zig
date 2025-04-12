@@ -35,7 +35,7 @@ const c = @cImport({
 });
 
 fn pio_comparison(comptime source: []const u8) !void {
-    inline for (comptime .{ Chip.RP2040, Chip.RP2350 }) |chip| {
+    inline for (comptime .{ Chip.RP2040, Chip.RP2350, Chip.RP2350_QFN80 }) |chip| {
         try pio_comparison_chip(chip, source);
     }
 }

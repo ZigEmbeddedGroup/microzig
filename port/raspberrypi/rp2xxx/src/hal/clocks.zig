@@ -8,7 +8,7 @@ const chip = @import("compatibility.zig").chip;
 // Re-export of platform rectified clocks implementation
 const chip_specific = switch (chip) {
     .RP2040 => @import("clocks/rp2040.zig"),
-    .RP2350 => @import("clocks/rp2350.zig"),
+    .RP2350, .RP2350_QFN80 => @import("clocks/rp2350.zig"),
 };
 
 /// Defines the potential sources a clock generator can take. Different clock generators will support
