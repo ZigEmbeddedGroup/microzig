@@ -3,7 +3,7 @@ const mmio = microzig.mmio;
 
 pub const PlatformOptions = struct {
     /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
-    ram_vectors: bool = true,
+    ram_vectors: bool = false,
     /// When true, the RAM vectors are placed in section `ram_vectors`.
     has_ram_vectors_section: bool = false,
 };
