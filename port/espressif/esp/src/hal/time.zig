@@ -59,7 +59,7 @@ pub fn get_systimer_counter(unit_id: u1) u64 {
     // Read LO, HI, then LO again, check that LO returns the same value. This accounts for the case
     // when an interrupt may happen between reading HI and LO values, and this function may get
     // called from the ISR. In this case, the repeated read will return consistent values.
-    var lo_start = LO.read().TIMER_UNIT0_VALUE_LO; // 32 bits
+    var lo_start = LO.read().TIMER_UNIT0_VALUE_LO;
     while (true) {
         const lo = lo_start;
         const hi = HI.read().TIMER_UNIT0_VALUE_HI;
@@ -70,7 +70,6 @@ pub fn get_systimer_counter(unit_id: u1) u64 {
 }
 
 inline fn ticks_to_us(ticks: u64) u64 {
-    // TODO: Use clock
     // 'average 16MHz ticks' based on 40MHz XTAL with 2.5 divider
     return ticks / 16;
 }
