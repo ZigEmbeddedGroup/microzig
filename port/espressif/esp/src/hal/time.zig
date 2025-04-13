@@ -19,24 +19,39 @@ pub fn sleep_us(time_us: u64) void {
     while (!end_time.is_reached_by(get_time_since_boot())) {}
 }
 
-fn get_systimer_counter(counter_id: u32) u64 {
-    // TODO: We need to put it somewhere else
+pub fn enable_systimer(unit_id: u1) void {
     // This is 1 on reset, but let's set it anyway
     SYSTEM.PERIP_CLK_EN0.modify(.{
         .SYSTIMER_CLK_EN = 1,
     });
-    SYSTIMER.CONF.modify(.{
-        // Resets as 1 anyway
-        .TIMER_UNIT0_WORK_EN = 1,
-        // Needs explicit setting
-        .CLK_EN = 1,
-    });
+    switch (unit_id) {
+        0 => SYSTIMER.CONF.modify(.{
+            .TIMER_UNIT0_WORK_EN = 1,
+            .CLK_EN = 1,
+        }),
+        1 => SYSTIMER.CONF.modify(.{
+            .TIMER_UNIT1_WORK_EN = 1,
+            .CLK_EN = 1,
+        }),
+    }
+}
 
-    // TODO: Support using the other unit
-    _ = counter_id;
-    const OP = &SYSTIMER.UNIT0_OP;
-    const LO = &SYSTIMER.UNIT0_VALUE_LO;
-    const HI = &SYSTIMER.UNIT0_VALUE_HI;
+pub fn get_systimer_counter(unit_id: u1) u64 {
+    // TODO: We need to put it somewhere else
+    enable_systimer(unit_id);
+
+    const OP: @TypeOf(&SYSTIMER.UNIT0_OP) = switch (unit_id) {
+        0 => &SYSTIMER.UNIT0_OP,
+        1 => @ptrCast(&SYSTIMER.UNIT1_OP),
+    };
+    const LO: @TypeOf(&SYSTIMER.UNIT0_VALUE_LO) = switch (unit_id) {
+        0 => &SYSTIMER.UNIT0_VALUE_LO,
+        1 => @ptrCast(&SYSTIMER.UNIT1_VALUE_LO),
+    };
+    const HI: @TypeOf(&SYSTIMER.UNIT0_VALUE_HI) = switch (unit_id) {
+        0 => &SYSTIMER.UNIT0_VALUE_HI,
+        1 => @ptrCast(&SYSTIMER.UNIT1_VALUE_HI),
+    };
 
     // Set the "update" bit and wait for acknowledgment
     OP.modify(.{ .TIMER_UNIT0_UPDATE = 1 });
