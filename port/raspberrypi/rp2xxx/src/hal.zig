@@ -82,7 +82,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 }
 
 pub fn get_cpu_id() u32 {
-    return SIO.CPUID.*;
+    return SIO.CPUID.read().CPUID;
 }
 
 test "hal tests" {
