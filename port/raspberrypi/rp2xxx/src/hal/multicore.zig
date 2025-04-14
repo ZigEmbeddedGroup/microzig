@@ -161,3 +161,92 @@ pub const Spinlock = struct {
         return SIO.SPINLOCK_ST.read().SPINLOCK_ST;
     }
 };
+
+/// Multicore semaphore.
+pub const Semaphore = struct {
+    available: bool = true,
+    spinlock: Spinlock = Spinlock.init(31),
+
+    /// Acquire the semaphore.
+    /// Returns true if the semaphore was acquired, false if the semaphore
+    /// is not available.
+    pub fn acquire_unblocking(self: *Semaphore) bool {
+        const critical_section = microzig.interrupt.enter_critical_section();
+        defer critical_section.leave();
+
+        self.spinlock.lock();
+        defer self.spinlock.unlock();
+
+        if (self.available) {
+            self.available = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// Acquire the semaphore.
+    /// If the semaphore cannot be acquired, this function will busy wait until
+    /// the semaphore is available.
+    pub fn acquire(self: *Semaphore) void {
+        while (!self.acquire_unblocking()) {}
+    }
+
+    /// Release the semaphore.
+    pub fn release(self: *Semaphore) void {
+        // Note: no need for critical section here as this operation
+        // is inherently atomic.
+        self.available = true;
+    }
+};
+
+/// Multicore counted semaphore.
+/// This semaphore can only be acquired by one core at a time.  It can be
+/// acquired more than once (by the same core) and must be released the same
+/// number of times before the other core can acquire it.
+pub const CountedSemaphore = struct {
+    count: usize = 0,
+    spinlock: Spinlock = Spinlock.init(31),
+    owning_core: u32 = 0,
+
+    /// Acquire the semaphore.
+    /// Returns true if the semaphore was acquired, false if the semaphore
+    /// is not available.
+    pub fn acquire_unblocking(self: *CountedSemaphore) bool {
+        const critical_section = microzig.interrupt.enter_critical_section();
+        defer critical_section.leave();
+
+        self.spinlock.lock();
+        defer self.spinlock.unlock();
+
+        if (self.count == 0) {
+            // Core is free
+            self.owning_core = microzig.hal.get_cpu_id();
+            self.count = 1;
+            return true;
+        } else if (self.owning_core == microzig.hal.get_cpu_id()) {
+            self.count += 1;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// Acquire the semaphore.
+    /// If a core cannot acquire the semaphore, it will busy wait until
+    /// the semaphore is available.
+    pub fn acquire(self: *CountedSemaphore) void {
+        while (!self.acquire_unblocking()) {}
+    }
+
+    /// Release the semaphore.
+    pub fn release(self: *CountedSemaphore) void {
+        const critical_section = microzig.interrupt.enter_critical_section();
+        defer critical_section.leave();
+
+        self.spinlock.lock();
+        defer self.spinlock.unlock();
+
+        if (self.count > 0) self.count -= 1;
+    }
+};
