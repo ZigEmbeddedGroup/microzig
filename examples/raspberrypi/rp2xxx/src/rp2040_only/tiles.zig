@@ -6,7 +6,7 @@ const Pio = rp2xxx.pio.Pio;
 const StateMachine = rp2xxx.pio.StateMachine;
 
 const ws2812_program = blk: {
-    @setEvalBranchQuota(5000);
+    @setEvalBranchQuota(10_000);
     break :blk rp2xxx.pio.assemble(
         \\;
         \\; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
