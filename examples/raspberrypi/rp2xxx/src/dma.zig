@@ -34,9 +34,9 @@ pub fn main() !void {
 
     rp2xxx.uart.init_logger(uart);
 
-    const channel = dma.claim_unused_channel();
-    
-    channel.?.trigger_transfer(
+    const channel = dma.claim_unused_channel().?;
+
+    channel.trigger_transfer(
         @intFromPtr(dst[0..dst.len].ptr),
         @intFromPtr(hello[0..hello.len].ptr),
         hello.len, 
@@ -49,7 +49,7 @@ pub fn main() !void {
         },
      );
 
-    channel.?.wait_for_finish_blocking();
+    channel.wait_for_finish_blocking();
 
     var i: u32 = 0;
     while (true) : (i += 1) {
