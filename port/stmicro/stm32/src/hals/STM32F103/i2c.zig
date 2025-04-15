@@ -1,9 +1,12 @@
+//TODO: add timeout
+
 const std = @import("std");
 const microzig = @import("microzig");
 const I2CREGS = *volatile microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
 const F_S = microzig.chip.types.peripherals.i2c_v1.F_S;
 const peripherals = microzig.chip.peripherals;
+const mdf = microzig.drivers;
 
 pub const Mode = enum {
     Standard,
@@ -245,6 +248,7 @@ pub const I2C = enum(u3) {
             try i2c.check_error();
         }
         regs.CR1.modify(.{
+            .ACK = 1,
             .START = 1,
         });
         while (regs.SR1.read().START != 1) {
@@ -255,6 +259,7 @@ pub const I2C = enum(u3) {
     fn STOP(i2c: I2C) void {
         const regs = get_regs(i2c);
         regs.CR1.modify(.{
+            .ACK = 0,
             .STOP = 1,
         });
 
@@ -280,26 +285,76 @@ pub const I2C = enum(u3) {
             try i2c.check_error();
         }
 
-        std.mem.doNotOptimizeAway(regs.SR1.raw);
         std.mem.doNotOptimizeAway(regs.SR2.raw);
     }
 
-    pub fn write(i2c: I2C, address: Address, data: []const u8) IOError!void {
+    fn set_addr(i2c: I2C, address: Address, rw: u1) IOError!void {
+        switch (address.mode) {
+            .@"7bits" => try i2c.send_7bits_addr(address.addr, rw),
+            .@"10bits" => try i2c.send_10bits_addr(address.addr, rw),
+        }
+    }
+
+    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) IOError!void {
+        for (chunks) |chunk| {
+            try i2c.read_blocking(addr, chunk, timeout);
+        }
+    }
+
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) IOError!void {
+        for (chunks) |chunk| {
+            try i2c.write_blocking(addr, chunk, timeout);
+        }
+    }
+
+    pub fn write_blocking(i2c: I2C, address: Address, data: []const u8, _: ?mdf.time.Duration) IOError!void {
         const regs = get_regs(i2c);
         try i2c.START();
-        switch (address.mode) {
-            .@"7bits" => try i2c.send_7bits_addr(address.addr, 0),
-            .@"10bits" => try i2c.send_10bits_addr(address.addr, 0),
-        }
+        try i2c.set_addr(address, 0);
 
         for (data) |bytes| {
             regs.DR.modify(.{
                 .DR = bytes,
             });
 
-            while (regs.SR1.read().BTF != 1) {
+            while (regs.SR1.read().TXE != 1) {
                 try i2c.check_error();
             }
+        }
+
+        while (regs.SR1.read().BTF != 1) {
+            try i2c.check_error();
+        }
+
+        i2c.STOP();
+    }
+
+    pub fn read_blocking(i2c: I2C, address: Address, data: []u8, _: ?mdf.time.Duration) IOError!void {
+        const regs = get_regs(i2c);
+
+        try i2c.START();
+        try i2c.set_addr(address, 1);
+
+        regs.CR1.modify(.{
+            .ACK = 1,
+        });
+
+        for (0..data.len) |index| {
+            if (index == data.len - 1) {
+                //disable ACk on last byte
+                regs.CR1.modify(.{
+                    .ACK = 0,
+                });
+            }
+            while (regs.SR1.read().RXNE != 1) {
+                try i2c.check_error();
+            }
+
+            data[index] = regs.DR.read().DR;
+        }
+
+        while (regs.SR1.read().BTF != 1) {
+            try i2c.check_error();
         }
 
         i2c.STOP();
