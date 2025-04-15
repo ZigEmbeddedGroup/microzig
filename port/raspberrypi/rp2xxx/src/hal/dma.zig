@@ -24,7 +24,7 @@ pub fn channel(n: u4) Channel {
 
 pub fn claim_unused_channel() ?Channel {
     for (0..num_channels) |i| {
-        if (claimed_channels.isSet(i) == false) {
+        if (!claimed_channels.isSet(i)) {
             claimed_channels.set(i);
             return channel(@intCast(i));
         }
@@ -60,23 +60,23 @@ pub const Channel = enum(u4) {
         al1_ctrl: u32,
         al1_read_addr: u32,
         al1_write_addr: u32,
-        al1_trans_count: u32,
+        al1_trans_count_trig: u32,
 
         // alias 2
         al2_ctrl: u32,
-        al2_read_addr: u32,
-        al2_write_addr: u32,
         al2_trans_count: u32,
+        al2_read_addr: u32,
+        al2_write_addr_trig: u32,
 
         // alias 3
         al3_ctrl: u32,
-        al3_read_addr: u32,
         al3_write_addr: u32,
         al3_trans_count: u32,
+        al3_read_addr_trig: u32,
     };
 
     fn get_regs(chan: Channel) *volatile Regs {
-        const regs = @as(*volatile [12]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
+        const regs = @as(*volatile [num_channels]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
         return &regs[@intFromEnum(chan)];
     }
 
@@ -131,5 +131,11 @@ pub const Channel = enum(u4) {
     pub fn is_busy(chan: Channel) bool {
         const regs = chan.get_regs();
         return regs.ctrl_trig.read().BUSY == 1;
+    }
+
+    pub fn wait_for_finish_blocking(chan: Channel) void {
+        while (chan.is_busy()) {
+            hw.tight_loop_contents();
+        }
     }
 };
