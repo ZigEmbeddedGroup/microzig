@@ -1376,7 +1376,7 @@ test "gen.peripheral with count, padding required" {
         \\            PORTB: u8,
         \\            DDRB: u8,
         \\            PINB: u8,
-        \\            padding: [1]u8 = 0,
+        \\            padding: [1]u8,
         \\        };
         \\    };
         \\};
@@ -1756,7 +1756,7 @@ test "gen.register fields with name collision" {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field 1
         \\                TEST_FIELD: u1,
-        \\                padding: u31,
+        \\                padding: u31 = 0,
         \\            }),
         \\        };
         \\    };
