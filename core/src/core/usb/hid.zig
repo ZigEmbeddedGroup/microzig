@@ -156,16 +156,6 @@ pub const ReportType = enum(u8) {
     Feature = 3,
 };
 
-/// HID class specific control request
-pub const Request = enum(u8) {
-    GetReport = 0x01,
-    GetIdle = 0x02,
-    GetProtocol = 0x03,
-    SetReport = 0x09,
-    SetIdle = 0x0a,
-    SetProtocol = 0x0b,
-};
-
 /// HID country codes
 pub const CountryCode = enum(u8) {
     NotSupported = 0,
