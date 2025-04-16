@@ -253,49 +253,49 @@ pub const LocalItem = enum(u4) {
 };
 
 pub const UsageTable = struct {
-    const desktop: [1]u8 = "\x01".*;
-    const keyboard: [1]u8 = "\x07".*;
-    const led: [1]u8 = "\x08".*;
-    const fido: [2]u8 = "\xD0\xF1".*;
-    const vendor: [2]u8 = "\x00\xFF".*;
+    pub const desktop: [1]u8 = "\x01".*;
+    pub const keyboard: [1]u8 = "\x07".*;
+    pub const led: [1]u8 = "\x08".*;
+    pub const fido: [2]u8 = "\xD0\xF1".*;
+    pub const vendor: [2]u8 = "\x00\xFF".*;
 };
 
 pub const FidoAllianceUsage = struct {
-    const u2fhid: [1]u8 = "\x01".*;
-    const data_in: [1]u8 = "\x20".*;
-    const data_out: [1]u8 = "\x21".*;
+    pub const u2fhid: [1]u8 = "\x01".*;
+    pub const data_in: [1]u8 = "\x20".*;
+    pub const data_out: [1]u8 = "\x21".*;
 };
 
 pub const DesktopUsage = struct {
-    const keyboard: [1]u8 = "\x06".*;
+    pub const keyboard: [1]u8 = "\x06".*;
 };
 
-const HID_DATA: u8 = 0 << 0;
-const HID_CONSTANT: u8 = 1 << 0;
+pub const HID_DATA: u8 = 0 << 0;
+pub const HID_CONSTANT: u8 = 1 << 0;
 
-const HID_ARRAY = 0 << 1;
-const HID_VARIABLE = 1 << 1;
+pub const HID_ARRAY = 0 << 1;
+pub const HID_VARIABLE = 1 << 1;
 
-const HID_ABSOLUTE = 0 << 2;
-const HID_RELATIVE = 1 << 2;
+pub const HID_ABSOLUTE = 0 << 2;
+pub const HID_RELATIVE = 1 << 2;
 
-const HID_WRAP_NO = 0 << 3;
-const HID_WRAP = 1 << 3;
+pub const HID_WRAP_NO = 0 << 3;
+pub const HID_WRAP = 1 << 3;
 
-const HID_LINEAR = 0 << 4;
-const HID_NONLINEAR = 1 << 4;
+pub const HID_LINEAR = 0 << 4;
+pub const HID_NONLINEAR = 1 << 4;
 
-const HID_PREFERRED_STATE = 0 << 5;
-const HID_PREFERRED_NO = 1 << 5;
+pub const HID_PREFERRED_STATE = 0 << 5;
+pub const HID_PREFERRED_NO = 1 << 5;
 
-const HID_NO_NULL_POSITION = 0 << 6;
-const HID_NULL_STATE = 1 << 6;
+pub const HID_NO_NULL_POSITION = 0 << 6;
+pub const HID_NULL_STATE = 1 << 6;
 
-const HID_NON_VOLATILE = 0 << 7;
-const HID_VOLATILE = 1 << 7;
+pub const HID_NON_VOLATILE = 0 << 7;
+pub const HID_VOLATILE = 1 << 7;
 
-const HID_BITFIELD = 0 << 8;
-const HID_BUFFERED_BYTES = 1 << 8;
+pub const HID_BITFIELD = 0 << 8;
+pub const HID_BUFFERED_BYTES = 1 << 8;
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++
 // Report Descriptor Functions
