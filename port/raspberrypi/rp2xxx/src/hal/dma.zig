@@ -22,6 +22,7 @@ pub fn channel(n: u4) Channel {
     return @as(Channel, @enumFromInt(n));
 }
 
+// TODO - this operation should be atomic
 pub fn claim_unused_channel() ?Channel {
     for (0..num_channels) |i| {
         if (!claimed_channels.isSet(i)) {
