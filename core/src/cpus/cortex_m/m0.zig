@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const PlatformOptions = struct {};
+pub const CPUOptions = struct {};
 
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.

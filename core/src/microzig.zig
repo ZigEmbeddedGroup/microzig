@@ -66,7 +66,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const InterruptOptions = if (@hasDecl(cpu, "InterruptOptions")) cpu.InterruptOptions else struct {};
 
-pub const PlatformOptions = if (@hasDecl(cpu, "PlatformOptions")) cpu.PlatformOptions else struct {};
+pub const CPUOptions = if (@hasDecl(cpu, "CPUOptions")) cpu.CPUOptions else struct {};
 
 pub const Options = struct {
     log_level: std.log.Level = std.log.default_level,
@@ -90,7 +90,7 @@ pub const Options = struct {
         }
     }.log,
     interrupts: InterruptOptions = .{},
-    platform: PlatformOptions = .{},
+    cpu: CPUOptions = .{},
 };
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!
