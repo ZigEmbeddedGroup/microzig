@@ -1,3 +1,4 @@
+const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
@@ -21,17 +22,10 @@ pub fn main() !void {
         dir: GPIO_Device,
         step: GPIO_Device,
     } = undefined;
-
-    inline for ([_]struct { field: []const u8, gpio: u6 }{
-        .{ .field = "ms1", .gpio = 1 },
-        .{ .field = "ms2", .gpio = 2 },
-        .{ .field = "ms3", .gpio = 3 },
-        .{ .field = "dir", .gpio = 14 },
-        .{ .field = "step", .gpio = 15 },
-    }) |info| {
-        const pin = gpio.num(info.gpio);
+    inline for (std.meta.fields(@TypeOf(pins)), .{ 1, 2, 3, 14, 15 }) |field, num| {
+        const pin = gpio.num(num);
         pin.set_function(.sio);
-        @field(pins, info.field) = GPIO_Device.init(pin);
+        @field(pins, field.name) = GPIO_Device.init(pin);
     }
 
     var stepper = A4988.init(.{
