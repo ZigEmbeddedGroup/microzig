@@ -53,6 +53,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "interrupts", .file = "src/interrupts.zig" },
         .{ .name = "stepper", .file = "src/stepper.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
+        .{ .name = "dma", .file = "src/dma.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
