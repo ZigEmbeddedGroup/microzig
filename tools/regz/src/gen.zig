@@ -867,7 +867,7 @@ fn write_fields(
             continue;
         }
         if (offset < field.offset_bits) {
-            try writer.print("reserved{}: u{},\n", .{ field.offset_bits, field.offset_bits - offset });
+            try writer.print("reserved{}: u{} = 0,\n", .{ field.offset_bits, field.offset_bits - offset });
             offset = field.offset_bits;
         }
         assert(offset == field.offset_bits);
@@ -919,7 +919,7 @@ fn write_fields(
 
     assert(offset <= register_size_bits);
     if (offset < register_size_bits)
-        try writer.print("padding: u{},\n", .{register_size_bits - offset});
+        try writer.print("padding: u{} = 0,\n", .{register_size_bits - offset});
 
     try out_writer.writeAll(buffer.items);
 }
@@ -957,7 +957,7 @@ test "gen.peripheral instantiation" {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
-        \\                padding: u31,
+        \\                padding: u31 = 0,
         \\            }),
         \\        };
         \\    };
@@ -998,7 +998,7 @@ test "gen.peripherals with a shared type" {
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
-        \\                padding: u31,
+        \\                padding: u31 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1058,14 +1058,14 @@ test "gen.peripheral with modes" {
         \\                TEST_REGISTER1: u32,
         \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                    TEST_FIELD: u1,
-        \\                    padding: u31,
+        \\                    padding: u31 = 0,
         \\                }),
         \\            },
         \\            TEST_MODE2: extern struct {
         \\                TEST_REGISTER2: u32,
         \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                    TEST_FIELD: u1,
-        \\                    padding: u31,
+        \\                    padding: u31 = 0,
         \\                }),
         \\            },
         \\        };
@@ -1173,7 +1173,7 @@ test "gen.field with named enum" {
         \\
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: TEST_ENUM,
-        \\                padding: u4,
+        \\                padding: u4 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1209,7 +1209,7 @@ test "gen.field with anonymous enum" {
         \\                    TEST_ENUM_FIELD2 = 0x1,
         \\                    _,
         \\                },
-        \\                padding: u4,
+        \\                padding: u4 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1454,7 +1454,7 @@ test "gen.register with count and fields" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: u4,
-        \\                padding: u4,
+        \\                padding: u4 = 0,
         \\            }),
         \\            DDRB: u8,
         \\            PINB: u8,
@@ -1487,7 +1487,7 @@ test "gen.field with count, width of one, offset, and padding" {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
-        \\                reserved2: u2,
+        \\                reserved2: u2 = 0,
         \\                /// (1/5 of TEST_FIELD)
         \\                @"TEST_FIELD[0]": u1,
         \\                /// (2/5 of TEST_FIELD)
@@ -1498,7 +1498,7 @@ test "gen.field with count, width of one, offset, and padding" {
         \\                @"TEST_FIELD[3]": u1,
         \\                /// (5/5 of TEST_FIELD)
         \\                @"TEST_FIELD[4]": u1,
-        \\                padding: u1,
+        \\                padding: u1 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1529,12 +1529,12 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
-        \\                reserved2: u2,
+        \\                reserved2: u2 = 0,
         \\                /// (1/2 of TEST_FIELD)
         \\                @"TEST_FIELD[0]": u2,
         \\                /// (2/2 of TEST_FIELD)
         \\                @"TEST_FIELD[1]": u2,
-        \\                padding: u2,
+        \\                padding: u2 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1609,7 +1609,7 @@ test "gen.peripheral type with register and field" {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field
         \\                TEST_FIELD: u1,
-        \\                padding: u31,
+        \\                padding: u31 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1686,7 +1686,7 @@ test "gen.pick one enum field in value collisions" {
         \\                    TEST_ENUM_FIELD1 = 0x0,
         \\                    _,
         \\                },
-        \\                padding: u4,
+        \\                padding: u4 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1721,7 +1721,7 @@ test "gen.pick one enum field in name collisions" {
         \\                    TEST_ENUM_FIELD1 = 0x0,
         \\                    _,
         \\                },
-        \\                padding: u4,
+        \\                padding: u4 = 0,
         \\            }),
         \\        };
         \\    };
@@ -1756,7 +1756,7 @@ test "gen.register fields with name collision" {
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field 1
         \\                TEST_FIELD: u1,
-        \\                padding: u31,
+        \\                padding: u31 = 0,
         \\            }),
         \\        };
         \\    };
