@@ -528,7 +528,7 @@ pub const ReportDescriptorKeyboard = hid_usage_page(1, UsageTable.desktop) //
     ++ hid_logical_max(2, "\xff\x00".*) //
     ++ hid_report_count(1, "\x06".*) //
     ++ hid_report_size(1, "\x08".*) //
-    ++ hid_output(HID_DATA | HID_ARRAY | HID_ABSOLUTE) //
+    ++ hid_input(HID_DATA | HID_ARRAY | HID_ABSOLUTE) //
     // End
     ++ hid_collection_end();
 
