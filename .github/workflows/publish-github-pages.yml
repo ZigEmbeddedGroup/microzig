@@ -6,6 +6,8 @@ on:
   release:
     types:
       - published
+env:
+  ZIG_VERSION: 0.14.0
 
 jobs:
   # Build job
