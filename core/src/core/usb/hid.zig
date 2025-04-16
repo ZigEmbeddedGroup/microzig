@@ -595,6 +595,32 @@ pub const HidClassDriver = struct {
                 switch (hid_request_type.?) {
                     .SetIdle => {
                         if (stage == .Setup) {
+                            // TODO: The host is attempting to limit bandwidth by requesting that
+                            // the device only return report data when its values actually change,
+                            // or when the specified duration elapses. In practice, the device can
+                            // still send reports as often as it wants, but for completeness this
+                            // should be implemented eventually.
+                            self.device.?.control_ack(setup);
+                        }
+                    },
+                    .SetProtocol => {
+                        if (stage == .Setup) {
+                            // TODO: The device should switch the format of its reports from the
+                            // boot keyboard/mouse protocol to the format described in its report descriptor,
+                            // or vice versa.
+                            //
+                            // For now, this request is ACKed without doing anything; in practice,
+                            // the OS will reuqest the report protocol anyway, so usually only one format is needed.
+                            // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
+                            // our device might not work in a limited BIOS environment.
+                            self.device.?.control_ack(setup);
+                        }
+                    },
+                    .SetReport => {
+                        if (stage == .Setup) {
+                            // TODO: This request sends a feature or ouptut report to the device,
+                            // e.g. turning on the caps lock LED. This must be handled in an
+                            // application-specific way, so notify the application code of the event.
                             self.device.?.control_ack(setup);
                         }
                     },
