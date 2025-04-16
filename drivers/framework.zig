@@ -46,6 +46,11 @@ pub const IO_expander = struct {
 };
 
 pub const wireless = struct {
+    pub const cyw43_bus = @import("wireless/cyw43/bus.zig");
+    pub const cyw43_runner = @import("wireless/cyw43/runner.zig");
+    pub const Cyw43_Spi = cyw43_bus.Cyw43_Spi;
+    pub const Cyw43_Bus = cyw43_bus.Cyw43_Bus;
+    pub const Cyw43_Runner = cyw43_runner.Cyw43_Runner;
     // pub const sx1278 = @import("wireless/sx1278.zig");
 };
 

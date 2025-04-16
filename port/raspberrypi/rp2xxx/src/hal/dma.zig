@@ -3,8 +3,8 @@ const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const DMA = microzig.chip.peripherals.DMA;
-const Dreq = microzig.chip.types.peripherals.DMA.Dreq;
-const DataSize = microzig.chip.types.peripherals.DMA.DataSize;
+pub const Dreq = microzig.chip.types.peripherals.DMA.Dreq;
+pub const DataSize = microzig.chip.types.peripherals.DMA.DataSize;
 
 const chip = @import("compatibility.zig").chip;
 
