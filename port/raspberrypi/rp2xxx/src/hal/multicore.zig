@@ -111,3 +111,53 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         seq = if (cmd == fifo.read_blocking()) seq + 1 else 0;
     }
 }
+
+/// Manage the state of hardware spinlocks.
+/// Usage example:
+///     var lock = Spinlock.init(5);
+///     . . .
+///     {
+///         lock.lock();
+///         defer lock.unlock();
+///         . . .
+///     }
+///
+pub const Spinlock = struct {
+    lock_reg: *volatile u32,
+
+    const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0.raw);
+
+    /// Returns an initialized Spinlock struct.
+    /// Parameters:
+    ///   lock_num - the index of the hardware spinlock to use
+    pub fn init(lock_num: u5) Spinlock {
+        return .{ .lock_reg = @ptrFromInt(spinlock_base + 4 * @as(usize, @intCast(lock_num))) };
+    }
+
+    /// Returns the index of the spinlock.
+    pub fn number(self: Spinlock) u5 {
+        return @intCast((@intFromPtr(self.lock_reg) - spinlock_base) / 4);
+    }
+
+    /// Lock the spinlock.  If the spinlock is already locked, busy wait until
+    /// it is release by the other core.
+    pub fn lock(self: Spinlock) void {
+        while (self.lock_reg.* == 0) {}
+    }
+
+    /// Returns true if the spinlock is locked
+    pub fn isLocked(self: Spinlock) bool {
+        const bit = @as(u32, 1) << self.number();
+        return (Spinlock.lockStatus() & bit) != 0;
+    }
+
+    /// Unlock the spinlock
+    pub fn unlock(self: Spinlock) void {
+        self.lock_reg.* = 0;
+    }
+
+    /// Returns bitmap of currently locked spinlocks
+    pub fn lockStatus() u32 {
+        return SIO.SPINLOCK_ST.read().SPINLOCK_ST;
+    }
+};

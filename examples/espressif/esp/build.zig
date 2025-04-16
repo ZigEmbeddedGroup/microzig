@@ -7,6 +7,7 @@ const MicroBuild = microzig.MicroBuild(.{
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const maybe_example = b.option([]const u8, "example", "only build matching examples");
 
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
@@ -18,9 +19,16 @@ pub fn build(b: *std.Build) void {
 
     const available_examples = [_]Example{
         .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "interrupts", .file = "src/interrupts.zig" },
+        .{ .name = "custom_clock_config", .file = "src/custom_clock_config.zig" },
     };
 
     for (available_examples) |example| {
+        // If we specify example, only select the ones that match
+        if (maybe_example) |selected_example|
+            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
+                continue;
+
         for (targets) |target_desc| {
             // `add_firmware` basically works like addExecutable, but takes a
             // `microzig.Target` for target instead of a `std.zig.CrossTarget`.

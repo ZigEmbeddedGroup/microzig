@@ -22,8 +22,7 @@ const CLOCKS = peripherals.CLOCKS;
 const WATCHDOG = peripherals.WATCHDOG;
 const AUX_SRC_SETTING_SRC_REG = common.AUX_SRC_SETTING_SRC_REG;
 
-pub const Source =
-    enum {
+pub const Source = enum {
     src_rosc,
     src_xosc,
     src_lposc,
@@ -169,8 +168,7 @@ pub const Source =
     }
 };
 
-pub const Generator =
-    enum(u32) {
+pub const Generator = enum(u32) {
     gpout0 = 0,
     gpout1,
     gpout2,

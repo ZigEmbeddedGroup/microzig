@@ -7,6 +7,7 @@ const MicroBuild = microzig.MicroBuild(.{
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const maybe_example = b.option([]const u8, "example", "only build matching examples");
 
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
@@ -21,6 +22,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_multicore", .file = "src/rp2040_only/blinky_core1.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
 
         // WaveShare Boards:
         .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
@@ -77,6 +79,11 @@ pub fn build(b: *std.Build) void {
     }
 
     for (available_examples.items) |example| {
+        // If we specify example, only select the ones that match
+        if (maybe_example) |selected_example|
+            if (!std.mem.containsAtLeast(u8, example.name, 1, selected_example))
+                continue;
+
         // `add_firmware` basically works like addExecutable, but takes a
         // `microzig.Target` for target instead of a `std.zig.CrossTarget`.
         //

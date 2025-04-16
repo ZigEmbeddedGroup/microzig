@@ -141,8 +141,7 @@ jobs:
             nxp/lpc,
             stmicro/stm32,
             raspberrypi/rp2xxx,
-            # TODO: investigate why these take up too much flash
-            #wch/ch32v,
+            wch/ch32v,
           ]
     steps:
       - name: Checkout

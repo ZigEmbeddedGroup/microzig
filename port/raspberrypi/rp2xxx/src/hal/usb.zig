@@ -48,7 +48,7 @@ pub const Dir = usb.types.Dir;
 pub const TransferType = usb.types.TransferType;
 pub const Endpoint = usb.types.Endpoint;
 
-pub const utf8ToUtf16Le = usb.utf8Toutf16Le;
+pub const utf8ToUtf16Le = usb.utf8ToUtf16Le;
 
 const BufferControlMmio = microzig.mmio.Mmio(@TypeOf(microzig.chip.peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL).underlying_type);
 const EndpointControlMimo = microzig.mmio.Mmio(@TypeOf(peripherals.USB_DPRAM.EP1_IN_CONTROL).underlying_type);

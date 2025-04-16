@@ -12,6 +12,9 @@
     <meta property="og:type" content="website">
     <link rel="stylesheet" href="$site.asset('style.css').link()">
     <link rel="icon" href="$site.asset('favicon.ico').link()" type="image/x-icon">
+
+    <meta name="build-date" content="$build.generated.formatHTTP()">
+
     <script>
       function navigateToVersion() {
         const version = document.getElementById('versionSelect').value;
@@ -26,6 +29,7 @@
       <nav>
         <div class="upper-header">
           <img class="logo" src="$site.asset('logo-text-brightmode.svg').link()">
+          <div>Build Date: <ctx :text="$build.generated.formatHTTP()"></ctx></div>
         </div>
         <hr>
         <div class="navbar">

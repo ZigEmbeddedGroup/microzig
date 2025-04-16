@@ -1,5 +1,6 @@
 .{
     .name = .port_espressif_esp,
+    .fingerprint = 0xabbc5d780bf390f1,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

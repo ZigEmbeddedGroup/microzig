@@ -289,46 +289,46 @@ pub const fifo = struct {
 
     /// Check if the ADC FIFO is full.
     pub fn is_full() bool {
-        const fsc = ADC.FSC.read();
-        return fsc.FULL != 0;
+        const fcs = ADC.FCS.read();
+        return fcs.FULL != 0;
     }
 
     /// Check if the ADC FIFO is empty.
     pub fn is_empty() bool {
-        const fsc = ADC.FSC.read();
-        return fsc.EMPTY != 0;
+        const fcs = ADC.FCS.read();
+        return fcs.EMPTY != 0;
     }
 
     /// Get the number of conversion in the ADC FIFO.
     pub fn get_level() u4 {
-        const fsc = ADC.FSC.read();
-        return fsc.LEVEL;
+        const fcs = ADC.FCS.read();
+        return fcs.LEVEL;
     }
 
     /// Check if the ADC FIFO has overflowed. When overflow happens, the new
     /// conversion is discarded. This flag is sticky, to clear it call
     /// `clear_overflowed()`.
     pub fn has_overflowed() bool {
-        const fsc = ADC.FSC.read();
-        return fsc.OVER != 0;
+        const fcs = ADC.FCS.read();
+        return fcs.OVER != 0;
     }
 
     /// Clear the overflow status flag if it is set.
     pub fn clear_overflowed() void {
-        ADC.FSC.modify(.{ .OVER = 1 });
+        ADC.FCS.modify(.{ .OVER = 1 });
     }
 
     /// Check if the ADC FIFO has underflowed. This means that the FIFO
     /// register was read while the FIFO was empty. This flag is sticky, to
     /// clear it call `clear_underflowed()`.
     pub fn has_underflowed() bool {
-        const fsc = ADC.FSC.read();
-        return fsc.UNDER != 0;
+        const fcs = ADC.FCS.read();
+        return fcs.UNDER != 0;
     }
 
     /// Clear the underflow status flag if it is set.
     pub fn clear_underflowed() void {
-        ADC.FSC.modify(.{ .UNDER = 1 });
+        ADC.FCS.modify(.{ .UNDER = 1 });
     }
 
     /// Pop conversion from ADC FIFO. This function assumes that the FIFO is

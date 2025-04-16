@@ -1,5 +1,6 @@
 .{
     .name = .examples_wch_ch32v,
+    .fingerprint = 0xf3835605e670e568,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

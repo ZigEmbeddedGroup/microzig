@@ -56,6 +56,13 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
     // Disable the watchdog as a soft reset doesn't disable the WD automatically!
     watchdog.disable();
 
+    // Clear all spinlocks as they may be left in a locked state following a
+    // soft reset
+
+    for (0..32) |i| {
+        multicore.Spinlock.init(@as(u5, @intCast(i))).unlock();
+    }
+
     // Reset all peripherals to put system into a known state, - except
     // for QSPI pads and the XIP IO bank, as this is fatal if running from
     // flash - and the PLLs, as this is fatal if clock muxing has not been
@@ -75,7 +82,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 }
 
 pub fn get_cpu_id() u32 {
-    return SIO.CPUID.*;
+    return SIO.CPUID.read().CPUID;
 }
 
 test "hal tests" {
