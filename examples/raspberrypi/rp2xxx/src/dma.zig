@@ -39,15 +39,15 @@ pub fn main() !void {
     channel.trigger_transfer(
         @intFromPtr(dst[0..dst.len].ptr),
         @intFromPtr(hello[0..hello.len].ptr),
-        hello.len, 
-        .{ 
+        hello.len,
+        .{
             .enable = true,
-            .read_increment = true, 
-            .write_increment = true, 
-            .data_size = .size_8, 
-            .dreq = .permanent, 
+            .read_increment = true,
+            .write_increment = true,
+            .data_size = .size_8,
+            .dreq = .permanent,
         },
-     );
+    );
 
     channel.wait_for_finish_blocking();
 

@@ -12,7 +12,7 @@ const hw = @import("hw.zig");
 
 const num_channels = switch (chip) {
     .RP2040 => 12,
-    .RP2350 => 16
+    .RP2350 => 16,
 };
 var claimed_channels = std.StaticBitSet(num_channels).initEmpty();
 
