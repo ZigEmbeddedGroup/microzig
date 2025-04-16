@@ -9,7 +9,6 @@ const Pin = rp2xxx.gpio.Pin;
 const gpout0_pin = gpio.num(21);
 
 pub fn main() !void {
-
     // Don't forget to bring a blinky!
     const led_gpio = rp2xxx.gpio.num(25);
     led_gpio.set_direction(.out);

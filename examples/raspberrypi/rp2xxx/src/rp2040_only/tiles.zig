@@ -70,7 +70,7 @@ inline fn floatToBright(f: f32) u8 {
     ];
 }
 
-pub fn main() void {
+pub fn main() !void {
     pio.gpio_init(led_pin);
     sm_set_consecutive_pindirs(pio, sm, @intFromEnum(led_pin), 1, true);
 

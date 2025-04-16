@@ -4,7 +4,6 @@ const std = @import("std");
 const microzig = @import("microzig");
 
 const rp2xxx = microzig.hal;
-const flash = rp2xxx.flash;
 const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const clocks = rp2xxx.clocks;
@@ -14,7 +13,6 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
 
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     std.log.err("panic: {s}", .{message});
@@ -28,23 +26,20 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
+    // init uart logging
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
+    rp2xxx.uart.init_logger(uart);
+
+    led.set_function(.sio);
+    led.set_direction(.out);
+    led.put(1);
 
     var ascon = rand.Ascon.init();
     var rng = ascon.random();
-
-    rp2xxx.uart.init_logger(uart);
 
     var buffer: [8]u8 = undefined;
     var dist: [256]usize = @splat(0);

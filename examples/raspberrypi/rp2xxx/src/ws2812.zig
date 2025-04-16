@@ -36,7 +36,7 @@ const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const led_pin = gpio.num(23);
 
-pub fn main() void {
+pub fn main() !void {
     pio.gpio_init(led_pin);
     pio.sm_set_pindir(sm, @intFromEnum(led_pin), 1, .out);
 
