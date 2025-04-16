@@ -370,24 +370,6 @@ pub fn hid_usage_page(comptime n: u2, usage: [n]u8) [n + 1]u8 {
     );
 }
 
-pub fn hid_usage_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
-    return hid_report_item(
-        n,
-        @intFromEnum(ReportItemTypes.Local),
-        @intFromEnum(LocalItem.UsageMin),
-        data,
-    );
-}
-
-pub fn hid_usage_max(comptime n: u2, data: [n]u8) [n + 1]u8 {
-    return hid_report_item(
-        n,
-        @intFromEnum(ReportItemTypes.Local),
-        @intFromEnum(LocalItem.UsageMax),
-        data,
-    );
-}
-
 pub fn hid_logical_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
     return hid_report_item(
         n,
@@ -432,6 +414,24 @@ pub fn hid_usage(comptime n: u2, data: [n]u8) [n + 1]u8 {
         n,
         @intFromEnum(ReportItemTypes.Local),
         @intFromEnum(LocalItem.Usage),
+        data,
+    );
+}
+
+pub fn hid_usage_min(comptime n: u2, data: [n]u8) [n + 1]u8 {
+    return hid_report_item(
+        n,
+        @intFromEnum(ReportItemTypes.Local),
+        @intFromEnum(LocalItem.UsageMin),
+        data,
+    );
+}
+
+pub fn hid_usage_max(comptime n: u2, data: [n]u8) [n + 1]u8 {
+    return hid_report_item(
+        n,
+        @intFromEnum(ReportItemTypes.Local),
+        @intFromEnum(LocalItem.UsageMax),
         data,
     );
 }
