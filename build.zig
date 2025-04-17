@@ -317,6 +317,12 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `bundle_compiler_rt` property of the target.
             bundle_compiler_rt: ?bool = null,
 
+            /// If set, overrides the `zig_target` property of the target.
+            zig_target: ?std.Target.Query = null,
+
+            /// If set, overrides the `cpu` property of the target.
+            cpu: ?Cpu = null,
+
             /// If set, overrides the `hal` property of the target.
             hal: ?HardwareAbstractionLayer = null,
 
@@ -360,8 +366,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const b = mb.dep.builder;
 
             const target = options.target;
-            const zig_target_resolved = b.resolveTargetQuery(target.zig_target);
-            const cpu = target.cpu orelse get_default_cpu(zig_target_resolved.result, mb.core_dep);
 
             // TODO: let the user override which ram section to use the stack on,
             // for now just using the first ram section in the memory region list
@@ -372,6 +376,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
 
+            const zig_target_resolved = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
+
+            const cpu = options.cpu orelse target.cpu orelse get_default_cpu(zig_target_resolved.result, mb.core_dep);
             const maybe_hal = options.hal orelse target.hal;
             const maybe_board = options.board orelse target.board;
 
@@ -484,6 +491,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                         .optimize = options.optimize,
                         .target = zig_target_resolved,
                         .root_source_file = mb.core_dep.path("src/start.zig"),
+                        .single_threaded = options.single_threaded orelse target.single_threaded,
                         .strip = options.strip,
                         .unwind_tables = options.unwind_tables,
                     }),
@@ -494,7 +502,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 .emitted_files = Firmware.EmittedFiles.init(mb.builder.allocator),
             };
 
-            fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse fw.target.bundle_compiler_rt;
+            fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
 
             fw.artifact.link_gc_sections = options.strip_unused_symbols;
             fw.artifact.link_function_sections = options.strip_unused_symbols;
