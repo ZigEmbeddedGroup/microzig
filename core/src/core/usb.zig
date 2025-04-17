@@ -23,6 +23,7 @@ pub const utils = @import("usb/utils.zig");
 pub const templates = @import("usb/templates.zig");
 
 const DescType = types.DescType;
+const FeatureSelector = types.FeatureSelector;
 const Dir = types.Dir;
 const Endpoint = types.Endpoint;
 const SetupRequest = types.SetupRequest;
@@ -202,12 +203,12 @@ pub fn Usb(comptime f: anytype) type {
                             const req = SetupRequest.from_u8(setup.request);
                             if (req == null) return;
                             switch (req.?) {
-                                SetupRequest.SetAddress => {
+                                .SetAddress => {
                                     S.new_address = @as(u8, @intCast(setup.value & 0xff));
                                     CmdEndpoint.send_cmd_ack();
                                     if (S.debug_mode) std.log.info("    SetAddress: {}", .{S.new_address.?});
                                 },
-                                SetupRequest.SetConfiguration => {
+                                .SetConfiguration => {
                                     if (S.debug_mode) std.log.info("    SetConfiguration", .{});
                                     const cfg_num = setup.value;
                                     if (S.cfg_num != cfg_num) {
@@ -226,10 +227,20 @@ pub fn Usb(comptime f: anytype) type {
                                     S.configured = true;
                                     CmdEndpoint.send_cmd_ack();
                                 },
-                                SetupRequest.GetDescriptor => {
+                                .GetDescriptor => {
                                     const descriptor_type = DescType.from_u8(@intCast(setup.value >> 8));
                                     if (descriptor_type) |dt| {
                                         try process_get_descriptor(setup, dt);
+                                    }
+                                },
+                                .SetFeature => {
+                                    const feature = FeatureSelector.from_u8(@intCast(setup.value >> 8));
+                                    if (feature) |feat| {
+                                        switch (feat) {
+                                            .DeviceRemoteWakeup, .EndpointHalt => CmdEndpoint.send_cmd_ack(),
+                                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
+                                            .TestMode => {},
+                                        }
                                     }
                                 },
                             }
@@ -470,9 +481,8 @@ pub fn Usb(comptime f: anytype) type {
                         else => {
                             const ep_num = Endpoint.num_from_address(epb.endpoint_address);
                             const ep_dir = Endpoint.dir_from_address(epb.endpoint_address).as_number();
-                            var driver = get_driver(ep_to_drv[ep_num][ep_dir]);
-                            if (driver != null) {
-                                driver.?.transfer(epb.endpoint_address, epb.buffer);
+                            if (get_driver(ep_to_drv[ep_num][ep_dir])) |driver| {
+                                driver.transfer(epb.endpoint_address, epb.buffer);
                             }
                             if (Endpoint.dir_from_address(epb.endpoint_address) == .Out) {
                                 f.endpoint_reset_rx(epb.endpoint_address);
