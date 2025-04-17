@@ -52,6 +52,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
         .{ .name = "interrupts", .file = "src/interrupts.zig" },
         .{ .name = "stepper", .file = "src/stepper.zig" },
+        .{ .name = "new_stepper", .file = "src/new_stepper.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
     };

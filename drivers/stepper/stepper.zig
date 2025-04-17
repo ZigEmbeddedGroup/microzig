@@ -368,14 +368,6 @@ pub fn Stepper(comptime Driver: type) type {
             return rv;
         }
 
-        pub fn get_steps_completed(self: Self) u32 {
-            return self.step_count;
-        }
-
-        pub fn get_steps_remaining(self: Self) u32 {
-            return self.steps_remaining;
-        }
-
         pub fn get_direction(self: Self) i2 {
             return switch (self.dir_state) {
                 .low => 1,
@@ -419,9 +411,9 @@ test "begin" {
         .clock_device = ttd.clock_device(),
     });
     try stepper.begin(100, 1);
-    try std.testing.expect(stepper.microsteps == 1);
+    try std.testing.expectEqual(1, stepper.microsteps);
     try stepper.begin(100, 2);
-    try std.testing.expect(stepper.microsteps == 2);
+    try std.testing.expectEqual(2, stepper.microsteps);
 }
 
 test "A4988: set microstep with ms pins set" {
