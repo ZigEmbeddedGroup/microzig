@@ -33,6 +33,9 @@ pub const State = enum {
     cruising,
     decelerating,
 };
+
+const Direction = enum { forward, backward };
+
 // TODO:
 // E.g. A4988?
 // DRIVER    = 1, ///< Stepper Driver, 2 driver pins required
@@ -44,11 +47,7 @@ pub const State = enum {
 // HALF4WIRE = 8  ///< 4 wire half stepper, 4 motor pins required
 
 pub const ULN2003 = struct {
-    const MAX_MICROSTEP = 2;
     const STEP_MIN_US = 2;
-    // TODO: Two different step tables, depending on microstepping setting
-    // full steps:      1010      0110      0101      1001
-    // half steps: 1000 1010 0010 0110 0100 0101 0001 1001
     const STEP_TABLE_FULL = [_]u4{ 0b1010, 0b0110, 0b0101, 0b1001 };
     const STEP_TABLE_HALF = [_]u4{ 0b1000, 0b1010, 0b0010, 0b0110, 0b0100, 0b0101, 0b0001, 0b1001 };
 };
@@ -58,14 +57,10 @@ pub fn Stepper(comptime Driver: type) type {
         const Self = @This();
         driver: Driver = .{},
 
-        // in1: mdf.base.Digital_IO,
-        // in2: mdf.base.Digital_IO,
-        // in3: mdf.base.Digital_IO,
-        // in4: mdf.base.Digital_IO,
         in: [4]mdf.base.Digital_IO,
         clock: mdf.base.Clock_Device,
         rpm: f64 = 0,
-        step_table: []const u4 = undefined,
+        step_table: []const u4 = Driver.STEP_TABLE_FULL[0..],
         microsteps: u2 = 1,
 
         // Movement state
@@ -83,7 +78,7 @@ pub fn Stepper(comptime Driver: type) type {
         last_action_end: mdf.time.Absolute = .from_us(0),
         next_action_interval: mdf.time.Duration = .from_us(0),
         step_count: u32 = 0,
-        dir_state: mdf.base.Digital_IO.State = .low,
+        direction: Direction = .forward,
         motor_steps: u16,
 
         pub fn init(opts: Stepper_Options) Self {
@@ -119,12 +114,21 @@ pub fn Stepper(comptime Driver: type) type {
             self.rpm = rpm;
         }
 
-        fn set_microstep(self: *Self, microsteps: u2) !void {
+        pub fn set_microstep(self: *Self, microsteps: u2) !void {
+            if (self.microsteps == microsteps) return;
+
             switch (microsteps) {
-                1 => self.step_table = Driver.STEP_TABLE_FULL[0..],
-                2 => self.step_table = Driver.STEP_TABLE_HALF[0..],
+                1 => {
+                    self.step_table = Driver.STEP_TABLE_FULL[0..];
+                    self.step_index = self.step_index >> 1;
+                },
+                2 => {
+                    self.step_table = Driver.STEP_TABLE_HALF[0..];
+                    self.step_index = self.step_index * 2;
+                },
                 else => return error.InvalidMicrosteps,
             }
+
             self.microsteps = microsteps;
         }
 
@@ -132,12 +136,14 @@ pub fn Stepper(comptime Driver: type) type {
             self.profile = profile;
         }
 
+        /// Synchronously run the specified number of steps
         pub fn move(self: *Self, steps: i32) !void {
             self.start_move(steps);
-            var action = try self.next_action();
-            while (@intFromEnum(action) != 0) : (action = try self.next_action()) {}
+            var action = try self.run();
+            while (@intFromEnum(action) != 0) : (action = try self.run()) {}
         }
 
+        /// Synchronously rotate the specified number of degrees
         pub fn rotate(self: *Self, deg: i32) !void {
             try self.move(self.calc_steps_for_rotation(deg));
         }
@@ -148,7 +154,7 @@ pub fn Stepper(comptime Driver: type) type {
 
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
-            self.dir_state = if (steps >= 0) .high else .low;
+            self.direction = if (steps >= 0) .forward else .backward;
             self.last_action_end = .from_us(0);
             self.steps_remaining = @abs(steps);
             self.step_count = 0;
@@ -244,6 +250,7 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
+        /// Delay delay_us from start_us. This accounts for time spent elsewhere since start_us
         fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
             if (@intFromEnum(start_us) == 0) {
                 self.clock.sleep_us(@intFromEnum(delay_us));
@@ -253,15 +260,42 @@ pub fn Stepper(comptime Driver: type) type {
             while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
         }
 
-        /// Change outputs to the next step
-        fn step(self: *Self, direction: enum { forward, backward }) !void {
+        /// Run the current step and calculate the next one
+        fn run(self: *Self) !mdf.time.Duration {
+            if (self.steps_remaining > 0) {
+                // Wait until for the next action interval, since the last action ended
+                self.delay_micros(self.next_action_interval, self.last_action_end);
+                try self.step(self.direction);
+                // Absolute time now
+                const start = self.clock.get_time_since_boot();
+                const pulse = self.step_pulse; // save value because calc_step_pulse() will overwrite it
+                self.calc_step_pulse();
+                // We need to hold the pins for at least STEP_MIN_US
+                self.clock.sleep_us(Driver.STEP_MIN_US);
+                self.last_action_end = self.clock.get_time_since_boot();
+                // account for calc_step_pulse() execution time.
+                const elapsed = self.last_action_end.diff(start);
+                self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
+            } else {
+                // end of move
+                self.last_action_end = .from_us(0);
+                self.next_action_interval = .from_us(0);
+            }
+            return self.next_action_interval;
+        }
+
+        /// Change outputs to the next step in the cycle
+        // TODO: Not pub?
+        pub fn step(self: *Self, direction: Direction) !void {
             const pattern = self.step_table[self.step_index];
             const len = self.step_table.len;
-            const mask: u4 = @intCast(len - 1); // This is 3 for len=4, 7 for len=8
+            const mask: u4 = @truncate(len - 1); // This is 3 for len=4, 7 for len=8
             switch (direction) {
                 .forward => self.step_index = @intCast((self.step_index + 1) & mask),
                 .backward => self.step_index = @intCast((self.step_index + mask) & mask),
             }
+            // std.log.info("t1 {b:0>4} t2 {b:0>4}", .{ Driver.STEP_TABLE_FULL, Driver.STEP_TABLE_HALF });
+            // std.log.info("table: {b} len: {} mask {b} pattern {b} index {}", .{ self.step_table, len, mask, pattern, self.step_index });
             // Update all pins based on the bit pattern
             for (0.., self.in) |i, pin| {
                 try pin.write(@enumFromInt(@intFromBool((pattern & (@as(u4, 1) << @intCast(i))) != 0)));
@@ -296,17 +330,6 @@ pub fn Stepper(comptime Driver: type) type {
 
         fn get_steps_completed(self: Self) u32 {
             return self.step_count;
-        }
-
-        fn get_steps_remaining(self: Self) u32 {
-            return self.steps_remaining;
-        }
-
-        fn get_direction(self: Self) i2 {
-            return switch (self.dir_state) {
-                .low => 1,
-                .high => -1,
-            };
         }
 
         fn calc_steps_for_rotation(self: Self, deg: i32) i32 {
