@@ -733,7 +733,7 @@ fn get_default_cpu(target: std.Target, core_dep: *Build.Dependency) Cpu {
     }
 
     std.debug.panic(
-        "No default cpu configuration for `{s}`. Please specify a cpu in `microzig.Target`.",
+        "No default cpu configuration for `{s}`. Please specify a cpu either in the target or in the options for creating the firmware.",
         .{target.cpu.model.name},
     );
 }

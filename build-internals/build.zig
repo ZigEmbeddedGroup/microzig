@@ -26,7 +26,7 @@ pub const Target = struct {
     /// The preferred binary format of this MicroZig target, if it has one.
     preferred_binary_format: ?BinaryFormat = null,
 
-    /// The cpu target this controller uses.
+    /// The cpu target for the firmware.
     zig_target: std.Target.Query,
 
     /// (optional) If set, overrides the default cpu module that microzig provides.
