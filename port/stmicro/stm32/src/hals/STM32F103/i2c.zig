@@ -9,8 +9,8 @@ const peripherals = microzig.chip.peripherals;
 const mdf = microzig.drivers;
 
 pub const Mode = enum {
-    Standard,
-    Fast,
+    standard,
+    fast,
 };
 
 pub const AddressMode = enum {
@@ -39,7 +39,7 @@ pub const Address = struct {
 const Config = struct {
     pclk: usize,
     speed: usize,
-    mode: Mode = .Standard,
+    mode: Mode = .standard,
     enable_duty: bool = false,
 };
 
@@ -100,10 +100,10 @@ pub const I2C = enum(u3) {
     fn validade_pclk(pclk: usize, mode: Mode) !void {
         if (pclk > 50_000_000) return comptime_fail_or_error("pclk need to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
-            .Standard => {
+            .standard => {
                 if (pclk < 2_000_000) return comptime_fail_or_error("pclk need to be >= 2_000_000 in standart mode", .{}, ConfigError.PCLKUnderflow);
             },
-            .Fast => {
+            .fast => {
                 if (pclk < 4_000_000) return comptime_fail_or_error("pclk need to be >= 4_000_000 in fast mode", .{}, ConfigError.PCLKUnderflow);
             },
         }
@@ -112,14 +112,14 @@ pub const I2C = enum(u3) {
     fn validade_speed(speed: usize, mode: Mode) !void {
         if (speed == 0) return comptime_fail_or_error("Invalid I2C speed", .{}, ConfigError.SpeedUnderdlow);
         switch (mode) {
-            .Standard => {
+            .standard => {
                 if (speed > 100_000) {
                     return comptime_fail_or_error("speed: {d} is too high for Stardart mode", .{speed}, ConfigError.SpeedOverflow);
                 }
             },
-            .Fast => {
+            .fast => {
                 if (speed > 400_000) {
-                    return comptime_fail_or_error("speed: {d} is too high for Fast mode", .{speed}, ConfigError.SpeedOverflow);
+                    return comptime_fail_or_error("speed: {d} is too high for fast mode", .{speed}, ConfigError.SpeedOverflow);
                 }
             },
         }
@@ -127,8 +127,8 @@ pub const I2C = enum(u3) {
 
     fn validade_Trise(pclk: usize, mode: Mode) !usize {
         const Tmax = switch (mode) {
-            .Standard => 1000,
-            .Fast => 300,
+            .standard => 1000,
+            .fast => 300,
         };
 
         const Trise = calc_Trise(pclk, Tmax);
@@ -139,10 +139,10 @@ pub const I2C = enum(u3) {
     fn validade_CCR(config: Config) !usize {
         const pclk = config.pclk;
         const speed = config.speed;
-        const duty: ?bool = if (config.mode == .Standard) null else config.enable_duty;
+        const duty: ?bool = if (config.mode == .standard) null else config.enable_duty;
         const CCR = calc_CCR(pclk, speed, duty);
         switch (config.mode) {
-            .Fast => {
+            .fast => {
                 if (CCR < 4) return comptime_fail_or_error("Invalid CCR", .{}, ConfigError.InvalidCCR);
             },
             else => {},
@@ -159,7 +159,7 @@ pub const I2C = enum(u3) {
         const Trise = comptime validade_Trise(pclk, mode) catch unreachable;
         const CCR = comptime validade_CCR(config) catch unreachable;
 
-        i2c.apply_internla(config, CCR, Trise);
+        i2c.apply_internal(config, CCR, Trise);
     }
 
     pub fn runtime_apply(i2c: I2C, config: Config) ConfigError!void {
@@ -170,10 +170,10 @@ pub const I2C = enum(u3) {
         const Trise = try validade_Trise(pclk, mode);
         const CCR = try validade_CCR(config);
 
-        i2c.apply_internla(config, CCR, Trise);
+        i2c.apply_internal(config, CCR, Trise);
     }
 
-    fn apply_internla(i2c: I2C, config: Config, CCR: usize, Trise: usize) void {
+    fn apply_internal(i2c: I2C, config: Config, CCR: usize, Trise: usize) void {
         const regs = get_regs(i2c);
         const val: u6 = @intCast(config.pclk / 1_000_000);
         const duty: usize = if (config.enable_duty) 1 else 0;
