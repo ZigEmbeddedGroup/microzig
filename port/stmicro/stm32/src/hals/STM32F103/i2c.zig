@@ -97,7 +97,7 @@ pub const I2C = enum(u3) {
         };
     }
 
-    fn validade_pclk(pclk: usize, mode: Mode) !void {
+    fn validate_pclk(pclk: usize, mode: Mode) !void {
         if (pclk > 50_000_000) return comptime_fail_or_error("pclk need to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
             .standard => {
@@ -109,7 +109,7 @@ pub const I2C = enum(u3) {
         }
     }
 
-    fn validade_speed(speed: usize, mode: Mode) !void {
+    fn validate_speed(speed: usize, mode: Mode) !void {
         if (speed == 0) return comptime_fail_or_error("Invalid I2C speed", .{}, ConfigError.SpeedUnderdlow);
         switch (mode) {
             .standard => {
@@ -125,7 +125,7 @@ pub const I2C = enum(u3) {
         }
     }
 
-    fn validade_Trise(pclk: usize, mode: Mode) !usize {
+    fn validate_Trise(pclk: usize, mode: Mode) !usize {
         const Tmax = switch (mode) {
             .standard => 1000,
             .fast => 300,
@@ -136,7 +136,7 @@ pub const I2C = enum(u3) {
         return Trise;
     }
 
-    fn validade_CCR(config: Config) !usize {
+    fn validate_CCR(config: Config) !usize {
         const pclk = config.pclk;
         const speed = config.speed;
         const duty: ?bool = if (config.mode == .standard) null else config.enable_duty;
@@ -154,10 +154,10 @@ pub const I2C = enum(u3) {
     pub fn apply(i2c: I2C, comptime config: Config) void {
         const mode = config.mode;
         const pclk = config.pclk;
-        comptime validade_pclk(pclk, mode) catch unreachable;
-        comptime validade_speed(config.speed, mode) catch unreachable;
-        const Trise = comptime validade_Trise(pclk, mode) catch unreachable;
-        const CCR = comptime validade_CCR(config) catch unreachable;
+        comptime validate_pclk(pclk, mode) catch unreachable;
+        comptime validate_speed(config.speed, mode) catch unreachable;
+        const Trise = comptime validate_Trise(pclk, mode) catch unreachable;
+        const CCR = comptime validate_CCR(config) catch unreachable;
 
         i2c.apply_internal(config, CCR, Trise);
     }
@@ -165,10 +165,10 @@ pub const I2C = enum(u3) {
     pub fn runtime_apply(i2c: I2C, config: Config) ConfigError!void {
         const mode = config.mode;
         const pclk = config.pclk;
-        try validade_pclk(pclk, mode);
-        try validade_speed(config.speed, mode);
-        const Trise = try validade_Trise(pclk, mode);
-        const CCR = try validade_CCR(config);
+        try validate_pclk(pclk, mode);
+        try validate_speed(config.speed, mode);
+        const Trise = try validate_Trise(pclk, mode);
+        const CCR = try validate_CCR(config);
 
         i2c.apply_internal(config, CCR, Trise);
     }
