@@ -39,6 +39,7 @@ pub const sensor = struct {
 };
 
 pub const stepper = @import("stepper/stepper.zig");
+pub const new_stepper = @import("stepper/ULN2003.zig");
 
 pub const IO_expander = struct {
     pub const pcf8574 = @import("io_expander/pcf8574.zig");
@@ -189,6 +190,7 @@ test {
     _ = sensor.TMP117;
 
     _ = stepper;
+    _ = new_stepper;
 
     _ = IO_expander.pcf8574;
 
