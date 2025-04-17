@@ -57,29 +57,35 @@ reside. When defining a `Chip`, which is ultimately used in the creation of an
 namespace. It's okay if the name has white space, for that we can use `@""`
 notation.
 
-Let's say we had a device with the name `STM32F103`. We'd define our chip as:
+Let's say we had a device with the name `STM32F103`. We'd define our target as:
 
 ```zig
-pub const stm32f103 = microzig.Chip{
-    .name = "STM32F103",
-    .cpu = microzig.cpus.cortex_m3,
-    .source = .{
-        .path = "path/to/generated.zig",
+pub const stm32f103: microzig.Target = .{
+    .dep = dep,
+    .preferred_binary_format = .elf,
+    .zig_target = .{
+        .cpu_arch = .thumb,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+        .os_tag = .freestanding,
+        .abi = .eabi,
     },
-    .json_register_schema = .{
-        .path = "path/to/generated.json",
+    .chip = .{
+        .name = "STM32F103RD",
+        .register_definition = .{
+            .zig = b.path("/path/to/file.zig"),
+        },
+        .memory_regions = &.{
+            .{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
+            .{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+        },
     },
     .hal = .{
-        .path = "path/to/hal.zig",
-    },
-    .memory_regions = &.{
-        MemoryRegion{ .offset = 0x08000000, .length = 64 * 1024, .kind = .flash },
-        MemoryRegion{ .offset = 0x20000000, .length = 20 * 1024, .kind = .ram },
+        .root_source_file = b.path("/path/to/file.zig"),
     },
 };
 ```
 
-As discussed, the `name` must match a namespace under `devices` in the `chip` source.
+As discussed, the `target.chip.name` must match a namespace under `devices` in the `chip` source.
 
 ### `hal`
 

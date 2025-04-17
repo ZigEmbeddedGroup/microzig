@@ -26,6 +26,12 @@ pub const Target = struct {
     /// The preferred binary format of this MicroZig target, if it has one.
     preferred_binary_format: ?BinaryFormat = null,
 
+    /// The cpu target for the firmware.
+    zig_target: std.Target.Query,
+
+    /// (optional) If set, overrides the default cpu module that microzig provides.
+    cpu: ?Cpu = null,
+
     /// The chip this target uses.
     chip: Chip,
 
@@ -57,6 +63,8 @@ pub const Target = struct {
     /// Things you can change by deriving from an already existing target.
     pub const DeriveOptions = struct {
         preferred_binary_format: ?BinaryFormat = null,
+        zig_target: ?std.Target.Query = null,
+        cpu: ?Cpu = null,
         chip: ?Chip = null,
         single_threaded: ?bool = null,
         bundle_compiler_rt: ?bool = null,
@@ -72,6 +80,8 @@ pub const Target = struct {
         ret.* = .{
             .dep = from.dep,
             .preferred_binary_format = options.preferred_binary_format orelse from.preferred_binary_format,
+            .zig_target = options.zig_target orelse from.zig_target,
+            .cpu = options.cpu orelse from.cpu,
             .chip = options.chip orelse from.chip,
             .single_threaded = options.single_threaded orelse from.single_threaded,
             .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
@@ -84,6 +94,18 @@ pub const Target = struct {
     }
 };
 
+/// Defines a cpu.
+pub const Cpu = struct {
+    /// Name of the cpu.
+    name: []const u8,
+
+    /// Provides the root source file for the cpu.
+    root_source_file: LazyPath,
+
+    /// (optional) Provides imports for the cpu. **Needs to be heap allocated.**
+    imports: []const Module.Import = &.{},
+};
+
 /// Defines a chip.
 pub const Chip = struct {
     /// The display name of the controller.
@@ -91,12 +113,6 @@ pub const Chip = struct {
 
     /// (optional) link to the documentation/vendor page of the controller.
     url: ?[]const u8 = null,
-
-    /// The cpu target this controller uses.
-    cpu: std.Target.Query,
-
-    /// The cpu specific module file, which contains its startup_logic.
-    cpu_module_file: ?LazyPath = null,
 
     /// The provider for register definitions.
     register_definition: union(enum) {
@@ -122,7 +138,7 @@ pub const HardwareAbstractionLayer = struct {
     /// Provides the root source file for the HAL.
     root_source_file: LazyPath,
 
-    /// Provides imports for the HAL. **Need to be heap allocated.**
+    /// Provides imports for the HAL. **Needs to be heap allocated.**
     imports: []const Module.Import = &.{},
 };
 
@@ -141,21 +157,8 @@ pub const Board = struct {
     /// Provides the root source file for the board definition.
     root_source_file: LazyPath,
 
-    /// (optional) Provides imports for the board definition. **Need to be heap allocated.**
+    /// (optional) Provides imports for the board definition. **Needs to be heap allocated.**
     imports: []const Module.Import = &.{},
-};
-
-/// Convenience struct for heap allocated imports.
-pub const ModuleImports = struct {
-    /// List of imports.
-    list: []const Module.Import = &.{},
-
-    /// Initializes module imports on the heap.
-    pub fn init(allocator: std.mem.Allocator, imports: []const Module.Import) ModuleImports {
-        return .{
-            .list = allocator.dupe(imports) catch @panic("out of memory"),
-        };
-    }
 };
 
 /// The resulting binary format for the firmware file.

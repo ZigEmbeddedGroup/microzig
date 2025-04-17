@@ -19,14 +19,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const chip_lpc176x5x: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
+        .zig_target = .{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
         .chip = .{
             .name = "LPC176x5x",
-            .cpu = .{
-                .cpu_arch = .thumb,
-                .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-                .os_tag = .freestanding,
-                .abi = .eabi,
-            },
             // Downloaded from http://ds.arm.com/media/resources/db/chip/nxp/lpc1768/LPC176x5x.svd
             .register_definition = .{ .svd = b.path("src/chips/LPC176x5x.svd") },
             .memory_regions = &.{
