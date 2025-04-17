@@ -102,7 +102,7 @@ pub const Cpu = struct {
     /// Provides the root source file for the cpu.
     root_source_file: LazyPath,
 
-    /// (optional) Provides imports for the cpu. **Need to be heap allocated.**
+    /// (optional) Provides imports for the cpu. **Needs to be heap allocated.**
     imports: []const Module.Import = &.{},
 };
 
@@ -138,7 +138,7 @@ pub const HardwareAbstractionLayer = struct {
     /// Provides the root source file for the HAL.
     root_source_file: LazyPath,
 
-    /// Provides imports for the HAL. **Need to be heap allocated.**
+    /// Provides imports for the HAL. **Needs to be heap allocated.**
     imports: []const Module.Import = &.{},
 };
 
@@ -157,7 +157,7 @@ pub const Board = struct {
     /// Provides the root source file for the board definition.
     root_source_file: LazyPath,
 
-    /// (optional) Provides imports for the board definition. **Need to be heap allocated.**
+    /// (optional) Provides imports for the board definition. **Needs to be heap allocated.**
     imports: []const Module.Import = &.{},
 };
 
