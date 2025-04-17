@@ -600,6 +600,8 @@ pub const HidClassDriver = struct {
                             // or when the specified duration elapses. In practice, the device can
                             // still send reports as often as it wants, but for completeness this
                             // should be implemented eventually.
+                            //
+                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             self.device.?.control_ack(setup);
                         }
                     },
@@ -613,6 +615,8 @@ pub const HidClassDriver = struct {
                             // the OS will reuqest the report protocol anyway, so usually only one format is needed.
                             // Unless the report format matches the boot protocol exactly (see ReportDescriptorKeyboard),
                             // our device might not work in a limited BIOS environment.
+                            //
+                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             self.device.?.control_ack(setup);
                         }
                     },
@@ -621,6 +625,8 @@ pub const HidClassDriver = struct {
                             // TODO: This request sends a feature or output report to the device,
                             // e.g. turning on the caps lock LED. This must be handled in an
                             // application-specific way, so notify the application code of the event.
+                            //
+                            // https://github.com/ZigEmbeddedGroup/microzig/issues/454
                             self.device.?.control_ack(setup);
                         }
                     },
