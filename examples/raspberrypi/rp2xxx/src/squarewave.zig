@@ -30,7 +30,7 @@ const pio: Pio = rp2xxx.pio.num(0);
 const sm: StateMachine = .sm0;
 const pin = gpio.num(2);
 
-pub fn main() void {
+pub fn main() !void {
     pio.gpio_init(pin);
     pio.sm_load_and_start_program(sm, squarewave_program, .{
         .clkdiv = rp2xxx.pio.ClkDivOptions.from_float(125),

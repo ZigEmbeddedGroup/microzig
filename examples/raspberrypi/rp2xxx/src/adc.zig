@@ -15,19 +15,19 @@ pub const microzig_options = microzig.Options{
     .logFn = rp2xxx.uart.logFn,
 };
 
-pub fn main() void {
-    adc.apply(.{
-        .temp_sensor_enabled = true,
-    });
-
+pub fn main() !void {
+    // init uart logging
     uart_tx_pin.set_function(.uart);
-
     uart.apply(.{
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
-
     rp2xxx.uart.init_logger(uart);
+
+    adc.apply(.{
+        .temp_sensor_enabled = true,
+    });
+
     while (true) : (time.sleep_ms(1000)) {
         const sample = adc.convert_one_shot_blocking(.temp_sensor) catch {
             std.log.err("conversion failed!", .{});

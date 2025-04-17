@@ -1,17 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-//Driver imports
 const drivers = microzig.drivers;
 const PCF8574 = drivers.IO_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;
 
-//Hal imports
 const rp2040 = microzig.hal;
 const i2c = rp2040.i2c;
 const I2C_Device = rp2040.drivers.I2C_Device;
 const gpio = rp2040.gpio;
-const peripherals = microzig.chip.peripherals;
 const timer = rp2040.time;
 
 const i2c0 = i2c.instance.num(0);
