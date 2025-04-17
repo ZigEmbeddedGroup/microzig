@@ -21,7 +21,7 @@ pub const microzig_options = microzig.Options{
 
 fn delay() void {
     var i: u32 = 0;
-    while (i < 25_000) {
+    while (i < 100_000) {
         asm volatile ("nop");
         i += 1;
     }
