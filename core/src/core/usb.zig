@@ -238,7 +238,7 @@ pub fn Usb(comptime f: anytype) type {
                                     if (feature) |feat| {
                                         switch (feat) {
                                             .DeviceRemoteWakeup, .EndpointHalt => CmdEndpoint.send_cmd_ack(),
-                                            // TODO
+                                            // TODO: https://github.com/ZigEmbeddedGroup/microzig/issues/453
                                             .TestMode => {},
                                         }
                                     }
