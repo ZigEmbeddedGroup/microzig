@@ -308,3 +308,32 @@ pub const UART = enum(u3) {
         return buffer.len;
     }
 };
+
+var uart_logger: ?UART.Writer = null;
+
+/// Set a specific uart instance to be used for logging.
+///
+/// Allows system logging over uart via:
+/// pub const microzig_options = .{
+///     .logFn = hal.uart.logFn,
+/// };
+pub fn init_logger(uart: UART) void {
+    uart_logger = uart.writer();
+    uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+}
+
+/// Disables logging via the uart instance.
+pub fn deinit_logger() void {
+    uart_logger = null;
+}
+
+pub fn logFn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+    const prefix = comptime level.asText() ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (uart_logger) |uart| {
+        uart.print(prefix ++ format ++ "\r\n", args) catch {};
+    }
+}
