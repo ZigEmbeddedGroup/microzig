@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: master
+  ZIG_VERSION: 0.14.0
 
 jobs:
   unit-test-regz:
