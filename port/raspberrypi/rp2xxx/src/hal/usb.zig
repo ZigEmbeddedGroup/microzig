@@ -255,7 +255,8 @@ pub fn F(comptime config: UsbConfig) type {
 
             const ep = hardware_endpoint_get_by_address(ep_addr);
 
-            @memcpy(ep.data_buffer[0..buffer.len], buffer);
+            // TODO: please fixme: https://github.com/ZigEmbeddedGroup/microzig/issues/452
+            std.mem.copyForwards(u8, ep.data_buffer[0..buffer.len], buffer);
 
             // Configure the IN:
             const np: u1 = if (ep.next_pid_1) 1 else 0;
