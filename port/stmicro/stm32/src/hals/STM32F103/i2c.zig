@@ -98,13 +98,13 @@ pub const I2C = enum(u3) {
     }
 
     fn validate_pclk(pclk: usize, mode: Mode) !void {
-        if (pclk > 50_000_000) return comptime_fail_or_error("pclk need to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
+        if (pclk > 50_000_000) return comptime_fail_or_error("pclk needs to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
             .standard => {
-                if (pclk < 2_000_000) return comptime_fail_or_error("pclk need to be >= 2_000_000 in standart mode", .{}, ConfigError.PCLKUnderflow);
+                if (pclk < 2_000_000) return comptime_fail_or_error("pclk needs to be >= 2_000_000 in standard mode", .{}, ConfigError.PCLKUnderflow);
             },
             .fast => {
-                if (pclk < 4_000_000) return comptime_fail_or_error("pclk need to be >= 4_000_000 in fast mode", .{}, ConfigError.PCLKUnderflow);
+                if (pclk < 4_000_000) return comptime_fail_or_error("pclk needs to be >= 4_000_000 in fast mode", .{}, ConfigError.PCLKUnderflow);
             },
         }
     }
@@ -114,7 +114,7 @@ pub const I2C = enum(u3) {
         switch (mode) {
             .standard => {
                 if (speed > 100_000) {
-                    return comptime_fail_or_error("speed: {d} is too high for stardart mode", .{speed}, ConfigError.SpeedOverflow);
+                    return comptime_fail_or_error("speed: {d} is too high for standard mode", .{speed}, ConfigError.SpeedOverflow);
                 }
             },
             .fast => {
