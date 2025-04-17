@@ -57,12 +57,10 @@ pub fn set_alarm(us: u32) void {
 pub fn main() !void {
     // init uart logging
     uart_tx_pin.set_function(.uart);
-
     uart.apply(.{
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
-
     rp2xxx.uart.init_logger(uart);
 
     led.set_function(.sio);

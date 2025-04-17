@@ -21,17 +21,19 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .root_source_file = b.path("src/hals/GD32VF103/hal.zig"),
     };
 
+    const sifive_e21_target: std.Target.Query = .{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    };
+
     const chip_gd32vf103xb: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
+        .zig_target = sifive_e21_target,
         .chip = .{
             .name = "GD32VF103",
-            .cpu = .{
-                .cpu_arch = .riscv32,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
-                .os_tag = .freestanding,
-                .abi = .none,
-            },
             .register_definition = .{
                 .svd = b.path("src/chips/GD32VF103.svd"),
             },
@@ -46,14 +48,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const chip_gd32vf103x8: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
+        .zig_target = sifive_e21_target,
         .chip = .{
             .name = "GD32VF103",
-            .cpu = .{
-                .cpu_arch = .riscv32,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.sifive_e21 },
-                .os_tag = .freestanding,
-                .abi = .none,
-            },
             .register_definition = .{
                 .svd = b.path("src/chips/GD32VF103.svd"),
             },

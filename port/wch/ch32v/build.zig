@@ -45,20 +45,25 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .root_source_file = b.path("src/hals/hal_ch32v307.zig"),
     };
 
-    const qingkev2a = std.Target.Query{
+    const qingkev2a_target: std.Target.Query = .{
         // QingKe V2C is RV32EC
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic },
         .cpu_features_add = std.Target.riscv.featureSet(&.{
-            std.Target.riscv.Feature.@"32bit",
-            std.Target.riscv.Feature.e,
-            std.Target.riscv.Feature.c,
+            .@"32bit",
+            .e,
+            .c,
         }),
         .os_tag = .freestanding,
         .abi = .eabi,
     };
 
-    const qingkev3 = std.Target.Query{
+    const qingkev2_cpu: microzig.Cpu = .{
+        .name = "qingkev2-rv32ec",
+        .root_source_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
+    };
+
+    const qingkev3_target: std.Target.Query = .{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
@@ -71,7 +76,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev4b = std.Target.Query{
+    const qingkev3_cpu: microzig.Cpu = .{
+        .name = "qingkev3-rv32imac",
+        .root_source_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
+    };
+
+    const qingkev4b_target: std.Target.Query = .{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
@@ -84,7 +94,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
-    const qingkev4f = std.Target.Query{
+    const qingkev4f_target: std.Target.Query = .{
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
@@ -98,13 +108,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .abi = .eabi,
     };
 
+    const qingkev4_cpu: microzig.Cpu = .{
+        .name = "qingkev4-rv32imac",
+        .root_source_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
+    };
+
     const chip_ch32v003x4: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
+        .zig_target = qingkev2a_target,
+        .cpu = qingkev2_cpu,
         .chip = .{
             .name = "CH32V00xxx", // <name/> from SVD
-            .cpu = qingkev2a,
-            .cpu_module_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v003.svd"),
             },
@@ -116,13 +131,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v003,
     };
 
-    const chip_ch32v103x8 = microzig.Target{
+    const chip_ch32v103x8: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
+        .zig_target = qingkev3_target,
+        .cpu = qingkev3_cpu,
         .chip = .{
             .name = "CH32V103xx", // <name/> from SVD
-            .cpu = qingkev3,
-            .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
@@ -134,13 +149,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v103,
     };
 
-    const chip_ch32v103x6 = microzig.Target{
+    const chip_ch32v103x6: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
+        .zig_target = qingkev3_target,
+        .cpu = qingkev3_cpu,
         .chip = .{
             .name = "CH32V103xx", // <name/> from SVD
-            .cpu = qingkev3,
-            .cpu_module_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 32 * KiB, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 10 * KiB, .kind = .ram },
@@ -152,14 +167,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v103,
     };
 
-    const chip_ch32v203x8 = microzig.Target{
+    const chip_ch32v203x8: microzig.Target = .{
         .dep = dep,
-
         .preferred_binary_format = .bin,
+        .zig_target = qingkev4b_target,
+        .cpu = qingkev4_cpu,
         .chip = .{
             .name = "CH32V20xxx", // <name/> from SVD
-            .cpu = qingkev4b,
-            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
@@ -171,13 +185,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v203,
     };
 
-    const chip_ch32v203x6 = microzig.Target{
+    const chip_ch32v203x6: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
+        .zig_target = qingkev4b_target,
+        .cpu = qingkev4_cpu,
         .chip = .{
             .name = "CH32V20xxx", // <name/> from SVD
-            .cpu = qingkev4b,
-            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
                 .{ .offset = 0x08000000, .length = 32 * KiB, .kind = .flash },
                 .{ .offset = 0x20000000, .length = 10 * KiB, .kind = .ram },
@@ -189,13 +203,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v203,
     };
 
-    const chip_ch32v307xc = microzig.Target{
+    const chip_ch32v307xc: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
+        .zig_target = qingkev4f_target,
+        .cpu = qingkev4_cpu,
         .chip = .{
             .name = "CH32V30xxx", // <name/> from SVD
-            .cpu = qingkev4f,
-            .cpu_module_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             .memory_regions = &.{
                 // FLASH + RAM supports the following configuration
                 // FLASH-192K + RAM-128K

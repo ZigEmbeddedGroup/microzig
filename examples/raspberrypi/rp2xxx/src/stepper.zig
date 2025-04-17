@@ -1,3 +1,4 @@
+const std = @import("std");
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
@@ -13,30 +14,26 @@ pub fn main() !void {
     led.set_direction(.out);
     var cd = ClockDevice{};
 
-    const dir_pin = gpio.num(14);
-    dir_pin.set_function(.sio);
-    var dp = GPIO_Device.init(dir_pin);
-
-    const step_pin = gpio.num(15);
-    step_pin.set_function(.sio);
-    var sp = GPIO_Device.init(step_pin);
-
-    const ms1_pin = gpio.num(1);
-    const ms2_pin = gpio.num(2);
-    const ms3_pin = gpio.num(3);
-    ms1_pin.set_function(.sio);
-    ms2_pin.set_function(.sio);
-    ms3_pin.set_function(.sio);
-    var ms1 = GPIO_Device.init(ms1_pin);
-    var ms2 = GPIO_Device.init(ms2_pin);
-    var ms3 = GPIO_Device.init(ms3_pin);
+    // Setup all pins for the stepper driver
+    var pins: struct {
+        ms1: GPIO_Device,
+        ms2: GPIO_Device,
+        ms3: GPIO_Device,
+        dir: GPIO_Device,
+        step: GPIO_Device,
+    } = undefined;
+    inline for (std.meta.fields(@TypeOf(pins)), .{ 1, 2, 3, 14, 15 }) |field, num| {
+        const pin = gpio.num(num);
+        pin.set_function(.sio);
+        @field(pins, field.name) = GPIO_Device.init(pin);
+    }
 
     var stepper = A4988.init(.{
-        .dir_pin = dp.digital_io(),
-        .step_pin = sp.digital_io(),
-        .ms1_pin = ms1.digital_io(),
-        .ms2_pin = ms2.digital_io(),
-        .ms3_pin = ms3.digital_io(),
+        .dir_pin = pins.dir.digital_io(),
+        .step_pin = pins.step.digital_io(),
+        .ms1_pin = pins.ms1.digital_io(),
+        .ms2_pin = pins.ms2.digital_io(),
+        .ms3_pin = pins.ms3.digital_io(),
         .clock_device = cd.clock_device(),
     });
 

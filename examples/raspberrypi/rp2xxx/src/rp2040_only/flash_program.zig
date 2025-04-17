@@ -11,7 +11,6 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
 
 const flash_target_offset: u32 = 256 * 1024;
 const flash_target_contents = @as([*]const u8, @ptrFromInt(rp2xxx.flash.XIP_BASE + flash_target_offset));
@@ -28,20 +27,17 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
+    // init uart logging
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
-
     rp2xxx.uart.init_logger(uart);
+
+    led.set_function(.sio);
+    led.set_direction(.out);
+    led.put(1);
 
     var data: [flash.PAGE_SIZE]u8 = undefined;
     var i: usize = 0;

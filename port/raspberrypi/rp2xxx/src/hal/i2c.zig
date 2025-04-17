@@ -11,9 +11,7 @@ const peripherals = microzig.chip.peripherals;
 const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
 
-const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
-const resets = @import("resets.zig");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
 

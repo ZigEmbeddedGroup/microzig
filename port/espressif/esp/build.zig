@@ -25,20 +25,23 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .flash_size = .@"4mb",
             .flash_freq = .@"40m",
         } },
+        .zig_target = .{
+            .cpu_arch = .riscv32,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+            .cpu_features_add = std.Target.riscv.featureSet(&.{
+                .c,
+                .m,
+            }),
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+        .cpu = .{
+            .name = "esp_riscv",
+            .root_source_file = b.path("src/cpus/esp_riscv_image.zig"),
+        },
         .chip = .{
             .name = "ESP32-C3",
             .url = "https://www.espressif.com/en/products/socs/esp32-c3",
-            .cpu = .{
-                .cpu_arch = .riscv32,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-                .cpu_features_add = std.Target.riscv.featureSet(&.{
-                    .c,
-                    .m,
-                }),
-                .os_tag = .freestanding,
-                .abi = .eabi,
-            },
-            .cpu_module_file = b.path("src/cpus/esp_riscv_image.zig"),
             .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
             .memory_regions = &.{
                 // external memory, ibus
@@ -51,39 +54,16 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .linker_script = b.path("esp32_c3.ld"),
     };
 
-    const chip_esp32_c3_direct_boot: microzig.Target = .{
-        .dep = dep,
-        .preferred_binary_format = .bin,
-        .chip = .{
-            .name = "ESP32-C3",
-            .url = "https://www.espressif.com/en/products/socs/esp32-c3",
-            .cpu = .{
-                .cpu_arch = .riscv32,
-                .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-                .cpu_features_add = std.Target.riscv.featureSet(&.{
-                    .c,
-                    .m,
-                }),
-                .os_tag = .freestanding,
-                .abi = .eabi,
-            },
-            .cpu_module_file = b.path("src/cpus/esp_riscv_direct_boot.zig"),
-            .register_definition = .{ .svd = b.path("src/chips/ESP32-C3.svd") },
-            .memory_regions = &.{
-                // external memory, ibus
-                .{ .kind = .flash, .offset = 0x4200_0000, .length = 0x0080_0000 },
-                // sram 1, data bus
-                .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
-            },
-        },
-        .hal = hal,
-        .linker_script = b.path("esp32_c3_direct_boot.ld"),
-    };
-
     return .{
         .chips = .{
             .esp32_c3 = chip_esp32_c3.derive(.{}),
-            .esp32_c3_direct_boot = chip_esp32_c3_direct_boot.derive(.{}),
+            .esp32_c3_direct_boot = chip_esp32_c3.derive(.{
+                .cpu = .{
+                    .name = "esp_riscv",
+                    .root_source_file = b.path("src/cpus/esp_riscv_direct_boot.zig"),
+                },
+                .linker_script = b.path("esp32_c3_direct_boot.ld"),
+            }),
         },
         .boards = .{},
     };
