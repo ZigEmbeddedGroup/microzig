@@ -114,7 +114,7 @@ pub const I2C = enum(u3) {
         switch (mode) {
             .standard => {
                 if (speed > 100_000) {
-                    return comptime_fail_or_error("speed: {d} is too high for Stardart mode", .{speed}, ConfigError.SpeedOverflow);
+                    return comptime_fail_or_error("speed: {d} is too high for stardart mode", .{speed}, ConfigError.SpeedOverflow);
                 }
             },
             .fast => {
@@ -179,18 +179,12 @@ pub const I2C = enum(u3) {
         const duty: usize = if (config.enable_duty) 1 else 0;
         const mode: F_S = @enumFromInt(@intFromEnum(config.mode));
 
-        regs.CR1.modify(.{
-            .PE = 0,
-        });
+        regs.CR1.modify(.{ .PE = 0 });
         i2c.reset();
 
-        regs.CR2.modify(.{
-            .FREQ = val,
-        });
+        regs.CR2.modify(.{ .FREQ = val });
 
-        regs.TRISE.modify(.{
-            .TRISE = @as(u6, @intCast(Trise)),
-        });
+        regs.TRISE.modify(.{ .TRISE = @as(u6, @intCast(Trise)) });
 
         regs.CCR.modify(.{
             .CCR = @as(u12, @intCast(CCR)),
@@ -198,9 +192,7 @@ pub const I2C = enum(u3) {
             .F_S = mode,
         });
 
-        regs.CR1.modify(.{
-            .PE = 1,
-        });
+        regs.CR1.modify(.{ .PE = 1 });
     }
 
     fn reset(i2c: I2C) void {
@@ -277,9 +269,7 @@ pub const I2C = enum(u3) {
         const regs = get_regs(i2c);
         const addr7 = @as(u8, @intCast(addr));
         const byte: u8 = (addr7 << 1) + IO;
-        regs.DR.modify(.{
-            .DR = byte,
-        });
+        regs.DR.modify(.{ .DR = byte });
 
         while (regs.SR1.read().ADDR != 1) {
             try i2c.check_error();
