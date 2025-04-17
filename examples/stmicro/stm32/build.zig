@@ -25,7 +25,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
         .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_gpio", .file = "src/stm32f1xx/gpio.zig" },
-        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart", .file = "src/stm32f1xx/uart.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_echo", .file = "src/stm32f1xx/uart_echo.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_log", .file = "src/stm32f1xx/uart_log.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c.zig" },
     };
 
