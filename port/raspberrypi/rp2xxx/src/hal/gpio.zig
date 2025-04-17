@@ -166,6 +166,15 @@ pub const Mask =
             }
         }
 
+        pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
+            const raw_mask = @intFromEnum(self);
+            for (0..@bitSizeOf(Mask)) |i| {
+                const bit = @as(u5, @intCast(i));
+                if (0 != raw_mask & (@as(u32, 1) << bit))
+                    num(bit).set_drive_strength(drive_strength);
+            }
+        }
+
         pub fn put(self: Mask, value: u32) void {
             SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @intFromEnum(self);
         }
@@ -233,6 +242,15 @@ pub const Mask =
                 const bit = @as(u6, @intCast(i));
                 if (0 != raw_mask & (@as(u48, 1) << bit))
                     num(bit).set_schmitt_trigger(enabled);
+            }
+        }
+
+        pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
+            const raw_mask = @intFromEnum(self);
+            for (0..@bitSizeOf(Mask)) |i| {
+                const bit = @as(u6, @intCast(i));
+                if (0 != raw_mask & (@as(u48, 1) << bit))
+                    num(bit).set_drive_strength(drive_strength);
             }
         }
 
@@ -473,6 +491,18 @@ pub const Pin = enum(u6) {
             .SCHMITT = switch (enabled) {
                 .enabled => @as(u1, 1),
                 .disabled => @as(u1, 0),
+            },
+        });
+    }
+
+    pub fn set_drive_strength(gpio: Pin, drive_strength: DriveStrength) void {
+        const pads_reg = gpio.get_pads_reg();
+        pads_reg.modify(.{
+            .DRIVE = switch (drive_strength) {
+                .@"2mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"2mA",
+                .@"4mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"4mA",
+                .@"8mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"8mA",
+                .@"12mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"12mA",
             },
         });
     }
