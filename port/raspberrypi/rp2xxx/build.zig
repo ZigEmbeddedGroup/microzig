@@ -56,7 +56,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const chip_rp2350_arm: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
-        .zig_target = std.Target.Query{
+        .zig_target = .{
             .cpu_arch = .thumb,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
             .os_tag = .freestanding,
@@ -78,20 +78,20 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const chip_rp2350_riscv: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .{ .uf2 = .RP2350_RISC_V },
-        .zig_target = std.Target.Query{
+        .zig_target = .{
             .cpu_arch = .riscv32,
             .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
             .cpu_features_add = std.Target.riscv.featureSet(&.{
-                std.Target.riscv.Feature.a,
-                std.Target.riscv.Feature.m,
-                std.Target.riscv.Feature.c,
-                std.Target.riscv.Feature.zba,
-                std.Target.riscv.Feature.zbb,
-                std.Target.riscv.Feature.zbs,
-                std.Target.riscv.Feature.zcb,
-                std.Target.riscv.Feature.zcmp,
-                std.Target.riscv.Feature.zbkb,
-                std.Target.riscv.Feature.zifencei,
+                .a,
+                .m,
+                .c,
+                .zba,
+                .zbb,
+                .zbs,
+                .zcb,
+                .zcmp,
+                .zbkb,
+                .zifencei,
             }),
             .os_tag = .freestanding,
             .abi = .eabi,
