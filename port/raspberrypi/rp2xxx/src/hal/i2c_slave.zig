@@ -160,7 +160,12 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
     //   } ;
 
     self.enable();
-    irq.enable(.I2C1_IRQ);
+
+    if (self.regs == I2C0) {
+        irq.enable(.I2C0_IRQ);
+    } else {
+        irq.enable(.I2C1_IRQ);
+    }
 }
 
 /// Close the I2C slave driver
@@ -217,43 +222,15 @@ fn isr_common(self: *Self) void {
     // Save the interrupt status and clear it
 
     const interruptStatus = self.regs.IC_RAW_INTR_STAT.read();
-    _ = self.regs.IC_CLR_INTR.read();
 
-    // --- We need to transmit data (Read Request) ---
-    // Move data from the transfer buffer to the TX FIFO until all data is sent
-    // or the TX FIFO is full.  Call the callback as needed to get data from
-    // the user.
+    // -- Clear Abort --
+    // IC_CLR_INTR does not do this correctly.
 
-    if (interruptStatus.RD_REQ == .ACTIVE) {
-        // If we don't have any data in the transfer buffer, use the registered
-        // callback to get some.
-
-        if (!self.tx_end and self.transfer_index >= self.transfer_length) {
-            self.transfer_index = 0;
-            self.transfer_length = self.txCallback(self.transfer_buffer, self.first_call, self.param);
-
-            if (self.transfer_length > self.transfer_buffer.len) @panic("I2C read callback returned too much data");
-
-            if (self.transfer_length == 0) self.tx_end = true;
-
-            self.first_call = false;
-        }
-
-        if (self.tx_end) {
-            // If we have no more data, fill the TX FIFO with zeros
-
-            while (self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
-                self.regs.IC_DATA_CMD.write_raw(0);
-            }
-        } else {
-            // Fill the TX FIFO with data from the transfer buffer
-
-            while (self.transfer_index < self.transfer_length and self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
-                self.regs.IC_DATA_CMD.write_raw(@intCast(self.transfer_buffer[self.transfer_index]));
-                self.transfer_index += 1;
-            }
-        }
+    if (interruptStatus.TX_ABRT == .ACTIVE) {
+        self.regs.IC_CLR_TX_ABRT.raw = 0;
     }
+
+    _ = self.regs.IC_CLR_INTR.read();
 
     // -- General Call --
 
@@ -296,6 +273,7 @@ fn isr_common(self: *Self) void {
     // the read and write modes and the transfer buffer.
 
     if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
+
         if (self.data_received) {
             self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, true, self.gen_call, self.param);
 
@@ -309,4 +287,41 @@ fn isr_common(self: *Self) void {
         self.transfer_index = 0;
         self.transfer_length = 0;
     }
+
+    // --- We need to transmit data (Read Request) ---
+    // Move data from the transfer buffer to the TX FIFO until all data is sent
+    // or the TX FIFO is full.  Call the callback as needed to get data from
+    // the user.
+
+    if (interruptStatus.RD_REQ == .ACTIVE) {
+        // If we don't have any data in the transfer buffer, use the registered
+        // callback to get some.
+
+        if (!self.tx_end and self.transfer_index >= self.transfer_length) {
+            self.transfer_index = 0;
+            self.transfer_length = self.txCallback(self.transfer_buffer, self.first_call, self.param);
+
+            if (self.transfer_length > self.transfer_buffer.len) @panic("I2C read callback returned too much data");
+
+            if (self.transfer_length == 0) self.tx_end = true;
+
+            self.first_call = false;
+        }
+
+        if (self.tx_end) {
+            // If we have no more data, fill the TX FIFO with zeros
+
+            while (self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
+                self.regs.IC_DATA_CMD.write_raw(0);
+            }
+        } else {
+            // Fill the TX FIFO with data from the transfer buffer
+
+            while (self.transfer_index < self.transfer_length and self.regs.IC_STATUS.read().TFNF == .NOT_FULL) {
+                self.regs.IC_DATA_CMD.write_raw(@intCast(self.transfer_buffer[self.transfer_index]));
+                self.transfer_index += 1;
+            }
+        }
+    }
+
 }

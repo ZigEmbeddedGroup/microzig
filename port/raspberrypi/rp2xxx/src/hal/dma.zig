@@ -2,19 +2,19 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
-const chip = microzig.chip;
-const DMA = chip.peripherals.DMA;
+const DMA = microzig.chip.peripherals.DMA;
+const Dreq = microzig.chip.types.peripherals.DMA.Dreq;
+const DataSize = microzig.chip.types.peripherals.DMA.DataSize;
+
+const chip = @import("compatibility.zig").chip;
 
 const hw = @import("hw.zig");
 
-const num_channels = 12;
-var claimed_channels = std.PackedIntArray(bool, num_channels).initAllTo(false);
-
-pub const Dreq = enum(u6) {
-    uart0_tx = 20,
-    uart1_tx = 21,
-    _,
+const num_channels = switch (chip) {
+    .RP2040 => 12,
+    .RP2350 => 16,
 };
+var claimed_channels = std.StaticBitSet(num_channels).initEmpty();
 
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
@@ -22,10 +22,11 @@ pub fn channel(n: u4) Channel {
     return @as(Channel, @enumFromInt(n));
 }
 
+// TODO - this operation should be atomic
 pub fn claim_unused_channel() ?Channel {
     for (0..num_channels) |i| {
-        if (claimed_channels.get(i)) {
-            claimed_channels.set(i, true);
+        if (!claimed_channels.isSet(i)) {
+            claimed_channels.set(i);
             return channel(@intCast(i));
         }
     }
@@ -43,11 +44,11 @@ pub const Channel = enum(u4) {
     }
 
     pub fn unclaim(chan: Channel) void {
-        claimed_channels.set(@intFromEnum(chan), false);
+        claimed_channels.unset(@intFromEnum(chan));
     }
 
     pub fn is_claimed(chan: Channel) bool {
-        return claimed_channels.get(@intFromEnum(chan));
+        return claimed_channels.isSet(@intFromEnum(chan));
     }
 
     const Regs = extern struct {
@@ -60,28 +61,28 @@ pub const Channel = enum(u4) {
         al1_ctrl: u32,
         al1_read_addr: u32,
         al1_write_addr: u32,
-        al1_trans_count: u32,
+        al1_trans_count_trig: u32,
 
         // alias 2
         al2_ctrl: u32,
-        al2_read_addr: u32,
-        al2_write_addr: u32,
         al2_trans_count: u32,
+        al2_read_addr: u32,
+        al2_write_addr_trig: u32,
 
         // alias 3
         al3_ctrl: u32,
-        al3_read_addr: u32,
         al3_write_addr: u32,
         al3_trans_count: u32,
+        al3_read_addr_trig: u32,
     };
 
     fn get_regs(chan: Channel) *volatile Regs {
-        const regs = @as(*volatile [12]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
+        const regs = @as(*volatile [num_channels]Regs, @ptrCast(&DMA.CH0_READ_ADDR));
         return &regs[@intFromEnum(chan)];
     }
 
     pub const TransferConfig = struct {
-        transfer_size_bytes: u3,
+        data_size: DataSize,
         enable: bool,
         read_increment: bool,
         write_increment: bool,
@@ -106,17 +107,10 @@ pub const Channel = enum(u4) {
         regs.trans_count = count;
         regs.ctrl_trig.modify(.{
             .EN = @intFromBool(config.enable),
-            .DATA_SIZE = switch (config.transfer_size_bytes) {
-                1 => @TypeOf(regs.ctrl_trig.read().DATA_SIZE.value).SIZE_BYTE,
-                2 => .SIZE_HALFWORD,
-                4 => .SIZE_WORD,
-                else => unreachable,
-            },
+            .DATA_SIZE = config.data_size,
             .INCR_READ = @intFromBool(config.read_increment),
             .INCR_WRITE = @intFromBool(config.write_increment),
-            .TREQ_SEL = .{
-                .raw = @intFromEnum(config.dreq),
-            },
+            .TREQ_SEL = config.dreq,
         });
     }
 
@@ -138,5 +132,11 @@ pub const Channel = enum(u4) {
     pub fn is_busy(chan: Channel) bool {
         const regs = chan.get_regs();
         return regs.ctrl_trig.read().BUSY == 1;
+    }
+
+    pub fn wait_for_finish_blocking(chan: Channel) void {
+        while (chan.is_busy()) {
+            hw.tight_loop_contents();
+        }
     }
 };

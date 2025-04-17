@@ -1,18 +1,18 @@
 const std = @import("std");
 
 pub const DescType = enum(u8) {
-    Device               = 0x01,
-    Config               = 0x02,
-    String               = 0x03,
-    Interface            = 0x04,
-    Endpoint             = 0x05,
-    DeviceQualifier      = 0x06,
+    Device = 0x01,
+    Config = 0x02,
+    String = 0x03,
+    Interface = 0x04,
+    Endpoint = 0x05,
+    DeviceQualifier = 0x06,
     InterfaceAssociation = 0x0b,
-    CsDevice             = 0x21,
-    CsConfig             = 0x22,
-    CsString             = 0x23,
-    CsInterface          = 0x24,
-    CsEndpoint           = 0x25,
+    CsDevice = 0x21,
+    CsConfig = 0x22,
+    CsString = 0x23,
+    CsInterface = 0x24,
+    CsEndpoint = 0x25,
 
     pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -21,18 +21,18 @@ pub const DescType = enum(u8) {
 
 pub const ClassCode = enum(u8) {
     Unspecified = 0,
-    Audio       = 1,
-    Cdc         = 2,
-    Hid         = 3,
-    CdcData     = 10,
+    Audio = 1,
+    Cdc = 2,
+    Hid = 3,
+    CdcData = 10,
 };
 
 /// Types of transfer that can be indicated by the `attributes` field on `EndpointDescriptor`.
 pub const TransferType = enum(u2) {
-    Control     = 0,
+    Control = 0,
     Isochronous = 1,
-    Bulk        = 2,
-    Interrupt   = 3,
+    Bulk = 2,
+    Interrupt = 3,
 
     pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -47,14 +47,26 @@ pub const ControlStage = enum {
     Idle,
     Setup,
     Data,
-    Ack
+    Ack,
 };
 
 /// The types of USB SETUP requests that we understand.
 pub const SetupRequest = enum(u8) {
-    GetDescriptor    = 0x06,
-    SetAddress       = 0x05,
+    SetFeature = 0x03,
+    SetAddress = 0x05,
+    GetDescriptor = 0x06,
     SetConfiguration = 0x09,
+
+    pub fn from_u8(v: u8) ?@This() {
+        return std.meta.intToEnum(@This(), v) catch null;
+    }
+};
+
+pub const FeatureSelector = enum(u8) {
+    EndpointHalt = 0x00,
+    DeviceRemoteWakeup = 0x01,
+    TestMode = 0x02,
+    // The remaining features only apply to OTG devices.
 
     pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;
@@ -66,7 +78,7 @@ pub const SetupRequest = enum(u8) {
 /// by a 0 byte, and IN by an `0x80` byte.
 pub const Dir = enum(u1) {
     Out = 0,
-    In  = 1,
+    In = 1,
 
     pub const DIR_IN_MASK = 0x80;
 
@@ -83,7 +95,7 @@ pub const Endpoint = struct {
     pub inline fn to_address(num: u8, dir: Dir) u8 {
         return switch (dir) {
             .Out => num,
-            .In => num | Dir.DIR_IN_MASK
+            .In => num | Dir.DIR_IN_MASK,
         };
     }
 
@@ -108,7 +120,7 @@ pub const RequestType = packed struct(u8) {
         Standard,
         Class,
         Vendor,
-        Other
+        Other,
     };
 
     /// RequestType is created from raw bytes using std.mem.bytesToValue, we need to support all potential values if we don't want to crash such conversion
@@ -144,7 +156,7 @@ pub const RequestType = packed struct(u8) {
         Reserved25,
         Reserved26,
         Reserved27,
-        Reserved28
+        Reserved28,
     };
 };
 
@@ -416,11 +428,11 @@ pub const DeviceQualifierDescriptor = extern struct {
     }
 };
 
-pub const DriverErrors = error {
+pub const DriverErrors = error{
     ExpectedInterfaceDescriptor,
     UnsupportedInterfaceClassType,
     UnsupportedInterfaceSubClassType,
-    UnexpectedDescriptor
+    UnexpectedDescriptor,
 };
 
 pub const UsbDevice = struct {

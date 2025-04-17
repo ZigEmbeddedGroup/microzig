@@ -6,7 +6,7 @@ const Pio = rp2xxx.pio.Pio;
 const StateMachine = rp2xxx.pio.StateMachine;
 
 const ws2812_program = blk: {
-    @setEvalBranchQuota(5000);
+    @setEvalBranchQuota(10_000);
     break :blk rp2xxx.pio.assemble(
         \\;
         \\; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
@@ -70,7 +70,7 @@ inline fn floatToBright(f: f32) u8 {
     ];
 }
 
-pub fn main() void {
+pub fn main() !void {
     pio.gpio_init(led_pin);
     sm_set_consecutive_pindirs(pio, sm, @intFromEnum(led_pin), 1, true);
 

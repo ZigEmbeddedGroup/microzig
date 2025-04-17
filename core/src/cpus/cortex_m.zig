@@ -183,8 +183,8 @@ pub const interrupt = struct {
     }
 
     pub const Priority = enum(u8) {
-        pub const highest: Priority = 0;
-        pub const lowest: Priority = 0xff;
+        pub const highest: Priority = @enumFromInt(0);
+        pub const lowest: Priority = @enumFromInt(0xff);
 
         _,
     };

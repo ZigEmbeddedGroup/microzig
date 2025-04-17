@@ -1,5 +1,6 @@
 .{
     .name = .examples_stmicro_stm32,
+    .fingerprint = 0xb5843068ef5ae13,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },

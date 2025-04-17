@@ -37,15 +37,16 @@ SECTIONS
         . = ALIGN(0x10);
     } > drom
 
-    /* .iram.rwtext : */
-    /* { */
-    /*     *(.rwtext*) */
-    /* } > irom */
-    /**/
-    /* .dram.dummy (NOLOAD) : */
-    /* { */
-    /*     . = ALIGN(ALIGNOF(.iram.rwtext)) + SIZEOF(.iram.rwtext); */
-    /* } > drom */
+    .iram.rwtext :
+    {
+        KEEP(*(.trap))
+        *(.rwtext*)
+    } > iram
+
+    .dram.dummy (NOLOAD) :
+    {
+        . = ALIGN(ALIGNOF(.iram.rwtext)) + SIZEOF(.iram.rwtext);
+    } > dram
 
     .dram.data :
     {

@@ -6,12 +6,17 @@ const time = rp2xxx.time;
 const gpio = rp2xxx.gpio;
 const chip = rp2xxx.compatibility.chip;
 
-const BUF_LEN = 0x100;
-const spi = rp2xxx.spi.instance.SPI0;
-
 const uart = rp2xxx.uart.instance.num(0);
 const uart_baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
+
+pub const microzig_options = microzig.Options{
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.logFn,
+};
+
+const BUF_LEN = 0x100;
+const spi = rp2xxx.spi.instance.SPI0;
 
 // These may change depending on which GPIO pins you have your SPI device routed to.
 const CS_PIN = 17;
@@ -20,11 +25,6 @@ const SCK_PIN = 18;
 // either receiving or transmitting SPI data, no matter whether the chip is in
 // master or slave mode.
 const RX_PIN = 16;
-
-pub const microzig_options = microzig.Options{
-    .log_level = .debug,
-    .logFn = rp2xxx.uart.logFn,
-};
 
 pub fn main() !void {
     // Set pin functions for CS, SCK, RX
