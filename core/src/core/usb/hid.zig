@@ -618,7 +618,7 @@ pub const HidClassDriver = struct {
                     },
                     .SetReport => {
                         if (stage == .Setup) {
-                            // TODO: This request sends a feature or ouptut report to the device,
+                            // TODO: This request sends a feature or output report to the device,
                             // e.g. turning on the caps lock LED. This must be handled in an
                             // application-specific way, so notify the application code of the event.
                             self.device.?.control_ack(setup);
