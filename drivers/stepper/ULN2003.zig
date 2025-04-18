@@ -43,8 +43,6 @@ pub fn Stepper(comptime Driver: type) type {
         step_index: u4 = 0,
         // Steps remaining in current move
         steps_remaining: u32 = 0,
-        // Steps remaining in decel
-        steps_to_brake: u32 = 0,
         // The length of the next pulse
         step_pulse: mdf.time.Duration = .from_us(0),
         last_action_end: mdf.time.Absolute = .from_us(0),
@@ -137,7 +135,7 @@ pub fn Stepper(comptime Driver: type) type {
             // If we have a deadline, we might have to shorten the pulse
             // NOTE: This might make the motor behave incorrectly, if it can't step that
             // fast.
-            if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+            if (time.to_us() > self.steps_remaining * self.step_pulse.to_us()) {
                 self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                     @as(f64, @floatFromInt(self.steps_remaining))));
             }
@@ -193,8 +191,6 @@ pub fn Stepper(comptime Driver: type) type {
                 .forward => self.step_index = @intCast((self.step_index + 1) & mask),
                 .backward => self.step_index = @intCast((self.step_index + mask) & mask),
             }
-            // std.log.info("t1 {b:0>4} t2 {b:0>4}", .{ Driver.STEP_TABLE_FULL, Driver.STEP_TABLE_HALF });
-            // std.log.info("pattern {b:0>4} index {}", .{ pattern, self.step_index });
             // Update all pins based on the bit pattern
             for (0.., self.in) |i, pin| {
                 try pin.write(@enumFromInt(@intFromBool((pattern & (@as(u4, 1) << @intCast(i))) != 0)));
