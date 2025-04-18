@@ -15,7 +15,8 @@ pub const Stepper_Options = struct {
     in3_pin: mdf.base.Digital_IO,
     in4_pin: mdf.base.Digital_IO,
     clock_device: mdf.base.Clock_Device,
-    motor_steps: u16 = 2048,
+    motor_steps: u16 = 512,
+    // motor_steps: u16 = 2048,
 };
 
 pub const MSPinsError = error.MSPinsError;
@@ -72,6 +73,7 @@ pub fn Stepper(comptime Driver: type) type {
         steps_remaining: u32 = 0,
         // Steps remaining in decel
         steps_to_brake: u32 = 0,
+        // The length of the next pulse
         step_pulse: mdf.time.Duration = .from_us(0),
         cruise_step_pulse: mdf.time.Duration = .from_us(0),
         remainder: mdf.time.Duration = .from_us(0),
@@ -145,7 +147,9 @@ pub fn Stepper(comptime Driver: type) type {
 
         /// Synchronously rotate the specified number of degrees
         pub fn rotate(self: *Self, deg: i32) !void {
-            try self.move(self.calc_steps_for_rotation(deg));
+            const steps = self.calc_steps_for_rotation(deg);
+            std.log.info("Steps for rotating {} degrees: {}", .{ deg, steps });
+            try self.move(steps);
         }
 
         pub fn start_move(self: *Self, steps: i32) void {
@@ -193,15 +197,19 @@ pub fn Stepper(comptime Driver: type) type {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
                     self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    // NOTE: This is correct // DELETEME
+                    // std.log.info("Step pulse: {} us", .{self.cruise_step_pulse.to_us()}); // DELETEME
                     self.step_pulse = self.cruise_step_pulse;
-                    if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
-                        self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
-                            @as(f64, @floatFromInt(self.steps_remaining))));
-                    }
+                    // if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+                    //     self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
+                    //         @as(f64, @floatFromInt(self.steps_remaining))));
+                    // }
                 },
             }
         }
 
+        /// Calculate the duration of a step pulse for a stepper with `steps` steps, `microsteps`
+        /// microsteps, at `rpm` rpm.
         inline fn get_step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
             return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
                 @as(f64, @floatFromInt(steps)) /
@@ -264,6 +272,14 @@ pub fn Stepper(comptime Driver: type) type {
         fn run(self: *Self) !mdf.time.Duration {
             if (self.steps_remaining > 0) {
                 // Wait until for the next action interval, since the last action ended
+                //   DELETEME>>
+                std.log.info("remaining: {}. Delaying for {any}us from {any}us (now: {any}us)", .{
+                    self.steps_remaining,
+                    self.next_action_interval.to_us(),
+                    self.last_action_end.to_us(),
+                    self.clock.get_time_since_boot().to_us(),
+                });
+                //   DELETEME<<
                 self.delay_micros(self.next_action_interval, self.last_action_end);
                 try self.step(self.direction);
                 // Absolute time now
@@ -272,8 +288,8 @@ pub fn Stepper(comptime Driver: type) type {
                 self.calc_step_pulse();
                 // We need to hold the pins for at least STEP_MIN_US
                 self.clock.sleep_us(Driver.STEP_MIN_US);
+                // Account for the time calculating and min sleeping
                 self.last_action_end = self.clock.get_time_since_boot();
-                // account for calc_step_pulse() execution time.
                 const elapsed = self.last_action_end.diff(start);
                 self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
             } else {
@@ -287,6 +303,7 @@ pub fn Stepper(comptime Driver: type) type {
         /// Change outputs to the next step in the cycle
         // TODO: Not pub?
         pub fn step(self: *Self, direction: Direction) !void {
+            // TODO: respect direction
             const pattern = self.step_table[self.step_index];
             const len = self.step_table.len;
             const mask: u4 = @truncate(len - 1); // This is 3 for len=4, 7 for len=8
@@ -295,7 +312,7 @@ pub fn Stepper(comptime Driver: type) type {
                 .backward => self.step_index = @intCast((self.step_index + mask) & mask),
             }
             // std.log.info("t1 {b:0>4} t2 {b:0>4}", .{ Driver.STEP_TABLE_FULL, Driver.STEP_TABLE_HALF });
-            // std.log.info("table: {b} len: {} mask {b} pattern {b} index {}", .{ self.step_table, len, mask, pattern, self.step_index });
+            // std.log.info("pattern {b:0>4} index {}", .{ pattern, self.step_index });
             // Update all pins based on the bit pattern
             for (0.., self.in) |i, pin| {
                 try pin.write(@enumFromInt(@intFromBool((pattern & (@as(u4, 1) << @intCast(i))) != 0)));
