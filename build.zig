@@ -675,6 +675,19 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 return result.value_ptr.*;
             }
 
+            /// Returns the emitted docs folder for this firmware.
+            ///
+            /// Example usage:
+            /// ```zig
+            /// const install_docs = b.addInstallDirectory(.{
+            ///     .source_dir = fw.get_emitted_docs(),
+            ///     .install_dir = .prefix,
+            ///     .install_subdir = "docs",
+            /// });
+            ///
+            /// const install_docs_step = b.step("docs", "Install documentation.");
+            /// install_docs_step.dependOn(&install_docs.step);
+            /// ```
             pub fn get_emitted_docs(fw: *Firmware) LazyPath {
                 if (fw.emitted_docs == null) {
                     const docs_test = fw.mb.builder.addTest(.{
