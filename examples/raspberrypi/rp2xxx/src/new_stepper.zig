@@ -61,34 +61,21 @@ pub fn main() !void {
     });
 
     try stepper.begin(20, 1);
-    // while (true) {
-    //     try stepper.step(.forward);
-    //     stepper.clock.sleep_us(3000); // 5ms delay between steps
-    // }
 
     while (true) {
-        // const linear_profile = stepper_driver.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
-        // const constant_profile = stepper_driver.Speed_Profile.constant_speed;
-        // Try both constant and linear acceleration profiles
-        // inline for (.{ constant_profile, linear_profile }) |profile| {
-        // stepper.set_speed_profile(
-        //     profile,
-        // );
         // Try different microsteps
-        // inline for (.{ 1, 2 }) |ms| {
-        // _ = try stepper.set_microstep(ms);
-        // for (0..8) |_| {
-        std.log.info("Rotating", .{});
-        try stepper.rotate(180);
-        // try stepper.step(.forward);
-        // time.sleep_ms(250);
-        std.log.info("Rotating", .{});
-        try stepper.rotate(-180);
-        // time.sleep_ms(250);
-        led.toggle();
-        // }
-        // }
-        // time.sleep_ms(1000);
+        inline for (.{ 1, 2 }) |ms| {
+            _ = try stepper.set_microstep(ms);
+            for (0..2) |_| {
+                std.log.info("Rotating", .{});
+                try stepper.rotate(180);
+                time.sleep_ms(250);
+                std.log.info("Rotating", .{});
+                try stepper.rotate(-180);
+                time.sleep_ms(250);
+                led.toggle();
+            }
+        }
+        time.sleep_ms(1000);
     }
-    // }
 }
