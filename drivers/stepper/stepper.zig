@@ -143,7 +143,7 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        pub fn set_rpm(self: Self, rpm: f64) void {
+        pub fn set_rpm(self: *Self, rpm: f64) void {
             self.rpm = rpm;
         }
 
