@@ -234,8 +234,8 @@ pub fn Stepper(comptime Driver: type) type {
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
-                    self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
-                    self.step_pulse = self.cruise_step_pulse;
+                    self.step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    // If we have a deadline, we might have to shorten the pulses to finish in time
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
                         self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                             @as(f64, @floatFromInt(self.steps_remaining))));
@@ -317,9 +317,11 @@ pub fn Stepper(comptime Driver: type) type {
             const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
             self.calc_step_pulse();
 
-            // We should pull HIGH for at least 1-2us (step_high_min)
+            // We should pull HIGH for at least STEP_HIGH_MIN us
             self.clock.sleep_us(Driver.STEP_HIGH_MIN);
             try self.step_pin.write(.low);
+            // We should pull LOW for at least STEP_LOW_MIN us
+            self.clock.sleep_us(Driver.STEP_LOW_MIN);
 
             // Update timing reference
             self.last_action_end = self.clock.get_time_since_boot();
