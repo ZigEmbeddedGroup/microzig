@@ -48,7 +48,7 @@ pub fn Stepper(comptime Driver: type) type {
         // The length of the next pulse
         step_pulse: mdf.time.Duration = .from_us(0),
         last_action_end: mdf.time.Absolute = .from_us(0),
-        next_action_interval: mdf.time.Duration = .from_us(0),
+        next_action_deadline: mdf.time.Absolute = .from_us(0),
         direction: Direction = .forward,
         motor_steps: u16,
 
@@ -130,7 +130,7 @@ pub fn Stepper(comptime Driver: type) type {
             // set up new move
             self.direction = if (steps >= 0) .forward else .backward;
             self.last_action_end = self.clock.get_time_since_boot();
-            self.next_action_interval = .from_us(0);
+            self.next_action_deadline = self.last_action_end;
             self.steps_remaining = @abs(steps);
 
             self.step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
@@ -151,23 +151,12 @@ pub fn Stepper(comptime Driver: type) type {
                 @as(f64, @floatFromInt(microsteps)) / rpm)));
         }
 
-        /// Delay delay_us from start_us. This accounts for time spent elsewhere since start_us
-        fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
-            // If `start_us` is zero, that means to wait the whole delay.
-            if (@intFromEnum(start_us) == 0) {
-                self.clock.sleep_us(@intFromEnum(delay_us));
-                return;
-            }
-            const deadline: mdf.time.Deadline = .init_relative(start_us, delay_us);
-            while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
-        }
-
         /// Run the current step and calculate the next one
         fn run(self: *Self) !bool {
             if (self.steps_remaining == 0)
                 return false;
             // Wait until for the next action interval, since the last action ended
-            self.delay_micros(self.next_action_interval, self.last_action_end);
+            while (!self.next_action_deadline.is_reached_by(self.clock.get_time_since_boot())) {}
             // Execute step
             try self.step(self.direction);
             // Absolute time now
@@ -185,10 +174,12 @@ pub fn Stepper(comptime Driver: type) type {
             // Update steps remaining
             self.steps_remaining -= 1;
 
-            // Calculate the next intervanl, accounting for the time spent in this function
-            // TODO: Make the interval a deadline?
+            // Calculate the next interval, accounting for the time spent in this function
             const elapsed = self.last_action_end.diff(step_start);
-            self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else .from_us(1);
+            self.next_action_deadline = if (elapsed.less_than(pulse))
+                self.last_action_end.add_duration(pulse.minus(elapsed))
+            else
+                self.last_action_end;
             return self.steps_remaining > 0;
         }
 
