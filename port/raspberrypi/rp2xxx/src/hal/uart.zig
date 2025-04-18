@@ -474,3 +474,19 @@ pub fn logFn(
         uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
+
+
+var log_lock = microzig.hal.multicore.Semaphore.init();
+
+/// This log function is used when logging in a multicore environment
+/// it prevents concurrent logs from colliding in output.
+pub fn logFnThreadsafe(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    log_lock.acquire();
+    logFn(level, scope, format, args);
+    log_lock.release();
+}

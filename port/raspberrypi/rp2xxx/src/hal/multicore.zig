@@ -130,6 +130,8 @@ pub const Spinlock = struct {
     /// Returns an initialized Spinlock struct.
     /// Parameters:
     ///   lock_num - the index of the hardware spinlock to use
+    ///
+    /// Note: Spinlocks 26 through 31 are reserved for use by microzig.
     pub fn init(lock_num: u5) Spinlock {
         return .{ .lock_reg = @ptrFromInt(spinlock_base + 4 * @as(usize, @intCast(lock_num))) };
     }
@@ -162,7 +164,10 @@ pub const Spinlock = struct {
     }
 };
 
-/// Multicore semaphore.
+// Reserved spinlocks:
+//  31 - multicore safe logging     - hal.uart
+
+/// Multicore safe semaphore.
 pub const Semaphore = struct {
     available: bool = true,
     spinlock: Spinlock = Spinlock.init(31),
@@ -199,12 +204,10 @@ pub const Semaphore = struct {
         self.available = true;
     }
 };
-
-/// Multicore counted semaphore.
 /// This semaphore can only be acquired by one core at a time.  It can be
-/// acquired more than once (by the same core) and must be released the same
-/// number of times before the other core can acquire it.
-pub const CountedSemaphore = struct {
+/// acquired more than once by the same core but must be released the same
+/// number of times it was acquired before the other core can acquire it.
+pub const CoreSemaphore = struct {
     count: usize = 0,
     spinlock: Spinlock = Spinlock.init(31),
     owning_core: u32 = 0,
@@ -212,7 +215,7 @@ pub const CountedSemaphore = struct {
     /// Acquire the semaphore.
     /// Returns true if the semaphore was acquired, false if the semaphore
     /// is not available.
-    pub fn acquire_unblocking(self: *CountedSemaphore) bool {
+    pub fn acquire_unblocking(self: *CoreSemaphore) bool {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -235,12 +238,12 @@ pub const CountedSemaphore = struct {
     /// Acquire the semaphore.
     /// If a core cannot acquire the semaphore, it will busy wait until
     /// the semaphore is available.
-    pub fn acquire(self: *CountedSemaphore) void {
+    pub fn acquire(self: *CoreSemaphore) void {
         while (!self.acquire_unblocking()) {}
     }
 
     /// Release the semaphore.
-    pub fn release(self: *CountedSemaphore) void {
+    pub fn release(self: *CoreSemaphore) void {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -250,3 +253,4 @@ pub const CountedSemaphore = struct {
         if (self.count > 0) self.count -= 1;
     }
 };
+
