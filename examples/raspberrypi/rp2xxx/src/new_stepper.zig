@@ -59,9 +59,7 @@ pub fn main() !void {
         .clock_device = cd.clock_device(),
     });
 
-    try stepper.begin(300, 1);
-    // Only needed if you set the enable pin
-    // try stepper.enable();
+    try stepper.begin(60, 1);
 
     while (true) {
         // const linear_profile = stepper_driver.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
@@ -72,16 +70,20 @@ pub fn main() !void {
         //     profile,
         // );
         // Try different microsteps
-        inline for (.{ 1, 2 }) |ms| {
-            for (0..8) |_| {
-                _ = try stepper.set_microstep(ms);
-                // try stepper.rotate(360);
-                try stepper.step(.forward);
-                time.sleep_ms(250);
-                led.toggle();
-            }
-        }
-        time.sleep_ms(1000);
+        // inline for (.{ 1, 2 }) |ms| {
+        // _ = try stepper.set_microstep(ms);
+        // for (0..8) |_| {
+        // std.log.info("Rotating", .{});
+        try stepper.rotate(180);
+        // try stepper.step(.forward);
+        time.sleep_ms(250);
+        try stepper.rotate(-180);
+        time.sleep_ms(250);
+        led.toggle();
+        // }
+        // }
+        // time.sleep_ms(1000);
+        time.sleep_ms(5);
     }
     // }
 }
