@@ -16,24 +16,7 @@ pub const Stepper_Options = struct {
     in4_pin: mdf.base.Digital_IO,
     clock_device: mdf.base.Clock_Device,
     motor_steps: u16 = 512,
-    // motor_steps: u16 = 2048,
     max_rpm: f64 = 30,
-};
-
-pub const MSPinsError = error.MSPinsError;
-pub const Speed_Profile = union(enum) {
-    constant_speed,
-    linear_speed: struct {
-        accel: u16 = 1000,
-        decel: u16 = 1000,
-    },
-};
-
-pub const State = enum {
-    stopped,
-    accelerating,
-    cruising,
-    decelerating,
 };
 
 const Direction = enum { forward, backward };
@@ -58,20 +41,14 @@ pub fn Stepper(comptime Driver: type) type {
 
         // Movement state
         step_index: u4 = 0,
-        profile: Speed_Profile = .constant_speed,
-        // Steps remaining in accel
-        steps_to_cruise: u32 = 0,
         // Steps remaining in current move
         steps_remaining: u32 = 0,
         // Steps remaining in decel
         steps_to_brake: u32 = 0,
         // The length of the next pulse
         step_pulse: mdf.time.Duration = .from_us(0),
-        cruise_step_pulse: mdf.time.Duration = .from_us(0),
-        remainder: mdf.time.Duration = .from_us(0),
         last_action_end: mdf.time.Absolute = .from_us(0),
         next_action_interval: mdf.time.Duration = .from_us(0),
-        step_count: u32 = 0,
         direction: Direction = .forward,
         motor_steps: u16,
 
@@ -91,6 +68,7 @@ pub fn Stepper(comptime Driver: type) type {
             try self.enable();
         }
 
+        /// Set control pins to output so that we can drive coils
         pub fn enable(self: *Self) !void {
             inline for (self.in) |pin| {
                 try pin.set_direction(.output);
@@ -101,7 +79,7 @@ pub fn Stepper(comptime Driver: type) type {
         /// stepper motor's position.
         pub fn disable(self: *Self) !void {
             inline for (self.in) |pin| {
-                pin.set_direction(.input);
+                try pin.set_direction(.input);
             }
         }
 
@@ -128,10 +106,6 @@ pub fn Stepper(comptime Driver: type) type {
             self.microsteps = microsteps;
         }
 
-        pub fn set_speed_profile(self: *Self, profile: Speed_Profile) void {
-            self.profile = profile;
-        }
-
         /// Synchronously run the specified number of steps
         pub fn move(self: *Self, steps: i32) !void {
             self.start_move(steps);
@@ -141,68 +115,31 @@ pub fn Stepper(comptime Driver: type) type {
         /// Synchronously rotate the specified number of degrees
         pub fn rotate(self: *Self, deg: i32) !void {
             const steps = self.calc_steps_for_rotation(deg);
-            std.log.info("Steps for rotating {} degrees: {}", .{ deg, steps });
             try self.move(steps);
-            std.log.info("Done", .{});
         }
 
+        /// Initialize a move, determining how many steps, how long for each pulse, and which
+        /// direction to run.
         pub fn start_move(self: *Self, steps: i32) void {
             // Start the move with no timeout duration
             self.start_move_time(steps, .from_us(0));
         }
 
+        /// Initialize a move, with a maximum duration. A duration of 0 means no deadline.
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
             self.direction = if (steps >= 0) .forward else .backward;
             self.last_action_end = self.clock.get_time_since_boot();
             self.next_action_interval = .from_us(0);
             self.steps_remaining = @abs(steps);
-            self.step_count = 0;
-            self.remainder = .from_us(0);
 
-            switch (self.profile) {
-                .linear_speed => |p| {
-                    const microstep_f: f64 = @floatFromInt(self.microsteps);
-                    const accel_f: f64 = @floatFromInt(p.accel);
-                    const decel_f: f64 = @floatFromInt(p.decel);
-                    // speed is in [steps/s]
-                    var speed: f64 = (self.rpm * @as(f64, @floatFromInt(self.motor_steps))) / 60;
-                    if (@intFromEnum(time) > 0) {
-                        // Calculate a new speed to finish in the time requested
-                        const t: f64 = @as(f64, @floatFromInt(time.to_us())) / 1e+6; // convert to seconds
-                        const d: f64 = @as(f64, @floatFromInt(self.steps_remaining)) / microstep_f; // convert to full steps
-                        const a2: f64 = 1.0 / accel_f + 1.0 / decel_f;
-                        const sqrt_candidate = t * t - 2 * a2 * d; // in √b^2-4ac
-                        if (sqrt_candidate >= 0)
-                            speed = @min(speed, (t - std.math.sqrt(sqrt_candidate)) / a2);
-                    }
-                    // How many microsteps from 0 to target speed
-                    self.steps_to_cruise = @intFromFloat(@as(f64, microstep_f * (speed * speed)) / (2 * accel_f));
-                    // How many microsteps are needed from cruise speed to a full stop
-                    self.steps_to_brake = @intFromFloat(@as(f64, @floatFromInt(self.steps_to_cruise)) * accel_f / decel_f);
-                    if (self.steps_remaining < self.steps_to_cruise + self.steps_to_brake) {
-                        // Cannot reach max speed, will need to brake early
-                        self.steps_to_cruise = @intFromFloat(@as(f64, @floatFromInt(self.steps_remaining)) * decel_f / (accel_f + decel_f));
-                        self.steps_to_brake = self.steps_remaining - self.steps_to_cruise;
-                    }
-                    // Initial pulse (c0) including error correction factor 0.676 [us]
-                    self.step_pulse = @enumFromInt(@as(u64, @intFromFloat((1e+6) * 0.676 * std.math.sqrt(2.0 / accel_f / microstep_f))));
-                    // Save cruise timing since we will no longer have the calculated target speed later
-                    self.cruise_step_pulse = @enumFromInt(@as(u64, @intFromFloat(1e+6 / speed / microstep_f)));
-                },
-                .constant_speed => {
-                    self.steps_to_cruise = 0;
-                    self.steps_to_brake = 0;
-                    self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
-                    self.step_pulse = self.cruise_step_pulse;
-                    // If we have a deadline, we might have to shorten the pulse
-                    // NOTE: This might make the motor behave incorrectly, if it can't step that
-                    // fast.
-                    if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
-                        self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
-                            @as(f64, @floatFromInt(self.steps_remaining))));
-                    }
-                },
+            self.step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+            // If we have a deadline, we might have to shorten the pulse
+            // NOTE: This might make the motor behave incorrectly, if it can't step that
+            // fast.
+            if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+                self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
+                    @as(f64, @floatFromInt(self.steps_remaining))));
             }
         }
 
@@ -212,48 +149,6 @@ pub fn Stepper(comptime Driver: type) type {
             return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
                 @as(f64, @floatFromInt(steps)) /
                 @as(f64, @floatFromInt(microsteps)) / rpm)));
-        }
-
-        fn calc_step_pulse(self: *Self) void {
-            // this should not happen, but avoids strange calculations
-            if (self.steps_remaining <= 0) {
-                return;
-            }
-            self.steps_remaining -= 1;
-            self.step_count += 1;
-
-            if (self.profile == .linear_speed) {
-                switch (self.get_current_state()) {
-                    .accelerating => {
-                        if (self.step_count < self.steps_to_cruise) {
-                            var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                            const denominator = 4 * self.step_count + 1;
-                            // Pulse shrinks as we are nearer to cruising speed, based on step_count
-                            self.step_pulse = self.step_pulse.minus(@enumFromInt(numerator / denominator));
-                            // Update based on new step_pulse
-                            numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                            self.remainder = @enumFromInt(numerator % denominator);
-                        } else {
-                            // The series approximates target, set the final value to what it should be instead
-                            self.step_pulse = self.cruise_step_pulse;
-                            self.remainder = .from_us(0);
-                        }
-                    },
-                    .decelerating => {
-                        var numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                        const denominator = 4 * self.steps_remaining + 1;
-                        // Pulse grows as we are near stopped, based on steps_remaining
-                        self.step_pulse = self.step_pulse.plus(@enumFromInt(numerator / denominator));
-                        // Update based on new step_pulse
-                        numerator = 2 * @intFromEnum(self.step_pulse) + @intFromEnum(self.remainder);
-                        self.remainder = @enumFromInt(numerator % denominator);
-                    },
-                    // If not accelerating or decelerating, we are either stopped
-                    // or cruising, in which case, the step_pulse is already
-                    // correct.
-                    else => {},
-                }
-            }
         }
 
         /// Delay delay_us from start_us. This accounts for time spent elsewhere since start_us
@@ -272,14 +167,6 @@ pub fn Stepper(comptime Driver: type) type {
             if (self.steps_remaining == 0)
                 return false;
             // Wait until for the next action interval, since the last action ended
-            //   DELETEME>>
-            // std.log.info("remaining: {}. Delaying for {any}us from {any}us (now: {any}us)", .{
-            //     self.steps_remaining,
-            //     self.next_action_interval.to_us(),
-            //     self.last_action_end.to_us(),
-            //     self.clock.get_time_since_boot().to_us(),
-            // });
-            //   DELETEME<<
             self.delay_micros(self.next_action_interval, self.last_action_end);
             // Execute step
             try self.step(self.direction);
@@ -288,14 +175,15 @@ pub fn Stepper(comptime Driver: type) type {
 
             // Calculate the duration of the next step
             const pulse = self.step_pulse; // save value because calc_step_pulse() will overwrite it
-            self.calc_step_pulse();
 
             // We need to hold the pins for at least STEP_MIN_US
             self.clock.sleep_us(Driver.STEP_MIN_US);
-            self.clock.sleep_us(500); // DELETEME
 
             // Update timing reference
             self.last_action_end = self.clock.get_time_since_boot();
+
+            // Update steps remaining
+            self.steps_remaining -= 1;
 
             // Calculate the next intervanl, accounting for the time spent in this function
             // TODO: Make the interval a deadline?
@@ -322,26 +210,6 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        fn get_current_state(self: Self) State {
-            if (self.steps_remaining <= 0)
-                return .stopped;
-
-            if (self.steps_remaining <= self.steps_to_brake)
-                return .decelerating
-            else if (self.step_count <= self.steps_to_cruise)
-                return .accelerating
-            else
-                return .cruising;
-        }
-
-        fn start_brake(self: *Self) void {
-            switch (self.get_current_state()) {
-                .cruising => self.steps_remaining = self.steps_to_brake,
-                .accelerating => self.steps_remaining = self.step_count * self.profile.accel / self.profile.decel,
-                else => {}, // Do nothing, already decelerating or stopped.
-            }
-        }
-
         pub fn stop(self: *Self) void {
             const rv = self.steps_remaining;
             self.steps_remaining = 0;
@@ -352,23 +220,6 @@ pub fn Stepper(comptime Driver: type) type {
             return @divTrunc(deg * self.motor_steps * self.microsteps, 360);
         }
     };
-}
-
-test {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var in1 = TestGPIO.init(.output, .high);
-    var in2 = TestGPIO.init(.output, .high);
-    var in3 = TestGPIO.init(.output, .high);
-    var in4 = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
-    _ = Stepper(ULN2003).init(.{
-        .in1_pin = in1.digital_io(),
-        .in2_pin = in2.digital_io(),
-        .in3_pin = in3.digital_io(),
-        .in4_pin = in4.digital_io(),
-        .clock_device = ttd.clock_device(),
-    });
 }
 
 test "begin" {
