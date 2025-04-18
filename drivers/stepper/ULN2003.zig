@@ -17,6 +17,7 @@ pub const Stepper_Options = struct {
     clock_device: mdf.base.Clock_Device,
     motor_steps: u16 = 512,
     // motor_steps: u16 = 2048,
+    max_rpm: f64 = 30,
 };
 
 pub const MSPinsError = error.MSPinsError;
@@ -37,16 +38,6 @@ pub const State = enum {
 
 const Direction = enum { forward, backward };
 
-// TODO:
-// E.g. A4988?
-// DRIVER    = 1, ///< Stepper Driver, 2 driver pins required
-// FULL2WIRE = 2, ///< 2 wire stepper, 2 motor pins required
-// FULL3WIRE = 3, ///< 3 wire stepper, such as HDD spindle, 3 motor pins required
-// HALF3WIRE = 6, ///< 3 wire half stepper, such as HDD spindle, 3 motor pins required
-// NOTE: These are4 pin, just that 'half' is microstepping
-// FULL4WIRE = 4, ///< 4 wire full stepper, 4 motor pins required
-// HALF4WIRE = 8  ///< 4 wire half stepper, 4 motor pins required
-
 pub const ULN2003 = struct {
     const STEP_MIN_US = 2;
     const STEP_TABLE_FULL = [_]u4{ 0b1010, 0b0110, 0b0101, 0b1001 };
@@ -61,6 +52,7 @@ pub fn Stepper(comptime Driver: type) type {
         in: [4]mdf.base.Digital_IO,
         clock: mdf.base.Clock_Device,
         rpm: f64 = 0,
+        max_rpm: f64,
         step_table: []const u4 = Driver.STEP_TABLE_FULL[0..],
         microsteps: u2 = 1,
 
@@ -88,11 +80,12 @@ pub fn Stepper(comptime Driver: type) type {
                 .clock = opts.clock_device,
                 .in = .{ opts.in1_pin, opts.in2_pin, opts.in3_pin, opts.in4_pin },
                 .motor_steps = opts.motor_steps,
+                .max_rpm = opts.max_rpm,
             };
         }
 
         pub fn begin(self: *Self, rpm: f64, microsteps: u2) !void {
-            self.rpm = rpm;
+            try self.set_rpm(rpm);
             _ = try self.set_microstep(microsteps);
 
             try self.enable();
@@ -112,7 +105,8 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        pub fn set_rpm(self: Self, rpm: f64) void {
+        pub fn set_rpm(self: *Self, rpm: f64) !void {
+            if (rpm > self.max_rpm) return error.TooFast;
             self.rpm = rpm;
         }
 
@@ -141,8 +135,7 @@ pub fn Stepper(comptime Driver: type) type {
         /// Synchronously run the specified number of steps
         pub fn move(self: *Self, steps: i32) !void {
             self.start_move(steps);
-            var action = try self.run();
-            while (@intFromEnum(action) != 0) : (action = try self.run()) {}
+            while (try self.run()) {}
         }
 
         /// Synchronously rotate the specified number of degrees
@@ -150,19 +143,23 @@ pub fn Stepper(comptime Driver: type) type {
             const steps = self.calc_steps_for_rotation(deg);
             std.log.info("Steps for rotating {} degrees: {}", .{ deg, steps });
             try self.move(steps);
+            std.log.info("Done", .{});
         }
 
         pub fn start_move(self: *Self, steps: i32) void {
+            // Start the move with no timeout duration
             self.start_move_time(steps, .from_us(0));
         }
 
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
             self.direction = if (steps >= 0) .forward else .backward;
-            self.last_action_end = .from_us(0);
+            self.last_action_end = self.clock.get_time_since_boot();
+            self.next_action_interval = .from_us(0);
             self.steps_remaining = @abs(steps);
             self.step_count = 0;
             self.remainder = .from_us(0);
+
             switch (self.profile) {
                 .linear_speed => |p| {
                     const microstep_f: f64 = @floatFromInt(self.microsteps);
@@ -197,13 +194,14 @@ pub fn Stepper(comptime Driver: type) type {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
                     self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
-                    // NOTE: This is correct // DELETEME
-                    // std.log.info("Step pulse: {} us", .{self.cruise_step_pulse.to_us()}); // DELETEME
                     self.step_pulse = self.cruise_step_pulse;
-                    // if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
-                    //     self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
-                    //         @as(f64, @floatFromInt(self.steps_remaining))));
-                    // }
+                    // If we have a deadline, we might have to shorten the pulse
+                    // NOTE: This might make the motor behave incorrectly, if it can't step that
+                    // fast.
+                    if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
+                        self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
+                            @as(f64, @floatFromInt(self.steps_remaining))));
+                    }
                 },
             }
         }
@@ -260,6 +258,7 @@ pub fn Stepper(comptime Driver: type) type {
 
         /// Delay delay_us from start_us. This accounts for time spent elsewhere since start_us
         fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
+            // If `start_us` is zero, that means to wait the whole delay.
             if (@intFromEnum(start_us) == 0) {
                 self.clock.sleep_us(@intFromEnum(delay_us));
                 return;
@@ -269,39 +268,43 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         /// Run the current step and calculate the next one
-        fn run(self: *Self) !mdf.time.Duration {
-            if (self.steps_remaining > 0) {
-                // Wait until for the next action interval, since the last action ended
-                //   DELETEME>>
-                std.log.info("remaining: {}. Delaying for {any}us from {any}us (now: {any}us)", .{
-                    self.steps_remaining,
-                    self.next_action_interval.to_us(),
-                    self.last_action_end.to_us(),
-                    self.clock.get_time_since_boot().to_us(),
-                });
-                //   DELETEME<<
-                self.delay_micros(self.next_action_interval, self.last_action_end);
-                try self.step(self.direction);
-                // Absolute time now
-                const start = self.clock.get_time_since_boot();
-                const pulse = self.step_pulse; // save value because calc_step_pulse() will overwrite it
-                self.calc_step_pulse();
-                // We need to hold the pins for at least STEP_MIN_US
-                self.clock.sleep_us(Driver.STEP_MIN_US);
-                // Account for the time calculating and min sleeping
-                self.last_action_end = self.clock.get_time_since_boot();
-                const elapsed = self.last_action_end.diff(start);
-                self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
-            } else {
-                // end of move
-                self.last_action_end = .from_us(0);
-                self.next_action_interval = .from_us(0);
-            }
-            return self.next_action_interval;
+        fn run(self: *Self) !bool {
+            if (self.steps_remaining == 0)
+                return false;
+            // Wait until for the next action interval, since the last action ended
+            //   DELETEME>>
+            // std.log.info("remaining: {}. Delaying for {any}us from {any}us (now: {any}us)", .{
+            //     self.steps_remaining,
+            //     self.next_action_interval.to_us(),
+            //     self.last_action_end.to_us(),
+            //     self.clock.get_time_since_boot().to_us(),
+            // });
+            //   DELETEME<<
+            self.delay_micros(self.next_action_interval, self.last_action_end);
+            // Execute step
+            try self.step(self.direction);
+            // Absolute time now
+            const step_start = self.clock.get_time_since_boot();
+
+            // Calculate the duration of the next step
+            const pulse = self.step_pulse; // save value because calc_step_pulse() will overwrite it
+            self.calc_step_pulse();
+
+            // We need to hold the pins for at least STEP_MIN_US
+            self.clock.sleep_us(Driver.STEP_MIN_US);
+            self.clock.sleep_us(500); // DELETEME
+
+            // Update timing reference
+            self.last_action_end = self.clock.get_time_since_boot();
+
+            // Calculate the next intervanl, accounting for the time spent in this function
+            // TODO: Make the interval a deadline?
+            const elapsed = self.last_action_end.diff(step_start);
+            self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else .from_us(1);
+            return self.steps_remaining > 0;
         }
 
         /// Change outputs to the next step in the cycle
-        // TODO: Not pub?
         pub fn step(self: *Self, direction: Direction) !void {
             // TODO: respect direction
             const pattern = self.step_table[self.step_index];
@@ -345,11 +348,7 @@ pub fn Stepper(comptime Driver: type) type {
             return rv;
         }
 
-        fn get_steps_completed(self: Self) u32 {
-            return self.step_count;
-        }
-
-        fn calc_steps_for_rotation(self: Self, deg: i32) i32 {
+        fn calc_steps_for_rotation(self: *Self, deg: i32) i32 {
             return @divTrunc(deg * self.motor_steps * self.microsteps, 360);
         }
     };

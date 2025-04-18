@@ -57,9 +57,14 @@ pub fn main() !void {
         .in3_pin = pins.in3.digital_io(),
         .in4_pin = pins.in4.digital_io(),
         .clock_device = cd.clock_device(),
+        .max_rpm = 30,
     });
 
-    try stepper.begin(60, 1);
+    try stepper.begin(20, 1);
+    // while (true) {
+    //     try stepper.step(.forward);
+    //     stepper.clock.sleep_us(3000); // 5ms delay between steps
+    // }
 
     while (true) {
         // const linear_profile = stepper_driver.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
@@ -73,17 +78,17 @@ pub fn main() !void {
         // inline for (.{ 1, 2 }) |ms| {
         // _ = try stepper.set_microstep(ms);
         // for (0..8) |_| {
-        // std.log.info("Rotating", .{});
+        std.log.info("Rotating", .{});
         try stepper.rotate(180);
         // try stepper.step(.forward);
-        time.sleep_ms(250);
+        // time.sleep_ms(250);
+        std.log.info("Rotating", .{});
         try stepper.rotate(-180);
-        time.sleep_ms(250);
+        // time.sleep_ms(250);
         led.toggle();
         // }
         // }
         // time.sleep_ms(1000);
-        time.sleep_ms(5);
     }
     // }
 }
