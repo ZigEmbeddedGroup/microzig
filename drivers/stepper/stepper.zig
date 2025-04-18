@@ -313,7 +313,7 @@ pub fn Stepper(comptime Driver: type) type {
 
             // Track when we started the step
             const start = self.clock.get_time_since_boot();
-            const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
+            const pulse = self.step_pulse; // save value because calc_step_pulse can overwrite it
             self.calc_step_pulse();
 
             // We should pull HIGH for at least STEP_HIGH_MIN us
