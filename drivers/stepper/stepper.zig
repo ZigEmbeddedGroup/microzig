@@ -180,7 +180,6 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         pub fn move(self: *Self, steps: i32) !void {
-            // std.log.info("Running {} steps", .{steps}); // DELETEME
             self.start_move(steps);
             while (try self.next_action()) {}
         }
