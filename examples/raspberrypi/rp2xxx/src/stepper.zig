@@ -5,8 +5,7 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
 const ClockDevice = rp2xxx.drivers.ClockDevice;
-const stepper_driver = microzig.drivers.stepper;
-const A4988 = stepper_driver.Stepper(stepper_driver.A4988);
+const A4988 = microzig.drivers.stepper.A4988;
 
 pub fn main() !void {
     const led = gpio.num(8);
@@ -42,8 +41,8 @@ pub fn main() !void {
     // try stepper.enable();
 
     while (true) {
-        const linear_profile = stepper_driver.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
-        const constant_profile = stepper_driver.Speed_Profile.constant_speed;
+        const linear_profile = A4988.Speed_Profile{ .linear_speed = .{ .accel = 2000, .decel = 2000 } };
+        const constant_profile = A4988.Speed_Profile.constant_speed;
         // Try both constant and linear acceleration profiles
         inline for (.{ constant_profile, linear_profile }) |profile| {
             stepper.set_speed_profile(
