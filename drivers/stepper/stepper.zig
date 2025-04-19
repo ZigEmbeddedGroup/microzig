@@ -8,6 +8,7 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
+const common = @import("common.zig");
 
 pub const Stepper_Options = struct {
     ms1_pin: ?mdf.base.Digital_IO = undefined,
@@ -21,13 +22,6 @@ pub const Stepper_Options = struct {
 };
 
 pub const MSPinsError = error.MSPinsError;
-pub const Speed_Profile = union(enum) {
-    constant_speed,
-    linear_speed: struct {
-        accel: u16 = 1000,
-        decel: u16 = 1000,
-    },
-};
 
 pub const State = enum {
     stopped,
@@ -55,6 +49,13 @@ pub const DRV8825 = struct {
 pub fn Stepper(comptime Driver: type) type {
     return struct {
         const Self = @This();
+        pub const Speed_Profile = union(enum) {
+            constant_speed,
+            linear_speed: struct {
+                accel: u16 = 1000,
+                decel: u16 = 1000,
+            },
+        };
         driver: Driver = .{},
 
         microsteps: u8 = 1,
@@ -185,7 +186,7 @@ pub fn Stepper(comptime Driver: type) type {
         }
 
         pub fn rotate(self: *Self, deg: i32) !void {
-            try self.move(self.calc_steps_for_rotation(deg));
+            try self.move(common.calc_steps_for_rotation(self.motor_steps, self.microsteps, deg));
         }
 
         pub fn start_move(self: *Self, steps: i32) void {
@@ -233,7 +234,7 @@ pub fn Stepper(comptime Driver: type) type {
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
-                    self.step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    self.step_pulse = common.get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
                     // If we have a deadline, we might have to shorten the pulses to finish in time
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
                         self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
@@ -241,12 +242,6 @@ pub fn Stepper(comptime Driver: type) type {
                     }
                 },
             }
-        }
-
-        inline fn get_step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
-            return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
-                @as(f64, @floatFromInt(steps)) /
-                @as(f64, @floatFromInt(microsteps)) / rpm)));
         }
 
         fn calc_step_pulse(self: *Self) void {
@@ -289,15 +284,6 @@ pub fn Stepper(comptime Driver: type) type {
                     else => {},
                 }
             }
-        }
-
-        fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
-            if (@intFromEnum(start_us) == 0) {
-                self.clock.sleep_us(@intFromEnum(delay_us));
-                return;
-            }
-            const deadline: mdf.time.Deadline = .init_relative(start_us, delay_us);
-            while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
         }
 
         /// Perform the next step, waiting until the next_action_time has been reached
@@ -368,14 +354,7 @@ pub fn Stepper(comptime Driver: type) type {
             return rv;
         }
 
-        pub fn get_direction(self: Self) i2 {
-            return switch (self.dir_state) {
-                .low => 1,
-                .high => -1,
-            };
-        }
-
-        fn calc_steps_for_rotation(self: Self, deg: i32) i32 {
+        fn calc_steps_for_rotation(self: *Self, deg: i32) i32 {
             return @divTrunc(deg * self.motor_steps * self.microsteps, 360);
         }
     };

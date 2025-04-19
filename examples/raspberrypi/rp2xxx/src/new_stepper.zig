@@ -5,8 +5,7 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
 const ClockDevice = rp2xxx.drivers.ClockDevice;
-const stepper_driver = microzig.drivers.new_stepper;
-const ULN2003 = stepper_driver.Stepper(stepper_driver.ULN2003);
+const ULN2003 = microzig.drivers.stepper.ULN2003;
 
 ////
 const uart = rp2xxx.uart.instance.num(0);
