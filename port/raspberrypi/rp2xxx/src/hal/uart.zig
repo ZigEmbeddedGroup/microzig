@@ -475,7 +475,7 @@ pub fn logFn(
     }
 }
 
-var log_lock: microzig.hal.multicore.Semaphore = .{};
+var log_lock: microzig.hal.multicore.Mutex = .{};
 
 /// This log function wraps logFn in a semaphore so that calls to it from
 /// different cores or interrupts don't collide.

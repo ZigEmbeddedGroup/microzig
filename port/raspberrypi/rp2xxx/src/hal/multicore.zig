@@ -137,7 +137,7 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
 ///     }
 ///
 /// Reserved spinlocks:
-///   - 31 - Semaphores
+///   - 31 - Mutexes
 pub const Spinlock = struct {
     lock_reg: *volatile u32,
 
@@ -180,15 +180,15 @@ pub const Spinlock = struct {
     }
 };
 
-/// Multicore safe semaphore.
-pub const Semaphore = struct {
+/// Multicore safe mutex.
+pub const Mutex = struct {
     available: bool = true,
     spinlock: Spinlock = Spinlock.init(31),
 
-    /// Acquire the semaphore.
-    /// Returns true if the semaphore was acquired, false if the semaphore
+    /// Acquire the mutex.
+    /// Returns true if the mutex was acquired, false if the mutex
     /// was not acquired.
-    pub fn acquire_unblocking(self: *Semaphore) bool {
+    pub fn acquire_unblocking(self: *Mutex) bool {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -203,33 +203,33 @@ pub const Semaphore = struct {
         return false;
     }
 
-    /// Acquire the semaphore.
-    /// If the semaphore cannot be acquired, this function will busy wait until
-    /// the semaphore is available.
-    pub fn acquire(self: *Semaphore) void {
+    /// Acquire the mutex.
+    /// If the mutex cannot be acquired, this function will busy wait until
+    /// the mutex is available.
+    pub fn acquire(self: *Mutex) void {
         while (!self.acquire_unblocking()) {}
     }
 
-    /// Release the semaphore.
-    pub fn release(self: *Semaphore) void {
+    /// Release the mutex.
+    pub fn release(self: *Mutex) void {
         // Note: no need for critical section here as this operation
         // is inherently atomic.
         self.available = true;
     }
 };
 
-/// This semaphore can only be acquired by one core at a time.  It can be
+/// This mutex can only be acquired by one core at a time.  It can be
 /// acquired more than once by the same core but must be released the same
 /// number of times it was acquired before the other core can acquire it.
-pub const CoreSemaphore = struct {
+pub const CoreMutex = struct {
     count: usize = 0,
     spinlock: Spinlock = Spinlock.init(31),
     owning_core: u32 = 0,
 
-    /// Acquire the semaphore.
-    /// Returns true if the semaphore was acquired, false if the semaphore
+    /// Acquire the mutex.
+    /// Returns true if the mutex was acquired, false if the mutex
     /// is not available.
-    pub fn acquire_unblocking(self: *CoreSemaphore) bool {
+    pub fn acquire_unblocking(self: *CoreMutex) bool {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -249,15 +249,15 @@ pub const CoreSemaphore = struct {
         return false;
     }
 
-    /// Acquire the semaphore.
-    /// If a core cannot acquire the semaphore, it will busy wait until
-    /// the semaphore is available.
-    pub fn acquire(self: *CoreSemaphore) void {
+    /// Acquire the mutex.
+    /// If a core cannot acquire the mutex, it will busy wait until
+    /// the mutex is available.
+    pub fn acquire(self: *CoreMutex) void {
         while (!self.acquire_unblocking()) {}
     }
 
-    /// Release the semaphore.
-    pub fn release(self: *CoreSemaphore) void {
+    /// Release the mutex.
+    pub fn release(self: *CoreMutex) void {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
