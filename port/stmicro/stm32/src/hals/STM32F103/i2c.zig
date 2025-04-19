@@ -47,7 +47,7 @@ const ConfigError = error{
     PCLKUnderflow,
     PCLKOverflow,
     SpeedOverflow,
-    SpeedUnderdlow,
+    SpeedUnderflow,
     InvalidAddress,
     InvalidTrise,
     InvalidCCR,
