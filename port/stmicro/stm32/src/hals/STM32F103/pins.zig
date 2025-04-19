@@ -59,7 +59,7 @@ pub const Pin = enum {
 pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type {
     return switch (mode) {
         .input => struct {
-            const pin = gpio.Pin.init(port, num);
+            const pin = gpio.Pin.from_port(@enumFromInt(port), num);
 
             pub inline fn read(self: @This()) u1 {
                 _ = self;
@@ -67,7 +67,7 @@ pub fn GPIO(comptime port: u3, comptime num: u4, comptime mode: gpio.Mode) type 
             }
         },
         .output => struct {
-            const pin = gpio.Pin.init(port, num);
+            const pin = gpio.Pin.from_port(@enumFromInt(port), num);
 
             pub inline fn put(self: @This(), value: u1) void {
                 _ = self;
@@ -201,7 +201,8 @@ pub const GlobalConfiguration = struct {
 
                 inline for (@typeInfo(Port.Configuration).@"struct".fields) |field| {
                     if (@field(port_config, field.name)) |pin_config| {
-                        var pin = gpio.Pin.init(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)));
+                        const port = @intFromEnum(@field(Port, port_field.name));
+                        var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
                         pin.set_mode(pin_config.mode.?);
                     }
                 }
@@ -209,7 +210,8 @@ pub const GlobalConfiguration = struct {
                 if (input_gpios != 0) {
                     inline for (@typeInfo(Port.Configuration).@"struct".fields) |field|
                         if (@field(port_config, field.name)) |pin_config| {
-                            var pin = gpio.Pin.init(@intFromEnum(@field(Port, port_field.name)), @intFromEnum(@field(Pin, field.name)));
+                            const port = @intFromEnum(@field(Port, port_field.name));
+                            var pin = gpio.Pin.from_port(@enumFromInt(port), @intFromEnum(@field(Pin, field.name)));
                             const pull = pin_config.pull orelse continue;
                             if (comptime pin_config.get_mode() != .input)
                                 @compileError("Only input pins can have pull up/down enabled");
