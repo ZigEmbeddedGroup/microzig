@@ -1,11 +1,11 @@
 .{
     .name = .port_wch_ch32v,
     .version = "0.0.0",
+    .fingerprint = 0x1de9e12a23a2eec,
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig",
         "build.zig.zon",
