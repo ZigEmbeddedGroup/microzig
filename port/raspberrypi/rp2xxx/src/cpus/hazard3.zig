@@ -150,14 +150,24 @@ pub const interrupt = struct {
     };
 };
 
-pub fn wfi() void {
-    asm volatile ("wfi");
+pub inline fn wfe() void {
+    // MAGIC: This instruction which seems to accomplishes nothing, is actually
+    //        a hint instruction that blocks the current core.
+    asm volatile ("slt zero, zero, x0");
 }
 
-pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
-    wfi();
-    asm volatile ("csrs 0x810, 0x1");
+pub inline fn sev() void {
+    // MAGIC: This instruction which seems to accomplishes nothing, is actually
+    //        a hint instruction that unblocks the other core.
+    asm volatile ("slt zero, zero, x1");
+}
+
+pub inline fn nop() void {
+    asm volatile ("nop");
+}
+
+pub fn wfi() void {
+    asm volatile ("wfi");
 }
 
 pub const startup_logic = struct {
