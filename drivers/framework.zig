@@ -38,7 +38,12 @@ pub const sensor = struct {
     pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
 };
 
-pub const stepper = @import("stepper/stepper.zig");
+pub const stepper = struct {
+    const s = @import("stepper/stepper.zig");
+    pub const A4988 = s.Stepper(s.A4988);
+    pub const DRV8825 = s.Stepper(s.DRV8825);
+    pub const ULN2003 = @import("stepper/ULN2003.zig").ULN2003;
+};
 
 pub const IO_expander = struct {
     pub const pcf8574 = @import("io_expander/pcf8574.zig");
@@ -188,7 +193,10 @@ test {
 
     _ = sensor.TMP117;
 
-    _ = stepper;
+    _ = @import("stepper/common.zig");
+    _ = stepper.A4988;
+    _ = stepper.DRV8825;
+    _ = stepper.ULN2003;
 
     _ = IO_expander.pcf8574;
 
