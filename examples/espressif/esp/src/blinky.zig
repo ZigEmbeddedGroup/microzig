@@ -4,6 +4,7 @@ const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const usb_serial_jtag = hal.usb_serial_jtag;
+const time = microzig.hal.time;
 
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
@@ -31,18 +32,18 @@ pub fn main() !void {
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.low);
         std.log.info("R", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.high);
         led_b_pin.write(gpio.Level.low);
         std.log.info("G", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
 
         led_r_pin.write(gpio.Level.low);
         led_g_pin.write(gpio.Level.low);
         led_b_pin.write(gpio.Level.high);
         std.log.info("B", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
     }
 }
