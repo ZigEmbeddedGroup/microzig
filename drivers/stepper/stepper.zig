@@ -80,7 +80,7 @@ pub fn Stepper(comptime Driver: type) type {
         cruise_step_pulse: mdf.time.Duration = .from_us(0),
         remainder: mdf.time.Duration = .from_us(0),
         last_action_end: mdf.time.Absolute = .from_us(0),
-        next_action_interval: mdf.time.Duration = .from_us(0),
+        next_action_time: mdf.time.Absolute = .from_us(0),
         step_count: u32 = 0,
         dir_state: mdf.base.Digital_IO.State = .low,
         motor_steps: u16,
@@ -143,7 +143,7 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        pub fn set_rpm(self: Self, rpm: f64) void {
+        pub fn set_rpm(self: *Self, rpm: f64) void {
             self.rpm = rpm;
         }
 
@@ -181,8 +181,7 @@ pub fn Stepper(comptime Driver: type) type {
 
         pub fn move(self: *Self, steps: i32) !void {
             self.start_move(steps);
-            var action = try self.next_action();
-            while (@intFromEnum(action) != 0) : (action = try self.next_action()) {}
+            while (try self.next_action()) {}
         }
 
         pub fn rotate(self: *Self, deg: i32) !void {
@@ -196,7 +195,8 @@ pub fn Stepper(comptime Driver: type) type {
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
             self.dir_state = if (steps >= 0) .high else .low;
-            self.last_action_end = .from_us(0);
+            self.last_action_end = self.clock.get_time_since_boot();
+            self.next_action_time = self.last_action_end;
             self.steps_remaining = @abs(steps);
             self.step_count = 0;
             self.remainder = .from_us(0);
@@ -233,8 +233,8 @@ pub fn Stepper(comptime Driver: type) type {
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
-                    self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
-                    self.step_pulse = self.cruise_step_pulse;
+                    self.step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    // If we have a deadline, we might have to shorten the pulses to finish in time
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
                         self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                             @as(f64, @floatFromInt(self.steps_remaining))));
@@ -300,29 +300,39 @@ pub fn Stepper(comptime Driver: type) type {
             while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
         }
 
-        pub fn next_action(self: *Self) !mdf.time.Duration {
-            if (self.steps_remaining > 0) {
-                self.delay_micros(self.next_action_interval, self.last_action_end);
-                //  DIR pin is sampled on rising STEP edge, so it is set first
-                try self.dir_pin.write(self.dir_state);
-                try self.step_pin.write(.high);
-                // Absolute time now
-                const start = self.clock.get_time_since_boot();
-                const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
-                self.calc_step_pulse();
-                // We should pull HIGH for at least 1-2us (step_high_min)
-                self.clock.sleep_us(Driver.STEP_HIGH_MIN);
-                try self.step_pin.write(.low);
-                // account for calc_step_pulse() execution time; sets ceiling for max rpm on slower MCUs
-                self.last_action_end = self.clock.get_time_since_boot();
-                const elapsed = self.last_action_end.diff(start);
-                self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
-            } else {
-                // end of move
-                self.last_action_end = .from_us(0);
-                self.next_action_interval = .from_us(0);
-            }
-            return self.next_action_interval;
+        /// Perform the next step, waiting until the next_action_time has been reached
+        pub fn next_action(self: *Self) !bool {
+            if (self.steps_remaining == 0) return false;
+
+            // Wait until we reach the deadline
+            while (!self.next_action_time.is_reached_by(self.clock.get_time_since_boot())) {}
+
+            //  DIR pin is sampled on rising STEP edge, so it is set first
+            try self.dir_pin.write(self.dir_state);
+            try self.step_pin.write(.high);
+
+            // Track when we started the step
+            const start = self.clock.get_time_since_boot();
+            const pulse = self.step_pulse; // save value because calc_step_pulse can overwrite it
+            self.calc_step_pulse();
+
+            // We should pull HIGH for at least STEP_HIGH_MIN us
+            self.clock.sleep_us(Driver.STEP_HIGH_MIN);
+            try self.step_pin.write(.low);
+            // We should pull LOW for at least STEP_LOW_MIN us
+            self.clock.sleep_us(Driver.STEP_LOW_MIN);
+
+            // Update timing reference
+            self.last_action_end = self.clock.get_time_since_boot();
+            const elapsed = self.last_action_end.diff(start);
+
+            // Calculate the next interval, accounting for the time spent in this function
+            self.next_action_time = if (elapsed.less_than(pulse))
+                self.last_action_end.add_duration(pulse.minus(elapsed))
+            else
+                self.last_action_end;
+
+            return self.steps_remaining > 0;
         }
 
         pub fn get_current_state(self: Self) State {
