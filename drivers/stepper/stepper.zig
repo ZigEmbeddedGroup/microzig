@@ -360,27 +360,11 @@ pub fn Stepper(comptime Driver: type) type {
     };
 }
 
-test {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var dp = TestGPIO.init(.output, .high);
-    var sp = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
-    _ = Stepper(A4988).init(.{
-        .dir_pin = dp.digital_io(),
-        .step_pin = sp.digital_io(),
-        .clock_device = ttd.clock_device(),
-    });
-    _ = Stepper(DRV8825).init(.{
-        .dir_pin = dp.digital_io(),
-        .step_pin = sp.digital_io(),
-        .clock_device = ttd.clock_device(),
-    });
-}
+// Testing
+const TestGPIO = mdf.base.Digital_IO.Test_Device;
+const TestTime = mdf.base.Clock_Device.Test_Device;
 
 test "begin" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
@@ -396,8 +380,6 @@ test "begin" {
 }
 
 test "A4988: set microstep with ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ms1 = TestGPIO.init(.output, .high);
@@ -434,8 +416,6 @@ test "A4988: set microstep with ms pins set" {
 }
 
 test "A4988: set microstep without ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
@@ -462,11 +442,10 @@ test "A4988: set microstep without ms pins set" {
         const m = stepper.init_microstep(tc[0]);
         try std.testing.expectEqual(tc[1], m);
     }
+    try std.testing.expectError(MSPinsError, stepper.set_microstep(1));
 }
 
 test "DRV8825: set microstep with ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ms1 = TestGPIO.init(.output, .high);
@@ -503,8 +482,6 @@ test "DRV8825: set microstep with ms pins set" {
 }
 
 test "DRV8825: set microstep without ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
