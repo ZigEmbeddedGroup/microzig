@@ -191,20 +191,34 @@ pub const ULN2003 = struct {
     }
 };
 
+// Testing
+const TestGPIO = mdf.base.Digital_IO.Test_Device;
+const TestTime = mdf.base.Clock_Device.Test_Device;
+const TestDevice = struct {
+    in1: TestGPIO,
+    in2: TestGPIO,
+    in3: TestGPIO,
+    in4: TestGPIO,
+    clock: TestTime,
+};
+fn createTestDevice() TestDevice {
+    return .{
+        .in1 = TestGPIO.init(.output, .high),
+        .in2 = TestGPIO.init(.output, .high),
+        .in3 = TestGPIO.init(.output, .high),
+        .in4 = TestGPIO.init(.output, .high),
+        .clock = TestTime.init(),
+    };
+}
+
 test "begin" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var in1 = TestGPIO.init(.output, .high);
-    var in2 = TestGPIO.init(.output, .high);
-    var in3 = TestGPIO.init(.output, .high);
-    var in4 = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
+    var td = createTestDevice();
     var stepper = ULN2003.init(.{
-        .in1_pin = in1.digital_io(),
-        .in2_pin = in2.digital_io(),
-        .in3_pin = in3.digital_io(),
-        .in4_pin = in4.digital_io(),
-        .clock_device = ttd.clock_device(),
+        .in1_pin = td.in1.digital_io(),
+        .in2_pin = td.in2.digital_io(),
+        .in3_pin = td.in3.digital_io(),
+        .in4_pin = td.in4.digital_io(),
+        .clock_device = td.clock.clock_device(),
     });
     try stepper.begin(20, 1);
     try std.testing.expectEqual(1, stepper.microsteps);
@@ -213,19 +227,13 @@ test "begin" {
 }
 
 test "set microsteps/rpm" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var in1 = TestGPIO.init(.output, .high);
-    var in2 = TestGPIO.init(.output, .high);
-    var in3 = TestGPIO.init(.output, .high);
-    var in4 = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
+    var td = createTestDevice();
     var stepper = ULN2003.init(.{
-        .in1_pin = in1.digital_io(),
-        .in2_pin = in2.digital_io(),
-        .in3_pin = in3.digital_io(),
-        .in4_pin = in4.digital_io(),
-        .clock_device = ttd.clock_device(),
+        .in1_pin = td.in1.digital_io(),
+        .in2_pin = td.in2.digital_io(),
+        .in3_pin = td.in3.digital_io(),
+        .in4_pin = td.in4.digital_io(),
+        .clock_device = td.clock.clock_device(),
         .max_rpm = 20,
     });
     try stepper.set_microstep(1);
@@ -238,19 +246,13 @@ test "set microsteps/rpm" {
 }
 
 test "step" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var in1 = TestGPIO.init(.output, .high);
-    var in2 = TestGPIO.init(.output, .high);
-    var in3 = TestGPIO.init(.output, .high);
-    var in4 = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
+    var td = createTestDevice();
     var stepper = ULN2003.init(.{
-        .in1_pin = in1.digital_io(),
-        .in2_pin = in2.digital_io(),
-        .in3_pin = in3.digital_io(),
-        .in4_pin = in4.digital_io(),
-        .clock_device = ttd.clock_device(),
+        .in1_pin = td.in1.digital_io(),
+        .in2_pin = td.in2.digital_io(),
+        .in3_pin = td.in3.digital_io(),
+        .in4_pin = td.in4.digital_io(),
+        .clock_device = td.clock.clock_device(),
     });
     try stepper.begin(20, 1);
     for ([_]u3{ 0, 1, 2, 3, 0 }) |i| {
