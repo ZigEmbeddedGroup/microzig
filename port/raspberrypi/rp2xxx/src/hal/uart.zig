@@ -475,11 +475,10 @@ pub fn logFn(
     }
 }
 
+var log_lock: microzig.hal.multicore.Semaphore = .{};
 
-var log_lock = microzig.hal.multicore.Semaphore.init();
-
-/// This log function is used when logging in a multicore environment
-/// it prevents concurrent logs from colliding in output.
+/// This log function wraps logFn in a semaphore so that calls to it from
+/// different cores or interrupts don't collide.
 pub fn logFnThreadsafe(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
