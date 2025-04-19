@@ -1,6 +1,13 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
+pub const CPUOptions = struct {
+    /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
+    ram_vectors: bool = false,
+    /// When true, the RAM vectors are placed in section `ram_vectors`.
+    has_ram_vectors_section: bool = false,
+};
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register
     CPUID: u32,
