@@ -376,9 +376,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 } else @panic("no ram memory region found for setting the end-of-stack address");
             };
 
-            const zig_target_resolved = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
+            const zig_resolved_target = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
 
-            const cpu = options.cpu orelse target.cpu orelse get_default_cpu(zig_target_resolved.result, mb.core_dep);
+            const cpu = options.cpu orelse target.cpu orelse get_default_cpu(zig_resolved_target.result, mb.core_dep);
             const maybe_hal = options.hal orelse target.hal;
             const maybe_board = options.board orelse target.board;
 
@@ -477,6 +477,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             const app_mod = mb.builder.createModule(.{
                 .root_source_file = options.root_source_file,
                 .imports = options.imports,
+                .target = zig_resolved_target,
             });
             app_mod.addImport("microzig", core_mod);
             core_mod.addImport("app", app_mod);
@@ -489,7 +490,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     .name = options.name,
                     .root_module = b.createModule(.{
                         .optimize = options.optimize,
-                        .target = zig_target_resolved,
+                        .target = zig_resolved_target,
                         .root_source_file = mb.core_dep.path("src/start.zig"),
                         .single_threaded = options.single_threaded orelse target.single_threaded,
                         .strip = options.strip,
@@ -518,8 +519,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 const generate_linker_script_exe = mb.dep.artifact("generate_linker_script");
 
                 const generate_linker_script_args: GenerateLinkerScriptArgs = .{
-                    .cpu_name = zig_target_resolved.result.cpu.model.name,
-                    .cpu_arch = zig_target_resolved.result.cpu.arch,
+                    .cpu_name = zig_resolved_target.result.cpu.model.name,
+                    .cpu_arch = zig_resolved_target.result.cpu.arch,
                     .chip_name = target.chip.name,
                     .memory_regions = target.chip.memory_regions,
                 };
@@ -589,6 +590,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             emitted_elf: ?LazyPath = null,
             emitted_files: EmittedFiles,
+            emitted_docs: ?LazyPath = null,
 
             /// Returns the emitted ELF file for this firmware. This is useful if you need debug information
             /// or want to use a debugger like Segger, ST-Link or similar.
@@ -671,6 +673,31 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 }
 
                 return result.value_ptr.*;
+            }
+
+            /// Returns the emitted docs folder for this firmware.
+            ///
+            /// Example usage:
+            /// ```zig
+            /// const install_docs = b.addInstallDirectory(.{
+            ///     .source_dir = fw.get_emitted_docs(),
+            ///     .install_dir = .prefix,
+            ///     .install_subdir = "docs",
+            /// });
+            ///
+            /// const install_docs_step = b.step("docs", "Install documentation.");
+            /// install_docs_step.dependOn(&install_docs.step);
+            /// ```
+            pub fn get_emitted_docs(fw: *Firmware) LazyPath {
+                if (fw.emitted_docs == null) {
+                    const docs_test = fw.mb.builder.addTest(.{
+                        .name = fw.artifact.name,
+                        .root_module = fw.app_mod,
+                    });
+
+                    fw.emitted_docs = docs_test.getEmittedDocs();
+                }
+                return fw.emitted_docs.?;
             }
 
             /// Configuration options for the `add_app_import` function.
