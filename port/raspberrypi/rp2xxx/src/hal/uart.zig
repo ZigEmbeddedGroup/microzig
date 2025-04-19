@@ -475,7 +475,7 @@ pub fn logFn(
     }
 }
 
-var log_lock: microzig.hal.multicore.Mutex = .{};
+var log_mutex: microzig.hal.multicore.Mutex = .{};
 
 /// This log function wraps logFn in a semaphore so that calls to it from
 /// different cores or interrupts don't collide.
@@ -485,7 +485,7 @@ pub fn logFnThreadsafe(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    log_lock.acquire();
+    log_mutex.lock();
     logFn(level, scope, format, args);
-    log_lock.release();
+    log_mutex.unlock();
 }

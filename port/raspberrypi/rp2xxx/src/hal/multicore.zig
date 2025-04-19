@@ -185,10 +185,10 @@ pub const Mutex = struct {
     available: bool = true,
     spinlock: Spinlock = Spinlock.init(31),
 
-    /// Acquire the mutex.
+    /// Try to lock the mutex.
     /// Returns true if the mutex was acquired, false if the mutex
     /// was not acquired.
-    pub fn acquire_unblocking(self: *Mutex) bool {
+    pub fn try_lock(self: *Mutex) bool {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -203,15 +203,15 @@ pub const Mutex = struct {
         return false;
     }
 
-    /// Acquire the mutex.
+    /// Lock the mutex.
     /// If the mutex cannot be acquired, this function will busy wait until
     /// the mutex is available.
-    pub fn acquire(self: *Mutex) void {
-        while (!self.acquire_unblocking()) {}
+    pub fn lock(self: *Mutex) void {
+        while (!self.try_lock()) {}
     }
 
-    /// Release the mutex.
-    pub fn release(self: *Mutex) void {
+    /// Unlock the mutex.
+    pub fn unlock(self: *Mutex) void {
         // Note: no need for critical section here as this operation
         // is inherently atomic.
         self.available = true;
@@ -226,10 +226,10 @@ pub const CoreMutex = struct {
     spinlock: Spinlock = Spinlock.init(31),
     owning_core: u32 = 0,
 
-    /// Acquire the mutex.
+    /// Try to acquire the mutex.
     /// Returns true if the mutex was acquired, false if the mutex
     /// is not available.
-    pub fn acquire_unblocking(self: *CoreMutex) bool {
+    pub fn try_lock(self: *CoreMutex) bool {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
@@ -249,15 +249,15 @@ pub const CoreMutex = struct {
         return false;
     }
 
-    /// Acquire the mutex.
+    /// Lock the mutex.
     /// If a core cannot acquire the mutex, it will busy wait until
     /// the mutex is available.
-    pub fn acquire(self: *CoreMutex) void {
-        while (!self.acquire_unblocking()) {}
+    pub fn lock(self: *CoreMutex) void {
+        while (!self.try_lock()) {}
     }
 
     /// Release the mutex.
-    pub fn release(self: *CoreMutex) void {
+    pub fn unlock(self: *CoreMutex) void {
         const critical_section = microzig.interrupt.enter_critical_section();
         defer critical_section.leave();
 
