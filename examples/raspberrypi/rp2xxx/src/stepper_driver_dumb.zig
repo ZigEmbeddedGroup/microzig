@@ -3,11 +3,11 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
+
 const GPIO_Device = rp2xxx.drivers.GPIO_Device;
 const ClockDevice = rp2xxx.drivers.ClockDevice;
 const ULN2003 = microzig.drivers.stepper.ULN2003;
 
-////
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
@@ -19,12 +19,11 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 }
 
 pub const microzig_options = microzig.Options{
-    .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
 };
-////
 
 pub fn main() !void {
+    // init uart logging
     uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = baud_rate,
@@ -32,9 +31,6 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
-    const led = gpio.num(25);
-    led.set_function(.sio);
-    led.set_direction(.out);
     var cd = ClockDevice{};
 
     // Setup all pins for the stepper driver
@@ -65,15 +61,11 @@ pub fn main() !void {
         // Try different microsteps
         inline for (.{ 1, 2 }) |ms| {
             _ = try stepper.set_microstep(ms);
-            for (0..2) |_| {
-                std.log.info("Rotating", .{});
-                try stepper.rotate(180);
-                time.sleep_ms(250);
-                std.log.info("Rotating", .{});
-                try stepper.rotate(-180);
-                time.sleep_ms(250);
-                led.toggle();
-            }
+            std.log.info("microsteps: {}", .{ms});
+            try stepper.rotate(360);
+            time.sleep_ms(250);
+            try stepper.rotate(-360);
+            time.sleep_ms(250);
         }
         time.sleep_ms(1000);
     }

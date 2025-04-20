@@ -51,8 +51,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
         .{ .name = "interrupts", .file = "src/interrupts.zig" },
-        .{ .name = "stepper", .file = "src/stepper.zig" },
-        .{ .name = "new_stepper", .file = "src/new_stepper.zig" },
+        .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
+        .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
         .{ .name = "dma", .file = "src/dma.zig" },
     };
