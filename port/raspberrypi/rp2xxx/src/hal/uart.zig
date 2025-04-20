@@ -474,3 +474,18 @@ pub fn logFn(
         uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
+
+var log_mutex: microzig.hal.mutex.Mutex = .{};
+
+/// This log function wraps logFn in a semaphore so that calls to it from
+/// different cores or interrupts don't collide.
+pub fn logFnThreadsafe(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    log_mutex.lock();
+    logFn(level, scope, format, args);
+    log_mutex.unlock();
+}
