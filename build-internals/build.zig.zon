@@ -8,7 +8,6 @@
         .esp_image = .{ .path = "../tools/esp_image" },
     },
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
     },

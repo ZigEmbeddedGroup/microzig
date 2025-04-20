@@ -3,7 +3,6 @@
     .fingerprint = 0xfec1b5453a206a46,
     .version = "0.0.1",
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
         "framework.zig",
