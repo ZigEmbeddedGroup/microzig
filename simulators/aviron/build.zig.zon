@@ -1,7 +1,7 @@
 .{
-    .name = .aviron,
+    .name = .simulators_aviron,
     .version = "0.1.0",
-    .fingerprint = 0x5dcc57b3c9d31477,
+    .fingerprint = 0x46b722f4690b55ca,
     .dependencies = .{
         .args = .{
             .url = "git+https://github.com/MasterQ32/zig-args#9425b94c103a031777fdd272c555ce93a7dea581",
