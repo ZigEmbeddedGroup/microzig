@@ -30,8 +30,7 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer.git#722cacef2b8be16cbd8e52d6b4a80fdeb36cb8e8",
-            .hash = "boxzer-0.1.0--ed-MIjlAAB7zqXj3rmnWQgFt8uiZKCyaYQSZvCN9t4X",
+            .path = "git+https://github.com/mattnite/boxzer.git#e38e5378a7ac3dbff8d233dc6f9267670909f968",
         },
     },
     .paths = .{
