@@ -1,4 +1,4 @@
-name: Build
+name: simulators/aviron
 on:
   push:
     branches: [main]
@@ -8,27 +8,30 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
           version: 0.14.0
 
       - name: Build
+        working-directory: simulators/aviron
         run: zig build install
-        
+
       - name: Run Test Suite
+        working-directory: simulators/aviron
         run: zig build test
 
       - name: Run Samples
+        working-directory: simulators/aviron
         run: |
           ./zig-out/bin/aviron --info
           ./zig-out/bin/aviron --trace zig-out/samples/math.elf
           ./zig-out/bin/aviron zig-out/samples/hello-world.elf
-          
