@@ -18,7 +18,7 @@
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
 
         // simulators
-        .@"simulators/aviron" = .{ .path = "simulators/aviron" },
+        .@"simulators/aviron" = .{ .path = "simulators/aviron", .lazy = true },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
