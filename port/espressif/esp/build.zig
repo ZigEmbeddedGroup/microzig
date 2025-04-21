@@ -37,7 +37,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .cpu = .{
             .name = "esp_riscv",
-            .root_source_file = b.path("src/cpus/esp_riscv_image.zig"),
+            .root_source_file = b.path("src/cpus/esp_riscv_image_boot.zig"),
         },
         .chip = .{
             .name = "ESP32-C3",

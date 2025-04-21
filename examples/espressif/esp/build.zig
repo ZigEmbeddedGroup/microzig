@@ -19,8 +19,8 @@ pub fn build(b: *std.Build) void {
 
     const available_examples = [_]Example{
         .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "systimer", .file = "src/systimer.zig" },
         .{ .name = "custom_clock_config", .file = "src/custom_clock_config.zig" },
-        .{ .name = "interrupts", .file = "src/interrupts.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
     };
 

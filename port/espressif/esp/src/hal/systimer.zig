@@ -4,10 +4,10 @@ const system = microzig.hal.system;
 
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
-/// In case systimer is used as time source, this function is already called by
-/// the hal. Don't call this function again as it might have unfortunate side effects.
+/// Already called internally.
 pub fn init() void {
-    system.clocks_enable(.{ .systimer = true });
+    // ensure systimer is enabled. Don't reset it to keep time consistent.
+    system.clocks_enable_set(.{ .systimer = true });
 }
 
 pub fn ticks_per_second() u64 {
@@ -135,9 +135,9 @@ pub const Alarm = enum(u2) {
         conf.modify(.{ .TARGET0_WORK_EN = en });
     }
 
-    pub fn set_unit(self: Alarm, _unit: Unit) void {
-        const conf = self.conf_reg();
-        conf.modify(.{ .TARGET0_TIMER_UNIT_SEL = @intFromEnum(_unit) });
+    pub fn set_unit(self: Alarm, unit_: Unit) void {
+        const conf = self.target_conf_reg();
+        conf.modify(.{ .TARGET0_TIMER_UNIT_SEL = @intFromEnum(unit_) });
     }
 
     pub const Mode = enum {

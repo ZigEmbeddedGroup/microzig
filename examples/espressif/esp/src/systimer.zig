@@ -24,10 +24,9 @@ fn timer_interrupt(_: *microzig.cpu.InterruptStack) linksection(".trap") callcon
 }
 
 pub fn main() !void {
-    const unit = systimer.unit(0);
-    unit.set_enabled(.enabled);
+    std.log.info("hello world!", .{});
 
-    alarm.set_unit(unit);
+    alarm.set_unit(.unit0);
     alarm.set_period(16_000_000);
 
     alarm.set_mode(.target);

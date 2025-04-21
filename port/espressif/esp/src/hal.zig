@@ -26,7 +26,8 @@ pub fn init_sequence(clock_cfg: clocks.Config) void {
 
     clock_cfg.apply();
 
-    system.clocks_disable(.all_but_keep_enabled);
+    // disable all peripherals. Only enable them when we use them.
+    system.clocks_enable_clear(.all_but_keep_enabled);
 
     time.initialize();
 }
