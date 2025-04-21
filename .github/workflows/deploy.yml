@@ -41,10 +41,6 @@ jobs:
           zig build release-uf2
           find zig-out/* -type d -and -not -path "*regz*" -print0 | xargs -0 -I {} sh -c 'mv {} "$(dirname {})"/uf2-"$(basename {})"'
 
-      - name: Create Microzig Tarball
-        run: |
-          tar -czf boxzer-out.tar.gz -C boxzer-out .
-
       - name: Create regz Tarballs
         run: |
           find zig-out/regz* -type d -exec sh -c 'tar -czf "{}.tar.gz" -C {} .' \;
@@ -61,4 +57,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out.tar.gz,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
+          artifacts: boxzer-out/${{ MICROZIG_VERSION }}/*,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
