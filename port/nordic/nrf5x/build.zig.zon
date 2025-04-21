@@ -1,6 +1,6 @@
 .{
-    .name = .port_nordic_nrf5x,
-    .fingerprint = 0x47cc426a5789bfab,
+    .name = .microzig_port_nordic_nrf5x,
+    .fingerprint = 0xf8d7a3f0ab3e25be,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
