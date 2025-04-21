@@ -48,11 +48,11 @@ pub fn main() !void {
     }
 
     var stepper = A4988.init(.{
-        .dir_pin = pins.dir.digital_io(),
-        .step_pin = pins.step.digital_io(),
         .ms1_pin = pins.ms1.digital_io(),
         .ms2_pin = pins.ms2.digital_io(),
         .ms3_pin = pins.ms3.digital_io(),
+        .dir_pin = pins.dir.digital_io(),
+        .step_pin = pins.step.digital_io(),
         .clock_device = cd.clock_device(),
     });
 
