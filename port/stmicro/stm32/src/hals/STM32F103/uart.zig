@@ -3,7 +3,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const mdf = microzig.drivers;
+const Timeout = @import("drivers.zig").Timeout;
 
 const peripherals = microzig.chip.peripherals;
 const UartReg = *volatile microzig.chip.types.peripherals.usart_v1.USART;
@@ -227,26 +227,32 @@ pub const UART = enum(u3) {
     }
 
     //TODO: add timeout
-    pub fn writev_blocking(uart: UART, payloads: []const []const u8, _: ?mdf.time.Duration) TransmitError!void {
+    pub fn writev_blocking(uart: UART, payloads: []const []const u8, timeout: ?Timeout) TransmitError!void {
         const regs = uart.get_regs();
-        //const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
         for (payloads) |pkgs| {
             for (pkgs) |byte| {
                 while (!uart.is_writeable()) {
-                    asm volatile ("nop");
+                    if (timeout) |check| {
+                        if (check.check_timeout()) {
+                            return error.Timeout;
+                        }
+                    }
                 }
                 regs.DR.raw = @intCast(byte);
             }
         }
     }
 
-    pub fn readv_blocking(uart: UART, buffers: []const []u8, _: ?mdf.time.Duration) ReceiveError!void {
-        //const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+    pub fn readv_blocking(uart: UART, buffers: []const []u8, timeout: ?Timeout) ReceiveError!void {
         const regs = uart.get_regs();
         for (buffers) |buf| {
             for (buf) |*bytes| {
                 while (!uart.is_readable()) {
-                    asm volatile ("nop");
+                    if (timeout) |check| {
+                        if (check.check_timeout()) {
+                            return error.Timeout;
+                        }
+                    }
                 }
                 const SR = regs.SR.read();
 
@@ -283,12 +289,12 @@ pub const UART = enum(u3) {
         std.mem.doNotOptimizeAway(regs.DR.raw);
     }
 
-    pub fn write_blocking(uart: UART, data: []const u8, _: ?mdf.time.Duration) TransmitError!void {
-        try uart.writev_blocking(&.{data}, null);
+    pub fn write_blocking(uart: UART, data: []const u8, timeout: ?Timeout) TransmitError!void {
+        try uart.writev_blocking(&.{data}, timeout);
     }
 
-    pub fn read_blocking(uart: UART, data: []u8, _: ?mdf.time.Duration) ReceiveError!void {
-        try uart.readv_blocking(&.{data}, null);
+    pub fn read_blocking(uart: UART, data: []u8, timeout: ?Timeout) ReceiveError!void {
+        try uart.readv_blocking(&.{data}, timeout);
     }
 
     pub fn writer(uart: UART) Writer {

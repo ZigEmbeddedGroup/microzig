@@ -1,16 +1,11 @@
 const std = @import("std");
 const microzig = @import("microzig");
+const CounterDevice = @import("drivers.zig").CounterDevice;
 const periferals = microzig.chip.peripherals;
-const CounterDevice = microzig.hal.driver.CounterDevice;
 
 const TIM_GP16 = *volatile microzig.chip.types.peripherals.timer_v1.TIM_GP16;
 const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
 const URS = microzig.chip.types.peripherals.timer_v1.URS;
-
-pub const CounterConfig = struct {
-    pclk: u32,
-    max_resolution: bool = false,
-};
 
 pub const GPTimer = enum {
     //TIM1 is a advanced timer
@@ -44,11 +39,8 @@ pub const GPTimer = enum {
         }
     }
 
-    pub fn into_counter(self: *const GPTimer, config: CounterConfig) CounterDevice {
+    pub fn into_counter(self: *const GPTimer, pclk: u32) CounterDevice {
         const regs = self.get_regs();
-
-        const ns_per_tick: u32 = if (config.max_resolution) 1_000_000_000 / config.pclk else 1000; //set 1uS per tick by default
-
         //clear timer configs end pending events
         regs.CR1.raw = 0;
         regs.CR2.raw = 0;
@@ -61,13 +53,33 @@ pub const GPTimer = enum {
             .URS = URS.CounterOnly,
             .ARPE = 1,
         });
-        regs.PSC = if (config.max_resolution) 0 else (config.pclk / 1_000_000) - 1;
 
         return CounterDevice{
-            .ticks_per_ns = ns_per_tick,
+            .ns_per_tick = 1_000_000_000 / pclk,
+            .us_psc = pclk / 1_000_000,
+            .ms_psc = pclk / 1_000,
+            .load_and_start = load_and_start,
+            .check_event = check_event,
             .busy_wait_fn = busy_wait_fn,
             .ctx = self,
         };
+    }
+
+    fn load_and_start(ctx: *const anyopaque, psc: u32, arr: u16) void {
+        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const regs = self.get_regs();
+        regs.CR1.modify(.{ .CEN = 0 });
+        regs.SR.raw = 0;
+        regs.PSC = psc;
+        regs.ARR.modify(.{ .ARR = arr - 1 });
+        regs.EGR.modify(.{ .UG = 1 });
+        regs.CR1.modify(.{ .CEN = 1 });
+    }
+
+    fn check_event(ctx: *const anyopaque) bool {
+        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const regs = self.get_regs();
+        return regs.SR.read().UIF == 1;
     }
 
     fn busy_wait_fn(ctx: ?*const anyopaque, time: u64) void {
@@ -79,6 +91,8 @@ pub const GPTimer = enum {
         //set initial counter to partial_ticks then wait for full_ticks
         //this will set timer to partial_ticks then after underflow the ARPE will automatically reload the timer
         //and start counting down from std.math.maxInt(u16) to 0
+        regs.SR.raw = 0;
+        regs.PSC = 0;
         regs.ARR.modify(.{ .ARR = partial_ticks });
         regs.EGR.modify(.{ .UG = 1 });
         regs.ARR.modify(.{ .ARR = std.math.maxInt(u16) });
