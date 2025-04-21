@@ -29,25 +29,7 @@ jobs:
         run: echo "MICROZIG_VERSION=$(zig build package -- get-version)" >> $GITHUB_ENV
 
       - name: Assemble Packages
-        run: zig build package -- https://microzig.tech/downloads/microzig
-
-      - name: Release RegZ
-        run: |
-          zig build release-regz
-          find zig-out/* -type d -print0 | xargs -0 -I {} sh -c 'mv {} "$(dirname {})"/regz-"$(basename {})"'
-
-      - name: Release Uf2
-        run: |
-          zig build release-uf2
-          find zig-out/* -type d -and -not -path "*regz*" -print0 | xargs -0 -I {} sh -c 'mv {} "$(dirname {})"/uf2-"$(basename {})"'
-
-      - name: Create regz Tarballs
-        run: |
-          find zig-out/regz* -type d -exec sh -c 'tar -czf "{}.tar.gz" -C {} .' \;
-
-      - name: Create uf2 Tarballs
-        run: |
-          find zig-out/uf2* -type d -exec sh -c 'tar -czf "{}.tar.gz" -C {} .' \;
+        run: zig build package -- https://github.com/ZigEmbeddedGroup/microzig/releases/download
 
       - name: Create Release Draft
         uses: ncipollo/release-action@v1
@@ -57,4 +39,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out/${{ MICROZIG_VERSION }}/*,zig-out/regz*.tar.gz,zig-out/uf2*.tar.gz
+          artifacts: boxzer-out/${{ MICROZIG_VERSION }}/*
