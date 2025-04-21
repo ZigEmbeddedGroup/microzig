@@ -1,6 +1,6 @@
 .{
     .name = .examples,
-    .fingerprint = 0x7bd0ad455b19df59,
+    .fingerprint = 0x7bd0ad451e1adddf,
     .version = "0.0.0",
     .dependencies = .{
         // examples

@@ -1,7 +1,7 @@
 .{
-    .name = .port_wch_ch32v,
+    .name = .microzig_port_wch_ch32v,
     .version = "0.0.0",
-    .fingerprint = 0x1de9e12a23a2eec,
+    .fingerprint = 0x30f936592d4a60f0,
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
     },
