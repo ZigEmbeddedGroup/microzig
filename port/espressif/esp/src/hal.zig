@@ -21,6 +21,8 @@ pub fn init_sequence(clock_cfg: clocks.Config) void {
     // TODO: disable watchdogs in a more elegant way (with a hal).
     disable_watchdogs();
 
+    time.initialize();
+
     clock_cfg.apply();
 
     // TODO: reset peripherals

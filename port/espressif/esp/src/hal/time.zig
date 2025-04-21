@@ -6,6 +6,11 @@ const time = microzig.drivers.time;
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
+pub fn initialize() void {
+    enable_systimer(0);
+    enable_systimer(1);
+}
+
 pub fn get_time_since_boot() time.Absolute {
     return @enumFromInt(get_time());
 }
@@ -37,9 +42,6 @@ pub fn enable_systimer(unit_id: u1) void {
 }
 
 pub fn get_systimer_counter(unit_id: u1) u64 {
-    // TODO: We need to put it somewhere else
-    enable_systimer(unit_id);
-
     const OP: @TypeOf(&SYSTIMER.UNIT0_OP) = switch (unit_id) {
         0 => &SYSTIMER.UNIT0_OP,
         1 => @ptrCast(&SYSTIMER.UNIT1_OP),
