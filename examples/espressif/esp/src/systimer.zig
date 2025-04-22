@@ -26,9 +26,13 @@ fn timer_interrupt(_: *microzig.cpu.InterruptStack) linksection(".trap") callcon
 pub fn main() !void {
     std.log.info("hello world!", .{});
 
+    // unit0 is already enabled as it is used by `hal.time`.
     alarm.set_unit(.unit0);
-    alarm.set_period(16_000_000);
 
+    // sets the period to one second.
+    alarm.set_period(@intCast(1_000_000 * systimer.ticks_per_us()));
+
+    // to enable period mode you have to first clear the mode bit.
     alarm.set_mode(.target);
     alarm.set_mode(.period);
 

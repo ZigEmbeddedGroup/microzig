@@ -5,16 +5,16 @@ const system = microzig.hal.system;
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
 /// Already called internally.
-// TODO: I am not sure how to call this. We should pick a name for functions that enable the peripheral
+// TODO: Not sure how this should be called. We should pick a name for functions that enable the peripheral
 // clock and then reset the peripheral (in other cases).
 pub fn initialize() void {
     // Make sure it's enabled. Don't reset it to keep time consistent.
     system.clocks_enable_set(.{ .systimer = true });
 }
 
-pub fn ticks_per_second() u64 {
+pub fn ticks_per_us() u64 {
     // NOTE: esp32c3 specific
-    return 16_000_000;
+    return 16;
 }
 
 pub fn unit(num: u1) Unit {
@@ -36,7 +36,7 @@ pub const Unit = enum(u1) {
         enabled,
     };
 
-    // TODO: I am not sure how to call this.
+    // TODO: Not sure how this should be called.
     pub fn apply(self: Unit, config: Config) void {
         // NOTE: not esp32s2
         switch (config) {

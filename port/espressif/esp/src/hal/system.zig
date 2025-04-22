@@ -3,7 +3,8 @@ const microzig = @import("microzig");
 const SYSTEM = microzig.chip.peripherals.SYSTEM;
 
 /// Peripheral mask for the PERIP_CLK_ENx and PERIP_RST_ENx registers.
-// NOTE: I added some reserved bits according to the manual. I am not sure whether it is accurate.
+// NOTE: tact1m4n3: I added some reserved bits according to the manual. I am not sure whether it is
+// accurate.
 pub const PeripheralMask = packed struct(u43) {
     pub const empty: PeripheralMask = .{};
     pub const all: PeripheralMask = empty.inverse();
