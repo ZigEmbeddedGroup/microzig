@@ -16,9 +16,9 @@ pub fn main() !void {
         .drive_strength = gpio.DriveStrength.@"40mA",
     };
 
-    const led_r_pin = gpio.instance.num(3);
-    const led_g_pin = gpio.instance.num(4);
-    const led_b_pin = gpio.instance.num(5);
+    const led_r_pin = gpio.num(3);
+    const led_g_pin = gpio.num(4);
+    const led_b_pin = gpio.num(5);
 
     led_r_pin.apply(pin_config);
     led_g_pin.apply(pin_config);
