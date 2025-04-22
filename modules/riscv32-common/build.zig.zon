@@ -1,0 +1,12 @@
+.{
+    .name = .foundationlibc,
+    .fingerprint = 0xfd6aab283c2e012c,
+    .version = "0.0.0",
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "include",
+        "src",
+    },
+}
