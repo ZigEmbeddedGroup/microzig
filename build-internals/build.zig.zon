@@ -1,6 +1,6 @@
 .{
-    .name = .buildinternals,
-    .fingerprint = 0x48ef72ba051e13e8,
+    .name = .microzig_buildinternals,
+    .fingerprint = 0x79c8daf1a8f973af,
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },

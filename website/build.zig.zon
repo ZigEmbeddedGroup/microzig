@@ -1,6 +1,6 @@
 .{
-    .name = .website,
-    .fingerprint = 0x476f5de7bbfb249a,
+    .name = .microzig_website,
+    .fingerprint = 0xc756ec109b390767,
     .version = "0.2.0",
     .paths = .{"."},
     .dependencies = .{
