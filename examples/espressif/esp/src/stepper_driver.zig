@@ -1,36 +1,20 @@
 const std = @import("std");
 const microzig = @import("microzig");
-const rp2xxx = microzig.hal;
-const gpio = rp2xxx.gpio;
-const time = rp2xxx.time;
+const hal = microzig.hal;
+const gpio = hal.gpio;
+const time = hal.time;
 
-const GPIO_Device = rp2xxx.drivers.GPIO_Device;
-const ClockDevice = rp2xxx.drivers.ClockDevice;
+const GPIO_Device = hal.drivers.GPIO_Device;
+const ClockDevice = hal.drivers.ClockDevice;
 const A4988 = microzig.drivers.stepper.A4988;
 
-const uart = rp2xxx.uart.instance.num(0);
-const baud_rate = 115200;
-const uart_tx_pin = gpio.num(0);
-
-pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    std.log.err("panic: {s}", .{message});
-    @breakpoint();
-    while (true) {}
-}
+const usb_serial_jtag = hal.usb_serial_jtag;
 
 pub const microzig_options = microzig.Options{
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = usb_serial_jtag.logger.logFn,
 };
 
 pub fn main() !void {
-    // init uart logging
-    uart_tx_pin.set_function(.uart);
-    uart.apply(.{
-        .baud_rate = baud_rate,
-        .clock_config = rp2xxx.clock_config,
-    });
-    rp2xxx.uart.init_logger(uart);
-
     var cd = ClockDevice{};
 
     // Setup all pins for the stepper driver
@@ -41,9 +25,10 @@ pub fn main() !void {
         dir: GPIO_Device,
         step: GPIO_Device,
     } = undefined;
-    inline for (std.meta.fields(@TypeOf(pins)), .{ 2, 3, 4, 14, 15 }) |field, num| {
+    inline for (std.meta.fields(@TypeOf(pins)), .{ 0, 1, 2, 20, 10 }) |field, num| {
         const pin = gpio.num(num);
-        pin.set_function(.sio);
+        // Give the pin a sane default config
+        pin.apply(.{});
         @field(pins, field.name) = GPIO_Device.init(pin);
     }
 

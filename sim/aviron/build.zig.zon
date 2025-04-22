@@ -1,7 +1,7 @@
 .{
-    .name = .simulators_aviron,
+    .name = .microzig_sim_aviron,
     .version = "0.1.0",
-    .fingerprint = 0x46b722f4690b55ca,
+    .fingerprint = 0x6e19c9125f1f3e06,
     .dependencies = .{
         .args = .{
             .url = "git+https://github.com/MasterQ32/zig-args#9425b94c103a031777fdd272c555ce93a7dea581",
@@ -19,7 +19,6 @@
         "doc",
         "linker.ld",
         "samples",
-        "shell.nix",
         "src",
         "testsuite",
         "testsuite.avr-gcc",

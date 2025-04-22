@@ -1,4 +1,4 @@
-name: simulators/aviron
+name: sim/aviron
 on:
   push:
     branches: [main]
@@ -22,15 +22,15 @@ jobs:
           version: 0.14.0
 
       - name: Build
-        working-directory: simulators/aviron
+        working-directory: sim/aviron
         run: zig build install
 
       - name: Run Test Suite
-        working-directory: simulators/aviron
+        working-directory: sim/aviron
         run: zig build test
 
       - name: Run Samples
-        working-directory: simulators/aviron
+        working-directory: sim/aviron
         run: |
           ./zig-out/bin/aviron --info
           ./zig-out/bin/aviron --trace zig-out/samples/math.elf

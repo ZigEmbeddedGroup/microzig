@@ -6,6 +6,8 @@ pub const compatibility = @import("hal/compatibility.zig");
 pub const rom = @import("hal/rom.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
+pub const time = @import("hal/time.zig");
+pub const drivers = @import("hal/drivers.zig");
 
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;
@@ -19,6 +21,8 @@ pub fn init() void {
 pub fn init_sequence(clock_cfg: clocks.Config) void {
     // TODO: disable watchdogs in a more elegant way (with a hal).
     disable_watchdogs();
+
+    time.initialize();
 
     clock_cfg.apply();
 
