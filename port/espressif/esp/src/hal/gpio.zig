@@ -67,14 +67,14 @@ pub const Pin = struct {
                 usb_conf0.DM_PULLDOWN == 0);
         }
 
-        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u17, 1) << self.number, .padding = 0 });
+        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << self.number, .padding = 0 });
     }
 
     pub fn reset(self: Pin) void {
         IO_MUX.GPIO[self.number].write_raw(0x00);
         GPIO.FUNC_OUT_SEL_CFG[self.number].write_raw(0x00);
         GPIO.PIN[self.number].write_raw(0x00);
-        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u17, 1) << self.number, .padding = 0 });
+        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << self.number, .padding = 0 });
     }
 
     pub fn set_output_enable(self: Pin, enable: bool) void {
@@ -120,11 +120,12 @@ pub const Pin = struct {
     }
 
     pub fn write(self: Pin, level: Level) void {
+        // Assert that the pin is set to output enabled
         std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[self.number].read().OEN_SEL == 1);
 
         switch (level) {
-            Level.low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u17, 1) << self.number, .padding = 0 }),
-            Level.high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u17, 1) << self.number, .padding = 0 }),
+            Level.low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u26, 1) << self.number }),
+            Level.high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u26, 1) << self.number }),
         }
     }
 
@@ -135,7 +136,7 @@ pub const Pin = struct {
     }
 
     pub fn read(self: Pin) Level {
-        std.debug.assert(IO_MUX.GPIO[self.number].FUN_IE == 1);
+        std.debug.assert(IO_MUX.GPIO[self.number].read().FUN_IE == 1);
 
         return @enumFromInt(GPIO.IN.raw >> self.number & 0x01);
     }
@@ -175,9 +176,10 @@ pub const instance = struct {
     pub const GPIO18: Pin = .{ .number = 18 };
     pub const GPIO19: Pin = .{ .number = 19 };
     pub const GPIO20: Pin = .{ .number = 20 };
+    pub const GPIO21: Pin = .{ .number = 21 };
 
     pub fn num(instance_number: u5) Pin {
-        std.debug.assert(instance_number < 21);
+        std.debug.assert(instance_number < 22);
         return .{ .number = instance_number };
     }
 };

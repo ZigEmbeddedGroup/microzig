@@ -4,10 +4,9 @@ const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const usb_serial_jtag = hal.usb_serial_jtag;
-const time = microzig.hal.time;
+const time = hal.time;
 
 pub const microzig_options: microzig.Options = .{
-    .log_level = .debug,
     .logFn = usb_serial_jtag.logger.logFn,
 };
 
@@ -17,9 +16,9 @@ pub fn main() !void {
         .drive_strength = gpio.DriveStrength.@"40mA",
     };
 
-    const led_r_pin = gpio.instance.GPIO3;
-    const led_g_pin = gpio.instance.GPIO4;
-    const led_b_pin = gpio.instance.GPIO5;
+    const led_r_pin = gpio.instance.num(3);
+    const led_g_pin = gpio.instance.num(4);
+    const led_b_pin = gpio.instance.num(5);
 
     led_r_pin.apply(pin_config);
     led_g_pin.apply(pin_config);
