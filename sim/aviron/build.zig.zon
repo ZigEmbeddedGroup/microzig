@@ -19,7 +19,6 @@
         "doc",
         "linker.ld",
         "samples",
-        "shell.nix",
         "src",
         "testsuite",
         "testsuite.avr-gcc",
