@@ -1,9 +1,8 @@
 .{
-    .name = .driverframework,
-    .fingerprint = 0xfec1b5453a206a46,
+    .name = .microzig_drivers,
+    .fingerprint = 0x642972f04265d547,
     .version = "0.0.1",
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
         "framework.zig",

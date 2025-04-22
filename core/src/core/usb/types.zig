@@ -52,9 +52,21 @@ pub const ControlStage = enum {
 
 /// The types of USB SETUP requests that we understand.
 pub const SetupRequest = enum(u8) {
-    GetDescriptor = 0x06,
+    SetFeature = 0x03,
     SetAddress = 0x05,
+    GetDescriptor = 0x06,
     SetConfiguration = 0x09,
+
+    pub fn from_u8(v: u8) ?@This() {
+        return std.meta.intToEnum(@This(), v) catch null;
+    }
+};
+
+pub const FeatureSelector = enum(u8) {
+    EndpointHalt = 0x00,
+    DeviceRemoteWakeup = 0x01,
+    TestMode = 0x02,
+    // The remaining features only apply to OTG devices.
 
     pub fn from_u8(v: u8) ?@This() {
         return std.meta.intToEnum(@This(), v) catch null;

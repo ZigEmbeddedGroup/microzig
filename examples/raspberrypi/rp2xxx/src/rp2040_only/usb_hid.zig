@@ -12,7 +12,6 @@ const led = gpio.num(25);
 const uart = rp2xxx.uart.instance.num(0);
 const baud_rate = 115200;
 const uart_tx_pin = gpio.num(0);
-const uart_rx_pin = gpio.num(1);
 
 const usb_dev = rp2xxx.usb.Usb(.{});
 
@@ -66,20 +65,17 @@ pub const microzig_options = microzig.Options{
 };
 
 pub fn main() !void {
-    led.set_function(.sio);
-    led.set_direction(.out);
-    led.put(1);
-
-    inline for (&.{ uart_tx_pin, uart_rx_pin }) |pin| {
-        pin.set_function(.uart);
-    }
-
+    // init uart logging
+    uart_tx_pin.set_function(.uart);
     uart.apply(.{
         .baud_rate = baud_rate,
         .clock_config = rp2xxx.clock_config,
     });
-
     rp2xxx.uart.init_logger(uart);
+
+    led.set_function(.sio);
+    led.set_direction(.out);
+    led.put(1);
 
     // First we initialize the USB clock
     usb_dev.init_clk();
