@@ -258,10 +258,10 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
 
 const I2C_ANA_MST_TYPE = extern struct {
     ANA_CONF0: microzig.mmio.Mmio(packed struct {
-        reserved0: u2,
+        reserved0: u2 = 0,
         BBPLL_STOP_FORCE_HIGH: u1,
         BBPLL_STOP_FORCE_LOW: u1,
-        padding: u28,
+        padding: u28 = 0,
     }),
 };
 

@@ -211,8 +211,6 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             sm_regs.clkdiv.write(.{
                 .INT = options.int,
                 .FRAC = options.frac,
-
-                .reserved8 = 0,
             });
         }
 

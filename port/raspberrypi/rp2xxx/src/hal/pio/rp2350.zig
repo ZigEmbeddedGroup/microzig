@@ -63,7 +63,6 @@ pub const Pio = enum(u2) {
 
             .FJOIN_RX_GET = @intFromBool(options.fjoin_rx_get),
             .FJOIN_RX_PUT = @intFromBool(options.fjoin_rx_put),
-            .reserved14 = 0,
             .IN_COUNT = options.in_count,
         });
     }
@@ -99,7 +98,6 @@ pub const Pio = enum(u2) {
 
             .FJOIN_RX_GET = 0,
             .FJOIN_RX_PUT = 0,
-            .reserved14 = 0,
             .IN_COUNT = 0,
         };
 

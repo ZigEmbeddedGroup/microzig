@@ -288,9 +288,9 @@ pub const csr = struct {
     pub const mhartid = CSR(0xF14, u32);
 
     pub const mstatus = CSR(0x300, packed struct {
-        reserved0: u3,
+        reserved0: u3 = 0,
         mie: u1,
-        reserved1: u28,
+        reserved1: u28 = 0,
     });
     pub const misa = CSR(0x301, u32);
     pub const medeleg = CSR(0x302, u32);
@@ -440,29 +440,29 @@ pub const csr = struct {
     pub const xh3irq = struct {
         pub const meiea = CSR(0xbe0, packed struct {
             index: u5,
-            reserved0: u11,
+            reserved0: u11 = 0,
             window: u16,
         });
         pub const meipa = CSR(0xbe1, packed struct {
             index: u5,
-            reserved0: u11,
+            reserved0: u11 = 0,
             window: u16,
         });
         pub const meifa = CSR(0xbe2, packed struct {
             index: u5,
-            reserved0: u11,
+            reserved0: u11 = 0,
             window: u16,
         });
         pub const meipra = CSR(0xbe3, packed struct {
             index: u5,
-            reserved0: u11,
+            reserved0: u11 = 0,
             window: u16,
         });
         pub const meinext = CSR(0xbe4, packed struct {
             update: u1,
-            reserved0: u1,
+            reserved0: u1 = 0,
             irq: u9,
-            reserved1: u20,
+            reserved1: u20 = 0,
             noirq: u1,
         });
     };

@@ -40,7 +40,6 @@ pub fn main() !void {
 
     SYSTIMER.COMP0_LOAD.write(.{
         .TIMER_COMP0_LOAD = 1,
-        .padding = 0,
     });
 
     SYSTIMER.TARGET0_CONF.modify(.{

@@ -49,7 +49,6 @@ pub const Pin = struct {
             .OEN_SEL = @intFromBool(config.output_enable),
             .INV_SEL = @intFromBool(config.output_invert),
             .OEN_INV_SEL = 0,
-            .padding = 0,
         });
 
         GPIO.PIN[self.number].modify(.{
@@ -67,14 +66,14 @@ pub const Pin = struct {
                 usb_conf0.DM_PULLDOWN == 0);
         }
 
-        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u17, 1) << self.number, .padding = 0 });
+        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u17, 1) << self.number });
     }
 
     pub fn reset(self: Pin) void {
         IO_MUX.GPIO[self.number].write_raw(0x00);
         GPIO.FUNC_OUT_SEL_CFG[self.number].write_raw(0x00);
         GPIO.PIN[self.number].write_raw(0x00);
-        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u17, 1) << self.number, .padding = 0 });
+        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u17, 1) << self.number });
     }
 
     pub fn set_output_enable(self: Pin, enable: bool) void {
@@ -123,8 +122,8 @@ pub const Pin = struct {
         std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[self.number].read().OEN_SEL == 1);
 
         switch (level) {
-            Level.low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u17, 1) << self.number, .padding = 0 }),
-            Level.high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u17, 1) << self.number, .padding = 0 }),
+            Level.low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u17, 1) << self.number }),
+            Level.high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u17, 1) << self.number }),
         }
     }
 
