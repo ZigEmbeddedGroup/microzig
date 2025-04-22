@@ -5,8 +5,10 @@ const system = microzig.hal.system;
 const SYSTIMER = microzig.chip.peripherals.SYSTIMER;
 
 /// Already called internally.
-pub fn init() void {
-    // ensure systimer is enabled. Don't reset it to keep time consistent.
+// TODO: I am not sure how to call this. We should pick a name for functions that enable the peripheral
+// clock and then reset the peripheral (in other cases).
+pub fn initialize() void {
+    // Make sure it's enabled. Don't reset it to keep time consistent.
     system.clocks_enable_set(.{ .systimer = true });
 }
 
@@ -34,7 +36,8 @@ pub const Unit = enum(u1) {
         enabled,
     };
 
-    pub fn set_enabled(self: Unit, config: Config) void {
+    // TODO: I am not sure how to call this.
+    pub fn apply(self: Unit, config: Config) void {
         // NOTE: not esp32s2
         switch (config) {
             .disabled => switch (self) {
@@ -130,9 +133,12 @@ pub const Alarm = enum(u2) {
     alarm2,
 
     pub fn set_enabled(self: Alarm, enable: bool) void {
-        const conf = self.conf_reg();
         const en = @intFromBool(enable);
-        conf.modify(.{ .TARGET0_WORK_EN = en });
+        switch (self) {
+            .alarm0 => SYSTIMER.CONF.modify(.{ .TARGET0_WORK_EN = en }),
+            .alarm1 => SYSTIMER.CONF.modify(.{ .TARGET1_WORK_EN = en }),
+            .alarm2 => SYSTIMER.CONF.modify(.{ .TARGET2_WORK_EN = en }),
+        }
     }
 
     pub fn set_unit(self: Alarm, unit_: Unit) void {
@@ -146,12 +152,12 @@ pub const Alarm = enum(u2) {
     };
 
     pub fn set_mode(self: Alarm, mode: Mode) void {
-        const conf = self.conf_reg();
+        const conf = self.target_conf_reg();
         conf.modify(.{ .TARGET0_PERIOD_MODE = @intFromBool(mode == .period) });
     }
 
     pub fn set_period(self: Alarm, value: u26) void {
-        const conf = self.conf_reg();
+        const conf = self.target_conf_reg();
         const comp_load = self.comp_load_reg();
 
         conf.modify(.{
@@ -200,7 +206,7 @@ pub const Alarm = enum(u2) {
         }
     }
 
-    fn conf_reg(self: Alarm) @TypeOf(&SYSTIMER.TARGET0_CONF) {
+    fn target_conf_reg(self: Alarm) @TypeOf(&SYSTIMER.TARGET0_CONF) {
         return switch (self) {
             .alarm0 => &SYSTIMER.TARGET0_CONF,
             .alarm1 => @ptrCast(&SYSTIMER.TARGET1_CONF),

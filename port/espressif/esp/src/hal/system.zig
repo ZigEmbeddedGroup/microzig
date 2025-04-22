@@ -13,7 +13,7 @@ pub const PeripheralMask = packed struct(u43) {
         .usb_device = true,
         .systimer = true,
 
-        // NOTE: disabling this breaks the code. I don't know why it can't be disabled.
+        // NOTE: disabling this breaks the code. I don't know why it can't be disabled on startup.
         .spi01 = true,
     };
 
@@ -28,7 +28,7 @@ pub const PeripheralMask = packed struct(u43) {
     i2c_ext0: bool = false,
     uhci0: bool = false,
     rmt: bool = false,
-    pcnt: bool = false,
+    reserved2: u1 = 0,
     ledc: bool = false,
     reserved3: u1 = 0,
     timergroup0: bool = false,
@@ -41,22 +41,21 @@ pub const PeripheralMask = packed struct(u43) {
     spi2_dma: bool = false,
     usb_device: bool = false,
     uart_mem: bool = false,
-    reserved8: u2 = 0,
-    spi3_dma: bool = false, // is there even spi3? The datasheet seems to think so.
+    reserved7: u2 = 0,
+    // Is spi3 even a thing? The datasheet seems to think so. I've added spi2_dma just in case which
+    // doesn't appear in the datasheet, but others seem to use it.
+    spi3_dma: bool = false,
     apb_saradc: bool = false,
     systimer: bool = false,
     adc2_arb: bool = false,
-    spi4: bool = false,
-    reserved1: bool = false,
+    reserved8: u2 = 0,
     crypto_aes: bool = false,
     crypto_sha: bool = false,
     crypto_rsa: bool = false,
     crypto_ds: bool = false,
     crypto_hmac: bool = false,
     dma: bool = false,
-    sdio_host: bool = false,
-    lcd_cam: bool = false,
-    uart2: bool = false,
+    reserved9: u3 = 0,
     tsens: bool = false,
 
     /// Combines two peripherals masks. Binary or.

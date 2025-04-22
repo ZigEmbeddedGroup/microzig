@@ -1,15 +1,15 @@
 const microzig = @import("microzig");
 
-pub const gpio = @import("hal/gpio.zig");
-pub const uart = @import("hal/uart.zig");
-pub const compatibility = @import("hal/compatibility.zig");
-pub const rom = @import("hal/rom.zig");
-pub const clocks = @import("hal/clocks.zig");
-pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
-pub const time = @import("hal/time.zig");
-pub const drivers = @import("hal/drivers.zig");
-pub const system = @import("hal/system.zig");
-pub const systimer = @import("hal/systimer.zig");
+pub const gpio = @import("gpio.zig");
+pub const uart = @import("uart.zig");
+pub const compatibility = @import("compatibility.zig");
+pub const rom = @import("rom.zig");
+pub const clocks = @import("clocks.zig");
+pub const usb_serial_jtag = @import("usb_serial_jtag.zig");
+pub const time = @import("time.zig");
+pub const drivers = @import("drivers.zig");
+pub const system = @import("system.zig");
+pub const systimer = @import("systimer.zig");
 
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;
