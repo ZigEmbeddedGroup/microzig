@@ -18,6 +18,8 @@ SECTIONS
   .flash_start :
   {
     KEEP(*(microzig_flash_start))
+    KEEP(*(core_vectors))
+    KEEP(*(flash_vectors))
   } > flash0
 
   .bootmeta :
@@ -47,6 +49,11 @@ SECTIONS
       *(.bss*)
       *(.sbss*)
       microzig_bss_end = .;
+  } > ram0
+
+  .ram_vectors (NOLOAD)  :
+  {
+    KEEP(*(ram_vectors))
   } > ram0
 
   .flash_end :

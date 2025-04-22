@@ -11,6 +11,8 @@ pub const CPUOptions = struct {
 };
 
 pub const SystemControlBlock = extern struct {
+    /// REVIDR Register.
+    REVIDR: u32,
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
@@ -61,14 +63,32 @@ pub const SystemControlBlock = extern struct {
     }),
     /// HardFault Status Register.
     HFSR: u32,
-    reserved0: u32,
+    /// Debug Fault Status Register.
+    DFSR: u32,
     /// MemManage Fault Address Register.
     MMFAR: u32,
     /// BusFault Address Register.
     BFAR: u32,
     /// Auxiliary Fault Status Register not implemented.
-    _AFSR: u32,
-    reserved1: [18]u32,
+    AFSR: u32,
+    /// Processor Feature Register.
+    ID_PFR: [2]u32,
+    /// Debug Feature Register.
+    ID_DFR0: u32,
+    /// Auxiliary Feature Register.
+    ID_AFR0: u32,
+    /// Memory Model Feature Register.
+    ID_MMFR: [4]u32,
+    /// Instruction Set Attribute Register.
+    ID_ISAR: [6]u32,
+    /// Cache level id register.
+    CLIDR: u32,
+    /// Cache Type Register.
+    CTR: u32,
+    /// Current Cache Size ID Register.
+    CSSIDR: u32,
+    /// Cache Size Selection Register.
+    CSSELR: u32,
     /// Coprocessor Access Control Register.
     CPACR: u32,
     /// Non-secure Access Control Register.

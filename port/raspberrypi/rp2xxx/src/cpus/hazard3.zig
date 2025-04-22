@@ -3,6 +3,11 @@ const root = @import("root");
 const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 
+pub const CPUOptions = struct {
+    ram_vectors: bool = true,
+    has_ram_vectors_section: bool = false,
+};
+
 pub const Exception = enum(u32) {
     InstructionMisaligned = 0x0,
     InstructionFault = 0x1,
@@ -31,12 +36,13 @@ pub const InterruptHandler = extern union {
     naked: *const fn () callconv(.naked) noreturn,
     riscv: *const fn () callconv(riscv_calling_convention) void,
 };
-pub const ExternalInterruptHandler = *const fn () callconv(.c) void;
+
+pub const Handler = microzig.interrupt.Handler;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
     .{ .InterruptEnum = CoreInterrupt, .HandlerFn = InterruptHandler },
-    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = ExternalInterruptHandler },
+    .{ .InterruptEnum = ExternalInterrupt, .HandlerFn = Handler },
 });
 
 pub const interrupt = struct {
@@ -52,102 +58,119 @@ pub const interrupt = struct {
         csr.mstatus.clear(.{ .mie = 1 });
     }
 
-    pub fn is_enabled(comptime int: CoreInterrupt) bool {
-        return csr.mie.read() & (1 << @intFromEnum(int)) != 0;
-    }
-
-    pub fn enable(comptime int: CoreInterrupt) void {
-        csr.mie.set(1 << @intFromEnum(int));
-    }
-
-    pub fn disable(comptime int: CoreInterrupt) void {
-        csr.mie.clear(1 << @intFromEnum(int));
-    }
-
-    pub fn is_pending(comptime int: CoreInterrupt) bool {
-        return csr.mip.read() & (1 << @intFromEnum(int));
-    }
-
-    pub fn set_pending(comptime int: CoreInterrupt) void {
-        csr.mip.set(1 << @intFromEnum(int));
-    }
-
-    pub fn clear_pending(comptime int: CoreInterrupt) void {
-        csr.mip.clear(1 << @intFromEnum(int));
-    }
-
-    pub const external = struct {
-        pub fn is_enabled(comptime int: ExternalInterrupt) bool {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            return csr.xh3irq.meiea.read_set(.{ .index = index }).window & mask != 0;
+     pub const core = struct {
+        pub fn is_enabled(comptime int: CoreInterrupt) bool {
+            return csr.mie.read() & (1 << @intFromEnum(int)) != 0;
         }
 
-        pub fn enable(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            csr.xh3irq.meiea.set(.{
-                .index = index,
-                .window = mask,
-            });
+        pub fn enable(comptime int: CoreInterrupt) void {
+            csr.mie.set(1 << @intFromEnum(int));
         }
 
-        pub fn disable(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            csr.xh3irq.meiea.clear(.{
-                .index = index,
-                .window = mask,
-            });
+        pub fn disable(comptime int: CoreInterrupt) void {
+            csr.mie.clear(1 << @intFromEnum(int));
         }
 
-        pub fn is_pending(comptime int: ExternalInterrupt) bool {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            return csr.xh3irq.meipa.read_set(.{ .index = index }).window & mask != 0;
+        pub fn is_pending(comptime int: CoreInterrupt) bool {
+            return csr.mip.read() & (1 << @intFromEnum(int));
         }
 
-        pub fn set_pending(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            csr.xh3irq.meifa.set(.{ .index = index, .window = mask });
+        pub fn set_pending(comptime int: CoreInterrupt) void {
+            csr.mip.set(1 << @intFromEnum(int));
         }
 
-        pub fn clear_pending(comptime int: ExternalInterrupt) void {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 16;
-            const mask: u32 = 1 << (num % 16);
-            csr.xh3irq.meifa.clear(.{ .index = index, .window = mask });
-        }
-
-        pub const Priority = enum(u4) {
-            pub const highest: Priority = 15;
-            pub const lowest: Priority = 0;
-
-            _,
-        };
-
-        pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 4;
-            const set_mask: u32 = @as(u16, @intFromEnum(priority)) << (4 * (num % 4));
-            const clear_mask: u32 = 0xf << (4 * (num % 4));
-            csr.xh3irq.meifa.clear(.{ .index = index, .window = clear_mask });
-            csr.xh3irq.meifa.set(.{ .index = index, .window = set_mask });
-        }
-
-        pub fn get_priority(comptime int: ExternalInterrupt) Priority {
-            const num: u32 = @intFromEnum(int);
-            const index: u32 = num / 4;
-            const mask: u32 = 0xf << (4 * (num % 4));
-            return @enumFromInt((csr.xh3irq.meifa.read_set(.{ .index = index }) & mask) >> (4 * (num % 4)));
+        pub fn clear_pending(comptime int: CoreInterrupt) void {
+            csr.mip.clear(1 << @intFromEnum(int));
         }
     };
+
+    pub fn is_enabled(comptime int: ExternalInterrupt) bool {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        return csr.xh3irq.meiea.read_set(.{ .index = index }).window & mask != 0;
+    }
+
+    pub fn enable(comptime int: ExternalInterrupt) void {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        csr.xh3irq.meiea.set(.{
+            .index = index,
+            .window = mask,
+        });
+    }
+
+    pub fn disable(comptime int: ExternalInterrupt) void {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        csr.xh3irq.meiea.clear(.{
+            .index = index,
+            .window = mask,
+        });
+    }
+
+    pub fn is_pending(comptime int: ExternalInterrupt) bool {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        return csr.xh3irq.meipa.read_set(.{ .index = index }).window & mask != 0;
+    }
+
+    pub fn set_pending(comptime int: ExternalInterrupt) void {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        csr.xh3irq.meifa.set(.{ .index = index, .window = mask });
+    }
+
+    pub fn clear_pending(comptime int: ExternalInterrupt) void {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 16;
+        const mask: u32 = 1 << (num % 16);
+        csr.xh3irq.meifa.clear(.{ .index = index, .window = mask });
+    }
+
+    pub const Priority = enum(u4) {
+        lowest = 0,
+        highest = 15,
+        _,
+    };
+
+    pub fn set_priority(comptime int: ExternalInterrupt, priority: Priority) void {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 4;
+        const set_mask: u32 = @as(u16, @intFromEnum(priority)) << (4 * (num % 4));
+        const clear_mask: u32 = 0xf << (4 * (num % 4));
+        csr.xh3irq.meifa.clear(.{ .index = index, .window = clear_mask });
+        csr.xh3irq.meifa.set(.{ .index = index, .window = set_mask });
+    }
+
+    pub fn get_priority(comptime int: ExternalInterrupt) Priority {
+        const num: u32 = @intFromEnum(int);
+        const index: u32 = num / 4;
+        const mask: u32 = 0xf << (4 * (num % 4));
+        return @enumFromInt((csr.xh3irq.meifa.read_set(.{ .index = index }) & mask) >> (4 * (num % 4)));
+    }
+
+    pub inline fn has_ram_vectors() bool {
+        return @hasField(@TypeOf(microzig_options.cpu), "ram_vectors") and microzig_options.cpu.ram_vectors;
+    }
+
+    pub inline fn has_ram_vectors_section() bool {
+        return @hasField(@TypeOf(microzig_options.cpu), "has_ram_vectors_section") and microzig_options.cpu.has_ram_vectors_section;
+    }
+
+    pub fn set_handler(comptime int: ExternalInterrupt, handler: ?Handler) ?Handler {
+        if (!has_ram_vectors()) {
+            @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
+        }
+
+        const old_handler = ram_vectors[@intFromEnum(int)];
+        ram_vectors[@intFromEnum(int)] = handler orelse microzig.interrupt.unhandled;
+        return if (old_handler.c == microzig.interrupt.unhandled.c) null else old_handler;
+    }
 };
 
 pub inline fn wfe() void {
@@ -169,6 +192,9 @@ pub inline fn nop() void {
 pub fn wfi() void {
     asm volatile ("wfi");
 }
+const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
+
+var ram_vectors: [vector_count]Handler = undefined;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -205,14 +231,34 @@ pub const startup_logic = struct {
     pub export fn _start_c() callconv(.c) noreturn {
         root.initialize_system_memories();
 
+        // Move vector table to RAM if requested
+        if (interrupt.has_ram_vectors()) {
+            if (interrupt.has_ram_vectors_section()) {
+                @export(&ram_vectors, .{
+                    .name = "_ram_vectors",
+                    .section = "ram_vectors",
+                    .linkage = .strong,
+                });
+            } else {
+                @export(&ram_vectors, .{
+                    .name = "_ram_vectors",
+                    .linkage = .strong,
+                });
+            }
+
+            @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
+        }
+
+        interrupt.core.enable(.MachineExternal);
+
         microzig_main();
     }
 
     fn unhandled_interrupt() callconv(riscv_calling_convention) void {
-        @panic("unhandled interrupt");
+        @panic("unhandled core interrupt");
     }
 
-    pub export fn _vector_table() align(64) callconv(.naked) noreturn {
+    pub export fn _vector_table() align(64) linksection("core_vectors") callconv(.naked)  noreturn {
         comptime {
             // NOTE: using the union variant .naked here is fine because both variants have the same layout
             @export(if (microzig_options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
@@ -237,47 +283,75 @@ pub const startup_logic = struct {
         );
     }
 
-    fn machine_external_interrupt() callconv(riscv_calling_convention) void {
-        _ = struct {
-            fn external_unhandled_interrupt() callconv(.c) void {
-                @panic("unhandled external interrupt");
+    const external_interrupt_table = blk: {
+        var temp: [vector_count]Handler = @splat(microzig.interrupt.unhandled);
+
+        for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
+            if (@field(microzig_options.interrupts, field.name)) |handler| {
+                temp[field.value] = handler;
             }
+        }
 
-            export const _external_interrupt_table = blk: {
-                const count = microzig.utilities.max_enum_tag(ExternalInterrupt);
-                var external_interrupt_table: [count]ExternalInterruptHandler = @splat(external_unhandled_interrupt);
+        break :blk temp;
+    };
 
-                for (@typeInfo(ExternalInterrupt).@"enum".fields) |field| {
-                    if (@field(microzig_options.interrupts, field.name)) |handler| {
-                        external_interrupt_table[field.value] = handler;
-                    }
-                }
+    pub export fn machine_external_interrupt() callconv(riscv_calling_convention) void {
+        if (microzig.hal.compatibility.arch == .riscv) {
+            // MAGIC: This is to work around a bug in the compiler.
+            //        If it is not here the compiler fails to generate
+            //        the code that saves and restores the registers.
 
-                break :blk external_interrupt_table;
-            };
-        };
+            var x: i32 = 0; x += 1;
+        }
 
-        asm volatile (
-            \\csrrsi a0, 0xbe4, 1
-            \\bltz a0, no_more_irqs
-            \\
-            \\dispatch_irq:
-            \\lui a1, %hi(_external_interrupt_table)
-            \\add a1, a1, a0
-            \\lw a1, %lo(_external_interrupt_table)(a1)
-            \\jalr ra, a1
-            \\
-            \\get_next_irq:
-            \\csrr a0, 0xbe4
-            \\bgez a0, dispatch_irq
-            \\
-            \\no_more_irqs:
-        );
+        if (interrupt.has_ram_vectors()) {
+            asm volatile (
+                \\csrrsi a0, 0xbe4, 1
+                \\bltz a0, no_more_irqs
+                \\
+                \\dispatch_irq:
+                \\lui a1, %hi(_ram_vectors)
+                \\add a1, a1, a0
+                \\lw a1, %lo(_ram_vectors)(a1)
+                \\jalr ra, a1
+                \\
+                \\get_next_irq:
+                \\csrr a0, 0xbe4
+                \\bgez a0, dispatch_irq
+                \\
+                \\no_more_irqs:
+            );
+        }
+        else
+        {
+            asm volatile (
+                \\csrrsi a0, 0xbe4, 1
+                \\bltz a0, no_more_irqs
+                \\
+                \\dispatch_irq:
+                \\lui a1, %hi(_external_interrupt_table)
+                \\add a1, a1, a0
+                \\lw a1, %lo(_external_interrupt_table)(a1)
+                \\jalr ra, a1
+                \\
+                \\get_next_irq:
+                \\csrr a0, 0xbe4
+                \\bgez a0, dispatch_irq
+                \\
+                \\no_more_irqs:
+            );
+        }
     }
 };
 
 pub fn export_startup_logic() void {
     std.testing.refAllDecls(startup_logic);
+
+    @export(&startup_logic.external_interrupt_table, .{
+        .name = "_external_interrupt_table",
+        .section = "flash_vectors",
+        .linkage = .strong,
+    });
 }
 
 pub const csr = struct {
