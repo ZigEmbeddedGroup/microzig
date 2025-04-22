@@ -13,7 +13,6 @@ pub fn initialize() void {
 }
 
 pub fn ticks_per_us() u64 {
-    // NOTE: esp32c3 specific
     return 16;
 }
 
@@ -38,7 +37,6 @@ pub const Unit = enum(u1) {
 
     // TODO: Not sure how this should be called.
     pub fn apply(self: Unit, config: Config) void {
-        // NOTE: not esp32s2
         switch (config) {
             .disabled => switch (self) {
                 .unit0 => SYSTIMER.CONF.modify(.{
@@ -49,7 +47,6 @@ pub const Unit = enum(u1) {
                 }),
             },
             .disabled_if_cpu_stalled => switch (self) {
-                // TODO: if multiple cores allow to select which one (not esp32c3)
                 .unit0 => SYSTIMER.CONF.modify(.{
                     .TIMER_UNIT0_WORK_EN = 1,
                     .TIMER_UNIT0_CORE0_STALL_EN = 1,
