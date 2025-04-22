@@ -26,7 +26,7 @@ pub fn main() !void {
         step: GPIO_Device,
     } = undefined;
     inline for (std.meta.fields(@TypeOf(pins)), .{ 0, 1, 2, 20, 10 }) |field, num| {
-        const pin = gpio.instance.num(num);
+        const pin = gpio.num(num);
         // Give the pin a sane default config
         pin.apply(.{});
         @field(pins, field.name) = GPIO_Device.init(pin);
