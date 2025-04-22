@@ -58,6 +58,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chips = .{
             .esp32_c3 = chip_esp32_c3.derive(.{}),
             .esp32_c3_direct_boot = chip_esp32_c3.derive(.{
+                .preferred_binary_format = .bin,
                 .cpu = .{
                     .name = "esp_riscv",
                     .root_source_file = b.path("src/cpus/esp_riscv_direct_boot.zig"),
