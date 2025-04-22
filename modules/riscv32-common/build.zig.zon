@@ -1,6 +1,6 @@
 .{
-    .name = .foundationlibc,
-    .fingerprint = 0xfd6aab283c2e012c,
+    .name = .modules_riscv32common,
+    .fingerprint = 0x6420fe5345654450,
     .version = "0.0.0",
     .paths = .{
         "README.md",
