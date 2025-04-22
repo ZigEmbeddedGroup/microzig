@@ -146,9 +146,9 @@ pub const Pin = enum(u5) {
     }
 
     pub fn toggle(self: Pin) void {
-        switch (get_output_state(self)) {
-            Level.low => write(self, Level.high),
-            Level.high => write(self, Level.low),
+        switch (self.get_output_state()) {
+            Level.low => self.write(Level.high),
+            Level.high => self.write(Level.low),
         }
     }
 };
