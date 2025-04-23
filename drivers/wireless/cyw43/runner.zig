@@ -15,145 +15,145 @@ pub const Cyw43_Runner = struct {
     bus: *bus.Cyw43_Bus,
     internal_delay_ms: *const delayus_callback,
 
-    pub fn init(this: *Self) !void {
-        try this.bus.init_bus();
+    pub fn init(self: *Self) !void {
+        try self.bus.init_bus();
 
         // Init ALP (Active Low Power) clock
         log.debug("init alp", .{});
-        _ = this.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, consts.BACKPLANE_ALP_AVAIL_REQ);
+        _ = self.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, consts.BACKPLANE_ALP_AVAIL_REQ);
 
         log.debug("set f2 watermark", .{});
-        _ = this.bus.write8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, 0x10);
-        const watermark = this.bus.read8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK);
+        _ = self.bus.write8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, 0x10);
+        const watermark = self.bus.read8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK);
         log.debug("watermark = 0x{X}", .{watermark});
         std.debug.assert(watermark == 0x10);
 
         log.debug("waiting for clock...", .{});
-        while (this.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & consts.BACKPLANE_ALP_AVAIL == 0) {}
+        while (self.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & consts.BACKPLANE_ALP_AVAIL == 0) {}
         log.debug("clock ok", .{});
 
         // clear request for ALP
         log.debug("clear request for ALP", .{});
-        this.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
+        self.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0);
 
-        const chip_id = this.bus.bp_read16(0x1800_0000);
+        const chip_id = self.bus.bp_read16(0x1800_0000);
         log.debug("chip ID: 0x{X}", .{chip_id});
 
         // Upload firmware
-        this.core_disable(.wlan);
-        this.core_disable(.socram); // TODO: is this needed if we reset right after?
-        this.core_reset(.socram);
+        self.core_disable(.wlan);
+        self.core_disable(.socram); // TODO: is this needed if we reset right after?
+        self.core_reset(.socram);
 
         // this is 4343x specific stuff: Disable remap for SRAM_3
-        this.bus.bp_write32(CYW43439_Chip.socsram_base_address + 0x10, 3);
-        this.bus.bp_write32(CYW43439_Chip.socsram_base_address + 0x44, 0);
+        self.bus.bp_write32(CYW43439_Chip.socsram_base_address + 0x10, 3);
+        self.bus.bp_write32(CYW43439_Chip.socsram_base_address + 0x44, 0);
 
         const ram_addr = CYW43439_Chip.atcm_ram_base_address;
 
         log.debug("loading fw", .{});
         const firmware = @embedFile("firmware/43439A0_7_95_61.bin")[0..];
-        this.bus.bp_write(ram_addr, firmware);
+        self.bus.bp_write(ram_addr, firmware);
 
         log.debug("loading nvram", .{});
         // Round up to 4 bytes.
         const nvram_len = (nvram.NVRAM.len + 3) / 4 * 4;
-        this.bus.bp_write(ram_addr + CYW43439_Chip.chip_ram_size - 4 - nvram_len, nvram.NVRAM);
+        self.bus.bp_write(ram_addr + CYW43439_Chip.chip_ram_size - 4 - nvram_len, nvram.NVRAM);
 
         const nvram_len_words = nvram_len / 4;
         const nvram_len_magic = (~nvram_len_words << 16) | nvram_len_words;
-        this.bus.bp_write32(ram_addr + CYW43439_Chip.chip_ram_size - 4, nvram_len_magic);
+        self.bus.bp_write32(ram_addr + CYW43439_Chip.chip_ram_size - 4, nvram_len_magic);
 
         log.debug("starting up core...", .{});
-        this.core_reset(.wlan);
-        std.debug.assert(this.core_is_up(.wlan));
+        self.core_reset(.wlan);
+        std.debug.assert(self.core_is_up(.wlan));
 
         // wait until HT clock is available; takes about 29ms
         log.debug("wait for HT clock", .{});
-        while (this.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
+        while (self.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
 
         // "Set up the interrupt mask and enable interrupts"
         log.debug("setup interrupt mask", .{});
-        this.bus.bp_write32(CYW43439_Chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
+        self.bus.bp_write32(CYW43439_Chip.sdiod_core_base_address + consts.SDIO_INT_HOST_MASK, consts.I_HMB_SW_MASK);
 
         // Set up the interrupt mask and enable interrupts
         // TODO - bluetooth interrupts
 
-        this.bus.write16(.bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
+        self.bus.write16(.bus, consts.REG_BUS_INTERRUPT_ENABLE, consts.IRQ_F2_PACKET_AVAILABLE);
 
         // "Lower F2 Watermark to avoid DMA Hang in F2 when SD Clock is stopped."
         // Sounds scary...
-        this.bus.write8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, consts.SPI_F2_WATERMARK);
+        self.bus.write8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, consts.SPI_F2_WATERMARK);
 
         log.debug("waiting for F2 to be ready...", .{});
-        while (this.bus.read32(.bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY == 0) {}
+        while (self.bus.read32(.bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY == 0) {}
 
         log.debug("clear pad pulls", .{});
-        this.bus.write8(.backplane, consts.REG_BACKPLANE_PULL_UP, 0);
-        _ = this.bus.read8(.backplane, consts.REG_BACKPLANE_PULL_UP);
+        self.bus.write8(.backplane, consts.REG_BACKPLANE_PULL_UP, 0);
+        _ = self.bus.read8(.backplane, consts.REG_BACKPLANE_PULL_UP);
 
         // start HT clock
-        this.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0x10);
+        self.bus.write8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR, 0x10);
         log.debug("waiting for HT clock...", .{});
-        while (this.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
+        while (self.bus.read8(.backplane, consts.REG_BACKPLANE_CHIP_CLOCK_CSR) & 0x80 == 0) {}
         log.debug("clock ok", .{});
 
-        this.log_init();
+        self.log_init();
 
         // TODO: bluetooth setup
 
         log.debug("cyw43 runner init done", .{});
     }
 
-    fn core_disable(this: *Self, core: Core) void {
+    fn core_disable(self: *Self, core: Core) void {
         const base = core.base_addr();
 
         // Dummy read?
-        _ = this.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
+        _ = self.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
 
         // Check it isn't already reset
-        const r = this.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
+        const r = self.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
         if (r & consts.AI_RESETCTRL_BIT_RESET != 0) {
             return;
         }
 
-        this.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, 0);
-        _ = this.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
+        self.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, 0);
+        _ = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
-        this.internal_delay_ms(1);
+        self.internal_delay_ms(1);
 
-        this.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
-        _ = this.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
+        self.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, consts.AI_RESETCTRL_BIT_RESET);
+        _ = self.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
     }
 
-    fn core_reset(this: *Self, core: Core) void {
-        this.core_disable(core);
+    fn core_reset(self: *Self, core: Core) void {
+        self.core_disable(core);
 
         const base = core.base_addr();
 
-        this.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = this.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
+        self.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN);
+        _ = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
-        this.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, 0);
+        self.bus.bp_write8(base + consts.AI_RESETCTRL_OFFSET, 0);
 
-        this.internal_delay_ms(1);
+        self.internal_delay_ms(1);
 
-        this.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
-        _ = this.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
+        self.bus.bp_write8(base + consts.AI_IOCTRL_OFFSET, consts.AI_IOCTRL_BIT_CLOCK_EN);
+        _ = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
-        this.internal_delay_ms(1);
+        self.internal_delay_ms(1);
     }
 
-    fn core_is_up(this: *Self, core: Core) bool {
+    fn core_is_up(self: *Self, core: Core) bool {
         const base = core.base_addr();
 
-        const io = this.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
+        const io = self.bus.bp_read8(base + consts.AI_IOCTRL_OFFSET);
 
         if (io & (consts.AI_IOCTRL_BIT_FGC | consts.AI_IOCTRL_BIT_CLOCK_EN) != consts.AI_IOCTRL_BIT_CLOCK_EN) {
             log.debug("core_is_up: returning false due to bad ioctrl 0x{X}", .{io});
             return false;
         }
 
-        const r = this.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
+        const r = self.bus.bp_read8(base + consts.AI_RESETCTRL_OFFSET);
         if (r & (consts.AI_RESETCTRL_BIT_RESET) != 0) {
             log.debug("core_is_up: returning false due to bad resetctrl 0x{X}", .{r});
             return false;
@@ -162,55 +162,55 @@ pub const Cyw43_Runner = struct {
         return true;
     }
 
-    fn log_init(this: *Self) void {
+    fn log_init(self: *Self) void {
         const addr = CYW43439_Chip.atcm_ram_base_address + CYW43439_Chip.chip_ram_size - 4 - CYW43439_Chip.socram_srmem_size;
-        const shared_addr = this.bus.bp_read32(addr);
+        const shared_addr = self.bus.bp_read32(addr);
         log.debug("shared_addr 0x{X}", .{shared_addr});
 
         var shared: SharedMemData = undefined;
-        this.bus.bp_read(shared_addr, std.mem.asBytes(&shared));
+        self.bus.bp_read(shared_addr, std.mem.asBytes(&shared));
 
-        this.chip_log_state.addr = shared.console_addr + 8;
+        self.chip_log_state.addr = shared.console_addr + 8;
     }
 
-    fn log_read(this: *Self) void {
+    fn log_read(self: *Self) void {
         var chip_log_mem: SharedMemLog = undefined;
-        this.bus.bp_read(this.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
+        self.bus.bp_read(self.chip_log_state.addr, std.mem.asBytes(&chip_log_mem));
 
         const idx = chip_log_mem.idx;
 
         // If pointer hasn't moved, no need to do anything.
-        if (idx == this.chip_log_state.last_idx) {
+        if (idx == self.chip_log_state.last_idx) {
             return;
         }
 
         // Read entire buf for now. We could read only what we need, but then we
         // run into annoying alignment issues in `bp_read`.
         var buf: [1024]u8 = undefined;
-        this.bus.bp_read(chip_log_mem.buf, &buf);
+        self.bus.bp_read(chip_log_mem.buf, &buf);
 
-        while (this.chip_log_state.last_idx != idx) {
-            const b = buf[this.chip_log_state.last_idx];
+        while (self.chip_log_state.last_idx != idx) {
+            const b = buf[self.chip_log_state.last_idx];
             if (b == '\r' or b == '\n') {
-                if (this.chip_log_state.buf_count != 0) {
-                    chip_log.debug("{s}", .{this.chip_log_state.buf[0..this.chip_log_state.buf_count]});
-                    this.chip_log_state.buf_count = 0;
+                if (self.chip_log_state.buf_count != 0) {
+                    chip_log.debug("{s}", .{self.chip_log_state.buf[0..self.chip_log_state.buf_count]});
+                    self.chip_log_state.buf_count = 0;
                 }
-            } else if (this.chip_log_state.buf_count < this.chip_log_state.buf.len) {
-                this.chip_log_state.buf[this.chip_log_state.buf_count] = b;
-                this.chip_log_state.buf_count += 1;
+            } else if (self.chip_log_state.buf_count < self.chip_log_state.buf.len) {
+                self.chip_log_state.buf[self.chip_log_state.buf_count] = b;
+                self.chip_log_state.buf_count += 1;
             }
 
-            this.chip_log_state.last_idx += 1;
-            if (this.chip_log_state.last_idx == 1024) {
-                this.chip_log_state.last_idx = 0;
+            self.chip_log_state.last_idx += 1;
+            if (self.chip_log_state.last_idx == 1024) {
+                self.chip_log_state.last_idx = 0;
             }
         }
     }
 
-    pub fn run(this: *Self) void {
+    pub fn run(self: *Self) void {
         while (true) {
-            this.log_read();
+            self.log_read();
         }
     }
 };
@@ -279,8 +279,8 @@ const Core = enum(u2) {
     socram = 1,
     sdiod = 2,
 
-    fn base_addr(this: Core) u32 {
-        return switch (this) {
+    fn base_addr(self: Core) u32 {
+        return switch (self) {
             .wlan => CYW43439_Chip.arm_core_base_address,
             .socram => CYW43439_Chip.socsram_wrapper_base_address,
             .sdiod => CYW43439_Chip.sdiod_core_base_address,
