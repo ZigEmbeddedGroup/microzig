@@ -28,6 +28,8 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_echo", .file = "src/stm32f1xx/uart_echo.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_log", .file = "src/stm32f1xx/uart_log.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c_bus_scan.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_hd44780", .file = "src/stm32f1xx/hd44780.zig" },
     };
 
     for (available_examples) |example| {
