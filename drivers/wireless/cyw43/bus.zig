@@ -65,10 +65,10 @@ pub const Cyw43_Bus = struct {
         log.debug("0b{b}", .{@as(u8, @truncate(ctrl_reg_val))});
 
         // Set 32-bit word length and keep deault endianess: little endian
-        const setup_regs = Cyw43FirstFourRegs { 
+        const setup_regs = Cyw43FirstFourRegs{
             .ctrl = .{ .word_length = .word_32, .endianess = .little_endian, .speed_mode = .high_speed, .interrupt_polarity = .high_polarity, .wake_up = true },
             .response_delay = .{ .unknown = 0x4 }, // 32bit resposne delay?
-            .status_enable = .{ .status_enable = true, .interrupt_with_status = true }
+            .status_enable = .{ .status_enable = true, .interrupt_with_status = true },
         };
 
         log.debug("write REG_BUS_CTRL", .{});
@@ -96,12 +96,7 @@ pub const Cyw43_Bus = struct {
         // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
         log.debug("enable a selection of interrupts", .{});
 
-        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW
-            | consts.IRQ_F2_F3_FIFO_WR_OVERFLOW
-            | consts.IRQ_COMMAND_ERROR
-            | consts.IRQ_DATA_ERROR
-            | consts.IRQ_F2_PACKET_AVAILABLE
-            | consts.IRQ_F1_OVERFLOW;
+        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW | consts.IRQ_F2_F3_FIFO_WR_OVERFLOW | consts.IRQ_COMMAND_ERROR | consts.IRQ_DATA_ERROR | consts.IRQ_F2_PACKET_AVAILABLE | consts.IRQ_F1_OVERFLOW;
 
         //if bluetooth_enabled {
         //    val = val | IRQ_F1_INTR;
@@ -123,7 +118,7 @@ pub const Cyw43_Bus = struct {
     }
 
     fn readn(this: *Self, func: FuncType, addr: u17, len: u11) u32 {
-        const cmd = Cyw43Cmd { .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
+        const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = len };
         var buff = [_]u32{0} ** 2;
         // if we are reading from the backplane, we need an extra word for the response delay
         const buff_len: usize = if (func == .backplane) 2 else 1;
@@ -146,14 +141,14 @@ pub const Cyw43_Bus = struct {
     }
 
     fn writen(this: *Self, func: FuncType, addr: u17, value: u32, len: u11) void {
-        const cmd = Cyw43Cmd { .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
+        const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = len };
 
-        _ = this.spi.spi_write_blocking(&[_]u32{@bitCast(cmd), value});
+        _ = this.spi.spi_write_blocking(&[_]u32{ @bitCast(cmd), value });
     }
 
     pub fn bp_read(this: *Self, addr: u32, data: []u8) void {
         log.debug("bp_read addr = 0x{X}", .{addr});
-        
+
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
         // to 4 if data.len() >= 4
@@ -173,11 +168,11 @@ pub const Cyw43_Bus = struct {
 
             this.backplane_set_window(current_addr);
 
-            const cmd = Cyw43Cmd { .cmd = .read, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
+            const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
 
             // round `buf` to word boundary, add one extra word for the response delay
             const words_to_send = (len + 3) / 4 + 1;
-            _= this.spi.spi_read_blocking(@bitCast(cmd), buf[0..words_to_send]);
+            _ = this.spi.spi_read_blocking(@bitCast(cmd), buf[0..words_to_send]);
 
             const u32_data_slice = buf[1..];
             var u8_buf_view = std.mem.sliceAsBytes(u32_data_slice);
@@ -202,7 +197,7 @@ pub const Cyw43_Bus = struct {
     }
 
     pub fn backplane_readn(this: *Self, addr: u32, len: u11) u32 {
-        log.debug("backplane_readn addr = 0x{X} len = {}", .{addr, len});
+        log.debug("backplane_readn addr = 0x{X} len = {}", .{ addr, len });
 
         this.backplane_set_window(addr);
 
@@ -213,14 +208,14 @@ pub const Cyw43_Bus = struct {
 
         const val = this.readn(.backplane, @truncate(bus_addr), len);
 
-        log.debug("backplane_readn addr = 0x{X} len = {} val = 0x{X}", .{addr, len, val});
+        log.debug("backplane_readn addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, val });
 
         return val;
     }
 
     pub fn bp_write(this: *Self, addr: u32, data: []const u8) void {
-        log.debug("bp_write addr = 0x{X} len = {}", .{addr, data.len});
-        
+        log.debug("bp_write addr = 0x{X} len = {}", .{ addr, data.len });
+
         // It seems the HW force-aligns the addr
         // to 2 if data.len() >= 2
         // to 4 if data.len() >= 4
@@ -245,11 +240,11 @@ pub const Cyw43_Bus = struct {
 
             this.backplane_set_window(current_addr);
 
-            const cmd = Cyw43Cmd { .cmd = .write, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
+            const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = .backplane, .addr = @truncate(window_offs), .len = @truncate(len) };
             buf[0] = @bitCast(cmd);
 
             const words_to_send = (len + 3) / 4 + 1;
-            _= this.spi.spi_write_blocking(buf[0..words_to_send]);
+            _ = this.spi.spi_write_blocking(buf[0..words_to_send]);
 
             current_addr += @as(u32, @intCast(len));
             remaining_data = remaining_data[len..];
@@ -269,7 +264,7 @@ pub const Cyw43_Bus = struct {
     }
 
     pub fn backplane_writen(this: *Self, addr: u32, value: u32, len: u11) void {
-        log.debug("backplane_writen addr = 0x{X} len = {} val = 0x{X}", .{addr, len, value});
+        log.debug("backplane_writen addr = 0x{X} len = {} val = 0x{X}", .{ addr, len, value });
 
         this.backplane_set_window(addr);
 
@@ -298,7 +293,7 @@ pub const Cyw43_Bus = struct {
     }
 
     fn read32_swapped(this: *Self, func: FuncType, addr: u17) u32 {
-        const cmd = Cyw43Cmd { .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+        const cmd = Cyw43Cmd{ .cmd = .read, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
         const cmd_swapped = swap16(@bitCast(cmd));
 
         var buff = [1]u32{0};
@@ -308,7 +303,7 @@ pub const Cyw43_Bus = struct {
     }
 
     fn write32_swapped(this: *Self, func: FuncType, addr: u17, value: u32) void {
-        const cmd = Cyw43Cmd { .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
+        const cmd = Cyw43Cmd{ .cmd = .write, .incr = .incremental, .func = func, .addr = addr, .len = 4 };
 
         var buff: [2]u32 = .{ swap16(@bitCast(cmd)), swap16(value) };
         _ = this.spi.spi_write_blocking(&buff);
@@ -325,44 +320,27 @@ const CmdType = enum(u1) {
 };
 
 const IncrMode = enum(u1) {
-    fixed = 0,       // Fixed address (no increment)
+    fixed = 0, // Fixed address (no increment)
     incremental = 1, // Incremental burst
 };
 
-const FuncType = enum(u2) {
-    bus = 0,
-    backplane = 1,
-    wlan = 2,
-    bt = 3
-};
+const FuncType = enum(u2) { bus = 0, backplane = 1, wlan = 2, bt = 3 };
 
 const Cyw43Cmd = packed struct(u32) {
-    len: u11, 
+    len: u11,
     addr: u17,
     func: FuncType = .bus,
     incr: IncrMode = .fixed,
     cmd: CmdType,
 };
 
-const CtrlWordLength = enum(u1) {
-    word_16 = 0,
-    word_32 = 1
-};
+const CtrlWordLength = enum(u1) { word_16 = 0, word_32 = 1 };
 
-const CtrlEndianess = enum(u1) {
-    little_endian = 0,
-    big_endian = 1
-};
+const CtrlEndianess = enum(u1) { little_endian = 0, big_endian = 1 };
 
-const CtrlSpeedMode = enum(u1) {
-    normal = 0,
-    high_speed = 1
-};
+const CtrlSpeedMode = enum(u1) { normal = 0, high_speed = 1 };
 
-const CtrlInterruptPolarity = enum(u1) {
-    low_polarity = 0,
-    high_polarity = 1
-};
+const CtrlInterruptPolarity = enum(u1) { low_polarity = 0, high_polarity = 1 };
 
 const CtrlReg = packed struct(u8) {
     word_length: CtrlWordLength,

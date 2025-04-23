@@ -210,7 +210,7 @@ pub const Cyw43PioSpi = struct {
         };
     }
 
-    const vtable = Cyw43_Spi.VTable {
+    const vtable = Cyw43_Spi.VTable{
         .spi_read_blocking_fn = spi_read_blocking_fn,
         .spi_write_blocking_fn = spi_write_blocking_fn,
     };

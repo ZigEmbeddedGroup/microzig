@@ -85,7 +85,7 @@ pub const Cyw43_Runner = struct {
         this.bus.write8(.backplane, consts.REG_BACKPLANE_FUNCTION2_WATERMARK, consts.SPI_F2_WATERMARK);
 
         log.debug("waiting for F2 to be ready...", .{});
-        while (this.bus.read32(.bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY  == 0) {}
+        while (this.bus.read32(.bus, consts.REG_BUS_STATUS) & consts.STATUS_F2_RX_READY == 0) {}
 
         log.debug("clear pad pulls", .{});
         this.bus.write8(.backplane, consts.REG_BACKPLANE_PULL_UP, 0);
@@ -196,8 +196,7 @@ pub const Cyw43_Runner = struct {
                     chip_log.debug("{s}", .{this.chip_log_state.buf[0..this.chip_log_state.buf_count]});
                     this.chip_log_state.buf_count = 0;
                 }
-            }
-            else if (this.chip_log_state.buf_count < this.chip_log_state.buf.len) {
+            } else if (this.chip_log_state.buf_count < this.chip_log_state.buf.len) {
                 this.chip_log_state.buf[this.chip_log_state.buf_count] = b;
                 this.chip_log_state.buf_count += 1;
             }
@@ -284,7 +283,7 @@ const Core = enum(u2) {
         return switch (this) {
             .wlan => CYW43439_Chip.arm_core_base_address,
             .socram => CYW43439_Chip.socsram_wrapper_base_address,
-            .sdiod => CYW43439_Chip.sdiod_core_base_address
+            .sdiod => CYW43439_Chip.sdiod_core_base_address,
         };
     }
 };
