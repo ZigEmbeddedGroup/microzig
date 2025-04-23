@@ -67,7 +67,7 @@ pub const IOError = error{
 };
 
 fn freq_to_ns(freq: usize) usize {
-    return 1_000_000_000 / @as(u64, freq);
+    return @intCast(1_000_000_000 / @as(u64, freq));
 }
 fn calc_Trise(pclk: usize, Tmax: usize) usize {
     const Tpclk: f32 = @floatFromInt(freq_to_ns(pclk));
@@ -116,7 +116,7 @@ pub const I2C = enum(u3) {
     }
 
     fn validate_speed(speed: usize, mode: Mode) !void {
-        if (speed == 0) return comptime_fail_or_error("Invalid I2C speed", .{}, ConfigError.SpeedUnderdlow);
+        if (speed == 0) return comptime_fail_or_error("Invalid I2C speed", .{}, ConfigError.SpeedUnderflow);
         switch (mode) {
             .standard => {
                 if (speed > 100_000) {
@@ -132,7 +132,7 @@ pub const I2C = enum(u3) {
     }
 
     fn validate_Trise(pclk: usize, mode: Mode) !usize {
-        const Tmax = switch (mode) {
+        const Tmax: usize = switch (mode) {
             .standard => 1000,
             .fast => 300,
         };
@@ -305,7 +305,7 @@ pub const I2C = enum(u3) {
         }
     }
 
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
+    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
         for (chunks) |chunk| {
             try i2c.write_blocking(addr, chunk, timeout);
         }
