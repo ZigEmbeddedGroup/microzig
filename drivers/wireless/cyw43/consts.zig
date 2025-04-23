@@ -89,23 +89,23 @@ pub const TEST_PATTERN: u32 = 0x12345678;
 pub const FEEDBEAD: u32 = 0xFEEDBEAD;
 
 // SPI_INTERRUPT_REGISTER and SPI_INTERRUPT_ENABLE_REGISTER Bits
-pub const  IRQ_DATA_UNAVAILABLE: u16 = 0x0001; // Requested data not available; Clear by writing a "1"
-pub const  IRQ_F2_F3_FIFO_RD_UNDERFLOW: u16 = 0x0002;
-pub const  IRQ_F2_F3_FIFO_WR_OVERFLOW: u16 = 0x0004;
-pub const  IRQ_COMMAND_ERROR: u16 = 0x0008; // Cleared by writing 1
-pub const  IRQ_DATA_ERROR: u16 = 0x0010; // Cleared by writing 1
-pub const  IRQ_F2_PACKET_AVAILABLE: u16 = 0x0020;
-pub const  IRQ_F3_PACKET_AVAILABLE: u16 = 0x0040;
-pub const  IRQ_F1_OVERFLOW: u16 = 0x0080; // Due to last write. Bkplane has pending write requests
-pub const  IRQ_MISC_INTR0: u16 = 0x0100;
-pub const  IRQ_MISC_INTR1: u16 = 0x0200;
-pub const  IRQ_MISC_INTR2: u16 = 0x0400;
-pub const  IRQ_MISC_INTR3: u16 = 0x0800;
-pub const  IRQ_MISC_INTR4: u16 = 0x1000;
-pub const  IRQ_F1_INTR: u16 = 0x2000;
-pub const  IRQ_F2_INTR: u16 = 0x4000;
-pub const  IRQ_F3_INTR: u16 = 0x8000;
+pub const IRQ_DATA_UNAVAILABLE: u16 = 0x0001; // Requested data not available; Clear by writing a "1"
+pub const IRQ_F2_F3_FIFO_RD_UNDERFLOW: u16 = 0x0002;
+pub const IRQ_F2_F3_FIFO_WR_OVERFLOW: u16 = 0x0004;
+pub const IRQ_COMMAND_ERROR: u16 = 0x0008; // Cleared by writing 1
+pub const IRQ_DATA_ERROR: u16 = 0x0010; // Cleared by writing 1
+pub const IRQ_F2_PACKET_AVAILABLE: u16 = 0x0020;
+pub const IRQ_F3_PACKET_AVAILABLE: u16 = 0x0040;
+pub const IRQ_F1_OVERFLOW: u16 = 0x0080; // Due to last write. Bkplane has pending write requests
+pub const IRQ_MISC_INTR0: u16 = 0x0100;
+pub const IRQ_MISC_INTR1: u16 = 0x0200;
+pub const IRQ_MISC_INTR2: u16 = 0x0400;
+pub const IRQ_MISC_INTR3: u16 = 0x0800;
+pub const IRQ_MISC_INTR4: u16 = 0x1000;
+pub const IRQ_F1_INTR: u16 = 0x2000;
+pub const IRQ_F2_INTR: u16 = 0x4000;
+pub const IRQ_F3_INTR: u16 = 0x8000;
 
 // Bluetooth constants.
-pub const  SPI_RESP_DELAY_F1: u32 = 0x001d;
-pub const  WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE: u8 = 4;
+pub const SPI_RESP_DELAY_F1: u32 = 0x001d;
+pub const WHD_BUS_SPI_BACKPLANE_READ_PADD_SIZE: u8 = 4;
