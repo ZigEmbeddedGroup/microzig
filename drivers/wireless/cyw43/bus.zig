@@ -64,11 +64,22 @@ pub const Cyw43_Bus = struct {
         const ctrl_reg_val = self.read32_swapped(.bus, consts.REG_BUS_CTRL);
         log.debug("0b{b}", .{@as(u8, @truncate(ctrl_reg_val))});
 
-        // Set 32-bit word length and keep deault endianess: little endian
+        // Set 32-bit word length and keep default endianness: little endian
         const setup_regs = Cyw43FirstFourRegs{
-            .ctrl = .{ .word_length = .word_32, .endianess = .little_endian, .speed_mode = .high_speed, .interrupt_polarity = .high_polarity, .wake_up = true },
-            .response_delay = .{ .unknown = 0x4 }, // 32bit resposne delay?
-            .status_enable = .{ .status_enable = true, .interrupt_with_status = true },
+            .ctrl = .{ 
+                .word_length = .word_32,
+                .endianness = .little_endian,
+                .speed_mode = .high_speed,
+                .interrupt_polarity = .high_polarity,
+                .wake_up = true 
+            },
+            .response_delay = .{ 
+                .unknown = 0x4    // 32-bit response delay?
+            },
+            .status_enable = .{ 
+                .status_enable = true, 
+                .interrupt_with_status = true 
+            },
         };
 
         log.debug("write REG_BUS_CTRL", .{});
@@ -96,7 +107,12 @@ pub const Cyw43_Bus = struct {
         // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
         log.debug("enable a selection of interrupts", .{});
 
-        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW | consts.IRQ_F2_F3_FIFO_WR_OVERFLOW | consts.IRQ_COMMAND_ERROR | consts.IRQ_DATA_ERROR | consts.IRQ_F2_PACKET_AVAILABLE | consts.IRQ_F1_OVERFLOW;
+        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW | 
+            consts.IRQ_F2_F3_FIFO_WR_OVERFLOW | 
+            consts.IRQ_COMMAND_ERROR | 
+            consts.IRQ_DATA_ERROR | 
+            consts.IRQ_F2_PACKET_AVAILABLE | 
+            consts.IRQ_F1_OVERFLOW;
 
         //if bluetooth_enabled {
         //    val = val | IRQ_F1_INTR;
@@ -184,15 +200,15 @@ pub const Cyw43_Bus = struct {
         }
     }
 
-    pub fn bp_read8(self: *Self, addr: u32) u8 {
+    pub inline fn bp_read8(self: *Self, addr: u32) u8 {
         return @truncate(self.backplane_readn(addr, 1));
     }
 
-    pub fn bp_read16(self: *Self, addr: u32) u16 {
+    pub inline fn bp_read16(self: *Self, addr: u32) u16 {
         return @truncate(self.backplane_readn(addr, 2));
     }
 
-    pub fn bp_read32(self: *Self, addr: u32) u32 {
+    pub inline fn bp_read32(self: *Self, addr: u32) u32 {
         return @truncate(self.backplane_readn(addr, 4));
     }
 
@@ -251,15 +267,15 @@ pub const Cyw43_Bus = struct {
         }
     }
 
-    pub fn bp_write8(self: *Self, addr: u32, value: u8) void {
+    pub inline fn bp_write8(self: *Self, addr: u32, value: u8) void {
         self.backplane_writen(addr, value, 1);
     }
 
-    pub fn bp_write16(self: *Self, addr: u32, value: u16) void {
+    pub inline fn bp_write16(self: *Self, addr: u32, value: u16) void {
         self.backplane_writen(addr, value, 2);
     }
 
-    pub fn bp_write32(self: *Self, addr: u32, value: u32) void {
+    pub inline fn bp_write32(self: *Self, addr: u32, value: u32) void {
         self.backplane_writen(addr, value, 4);
     }
 
@@ -309,7 +325,7 @@ pub const Cyw43_Bus = struct {
         _ = self.spi.spi_write_blocking(&buff);
     }
 
-    fn swap16(x: u32) u32 {
+    inline fn swap16(x: u32) u32 {
         return x << 16 | x >> 16;
     }
 };
@@ -336,7 +352,7 @@ const Cyw43Cmd = packed struct(u32) {
 
 const CtrlWordLength = enum(u1) { word_16 = 0, word_32 = 1 };
 
-const CtrlEndianess = enum(u1) { little_endian = 0, big_endian = 1 };
+const CtrlEndianness = enum(u1) { little_endian = 0, big_endian = 1 };
 
 const CtrlSpeedMode = enum(u1) { normal = 0, high_speed = 1 };
 
@@ -344,7 +360,7 @@ const CtrlInterruptPolarity = enum(u1) { low_polarity = 0, high_polarity = 1 };
 
 const CtrlReg = packed struct(u8) {
     word_length: CtrlWordLength,
-    endianess: CtrlEndianess,
+    endianness: CtrlEndianness,
     reserved1: u2 = 0,
     speed_mode: CtrlSpeedMode,
     interrupt_polarity: CtrlInterruptPolarity,

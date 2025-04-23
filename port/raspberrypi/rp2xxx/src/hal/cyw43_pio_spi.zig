@@ -47,7 +47,7 @@ pub fn init(pio: hal.pio.Pio, cs_pin: hal.gpio.Pin, io_pin: hal.gpio.Pin, clk_pi
     cs_pin.put(1);
 
     // IO pin setup
-    io_pin.set_function(get_pin_pio_function(pio));
+    pio.gpio_init(io_pin);
     io_pin.set_output_disabled(false);
     io_pin.set_pull(.disabled);
     io_pin.set_schmitt_trigger(.enabled);
@@ -58,7 +58,7 @@ pub fn init(pio: hal.pio.Pio, cs_pin: hal.gpio.Pin, io_pin: hal.gpio.Pin, clk_pi
     io_pin.set_slew_rate(.fast);
 
     // Clock pin setup
-    clk_pin.set_function(get_pin_pio_function(pio));
+    pio.gpio_init(clk_pin);
     clk_pin.set_output_disabled(false);
     clk_pin.set_drive_strength(.@"12mA");
     clk_pin.set_slew_rate(.fast);
@@ -87,20 +87,6 @@ pub fn init(pio: hal.pio.Pio, cs_pin: hal.gpio.Pin, io_pin: hal.gpio.Pin, clk_pi
     pio.sm_set_pin(sm, @truncate(@intFromEnum(io_pin)), 1, 0);
 
     return .{ .pio = pio, .sm = sm, .cs_pin = cs_pin, .io_pin = io_pin, .clk_pin = clk_pin };
-}
-
-fn get_pin_pio_function(pio: hal.pio.Pio) hal.gpio.Function {
-    return switch (chip) {
-        .RP2040 => switch (pio) {
-            .pio0 => .pio0,
-            .pio1 => .pio1,
-        },
-        .RP2350 => switch (pio) {
-            .pio0 => .pio0,
-            .pio1 => .pio1,
-            .pio2 => .pio2,
-        },
-    };
 }
 
 pub const Cyw43PioSpi = struct {
