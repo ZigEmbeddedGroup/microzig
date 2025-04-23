@@ -36,7 +36,6 @@ pub const FlowControl = enum {
     CTS_RTS,
 };
 
-//TODO: add error for UART4/5 invalid features
 pub const ConfigError = error{
     InvalidUartNum,
     UnsupportedBaudRate,
@@ -226,7 +225,6 @@ pub const UART = enum(u3) {
         return (0 != get_regs(uart).SR.read().TXE);
     }
 
-    //TODO: add timeout
     pub fn writev_blocking(uart: UART, payloads: []const []const u8, timeout: ?Timeout) TransmitError!void {
         const regs = uart.get_regs();
         for (payloads) |pkgs| {
