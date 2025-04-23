@@ -17,6 +17,7 @@ A collection of device drivers for the use with MicroZig.
   - [ ] [ST7735](https://github.com/ZigEmbeddedGroup/microzig/issues/250) (WIP)
   - [ ] [ILI9488](https://github.com/ZigEmbeddedGroup/microzig/issues/249)
 - Wireless
+  - [ ] CYW43 (WIP)
   - [ ] [SX1276, SX1278](https://github.com/ZigEmbeddedGroup/microzig/issues/248)
 - Stepper
   - [x] A4988
