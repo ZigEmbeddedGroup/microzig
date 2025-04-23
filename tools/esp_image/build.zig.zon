@@ -1,6 +1,6 @@
 .{
-    .name = .tools_espimage,
-    .fingerprint = 0xf6d097a2c2b8c9bc,
+    .name = .microzig_tools_espimage,
+    .fingerprint = 0xc7f73fe9aad2fe1e,
     .version = "0.1.0",
     .dependencies = .{
         .clap = .{
@@ -9,7 +9,6 @@
         },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig",
         "build.zig.zon",

@@ -17,6 +17,9 @@
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
 
+        // simulators
+        .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
+
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
         .@"port/gigadevice/gd32" = .{ .path = "port/gigadevice/gd32", .lazy = true },
@@ -30,8 +33,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer.git#ba48dc0beed520d3fd91738e3717776ac02df175",
-            .hash = "boxzer-0.1.0-UECMFB7WAAAOQio_OOb84Tmeft26gQ6Ec6jL5MUU_h1r",
+            .url = "git+https://github.com/mattnite/boxzer.git#d50d7916b1f850048b2ad7e63a7abf05bd73c0e6",
+            .hash = "boxzer-0.1.0--ed-MLzlAADinFJMGZncIcYAE07MoAbAr8a2R7Cr-xln",
         },
     },
     .paths = .{

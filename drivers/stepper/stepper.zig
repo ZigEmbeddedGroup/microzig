@@ -8,6 +8,7 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
+const common = @import("common.zig");
 
 pub const Stepper_Options = struct {
     ms1_pin: ?mdf.base.Digital_IO = undefined,
@@ -21,13 +22,6 @@ pub const Stepper_Options = struct {
 };
 
 pub const MSPinsError = error.MSPinsError;
-pub const Speed_Profile = union(enum) {
-    constant_speed,
-    linear_speed: struct {
-        accel: u16 = 1000,
-        decel: u16 = 1000,
-    },
-};
 
 pub const State = enum {
     stopped,
@@ -55,6 +49,13 @@ pub const DRV8825 = struct {
 pub fn Stepper(comptime Driver: type) type {
     return struct {
         const Self = @This();
+        pub const Speed_Profile = union(enum) {
+            constant_speed,
+            linear_speed: struct {
+                accel: u16 = 1000,
+                decel: u16 = 1000,
+            },
+        };
         driver: Driver = .{},
 
         microsteps: u8 = 1,
@@ -80,7 +81,7 @@ pub fn Stepper(comptime Driver: type) type {
         cruise_step_pulse: mdf.time.Duration = .from_us(0),
         remainder: mdf.time.Duration = .from_us(0),
         last_action_end: mdf.time.Absolute = .from_us(0),
-        next_action_interval: mdf.time.Duration = .from_us(0),
+        next_action_time: mdf.time.Absolute = .from_us(0),
         step_count: u32 = 0,
         dir_state: mdf.base.Digital_IO.State = .low,
         motor_steps: u16,
@@ -143,7 +144,7 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        pub fn set_rpm(self: Self, rpm: f64) void {
+        pub fn set_rpm(self: *Self, rpm: f64) void {
             self.rpm = rpm;
         }
 
@@ -181,12 +182,11 @@ pub fn Stepper(comptime Driver: type) type {
 
         pub fn move(self: *Self, steps: i32) !void {
             self.start_move(steps);
-            var action = try self.next_action();
-            while (@intFromEnum(action) != 0) : (action = try self.next_action()) {}
+            while (try self.next_action()) {}
         }
 
         pub fn rotate(self: *Self, deg: i32) !void {
-            try self.move(self.calc_steps_for_rotation(deg));
+            try self.move(common.calc_steps_for_rotation(self.motor_steps, self.microsteps, deg));
         }
 
         pub fn start_move(self: *Self, steps: i32) void {
@@ -196,7 +196,8 @@ pub fn Stepper(comptime Driver: type) type {
         pub fn start_move_time(self: *Self, steps: i32, time: mdf.time.Duration) void {
             // set up new move
             self.dir_state = if (steps >= 0) .high else .low;
-            self.last_action_end = .from_us(0);
+            self.last_action_end = self.clock.get_time_since_boot();
+            self.next_action_time = self.last_action_end;
             self.steps_remaining = @abs(steps);
             self.step_count = 0;
             self.remainder = .from_us(0);
@@ -233,20 +234,14 @@ pub fn Stepper(comptime Driver: type) type {
                 .constant_speed => {
                     self.steps_to_cruise = 0;
                     self.steps_to_brake = 0;
-                    self.cruise_step_pulse = get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
-                    self.step_pulse = self.cruise_step_pulse;
+                    self.step_pulse = common.get_step_pulse(self.motor_steps, self.microsteps, self.rpm);
+                    // If we have a deadline, we might have to shorten the pulses to finish in time
                     if (@intFromEnum(time) > self.steps_remaining * @intFromEnum(self.step_pulse)) {
                         self.step_pulse = .from_us(@intFromFloat(@as(f64, @floatFromInt(time.to_us())) /
                             @as(f64, @floatFromInt(self.steps_remaining))));
                     }
                 },
             }
-        }
-
-        inline fn get_step_pulse(steps: i32, microsteps: u8, rpm: f64) mdf.time.Duration {
-            return @enumFromInt(@as(u64, @intFromFloat(60.0 * 1000000 /
-                @as(f64, @floatFromInt(steps)) /
-                @as(f64, @floatFromInt(microsteps)) / rpm)));
         }
 
         fn calc_step_pulse(self: *Self) void {
@@ -291,38 +286,39 @@ pub fn Stepper(comptime Driver: type) type {
             }
         }
 
-        fn delay_micros(self: Self, delay_us: mdf.time.Duration, start_us: mdf.time.Absolute) void {
-            if (@intFromEnum(start_us) == 0) {
-                self.clock.sleep_us(@intFromEnum(delay_us));
-                return;
-            }
-            const deadline: mdf.time.Deadline = .init_relative(start_us, delay_us);
-            while (!deadline.is_reached_by(self.clock.get_time_since_boot())) {}
-        }
+        /// Perform the next step, waiting until the next_action_time has been reached
+        pub fn next_action(self: *Self) !bool {
+            if (self.steps_remaining == 0) return false;
 
-        pub fn next_action(self: *Self) !mdf.time.Duration {
-            if (self.steps_remaining > 0) {
-                self.delay_micros(self.next_action_interval, self.last_action_end);
-                //  DIR pin is sampled on rising STEP edge, so it is set first
-                try self.dir_pin.write(self.dir_state);
-                try self.step_pin.write(.high);
-                // Absolute time now
-                const start = self.clock.get_time_since_boot();
-                const pulse = self.step_pulse; // save value because calcStepPulse() will overwrite it
-                self.calc_step_pulse();
-                // We should pull HIGH for at least 1-2us (step_high_min)
-                self.clock.sleep_us(Driver.STEP_HIGH_MIN);
-                try self.step_pin.write(.low);
-                // account for calc_step_pulse() execution time; sets ceiling for max rpm on slower MCUs
-                self.last_action_end = self.clock.get_time_since_boot();
-                const elapsed = self.last_action_end.diff(start);
-                self.next_action_interval = if (elapsed.less_than(pulse)) pulse.minus(elapsed) else @enumFromInt(1);
-            } else {
-                // end of move
-                self.last_action_end = .from_us(0);
-                self.next_action_interval = .from_us(0);
-            }
-            return self.next_action_interval;
+            // Wait until we reach the deadline
+            while (!self.next_action_time.is_reached_by(self.clock.get_time_since_boot())) {}
+
+            //  DIR pin is sampled on rising STEP edge, so it is set first
+            try self.dir_pin.write(self.dir_state);
+            try self.step_pin.write(.high);
+
+            // Track when we started the step
+            const start = self.clock.get_time_since_boot();
+            const pulse = self.step_pulse; // save value because calc_step_pulse can overwrite it
+            self.calc_step_pulse();
+
+            // We should pull HIGH for at least STEP_HIGH_MIN us
+            self.clock.sleep_us(Driver.STEP_HIGH_MIN);
+            try self.step_pin.write(.low);
+            // We should pull LOW for at least STEP_LOW_MIN us
+            self.clock.sleep_us(Driver.STEP_LOW_MIN);
+
+            // Update timing reference
+            self.last_action_end = self.clock.get_time_since_boot();
+            const elapsed = self.last_action_end.diff(start);
+
+            // Calculate the next interval, accounting for the time spent in this function
+            self.next_action_time = if (elapsed.less_than(pulse))
+                self.last_action_end.add_duration(pulse.minus(elapsed))
+            else
+                self.last_action_end;
+
+            return self.steps_remaining > 0;
         }
 
         pub fn get_current_state(self: Self) State {
@@ -358,48 +354,17 @@ pub fn Stepper(comptime Driver: type) type {
             return rv;
         }
 
-        pub fn get_steps_completed(self: Self) u32 {
-            return self.step_count;
-        }
-
-        pub fn get_steps_remaining(self: Self) u32 {
-            return self.steps_remaining;
-        }
-
-        pub fn get_direction(self: Self) i2 {
-            return switch (self.dir_state) {
-                .low => 1,
-                .high => -1,
-            };
-        }
-
-        fn calc_steps_for_rotation(self: Self, deg: i32) i32 {
+        fn calc_steps_for_rotation(self: *Self, deg: i32) i32 {
             return @divTrunc(deg * self.motor_steps * self.microsteps, 360);
         }
     };
 }
 
-test {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
-    var dp = TestGPIO.init(.output, .high);
-    var sp = TestGPIO.init(.output, .high);
-    var ttd = TestTime.init();
-    _ = Stepper(A4988).init(.{
-        .dir_pin = dp.digital_io(),
-        .step_pin = sp.digital_io(),
-        .clock_device = ttd.clock_device(),
-    });
-    _ = Stepper(DRV8825).init(.{
-        .dir_pin = dp.digital_io(),
-        .step_pin = sp.digital_io(),
-        .clock_device = ttd.clock_device(),
-    });
-}
+// Testing
+const TestGPIO = mdf.base.Digital_IO.Test_Device;
+const TestTime = mdf.base.Clock_Device.Test_Device;
 
 test "begin" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
@@ -409,14 +374,12 @@ test "begin" {
         .clock_device = ttd.clock_device(),
     });
     try stepper.begin(100, 1);
-    try std.testing.expect(stepper.microsteps == 1);
+    try std.testing.expectEqual(1, stepper.microsteps);
     try stepper.begin(100, 2);
-    try std.testing.expect(stepper.microsteps == 2);
+    try std.testing.expectEqual(2, stepper.microsteps);
 }
 
 test "A4988: set microstep with ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ms1 = TestGPIO.init(.output, .high);
@@ -453,8 +416,6 @@ test "A4988: set microstep with ms pins set" {
 }
 
 test "A4988: set microstep without ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
@@ -481,11 +442,10 @@ test "A4988: set microstep without ms pins set" {
         const m = stepper.init_microstep(tc[0]);
         try std.testing.expectEqual(tc[1], m);
     }
+    try std.testing.expectError(MSPinsError, stepper.set_microstep(1));
 }
 
 test "DRV8825: set microstep with ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ms1 = TestGPIO.init(.output, .high);
@@ -522,8 +482,6 @@ test "DRV8825: set microstep with ms pins set" {
 }
 
 test "DRV8825: set microstep without ms pins set" {
-    const TestGPIO = mdf.base.Digital_IO.Test_Device;
-    const TestTime = mdf.base.Clock_Device.Test_Device;
     var dp = TestGPIO.init(.output, .high);
     var sp = TestGPIO.init(.output, .high);
     var ttd = TestTime.init();
