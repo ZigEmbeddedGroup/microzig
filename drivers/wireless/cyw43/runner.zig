@@ -51,7 +51,7 @@ pub const Cyw43_Runner = struct {
         const ram_addr = CYW43439_Chip.atcm_ram_base_address;
 
         log.debug("loading fw", .{});
-        const firmware = @embedFile("firmware/43439A0.bin")[0..];
+        const firmware = @embedFile("firmware/43439A0_7_95_61.bin")[0..];
         this.bus.bp_write(ram_addr, firmware);
 
         log.debug("loading nvram", .{});
