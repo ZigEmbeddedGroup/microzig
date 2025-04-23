@@ -7,16 +7,15 @@ const gpio = stm32.gpio;
 
 const timer = stm32.timer.GPTimer.TIM2;
 
-const i2c = stm32.i2c;
+const I2c = stm32.i2c;
 
 const uart: stm32.uart.UART = @enumFromInt(0);
 const TX = gpio.Pin.from_port(.A, 9);
 
-const i2c2: i2c.I2C = @enumFromInt(1);
+const i2c: I2c.I2C = @enumFromInt(1);
 const SCL = gpio.Pin.from_port(.B, 10);
 const SDA = gpio.Pin.from_port(.B, 11);
-const ADDR = i2c.Address.new(0x27);
-const config = i2c.Config{
+const config = I2c.Config{
     .pclk = 8_000_000,
     .speed = 100_000,
     .mode = .standard,
@@ -53,7 +52,7 @@ pub fn main() !void {
     SCL.set_output_mode(.alternate_function_open_drain, .max_50MHz);
     SDA.set_output_mode(.alternate_function_open_drain, .max_50MHz);
 
-    i2c2.apply(config);
+    i2c.apply(config);
 
     uart.apply(.{
         .baud_rate = 115200,
@@ -62,34 +61,20 @@ pub fn main() !void {
 
     stm32.uart.init_logger(uart);
 
-    var to_read: [1]u8 = undefined;
     std.log.info("start I2C master", .{});
     while (true) {
-        for (0..0xFF) |val| {
-            std.log.info("sending {d}", .{val});
-            i2c2.write_blocking(ADDR, &.{@intCast(val)}, counter.make_ms_timeout(5000)) catch |err| {
-                std.log.err("send to send data | error {any}", .{err});
+        std.log.info("starting i2c scan:", .{});
+        for (1..127) |val| {
+            const addr = I2c.Address.new(@intCast(val));
+            i2c.write_blocking(addr, &[_]u8{0}, counter.make_ms_timeout(100)) catch |err| {
                 if (err == error.UnrecoverableError) {
-                    //Reset I2C peripheral
-                    i2c2.apply(config);
+                    i2c.apply(config);
                 } else {
-                    i2c2.clear_errors();
+                    i2c.clear_errors();
                 }
                 continue;
             };
-
-            std.log.info("receiving data from the slave", .{});
-            i2c2.read_blocking(ADDR, &to_read, counter.make_ms_timeout(1000)) catch |err| {
-                std.log.err("fail to read data | error {any}", .{err});
-                if (err == error.UnrecoverableError) {
-                    //Reset I2C peripheral
-                    i2c2.apply(config);
-                } else {
-                    i2c2.clear_errors();
-                }
-                continue;
-            };
-            std.log.info("data received: {}", .{to_read[0]});
+            std.log.info("found device at 0x{x}", .{val});
             counter.sleep_ms(1000);
         }
     }
