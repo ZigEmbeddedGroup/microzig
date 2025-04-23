@@ -11,3 +11,6 @@ Licensed under the [Infineon Permissive Binary License](./LICENSE-permissive-bin
 ## Changelog
 
 * 2025-04-23: Firmware 7.95.88 (`cf1d613`) obtained from Infineon GitHub repo (source 2)
+
+## Notes
+* The Pico SDK and Embassy use a slightly older version of the CYW-43439 firmware. In case of issues with the driver code, please consider testing against the older firmware.
