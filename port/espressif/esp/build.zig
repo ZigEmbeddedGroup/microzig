@@ -14,7 +14,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const hal: microzig.HardwareAbstractionLayer = .{
-        .root_source_file = b.path("src/hal/hal.zig"),
+        .root_source_file = b.path("src/hal.zig"),
     };
 
     const chip_esp32_c3: microzig.Target = .{
