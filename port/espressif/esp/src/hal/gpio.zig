@@ -49,14 +49,14 @@ pub const Event = enum(u3) {
 
 pub const InputSignal = enum(u8) {
     // TODO: Other signals
-    I2CEXT0_SCL = 53,
-    I2CEXT0_SDA = 54,
+    i2cext0_scl = 53,
+    i2cext0_sda = 54,
 };
 
 pub const OutputSignal = enum(u8) {
     // TODO: Other signals
-    I2CEXT0_SCL = 53,
-    I2CEXT0_SDA = 54,
+    i2cext0_scl = 53,
+    i2cext0_sda = 54,
     gpio = 128,
 };
 
