@@ -575,6 +575,42 @@ const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
+// TODO: Get this defined with some compile-time target config
+const flash = false;
+
+pub const ram_image_entry = struct {
+    // TODO: Remove export in favour of @export?
+    // export fn _entry_point() callconv(.c) void {
+    // export fn _entry_point() callconv(.c) void {
+    // export fn _entry_point() callconv(.naked) noreturn {
+    pub fn _entry_point() callconv(.c) void {
+        var i: u8 = 0;
+        i += 1;
+        asm volatile (
+        // This is garbage, just easy to spot in the disassembly
+            \\.dcb 0xde, 0xad
+            // Get address of vector table
+            \\mov r0, %[_vector_table]
+            // Get address of VTOR register
+            \\mov r1, %[_VTOR_ADDRESS]
+            // Set VTOR to point to ram table
+            \\str r0, [r1]
+            // Needed?
+            //\\eor r2, r2
+            // Load stack address from vector table
+            \\ldm r0!, {r1, r2}
+            // Set sp
+            \\msr msp, r1
+            // Branch to _start (reset vector)
+            \\bx r2
+            :
+            : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
+              [_VTOR_ADDRESS] "r" (0xe000ed08),
+            : "memory", "r0", "r1", "r2"
+        );
+    }
+};
+
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
@@ -588,25 +624,27 @@ pub const startup_logic = struct {
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.c) noreturn {
+        // TODO: Can't be comptime, since we don't have the microzig_xxx symbols until we link
+        comptime if (flash) {
+            // fill .bss with zeroes
+            {
+                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
+                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
+                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
 
-        // fill .bss with zeroes
-        {
-            const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-            const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+                @memset(bss_start[0..bss_len], 0);
+            }
 
-            @memset(bss_start[0..bss_len], 0);
-        }
+            // load .data from flash
+            {
+                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
+                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
+                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
 
-        // load .data from flash
-        {
-            const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-            const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-            const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
-
-            @memcpy(data_start[0..data_len], data_src[0..data_len]);
-        }
+                @memcpy(data_start[0..data_len], data_src[0..data_len]);
+            }
+        };
 
         // Move vector table to RAM if requested
         if (interrupt.has_ram_vectors()) {
@@ -641,6 +679,7 @@ pub const startup_logic = struct {
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
+            // TODO: This is _after_ the entrypoint? We need code that actually respects it
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
@@ -655,7 +694,16 @@ pub const startup_logic = struct {
     };
 };
 
+// Called by core/src/start.zig at comptime
 pub fn export_startup_logic() void {
+    // TODO: only if ram image
+    @export(&ram_image_entry._entry_point, .{
+        .name = "_entry_point",
+        .section = ".hello",
+        .linkage = .strong,
+    });
+
+    // Jumps to microzig_main
     @export(&startup_logic._start, .{
         .name = "_start",
     });

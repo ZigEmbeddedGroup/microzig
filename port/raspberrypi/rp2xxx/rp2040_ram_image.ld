@@ -5,11 +5,13 @@
  * Target Chip: RP2040
  */
 
-ENTRY(microzig_main);
+ENTRY(_entry_point);
 
 MEMORY
 {
-  ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000
+  hello  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
+  ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x0003ff00
+  /* ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000 */
 }
 /* A RAM only binary */
 /* ▪ 0x20000000-0x20042000 Main RAM: Blocks can be positioned with byte alignment. */
@@ -17,19 +19,14 @@ MEMORY
 /*   as RAM with same properties as Main RAM). */
 SECTIONS
 {
-/* NOTE: The rp2040 booloader has a PICO_NO_FLASH define used to configure the bootloader
-  /* TODO: Does it need the bootloader? It only sets up XIP. */
-  /* .boot2 : { */
-  /*   __boot2_start__ = .; */
-  /*   KEEP (*(.boot2)) */
-  /*   __boot2_end__ = .; */
-  /* } > flash0 */
-
-  /* ASSERT(__boot2_end__ - __boot2_start__ == 256, */
-  /*   "ERROR: Pico second stage bootloader must be 256 bytes in size") */
+  .hello :
+  {
+     KEEP(*(.hello*))
+  } > hello
 
   .text :
   {
+     /* Using microzig_flash_start here because we put the vector table here */
      KEEP(*(microzig_flash_start))
      *(.text*)
      *(.rodata*)
@@ -51,17 +48,17 @@ SECTIONS
   /* TODO: We would like to skip over the clearing of bss and writing of data since it's already in ram */
   .data :
   {
-     microzig_data_start = .;
+     /* microzig_data_start = .; */
      KEEP(*(.time_critical*))
      *(.data*)
-     microzig_data_end = .;
+     /* microzig_data_end = .; */
   } > ram0
 
   .bss :
   {
-      microzig_bss_start = .;
+      /* microzig_bss_start = .; */
       *(.bss*)
-      microzig_bss_end = .;
+      /* microzig_bss_end = .; */
   } > ram0
 
   /* .flash_end : */
@@ -69,5 +66,6 @@ SECTIONS
   /*   microzig_flash_end = .; */
   /* } > flash0 */
 
+  /* Would not be used */
   microzig_data_load_start = LOADADDR(.data);
 }
