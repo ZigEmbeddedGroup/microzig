@@ -33,18 +33,18 @@ pub const DriveStrength = enum(u2) {
 
 /// Alternative pin functions
 pub const AlternateFunction = enum(u2) {
-    Function0 = 0,
-    Function1 = 1,
-    Function2 = 2,
+    function0 = 0,
+    function1 = 1,
+    function2 = 2,
 };
 
 /// Interrupt events
 pub const Event = enum(u3) {
-    RisingEdge = 1,
-    FallingEdge = 2,
-    AnyEdge = 3,
-    LowLevel = 4,
-    HighLevel = 5,
+    rising_edge = 1,
+    falling_edge = 2,
+    any_edge = 3,
+    low_level = 4,
+    high_level = 5,
 };
 
 pub const InputSignal = enum(u8) {
