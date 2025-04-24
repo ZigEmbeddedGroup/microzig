@@ -323,7 +323,9 @@ var uart_logger: ?UART.Writer = null;
 /// };
 pub fn init_logger(uart: UART) void {
     uart_logger = uart.writer();
-    uart_logger.?.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    if (uart_logger) |logger| {
+        logger.writeAll("\r\n================ STARTING NEW LOGGER ================\r\n") catch {};
+    }
 }
 
 /// Disables logging via the uart instance.
