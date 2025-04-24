@@ -29,8 +29,17 @@ pub fn main() !void {
     });
     rp2xxx.uart.init_logger(uart);
 
+    const cyw43_config  = drivers.CYW43_Pio_Device_Config{
+        .spi = .{
+            .pio = pio.num(0),
+            .cs_pin = gpio.num(25),
+            .io_pin = gpio.num(24),
+            .clk_pin = gpio.num(29),
+         },
+        .pwr_pin = gpio.num(23),
+    };
     var cyw43: CYW43_Pio_Device = .{};
-    try cyw43.init(pio.num(0), gpio.num(25), gpio.num(24), gpio.num(29), gpio.num(23));
+    try cyw43.init(cyw43_config);
 
     cyw43.test_loop();
 }

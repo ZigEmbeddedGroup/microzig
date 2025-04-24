@@ -38,39 +38,46 @@ const cyw43spi_program = blk: {
     , .{}).get_program_by_name("cyw43spi");
 };
 
-pub fn init(pio: hal.pio.Pio, cs_pin: hal.gpio.Pin, io_pin: hal.gpio.Pin, clk_pin: hal.gpio.Pin) !Cyw43PioSpi {
-    const sm = try pio.claim_unused_state_machine();
+pub const Cyw43PioSpi_Config = struct {
+    pio: hal.pio.Pio,
+    cs_pin: hal.gpio.Pin,
+    io_pin: hal.gpio.Pin,
+    clk_pin: hal.gpio.Pin,
+};
+
+pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
+    const sm = try config.pio.claim_unused_state_machine();
 
     // Chip select pin setup
-    cs_pin.set_function(.sio);
-    cs_pin.set_direction(.out);
-    cs_pin.put(1);
+    config.cs_pin.set_function(.sio);
+    config.cs_pin.set_direction(.out);
+    config.cs_pin.put(1);
 
     // IO pin setup
-    pio.gpio_init(io_pin);
-    io_pin.set_output_disabled(false);
-    io_pin.set_pull(.disabled);
-    io_pin.set_schmitt_trigger(.enabled);
+    config.pio.gpio_init(config.io_pin);
+    config.io_pin.set_output_disabled(false);
+    config.io_pin.set_pull(.disabled);
+    config.io_pin.set_schmitt_trigger(.enabled);
 
-    pio.set_input_sync_bypass(@truncate(@intFromEnum(io_pin)));
+    config.pio.set_input_sync_bypass(to_pio_pin_num(config.io_pin));
 
-    io_pin.set_drive_strength(.@"12mA");
-    io_pin.set_slew_rate(.fast);
+    config.io_pin.set_drive_strength(.@"12mA");
+    config.io_pin.set_slew_rate(.fast);
 
     // Clock pin setup
-    pio.gpio_init(clk_pin);
-    clk_pin.set_output_disabled(false);
-    clk_pin.set_drive_strength(.@"12mA");
-    clk_pin.set_slew_rate(.fast);
+    config.pio.gpio_init(config.clk_pin);
+    config.clk_pin.set_output_disabled(false);
+    config.clk_pin.set_drive_strength(.@"12mA");
+    config.clk_pin.set_slew_rate(.fast);
 
-    try pio.sm_load_and_start_program(sm, cyw43spi_program, .{
+    try config.pio.sm_load_and_start_program(sm, cyw43spi_program, .{
         // Default max value from pico-sdk 62.5Mhz
         .clkdiv = .{ .int = 2, .frac = 0 },
         .pin_mappings = .{
-            .out = .{ .base = @truncate(@intFromEnum(io_pin)), .count = 1 },
-            .set = .{ .base = @truncate(@intFromEnum(io_pin)), .count = 1 },
-            .side_set = .{ .base = @truncate(@intFromEnum(clk_pin)), .count = 1 },
-            .in_base = @truncate(@intFromEnum(io_pin)),
+            .out = .{ .base = to_pio_pin_num(config.io_pin), .count = 1 },
+            .set = .{ .base = to_pio_pin_num(config.io_pin), .count = 1 },
+            .side_set = .{ .base = to_pio_pin_num(config.clk_pin), .count = 1 },
+            .in_base = to_pio_pin_num(config.io_pin),
         },
         .shift = .{
             .out_shiftdir = .left,
@@ -80,13 +87,17 @@ pub fn init(pio: hal.pio.Pio, cs_pin: hal.gpio.Pin, io_pin: hal.gpio.Pin, clk_pi
         },
     });
 
-    pio.sm_set_pindir(sm, @truncate(@intFromEnum(clk_pin)), 1, .out);
-    pio.sm_set_pindir(sm, @truncate(@intFromEnum(io_pin)), 1, .out);
+    config.pio.sm_set_pindir(sm, to_pio_pin_num(config.clk_pin), 1, .out);
+    config.pio.sm_set_pindir(sm, to_pio_pin_num(config.io_pin), 1, .out);
 
-    pio.sm_set_pin(sm, @truncate(@intFromEnum(clk_pin)), 1, 0);
-    pio.sm_set_pin(sm, @truncate(@intFromEnum(io_pin)), 1, 0);
+    config.pio.sm_set_pin(sm, to_pio_pin_num(config.clk_pin), 1, 0);
+    config.pio.sm_set_pin(sm, to_pio_pin_num(config.io_pin), 1, 0);
 
-    return .{ .pio = pio, .sm = sm, .cs_pin = cs_pin, .io_pin = io_pin, .clk_pin = clk_pin };
+    return .{ .pio = config.pio, .sm = sm, .cs_pin = config.cs_pin, .io_pin = config.io_pin, .clk_pin = config.clk_pin };
+}
+
+fn to_pio_pin_num(pin: hal.gpio.Pin) u5 {
+    return @truncate(@intFromEnum(pin));
 }
 
 pub const Cyw43PioSpi = struct {
