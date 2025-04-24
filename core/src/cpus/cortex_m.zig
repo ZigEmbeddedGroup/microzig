@@ -364,7 +364,8 @@ pub const interrupt = struct {
             }
 
             if (!interrupt.has_ram_vectors()) {
-                @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
+                @compileError("RAM vectors are disabled. Consider adding .platform = " ++
+                    ".{ .ram_vectors = true } to your microzig_options");
             }
 
             var vector_table: *volatile [vector_count]Handler = @ptrFromInt(peripherals.scb.VTOR);
@@ -513,6 +514,7 @@ pub const interrupt = struct {
         return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
     }
 
+    // TODO: Do similar for ram only images?
     pub inline fn has_ram_vectors() bool {
         return @hasField(@TypeOf(microzig_options.cpu), "ram_vectors") and microzig_options.cpu.ram_vectors;
     }
@@ -573,6 +575,8 @@ pub fn clrex() void {
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
+// TODO: If we want to reuse this, we would set this at comptime since the flash version would never
+// make it into the binary
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
 // TODO: Get this defined with some compile-time target config
@@ -584,11 +588,8 @@ pub const ram_image_entry = struct {
     // export fn _entry_point() callconv(.c) void {
     // export fn _entry_point() callconv(.naked) noreturn {
     pub fn _entry_point() callconv(.c) void {
-        var i: u8 = 0;
-        i += 1;
         asm volatile (
-        // This is garbage, just easy to spot in the disassembly
-            \\.dcb 0xde, 0xad
+            \\
             // Get address of vector table
             \\mov r0, %[_vector_table]
             // Get address of VTOR register
@@ -605,7 +606,9 @@ pub const ram_image_entry = struct {
             \\bx r2
             :
             : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
-              [_VTOR_ADDRESS] "r" (0xe000ed08),
+              // TODO: Why not use &microzig.hal.PPB.VTOR?
+              [_VTOR_ADDRESS] "r" (peripherals.scb.VTOR),
+              // [_VTOR_ADDRESS] "r" (0xe000ed08),
             : "memory", "r0", "r1", "r2"
         );
     }
@@ -647,10 +650,11 @@ pub const startup_logic = struct {
         };
 
         // Move vector table to RAM if requested
+        // TODO: Make sure that this isn't set for ram image
         if (interrupt.has_ram_vectors()) {
             // Copy vector table to RAM and set VTOR to point to it
 
-            if (interrupt.has_ram_vectors_section()) {
+            if (comptime interrupt.has_ram_vectors_section()) {
                 @export(&ram_vectors, .{
                     .name = "_ram_vectors",
                     .section = "ram_vectors",
@@ -680,6 +684,8 @@ pub const startup_logic = struct {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
             // TODO: This is _after_ the entrypoint? We need code that actually respects it
+            // For some reason the ELF entry point is set to this, even if i try to set ENTRYPOINT
+            // in the linker script
             .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
