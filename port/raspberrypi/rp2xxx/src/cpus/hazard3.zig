@@ -58,7 +58,7 @@ pub const interrupt = struct {
         csr.mstatus.clear(.{ .mie = 1 });
     }
 
-     pub const core = struct {
+    pub const core = struct {
         pub fn is_enabled(comptime int: CoreInterrupt) bool {
             return csr.mie.read() & (1 << @intFromEnum(int)) != 0;
         }
@@ -258,7 +258,7 @@ pub const startup_logic = struct {
         @panic("unhandled core interrupt");
     }
 
-    pub export fn _vector_table() align(64) linksection("core_vectors") callconv(.naked)  noreturn {
+    pub export fn _vector_table() align(64) linksection("core_vectors") callconv(.naked) noreturn {
         comptime {
             // NOTE: using the union variant .naked here is fine because both variants have the same layout
             @export(if (microzig_options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
@@ -301,7 +301,8 @@ pub const startup_logic = struct {
             //        If it is not here the compiler fails to generate
             //        the code that saves and restores the registers.
 
-            var x: i32 = 0; x += 1;
+            var x: i32 = 0;
+            x += 1;
         }
 
         if (interrupt.has_ram_vectors()) {
@@ -321,9 +322,7 @@ pub const startup_logic = struct {
                 \\
                 \\no_more_irqs:
             );
-        }
-        else
-        {
+        } else {
             asm volatile (
                 \\csrrsi a0, 0xbe4, 1
                 \\bltz a0, no_more_irqs

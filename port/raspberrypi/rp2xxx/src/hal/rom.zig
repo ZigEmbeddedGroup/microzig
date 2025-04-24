@@ -17,14 +17,14 @@ const chip = microzig.hal.compatibility.chip;
 
 /// Function codes to lookup public functions that provide useful RP2040 functionality
 pub const Code = enum(u32) {
-    popcount32 = rom_table_code('P', '3'),  // Only avaiable on: RP2040
-    reverse32 = rom_table_code('R', '3'),   // Only avaiable on: RP2040
-    clz32 = rom_table_code('L', '3'),       // Only avaiable on: RP2040
-    ctz32 = rom_table_code('T', '3'),       // Only avaiable on: RP2040
-    memset = rom_table_code('M', 'S'),      // Only avaiable on: RP2040
-    memset4 = rom_table_code('S', '4'),     // Only avaiable on: RP2040
-    memcpy = rom_table_code('M', 'C'),      // Only avaiable on: RP2040
-    memcpy44 = rom_table_code('C', '4'),    // Only avaiable on: RP2040
+    popcount32 = rom_table_code('P', '3'), // Only avaiable on: RP2040
+    reverse32 = rom_table_code('R', '3'), // Only avaiable on: RP2040
+    clz32 = rom_table_code('L', '3'), // Only avaiable on: RP2040
+    ctz32 = rom_table_code('T', '3'), // Only avaiable on: RP2040
+    memset = rom_table_code('M', 'S'), // Only avaiable on: RP2040
+    memset4 = rom_table_code('S', '4'), // Only avaiable on: RP2040
+    memcpy = rom_table_code('M', 'C'), // Only avaiable on: RP2040
+    memcpy44 = rom_table_code('C', '4'), // Only avaiable on: RP2040
     connect_internal_flash = rom_table_code('I', 'F'),
     flash_exit_xip = rom_table_code('E', 'X'),
     flash_range_erase = rom_table_code('R', 'E'),

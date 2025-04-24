@@ -15,21 +15,16 @@ const chip = rp2xxx.compatibility.chip;
 const timer = if (chip == .RP2040) peripherals.TIMER else peripherals.TIMER0;
 const timer_irq = if (chip == .RP2040) .TIMER_IRQ_0 else .TIMER0_IRQ_0;
 
-
 pub const rp2040_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    .interrupts = .{
-        .TIMER_IRQ_0 = .{ .c = timer_interrupt }
-     },
+    .interrupts = .{ .TIMER_IRQ_0 = .{ .c = timer_interrupt } },
 };
 
 pub const rp2350_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = rp2xxx.uart.logFn,
-    .interrupts = .{
-        .TIMER0_IRQ_0= .{ .c = timer_interrupt }
-     },
+    .interrupts = .{ .TIMER0_IRQ_0 = .{ .c = timer_interrupt } },
 };
 
 pub const microzig_options = if (chip == .RP2040) rp2040_options else rp2350_options;

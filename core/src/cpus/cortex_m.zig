@@ -38,7 +38,7 @@ pub const ExternalInterrupt = blk: {
     // Note: The value of each field is the interrupt number (VTOR offset),
     //       not the offset into the whole vector table.
 
-    const vector_info   = @typeInfo(Interrupt).@"enum";
+    const vector_info = @typeInfo(Interrupt).@"enum";
     const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
@@ -74,7 +74,7 @@ pub const Exception = blk: {
     // Note: The value of each field is the index into the whole
     //       vector table, not the negative offset from VTOR.
 
-    const vector_info   = @typeInfo(Interrupt).@"enum";
+    const vector_info = @typeInfo(Interrupt).@"enum";
     const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
@@ -106,7 +106,6 @@ pub const Exception = blk: {
 };
 
 pub const interrupt = struct {
-
     pub const Priority = enum(u8) {
         lowest = 0,
         highest = 15,
@@ -136,15 +135,11 @@ pub const interrupt = struct {
     }
 
     pub const exception = struct {
-
         const ppb = microzig.chip.peripherals.PPB;
 
         pub fn is_enabled(comptime excpt: Exception) bool {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
                         .UsageFault => return (raw & 0x0004_0000) != 0,
@@ -171,10 +166,7 @@ pub const interrupt = struct {
 
         pub fn enable(comptime excpt: Exception) void {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .UsageFault => ppb.SHCSR.raw |= 0x0004_0000,
                         .BusFault => ppb.SHCSR.raw |= 0x0002_0000,
@@ -195,14 +187,11 @@ pub const interrupt = struct {
                 },
                 else => @compileError("not supported on this platform"),
             }
-       }
+        }
 
         pub fn disable(comptime excpt: Exception) void {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0004_0000),
                         .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0002_0000),
@@ -232,10 +221,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) return (ppb.SHCSR.raw & 0x0000_8000) != 0;
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
                         .SVCall => return (raw & 0x0000_8000) != 0,
@@ -270,10 +256,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw |= 0x0000_8000;
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .SVCall => ppb.SHCSR.raw |= 0x0000_8000,
                         .BusFault => ppb.SHCSR.raw |= 0x0000_4000,
@@ -306,10 +289,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .SVCall => ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000),
                         .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_4000),
@@ -357,7 +337,7 @@ pub const interrupt = struct {
                     ppb.SHPR2.raw &= ~(@as(u32, 0xFF) << shift);
                     ppb.SHPR2.raw |= @as(u32, @intFromEnum(priority)) << shift;
                 },
-                3 =>     {
+                3 => {
                     ppb.SHPR3.raw &= ~(@as(u32, 0xFF) << shift);
                     ppb.SHPR3.raw |= @as(u32, @intFromEnum(priority)) << shift;
                 },
