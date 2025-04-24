@@ -4,6 +4,7 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
+pub const atomic = @import("hal/atomic.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
@@ -36,6 +37,8 @@ comptime {
     if (!builtin.is_test) {
         _ = image_def;
     }
+
+    _ = @import("hal/atomic.zig");
 }
 
 /// A default clock configuration with sensible defaults that will work
