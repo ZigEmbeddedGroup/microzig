@@ -21,189 +21,189 @@ const AUX_SRC_SETTING_SRC_REG = common.AUX_SRC_SETTING_SRC_REG;
 
 pub const Source =
     enum {
-    src_rosc,
-    src_xosc,
-    src_gpin0,
-    src_gpin1,
-    pll_sys,
-    pll_usb,
-    clk_sys,
-    clk_ref,
-    clk_usb,
-    clk_adc,
-    clk_rtc,
+        src_rosc,
+        src_xosc,
+        src_gpin0,
+        src_gpin1,
+        pll_sys,
+        pll_usb,
+        clk_sys,
+        clk_ref,
+        clk_usb,
+        clk_adc,
+        clk_rtc,
 
-    /// Gets the integer value for the given clock generator's _CTRL[SRC] bitfield that
-    /// configures the given source. This is only relevant to glitchless sources (ref/sys).
-    pub fn src_for(source: Source, generator: Generator) u32 {
-        assert(generator.has_glitchless_mux());
+        /// Gets the integer value for the given clock generator's _CTRL[SRC] bitfield that
+        /// configures the given source. This is only relevant to glitchless sources (ref/sys).
+        pub fn src_for(source: Source, generator: Generator) u32 {
+            assert(generator.has_glitchless_mux());
 
-        return switch (generator) {
-            .sys => src: {
-                const ret: u32 = switch (source) {
-                    .clk_ref => 0,
-                    else => AUX_SRC_SETTING_SRC_REG,
-                };
-                break :src ret;
-            },
-            .ref => src: {
-                const ret: u32 = switch (source) {
-                    .src_rosc => 0,
-                    .src_xosc => 2,
-                    else => AUX_SRC_SETTING_SRC_REG,
-                };
-                break :src ret;
-            },
-            else => @panic("Only allowed for glitchless SYS and REF clocks"),
-        };
-    }
+            return switch (generator) {
+                .sys => src: {
+                    const ret: u32 = switch (source) {
+                        .clk_ref => 0,
+                        else => AUX_SRC_SETTING_SRC_REG,
+                    };
+                    break :src ret;
+                },
+                .ref => src: {
+                    const ret: u32 = switch (source) {
+                        .src_rosc => 0,
+                        .src_xosc => 2,
+                        else => AUX_SRC_SETTING_SRC_REG,
+                    };
+                    break :src ret;
+                },
+                else => @panic("Only allowed for glitchless SYS and REF clocks"),
+            };
+        }
 
-    /// Gets the integer value for the given clock generator's _CTRL[AUXSRC] bitfield that
-    /// configures the given source.
-    pub fn aux_src_for(source: Source, generator: Generator) u32 {
-        return switch (generator) {
-            .sys => auxsrc: {
-                const ret: u32 = switch (source) {
-                    .pll_sys => 0,
-                    .pll_usb => 1,
-                    .src_rosc => 2,
-                    .src_xosc => 3,
-                    .src_gpin0 => 4,
-                    .src_gpin1 => 5,
-                    else => @panic("invalid aux source for generator"),
-                };
-                break :auxsrc ret;
-            },
-            .ref => auxsrc: {
-                const ret: u32 = switch (source) {
-                    .pll_usb => 0,
-                    .src_gpin0 => 1,
-                    .src_gpin1 => 2,
-                    else => @panic("invalid aux source for generator"),
-                };
-                break :auxsrc ret;
-            },
-            .peri => auxsrc: {
-                const ret: u32 = switch (source) {
-                    .clk_sys => 0,
-                    .pll_sys => 1,
-                    .pll_usb => 2,
-                    .src_rosc => 3,
-                    .src_xosc => 4,
-                    .src_gpin0 => 5,
-                    .src_gpin1 => 6,
-                    else => @panic("invalid aux source for generator"),
-                };
-                break :auxsrc ret;
-            },
-            .usb, .adc, .rtc => auxsrc: {
-                const ret: u32 = switch (source) {
-                    .pll_usb => 0,
-                    .pll_sys => 1,
-                    .src_rosc => 2,
-                    .src_xosc => 3,
-                    .src_gpin0 => 4,
-                    .src_gpin1 => 5,
-                    else => @panic("invalid aux source for generator"),
-                };
-                break :auxsrc ret;
-            },
-            .gpout0, .gpout1, .gpout2, .gpout3 => auxsrc: {
-                const ret: u32 = switch (source) {
-                    .pll_sys => 0,
-                    .src_gpin0 => 1,
-                    .src_gpin1 => 2,
-                    .pll_usb => 3,
-                    .src_rosc => 4,
-                    .src_xosc => 5,
-                    .clk_sys => 6,
-                    .clk_usb => 7,
-                    .clk_adc => 8,
-                    .clk_rtc => 9,
-                    .clk_ref => 10,
-                };
-                break :auxsrc ret;
-            },
-        };
-    }
+        /// Gets the integer value for the given clock generator's _CTRL[AUXSRC] bitfield that
+        /// configures the given source.
+        pub fn aux_src_for(source: Source, generator: Generator) u32 {
+            return switch (generator) {
+                .sys => auxsrc: {
+                    const ret: u32 = switch (source) {
+                        .pll_sys => 0,
+                        .pll_usb => 1,
+                        .src_rosc => 2,
+                        .src_xosc => 3,
+                        .src_gpin0 => 4,
+                        .src_gpin1 => 5,
+                        else => @panic("invalid aux source for generator"),
+                    };
+                    break :auxsrc ret;
+                },
+                .ref => auxsrc: {
+                    const ret: u32 = switch (source) {
+                        .pll_usb => 0,
+                        .src_gpin0 => 1,
+                        .src_gpin1 => 2,
+                        else => @panic("invalid aux source for generator"),
+                    };
+                    break :auxsrc ret;
+                },
+                .peri => auxsrc: {
+                    const ret: u32 = switch (source) {
+                        .clk_sys => 0,
+                        .pll_sys => 1,
+                        .pll_usb => 2,
+                        .src_rosc => 3,
+                        .src_xosc => 4,
+                        .src_gpin0 => 5,
+                        .src_gpin1 => 6,
+                        else => @panic("invalid aux source for generator"),
+                    };
+                    break :auxsrc ret;
+                },
+                .usb, .adc, .rtc => auxsrc: {
+                    const ret: u32 = switch (source) {
+                        .pll_usb => 0,
+                        .pll_sys => 1,
+                        .src_rosc => 2,
+                        .src_xosc => 3,
+                        .src_gpin0 => 4,
+                        .src_gpin1 => 5,
+                        else => @panic("invalid aux source for generator"),
+                    };
+                    break :auxsrc ret;
+                },
+                .gpout0, .gpout1, .gpout2, .gpout3 => auxsrc: {
+                    const ret: u32 = switch (source) {
+                        .pll_sys => 0,
+                        .src_gpin0 => 1,
+                        .src_gpin1 => 2,
+                        .pll_usb => 3,
+                        .src_rosc => 4,
+                        .src_xosc => 5,
+                        .clk_sys => 6,
+                        .clk_usb => 7,
+                        .clk_adc => 8,
+                        .clk_rtc => 9,
+                        .clk_ref => 10,
+                    };
+                    break :auxsrc ret;
+                },
+            };
+        }
 
-    /// Determines for a given generator if this source will need to be
-    /// set in the AUX_SRC register
-    pub fn is_aux_src_for(source: Source, generator: Generator) bool {
-        return switch (generator) {
-            .sys => switch (source) {
-                .clk_ref => false,
+        /// Determines for a given generator if this source will need to be
+        /// set in the AUX_SRC register
+        pub fn is_aux_src_for(source: Source, generator: Generator) bool {
+            return switch (generator) {
+                .sys => switch (source) {
+                    .clk_ref => false,
+                    else => true,
+                },
+                .ref => switch (source) {
+                    .src_rosc, .src_xosc => false,
+                    else => true,
+                },
                 else => true,
-            },
-            .ref => switch (source) {
-                .src_rosc, .src_xosc => false,
-                else => true,
-            },
-            else => true,
-        };
-    }
-};
+            };
+        }
+    };
 
 pub const Generator =
     enum(u32) {
-    gpout0 = 0,
-    gpout1,
-    gpout2,
-    gpout3,
-    ref,
-    sys,
-    peri,
-    usb,
-    adc,
-    rtc,
+        gpout0 = 0,
+        gpout1,
+        gpout2,
+        gpout3,
+        ref,
+        sys,
+        peri,
+        usb,
+        adc,
+        rtc,
 
-    const Impl = common.GeneratorImpl(Generator, Source, u24);
-    pub const Regs = Impl.Regs;
+        const Impl = common.GeneratorImpl(Generator, Source, u24);
+        pub const Regs = Impl.Regs;
 
-    pub const get_regs = Impl.get_regs;
-    pub const has_glitchless_mux = Impl.has_glitchless_mux;
-    pub const enable = Impl.enable;
-    pub const selected = Impl.selected;
-    pub const clear_source = Impl.clear_source;
-    pub const disable = Impl.disable;
-    pub const set_source = Impl.set_source;
-    pub const set_aux_source = Impl.set_aux_source;
-    pub const apply = Impl.apply;
+        pub const get_regs = Impl.get_regs;
+        pub const has_glitchless_mux = Impl.has_glitchless_mux;
+        pub const enable = Impl.enable;
+        pub const selected = Impl.selected;
+        pub const clear_source = Impl.clear_source;
+        pub const disable = Impl.disable;
+        pub const set_source = Impl.set_source;
+        pub const set_aux_source = Impl.set_aux_source;
+        pub const apply = Impl.apply;
 
-    pub fn set_div(comptime generator: Generator, comptime div: u32) void {
-        comptime {
-            if ((div & 0xFF) > 0)
-                @compileError("TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches");
-            const int_component: u24 = @intCast(div >> 8);
+        pub fn set_div(comptime generator: Generator, comptime div: u32) void {
+            comptime {
+                if ((div & 0xFF) > 0)
+                    @compileError("TODO: Currently don't support fractional clock dividers due to potential clock jitter headaches");
+                const int_component: u24 = @intCast(div >> 8);
 
-            switch (generator) {
-                .gpout0, .gpout1, .gpout2, .gpout3, .sys, .rtc => {
-                    // No checks required on int component, can be full 24 bits
-                },
-                .usb, .ref, .adc => {
-                    if (int_component > std.math.maxInt(u2)) @compileError("CLK_REF only supports integer divisors of 2 bits");
-                },
-                .peri => {
-                    if (int_component != 1) @compileError("CLK_PERI only supports a peripheral divisor of 1");
-                },
+                switch (generator) {
+                    .gpout0, .gpout1, .gpout2, .gpout3, .sys, .rtc => {
+                        // No checks required on int component, can be full 24 bits
+                    },
+                    .usb, .ref, .adc => {
+                        if (int_component > std.math.maxInt(u2)) @compileError("CLK_REF only supports integer divisors of 2 bits");
+                    },
+                    .peri => {
+                        if (int_component != 1) @compileError("CLK_PERI only supports a peripheral divisor of 1");
+                    },
+                }
             }
+
+            // Peripheral clock divisor always fixed to 1
+            if (generator == .peri)
+                return;
+
+            generator.get_regs().div = div;
         }
 
-        // Peripheral clock divisor always fixed to 1
-        if (generator == .peri)
-            return;
+        pub fn get_div(generator: Generator) u32 {
+            // Peripheral clock divisor is always fixed to 1
+            if (generator == .peri)
+                return 1;
 
-        generator.get_regs().div = div;
-    }
-
-    pub fn get_div(generator: Generator) u32 {
-        // Peripheral clock divisor is always fixed to 1
-        if (generator == .peri)
-            return 1;
-
-        return generator.get_regs().div;
-    }
-};
+            return generator.get_regs().div;
+        }
+    };
 
 pub const config = struct {
     pub const Global = struct {
@@ -363,12 +363,12 @@ pub const config = struct {
             // to be a suitable clock for 1 second reference.
             cfg.rtc =
                 .{
-                .input = .{
-                    .source = .pll_usb,
-                    .freq = 48_000_000,
-                },
-                .integer_divisor = 733,
-            };
+                    .input = .{
+                        .source = .pll_usb,
+                        .freq = 48_000_000,
+                    },
+                    .integer_divisor = 733,
+                };
 
             // CLK_PERI is sourced from CLK_SYS, divisor hard coded to 1 on RP2040
             cfg.peri = .{

@@ -188,37 +188,37 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     const usart_name = std.fmt.comptimePrint("USART{d}", .{index});
     const tx_pin =
         if (pins.tx) |tx|
-        if (uart.is_valid_pin(tx, index, .tx))
-            tx
-        else
-            @compileError(std.fmt.comptimePrint("Tx pin {s} is not valid for UART{}", .{ tx.name, index }))
-    else switch (index) {
-        // Provide default tx pins if no pin is specified
-        1 => microzig.Pin("PA9"),
-        2 => microzig.Pin("PA2"),
-        3 => microzig.Pin("PB10"),
-        4 => microzig.Pin("PA0"),
-        5 => microzig.Pin("PC12"),
-        6 => microzig.Pin("PC6"),
-        else => unreachable,
-    };
+            if (uart.is_valid_pin(tx, index, .tx))
+                tx
+            else
+                @compileError(std.fmt.comptimePrint("Tx pin {s} is not valid for UART{}", .{ tx.name, index }))
+        else switch (index) {
+            // Provide default tx pins if no pin is specified
+            1 => microzig.Pin("PA9"),
+            2 => microzig.Pin("PA2"),
+            3 => microzig.Pin("PB10"),
+            4 => microzig.Pin("PA0"),
+            5 => microzig.Pin("PC12"),
+            6 => microzig.Pin("PC6"),
+            else => unreachable,
+        };
 
     const rx_pin =
         if (pins.rx) |rx|
-        if (uart.is_valid_pin(rx, index, .rx))
-            rx
-        else
-            @compileError(std.fmt.comptimePrint("Rx pin {s} is not valid for UART{}", .{ rx.name, index }))
-    else switch (index) {
-        // Provide default rx pins if no pin is specified
-        1 => microzig.Pin("PA10"),
-        2 => microzig.Pin("PA3"),
-        3 => microzig.Pin("PB11"),
-        4 => microzig.Pin("PA1"),
-        5 => microzig.Pin("PD2"),
-        6 => microzig.Pin("PC7"),
-        else => unreachable,
-    };
+            if (uart.is_valid_pin(rx, index, .rx))
+                rx
+            else
+                @compileError(std.fmt.comptimePrint("Rx pin {s} is not valid for UART{}", .{ rx.name, index }))
+        else switch (index) {
+            // Provide default rx pins if no pin is specified
+            1 => microzig.Pin("PA10"),
+            2 => microzig.Pin("PA3"),
+            3 => microzig.Pin("PB11"),
+            4 => microzig.Pin("PA1"),
+            5 => microzig.Pin("PD2"),
+            6 => microzig.Pin("PC7"),
+            else => unreachable,
+        };
 
     // USART1..3 are AF7, USART 4..6 are AF8
     const alternate_function = if (index <= 3) .af7 else .af8;
@@ -391,31 +391,31 @@ pub fn I2CController(comptime index: usize, comptime pins: microzig.i2c.Pins) ty
     const i2c_name = std.fmt.comptimePrint("I2C{d}", .{index});
     const scl_pin =
         if (pins.scl) |scl|
-        if (uart.is_valid_pin(scl, index, .scl))
-            scl
-        else
-            @compileError(std.fmt.comptimePrint("SCL pin {s} is not valid for I2C{}", .{ scl.name, index }))
-    else switch (index) {
-        // Provide default scl pins if no pin is specified
-        1 => microzig.Pin("PB6"),
-        2 => microzig.Pin("PB10"),
-        3 => microzig.Pin("PA8"),
-        else => unreachable,
-    };
+            if (uart.is_valid_pin(scl, index, .scl))
+                scl
+            else
+                @compileError(std.fmt.comptimePrint("SCL pin {s} is not valid for I2C{}", .{ scl.name, index }))
+        else switch (index) {
+            // Provide default scl pins if no pin is specified
+            1 => microzig.Pin("PB6"),
+            2 => microzig.Pin("PB10"),
+            3 => microzig.Pin("PA8"),
+            else => unreachable,
+        };
 
     const sda_pin =
         if (pins.sda) |sda|
-        if (uart.is_valid_pin(sda, index, .sda))
-            sda
-        else
-            @compileError(std.fmt.comptimePrint("SDA pin {s} is not valid for UART{}", .{ sda.name, index }))
-    else switch (index) {
-        // Provide default sda pins if no pin is specified
-        1 => microzig.Pin("PB7"),
-        2 => microzig.Pin("PB11"),
-        3 => microzig.Pin("PC9"),
-        else => unreachable,
-    };
+            if (uart.is_valid_pin(sda, index, .sda))
+                sda
+            else
+                @compileError(std.fmt.comptimePrint("SDA pin {s} is not valid for UART{}", .{ sda.name, index }))
+        else switch (index) {
+            // Provide default sda pins if no pin is specified
+            1 => microzig.Pin("PB7"),
+            2 => microzig.Pin("PB11"),
+            3 => microzig.Pin("PC9"),
+            else => unreachable,
+        };
 
     const scl_gpio = microzig.Gpio(scl_pin, .{
         .mode = .alternate_function,

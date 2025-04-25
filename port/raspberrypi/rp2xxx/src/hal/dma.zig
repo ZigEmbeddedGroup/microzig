@@ -14,7 +14,7 @@ const num_channels = switch (chip) {
     .RP2040 => 12,
     .RP2350 => 16,
 };
-var claimed_channels = std.StaticBitSet(num_channels).initEmpty();
+var claimed_channels = microzig.concurrency.AtomicStaticBitSet(num_channels){};
 
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
@@ -22,33 +22,30 @@ pub fn channel(n: u4) Channel {
     return @as(Channel, @enumFromInt(n));
 }
 
-// TODO - this operation should be atomic
 pub fn claim_unused_channel() ?Channel {
-    for (0..num_channels) |i| {
-        if (!claimed_channels.isSet(i)) {
-            claimed_channels.set(i);
-            return channel(@intCast(i));
-        }
-    }
-
-    return null;
+    const ch = claimed_channels.set_first_available() catch {
+        return null;
+    };
+    return channel(@intCast(ch));
 }
+
+pub const ChannelError = error{AlreadyClaimed};
 
 pub const Channel = enum(u4) {
     _,
 
-    /// panics if the channel is already claimed
-    pub fn claim(chan: Channel) void {
-        if (chan.is_claimed())
-            @panic("channel is already claimed!");
+    pub fn claim(chan: Channel) ChannelError!void {
+        if (!claimed_channels.set(@intFromEnum(chan)))
+            return ChannelError.AlreadyClaimed;
     }
 
     pub fn unclaim(chan: Channel) void {
-        claimed_channels.unset(@intFromEnum(chan));
+        const result = claimed_channels.reset(@intFromEnum(chan));
+        std.debug.assert(result);
     }
 
     pub fn is_claimed(chan: Channel) bool {
-        return claimed_channels.isSet(@intFromEnum(chan));
+        return claimed_channels.test_bit(@intFromEnum(chan)) == 1;
     }
 
     const Regs = extern struct {

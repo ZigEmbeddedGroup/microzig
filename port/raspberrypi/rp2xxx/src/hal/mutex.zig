@@ -8,7 +8,7 @@ const Spinlock = microzig.hal.multicore.Spinlock;
 /// Multicore safe mutex.
 pub const Mutex = struct {
     available: bool = true,
-    spinlock: Spinlock = Spinlock.init(31),
+    spinlock: Spinlock = .mutexes,
 
     /// Try to lock the mutex.
     /// Returns true if the mutex was acquired, false if the mutex
@@ -48,7 +48,7 @@ pub const Mutex = struct {
 /// number of times it was acquired before the other core can acquire it.
 pub const CoreMutex = struct {
     count: usize = 0,
-    spinlock: Spinlock = Spinlock.init(31),
+    spinlock: Spinlock = .mutexes,
     owning_core: u32 = 0,
 
     /// Try to acquire the mutex.
