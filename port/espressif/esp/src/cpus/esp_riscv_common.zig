@@ -37,7 +37,7 @@ pub const Interrupt = enum(u5) {
     interrupt31 = 31,
 };
 
-pub const InterruptHandler = *const fn (*InterruptStack) callconv(.c) void;
+pub const InterruptHandler = *const fn (*TrapStack) callconv(.c) void;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
@@ -243,7 +243,7 @@ pub fn wfe() void {
     asm volatile ("csrs 0x810, 0x1");
 }
 
-pub const InterruptStack = extern struct {
+pub const TrapStack = extern struct {
     ra: usize,
     t0: usize,
     t1: usize,
@@ -344,163 +344,163 @@ fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _exception_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt1:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt1_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt2:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt2_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt3:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt3_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt4:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt4_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt5:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt5_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt6:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt6_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt7:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt7_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt8:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt8_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt9:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt9_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt10:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt10_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt11:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt11_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt12:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt12_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt13:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt13_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt14:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt14_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt15:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt15_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt16:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt16_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt17:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt17_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt18:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt18_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt19:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt19_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt20:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt20_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt21:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt21_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt22:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt22_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt23:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt23_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt24:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt24_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt25:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt25_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt26:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt26_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt27:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt27_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt28:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt28_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt29:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt29_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt30:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt30_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt31:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt31_handler
-        \\    j interrupt_common
-        \\interrupt_common:
+        \\    j trap_common
+        \\trap_common:
         \\    sw t0, 1*4(sp)
         \\    sw t1, 2*4(sp)
         \\    sw t2, 3*4(sp)

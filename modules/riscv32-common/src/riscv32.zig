@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 pub const Exception = enum(u32) {
@@ -26,70 +27,243 @@ pub const CoreInterrupt = enum(u5) {
     MachineExternal = 0xb,
 };
 
+pub const TrapFrame = struct {
+    /// `x1`: return address, stores the address to return to after a function call or interrupt.
+    ra: u32,
+    /// `x5`: temporary register `t0`, used for intermediate values.
+    t0: u32,
+    /// `x6`: temporary register `t1`, used for intermediate values.
+    t1: u32,
+    /// `x7`: temporary register `t2`, used for intermediate values.
+    t2: u32,
+    /// `x28`: temporary register `t3`, used for intermediate values.
+    t3: u32,
+    /// `x29`: temporary register `t4`, used for intermediate values.
+    t4: u32,
+    /// `x30`: temporary register `t5`, used for intermediate values.
+    t5: u32,
+    /// `x31`: temporary register `t6`, used for intermediate values.
+    t6: u32,
+    /// `x10`: argument register `a0`. Used to pass the first argument to a function.
+    a0: u32,
+    /// `x11`: argument register `a1`. Used to pass the second argument to a function.
+    a1: u32,
+    /// `x12`: argument register `a2`. Used to pass the third argument to a function.
+    a2: u32,
+    /// `x13`: argument register `a3`. Used to pass the fourth argument to a function.
+    a3: u32,
+    /// `x14`: argument register `a4`. Used to pass the fifth argument to a function.
+    a4: u32,
+    /// `x15`: argument register `a5`. Used to pass the sixth argument to a function.
+    a5: u32,
+    /// `x16`: argument register `a6`. Used to pass the seventh argument to a function.
+    a6: u32,
+    /// `x17`: argument register `a7`. Used to pass the eighth argument to a function.
+    a7: u32,
+};
+
+pub const InterruptHandler = *const fn (*TrapFrame) callconv(.c) void;
+
 pub const interrupt = struct {
+    pub fn globally_enabled() bool {
+        return csr.core.mstatus.read().mie == 1;
+    }
+
+    pub fn enable_interrupts() void {
+        csr.core.mstatus.set(.{ .mie = 1 });
+    }
+
+    pub fn disable_interrupts() void {
+        csr.core.mstatus.clear(.{ .mie = 1 });
+    }
+
     pub const core = struct {
-        pub fn globally_enabled() bool {
-            return csr.core.mstatus.read().mie == 1;
-        }
-
-        pub fn enable_interrupts() void {
-            csr.core.mstatus.set(.{ .mie = 1 });
-        }
-
-        pub fn disable_interrupts() void {
-            csr.core.mstatus.clear(.{ .mie = 1 });
-        }
-
         pub fn is_enabled(int: CoreInterrupt) bool {
             return csr.core.mie.read() & (1 << @intFromEnum(int)) != 0;
         }
 
-        pub fn enable(comptime int: CoreInterrupt) void {
+        pub fn enable(int: CoreInterrupt) void {
             csr.core.mie.set(1 << @intFromEnum(int));
         }
 
-        pub fn disable(comptime int: CoreInterrupt) void {
+        pub fn disable(int: CoreInterrupt) void {
             csr.core.mie.clear(1 << @intFromEnum(int));
         }
 
-        pub fn is_pending(comptime int: CoreInterrupt) bool {
+        pub fn is_pending(int: CoreInterrupt) bool {
             return csr.core.mip.read() & (1 << @intFromEnum(int));
         }
 
-        pub fn set_pending(comptime int: CoreInterrupt) void {
+        pub fn set_pending(int: CoreInterrupt) void {
             csr.core.mip.set(1 << @intFromEnum(int));
         }
 
-        pub fn clear_pending(comptime int: CoreInterrupt) void {
+        pub fn clear_pending(int: CoreInterrupt) void {
             csr.core.mip.clear(1 << @intFromEnum(int));
         }
     };
 };
 
-pub export fn _vector_table() align(64) callconv(.naked) noreturn {
-    comptime {
-        // NOTE: using the union variant .naked here is fine because both variants have the same layout
-        @export(if (microzig_options.interrupts.Exception) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_exception_handler" });
-        @export(if (microzig_options.interrupts.MachineSoftware) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_software_handler" });
-        @export(if (microzig_options.interrupts.MachineTimer) |handler| handler.naked else &unhandled_interrupt, .{ .name = "_machine_timer_handler" });
-        @export(if (microzig_options.interrupts.MachineExternal) |handler| handler.naked else &machine_external_interrupt, .{ .name = "_machine_external_handler" });
+pub const InitInterruptsOptions = struct {
+    ExceptionEnum: type,
+    InterruptEnum: type,
+    OptionsEnum: type,
+    export_name: []const u8,
+    alignment: comptime_int,
+};
+
+pub fn vector_table(
+    comptime alignment: usize,
+    comptime mode: enum {
+        direct,
+        vectored,
+    },
+) *const fn () callconv(.naked) noreturn {
+    // builtin.cpu.features
+    switch (mode) {
+        .direct => struct {
+            pub fn vec_table() align(alignment) callconv(.naked) noreturn {}
+        }.vec_table,
+        .vectored => struct {
+            pub fn vec_table() align(alignment) callconv(.naked) noreturn {}
+        }.vec_table,
     }
 
-    asm volatile (
-        \\j _exception_handler
-        \\.word 0
-        \\.word 0
-        \\j _machine_software_handler
-        \\.word 0
-        \\.word 0
-        \\.word 0
-        \\j _machine_timer_handler
-        \\.word 0
-        \\.word 0
-        \\.word 0
-        \\j _machine_external_handler
-    );
+    // return struct {
+    //     const Self = @This();
+    //
+    //     pub fn vector_table() align() void {
+    //
+    //     }
+    // };
+    // const trap_entry_asm = std.fmt.comptimePrint("sw {s}, 0(sp)", .{
+    //     @typeInfo(TrapFrame).@"struct".fields[0].name,
+    // });
+    //
+    // const save_state_all_asm = comptime blk: {
+    //     var s: []const u8 = &.{};
+    //
+    //     for (@typeInfo(TrapFrame).@"struct".fields[1..]) |field| {
+    //         s = s ++ std.fmt.comptimePrint(
+    //             \\    sw {s}, {}(sp)
+    //             \\
+    //         , .{ field.name, @offsetOf(TrapFrame, field.name) });
+    //     }
+    //
+    //     break :blk s;
+    // };
+    //
+    // const load_state_asm = comptime blk: {
+    //     var s: []const u8 = &.{};
+    //
+    //     for (@typeInfo(TrapFrame).@"struct".fields) |field| {
+    //         s = s ++ std.fmt.comptimePrint(
+    //             \\    lw {s}, {}(sp)
+    //             \\
+    //         , .{ field.name, @offsetOf(TrapFrame, field.name) });
+    //     }
+    //
+    //     break :blk s;
+    // };
 }
+
+pub inline fn init_interrupts() void {}
+
+// pub fn _vector_table(
+//     InterruptEnum: type,
+//     comptime export_name: []const u8,
+//     comptime alignment: comptime_int,
+//     comptime vector_table_mode: enum {
+//         direct,
+//         vectored,
+//     },
+// ) void {
+//     // sort the fields in case they are defined in a different order
+//     const interrupt_fields = comptime blk: {
+//         const EnumField = std.builtin.Type.EnumField;
+//         const fields_const = @typeInfo(InterruptEnum).@"enum".fields;
+//         var fields: [fields_const.len]EnumField = undefined;
+//         @memcpy(&fields, fields_const);
+//         std.mem.sort(EnumField, &fields, {}, struct {
+//             pub fn lessThan(left: EnumField, right: EnumField) bool {
+//                 return left.value < right.value;
+//             }
+//         }.lessThan);
+//         break :blk fields;
+//     };
+//
+//     const vector_table_asm = comptime blk: {
+//         var s: []const u8 = "    j _Exception_entry\n";
+//         var last_idx: usize = 0;
+//
+//         for (interrupt_fields) |field| {
+//             while (last_idx < field.value - 1) {
+//                 s = s ++ std.fmt.comptimePrint(
+//                     \\    .word 0
+//                     \\
+//                 , .{field.name});
+//                 last_idx += 1;
+//             }
+//
+//             s = s ++ std.fmt.comptimePrint(
+//                 \\.balign 4
+//                 \\    j _{s}_entry
+//                 \\
+//             , .{field.name});
+//
+//             last_idx += 1;
+//         }
+//
+//         break :blk s;
+//     };
+//
+//     _ = struct {
+//         comptime {
+//             @export(&vector_table, .{
+//                 .name = export_name,
+//             });
+//         }
+//
+//         pub fn vector_table() align(alignment) callconv(.naked) noreturn {
+//             switch (vector_table_mode) {
+//                 .direct => {
+//                     entry("trap");
+//
+//                     asm volatile (
+//                         \\
+//                     );
+//                 },
+//                 .vectored => {
+//                     asm volatile (vector_table_asm);
+//
+//                     entry("Exception");
+//                     for (interrupt_fields) |field| {
+//                         entry(field.name);
+//                     }
+//                 },
+//             }
+//         }
+//
+//         inline fn entry(name: []const u8) void {
+//             asm volatile (std.fmt.comptimePrint(
+//                     \\_{s}_entry:
+//                     \\    addi sp, sp, -{}
+//                 ++ save_state_asm ++
+//                     \\    add a0, sp, zero
+//                     \\    jal ra, _{s}_handler
+//                 ++ load_state_asm ++
+//                     \\    addi sp, sp, {}
+//                     \\    mret
+//                     \\
+//                 ,
+//                     name,
+//                     @sizeOf(TrapFrame),
+//                     name,
+//                     @sizeOf(TrapFrame),
+//                 ));
+//         }
+//     };
+// }
 
 pub fn nop() void {
     asm volatile ("nop");
