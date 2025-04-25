@@ -18,7 +18,7 @@ pub fn AtomicStaticBitSet(comptime size: usize) type {
         const Bit = std.math.Log2Int(BlockType);
         const Self = @This();
 
-        blocks: [BlockNum]std.atomic.Value(BlockType) = .{std.atomic.Value(usize){ .raw = 0 }} ** BlockNum,
+        blocks: [BlockNum]std.atomic.Value(BlockType) = .{std.atomic.Value(BlockType){ .raw = 0 }} ** BlockNum,
 
         /// Sets the bit at `bit_index` to 1.
         ///

@@ -58,10 +58,7 @@ else if (builtin.object_format == .c)
 else
     .weak;
 
-const visibility: std.builtin.SymbolVisibility = if (builtin.cpu.arch.isWasm() and linkage != .internal)
-    .hidden
-else
-    .default;
+const visibility: std.builtin.SymbolVisibility = .default;
 
 // Based on: https://github.com/ziglang/zig/blob/79460d4a3eef8eb927b02a7eda8bc9999a766672/lib/compiler_rt/atomics.zig
 // and: https://github.com/raspberrypi/pico-sdk/blob/ee68c78d0afae2b69c03ae1a72bf5cc267a2d94c/src/rp2_common/pico_atomic/atomic.c

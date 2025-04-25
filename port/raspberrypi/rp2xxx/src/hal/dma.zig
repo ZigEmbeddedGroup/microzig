@@ -34,7 +34,6 @@ pub const ChannelError = error{AlreadyClaimed};
 pub const Channel = enum(u4) {
     _,
 
-    /// panics if the channel is already claimed
     pub fn claim(chan: Channel) ChannelError!void {
         if (!claimed_channels.set(@intFromEnum(chan)))
             return ChannelError.AlreadyClaimed;
