@@ -379,7 +379,7 @@ pub const interrupt = struct {
         }
 
         pub fn set_handler(comptime excpt: Exception, handler: Handler) Handler {
-            if (@intFromEnum(exception) == 0) {
+            if (@intFromEnum(excpt) == 0) {
                 @compileError("Cannot set handler for slot 0 (initial stack pointer)");
             }
 
@@ -593,7 +593,7 @@ pub fn clrex() void {
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
-var ram_vectors: [vector_count]usize = undefined;
+var ram_vectors: [vector_count]usize align(256) = undefined;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
