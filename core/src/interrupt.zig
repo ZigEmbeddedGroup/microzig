@@ -47,7 +47,7 @@ pub fn enter_critical_section() CriticalSection {
 
 /// A critical section structure that allows restoring the interrupt
 /// status that was set before entering.
-const CriticalSection = struct {
+pub const CriticalSection = struct {
     enable_on_leave: bool,
 
     /// Leaves the critical section and restores the interrupt state.
