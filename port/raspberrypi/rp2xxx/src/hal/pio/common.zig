@@ -190,6 +190,13 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
             } else error.NoSpace;
         }
 
+        pub fn set_input_sync_bypass(self: EnumType, pin: u5) void {
+            const mask = @as(u32, 1) << pin;
+            var val = self.get_regs().INPUT_SYNC_BYPASS.raw;
+            val |= mask;
+            self.get_regs().INPUT_SYNC_BYPASS.write_raw(val);
+        }
+
         pub fn get_sm_regs(self: EnumType, sm: StateMachine) *volatile StateMachine.Regs {
             const pio_regs = self.get_regs();
             // SM0_CLKDIV is the first one, which is why we are taking its address
@@ -560,6 +567,30 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
                     .jmp_pin = options.exec.jmp_pin,
                 },
             });
+        }
+
+        pub fn sm_exec_set_x(self: EnumType, sm: StateMachine, value: u32) void {
+            // 32 = .bit_count = 0
+            const inst = Instruction(chip){ .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .x, .bit_count = 0 } } };
+            sm_write(self, sm, value);
+            sm_exec(self, sm, inst);
+        }
+
+        pub fn sm_exec_set_y(self: EnumType, sm: StateMachine, value: u32) void {
+            // 32 = .bit_count = 0
+            const inst = Instruction(chip){ .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .y, .bit_count = 0 } } };
+            sm_write(self, sm, value);
+            sm_exec(self, sm, inst);
+        }
+
+        pub fn sm_exec_set_pindir(self: EnumType, sm: StateMachine, data: u5) void {
+            const inst = Instruction(chip){ .tag = .set, .delay_side_set = 0, .payload = .{ .set = .{ .destination = .pindirs, .data = data } } };
+            sm_exec(self, sm, inst);
+        }
+
+        pub fn sm_exec_jmp(self: EnumType, sm: StateMachine, to_addr: u5) void {
+            const inst = Instruction(chip){ .tag = .jmp, .delay_side_set = 0, .payload = .{ .jmp = .{ .address = to_addr, .condition = .always } } };
+            sm_exec(self, sm, inst);
         }
     };
 }

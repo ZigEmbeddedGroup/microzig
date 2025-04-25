@@ -28,6 +28,7 @@ pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
+pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const image_def = @import("hal/image_def.zig");

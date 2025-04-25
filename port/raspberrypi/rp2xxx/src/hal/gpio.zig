@@ -448,6 +448,11 @@ pub const Pin = enum(u6) {
         pads_reg.modify(.{ .IE = @intFromBool(enabled) });
     }
 
+    pub inline fn set_output_disabled(pin: Pin, disabled: bool) void {
+        const pads_reg = pin.get_pads_reg();
+        pads_reg.modify(.{ .OD = @intFromBool(disabled) });
+    }
+
     pub inline fn set_function(gpio: Pin, function: Function) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
