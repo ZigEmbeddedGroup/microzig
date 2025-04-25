@@ -93,7 +93,13 @@ pub fn init(config: Cyw43PioSpi_Config) !Cyw43PioSpi {
     config.pio.sm_set_pin(sm, to_pio_pin_num(config.clk_pin), 1, 0);
     config.pio.sm_set_pin(sm, to_pio_pin_num(config.io_pin), 1, 0);
 
-    return .{ .pio = config.pio, .sm = sm, .cs_pin = config.cs_pin, .io_pin = config.io_pin, .clk_pin = config.clk_pin };
+    return .{
+        .pio = config.pio,
+        .sm = sm,
+        .cs_pin = config.cs_pin,
+        .io_pin = config.io_pin,
+        .clk_pin = config.clk_pin,
+    };
 }
 
 fn to_pio_pin_num(pin: hal.gpio.Pin) u5 {
@@ -139,16 +145,34 @@ pub const Cyw43PioSpi = struct {
         const dma_ch = hal.dma.claim_unused_channel().?;
         defer dma_ch.unclaim();
 
-        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{ .data_size = .size_32, .enable = true, .read_increment = true, .write_increment = false, .dreq = self.get_pio_tx_dreq() });
+        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = true,
+            .write_increment = false,
+            .dreq = self.get_pio_tx_dreq(),
+        });
 
         dma_ch.wait_for_finish_blocking();
 
-        dma_ch.trigger_transfer(@intFromPtr(buffer.ptr), self.get_pio_rx_fifo_addr(), buffer.len, .{ .data_size = .size_32, .enable = true, .read_increment = false, .write_increment = true, .dreq = self.get_pio_rx_dreq() });
+        dma_ch.trigger_transfer(@intFromPtr(buffer.ptr), self.get_pio_rx_fifo_addr(), buffer.len, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = false,
+            .write_increment = true,
+            .dreq = self.get_pio_rx_dreq(),
+        });
 
         dma_ch.wait_for_finish_blocking();
 
         var status: u32 = 0;
-        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{ .data_size = .size_32, .enable = true, .read_increment = false, .write_increment = true, .dreq = self.get_pio_rx_dreq() });
+        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = false,
+            .write_increment = true,
+            .dreq = self.get_pio_rx_dreq(),
+        });
 
         dma_ch.wait_for_finish_blocking();
 
@@ -171,12 +195,24 @@ pub const Cyw43PioSpi = struct {
         const dma_ch = hal.dma.claim_unused_channel().?;
         defer dma_ch.unclaim();
 
-        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{ .data_size = .size_32, .enable = true, .read_increment = true, .write_increment = false, .dreq = self.get_pio_tx_dreq() });
+        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = true,
+            .write_increment = false,
+            .dreq = self.get_pio_tx_dreq(),
+        });
 
         dma_ch.wait_for_finish_blocking();
 
         var status: u32 = 0;
-        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{ .data_size = .size_32, .enable = true, .read_increment = false, .write_increment = true, .dreq = self.get_pio_rx_dreq() });
+        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
+            .data_size = .size_32,
+            .enable = true,
+            .read_increment = false,
+            .write_increment = true,
+            .dreq = self.get_pio_rx_dreq(),
+        });
 
         dma_ch.wait_for_finish_blocking();
 

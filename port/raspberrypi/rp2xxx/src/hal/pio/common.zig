@@ -571,25 +571,25 @@ pub fn PioImpl(EnumType: type, chip: Chip) type {
 
         pub fn sm_exec_set_x(self: EnumType, sm: StateMachine, value: u32) void {
             // 32 = .bit_count = 0
-            const inst = Instruction(chip) { .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .x, .bit_count = 0 } } };
+            const inst = Instruction(chip){ .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .x, .bit_count = 0 } } };
             sm_write(self, sm, value);
             sm_exec(self, sm, inst);
         }
 
         pub fn sm_exec_set_y(self: EnumType, sm: StateMachine, value: u32) void {
             // 32 = .bit_count = 0
-            const inst = Instruction(chip) { .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .y, .bit_count = 0 } } };
+            const inst = Instruction(chip){ .tag = .out, .delay_side_set = 0, .payload = .{ .out = .{ .destination = .y, .bit_count = 0 } } };
             sm_write(self, sm, value);
             sm_exec(self, sm, inst);
         }
 
         pub fn sm_exec_set_pindir(self: EnumType, sm: StateMachine, data: u5) void {
-            const inst = Instruction(chip) { .tag = .set, .delay_side_set = 0, .payload = .{ .set = .{ .destination = .pindirs, .data = data } } };
+            const inst = Instruction(chip){ .tag = .set, .delay_side_set = 0, .payload = .{ .set = .{ .destination = .pindirs, .data = data } } };
             sm_exec(self, sm, inst);
         }
 
         pub fn sm_exec_jmp(self: EnumType, sm: StateMachine, to_addr: u5) void {
-            const inst = Instruction(chip) { .tag = .jmp, .delay_side_set = 0, .payload = .{ .jmp = .{ .address = to_addr, .condition = .always } } };
+            const inst = Instruction(chip){ .tag = .jmp, .delay_side_set = 0, .payload = .{ .jmp = .{ .address = to_addr, .condition = .always } } };
             sm_exec(self, sm, inst);
         }
     };

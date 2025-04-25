@@ -66,19 +66,19 @@ pub const Cyw43_Bus = struct {
 
         // Set 32-bit word length and keep default endianness: little endian
         const setup_regs = Cyw43FirstFourRegs{
-            .ctrl = .{ 
+            .ctrl = .{
                 .word_length = .word_32,
                 .endianness = .little_endian,
                 .speed_mode = .high_speed,
                 .interrupt_polarity = .high_polarity,
-                .wake_up = true 
+                .wake_up = true,
             },
-            .response_delay = .{ 
-                .unknown = 0x4    // 32-bit response delay?
+            .response_delay = .{
+                .unknown = 0x4, // 32-bit response delay?
             },
-            .status_enable = .{ 
-                .status_enable = true, 
-                .interrupt_with_status = true 
+            .status_enable = .{
+                .status_enable = true,
+                .interrupt_with_status = true,
             },
         };
 
@@ -107,11 +107,11 @@ pub const Cyw43_Bus = struct {
         // TODO: why not all of these F2_F3_FIFO_RD_UNDERFLOW | F2_F3_FIFO_WR_OVERFLOW | COMMAND_ERROR | DATA_ERROR | F2_PACKET_AVAILABLE | F1_OVERFLOW | F1_INTR
         log.debug("enable a selection of interrupts", .{});
 
-        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW | 
-            consts.IRQ_F2_F3_FIFO_WR_OVERFLOW | 
-            consts.IRQ_COMMAND_ERROR | 
-            consts.IRQ_DATA_ERROR | 
-            consts.IRQ_F2_PACKET_AVAILABLE | 
+        const val: u16 = consts.IRQ_F2_F3_FIFO_RD_UNDERFLOW |
+            consts.IRQ_F2_F3_FIFO_WR_OVERFLOW |
+            consts.IRQ_COMMAND_ERROR |
+            consts.IRQ_DATA_ERROR |
+            consts.IRQ_F2_PACKET_AVAILABLE |
             consts.IRQ_F1_OVERFLOW;
 
         //if bluetooth_enabled {
