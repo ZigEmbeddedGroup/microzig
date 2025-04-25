@@ -136,9 +136,11 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
 ///         . . .
 ///     }
 ///
-/// Reserved spinlocks:
-///   - 31 - Mutexes
 pub const Spinlock = struct {
+    // Reserved spinlocks
+    pub const atomics = init(30);
+    pub const mutexes = init(31);
+
     lock_reg: *volatile u32,
 
     const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0.raw);

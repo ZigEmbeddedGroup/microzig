@@ -37,6 +37,7 @@ pub const drivers = @import("drivers");
 pub const mmio = @import("mmio.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
+pub const concurrency = @import("concurrency.zig");
 pub const utilities = @import("utilities.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
