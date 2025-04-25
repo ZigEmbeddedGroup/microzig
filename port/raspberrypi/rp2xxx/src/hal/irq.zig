@@ -2,7 +2,7 @@
 ///
 const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
-const cpu    = microzig.cpu;
+const cpu = microzig.cpu;
 const chip = rp2xxx.compatibility.chip;
 const PPB = microzig.chip.peripherals.PPB;
 
@@ -10,24 +10,24 @@ const interrupt = cpu.interrupt;
 
 /// Returns true, when interrupts are globally enabled.
 pub fn is_globally_enabled() bool {
-  return cpu.interrupt.globally_enabled();
+    return cpu.interrupt.globally_enabled();
 }
 
 /// Enable interrupts globally
 pub fn globally_enable() void {
-  cpu.interrupt.enable_interrupts();
+    cpu.interrupt.enable_interrupts();
 }
 
 /// Disable interrupts globally
 pub fn globally_disable() void {
-  interrupt.disable_interrupts();
+    interrupt.disable_interrupts();
 }
 
 /// Returns true, when the given interrupt is enabled.
 /// Parameters:
 ///   int: The interrupt to check
 pub fn is_enabled(comptime int: cpu.ExternalInterrupt) bool {
-  return interrupt.is_enabled(int);
+    return interrupt.is_enabled(int);
 }
 
 /// Enable a specific device interrupt.
@@ -36,20 +36,20 @@ pub fn is_enabled(comptime int: cpu.ExternalInterrupt) bool {
 /// Parameters:
 ///   int: The interrupt to enable
 pub fn enable(comptime int: cpu.ExternalInterrupt) void {
-  interrupt.clear_pending(int);
-  interrupt.enable(int);
+    interrupt.clear_pending(int);
+    interrupt.enable(int);
 }
 
 /// Disable a specific device interrupt
 /// Parameters:
 ///   int: The interrupt to disable
 pub fn disable(comptime int: cpu.ExternalInterrupt) void {
-  interrupt.disable(int);
+    interrupt.disable(int);
 }
 
 /// Returns true, when setting interrupt handlers at runtime is possible.
 pub inline fn can_set_handler() bool {
-  return interrupt.has_ram_vectors();
+    return interrupt.has_ram_vectors();
 }
 
 /// Set the handler for a specific interrupt.
@@ -59,5 +59,5 @@ pub inline fn can_set_handler() bool {
 /// Returns:
 ///   The old handler, or null if the handler was not set
 pub fn set_handler(comptime int: cpu.ExternalInterrupt, handler: ?cpu.Handler) ?cpu.Handler {
-  return interrupt.set_handler(int, handler);
+    return interrupt.set_handler(int, handler);
 }

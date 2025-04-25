@@ -266,7 +266,6 @@ fn isr_common(self: *Self) void {
     // the read and write modes and the transfer buffer.
 
     if (interruptStatus.RESTART_DET == .ACTIVE or interruptStatus.STOP_DET == .ACTIVE) {
-
         if (self.data_received) {
             self.rxCallback(self.transfer_buffer[0..self.transfer_index], self.first_call, true, self.gen_call, self.param);
 
@@ -316,5 +315,4 @@ fn isr_common(self: *Self) void {
             }
         }
     }
-
 }

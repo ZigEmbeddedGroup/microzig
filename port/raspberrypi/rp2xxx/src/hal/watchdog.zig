@@ -7,16 +7,16 @@ const chip = @import("compatibility.zig").chip;
 
 pub const Config =
     switch (chip) {
-    .RP2040 => struct {
-        // See errata RP2040-E1, duration ends up getting multiplied by 2 reducing the allowable delay range
-        duration_us: u23,
-        pause_during_debug: bool,
-    },
-    .RP2350 => struct {
-        duration_us: u24,
-        pause_during_debug: bool,
-    },
-};
+        .RP2040 => struct {
+            // See errata RP2040-E1, duration ends up getting multiplied by 2 reducing the allowable delay range
+            duration_us: u23,
+            pause_during_debug: bool,
+        },
+        .RP2350 => struct {
+            duration_us: u24,
+            pause_during_debug: bool,
+        },
+    };
 
 var previous_watchdog_delay: ?u24 = null;
 
