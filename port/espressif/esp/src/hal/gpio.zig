@@ -71,7 +71,7 @@ pub const Pin = enum(u5) {
         pulldown_enable: bool = false,
         input_filter_enable: bool = false,
         output_invert: bool = false,
-        drive_strength: DriveStrength = DriveStrength.@"5mA",
+        drive_strength: DriveStrength = .@"5mA",
         output_signal: OutputSignal = .gpio,
     };
 
@@ -145,9 +145,9 @@ pub const Pin = enum(u5) {
         force_via_gpio_mux: bool,
     ) void {
         // TODO: In else case, match function to alt function?
-        const af: AlternateFunction = if (force_via_gpio_mux) .Function1 else .Function1;
+        const af: AlternateFunction = if (force_via_gpio_mux) .function1 else .function1;
 
-        if (af == .Function1 and @intFromEnum(signal) >= 128) {
+        if (af == .function1 and @intFromEnum(signal) >= 128) {
             @panic("Cannot connect GPIO to this peripheral");
         }
 
@@ -176,9 +176,9 @@ pub const Pin = enum(u5) {
         force_via_gpio_mux: bool,
     ) void {
         // TODO: In else case, match function to alt function?
-        const af: AlternateFunction = if (force_via_gpio_mux) .Function1 else .Function1;
+        const af: AlternateFunction = if (force_via_gpio_mux) .function1 else .function1;
 
-        if (af == .Function1 and @intFromEnum(signal) > 128) {
+        if (af == .function1 and @intFromEnum(signal) > 128) {
             @panic("Cannot connect this peripheral to GPIO");
         }
 
@@ -244,7 +244,7 @@ pub const Pin = enum(u5) {
         const n = @intFromEnum(self);
         // Disable input & pull up/down resistors
         IO_MUX.GPIO[n].modify(.{
-            .MCU_SEL = @intFromEnum(AlternateFunction.Function1),
+            .MCU_SEL = @intFromEnum(AlternateFunction.function1),
             .FUN_IE = false,
             .FUN_WPU = false,
             .FUN_WPD = false,
@@ -257,7 +257,7 @@ pub const Pin = enum(u5) {
 
         // Configure as GPIO
         GPIO.FUNC_OUT_SEL_CFG[n].modify(.{
-            .OUT_SEL = @intFromEnum(OutputSignal.GPIO),
+            .OUT_SEL = @intFromEnum(OutputSignal.gpio),
         });
 
         // Enable output
@@ -278,8 +278,8 @@ pub const Pin = enum(u5) {
         std.debug.assert(GPIO.FUNC_OUT_SEL_CFG[n].read().OEN_SEL == 1);
 
         switch (level) {
-            Level.low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u26, 1) << n }),
-            Level.high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u26, 1) << n }),
+            .low => GPIO.OUT_W1TC.write(.{ .OUT_W1TC = @as(u26, 1) << n }),
+            .high => GPIO.OUT_W1TS.write(.{ .OUT_W1TS = @as(u26, 1) << n }),
         }
     }
 
@@ -297,8 +297,8 @@ pub const Pin = enum(u5) {
 
     pub fn toggle(self: Pin) void {
         switch (self.get_output_state()) {
-            Level.low => self.write(Level.high),
-            Level.high => self.write(Level.low),
+            .low => self.write(.high),
+            .high => self.write(.low),
         }
     }
 
