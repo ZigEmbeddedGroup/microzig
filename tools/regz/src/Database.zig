@@ -266,6 +266,21 @@ pub const StructRegister = struct {
     };
 };
 
+pub const NestedStructField = struct {
+    parent_id: StructID,
+    struct_id: StructID,
+    offset_bytes: u32,
+    count: ?u64 = null,
+    size: ?u64 = null,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "parent_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+};
+
 pub const Peripheral = struct {
     id: PeripheralID,
     struct_id: StructID,
@@ -444,6 +459,7 @@ const schema: []const []const u8 = &.{
     gen_sql_table("struct_fields", StructField),
     gen_sql_table("struct_decls", StructDecl),
     gen_sql_table("struct_registers", StructRegister),
+    gen_sql_table("nested_struct_fields", NestedStructField),
     gen_sql_table("enums", Enum),
     gen_sql_table("enum_fields", EnumField),
     gen_sql_table("devices", Device),
@@ -1609,6 +1625,47 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
     });
 
     return register_id;
+}
+
+pub const CreateNestedStructFieldOptions = struct {
+    name: []const u8,
+    description: ?[]const u8 = null,
+    offset_bytes: u32,
+    count: ?u64 = null,
+    size: ?u64 = null,
+};
+
+pub fn create_nested_struct_field(db: *Database, parent: StructID, opts: CreateNestedStructFieldOptions) !StructID {
+    var savepoint = try db.sql.savepoint("nested_struct_field");
+    defer savepoint.rollback();
+
+    const struct_id = try db.create_struct(.{});
+
+    try db.exec(
+        \\INSERT INTO nested_struct_fields
+        \\  (parent_id, struct_id, offset_bytes, count, size)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?)
+    , .{
+        .parent_id = parent,
+        .struct_id = struct_id,
+        .offset_bytes = opts.offset_bytes,
+        .count = opts.count,
+        .size = opts.size,
+    });
+
+    savepoint.commit();
+
+    log.debug("created nested struct field: name='{s}' parent={} struct_id={} offset_bytes={} count={} size={}", .{
+        opts.name,
+        parent,
+        struct_id,
+        opts.offset_bytes,
+        opts.count,
+        opts.size,
+    });
+
+    return struct_id;
 }
 
 pub fn get_register_by_name(

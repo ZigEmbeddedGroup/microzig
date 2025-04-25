@@ -332,7 +332,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
     // TODO: handle errors when implemented
     var cluster_it = node.iterate(&.{"registers"}, &.{"cluster"});
     while (cluster_it.next()) |cluster_node|
-        load_cluster(ctx, cluster_node) catch |err|
+        load_cluster(ctx, cluster_node, struct_id) catch |err|
             log.warn("failed to load cluster: {}", .{err});
 
     // alternatePeripheral
@@ -365,13 +365,55 @@ fn load_interrupt(db: *Database, node: xml.Node, device_id: DeviceID) !void {
 fn load_cluster(
     ctx: *Context,
     node: xml.Node,
+    parent: StructID,
 ) !void {
+
+    // Note that dimable identifier type means that it can include a %s in the name, it's a copy of a previous identifier
     const name = node.get_value("name") orelse return error.MissingClusterName;
-    log.warn("TODO clusters. name: {s}", .{name});
+    const description = node.get_value("description");
 
     const dim_elements = try DimElements.parse(ctx, node);
     if (dim_elements != null)
         return error.TodoDimElements;
+
+    // TODO: clusters always have an offset, I need to add them as a field
+    const address_offset_str = node.get_value("addressOffset") orelse return error.MissingClusterOffset;
+
+    const alternate_cluster = node.get_value("alternateCluster");
+    if (alternate_cluster != null)
+        return error.TodoAlternateCluster;
+
+    const derived_from = node.get_attribute("derivedFrom");
+    if (derived_from != null)
+        return error.TodoClusterDerivation;
+
+    const count: ?u64, const size: ?u64 = if (try DimElements.parse(node)) |elements| count: {
+        if (elements.dim_index != null or elements.dim_name != null)
+            return error.TodoDimElementsExtended;
+
+        break :count .{ elements.dim, elements.dim_increment };
+    } else .{ null, null };
+
+    const struct_id = try ctx.db.create_nested_struct_field(parent, .{
+        .name = name,
+        .description = description,
+        .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
+        .count = count,
+        .size = size,
+    });
+
+    const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
+    try ctx.register_props.put(ctx.db.gpa, .{ .@"struct" = struct_id }, register_props);
+
+    var register_it = node.iterate(&.{}, &.{"register"});
+    while (register_it.next()) |register_node|
+        try load_register(ctx, register_node, struct_id);
+
+    var cluster_it = node.iterate(&.{}, &.{"cluster"});
+    while (cluster_it.next()) |cluster_node|
+        try load_cluster(ctx, cluster_node, struct_id);
+
+    log.debug("loaded cluster name: {s} description={?s} offset={?s}", .{ name, description, address_offset_str });
 }
 
 fn get_name_without_suffix(node: xml.Node, suffix: []const u8) ![]const u8 {
@@ -860,7 +902,10 @@ const RegisterProperties = struct {
             else
                 null,
             .access = if (node.get_value("access")) |access_str|
-                try parse_access(access_str)
+                parse_access(access_str) catch blk: {
+                    log.warn("Failed to parse access string '{s}', it must be one of 'read-value', 'write-only', 'read-write', 'writeOnce', or 'read-writeOnce', defaulting to 'read-write'", .{access_str});
+                    break :blk .read_write;
+                }
             else
                 null,
             .protection = null,
@@ -887,8 +932,10 @@ fn parse_access(str: []const u8) !Access {
         Access.write_once
     else if (std.mem.eql(u8, "read-writeOnce", str))
         Access.read_write_once
-    else
-        error.UnknownAccessType;
+    else blk: {
+        log.warn("invalid access type: '{s}'", .{str});
+        break :blk error.UnknownAccessType;
+    };
 }
 
 test "svd.device register properties" {

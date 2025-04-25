@@ -43,7 +43,7 @@ pub fn write_interrupt_vector(
                 });
                 index = interrupt.idx;
             } else if (index > interrupt.idx) {
-                log.warn("skipping interrupt: {s}, index({}) > interrupt.idx({})", .{ interrupt.name, index, interrupt.idx });
+                log.debug("skipping interrupt: {s}, index({}) > interrupt.idx({})", .{ interrupt.name, index, interrupt.idx });
                 continue;
             }
 

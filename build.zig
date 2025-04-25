@@ -412,7 +412,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
+            // FIXME: return to release safe
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
                 .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);

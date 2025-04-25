@@ -312,7 +312,7 @@ fn write_interrupt_list(
             {
                 const gop = try name_set.getOrPut(arena, interrupt.name);
                 if (gop.found_existing) {
-                    log.warn("skipping interrupt: {s}", .{interrupt.name});
+                    log.debug("skipping interrupt: {s}", .{interrupt.name});
                     continue;
                 }
             }
@@ -320,7 +320,7 @@ fn write_interrupt_list(
             {
                 const gop = try idx_set.getOrPut(arena, interrupt.idx);
                 if (gop.found_existing) {
-                    log.warn("skipping interrupt: {s}", .{interrupt.name});
+                    log.debug("skipping interrupt: {s}", .{interrupt.name});
                     continue;
                 }
             }
@@ -864,7 +864,7 @@ fn write_fields(
             // then (because of the `field_comes_before()` sort order) we will already have seen the shorter field,
             // and here we are skipping the longer field.
             const message = try std.fmt.allocPrint(arena, "skipped overlapping field {s} at offset {d} bits", .{ field.name, field.offset_bits });
-            log.warn("{s}", .{message});
+            log.debug("{s}", .{message});
             try write_regular_comment(arena, message, writer);
             continue;
         }
