@@ -3,37 +3,36 @@ const builtin = @import("builtin");
 const microzig = @import("microzig");
 
 const chip = microzig.hal.compatibility.chip;
+const CriticalSection = microzig.interrupt.CriticalSection;
 
-const Spinlock = microzig.hal.multicore.Spinlock;
+const atomic_spinlock: microzig.hal.multicore.Spinlock = .atomics;
 
-const atomic_spinlock: Spinlock = .atomics;
-
-inline fn atomic_lock() void {
-    atomic_spinlock.lock();
+inline fn atomic_lock() CriticalSection {
+    return atomic_spinlock.lock_irq();
 }
 
-inline fn atomic_unlock() void {
-    atomic_spinlock.unlock();
+inline fn atomic_unlock(critical_section: CriticalSection) void {
+    atomic_spinlock.unlock_irq(critical_section);
 }
 
 fn atomic_load(comptime T: type, ptr: *volatile T, _: i32) T {
-    atomic_lock();
-    defer atomic_unlock();
+    const save = atomic_lock();
+    defer atomic_unlock(save);
     const val = ptr.*;
     return val;
 }
 
 fn atomic_rmw_and(comptime T: type, ptr: *volatile T, val: T, _: i32) T {
-    atomic_lock();
-    defer atomic_unlock();
+    const save = atomic_lock();
+    defer atomic_unlock(save);
     const tmp = ptr.*;
     ptr.* = tmp & val;
     return tmp;
 }
 
 fn atomic_rmw_or(comptime T: type, ptr: *volatile T, val: T, _: i32) T {
-    atomic_lock();
-    defer atomic_unlock();
+    const save = atomic_lock();
+    defer atomic_unlock(save);
     const tmp = ptr.*;
     ptr.* = tmp | val;
     return tmp;

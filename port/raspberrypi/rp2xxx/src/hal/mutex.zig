@@ -14,11 +14,8 @@ pub const Mutex = struct {
     /// Returns true if the mutex was acquired, false if the mutex
     /// was not acquired.
     pub fn try_lock(self: *Mutex) bool {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.available) {
             self.available = false;
@@ -55,11 +52,8 @@ pub const CoreMutex = struct {
     /// Returns true if the mutex was acquired, false if the mutex
     /// is not available.
     pub fn try_lock(self: *CoreMutex) bool {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.count == 0) {
             // Core is free
@@ -83,11 +77,8 @@ pub const CoreMutex = struct {
 
     /// Release the mutex.
     pub fn unlock(self: *CoreMutex) void {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.count > 0) self.count -= 1;
     }
