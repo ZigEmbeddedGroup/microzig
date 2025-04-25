@@ -1,9 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
-
-const chip = @import("compatibility.zig").chip;
-
 const microzig = @import("microzig");
+
+const chip = microzig.hal.compatibility.chip;
+
 const Spinlock = microzig.hal.multicore.Spinlock;
 
 const atomic_spinlock: Spinlock = .atomics;
