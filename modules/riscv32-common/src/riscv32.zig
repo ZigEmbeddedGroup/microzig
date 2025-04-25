@@ -21,7 +21,7 @@ pub const Exception = enum(u32) {
 pub const CoreInterrupt = enum(u5) {
     SupervisorSoftware = 0x1,
     MachineSoftware = 0x3,
-    SupervisorTimer = 0x1,
+    SupervisorTimer = 0x5,
     MachineTimer = 0x7,
     SupervisorExternal = 0x9,
     MachineExternal = 0xb,
@@ -77,31 +77,7 @@ pub const interrupt = struct {
         csr.core.mstatus.clear(.{ .mie = 1 });
     }
 
-    pub const core = struct {
-        pub fn is_enabled(int: CoreInterrupt) bool {
-            return csr.core.mie.read() & (1 << @intFromEnum(int)) != 0;
-        }
-
-        pub fn enable(int: CoreInterrupt) void {
-            csr.core.mie.set(1 << @intFromEnum(int));
-        }
-
-        pub fn disable(int: CoreInterrupt) void {
-            csr.core.mie.clear(1 << @intFromEnum(int));
-        }
-
-        pub fn is_pending(int: CoreInterrupt) bool {
-            return csr.core.mip.read() & (1 << @intFromEnum(int));
-        }
-
-        pub fn set_pending(int: CoreInterrupt) void {
-            csr.core.mip.set(1 << @intFromEnum(int));
-        }
-
-        pub fn clear_pending(int: CoreInterrupt) void {
-            csr.core.mip.clear(1 << @intFromEnum(int));
-        }
-    };
+    pub const core = utilities.interrupt.CoreImpl(CoreInterrupt);
 };
 
 pub const InitInterruptsOptions = struct {
@@ -546,4 +522,38 @@ pub const csr = struct {
             }
         };
     }
+};
+
+pub const utilities = struct {
+    pub const interrupt = struct {
+        pub fn CoreImpl(CoreInterruptEnum: type) type {
+            std.debug.assert(@typeInfo(CoreInterruptEnum).@"struct".backing_integer == u5);
+
+            return struct {
+                pub fn is_enabled(int: CoreInterruptEnum) bool {
+                    return csr.core.mie.read() & (@as(u32, 1) << @intFromEnum(int)) != 0;
+                }
+
+                pub fn enable(int: CoreInterrupt) void {
+                    csr.core.mie.set(@as(u32, 1) << @intFromEnum(int));
+                }
+
+                pub fn disable(int: CoreInterrupt) void {
+                    csr.core.mie.clear(@as(u32, 1) << @intFromEnum(int));
+                }
+
+                pub fn is_pending(int: CoreInterrupt) bool {
+                    return csr.core.mip.read() & (@as(u32, 1) << @intFromEnum(int));
+                }
+
+                pub fn set_pending(int: CoreInterrupt) void {
+                    csr.core.mip.set(@as(u32, 1) << @intFromEnum(int));
+                }
+
+                pub fn clear_pending(int: CoreInterrupt) void {
+                    csr.core.mip.clear(@as(u32, 1) << @intFromEnum(int));
+                }
+            };
+        }
+    };
 };
