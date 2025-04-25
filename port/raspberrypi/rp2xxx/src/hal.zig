@@ -36,9 +36,9 @@ comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test) {
         _ = image_def;
-    }
 
-    _ = @import("hal/atomic.zig");
+        _ = @import("hal/atomic.zig");
+    }
 }
 
 /// A default clock configuration with sensible defaults that will work
