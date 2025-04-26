@@ -35,6 +35,12 @@ pub fn Mmio(comptime PackedT: type) type {
         }
 
         pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
+            if (@intFromPtr(addr) > 0x60004000 and @intFromPtr(addr) < 0x60004f00)
+                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr })
+            else if (@intFromPtr(addr) > 0x60009000 and @intFromPtr(addr) < 0x6000c000)
+                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr })
+            else if (@intFromPtr(addr) > 0x60013000 and @intFromPtr(addr) < 0x60014000)
+                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr });
             addr.raw = val;
         }
 
