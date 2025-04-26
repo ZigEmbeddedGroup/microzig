@@ -93,5 +93,21 @@ pub fn Mmio(comptime PackedT: type) type {
             }
             write(addr, val);
         }
+
+        pub inline fn write_bit(addr: *volatile Self, offset: u5, value: u1) void {
+            if (value == 1) {
+                addr.raw |= 1 << offset;
+            } else {
+                addr.raw &= ~@as(IntT, 1 << offset);
+            }
+        }
+
+        pub inline fn read_bit(addr: *volatile Self, offset: u5) u1 {
+            return @truncate(addr.raw >> offset);
+        }
+
+        pub inline fn toggle_bit(addr: *volatile Self, offset: u5) void {
+            addr.raw ^= 1 << offset;
+        }
     };
 }
