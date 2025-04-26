@@ -1,0 +1,14 @@
+.{
+    .name = .microzig_port_hdsc_hc32l110,
+    .fingerprint = 0x75d5d0484fa537e9,
+    .version = "0.0.0",
+    .dependencies = .{
+        .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig.zon",
+        "build.zig",
+        "src",
+    },
+}
