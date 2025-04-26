@@ -10,6 +10,9 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
+const common = @import("common.zig");
+
+const I2C_ControlByte = common.I2C_ControlByte;
 
 pub const Driver_Mode = enum {
     /// The driver operates in I²C mode, which requires a 8 bit datagram device.
@@ -38,6 +41,12 @@ pub const Options = struct {
     /// Which digital i/o interface should be used.
     Digital_IO: type = mdf.base.Digital_IO,
 };
+
+pub const DisplayOnMode = enum(u8) { resume_to_ram = 0xA4, ignore_ram = 0xA5 };
+pub const NormalOrInverseDisplay = enum(u8) { normal = 0xA6, inverse = 0xA7 };
+pub const DisplayMode = enum(u8) { off = 0xAE, on = 0xAF };
+
+pub const InputError = error{InvalidEntry};
 
 const cols = 132;
 const rows = 64;
@@ -355,14 +364,6 @@ pub fn SH1106(comptime options: Options) type {
         }
     };
 }
-
-pub const I2C_ControlByte = @import("ssd1106.zig");
-
-pub const DisplayOnMode = enum(u8) { resume_to_ram = 0xA4, ignore_ram = 0xA5 };
-pub const NormalOrInverseDisplay = enum(u8) { normal = 0xA6, inverse = 0xA7 };
-pub const DisplayMode = enum(u8) { off = 0xAE, on = 0xAF };
-
-pub const InputError = error{InvalidEntry};
 
 test {
     _ = SH1106(.{ .mode = .i2c });

@@ -10,6 +10,9 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
+const common = @import("common.zig");
+
+const I2C_ControlByte = common.I2C_ControlByte;
 
 /// SSD1306 driver for I²C based operation.
 pub const SSD1306_I2C = SSD1306_Generic(.{
@@ -915,41 +918,6 @@ pub const Framebuffer = struct {
         }
     }
 };
-
-const I2C_ControlByte = packed struct(u8) {
-    zero: u6 = 0,
-
-    /// The D/C# bit determines the next data byte is acted as a command or a data. If the D/C# bit is
-    /// set to logic “0”, it defines the following data byte as a command. If the D/C# bit is set to
-    /// logic “1”, it defines the following data byte as a data which will be stored at the GDDRAM.
-    /// The GDDRAM column address pointer will be increased by one automatically after each
-    /// data write.
-    mode: enum(u1) { command = 0, data = 1 },
-
-    /// If the Co bit is set as logic “0”, the transmission of the following information will contain data bytes only.
-    co_bit: u1,
-
-    const command: u8 = @bitCast(I2C_ControlByte{
-        .mode = .command,
-        .co_bit = 0,
-    });
-
-    const data_byte: u8 = @bitCast(I2C_ControlByte{
-        .mode = .data,
-        .co_bit = 1,
-    });
-
-    const data_stream: u8 = @bitCast(I2C_ControlByte{
-        .mode = .data,
-        .co_bit = 0,
-    });
-};
-
-comptime {
-    std.debug.assert(I2C_ControlByte.command == 0x00);
-    std.debug.assert(I2C_ControlByte.data_byte == 0xC0);
-    std.debug.assert(I2C_ControlByte.data_stream == 0x40);
-}
 
 // Fundamental Commands
 pub const DisplayOnMode = enum(u8) { resumeToRam = 0xA4, ignoreRam = 0xA5 };
