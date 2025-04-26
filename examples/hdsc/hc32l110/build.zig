@@ -14,6 +14,7 @@ pub fn build(b: *std.Build) void {
 
     const examples: []const Example = &.{
         .{ .name = "blinky", .file = "src/blinky.zig" },
+        .{ .name = "crc16", .file = "src/crc16.zig" },
     };
 
     for (examples) |example| {

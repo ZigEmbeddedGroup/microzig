@@ -6,7 +6,7 @@ HAL and register definitions for the HC32L110 family of microcontrollers
 - [ ] adc
 - [ ] adt
 - [-] clocks
-- [ ] crc
+- [x] crc
 - [ ] flash
 - [x] gpio
 - [ ] i2c
