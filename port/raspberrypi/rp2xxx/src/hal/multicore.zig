@@ -105,11 +105,13 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         (stack.len - 2) * @sizeOf(u32); // account for the two elements we "pushed" above
 
     // after reseting core1 is waiting for this specific sequence
+
+
     const cmds: [6]u32 = .{
         0,
         0,
         1,
-        if (microzig.hal.compatibility.arch == .riscv) @intFromPtr(wrapper_riscv) else @intFromPtr(wrapper),
+        microzig.cpu.peripherals.scb.VTOR,
         stack_ptr,
         @intFromPtr(if (microzig.hal.compatibility.arch == .riscv) wrapper_riscv else wrapper),
     };
