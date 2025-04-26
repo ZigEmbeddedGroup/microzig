@@ -8,7 +8,7 @@ HAL and register definitions for the HC32L110 family of microcontrollers
 - [-] clocks
 - [ ] crc
 - [ ] flash
-- [ ] gpio
+- [x] gpio
 - [ ] i2c
   - [ ] master
   - [ ] slave
