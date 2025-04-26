@@ -177,14 +177,14 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
 
         // Setup SDA pin
-        pins.sda.set_open_drain(true);
+        pins.sda.set_open_drain_output(true);
         pins.sda.set_input_enable(true);
         pins.sda.set_pullup(true);
         pins.sda.connect_peripheral_to_output(.i2cext0_sda);
         pins.sda.connect_input_to_peripheral(.i2cext0_sda);
 
         // Setup SCL pin
-        pins.scl.set_open_drain(true);
+        pins.scl.set_open_drain_output(true);
         pins.scl.set_input_enable(true);
         pins.scl.set_pullup(true);
         pins.scl.connect_peripheral_to_output(.i2cext0_scl);
@@ -210,10 +210,10 @@ pub const I2C = enum(u1) {
         });
 
         // Configure filter
-        i2c.setFilter(7, 7);
+        i2c.set_filter(7, 7);
 
         // Configure frequency
-        try i2c.setFrequency(SOURCE_CLK_FREQ, frequency);
+        try i2c.set_frequency(SOURCE_CLK_FREQ, frequency);
 
         // Propagate configuration changes
         regs.CTR.modify(.{ .CONF_UPGATE = 1 });
@@ -221,9 +221,6 @@ pub const I2C = enum(u1) {
 
     /// Reset the I2C controller
     fn reset(self: I2C) void {
-        // Reset FSM
-        self.get_regs().CTR.modify(.{ .FSM_RST = 1 });
-
         // Clear all I2C interrupts
         self.clear_interrupts();
 
@@ -232,6 +229,9 @@ pub const I2C = enum(u1) {
 
         // Reset command list
         self.reset_command_list();
+
+        // Reset FSM
+        self.get_regs().CTR.modify(.{ .FSM_RST = 1 });
     }
 
     /// Reset the FIFO buffers
@@ -239,8 +239,8 @@ pub const I2C = enum(u1) {
         self.get_regs().FIFO_CONF.modify(.{
             .TX_FIFO_RST = 1,
             .RX_FIFO_RST = 1,
-            .NONFIFO_EN = 0,
-            .FIFO_PRT_EN = 1,
+            // .NONFIFO_EN = 0,
+            // .FIFO_PRT_EN = 1,
             // .RXFIFO_WM_THRHD = 1,
             // .TXFIFO_WM_THRHD = 8,
         });
@@ -250,10 +250,17 @@ pub const I2C = enum(u1) {
             .RX_FIFO_RST = 0,
         });
 
+        // clear_interrupts clear ALL
         // TODO: Do we need to clear interrupts?
-        self.get_regs().INT_CLR.modify(.{
-            .RXFIFO_WM_INT_CLR = 1,
-            .TXFIFO_WM_INT_CLR = 1,
+        // self.get_regs().INT_CLR.modify(.{
+        //     .RXFIFO_WM_INT_CLR = 1,
+        //     .TXFIFO_WM_INT_CLR = 1,
+        // });
+
+        // Make sure the FIFO operates in FIFO mode
+        self.get_regs().FIFO_CONF.modify(.{
+            .NONFIFO_EN = 0,
+            .FIFO_PRT_EN = 1,
         });
         // self.updateConfig();
     }
@@ -261,13 +268,13 @@ pub const I2C = enum(u1) {
     /// Reset the command list
     fn reset_command_list(self: I2C) void {
         // Reset all command registers
-        for (0..8) |i| {
+        for (0..8) |i|
             self.get_regs().COMD[@intCast(i)].write_raw(0);
-        }
     }
 
     /// Set the filter threshold in clock cycles
-    fn setFilter(self: I2C, sda_threshold: ?u4, scl_threshold: ?u4) void {
+    fn set_filter(self: I2C, sda_threshold: ?u4, scl_threshold: ?u4) void {
+        // TODO: Maybe do in two writes?
         if (sda_threshold) |threshold| {
             self.get_regs().FILTER_CFG.modify(.{
                 .SDA_FILTER_THRES = threshold,
@@ -288,7 +295,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Sets the frequency of the I2C interface
-    fn setFrequency(self: I2C, source_clk: u32, bus_freq: u32) !void {
+    fn set_frequency(self: I2C, source_clk: u32, bus_freq: u32) !void {
         // Calculate dividing factor (maximum possible)
         const sclk_div: u8 = @intCast((source_clk / (bus_freq * 1024) + 1));
         if (sclk_div >= 256) {
