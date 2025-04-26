@@ -361,7 +361,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Execute transmission and monitor for completion/errors
-    fn execute_transmission(self: I2C) !void {
+    fn execute_transmission(self: I2C, timeout: ?mdf.time.Duration) !void {
         // Clear all I2C interrupts
         self.clear_interrupts();
 
@@ -370,6 +370,8 @@ pub const I2C = enum(u1) {
 
         // Start transmission
         self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
+
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         // Monitor for completion or errors
         while (true) {
@@ -387,6 +389,11 @@ pub const I2C = enum(u1) {
             // Check for completion
             if (interrupts.TRANS_COMPLETE_INT_RAW == 1 or interrupts.END_DETECT_INT_RAW == 1) {
                 break;
+            }
+
+            // Check for timeout
+            if (deadline.is_reached_by(time.get_time_since_boot())) {
+                return Error.Timeout;
             }
         }
 
@@ -503,10 +510,6 @@ pub const I2C = enum(u1) {
             return Error.FifoExceeded;
         }
 
-        // TODO: Actually use this
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        _ = deadline;
-
         // Reset FIFO and command list
         self.reset_fifo();
         self.reset_command_list();
@@ -516,7 +519,7 @@ pub const I2C = enum(u1) {
         try self.add_read_op(addr, dst.len, &cmd_idx);
 
         // Execute transmission
-        try self.execute_transmission();
+        try self.execute_transmission(timeout);
 
         // Read data from FIFO into dst
         for (dst) |*byte| {
@@ -528,10 +531,6 @@ pub const I2C = enum(u1) {
     pub fn write_blocking(self: I2C, addr: u8, src: []const u8, timeout: ?mdf.time.Duration) !void {
         // Split data into chunks that fit in TX FIFO (31 bytes max + 1 addr byte)
         var chunk_start: usize = 0;
-
-        // TODO: Actually use this
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        _ = deadline;
 
         while (chunk_start < src.len) {
             // Reset FIFO and command list
@@ -548,7 +547,7 @@ pub const I2C = enum(u1) {
             try self.add_write_op(addr, chunk, &cmd_idx);
 
             // Execute transmission
-            try self.execute_transmission();
+            try self.execute_transmission(timeout);
 
             // Move to next chunk
             chunk_start += chunk_size;
@@ -556,7 +555,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Write data then read data from an I2C slave
-    pub fn write_then_read_blocking(self: I2C, addr: Address, src: []const u8, dst: []u8) !void {
+    pub fn write_then_read_blocking(self: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) !void {
         // Check if buffers exceed FIFO size
         if (src.len > 31 or dst.len > 31) {
             return Error.FifoExceeded;
@@ -572,7 +571,7 @@ pub const I2C = enum(u1) {
         try self.add_read_op(addr, dst.len, &cmd_idx);
 
         // Execute transmission
-        try self.execute_transmission();
+        try self.execute_transmission(timeout);
 
         // Read data from FIFO into buffer
         for (dst) |*byte| {
