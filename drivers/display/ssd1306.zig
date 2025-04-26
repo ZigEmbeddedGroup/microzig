@@ -156,7 +156,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
             try self.deactivate_scroll();
             try self.set_segment_remap(true); // Flip left/right
-            try self.set_com_ouput_scan_direction(true); // Flip up/down
+            try self.set_com_output_scan_direction(true); // Flip up/down
             try self.set_normal_or_inverse_display(.normal);
             try self.set_contrast(255);
 
@@ -310,7 +310,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         /// false: normal (COM0 to COMn)
         /// true: remapped
-        pub fn set_com_ouput_scan_direction(self: Self, remap: bool) !void {
+        pub fn set_com_output_scan_direction(self: Self, remap: bool) !void {
             if (remap) {
                 try self.execute_command(0xC8, &.{});
             } else {
@@ -688,7 +688,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             try std.testing.expectEqual(err, InputError.InvalidEntry);
         }
 
-        test set_com_ouput_scan_direction {
+        test set_com_output_scan_direction {
             // Arrange
             var td = TestDevice.init_receiver_only();
             defer td.deinit();
@@ -696,8 +696,8 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             const expected_data = &[_][]const u8{ &.{ 0x00, 0xC0 }, &.{ 0x00, 0xC8 } };
             // Act
             const driver = try SSD1306_I2C.init(td.datagram_device());
-            try driver.set_com_ouput_scan_direction(false);
-            try driver.set_com_ouput_scan_direction(true);
+            try driver.set_com_output_scan_direction(false);
+            try driver.set_com_output_scan_direction(true);
             // Assert
             try td.expect_sent(&recorded_init_sequence ++ expected_data);
         }
