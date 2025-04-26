@@ -106,7 +106,6 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
 
     // after reseting core1 is waiting for this specific sequence
 
-
     const cmds: [6]u32 = .{
         0,
         0,
