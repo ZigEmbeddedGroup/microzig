@@ -4,6 +4,10 @@
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
+        .rtt = .{
+            .url = "git+https://github.com/haydenridd/zig-rtt#b21fa1b54176e9aa5d17aefe4a7c4e0d9a89a09e",
+            .hash = "rtt-0.0.0-s7auv1V5AAAtPzKYj-8Kbj7dD1JPkDJBsVxrKGfnIwqj",
+        },
     },
     .paths = .{
         "README.md",

@@ -5,7 +5,7 @@ const chip = microzig.chip;
 
 pub const time = @import("hal/time.zig");
 pub const gpio = @import("hal/gpio.zig");
-pub const clock = @import("hal/clocks.zig");
+pub const clocks = @import("hal/clocks.zig");
 pub const crc16 = @import("hal/crc16.zig");
 pub const spi = @import("hal/spi.zig");
 pub const uart = @import("hal/uart.zig");
@@ -14,8 +14,8 @@ pub const drivers = @import("hal/drivers.zig");
 
 pub inline fn init() void {
     const CLOCK = chip.peripherals.CLOCK;
-    clock.set_rch_frequency(.@"4MHz");
-    clock.enable(.InternalHighSpeed, true);
+    clocks.set_rch_frequency(.@"24MHz");
+    clocks.enable(.InternalHighSpeed, true);
     // TODO: hide pins on 20-pin mcu
 
     // TODO: move this to seprate function

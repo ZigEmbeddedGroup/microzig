@@ -9,8 +9,8 @@ HAL and register definitions for the HC32L110 family of microcontrollers
 - [x] crc
 - [ ] flash
 - [x] gpio
-- [ ] i2c
-  - [ ] master
+- [-] i2c
+  - [x] master
   - [ ] slave
 - [ ] irq
 - [ ] lpm - Low Power Management

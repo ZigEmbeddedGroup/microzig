@@ -12,9 +12,12 @@ pub fn build(b: *std.Build) void {
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
+    const rtt = b.dependency("rtt", .{});
+
     const examples: []const Example = &.{
         .{ .name = "blinky", .file = "src/blinky.zig" },
         .{ .name = "crc16", .file = "src/crc16.zig" },
+        .{ .name = "i2c_ssd1306", .file = "src/i2c_ssd1306.zig" },
     };
 
     for (examples) |example| {
@@ -24,10 +27,11 @@ pub fn build(b: *std.Build) void {
 
         const firmware = mb.add_firmware(.{
             .name = example.name,
-            .target = mb.ports.hc32l110.chips.hc32l110x4,
+            .target = mb.ports.hc32l110.chips.hc32l110x6,
             .optimize = optimize,
             .root_source_file = b.path(example.file),
         });
+        firmware.add_app_import("rtt", rtt.module("rtt"), .{});
 
         mb.install_firmware(firmware, .{});
         mb.install_firmware(firmware, .{ .format = .elf });
