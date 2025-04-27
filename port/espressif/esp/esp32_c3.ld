@@ -30,17 +30,29 @@ SECTIONS
         . = ALIGN(0x10000) + 0x20;
     } > drom
 
-    .drom.rodata : ALIGN(0x10)
+    .drom.rodata : ALIGN(4)
     {
         KEEP(*(.app_desc))
-        *(.rodata*) /* should we leave this here? */
-        . = ALIGN(0x10);
+        *(.rodata*)
+
+        /* wifi rodata */
+        *(.rodata_wlog_*.*)
     } > drom
 
     .iram.rwtext :
     {
         KEEP(*(.trap))
         *(.rwtext*)
+
+        /* wifi rwtext */
+        *(.wifi0iram  .wifi0iram.*)
+        *(.wifirxiram  .wifirxiram.*)
+        *(.wifislprxiram  .wifislprxiram.*)
+        *(.wifislpiram  .wifislpiram.*)
+        *(.phyiram  .phyiram.*)
+        *(.iram1  .iram1.*)
+        *(.wifiextrairam.* )
+        *(.coexiram.* )
     } > iram
 
     .dram.dummy (NOLOAD) :
@@ -48,11 +60,14 @@ SECTIONS
         . = ALIGN(ALIGNOF(.iram.rwtext)) + SIZEOF(.iram.rwtext);
     } > dram
 
-    .dram.data :
+    .dram.data : ALIGN(4)
     {
         microzig_data_start = .;
         *(.sdata*)
         *(.data*)
+
+        /* wifi data */
+        *(.dram1 .dram1.*)
     } > dram
 
     .dram.bss (NOLOAD) :

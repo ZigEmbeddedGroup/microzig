@@ -14,18 +14,24 @@ boards: struct {},
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
-    const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+    const esp32_c3_zig_target: std.Target.Query = .{
+        .cpu_arch = .riscv32,
+        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+        .cpu_features_add = std.Target.riscv.featureSet(&.{
+            .c,
+            .m,
+        }),
+        .os_tag = .freestanding,
+        .abi = .eabi,
+    };
 
+    const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const cpu_imports: []Import = b.allocator.dupe(Import, &.{
         .{
             .name = "riscv32-common",
             .module = riscv32_common_dep.module("riscv32-common"),
         },
     }) catch @panic("OOM");
-
-    const hal: microzig.HardwareAbstractionLayer = .{
-        .root_source_file = b.path("src/hal.zig"),
-    };
 
     const chip_esp32_c3: microzig.Target = .{
         .dep = dep,
@@ -35,16 +41,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .flash_size = .@"4mb",
             .flash_freq = .@"40m",
         } },
-        .zig_target = .{
-            .cpu_arch = .riscv32,
-            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-            .cpu_features_add = std.Target.riscv.featureSet(&.{
-                .c,
-                .m,
-            }),
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
+        .zig_target = esp32_c3_zig_target,
         .cpu = .{
             .name = "esp_riscv",
             .root_source_file = b.path("src/cpus/esp_riscv_image_boot.zig"),
@@ -61,7 +58,18 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .kind = .ram, .offset = 0x3FC8_0000, .length = 0x0006_0000 },
             },
         },
-        .hal = hal,
+        .hal = .{
+            .root_source_file = b.path("src/hal.zig"),
+            .imports = b.allocator.dupe(Import, &.{
+                .{
+                    .name = "wifi-driver-c",
+                    .module = b.dependency("wifi-driver-c", .{
+                        .target = esp32_c3_zig_target,
+                        .chip = .esp32_c3,
+                    }).module("wifi-driver-c"),
+                },
+            }) catch @panic("OOM"),
+        },
         .linker_script = b.path("esp32_c3.ld"),
     };
 

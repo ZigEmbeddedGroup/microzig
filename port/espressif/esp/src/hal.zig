@@ -10,6 +10,7 @@ pub const systimer = @import("hal/systimer.zig");
 pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
+pub const wifi = @import("hal/wifi.zig");
 
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;
