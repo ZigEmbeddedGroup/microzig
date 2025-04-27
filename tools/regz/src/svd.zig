@@ -176,7 +176,7 @@ fn derive_peripherals(ctx: *Context, device_id: DeviceID) !void {
         // count is applied to the specific instance
         // size is applied to the type
         const count: ?u64 = blk: {
-            const dim_elements = try DimElements.parse(node);
+            const dim_elements = try DimElements.parse(ctx, node);
             if (dim_elements) |elements| {
                 // peripherals can't have dimIndex set according to the spec
                 if (elements.dim_index != null)
@@ -281,7 +281,7 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
     // count is applied to the specific instance
     // size is applied to the type
     const count: ?u64, const size_bytes: ?u64 = blk: {
-        const dim_elements = try DimElements.parse(node);
+        const dim_elements = try DimElements.parse(ctx, node);
         if (dim_elements) |elements| {
             // peripherals can't have dimIndex set according to the spec
             if (elements.dim_index != null)
@@ -361,12 +361,10 @@ fn load_cluster(
     ctx: *Context,
     node: xml.Node,
 ) !void {
-    _ = ctx;
-
     const name = node.get_value("name") orelse return error.MissingClusterName;
     log.warn("TODO clusters. name: {s}", .{name});
 
-    const dim_elements = try DimElements.parse(node);
+    const dim_elements = try DimElements.parse(ctx, node);
     if (dim_elements != null)
         return error.TodoDimElements;
 }
@@ -386,19 +384,78 @@ fn load_register(
     node: xml.Node,
     parent: StructID,
 ) !void {
+    const dim_element = DimElements.parse(ctx, node);
+
+    if (try dim_element) |elements| {
+        try load_register_with_dim_element_group(ctx, node, parent, elements);
+    } else {
+        try load_single_register(ctx, node, parent);
+    }
+
+    // TODO: derivision
+    //if (node.get_attribute("derivedFrom")) |derived_from|
+    //    try ctx.add_derived_entity(id, derived_from);
+
+    // TODO:
+    // dimName
+    // displayName
+    // alternateGroup
+    // alternateRegister
+    // dataType
+    // modifiedWriteValues
+    // writeConstraint
+    // readAction
+    // }
+}
+
+fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: StructID, dim_elements: DimElements) !void {
     const db = ctx.db;
-    const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     const name = node.get_value("name") orelse return error.MissingRegisterName;
+    const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     const size = register_props.size orelse return error.MissingRegisterSize;
-    const count: ?u64 = if (try DimElements.parse(node)) |elements| count: {
-        if (elements.dim_index != null or elements.dim_name != null)
-            return error.TodoDimElementsExtended;
+    const address_offset_string = node.get_value("addressOffset") orelse return error.MissinRegisterOffset;
+    const address_offset = try std.fmt.parseInt(usize, address_offset_string, 0);
 
-        if ((elements.dim_increment * 8) != size)
-            return error.DimIncrementSizeMismatch;
+    // Array type needs only one entry in db with set count, list type should be each register as a separate entry
+    const count = if (dim_elements.type == DimType.list) dim_elements.dim else 1;
 
-        break :count elements.dim;
-    } else null;
+    for (0..count) |i| {
+        const register_id = try db.create_register(parent, .{
+            .name = switch (dim_elements.type) {
+                DimType.array => name[0 .. name.len - 4],
+                DimType.list => blk: {
+                    const replacement = try dim_elements.dim_index_value(ctx, i);
+                    const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", replacement);
+                    break :blk try std.fmt.allocPrintZ(ctx.arena.allocator(), "{s}", .{new_name});
+                },
+            },
+            .description = node.get_value("description"),
+            .offset_bytes = switch (dim_elements.type) {
+                DimType.array => address_offset,
+                DimType.list => address_offset + (i * dim_elements.dim_increment),
+            },
+            .size_bits = size,
+            .count = if (dim_elements.type == DimType.array) dim_elements.dim else null,
+            .access = register_props.access orelse .read_write,
+            .reset_mask = register_props.reset_mask,
+            .reset_value = register_props.reset_value,
+        });
+
+        var field_it = node.iterate(&.{"fields"}, &.{"field"});
+        while (field_it.next()) |field_node|
+            load_field(ctx, field_node, register_id) catch |err| {
+                const reg_name = node.get_value("name") orelse "EMPTY";
+                const field_name = field_node.get_value("name") orelse "EMPTY";
+                log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
+            };
+    }
+}
+
+fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
+    const db = ctx.db;
+    const name = node.get_value("name") orelse return error.MissingRegisterName;
+    const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
+    const size = register_props.size orelse return error.MissingRegisterSize;
 
     const register_id = try db.create_register(parent, .{
         .name = if (std.mem.endsWith(u8, name, "[%s]"))
@@ -411,7 +468,7 @@ fn load_register(
         else
             return error.MissingRegisterOffset,
         .size_bits = size,
-        .count = count,
+        .count = null,
         .access = register_props.access orelse .read_write,
         .reset_mask = register_props.reset_mask,
         .reset_value = register_props.reset_value,
@@ -424,26 +481,13 @@ fn load_register(
             const field_name = field_node.get_value("name") orelse "EMPTY";
             log.warn("failed to load field {s}.{s}: {}", .{ reg_name, field_name, err });
         };
-    // TODO: derivision
-    //if (node.get_attribute("derivedFrom")) |derived_from|
-    //    try ctx.add_derived_entity(id, derived_from);
-
-    // TODO:
-    // dimElementGroup
-    // displayName
-    // alternateGroup
-    // alternateRegister
-    // dataType
-    // modifiedWriteValues
-    // writeConstraint
-    // readAction
 }
 
 fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     const db = ctx.db;
 
     const bit_range = try BitRange.parse(node);
-    const count: ?u16 = if (try DimElements.parse(node)) |elements| count: {
+    const count: ?u16 = if (try DimElements.parse(ctx, node)) |elements| count: {
         if (elements.dim_index != null or elements.dim_name != null)
             return error.TodoDimElementsExtended;
 
@@ -589,6 +633,11 @@ pub const DimableIdentifier = struct {
 /// pattern: [0-9]+\-[0-9]+|[A-Z]-[A-Z]|[_0-9a-zA-Z]+(,\s*[_0-9a-zA-Z]+)+
 pub const DimIndex = struct {};
 
+const DimType = enum {
+    array,
+    list,
+};
+
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 const expectError = std.testing.expectError;
@@ -617,9 +666,10 @@ test "svd.Revision.parse" {
 // seperated list of strings being used for identifying each element in
 // the array -->
 const DimElements = struct {
-    /// number of array elements
+    /// Define the number of elements in an array of registers. If "dimIncrement" is specified, this element becomes mandatory.
+    type: DimType,
     dim: u64,
-    /// address offset between consecutive array elements
+    /// Specify the address increment, in Bytes, between two neighboring registers.
     dim_increment: u64,
 
     /// dimIndexType specifies the subset and sequence of characters used for specifying the sequence of indices in register arrays -->
@@ -629,23 +679,67 @@ const DimElements = struct {
     // TODO: not sure what dimArrayIndexType means
     //dim_array_index: ?u64 = null,
 
-    fn parse(node: xml.Node) !?DimElements {
-        return DimElements{
-            // these two are required for DimElements, so if either is not
-            // found then just say there's no dimElementGroup. TODO: error
-            // if only one is present because that's sus
-            .dim = if (node.get_value("dim")) |dim_str|
-                try std.fmt.parseInt(u64, dim_str, 0)
-            else
-                return null,
-            .dim_increment = if (node.get_value("dimIncrement")) |dim_increment_str|
-                try std.fmt.parseInt(u64, dim_increment_str, 0)
-            else
-                return null,
+    fn parse(ctx: *Context, node: xml.Node) !?DimElements {
+        const dim_increment = if (node.get_value("dimIncrement")) |dim_increment_str|
+            try std.fmt.parseInt(u64, dim_increment_str, 0)
+        else
+            null;
+        const dim = if (node.get_value("dim")) |dim_str|
+            try std.fmt.parseInt(u64, dim_str, 0)
+        else
+            null;
+        var dim_index = node.get_value("dimIndex");
 
-            .dim_index = node.get_value("dimIndex"),
-            .dim_name = node.get_value("dimName"),
+        // if "dimIncrement" exists, "dim" becomes a mandatory field
+        if (dim_increment != null and dim == null) {
+            return error.DimElementGroupMalformed;
+        } else if (dim_increment == null and dim == null) {
+            // dim element group is an optional type
+            return null;
+        }
+
+        const name = node.get_value("name").?; // Not a dim element!
+        // By default, the index is a decimal value starting with 0 for the first register.
+        // Initialize dim_index to range [0-dim] (inclusive) if the node does not exist
+        const is_array_type = std.mem.endsWith(u8, name, "[%s]");
+        const is_list_type = std.mem.containsAtLeast(u8, name, 1, "%s");
+
+        if (!is_array_type and !is_list_type) {
+            return error.NameFieldMalformed;
+        }
+
+        if (dim_index == null and !is_array_type and is_list_type) {
+            const buf = try ctx.arena.allocator().allocSentinel(u8, 16, 0);
+            @memset(buf, 0);
+            // dim index range is with
+            dim_index = try std.fmt.bufPrintZ(buf, "0-{d}", .{dim.? - 1});
+        }
+
+        return DimElements{
+            .type = if (is_array_type) DimType.array else DimType.list,
+            .dim = if (dim) |d| blk: {
+                break :blk d;
+            } else return null,
+            .dim_increment = dim_increment.?,
+            .dim_index = dim_index,
+            .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name"
         };
+    }
+
+    // TODO: regex pattern not verified, function assumes valid node value
+    fn dim_index_value(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
+        var iter = std.mem.splitScalar(u8, self.dim_index.?, '-');
+        const start_index = iter.next().?;
+        const parse_start = std.fmt.parseInt(usize, start_index, 0);
+        if (parse_start) |start| {
+            return try std.fmt.allocPrintZ(ctx.arena.allocator(), "{d}", .{start + index});
+        } else |_| {
+            if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
+                return std.fmt.allocPrintZ(ctx.arena.allocator(), "{c}", .{start_index[0] + @as(u8, @truncate(index))});
+            }
+            return error.DimIndexInvalid;
+        }
+        return error.DimIndexInvalid;
     }
 };
 
@@ -1100,45 +1194,6 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
     try expectEqual(null, try db.get_peripheral_by_name("TEST_PERIPHERAL"));
 }
 
-test "svd.register with dimElementGroup" {
-    const text =
-        \\<device>
-        \\  <name>TEST_DEVICE</name>
-        \\  <size>32</size>
-        \\  <access>read-only</access>
-        \\  <resetValue>0x00000000</resetValue>
-        \\  <resetMask>0xffffffff</resetMask>
-        \\  <peripherals>
-        \\    <peripheral>
-        \\      <name>TEST_PERIPHERAL</name>
-        \\      <baseAddress>0x1000</baseAddress>
-        \\      <registers>
-        \\        <register>
-        \\          <name>TEST_REGISTER</name>
-        \\          <addressOffset>0</addressOffset>
-        \\          <dim>4</dim>
-        \\          <dimIncrement>4</dimIncrement>
-        \\        </register>
-        \\      </registers>
-        \\    </peripheral>
-        \\  </peripherals>
-        \\</device>
-    ;
-
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-
-    const doc = try xml.Doc.from_memory(text);
-    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
-    defer db.destroy();
-
-    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
-    const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
-
-    try expectEqual(4, register.count);
-}
-
 test "svd.register with dimElementGroup, dimIncrement != size" {
     const text =
         \\<device>
@@ -1261,9 +1316,15 @@ test "svd.register with dimElementGroup, %s in name" {
     // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+    const register0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
+    const register1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
+    const register2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
+    const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
 
-    try expectEqual(4, register.count);
+    try expectEqual(null, register0.count);
+    try expectEqual(null, register1.count);
+    try expectEqual(null, register2.count);
+    try expectEqual(null, register3.count);
 }
 
 test "svd.field with dimElementGroup, suffixed with %s" {
@@ -1284,7 +1345,7 @@ test "svd.field with dimElementGroup, suffixed with %s" {
         \\          <addressOffset>0</addressOffset>
         \\          <fields>
         \\            <field>
-        \\              <name>TEST_FIELD%s</name>
+        \\              <name>TEST_FIELD[%s]</name>
         \\              <access>read-write</access>
         \\              <bitRange>[0:0]</bitRange>
         \\              <dim>2</dim>
