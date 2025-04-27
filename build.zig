@@ -114,7 +114,7 @@ fn generate_release_steps(b: *Build) void {
     for (exe_targets) |t| {
         const release_target = b.resolveTargetQuery(t);
 
-        const esp_image_dep = b.dependency("tools/esp_image", .{
+        const esp_image_dep = b.dependency("tools/esp-image", .{
             .optimize = .ReleaseSafe,
             .target = release_target,
         });
@@ -378,7 +378,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const zig_resolved_target = b.resolveTargetQuery(options.zig_target orelse target.zig_target);
 
-            const cpu = options.cpu orelse target.cpu orelse get_default_cpu(zig_resolved_target.result, mb.core_dep);
+            const cpu = options.cpu orelse target.cpu orelse mb.get_default_cpu(zig_resolved_target.result);
             const maybe_hal = options.hal orelse target.hal;
             const maybe_board = options.board orelse target.board;
 
@@ -662,8 +662,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
                         .dfu => @panic("DFU is not implemented yet. See https://github.com/ZigEmbeddedGroup/microzig/issues/145 for more details!"),
 
-                        .esp => |options| @import("tools/esp_image").from_elf(
-                            fw.mb.dep.builder.dependency("tools/esp_image", .{}),
+                        .esp => |options| @import("tools/esp-image").from_elf(
+                            fw.mb.dep.builder.dependency("tools/esp-image", .{}),
                             elf_file,
                             options,
                         ),
@@ -738,31 +738,37 @@ pub fn MicroBuild(port_select: PortSelect) type {
                 fw.artifact.addObjectFile(source);
             }
         };
+
+        fn get_default_cpu(mb: *Self, target: std.Target) Cpu {
+            if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
+                return .{
+                    .name = "avr5",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_avr5"),
+                };
+            } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
+                return .{
+                    .name = target.cpu.model.name,
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_cortex_m"),
+                };
+            } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
+                return .{
+                    .name = "riscv32",
+                    .root_source_file = mb.core_dep.namedLazyPath("cpu_riscv32"),
+                    .imports = mb.builder.allocator.dupe(Build.Module.Import, &.{
+                        .{
+                            .name = "riscv32-common",
+                            .module = mb.dep.builder.dependency("modules/riscv32-common", .{}).module("riscv32-common"),
+                        },
+                    }) catch @panic("OOM"),
+                };
+            }
+
+            std.debug.panic(
+                "No default cpu configuration for `{s}`. Please specify a cpu either in the target or in the options for creating the firmware.",
+                .{target.cpu.model.name},
+            );
+        }
     };
-}
-
-fn get_default_cpu(target: std.Target, core_dep: *Build.Dependency) Cpu {
-    if (std.mem.eql(u8, target.cpu.model.name, "avr5")) {
-        return .{
-            .name = "avr5",
-            .root_source_file = core_dep.namedLazyPath("cpu_avr5"),
-        };
-    } else if (std.mem.startsWith(u8, target.cpu.model.name, "cortex_m")) {
-        return .{
-            .name = target.cpu.model.name,
-            .root_source_file = core_dep.namedLazyPath("cpu_cortex_m"),
-        };
-    } else if (target.cpu.arch.isRISCV() and target.ptrBitWidth() == 32) {
-        return .{
-            .name = "riscv32",
-            .root_source_file = core_dep.namedLazyPath("cpu_riscv32"),
-        };
-    }
-
-    std.debug.panic(
-        "No default cpu configuration for `{s}`. Please specify a cpu either in the target or in the options for creating the firmware.",
-        .{target.cpu.model.name},
-    );
 }
 
 pub inline fn custom_lazy_import(
