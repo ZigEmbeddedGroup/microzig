@@ -1281,7 +1281,7 @@ test "svd.register with dimElementGroup, suffixed with [%s]" {
     try expectEqual(4, register.count);
 }
 
-test "svd.register with dimElementGroup, %s in name" {
+test "svd.register with dimElementGroup, %s in name with missing dimIndex" {
     const text =
         \\<device>
         \\  <name>TEST_DEVICE</name>
@@ -1325,6 +1325,147 @@ test "svd.register with dimElementGroup, %s in name" {
     try expectEqual(null, register1.count);
     try expectEqual(null, register2.count);
     try expectEqual(null, register3.count);
+}
+
+test "svd.register with dimElementGroup, %s in name with default dimIndex" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST%s_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\          <dimIndex>0-3</dimIndex>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    // %s is dropped from name, it is redundant
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
+    const register1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
+    const register2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
+    const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
+
+    try expectEqual(null, register0.count);
+    try expectEqual(null, register1.count);
+    try expectEqual(null, register2.count);
+    try expectEqual(null, register3.count);
+}
+
+test "svd.register with dimElementGroup, %s in name with non-default dimIndex" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST%s_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\          <dimIndex>123-126</dimIndex>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    // %s is dropped from name, it is redundant
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register123 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST123_REGISTER");
+    const register124 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST124_REGISTER");
+    const register125 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST125_REGISTER");
+    const register126 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST126_REGISTER");
+
+    try expectEqual(null, register123.count);
+    try expectEqual(null, register124.count);
+    try expectEqual(null, register125.count);
+    try expectEqual(null, register126.count);
+}
+
+test "svd.register with dimElementGroup, %s in name with alphabetical dimIndex" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST%s_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\          <dimIndex>D-G</dimIndex>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    // %s is dropped from name, it is redundant
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const registerD = try db.get_register_by_name(arena.allocator(), struct_id, "TESTD_REGISTER");
+    const registerE = try db.get_register_by_name(arena.allocator(), struct_id, "TESTE_REGISTER");
+    const registerF = try db.get_register_by_name(arena.allocator(), struct_id, "TESTF_REGISTER");
+    const registerG = try db.get_register_by_name(arena.allocator(), struct_id, "TESTG_REGISTER");
+
+    try expectEqual(null, registerD.count);
+    try expectEqual(null, registerE.count);
+    try expectEqual(null, registerF.count);
+    try expectEqual(null, registerG.count);
 }
 
 test "svd.field with dimElementGroup, suffixed with %s" {
