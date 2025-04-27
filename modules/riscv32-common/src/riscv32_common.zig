@@ -43,6 +43,8 @@ pub const interrupt = struct {
     pub const core = utilities.interrupt.CoreImpl(CoreInterrupt);
 };
 
+// TODO: Verbose exception handler
+
 pub fn nop() void {
     asm volatile ("nop");
 }
@@ -51,9 +53,8 @@ pub fn wfi() void {
     asm volatile ("wfi");
 }
 
-// Contains all csrs from the riscv manual and should follow their spec. Cpu implementations can reexport
-// what they need from here or they can override the register in case they only support a subset of
-// the functionality.
+// NOTE: Contains all csrs from the riscv manual and should follow their spec. Cpu implementations can
+// reexport what they need from here.
 pub const csr = struct {
     pub const fflags = Csr(0x001, u32);
     pub const frm = Csr(0x002, u32);
@@ -157,7 +158,10 @@ pub const csr = struct {
 
     pub const mscratch = Csr(0x340, u32);
     pub const mepc = Csr(0x341, u32);
-    pub const mcause = Csr(0x342, u32);
+    pub const mcause = Csr(0x342, packed struct {
+        code: u31,
+        is_interrupt: u1,
+    });
     pub const mtval = Csr(0x343, u32);
     pub const mip = Csr(0x344, u32);
     pub const mtinst = Csr(0x34A, u32);

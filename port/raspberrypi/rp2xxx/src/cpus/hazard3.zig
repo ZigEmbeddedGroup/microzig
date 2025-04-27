@@ -115,7 +115,7 @@ pub const interrupt = struct {
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
         const set_mask: u16 = @as(u16, @intFromEnum(priority)) << shift;
-        const clear_mask: u16 = 0xf << shift;
+        const clear_mask: u16 = @as(u16, 0xf) << shift;
         csr.meifa.clear(.{ .index = index, .window = clear_mask });
         csr.meifa.set(.{ .index = index, .window = set_mask });
     }
@@ -147,8 +147,8 @@ pub const interrupt = struct {
     }
 };
 
-pub const wfi = riscv32_common.wfi;
 pub const nop = riscv32_common.nop;
+pub const wfi = riscv32_common.wfi;
 
 pub fn wfe() void {
     // MAGIC: This instruction which seems to accomplishes nothing, is actually
@@ -219,6 +219,7 @@ pub const startup_logic = struct {
             @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
         }
 
+        // NOTE: tact1m4n3: I don't think it's fine to enable this behind the user's back.
         interrupt.core.enable(.MachineExternal);
 
         microzig_main();
@@ -323,8 +324,6 @@ pub fn export_startup_logic() void {
     });
 }
 
-// NOTE: We only export the csrs that are implemented by this cpu. Writing to the others would cause
-// an exception.
 pub const csr = struct {
     pub const cycle = riscv32_common.csr.cycle;
     pub const instret = riscv32_common.csr.instret;
