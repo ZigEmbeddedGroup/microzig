@@ -136,7 +136,7 @@ pub const interrupt = struct {
         return @hasField(@TypeOf(microzig_options.cpu), "has_ram_vectors_section") and microzig_options.cpu.has_ram_vectors_section;
     }
 
-    pub fn set_handler(int: ExternalInterrupt, handler: ?InterruptHandler) ?InterruptHandler {
+    pub fn set_handler(int: ExternalInterrupt, handler: ?Handler) ?Handler {
         if (!has_ram_vectors()) {
             @compileError("RAM vectors are disabled. Consider adding .platform = .{ .ram_vectors = true } to your microzig_options");
         }

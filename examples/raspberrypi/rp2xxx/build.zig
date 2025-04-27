@@ -62,17 +62,17 @@ pub fn build(b: *std.Build) void {
     available_examples.appendSlice(rp2040_only_examples) catch @panic("out of memory");
     available_examples.appendSlice(rp2350_only_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
-        // available_examples.append(.{
-        //     .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
-        //     .name = b.fmt("pico_{s}", .{example.name}),
-        //     .file = example.file,
-        // }) catch @panic("out of memory");
-        //
-        // available_examples.append(.{
-        //     .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
-        //     .name = b.fmt("pico2_arm_{s}", .{example.name}),
-        //     .file = example.file,
-        // }) catch @panic("out of memory");
+        available_examples.append(.{
+            .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
+            .name = b.fmt("pico_{s}", .{example.name}),
+            .file = example.file,
+        }) catch @panic("out of memory");
+
+        available_examples.append(.{
+            .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_arm,
+            .name = b.fmt("pico2_arm_{s}", .{example.name}),
+            .file = example.file,
+        }) catch @panic("out of memory");
 
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico2_riscv,
