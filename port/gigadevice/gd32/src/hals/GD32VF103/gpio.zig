@@ -66,13 +66,12 @@ pub const Pull = enum {
 pub const Pin = packed struct(u8) {
     number: u4,
     port: u3,
-    padding: u1,
+    padding: u1 = 0,
 
     pub fn init(port: u3, number: u4) Pin {
         return Pin{
             .number = number,
             .port = port,
-            .padding = 0,
         };
     }
     inline fn write_pin_config(gpio: Pin, config: u32) void {

@@ -299,7 +299,6 @@ pub const UART = enum(u1) {
             .BE = 1,
             .PE = 1,
             .FE = 1,
-            .padding = 0,
         });
     }
 
@@ -408,8 +407,8 @@ pub const UART = enum(u1) {
             break :baud_fbrd 0;
         } else @as(u6, @intCast(((@as(u7, @truncate(baud_rate_div))) + 1) / 2));
 
-        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd, .padding = 0 });
-        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd, .padding = 0 });
+        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd });
+        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd });
 
         // PL011 needs a (dummy) LCR_H write to latch in the divisors.
         // We don't want to actually change LCR_H contents here.

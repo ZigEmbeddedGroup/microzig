@@ -37,6 +37,7 @@ pub const drivers = @import("drivers");
 pub const mmio = @import("mmio.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
+pub const concurrency = @import("concurrency.zig");
 pub const utilities = @import("utilities.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
@@ -66,6 +67,8 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const InterruptOptions = if (@hasDecl(cpu, "InterruptOptions")) cpu.InterruptOptions else struct {};
 
+pub const CPUOptions = if (@hasDecl(cpu, "CPUOptions")) cpu.CPUOptions else struct {};
+
 pub const Options = struct {
     log_level: std.log.Level = std.log.default_level,
     log_scope_levels: []const std.log.ScopeLevel = &.{},
@@ -88,6 +91,7 @@ pub const Options = struct {
         }
     }.log,
     interrupts: InterruptOptions = .{},
+    cpu: CPUOptions = .{},
 };
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!

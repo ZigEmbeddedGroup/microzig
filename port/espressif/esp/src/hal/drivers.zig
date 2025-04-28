@@ -4,7 +4,7 @@
 
 const std = @import("std");
 const microzig = @import("microzig");
-const hal = @import("../hal.zig");
+const hal = microzig.hal;
 
 const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;

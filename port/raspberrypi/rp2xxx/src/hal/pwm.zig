@@ -15,7 +15,7 @@ fn get_regs(slice: u32) *volatile Regs {
 
 pub const Channel = enum(u1) { a, b };
 
-pub const Slice = enum (u32) {
+pub const Slice = enum(u32) {
     _,
 
     pub fn set_wrap(self: Slice, wrap: u16) void {
@@ -38,7 +38,6 @@ pub const Slice = enum (u32) {
         set_slice_clk_div(@intFromEnum(self), integer, fraction);
     }
 };
-
 
 // An instance of Pwm corresponds to one of the 16 total channels
 //  (There are eight slices and each has two channels)

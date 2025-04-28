@@ -27,21 +27,21 @@ pub fn main() !void {
     std.log.info("Hello from Zig!", .{});
 
     while (true) {
-        led_r_pin.write(gpio.Level.high);
-        led_g_pin.write(gpio.Level.low);
-        led_b_pin.write(gpio.Level.low);
+        led_r_pin.write(.high);
+        led_g_pin.write(.low);
+        led_b_pin.write(.low);
         std.log.info("R", .{});
         time.sleep_ms(500);
 
-        led_r_pin.write(gpio.Level.low);
-        led_g_pin.write(gpio.Level.high);
-        led_b_pin.write(gpio.Level.low);
+        led_r_pin.write(.low);
+        led_g_pin.write(.high);
+        led_b_pin.write(.low);
         std.log.info("G", .{});
         time.sleep_ms(500);
 
-        led_r_pin.write(gpio.Level.low);
-        led_g_pin.write(gpio.Level.low);
-        led_b_pin.write(gpio.Level.high);
+        led_r_pin.write(.low);
+        led_g_pin.write(.low);
+        led_b_pin.write(.high);
         std.log.info("B", .{});
         time.sleep_ms(500);
     }

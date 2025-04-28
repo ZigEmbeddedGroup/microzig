@@ -5,7 +5,7 @@
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },
         .uf2 = .{ .path = "../tools/uf2" },
-        .esp_image = .{ .path = "../tools/esp_image" },
+        .@"esp-image" = .{ .path = "../tools/esp-image" },
     },
     .paths = .{
         "build.zig",

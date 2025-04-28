@@ -65,7 +65,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
             const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
-            var PCF_base: *Self = @fieldParentPtr("pin_arr", pin_base);
+            var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));
             const state = PCF_base.read(@intCast(index)) catch return ReadError.IoError;
             return state;
         }
@@ -74,7 +74,7 @@ pub fn PCF8574(comptime config: PCF8574_Config) type {
             const pin_ref: *u8 = @alignCast(@ptrCast(ctx));
             const index = pin_ref.*;
             const pin_base: *[8]u8 = @ptrFromInt(@intFromPtr(pin_ref) - index); //just 1 byte
-            var PCF_base: *Self = @fieldParentPtr("pin_arr", pin_base);
+            var PCF_base: *Self = @alignCast(@fieldParentPtr("pin_arr", pin_base));
             PCF_base.put(@intCast(index), state) catch return WriteError.IoError;
         }
 

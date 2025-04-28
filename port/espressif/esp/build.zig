@@ -1,4 +1,5 @@
 const std = @import("std");
+const Import = std.Build.Module.Import;
 const microzig = @import("microzig/build-internals");
 
 const Self = @This();
@@ -12,6 +13,15 @@ boards: struct {},
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
+
+    const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+
+    const cpu_imports: []Import = b.allocator.dupe(Import, &.{
+        .{
+            .name = "riscv32-common",
+            .module = riscv32_common_dep.module("riscv32-common"),
+        },
+    }) catch @panic("OOM");
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
@@ -37,7 +47,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .cpu = .{
             .name = "esp_riscv",
-            .root_source_file = b.path("src/cpus/esp_riscv_image.zig"),
+            .root_source_file = b.path("src/cpus/esp_riscv_image_boot.zig"),
+            .imports = cpu_imports,
         },
         .chip = .{
             .name = "ESP32-C3",
@@ -58,9 +69,11 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chips = .{
             .esp32_c3 = chip_esp32_c3.derive(.{}),
             .esp32_c3_direct_boot = chip_esp32_c3.derive(.{
+                .preferred_binary_format = .bin,
                 .cpu = .{
                     .name = "esp_riscv",
                     .root_source_file = b.path("src/cpus/esp_riscv_direct_boot.zig"),
+                    .imports = cpu_imports,
                 },
                 .linker_script = b.path("esp32_c3_direct_boot.ld"),
             }),

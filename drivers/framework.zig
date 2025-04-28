@@ -4,11 +4,13 @@
 const std = @import("std");
 
 pub const display = struct {
+    pub const sh1106 = @import("display/sh1106.zig");
     pub const ssd1306 = @import("display/ssd1306.zig");
     pub const st77xx = @import("display/st77xx.zig");
     pub const hd44780 = @import("display/hd44780.zig");
 
     // Export generic drivers:
+    pub const SH1106 = sh1106.SH1106;
     pub const SSD1306_I2C = ssd1306.SSD1306_I2C;
     pub const ST7735 = st77xx.ST7735;
     pub const ST7789 = st77xx.ST7789;
@@ -51,6 +53,11 @@ pub const IO_expander = struct {
 };
 
 pub const wireless = struct {
+    pub const cyw43_bus = @import("wireless/cyw43/bus.zig");
+    pub const cyw43_runner = @import("wireless/cyw43/runner.zig");
+    pub const Cyw43_Spi = cyw43_bus.Cyw43_Spi;
+    pub const Cyw43_Bus = cyw43_bus.Cyw43_Bus;
+    pub const Cyw43_Runner = cyw43_runner.Cyw43_Runner;
     // pub const sx1278 = @import("wireless/sx1278.zig");
 };
 
@@ -183,6 +190,7 @@ pub const base = struct {
 };
 
 test {
+    _ = display.sh1106;
     _ = display.ssd1306;
     _ = display.st77xx;
     _ = display.HD44780;

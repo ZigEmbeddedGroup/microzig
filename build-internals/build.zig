@@ -7,7 +7,7 @@ const regz = @import("regz");
 pub const Patch = regz.patch.Patch;
 const uf2 = @import("uf2");
 pub const FamilyId = uf2.FamilyId;
-const esp_image = @import("esp_image");
+const esp_image = @import("esp-image");
 
 pub fn build(b: *Build) void {
     _ = b.addModule("build-internals", .{

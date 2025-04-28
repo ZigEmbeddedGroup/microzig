@@ -8,17 +8,14 @@ const Spinlock = microzig.hal.multicore.Spinlock;
 /// Multicore safe mutex.
 pub const Mutex = struct {
     available: bool = true,
-    spinlock: Spinlock = Spinlock.init(31),
+    spinlock: Spinlock = .mutexes,
 
     /// Try to lock the mutex.
     /// Returns true if the mutex was acquired, false if the mutex
     /// was not acquired.
     pub fn try_lock(self: *Mutex) bool {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.available) {
             self.available = false;
@@ -48,18 +45,15 @@ pub const Mutex = struct {
 /// number of times it was acquired before the other core can acquire it.
 pub const CoreMutex = struct {
     count: usize = 0,
-    spinlock: Spinlock = Spinlock.init(31),
+    spinlock: Spinlock = .mutexes,
     owning_core: u32 = 0,
 
     /// Try to acquire the mutex.
     /// Returns true if the mutex was acquired, false if the mutex
     /// is not available.
     pub fn try_lock(self: *CoreMutex) bool {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.count == 0) {
             // Core is free
@@ -83,11 +77,8 @@ pub const CoreMutex = struct {
 
     /// Release the mutex.
     pub fn unlock(self: *CoreMutex) void {
-        const critical_section = microzig.interrupt.enter_critical_section();
-        defer critical_section.leave();
-
-        self.spinlock.lock();
-        defer self.spinlock.unlock();
+        const critical_section = self.spinlock.lock_irq();
+        defer self.spinlock.unlock_irq(critical_section);
 
         if (self.count > 0) self.count -= 1;
     }
