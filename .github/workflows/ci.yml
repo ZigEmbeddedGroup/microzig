@@ -75,7 +75,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test ESP Image
         run: zig build test
-        working-directory: tools/esp_image
+        working-directory: tools/esp-image
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date

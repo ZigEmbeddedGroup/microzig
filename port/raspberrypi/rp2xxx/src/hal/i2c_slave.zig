@@ -107,7 +107,7 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
 
     self.disable();
 
-    self.regs.IC_SAR.write(.{ .IC_SAR = @intFromEnum(addr), .padding = 0 });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @intFromEnum(addr) });
 
     self.regs.IC_CON.write(.{
         .MASTER_MODE = .DISABLED,
@@ -120,7 +120,6 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
         .IC_10BITADDR_MASTER = .ADDR_7BITS,
         .STOP_DET_IFADDRESSED = .DISABLED,
         .STOP_DET_IF_MASTER_ACTIVE = 0,
-        .padding = 0,
     });
 
     // Be careful when setting the mask.  Due to vagrancies of the RP2040.svd file
@@ -143,7 +142,6 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
         .M_TX_OVER = .ENABLED,
         .M_RX_OVER = .ENABLED,
         .M_RX_UNDER = .ENABLED,
-        .padding = 0,
     });
 
     self.enable();
@@ -177,7 +175,6 @@ inline fn disable(self: *Self) void {
         .ENABLE = .DISABLED,
         .ABORT = .DISABLE,
         .TX_CMD_BLOCK = .NOT_BLOCKED,
-        .padding = 0,
     });
 }
 
@@ -187,7 +184,6 @@ inline fn enable(self: *Self) void {
         .ENABLE = .ENABLED,
         .ABORT = .DISABLE,
         .TX_CMD_BLOCK = .NOT_BLOCKED,
-        .padding = 0,
     });
 }
 
@@ -200,7 +196,7 @@ inline fn enable(self: *Self) void {
 ///
 pub fn set_slave_address(self: *Self, addr: u7) void {
     self.disable();
-    self.regs.IC_SAR.write(.{ .IC_SAR = @enumFromInt(addr), .padding = 0 });
+    self.regs.IC_SAR.write(.{ .IC_SAR = @enumFromInt(addr) });
     self.enable();
 }
 
