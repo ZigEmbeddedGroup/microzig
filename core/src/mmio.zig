@@ -37,11 +37,11 @@ pub fn Mmio(comptime PackedT: type) type {
 
         pub inline fn write_raw(addr: *volatile Self, val: IntT) void {
             if (@intFromPtr(addr) > 0x60004000 and @intFromPtr(addr) < 0x60004f00)
-                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr })
+                std.log.debug("Writing 0x{x:0>8} to 0x{x:0>8}", .{ val, @intFromPtr(addr) })
             else if (@intFromPtr(addr) > 0x60009000 and @intFromPtr(addr) < 0x6000c000)
-                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr })
+                std.log.debug("Writing 0x{x:0>8} to 0x{x:0>8}", .{ val, @intFromPtr(addr) })
             else if (@intFromPtr(addr) > 0x60013000 and @intFromPtr(addr) < 0x60014000)
-                std.log.debug("Writing 0x{x:0>8} to {*}", .{ val, addr });
+                std.log.debug("Writing 0x{x:0>8} to 0x{x:0>8}", .{ val, @intFromPtr(addr) });
             addr.raw = val;
         }
 
@@ -58,11 +58,11 @@ pub fn Mmio(comptime PackedT: type) type {
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
             if (@intFromPtr(addr) > 0x60004000 and @intFromPtr(addr) < 0x60004f00)
-                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr })
+                std.log.debug("Reading 0x{x:0>8} from 0x{x:0>8}", .{ @as(IntT, @bitCast(val)), @intFromPtr(addr) })
             else if (@intFromPtr(addr) > 0x60009000 and @intFromPtr(addr) < 0x6000c000)
-                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr })
+                std.log.debug("Reading 0x{x:0>8} from 0x{x:0>8}", .{ @as(IntT, @bitCast(val)), @intFromPtr(addr) })
             else if (@intFromPtr(addr) > 0x60013000 and @intFromPtr(addr) < 0x60014000)
-                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr });
+                std.log.debug("Reading 0x{x:0>8} from 0x{x:0>8}", .{ @as(IntT, @bitCast(val)), @intFromPtr(addr) });
             inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
