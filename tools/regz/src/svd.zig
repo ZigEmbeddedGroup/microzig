@@ -290,16 +290,21 @@ pub fn load_peripheral(ctx: *Context, node: xml.Node, device_id: DeviceID) !void
             if (elements.dim_name != null)
                 return error.TodoDimElementsExtended;
 
+            if (elements.type != DimType.array) {
+                return error.InvalidPeripheralDimType;
+            }
+
             break :blk .{ elements.dim, elements.dim_increment };
         }
 
         break :blk .{ null, null };
     };
 
-    const peripheral_id = try db.create_peripheral(.{ .name = node.get_value("name") orelse return error.PeripheralMissingName, .description = node.get_value("description"), .size_bytes = size_bytes });
+    const name = try get_name_without_suffix(node, "[%s]");
+    const peripheral_id = try db.create_peripheral(.{ .name = name, .description = node.get_value("description"), .size_bytes = size_bytes });
     const struct_id = try db.get_peripheral_struct(peripheral_id);
     const instance_id = try db.create_device_peripheral(device_id, .{
-        .name = node.get_value("name") orelse return error.PeripheralMissingName,
+        .name = name,
         .description = node.get_value("description"),
         .struct_id = struct_id,
         .count = count,
@@ -414,7 +419,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
     const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     const size = register_props.size orelse return error.MissingRegisterSize;
     const address_offset_string = node.get_value("addressOffset") orelse return error.MissinRegisterOffset;
-    const address_offset = try std.fmt.parseInt(usize, address_offset_string, 0);
+    const address_offset = try std.fmt.parseUnsigned(usize, address_offset_string, 0);
 
     // Array type needs only one entry in db with set count, list type should be each register as a separate entry
     const count = if (dim_elements.type == DimType.list) dim_elements.dim else 1;
@@ -432,7 +437,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
             .description = node.get_value("description"),
             .offset_bytes = switch (dim_elements.type) {
                 DimType.array => address_offset,
-                DimType.list => address_offset + (i * dim_elements.dim_increment),
+                DimType.list => (address_offset + (i * dim_elements.dim_increment)),
             },
             .size_bits = size,
             .count = if (dim_elements.type == DimType.array) dim_elements.dim else null,
@@ -464,7 +469,7 @@ fn load_single_register(ctx: *Context, node: xml.Node, parent: StructID) !void {
             try std.mem.replaceOwned(u8, ctx.arena.allocator(), name, "%s", ""),
         .description = node.get_value("description"),
         .offset_bytes = if (node.get_value("addressOffset")) |offset_str|
-            try std.fmt.parseInt(u64, offset_str, 0)
+            try std.fmt.parseUnsigned(usize, offset_str, 0)
         else
             return error.MissingRegisterOffset,
         .size_bits = size,
@@ -487,12 +492,13 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     const db = ctx.db;
 
     const bit_range = try BitRange.parse(node);
-    const count: ?u16 = if (try DimElements.parse(ctx, node)) |elements| count: {
-        if (elements.dim_index != null or elements.dim_name != null)
+    const dim_elements = try DimElements.parse(ctx, node);
+    const count: ?u16 = if (dim_elements) |elements| count: {
+        if (elements.dim_name != null)
             return error.TodoDimElementsExtended;
 
-        if (elements.dim_increment != bit_range.width)
-            return error.DimIncrementSizeMismatch;
+        // if (elements.dim_increment != bit_range.width)
+        // return error.DimIncrementSizeMismatch;
 
         break :count @intCast(elements.dim);
     } else null;
@@ -511,14 +517,25 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
     //if (node.get_value("access")) |access_str|
     //    try db.add_access(id, try parse_access(access_str));
 
-    try db.add_register_field(register_id, .{
-        .name = try get_name_without_suffix(node, "%s"),
-        .description = node.get_value("description"),
-        .size_bits = @intCast(bit_range.width),
-        .offset_bits = @intCast(bit_range.offset),
-        .count = count,
-        .enum_id = enum_id,
-    });
+    for (0..count orelse 1) |i| {
+        try db.add_register_field(register_id, .{
+            .name = if (dim_elements) |elements| blk: {
+                break :blk switch (elements.type) {
+                    // A bit-field has a name that is unique within the register, cannot use array for fields
+                    DimType.array => return error.FieldDimMalformed,
+                    DimType.list => listblk: {
+                        const replacement = try elements.dim_index_value(ctx, i);
+                        const new_name = try std.mem.replaceOwned(u8, ctx.arena.allocator(), node.get_value("name").?, "%s", replacement);
+                        break :listblk try std.fmt.allocPrintZ(ctx.arena.allocator(), "{s}", .{new_name});
+                    },
+                };
+            } else try get_name_without_suffix(node, "%s"),
+            .description = node.get_value("description"),
+            .size_bits = @intCast(bit_range.width),
+            .offset_bits = @intCast(bit_range.offset),
+            .enum_id = enum_id,
+        });
+    }
 
     // TODO:
     // modifiedWriteValues
@@ -1123,7 +1140,7 @@ test "svd.peripheral with dimElementGroup" {
         \\  <resetMask>0xffffffff</resetMask>
         \\  <peripherals>
         \\    <peripheral>
-        \\      <name>TEST_PERIPHERAL</name>
+        \\      <name>TEST_PERIPHERAL[%s]</name>
         \\      <baseAddress>0x1000</baseAddress>
         \\      <dim>4</dim>
         \\      <dimIncrement>4</dimIncrement>
@@ -1164,7 +1181,7 @@ test "svd.peripheral with dimElementgroup, dimIndex set" {
         \\  <resetMask>0xffffffff</resetMask>
         \\  <peripherals>
         \\    <peripheral>
-        \\      <name>TEST_PERIPHERAL</name>
+        \\      <name>TEST_PERIPHERAL%s</name>
         \\      <baseAddress>0x1000</baseAddress>
         \\      <dim>4</dim>
         \\      <dimIncrement>4</dimIncrement>
@@ -1208,7 +1225,7 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
         \\      <baseAddress>0x1000</baseAddress>
         \\      <registers>
         \\        <register>
-        \\          <name>TEST_REGISTER</name>
+        \\          <name>TEST_REGISTER[%s]</name>
         \\          <addressOffset>0</addressOffset>
         \\          <dim>4</dim>
         \\          <dimIncrement>8</dimIncrement>
@@ -1238,7 +1255,8 @@ test "svd.register with dimElementGroup, dimIncrement != size" {
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
 
-    try expectError(error.MissingEntity, db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER"));
+    const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
+    try expectEqual(4, register.count);
 }
 
 test "svd.register with dimElementGroup, suffixed with [%s]" {
@@ -1322,9 +1340,13 @@ test "svd.register with dimElementGroup, %s in name with missing dimIndex" {
     const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
 
     try expectEqual(null, register0.count);
+    try expectEqual(0x0, register0.offset_bytes);
     try expectEqual(null, register1.count);
+    try expectEqual(0x4, register1.offset_bytes);
     try expectEqual(null, register2.count);
+    try expectEqual(0x8, register2.offset_bytes);
     try expectEqual(null, register3.count);
+    try expectEqual(0xC, register3.offset_bytes);
 }
 
 test "svd.register with dimElementGroup, %s in name with default dimIndex" {
@@ -1344,7 +1366,7 @@ test "svd.register with dimElementGroup, %s in name with default dimIndex" {
         \\          <name>TEST%s_REGISTER</name>
         \\          <addressOffset>0</addressOffset>
         \\          <dim>4</dim>
-        \\          <dimIncrement>4</dimIncrement>
+        \\          <dimIncrement>0x8</dimIncrement>
         \\          <dimIndex>0-3</dimIndex>
         \\        </register>
         \\      </registers>
@@ -1369,9 +1391,13 @@ test "svd.register with dimElementGroup, %s in name with default dimIndex" {
     const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
 
     try expectEqual(null, register0.count);
+    try expectEqual(0x0, register0.offset_bytes);
     try expectEqual(null, register1.count);
+    try expectEqual(0x8, register1.offset_bytes);
     try expectEqual(null, register2.count);
+    try expectEqual(0x10, register2.offset_bytes);
     try expectEqual(null, register3.count);
+    try expectEqual(0x18, register3.offset_bytes);
 }
 
 test "svd.register with dimElementGroup, %s in name with non-default dimIndex" {
@@ -1486,9 +1512,9 @@ test "svd.field with dimElementGroup, suffixed with %s" {
         \\          <addressOffset>0</addressOffset>
         \\          <fields>
         \\            <field>
-        \\              <name>TEST_FIELD[%s]</name>
+        \\              <name>TEST_FIELD%s</name>
         \\              <access>read-write</access>
-        \\              <bitRange>[0:0]</bitRange>
+        \\              <bitRange>[1:0]</bitRange>
         \\              <dim>2</dim>
         \\              <dimIncrement>1</dimIncrement>
         \\            </field>
@@ -1506,14 +1532,16 @@ test "svd.field with dimElementGroup, suffixed with %s" {
     const doc = try xml.Doc.from_memory(text);
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
+    _ = try db.backup("fields.sqlite");
 
-    // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
     const register = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER");
 
     const fields = try db.get_register_fields(arena.allocator(), register.id, .{ .distinct = false });
 
-    try expectEqualStrings("TEST_FIELD", fields[0].name);
-    try expectEqual(2, fields[0].count);
+    try expectEqualStrings("TEST_FIELD0", fields[0].name);
+    try expectEqual(null, fields[0].count);
+    try expectEqualStrings("TEST_FIELD1", fields[1].name);
+    try expectEqual(null, fields[1].count);
 }

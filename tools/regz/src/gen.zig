@@ -1488,16 +1488,11 @@ test "gen.field with count, width of one, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2 = 0,
-        \\                /// (1/5 of TEST_FIELD)
-        \\                @"TEST_FIELD[0]": u1,
-        \\                /// (2/5 of TEST_FIELD)
-        \\                @"TEST_FIELD[1]": u1,
-        \\                /// (3/5 of TEST_FIELD)
-        \\                @"TEST_FIELD[2]": u1,
-        \\                /// (4/5 of TEST_FIELD)
-        \\                @"TEST_FIELD[3]": u1,
-        \\                /// (5/5 of TEST_FIELD)
-        \\                @"TEST_FIELD[4]": u1,
+        \\                TEST_FIELD0: u1,
+        \\                TEST_FIELD1: u1,
+        \\                TEST_FIELD2: u1,
+        \\                TEST_FIELD3: u1,
+        \\                TEST_FIELD4: u1,
         \\                padding: u1 = 0,
         \\            }),
         \\        };
@@ -1530,10 +1525,8 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\        pub const PORTB = extern struct {
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2 = 0,
-        \\                /// (1/2 of TEST_FIELD)
-        \\                @"TEST_FIELD[0]": u2,
-        \\                /// (2/2 of TEST_FIELD)
-        \\                @"TEST_FIELD[1]": u2,
+        \\                TEST_FIELD0: u2,
+        \\                TEST_FIELD1: u2,
         \\                padding: u2 = 0,
         \\            }),
         \\        };
