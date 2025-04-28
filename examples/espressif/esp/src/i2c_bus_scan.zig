@@ -35,11 +35,10 @@ pub fn main() !void {
         100_000,
     );
 
-    std.log.info("Hello", .{}); // DELETEME
     for (0x20..0x21) |addr| {
         // for (0..std.math.maxInt(u7)) |addr| {
         const a: i2c.Address = @enumFromInt(addr);
-        std.log.info("Trying {x:0>2}", .{addr}); // DELETEME
+        std.log.info("Trying to read from address 0x{x:0>2}", .{addr}); // DELETEME
 
         // Skip over any reserved addresses.
         if (a.is_reserved()) {

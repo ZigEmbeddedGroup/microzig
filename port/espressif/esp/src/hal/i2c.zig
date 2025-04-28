@@ -387,11 +387,19 @@ pub const I2C = enum(u1) {
 
     /// Execute transmission and monitor for completion/errors
     fn execute_transmission(self: I2C, timeout: ?mdf.time.Duration) !void {
+        std.log.debug("Executing transaction", .{}); // DELETEME
         // Clear all I2C interrupts
         self.clear_interrupts();
 
         // Ensure configuration is propagated
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
+
+        //   DELETEME>>
+        for (0..8) |i| {
+            const v = self.get_regs().COMD[i].raw;
+            std.log.debug("command: {} 0x{x:0>8}", .{ i, v });
+        }
+        //   DELETEME<<
 
         // Start transmission, causes peripheral to read its commands from COMD
         self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
