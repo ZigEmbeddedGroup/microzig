@@ -675,7 +675,7 @@ const tpi_base = 0xE0040000;
 const coredebug_base = 0xE000EDF0;
 const systick_base = scs_base + 0x0010;
 const nvic_base = scs_base + 0x0100;
-const scb_base = scs_base + 0x0D00;
+const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
 
 const properties = microzig.chip.properties;
