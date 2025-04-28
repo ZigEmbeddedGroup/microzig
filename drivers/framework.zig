@@ -50,6 +50,9 @@ pub const stepper = struct {
 pub const IO_expander = struct {
     pub const pcf8574 = @import("io_expander/pcf8574.zig");
     pub const PCF8574 = pcf8574.PCF8574;
+
+    pub const pca9685 = @import("io_expander/pca9685.zig");
+    pub const PCA9685 = pca9685.PCA9685;
 };
 
 pub const wireless = struct {
