@@ -23,7 +23,7 @@ pub const SystemControlBlock = extern struct {
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
         VECTACTIVE: u9,
-        reserved0: u2,
+        reserved0: u2 = 0,
         /// Return to base. In Handler mode, indicates whether there is more than one active exception.
         /// 0 = more than one active exception
         /// 1 = only one active exception.
@@ -32,11 +32,11 @@ pub const SystemControlBlock = extern struct {
         /// 0 = no pending exceptions
         /// Nonzero = the exception number of the highest priority pending enabled exception.
         VECTPENDING: u9,
-        reserved1: u1,
+        reserved1: u1 = 0,
         /// Interrupt pending flag, excluding NMI and Faults:
         /// 0 = interrupt not pending
         /// 1 = interrupt pending.
-        ISRPENDING: u1,
+        ISRPENDING: u1 = 0,
         /// Indicates whether a pending exception will be serviced on exit from debug
         /// halt state:
         /// 0 = will not be serviced
@@ -82,7 +82,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// Writing 1 to this bit is the only way to set the PendSV exception state to pending.
         PENDSVSET: u1,
-        reserved2: u1,
+        reserved2: u1 = 0,
         /// NMI clear-pending bit.
         ///
         /// Write:
@@ -110,7 +110,7 @@ pub const SystemControlBlock = extern struct {
     VTOR: u32,
     /// Application Interrupt and Reset Control Register.
     AIRCR: mmio.Mmio(packed struct {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
         VECTCLRACTIVE: u1,
@@ -136,11 +136,11 @@ pub const SystemControlBlock = extern struct {
         /// 0 = No implicit Error Synchronization Bit
         /// 1 = Insert an implicit Error Synchronization Bit
         IESB: u1,
-        reserved1: u2,
+        reserved1: u2 = 0,
         /// Priority grouping. The value of this field defines the exception priority binary point position for the selected
         /// value of PRIS.
         PRIGROUP: u3,
-        reserved2: u2,
+        reserved2: u2 = 0,
         /// BusFault, HardFault, and NMI Non-secure enable. The value of this bit defines whether BusFault and NMI
         /// exceptions are Non-secure, and whether exceptions target the Non-secure HardFault exception.
         /// 0 = BusFault, HardFault, and NMI are Secure
@@ -161,7 +161,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// System Control Register.
     SCR: mmio.Mmio(packed struct(u32) {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
         /// 1 = enter sleep, or deep sleep, on return from an ISR to Thread mode.
@@ -189,7 +189,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// The processor also wakes up on execution of an SEV instruction or an external event.
         SEVONPEND: u1,
-        reserved1: u27,
+        reserved1: u27 = 0,
     }),
     /// Configuration and Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
