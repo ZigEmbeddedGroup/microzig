@@ -963,6 +963,7 @@ test "gen.peripheral instantiation" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
         \\                padding: u31 = 0,
@@ -1004,6 +1005,7 @@ test "gen.peripherals with a shared type" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                TEST_FIELD: u1,
         \\                padding: u31 = 0,
@@ -1063,14 +1065,18 @@ test "gen.peripheral with modes" {
         \\            }
         \\
         \\            TEST_MODE1: extern struct {
+        \\                /// offset: 0x00
         \\                TEST_REGISTER1: u32,
+        \\                /// offset: 0x04
         \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                    TEST_FIELD: u1,
         \\                    padding: u31 = 0,
         \\                }),
         \\            },
         \\            TEST_MODE2: extern struct {
+        \\                /// offset: 0x00
         \\                TEST_REGISTER2: u32,
+        \\                /// offset: 0x04
         \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                    TEST_FIELD: u1,
         \\                    padding: u31 = 0,
@@ -1110,6 +1116,7 @@ test "gen.peripheral with enum" {
         \\                _,
         \\            };
         \\
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: u8,
         \\        };
         \\    };
@@ -1144,6 +1151,7 @@ test "gen.peripheral with enum, enum is exhausted of values" {
         \\                TEST_ENUM_FIELD2 = 0x1,
         \\            };
         \\
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: u8,
         \\        };
         \\    };
@@ -1179,6 +1187,7 @@ test "gen.field with named enum" {
         \\                _,
         \\            };
         \\
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: TEST_ENUM,
         \\                padding: u4 = 0,
@@ -1211,6 +1220,7 @@ test "gen.field with anonymous enum" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: enum(u4) {
         \\                    TEST_ENUM_FIELD1 = 0x0,
@@ -1257,14 +1267,20 @@ test "gen.namespaced register groups" {
         \\    pub const peripherals = struct {
         \\        pub const PORT = struct {
         \\            pub const PORTB = extern struct {
+        \\                /// offset: 0x00
         \\                PORTB: u8,
+        \\                /// offset: 0x01
         \\                DDRB: u8,
+        \\                /// offset: 0x02
         \\                PINB: u8,
         \\            };
         \\
         \\            pub const PORTC = extern struct {
+        \\                /// offset: 0x00
         \\                PORTC: u8,
+        \\                /// offset: 0x01
         \\                DDRC: u8,
+        \\                /// offset: 0x02
         \\                PINC: u8,
         \\            };
         \\        };
@@ -1303,8 +1319,11 @@ test "gen.peripheral with reserved register" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: u32,
+        \\            /// offset: 0x04
         \\            reserved8: [4]u8,
+        \\            /// offset: 0x08
         \\            PINB: u32,
         \\        };
         \\    };
@@ -1342,8 +1361,11 @@ test "gen.peripheral with count" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: u8,
+        \\            /// offset: 0x01
         \\            DDRB: u8,
+        \\            /// offset: 0x02
         \\            PINB: u8,
         \\        };
         \\    };
@@ -1381,8 +1403,11 @@ test "gen.peripheral with count, padding required" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: u8,
+        \\            /// offset: 0x01
         \\            DDRB: u8,
+        \\            /// offset: 0x02
         \\            PINB: u8,
         \\            padding: [1]u8,
         \\        };
@@ -1421,8 +1446,11 @@ test "gen.register with count" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: [4]u8,
+        \\            /// offset: 0x04
         \\            DDRB: u8,
+        \\            /// offset: 0x05
         \\            PINB: u8,
         \\        };
         \\    };
@@ -1460,11 +1488,14 @@ test "gen.register with count and fields" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: u4,
         \\                padding: u4 = 0,
         \\            }),
+        \\            /// offset: 0x04
         \\            DDRB: u8,
+        \\            /// offset: 0x05
         \\            PINB: u8,
         \\        };
         \\    };
@@ -1494,6 +1525,7 @@ test "gen.field with count, width of one, offset, and padding" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2 = 0,
         \\                /// (1/5 of TEST_FIELD)
@@ -1536,6 +1568,7 @@ test "gen.field with count, multi-bit width, offset, and padding" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const PORTB = extern struct {
+        \\            /// offset: 0x00
         \\            PORTB: mmio.Mmio(packed struct(u8) {
         \\                reserved2: u2 = 0,
         \\                /// (1/2 of TEST_FIELD)
@@ -1614,6 +1647,7 @@ test "gen.peripheral type with register and field" {
         \\        /// test peripheral
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            /// test register
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field
         \\                TEST_FIELD: u1,
@@ -1647,6 +1681,7 @@ test "gen.name collisions in enum name cause them to be anonymous" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD1: enum(u4) {
         \\                    TEST_ENUM_FIELD1 = 0x0,
@@ -1689,6 +1724,7 @@ test "gen.pick one enum field in value collisions" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: enum(u4) {
         \\                    TEST_ENUM_FIELD1 = 0x0,
@@ -1724,6 +1760,7 @@ test "gen.pick one enum field in name collisions" {
         \\pub const types = struct {
         \\    pub const peripherals = struct {
         \\        pub const TEST_PERIPHERAL = extern struct {
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
         \\                TEST_FIELD: enum(u4) {
         \\                    TEST_ENUM_FIELD1 = 0x0,
@@ -1761,6 +1798,7 @@ test "gen.register fields with name collision" {
         \\        /// test peripheral
         \\        pub const TEST_PERIPHERAL = extern struct {
         \\            /// test register
+        \\            /// offset: 0x00
         \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
         \\                /// test field 1
         \\                TEST_FIELD: u1,
