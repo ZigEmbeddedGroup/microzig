@@ -32,10 +32,6 @@ pub fn main() !void {
     // sets the period to one second.
     alarm.set_period(@intCast(1_000_000 * systimer.ticks_per_us()));
 
-    // SYSTIMER.COMP0_LOAD.write(.{
-    //     .TIMER_COMP0_LOAD = 1,
-    // });
-
     // to enable period mode you have to first clear the mode bit.
     alarm.set_mode(.target);
     alarm.set_mode(.period);

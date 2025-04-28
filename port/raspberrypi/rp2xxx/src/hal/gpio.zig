@@ -278,35 +278,35 @@ pub const Pin = enum(u6) {
 
     pub const Regs =
         switch (chip) {
-        .RP2040 => extern struct {
-            status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-            ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: Function,
-                reserved8: u3 = 0,
-                OUTOVER: Override,
-                reserved12: u2 = 0,
-                OEOVER: Override,
-                reserved16: u2 = 0,
-                INOVER: Override,
-                reserved28: u10 = 0,
-                IRQOVER: Override,
-                padding: u2 = 0,
-            }),
-        },
-        .RP2350 => extern struct {
-            status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-            ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: Function,
-                reserved12: u7 = 0,
-                OUTOVER: Override,
-                OEOVER: Override,
-                INOVER: Override,
-                reserved28: u10 = 0,
-                IRQOVER: Override,
-                padding: u2 = 0,
-            }),
-        },
-    };
+            .RP2040 => extern struct {
+                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+                ctrl: microzig.mmio.Mmio(packed struct(u32) {
+                    FUNCSEL: Function,
+                    reserved8: u3 = 0,
+                    OUTOVER: Override,
+                    reserved12: u2 = 0,
+                    OEOVER: Override,
+                    reserved16: u2 = 0,
+                    INOVER: Override,
+                    reserved28: u10 = 0,
+                    IRQOVER: Override,
+                    padding: u2 = 0,
+                }),
+            },
+            .RP2350 => extern struct {
+                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+                ctrl: microzig.mmio.Mmio(packed struct(u32) {
+                    FUNCSEL: Function,
+                    reserved12: u7 = 0,
+                    OUTOVER: Override,
+                    OEOVER: Override,
+                    INOVER: Override,
+                    reserved28: u10 = 0,
+                    IRQOVER: Override,
+                    padding: u2 = 0,
+                }),
+            },
+        };
 
     pub const RegsArray = switch (chip) {
         .RP2040 => *volatile [30]Regs,
