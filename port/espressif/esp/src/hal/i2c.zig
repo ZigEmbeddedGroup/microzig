@@ -80,6 +80,7 @@ const Command = union(enum) {
     Read: struct {
         /// ACK value to send after byte received
         ack_value: Ack,
+        // TODO: No ack_check_en for read? TRM says only for write, but examples set it (Page 696)
         /// Data length in bytes (1-255)
         length: u8,
     },
@@ -500,6 +501,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx.* += 1;
 
         // Load address with READ bit into FIFO
+        // TODO: What is this doing?
         self.get_regs().DATA.write(.{
             .FIFO_RDATA = (@intFromEnum(addr) << 1) | @intFromEnum(OperationType.Read),
         });
@@ -595,7 +597,7 @@ pub const I2C = enum(u1) {
         // Add read operation
         var cmd_idx: usize = 0;
         self.add_read_op(addr, dst.len, &cmd_idx) catch |e| {
-            std.log.debug("Error adding read op {any}", .{e});
+            std.log.debug("Error adding read op {any}", .{e}); // DELETEME
         };
 
         // Execute transmission

@@ -24,7 +24,8 @@ pub fn Mmio(comptime PackedT: type) type {
         pub const underlying_type = PackedT;
 
         pub inline fn read(addr: *volatile Self) PackedT {
-            return @bitCast(addr.raw);
+            const val: PackedT = @bitCast(addr.raw);
+            return val;
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
@@ -56,6 +57,12 @@ pub fn Mmio(comptime PackedT: type) type {
         /// Set field `Field` of this register to `value`.
         pub inline fn modify(addr: *volatile Self, fields: anytype) void {
             var val = read(addr);
+            if (@intFromPtr(addr) > 0x60004000 and @intFromPtr(addr) < 0x60004f00)
+                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr })
+            else if (@intFromPtr(addr) > 0x60009000 and @intFromPtr(addr) < 0x6000c000)
+                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr })
+            else if (@intFromPtr(addr) > 0x60013000 and @intFromPtr(addr) < 0x60014000)
+                std.log.debug("Reading 0x{x:0>8} from {*}", .{ @as(IntT, @bitCast(val)), addr });
             inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
                 @field(val, field.name) = @field(fields, field.name);
             }
