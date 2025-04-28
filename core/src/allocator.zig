@@ -33,11 +33,11 @@ pub fn initialize(heap: []u8) void {
     init_chunk.next_free = null;
     init_chunk.prior_free = null;
 
-    free_lists[freeIndexForSize(init_chunk.size())] = init_chunk;
+    free_lists[free_index_for_size(init_chunk.size())] = init_chunk;
 }
 
 /// Returns the total amount of free memory in the heap.
-pub fn freeHeap() usize {
+pub fn free_heap() usize {
     mutex.lock();
     defer mutex.unlock();
 
@@ -53,7 +53,7 @@ pub fn freeHeap() usize {
 }
 
 /// Returns the largest length that can be currently allocated.
-pub fn maxAllocSize() usize {
+pub fn max_alloc_size() usize {
     mutex.lock();
     defer mutex.unlock();
 
@@ -98,7 +98,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
 
     // std.log.debug( "\n *** Allocating {} bytes of memory with alignment {d}\n", .{ len, alignment.toByteUnits() } );
 
-    var free_index = freeIndexForSize(len + Chunk.header_size);
+    var free_index = free_index_for_size(len + Chunk.header_size);
 
     while (free_index < free_list_count) {
         var maybe_chunk = free_lists[free_index];
@@ -136,7 +136,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
                     our_chunk._size = (available + Chunk.header_size) | 0x01;
 
                     c._size = our_chunk.previous_size;
-                    c.combineAndFree();
+                    c.combine_and_free();
                 }
 
                 // See if there is trailing space that we can trim off.
@@ -155,7 +155,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
                     trim_chunk._size = next_addr - trim_addr;
                     trim_chunk.previous_size = our_new_size;
 
-                    trim_chunk.combineAndFree();
+                    trim_chunk.combine_and_free();
                 }
 
                 our_chunk._size |= 0x01;
@@ -185,12 +185,12 @@ fn resize(_: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) b
 
     // std.log.debug( "\n *** Resizing {} bytes of memory at 0x{x} to {d} bytes\n", .{ @intFromPtr( memory.ptr ), memory.len, new_len } );
 
-    var chunk = Chunk.fromData(memory);
+    var chunk = Chunk.from_data(memory);
 
     if (new_len > chunk.size() - Chunk.header_size) {
         // We need to grow the chunk, which means the next chunk must be free.
 
-        if (!chunk.next().isFree()) return false;
+        if (!chunk.next().is_free()) return false;
 
         const target_size = new_len + Chunk.header_size;
         const combined_size = chunk.size() + chunk.next().size();
@@ -223,7 +223,7 @@ fn resize(_: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) b
         trim_chunk._size = next_addr - trim_addr;
         trim_chunk.previous_size = our_new_size;
 
-        trim_chunk.combineAndFree();
+        trim_chunk.combine_and_free();
     }
 
     return true;
@@ -237,7 +237,7 @@ fn free(_: *anyopaque, memory: []u8, _: Alignment, _: usize) void {
     mutex.lock();
     defer mutex.unlock();
 
-    Chunk.fromData(memory).combineAndFree();
+    Chunk.from_data(memory).combine_and_free();
 }
 
 /// Return the index of the first free list that can hold a chunk of the
@@ -248,7 +248,7 @@ fn free(_: *anyopaque, memory: []u8, _: Alignment, _: usize) void {
 ///
 /// Returns:
 /// - `usize`: The index of the free list
-fn freeIndexForSize(size: usize) usize {
+fn free_index_for_size(size: usize) usize {
     var test_size: usize = Chunk.min_size;
     for (0..free_list_count - 1) |i| {
         if (test_size >= size) return i;
@@ -284,7 +284,7 @@ const Chunk = extern struct {
     const alignment = Alignment.fromByteUnits(@alignOf(@This()));
 
     /// Returns a pointer to the chunk that contains the given data.
-    pub fn fromData(data_slice: []u8) *Chunk {
+    pub fn from_data(data_slice: []u8) *Chunk {
         // If we are built with .Debug or .ReleaseSafe, we need to do a slow
         // search to make sure the slice is valid.
         std.debug.assert( blk: {
@@ -315,7 +315,7 @@ const Chunk = extern struct {
     /// Returns true of the chunk is marked as free.  That is the low order bit
     /// of the size value is clear. An out of range Chunk pointer will return
     /// not free.
-    pub fn isFree(self: *Chunk) bool {
+    pub fn is_free(self: *Chunk) bool {
         const addr: usize = @intFromPtr(self);
         if (addr < low_boundary or addr >= high_boundary) return false;
 
@@ -336,15 +336,15 @@ const Chunk = extern struct {
 
     /// Combine this chunk with any neighboring free chunks and
     /// add the result to the appropriate free list.
-    pub fn combineAndFree(self: *Chunk) void {
+    pub fn combine_and_free(self: *Chunk) void {
         var chunk = self;
 
-        if (chunk.next().isFree()) {
+        if (chunk.next().is_free()) {
             chunk.next().unlink();
             chunk._size += chunk.next().size();
         }
 
-        if (chunk.prior().isFree()) {
+        if (chunk.prior().is_free()) {
             const our_size = chunk.size();
 
             chunk = chunk.prior();
@@ -352,7 +352,7 @@ const Chunk = extern struct {
             chunk._size += our_size;
         }
 
-        const free_index = freeIndexForSize(chunk.size());
+        const free_index = free_index_for_size(chunk.size());
         const list = free_lists[free_index];
 
         chunk.prior_free = null;
@@ -366,12 +366,12 @@ const Chunk = extern struct {
 
     /// Unlink the chunk from the free list.
     pub fn unlink(self: *Chunk) void {
-        if (!self.isFree()) return;
+        if (!self.is_free()) return;
 
         if (self.prior_free) |p| {
             p.next_free = self.next_free;
         } else {
-            free_lists[freeIndexForSize(self.size())] = self.next_free;
+            free_lists[free_index_for_size(self.size())] = self.next_free;
         }
 
         if (self.next_free) |n| n.prior_free = self.prior_free;
