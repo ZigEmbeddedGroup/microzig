@@ -725,13 +725,14 @@ fn write_registers_base(
         }
     }
 
-    // registers _should_ be sorted when then make their way here
+    // registers _should_ be sorted by the time they make their way here
     var buffer = std.ArrayList(u8).init(arena);
     defer buffer.deinit();
 
     const writer = buffer.writer();
     var offset: u64 = 0;
     for (non_overlapping.items) |register| {
+        try writer.print("/// Offset: 0x{x}\n", .{offset});
         if (offset < register.offset_bytes) {
             try writer.print("reserved{}: [{}]u8,\n", .{ register.offset_bytes, register.offset_bytes - offset });
             offset = register.offset_bytes;
