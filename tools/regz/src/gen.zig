@@ -732,8 +732,9 @@ fn write_registers_base(
     const writer = buffer.writer();
     var offset: u64 = 0;
     for (non_overlapping.items) |register| {
-        try writer.print("/// Offset: 0x{x}\n", .{offset});
+        // Pad out space between registers with 'reserved' byte arrays
         if (offset < register.offset_bytes) {
+            try writer.print("/// offset: 0x{x:0>2}\n", .{offset});
             try writer.print("reserved{}: [{}]u8,\n", .{ register.offset_bytes, register.offset_bytes - offset });
             offset = register.offset_bytes;
         }
@@ -770,6 +771,12 @@ fn write_register(
     const writer = buffer.writer();
     if (register.description) |description|
         try write_doc_comment(arena, description, writer);
+
+    // Add offset comment
+    var offset_buf: [80]u8 = undefined;
+    const offset_str: []const u8 =
+        try std.fmt.bufPrint(&offset_buf, "offset: 0x{x:0>2}", .{register.offset_bytes});
+    try write_doc_comment(arena, offset_str, writer);
 
     var array_prefix_buf: [80]u8 = undefined;
     const array_prefix: []const u8 = if (register.count) |count|
