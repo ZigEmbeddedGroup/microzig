@@ -64,8 +64,7 @@ pub const patches: []const Patch = &.{
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO45.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO46.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
     .{ .set_enum_type = .{ .of = "types.peripherals.PADS_BANK0.GPIO47.DRIVE", .to = "types.peripherals.PADS_BANK0.DriveStrength" } },
-    .{ 
-        .add_enum = .{
+    .{ .add_enum = .{
         .parent = "types.peripherals.USB_DPRAM",
         .@"enum" = .{
             .name = "EndpointType",

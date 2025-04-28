@@ -323,3 +323,45 @@ pub const ClockDevice = struct {
         return @enumFromInt(t);
     }
 };
+
+const Cyw43PioSpi = microzig.hal.cyw49_pio_spi.Cyw43PioSpi;
+const Cyw43_Spi = microzig.drivers.wireless.Cyw43_Spi;
+const Cyw43_Bus = microzig.drivers.wireless.Cyw43_Bus;
+const Cyw43_Runner = microzig.drivers.wireless.Cyw43_Runner;
+
+pub const CYW43_Pio_Device_Config = struct {
+    spi: hal.cyw49_pio_spi.Cyw43PioSpi_Config,
+    pwr_pin: hal.gpio.Pin,
+};
+
+// TODO: CYW43 top level struct just for testing purpose (please redesign)
+pub const CYW43_Pio_Device = struct {
+    const Self = @This();
+    pwr_pin: GPIO_Device = undefined,
+    cyw43_pio_spi: Cyw43PioSpi = undefined,
+    cyw43_spi: Cyw43_Spi = undefined,
+    cyw43_bus: Cyw43_Bus = undefined,
+    cyw43_runner: Cyw43_Runner = undefined,
+
+    pub fn init(this: *Self, config: CYW43_Pio_Device_Config) !void {
+        std.log.info("before gpio init", .{});
+
+        this.cyw43_pio_spi = try hal.cyw49_pio_spi.init(config.spi);
+        this.cyw43_spi = this.cyw43_pio_spi.cyw43_spi();
+
+        config.pwr_pin.set_function(.sio);
+        config.pwr_pin.set_direction(.out);
+        var pwr_gpio = GPIO_Device.init(config.pwr_pin);
+
+        this.cyw43_bus = .{ .pwr_pin = pwr_gpio.digital_io(), .spi = &this.cyw43_spi, .internal_delay_ms = hal.time.sleep_ms };
+        this.cyw43_runner = .{ .bus = &this.cyw43_bus, .internal_delay_ms = hal.time.sleep_ms };
+
+        try this.cyw43_runner.init();
+    }
+
+    pub fn test_loop(this: *Self) void {
+        while (true) {
+            this.cyw43_runner.run();
+        }
+    }
+};

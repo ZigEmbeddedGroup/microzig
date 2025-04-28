@@ -137,8 +137,8 @@ pub const DeviceConfig = struct {
 };
 
 pub const InitError = error{
-// TODO: add common options
-};
+    // TODO: add common options
+    };
 
 pub const WriteError = error{};
 pub const ReadError = error{

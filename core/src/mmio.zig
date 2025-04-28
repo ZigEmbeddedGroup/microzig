@@ -2,7 +2,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 pub fn Mmio(comptime PackedT: type) type {
-
     @setEvalBranchQuota(2_000);
 
     const size = @bitSizeOf(PackedT);

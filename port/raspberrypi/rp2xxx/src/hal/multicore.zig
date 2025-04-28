@@ -2,7 +2,10 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const microzig = @import("microzig");
+const interrupt = microzig.interrupt;
 const peripherals = microzig.chip.peripherals;
+
+const CriticalSection = interrupt.CriticalSection;
 const SIO = peripherals.SIO;
 const PSM = peripherals.PSM;
 const PPB = peripherals.PPB;
@@ -136,9 +139,11 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
 ///         . . .
 ///     }
 ///
-/// Reserved spinlocks:
-///   - 31 - Mutexes
 pub const Spinlock = struct {
+    // Reserved spinlocks
+    pub const atomics = init(30);
+    pub const mutexes = init(31);
+
     lock_reg: *volatile u32,
 
     const spinlock_base: usize = @intFromPtr(&SIO.SPINLOCK0.raw);
@@ -177,5 +182,18 @@ pub const Spinlock = struct {
     /// Returns bitmap of currently locked spinlocks
     pub fn lockStatus() u32 {
         return SIO.SPINLOCK_ST.read().SPINLOCK_ST;
+    }
+
+    /// Disable interrupts and lock the spinlock.
+    pub fn lock_irq(self: Spinlock) CriticalSection {
+        const critical_section = interrupt.enter_critical_section();
+        self.lock();
+        return critical_section;
+    }
+
+    /// Unlock the spinlock and restore interrupts.
+    pub fn unlock_irq(self: Spinlock, critical_section: CriticalSection) void {
+        self.unlock();
+        critical_section.leave();
     }
 };

@@ -67,11 +67,11 @@ pub fn main() !void {
 fn blinkError(led: anytype, err: microzig.uart.InitError) void {
     var blinks: u3 =
         switch (err) {
-        error.UnsupportedBaudRate => 1,
-        error.UnsupportedParity => 2,
-        error.UnsupportedStopBitCount => 3,
-        error.UnsupportedWordSize => 4,
-    };
+            error.UnsupportedBaudRate => 1,
+            error.UnsupportedParity => 2,
+            error.UnsupportedStopBitCount => 3,
+            error.UnsupportedWordSize => 4,
+        };
 
     while (blinks > 0) : (blinks -= 1) {
         led.setToHigh();

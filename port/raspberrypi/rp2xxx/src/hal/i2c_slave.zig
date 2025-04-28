@@ -144,24 +144,17 @@ pub fn open(self: *Self, addr: i2c.Address, transfer_buffer: []u8, rxCallback: R
         .M_RX_UNDER = .ENABLED,
     });
 
-    // ### TODO ### Set up the ISR at runtime
-    // Ideally, MicroZig would have a way to set up the ISR at runtime,
-    // and we could make a call like:
-    //    `irq.set_handler( self.i2c, if (i2c == 0) isr0 else isr1);`
-
-    // For now, you'll have to set up the ISR manually in your main program.
-    // by adding something like the following to your main program:
-    //
-    // pub const microzig_options = microzig.Options
-    //   {
-    //     .interrupts = .{ .I2C0_IRQ = .{ .c = i2c_slave.isr0 }, .I2C1_IRQ = .{ .c = i2c_slave.isr1 } },
-    //   } ;
-
     self.enable();
 
     if (self.regs == I2C0) {
+        if (irq.can_set_handler()) {
+            _ = irq.set_handler(.I2C0_IRQ, .{ .c = isr0 });
+        }
         irq.enable(.I2C0_IRQ);
     } else {
+        if (irq.can_set_handler()) {
+            _ = irq.set_handler(.I2C1_IRQ, .{ .c = isr1 });
+        }
         irq.enable(.I2C1_IRQ);
     }
 }
