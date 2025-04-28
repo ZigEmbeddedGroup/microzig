@@ -55,5 +55,6 @@ pub fn main() !void {
         };
 
         std.log.info("I2C device found at address {X}.", .{addr});
+        break; // Just one for now // DELETEME
     }
 }
