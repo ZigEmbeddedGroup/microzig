@@ -47,6 +47,24 @@ pub const SSD1306_Options = struct {
     Digital_IO: type = mdf.base.Digital_IO,
 };
 
+pub fn init(comptime mode: Driver_Mode, device: anytype, digital_io: anytype) !SSD1306_Generic(.{
+    .mode = mode,
+    .Datagram_Device = @TypeOf(device),
+    .Digital_IO = @TypeOf(digital_io),
+}) {
+    const Type = SSD1306_Generic(.{
+        .mode = mode,
+        .Datagram_Device = @TypeOf(device),
+        .Digital_IO = @TypeOf(digital_io),
+    });
+
+    return switch (mode) {
+        .i2c, .spi_3wire => Type.init_without_io(device),
+        .spi_4wire => Type.init_with_io(device, digital_io),
+        .dynamic => @compileError("unsupported, use SSD1306_Generic directly"),
+    };
+}
+
 pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
     switch (options.mode) {
         .i2c, .spi_4wire, .dynamic => {},
@@ -835,7 +853,7 @@ pub const Framebuffer = struct {
 
     /// Clears the framebuffer to `color`.
     pub fn clear(fb: *Framebuffer, color: Color) void {
-        fb.* = init(color);
+        fb.* = .init(color);
     }
 
     /// Sets the pixel at (`x`, `y`) to `color`.
@@ -854,7 +872,7 @@ pub const Framebuffer = struct {
 
     // Tests:
 
-    test init {
+    test "Framebuffer.init" {
         // .white
         {
             const fb = Framebuffer.init(.white);

@@ -55,7 +55,6 @@ pub const Pio = enum(u1) {
 
             .FJOIN_TX = @intFromBool(options.join_tx),
             .FJOIN_RX = @intFromBool(options.join_rx),
-            .reserved16 = 0,
         });
     }
 
@@ -87,8 +86,6 @@ pub const Pio = enum(u1) {
             .OUT_SHIFTDIR = 0,
             .PUSH_THRESH = 0,
             .PULL_THRESH = 0,
-
-            .reserved16 = 0,
         };
 
         xor_shiftctrl.write(mask);

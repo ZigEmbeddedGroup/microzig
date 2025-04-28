@@ -92,7 +92,6 @@ pub const Pin = enum(u5) {
             .OEN_SEL = @intFromBool(config.output_enable),
             .INV_SEL = @intFromBool(config.output_invert),
             .OEN_INV_SEL = 0,
-            .padding = 0,
         });
 
         GPIO.PIN[n].modify(.{ .PIN_PAD_DRIVER = @intFromBool(config.open_drain) });
@@ -108,8 +107,7 @@ pub const Pin = enum(u5) {
                 usb_conf0.DM_PULLDOWN == 0);
         }
 
-        // Enable output
-        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << n, .padding = 0 });
+        GPIO.ENABLE_W1TS.write(.{ .ENABLE_W1TS = @as(u26, 1) << n });
     }
 
     pub fn reset(self: Pin) void {
@@ -117,7 +115,7 @@ pub const Pin = enum(u5) {
         IO_MUX.GPIO[n].write_raw(0x00);
         GPIO.FUNC_OUT_SEL_CFG[n].write_raw(0x00);
         GPIO.PIN[n].write_raw(0x00);
-        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n, .padding = 0 });
+        GPIO.ENABLE_W1TC.write(.{ .ENABLE_W1TC = @as(u26, 1) << n });
     }
 
     pub fn set_output_enable(self: Pin, enable: bool) void {

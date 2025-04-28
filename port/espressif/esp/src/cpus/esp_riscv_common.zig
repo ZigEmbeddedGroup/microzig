@@ -119,7 +119,6 @@ pub const interrupt = struct {
     pub fn set_priority_threshold(priority: Priority) void {
         INTERRUPT_CORE0.CPU_INT_THRESH.write(.{
             .CPU_INT_THRESH = @intFromEnum(priority),
-            .padding = 0,
         });
     }
 

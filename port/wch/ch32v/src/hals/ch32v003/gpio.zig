@@ -51,13 +51,12 @@ pub const Pull = enum {
 pub const Pin = packed struct(u8) {
     number: u3,
     port: u2,
-    padding: u3,
+    padding: u3 = 0,
 
     pub fn init(port: u2, number: u3) Pin {
         return Pin{
             .number = number,
             .port = port,
-            .padding = 0,
         };
     }
 
