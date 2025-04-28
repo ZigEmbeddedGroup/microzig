@@ -17,7 +17,6 @@ pub fn tx_fifo_flush() void {
 pub fn tx_fifo_write(byte: u8) void {
     USB_SERIAL_JTAG.EP1.write(.{
         .RDWR_BYTE = byte,
-        .padding = 0,
     });
 }
 
