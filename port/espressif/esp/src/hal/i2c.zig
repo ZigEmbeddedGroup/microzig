@@ -212,7 +212,6 @@ pub const I2C = enum(u1) {
             .RX_LSB_FIRST = 0, // MSB first for receiving
             .CLK_EN = 1, // Enable clock
         });
-        // std.log.info("CTR {x:0>8}", .{regs.CTR.raw}); // DELETEME
 
         // Configure filter
         i2c.set_filter(7, 7);
@@ -222,7 +221,6 @@ pub const I2C = enum(u1) {
 
         // Propagate configuration changes
         regs.CTR.modify(.{ .CONF_UPGATE = 1 });
-        // std.log.info("CTR after sync {x:0>8}", .{regs.CTR.raw}); // DELETEME
     }
 
     /// Reset the I2C controller
@@ -243,7 +241,6 @@ pub const I2C = enum(u1) {
 
     /// Reset the FIFO buffers
     fn reset_fifo(self: I2C) void {
-        std.log.debug("Resetting FIFO", .{}); // DELETEME
         self.get_regs().FIFO_CONF.modify(.{
             .TX_FIFO_RST = 1,
             .RX_FIFO_RST = 1,
@@ -279,7 +276,6 @@ pub const I2C = enum(u1) {
 
     /// Reset the command list
     fn reset_command_list(self: I2C) void {
-        std.log.debug("Resetting command list", .{}); // DELETEME
         // Reset all command registers
         for (0..self.get_regs().COMD.len) |i|
             self.get_regs().COMD[@intCast(i)].write_raw(0);
@@ -391,7 +387,6 @@ pub const I2C = enum(u1) {
 
     /// Execute transmission and monitor for completion/errors
     fn execute_transmission(self: I2C, deadline: mdf.time.Deadline) !void {
-        std.log.debug("Executing transaction", .{}); // DELETEME
         // Clear all I2C interrupts
         self.clear_interrupts();
 
@@ -534,11 +529,6 @@ pub const I2C = enum(u1) {
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
-
-        //   DELETEME>>
-        // for (0..cmd_start_idx.*) |i|
-        //     std.log.info("Command at {d}: {X:0>8}", .{ i, self.get_regs().COMD[i].raw });
-        //   DELETEME<<
     }
 
     /// Read data from an I2C slave
