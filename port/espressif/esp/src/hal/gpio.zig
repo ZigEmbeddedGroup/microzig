@@ -98,32 +98,21 @@ pub const Pin = enum(u5) {
         const n = @intFromEnum(self);
         IO_MUX.GPIO[n].modify(.{
             .SLP_SEL = 0,
-            // Set by i2c -> set_open_drain_output
             .FUN_WPD = @intFromBool(config.pulldown_enable),
-            // Set by i2c -> set_open_drain_output
             .FUN_WPU = @intFromBool(config.pullup_enable),
-            // Set by i2c -> set_open_drain_output
             .FUN_DRV = @intFromEnum(config.drive_strength),
-            // NOTE: ONLY set by set_input_filter?
             .FILTER_EN = @intFromBool(config.input_filter_enable),
-            // Set in i2c -> set_open_drain_output
             .FUN_IE = @intFromBool(config.input_enable),
-            // Set by i2c -> connect_input_to_peripheral -> set_alternate_function
             .MCU_SEL = 1,
         });
 
         GPIO.FUNC_OUT_SEL_CFG[n].write(.{
-            // Set in i2c -> connect output
             .OUT_SEL = @intFromEnum(config.output_signal),
-            // Set in i2c -> connect output
             .OEN_SEL = @intFromBool(config.output_enable),
-            // Set in i2c -> connect output
             .INV_SEL = @intFromBool(config.output_invert),
-            // Set in i2c -> connect output
             .OEN_INV_SEL = 0,
         });
 
-        // Set in i2c
         GPIO.PIN[n].modify(.{ .PIN_PAD_DRIVER = @intFromBool(config.open_drain) });
 
         // NOTE: Assert that the USB_SERIAL_JTAG peripheral which uses pins GPIO18 and GPIO19

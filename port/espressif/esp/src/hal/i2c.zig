@@ -30,7 +30,6 @@ pub const Error = error{
 ///
 /// 7-bit I²C address, without the read/write bit.
 ///
-/// NOTE: From rp2xxx hal
 pub const Address = enum(u7) {
     _,
 
