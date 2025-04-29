@@ -84,9 +84,9 @@ pub const Pin = enum(usize) {
         }
     }
 
-    fn mask(gpio: Pin) u16 {
+    fn mask(gpio: Pin) u32 {
         const pin: u4 = @intCast(@intFromEnum(gpio) % 16);
-        return @as(u16, 1) << pin;
+        return @as(u32, 1) << pin;
     }
 
     // NOTE: Im not sure I like this
@@ -149,7 +149,7 @@ pub const Pin = enum(usize) {
     pub inline fn put(gpio: Pin, value: u1) void {
         var port = gpio.get_port();
         switch (value) {
-            0 => port.BSRR.raw = gpio.mask() << 16,
+            0 => port.BSRR.raw = @intCast(gpio.mask() << 16),
             1 => port.BSRR.raw = gpio.mask(),
         }
     }

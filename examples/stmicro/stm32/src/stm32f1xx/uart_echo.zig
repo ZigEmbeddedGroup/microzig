@@ -4,9 +4,9 @@ const microzig = @import("microzig");
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 
-const timer = stm32.timer.GPTimer.TIM2;
+const timer = stm32.timer.GPTimer.init(.TIM2);
 
-const uart: stm32.uart.UART = @enumFromInt(0);
+const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
 const RX = gpio.Pin.from_port(.A, 10);

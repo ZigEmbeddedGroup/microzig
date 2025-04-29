@@ -9,7 +9,6 @@ const SpiRegs = *volatile spi_f1.SPI;
 //in this way we can use the same code for all STM32F1xx chips
 //avoid selecting invalid peripherals
 //avoid using panic on invalid peripherals
-pub const SPI_instance = util.create_peripheral_enum("SPI");
 
 const ChipSelect = enum {
     NSS, //hardware slave management using NSS pin
@@ -26,7 +25,8 @@ const Config = struct {
     prescaler: spi_f1.BR = .Div2,
 };
 
-fn get_regs(instance: SPI_instance) SpiRegs {
+pub const Instances = util.create_peripheral_enum("SPI", "spi_f1");
+fn get_regs(instance: Instances) SpiRegs {
     return @field(microzig.chip.peripherals, @tagName(instance));
 }
 
@@ -72,8 +72,8 @@ pub const SPI = struct {
         std.mem.doNotOptimizeAway(self.spi.DR.read());
         std.mem.doNotOptimizeAway(self.spi.SR.read());
     }
-};
 
-pub fn get_SPI(spi_inst: SPI_instance) SPI {
-    return .{ .spi = get_regs(spi_inst) };
-}
+    pub fn init(spi_inst: Instances) SPI {
+        return .{ .spi = get_regs(spi_inst) };
+    }
+};

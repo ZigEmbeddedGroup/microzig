@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
     const stm32 = mb.ports.stm32;
 
     const available_examples = [_]Example{
-        //.{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
+        .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
         // .{ .target = stm32.chips.stm32f407vg, .name = "stm32f407vg", .file = "src/blinky.zig" },
@@ -28,7 +28,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_echo", .file = "src/stm32f1xx/uart_echo.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_log", .file = "src/stm32f1xx/uart_log.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c.zig" },
-        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c_bus_scan.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c_bus_scan", .file = "src/stm32f1xx/i2c_bus_scan.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_hd44780", .file = "src/stm32f1xx/hd44780.zig" },
         .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_spi", .file = "src/stm32f1xx/spi.zig" },
     };

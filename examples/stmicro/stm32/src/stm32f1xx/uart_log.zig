@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 
-const uart: stm32.uart.UART = @enumFromInt(0);
+const uart = stm32.uart.UART.init(.USART1);
 const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
 
@@ -26,7 +26,7 @@ pub fn main() !void {
         .clock_speed = 8_000_000,
     });
 
-    stm32.uart.init_logger(uart);
+    stm32.uart.init_logger(&uart);
     std.log.info("hello world!", .{});
     var foo: usize = 0;
     while (true) {

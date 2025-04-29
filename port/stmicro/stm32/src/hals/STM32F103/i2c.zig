@@ -1,6 +1,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const Timeout = @import("drivers.zig").Timeout;
+const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
 
 const I2CREGS = *volatile microzig.chip.types.peripherals.i2c_v1.I2C;
 const DUTY = microzig.chip.types.peripherals.i2c_v1.DUTY;
@@ -91,18 +92,12 @@ fn comptime_fail_or_error(msg: []const u8, fmt_args: anytype, err: ConfigError) 
     }
 }
 
-pub const I2C = enum(u3) {
-    _,
-    fn get_regs(i2c: I2C) I2CREGS {
-        return switch (@intFromEnum(i2c)) {
-            0 => if (@hasDecl(peripherals, "I2C1")) peripherals.I2C1 else @panic("invalid i2c"),
-            1 => if (@hasDecl(peripherals, "I2C2")) peripherals.I2C2 else @panic("invalid i2c"),
-            2 => if (@hasDecl(peripherals, "I2C3")) peripherals.I2C3 else @panic("invalid i2c"),
-            3 => if (@hasDecl(peripherals, "I2C4")) peripherals.I2C4 else @panic("invalid i2c"),
-            else => @panic("invalid i2c"),
-        };
-    }
-
+pub const Instances = create_peripheral_enum("I2C", "i2c_v1");
+fn get_regs(instance: Instances) I2CREGS {
+    return @field(microzig.chip.peripherals, @tagName(instance));
+}
+pub const I2C = struct {
+    regs: I2CREGS,
     fn validate_pclk(pclk: usize, mode: Mode) !void {
         if (pclk > 50_000_000) return comptime_fail_or_error("pclk needs to be < 50_000_000", .{}, ConfigError.PCLKOverflow);
         switch (mode) {
@@ -157,7 +152,7 @@ pub const I2C = enum(u3) {
         return CCR;
     }
 
-    pub fn apply(i2c: I2C, comptime config: Config) void {
+    pub fn apply(i2c: *const I2C, comptime config: Config) void {
         const mode = config.mode;
         const pclk = config.pclk;
         comptime validate_pclk(pclk, mode) catch unreachable;
@@ -168,7 +163,7 @@ pub const I2C = enum(u3) {
         i2c.apply_internal(config, CCR, Trise);
     }
 
-    pub fn runtime_apply(i2c: I2C, config: Config) ConfigError!void {
+    pub fn runtime_apply(i2c: *const I2C, config: Config) ConfigError!void {
         const mode = config.mode;
         const pclk = config.pclk;
         try validate_pclk(pclk, mode);
@@ -179,8 +174,8 @@ pub const I2C = enum(u3) {
         i2c.apply_internal(config, CCR, Trise);
     }
 
-    fn apply_internal(i2c: I2C, config: Config, CCR: usize, Trise: usize) void {
-        const regs = get_regs(i2c);
+    fn apply_internal(i2c: *const I2C, config: Config, CCR: usize, Trise: usize) void {
+        const regs = i2c.regs;
         const val: u6 = @intCast(config.pclk / 1_000_000);
         const duty: usize = if (config.enable_duty) 1 else 0;
         const mode: F_S = @enumFromInt(@intFromEnum(config.mode));
@@ -201,14 +196,14 @@ pub const I2C = enum(u3) {
         regs.CR1.modify(.{ .PE = 1 });
     }
 
-    fn reset(i2c: I2C) void {
-        const regs = get_regs(i2c);
+    fn reset(i2c: *const I2C) void {
+        const regs = i2c.regs;
         regs.CR1.modify(.{ .SWRST = 1 });
         regs.CR1.modify(.{ .SWRST = 0 });
     }
 
-    fn check_error(i2c: I2C, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    fn check_error(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
         const status = regs.SR1.read();
 
         var io_err: ?IOError = null;
@@ -235,8 +230,8 @@ pub const I2C = enum(u3) {
         }
     }
 
-    pub fn clear_errors(i2c: I2C) void {
-        const regs = get_regs(i2c);
+    pub fn clear_errors(i2c: *const I2C) void {
+        const regs = i2c.regs;
         regs.SR1.modify(.{
             .AF = 0,
             .ARLO = 0,
@@ -244,8 +239,8 @@ pub const I2C = enum(u3) {
         });
     }
 
-    fn START(i2c: I2C, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    fn START(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
 
         regs.CR1.modify(.{
             .ACK = 1,
@@ -259,8 +254,8 @@ pub const I2C = enum(u3) {
         }
     }
 
-    fn STOP(i2c: I2C, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    fn STOP(i2c: *const I2C, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
 
         //if stop is already set, just wait for it to be cleared
         if (regs.CR1.read().STOP != 1) {
@@ -279,8 +274,8 @@ pub const I2C = enum(u3) {
         }
     }
 
-    fn send_7bits_addr(i2c: I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
         const addr7 = @as(u8, @intCast(addr));
         const byte: u8 = (addr7 << 1) + IO;
         regs.DR.modify(.{ .DR = byte });
@@ -292,27 +287,27 @@ pub const I2C = enum(u3) {
         std.mem.doNotOptimizeAway(regs.SR2.raw);
     }
 
-    fn set_addr(i2c: I2C, address: Address, rw: u1, timeout: ?Timeout) IOError!void {
+    fn set_addr(i2c: *const I2C, address: Address, rw: u1, timeout: ?Timeout) IOError!void {
         switch (address.mode) {
             .@"7bits" => try i2c.send_7bits_addr(address.addr, rw, timeout),
             .@"10bits" => @panic("10bits address not supported yet"),
         }
     }
 
-    pub fn readv_blocking(i2c: I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
+    pub fn readv_blocking(i2c: *const I2C, addr: Address, chunks: []const []u8, timeout: ?Timeout) IOError!void {
         for (chunks) |chunk| {
             try i2c.read_blocking(addr, chunk, timeout);
         }
     }
 
-    pub fn writev_blocking(i2c: I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
+    pub fn writev_blocking(i2c: *const I2C, addr: Address, chunks: []const []const u8, timeout: ?Timeout) IOError!void {
         for (chunks) |chunk| {
             try i2c.write_blocking(addr, chunk, timeout);
         }
     }
 
-    pub fn write_blocking(i2c: I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    pub fn write_blocking(i2c: *const I2C, address: Address, data: []const u8, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
         try i2c.START(timeout);
         try i2c.set_addr(address, 0, timeout);
 
@@ -333,8 +328,8 @@ pub const I2C = enum(u3) {
         try i2c.STOP(timeout);
     }
 
-    pub fn read_blocking(i2c: I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
-        const regs = get_regs(i2c);
+    pub fn read_blocking(i2c: *const I2C, address: Address, data: []u8, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
 
         try i2c.START(timeout);
         try i2c.set_addr(address, 1, timeout);
@@ -367,8 +362,12 @@ pub const I2C = enum(u3) {
     ///use this function to check if the i2c is busy in multi-master mode
     /// NOTE: in single master mode
     /// having a busy state before the start condition means that the bus is in an error state.
-    pub fn is_busy(i2c: I2C) bool {
-        const regs = get_regs(i2c);
+    pub fn is_busy(i2c: *const I2C) bool {
+        const regs = i2c.regs;
         return regs.SR2.read().BUSY == 1;
+    }
+
+    pub fn init(instance: Instances) I2C {
+        return .{ .regs = get_regs(instance) };
     }
 };

@@ -11,15 +11,15 @@ const lcd = drivers.display.HD44780;
 const PCF8574 = drivers.IO_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;
 
-const timer = stm32.timer.GPTimer.TIM2;
+const timer = stm32.timer.GPTimer.init(.TIM2);
 
 const I2c = stm32.i2c;
 const I2C_Device = stm32.drivers.I2C_Device;
 
-const uart: stm32.uart.UART = @enumFromInt(0);
+const uart = stm32.uart.UART.init(.USART1);
 const TX = gpio.Pin.from_port(.A, 9);
 
-const i2c: I2c.I2C = @enumFromInt(1);
+const i2c = I2c.I2C.init(.I2C2);
 const SCL = gpio.Pin.from_port(.B, 10);
 const SDA = gpio.Pin.from_port(.B, 11);
 const config = I2c.Config{
@@ -74,7 +74,7 @@ pub fn main() !void {
         .clock_speed = 8_000_000,
     });
 
-    stm32.uart.init_logger(uart);
+    stm32.uart.init_logger(&uart);
     var expander = PCF8574(.{}).init(i2c_device.datagram_device());
     const pins_config = lcd(.{}).pins_struct{
         .high_pins = .{

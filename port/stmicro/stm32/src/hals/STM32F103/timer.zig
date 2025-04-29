@@ -1,46 +1,24 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const CounterDevice = @import("drivers.zig").CounterDevice;
+const create_peripheral_enum = @import("util.zig").create_peripheral_enum;
+
 const periferals = microzig.chip.peripherals;
 
 const TIM_GP16 = *volatile microzig.chip.types.peripherals.timer_v1.TIM_GP16;
 const DIR = microzig.chip.types.peripherals.timer_v1.DIR;
 const URS = microzig.chip.types.peripherals.timer_v1.URS;
 
-pub const GPTimer = enum {
-    //TIM1 is a advanced timer
-    TIM2,
-    TIM3,
-    TIM4,
-    TIM5,
-    //TIM 6 and 7 are basic timers
-    //TIM 8 is a advanced timer
+pub const Instances = create_peripheral_enum("TIM", "TIM_GP16");
+fn get_regs(instance: Instances) TIM_GP16 {
+    return @field(microzig.chip.peripherals, @tagName(instance));
+}
 
-    //XL-density devices only.
-    TIM9,
-    TIM10,
-    TIM11,
-    TIM12,
-    TIM13,
-    TIM14,
-
-    fn get_regs(self: GPTimer) TIM_GP16 {
-        switch (self) {
-            .TIM2 => if (@hasDecl(periferals, "TIM2")) return periferals.TIM2 else @panic("TIM2 not available"),
-            .TIM3 => if (@hasDecl(periferals, "TIM3")) return periferals.TIM3 else @panic("TIM3 not available"),
-            .TIM4 => if (@hasDecl(periferals, "TIM4")) return periferals.TIM4 else @panic("TIM4 not available"),
-            .TIM5 => if (@hasDecl(periferals, "TIM5")) return periferals.TIM5 else @panic("TIM5 not available"),
-            .TIM9 => if (@hasDecl(periferals, "TIM9")) return periferals.TIM9 else @panic("TIM9 not available"),
-            .TIM10 => if (@hasDecl(periferals, "TIM10")) return periferals.TIM10 else @panic("TIM10 not available"),
-            .TIM11 => if (@hasDecl(periferals, "TIM11")) return periferals.TIM11 else @panic("TIM11 not available"),
-            .TIM12 => if (@hasDecl(periferals, "TIM12")) return periferals.TIM12 else @panic("TIM12 not available"),
-            .TIM13 => if (@hasDecl(periferals, "TIM13")) return periferals.TIM13 else @panic("TIM13 not available"),
-            .TIM14 => if (@hasDecl(periferals, "TIM14")) return periferals.TIM14 else @panic("TIM14 not available"),
-        }
-    }
+pub const GPTimer = struct {
+    regs: TIM_GP16,
 
     pub fn into_counter(self: *const GPTimer, pclk: u32) CounterDevice {
-        const regs = self.get_regs();
+        const regs = self.regs;
         //clear timer configs end pending events
         regs.CR1.raw = 0;
         regs.CR2.raw = 0;
@@ -67,7 +45,7 @@ pub const GPTimer = enum {
 
     fn load_and_start(ctx: *const anyopaque, psc: u32, arr: u16) void {
         const self: *const GPTimer = @alignCast(@ptrCast(ctx));
-        const regs = self.get_regs();
+        const regs = self.regs;
         regs.CR1.modify(.{ .CEN = 0 });
         regs.SR.raw = 0;
         regs.PSC = psc;
@@ -78,13 +56,13 @@ pub const GPTimer = enum {
 
     fn check_event(ctx: *const anyopaque) bool {
         const self: *const GPTimer = @alignCast(@ptrCast(ctx));
-        const regs = self.get_regs();
+        const regs = self.regs;
         return regs.SR.read().UIF == 1;
     }
 
-    fn busy_wait_fn(ctx: ?*const anyopaque, time: u64) void {
-        const timer: *const GPTimer = @ptrCast(ctx);
-        const regs = timer.get_regs();
+    fn busy_wait_fn(ctx: *const anyopaque, time: u64) void {
+        const self: *const GPTimer = @alignCast(@ptrCast(ctx));
+        const regs = self.regs;
         const full_ticks: usize = @intCast(time / std.math.maxInt(u16));
         const partial_ticks: u16 = @intCast(time % std.math.maxInt(u16));
 
@@ -110,5 +88,9 @@ pub const GPTimer = enum {
             //reenable timer (becuse we are in OPM mode)
             regs.CR1.modify(.{ .CEN = 1 });
         }
+    }
+
+    pub fn init(instance: Instances) GPTimer {
+        return .{ .regs = get_regs(instance) };
     }
 };

@@ -1,10 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
-const timer = microzig.hal.timer.GPTimer.TIM2;
 const RCC = microzig.chip.peripherals.RCC;
+const GPTimer = microzig.hal.timer.GPTimer;
 const gpio = microzig.hal.gpio;
-const spi = microzig.hal.spi.get_SPI(.SPI2);
+const SPI = microzig.hal.spi.SPI;
+
+const timer = GPTimer.init(.TIM2);
+
+const spi = SPI.init(.SPI2);
 const MOSI = gpio.Pin.from_port(.B, 15);
 const MISO = gpio.Pin.from_port(.B, 14);
 const SCK = gpio.Pin.from_port(.B, 13);

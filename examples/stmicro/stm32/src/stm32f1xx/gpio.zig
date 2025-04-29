@@ -4,7 +4,7 @@ const microzig = @import("microzig");
 const RCC = microzig.chip.peripherals.RCC;
 const stm32 = microzig.hal;
 const gpio = stm32.gpio;
-const timer = stm32.timer.GPTimer.TIM2;
+const timer = stm32.timer.GPTimer.init(.TIM2);
 
 pub fn main() !void {
     RCC.APB2ENR.modify(.{
