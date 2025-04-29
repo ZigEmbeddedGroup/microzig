@@ -9,10 +9,9 @@ pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = usb_serial_jtag.logger.logFn,
     .interrupts = .{
-        .interrupt1 = wifi.interrupt_handlers.wifi_mac,
-        .interrupt2 = wifi.interrupt_handlers.wifi_pwr,
-        .interrupt3 = wifi.interrupt_handlers.timer,
-        .interrupt4 = wifi.interrupt_handlers.software,
+        .interrupt1 = wifi.interrupt_handlers.wifi_xxx,
+        .interrupt2 = wifi.interrupt_handlers.timer,
+        .interrupt3 = wifi.interrupt_handlers.software,
     },
 };
 
@@ -24,7 +23,8 @@ pub fn main() !void {
     var fba: std.heap.FixedBufferAllocator = .init(&buffer);
     const allocator = fba.allocator();
 
-    wifi.init(allocator) catch @panic("OOM");
+    wifi.init(allocator) catch |err| std.debug.panic("{}", .{err});
+    wifi.wifi_controller.init() catch |err| std.debug.panic("{}", .{err});
 
     // microzig.cpu.interrupt.set_priority_threshold(.zero);
     //
