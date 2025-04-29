@@ -442,7 +442,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx.* += 1;
 
         // Load address with WRITE bit into FIFO
-        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Read));
+        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Write));
 
         // Load data bytes into FIFO
         for (bytes) |byte|
