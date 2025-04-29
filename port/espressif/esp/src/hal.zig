@@ -5,6 +5,7 @@ pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const i2c = @import("hal/i2c.zig");
+pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
 pub const system = @import("hal/system.zig");
 pub const systimer = @import("hal/systimer.zig");
@@ -16,6 +17,8 @@ pub const wifi = @import("hal/wifi.zig");
 comptime {
     // export atomic intrinsics
     _ = @import("hal/atomic.zig");
+
+    rom.export_functions();
 }
 
 /// Clock config applied by the default `init()` function of the hal.
