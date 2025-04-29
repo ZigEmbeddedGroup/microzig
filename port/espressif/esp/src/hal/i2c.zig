@@ -169,9 +169,8 @@ pub const I2C = enum(u1) {
         return I2C0;
     }
 
-    pub fn apply(i2c: I2C, pins: Pins, frequency: u32) ConfigError!void {
-        std.log.debug("Applying config", .{});
-        const regs = i2c.get_regs();
+    pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
+        const regs = self.get_regs();
 
         // Setup SDA pin
         pins.sda.set_open_drain_output(true);
@@ -188,13 +187,13 @@ pub const I2C = enum(u1) {
         pins.scl.connect_input_to_peripheral(.i2cext0_scl);
 
         // Reset entire peripheral (also resets fifo)
-        i2c.reset();
+        self.reset();
 
         // Disable all I2C interrupts
         regs.INT_ENA.write_raw(0);
 
         // Clear all I2C interrupts
-        i2c.clear_interrupts();
+        self.clear_interrupts();
 
         // Configure controller
         regs.CTR.write_raw(0);
@@ -212,13 +211,13 @@ pub const I2C = enum(u1) {
         });
 
         // Configure filter
-        i2c.set_filter(7, 7);
+        self.set_filter(7, 7);
 
         // Configure frequency
-        try i2c.set_frequency(SOURCE_CLK_FREQ, frequency);
+        try self.set_frequency(SOURCE_CLK_FREQ, frequency);
 
         // Propagate configuration changes
-        regs.CTR.modify(.{ .CONF_UPGATE = 1 });
+        self.update_config();
     }
 
     /// Reset the I2C controller
@@ -246,8 +245,6 @@ pub const I2C = enum(u1) {
             .NONFIFO_EN = 0,
             // Esp hal sets these, but why?
             .RXFIFO_WM_THRHD = 1,
-            // TODO: esp-hal does .bits(32). But that's more than 5 bits?
-            // .TXFIFO_WM_THRHD = 32,
             .TXFIFO_WM_THRHD = 31,
         });
 
@@ -262,14 +259,13 @@ pub const I2C = enum(u1) {
             .NONFIFO_EN = 0,
             .FIFO_PRT_EN = 0,
         });
-        // self.updateConfig();
 
-        // TODO: Do we need to clear interrupts?
-        // clear_interrupts clears ALL, this only clear rx/tx fifo ones
         self.get_regs().INT_CLR.modify(.{
             .RXFIFO_WM_INT_CLR = 1,
             .TXFIFO_WM_INT_CLR = 1,
         });
+
+        self.update_config();
     }
 
     /// Reset the command list
@@ -291,7 +287,6 @@ pub const I2C = enum(u1) {
 
     /// Sets the frequency of the I2C interface
     fn set_frequency(self: I2C, source_clk: u32, bus_freq: u32) !void {
-        std.log.debug("Setting frequency", .{});
         // Calculate dividing factor (maximum possible)
         const sclk_div: u8 = @intCast((source_clk / (bus_freq * 1024) + 1));
         if (sclk_div >= 256) {
@@ -344,6 +339,11 @@ pub const I2C = enum(u1) {
         });
     }
 
+    /// Propagate configuration to the peripheral
+    inline fn update_config(self: I2C) void {
+        self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
+    }
+
     /// Read data from FIFO
     inline fn read_fifo(self: I2C) u8 {
         return self.get_regs().DATA.read().FIFO_RDATA;
@@ -361,11 +361,9 @@ pub const I2C = enum(u1) {
 
     /// Execute transmission and monitor for completion/errors
     fn execute_transmission(self: I2C, deadline: mdf.time.Deadline) !void {
-        // Clear all I2C interrupts
         self.clear_interrupts();
 
-        // Ensure configuration is propagated
-        self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
+        self.update_config();
 
         // Start transmission, causes peripheral to read its commands from COMD
         self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
