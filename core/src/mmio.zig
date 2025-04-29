@@ -24,8 +24,7 @@ pub fn Mmio(comptime PackedT: type) type {
         pub const underlying_type = PackedT;
 
         pub inline fn read(addr: *volatile Self) PackedT {
-            const val: PackedT = @bitCast(addr.raw);
-            return val;
+            return @bitCast(addr.raw);
         }
 
         pub inline fn write(addr: *volatile Self, val: PackedT) void {
