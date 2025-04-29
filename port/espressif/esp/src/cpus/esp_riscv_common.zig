@@ -231,6 +231,7 @@ pub const interrupt = struct {
 
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
+pub const fence = riscv32_common.fence;
 
 pub const TrapFrame = extern struct {
     ra: usize,

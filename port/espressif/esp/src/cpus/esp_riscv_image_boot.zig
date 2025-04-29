@@ -12,6 +12,7 @@ pub const interrupt = common.interrupt;
 
 pub const nop = common.nop;
 pub const wfi = common.wfi;
+pub const fence = common.fence;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
