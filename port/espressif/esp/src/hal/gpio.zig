@@ -30,7 +30,7 @@ pub const DriveStrength = enum {
     @"20mA",
     @"40mA",
 
-    /// Get the appropriate value of DriveStrentgh based on the pin number.
+    /// Get the appropriate value of DriveStrength based on the pin number.
     /// See section 5.15.2 (IO MUX Registers) of the Technical Reference Manual
     fn to_value(strength: DriveStrength, pin: Pin) u2 {
         return switch (@intFromEnum(pin)) {
