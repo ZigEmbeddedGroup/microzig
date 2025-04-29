@@ -269,7 +269,7 @@ pub const Pin = enum(u5) {
 
     pub fn set_output_drive_strength(self: Pin, strength: DriveStrength) void {
         IO_MUX.GPIO[@intFromEnum(self)].modify(.{
-            .FUN_DRV = DriveStrength.to_value(strength, self),
+            .FUN_DRV = strength.to_value(self),
         });
     }
 
