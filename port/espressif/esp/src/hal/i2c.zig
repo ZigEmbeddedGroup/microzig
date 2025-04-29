@@ -24,7 +24,7 @@ pub const Error = error{
     ExecutionIncomplete,
     CommandNumberExceeded,
     ZeroLengthInvalid,
-    AddressInvalid,
+    TargetAddressReserved,
 };
 
 ///
@@ -534,7 +534,7 @@ pub const I2C = enum(u1) {
     pub fn read_blocking(self: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) !void {
         // TODO: readv_blocking
         if (addr.is_reserved())
-            return error.AddressInvalid;
+            return error.TargetAddressReserved;
 
         // Check if buffer exceeds FIFO size
         if (dst.len > 31)
@@ -561,7 +561,7 @@ pub const I2C = enum(u1) {
     pub fn write_blocking(self: I2C, addr: Address, src: []const u8, timeout: ?mdf.time.Duration) !void {
         // TODO: writev_blocking
         if (addr.is_reserved())
-            return error.AddressInvalid;
+            return error.TargetAddressReserved;
 
         // Split data into chunks that fit in TX FIFO (31 bytes max + 1 addr byte)
         var chunk_start: usize = 0;
@@ -591,6 +591,9 @@ pub const I2C = enum(u1) {
 
     /// Write data then read data from an I2C slave
     pub fn write_then_read_blocking(self: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) !void {
+        if (addr.is_reserved())
+            return error.TargetAddressReserved;
+
         // Check if buffers exceed FIFO size
         if (src.len > 31 or dst.len > 31)
             return Error.FifoExceeded;
