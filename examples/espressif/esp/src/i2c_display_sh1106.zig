@@ -1,11 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const SH1106 = microzig.drivers.display.SH1106;
 
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
 const peripherals = microzig.chip.peripherals;
+const I2C_Device = esp.drivers.I2C_Device;
+const sleep_ms = esp.time.sleep_ms;
 
 const i2c0 = i2c.instance.num(0);
 
@@ -27,15 +30,26 @@ pub fn main() !void {
 
     try i2c0.apply(
         .{ .sda = sda_pin, .scl = scl_pin },
-        100_000,
+        400_000,
     );
 
-    for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @enumFromInt(addr);
+    // Create i2c datagram device
+    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x3C));
+    // Pass i2c device to driver to create display instance
+    const display_driver = SH1106(.{
+        .mode = .i2c,
+        .Datagram_Device = microzig.drivers.base.Datagram_Device,
+    });
 
-        var rx_data: [1]u8 = undefined;
-        _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;
+    // Configure device
+    const display = try display_driver.init(i2c_device.datagram_device());
 
-        std.log.info("I2C device found at address {X}.", .{addr});
+    while (true) {
+        std.log.debug("Clearing (white)", .{});
+        try display.clear_screen(false);
+        sleep_ms(500);
+        std.log.debug("Clearing (black)", .{});
+        try display.clear_screen(true);
+        sleep_ms(500);
     }
 }

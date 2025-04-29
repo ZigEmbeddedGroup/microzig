@@ -1,11 +1,14 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
+const TMP117 = microzig.drivers.sensor.TMP117;
 
 const esp = microzig.hal;
 const i2c = esp.i2c;
 const gpio = esp.gpio;
 const peripherals = microzig.chip.peripherals;
+const I2C_Device = esp.drivers.I2C_Device;
+const sleep_ms = esp.time.sleep_ms;
 
 const i2c0 = i2c.instance.num(0);
 
@@ -30,12 +33,17 @@ pub fn main() !void {
         100_000,
     );
 
-    for (0..std.math.maxInt(u7)) |addr| {
-        const a: i2c.Address = @enumFromInt(addr);
+    // Create i2c datagram device
+    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x48));
+    // Pass i2c device to driver to create sensor instance
+    const temp_sensor = try TMP117.init(i2c_device.datagram_device());
 
-        var rx_data: [1]u8 = undefined;
-        _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;
+    // Configure device
+    try temp_sensor.write_configuration(.{});
 
-        std.log.info("I2C device found at address {X}.", .{addr});
+    while (true) {
+        const temp = try temp_sensor.read_temperature();
+        std.log.info("Temp: {d:0.2}°C", .{temp});
+        sleep_ms(1000);
     }
 }
