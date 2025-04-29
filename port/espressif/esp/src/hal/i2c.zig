@@ -172,6 +172,7 @@ pub const I2C = enum(u1) {
     }
 
     pub fn apply(i2c: I2C, pins: Pins, frequency: u32) ConfigError!void {
+        std.log.debug("Applying config", .{});
         const regs = i2c.get_regs();
 
         // Setup SDA pin
@@ -198,19 +199,20 @@ pub const I2C = enum(u1) {
         i2c.clear_interrupts();
 
         // Configure controller
-        // NOTE: This doesn't seem to apply. It just reads back the reset value
+        regs.CTR.write_raw(0);
         regs.CTR.modify(.{
             .MS_MODE = 1, // Set I2C controller to master mode
-            // The rs one sets 1, but doc says 0
-            // .SDA_FORCE_OUT = 1, // Use open drain output for SDA
-            // .SCL_FORCE_OUT = 1, // Use open drain output for SCL
-            .SDA_FORCE_OUT = 0, // Use open drain output for SDA
-            .SCL_FORCE_OUT = 0, // Use open drain output for SCL
+            // The rs one sets 1, but doc says 0. esp-idf sets 1
+            // Seems we set this to 1 because we use the first method to set SCL and SDA as open drain (page 681)
+            .SDA_FORCE_OUT = 1, // Use open drain output for SDA
+            .SCL_FORCE_OUT = 1, // Use open drain output for SCL
+            // .SDA_FORCE_OUT = 0, // Use open drain output for SDA
+            // .SCL_FORCE_OUT = 0, // Use open drain output for SCL
             .TX_LSB_FIRST = 0, // MSB first for sending
             .RX_LSB_FIRST = 0, // MSB first for receiving
             .CLK_EN = 1, // Enable clock
         });
-        std.log.debug("CTR {x:0>8}", .{regs.CTR.raw}); // DELETEME
+        // std.log.info("CTR {x:0>8}", .{regs.CTR.raw}); // DELETEME
 
         // Configure filter
         i2c.set_filter(7, 7);
@@ -220,12 +222,14 @@ pub const I2C = enum(u1) {
 
         // Propagate configuration changes
         regs.CTR.modify(.{ .CONF_UPGATE = 1 });
+        // std.log.info("CTR after sync {x:0>8}", .{regs.CTR.raw}); // DELETEME
     }
 
     /// Reset the I2C controller
     fn reset(self: I2C) void {
+        // NOTE: This is done explicitly in apply after disabling all i2c interrupts
         // Clear all I2C interrupts
-        self.clear_interrupts();
+        // self.clear_interrupts();
 
         // Reset FIFO
         self.reset_fifo();
@@ -244,11 +248,12 @@ pub const I2C = enum(u1) {
             .TX_FIFO_RST = 1,
             .RX_FIFO_RST = 1,
             // Esp hal sets these here
-            // .NONFIFO_EN = 0,
+            .NONFIFO_EN = 0,
             // Esp hal sets these, but why?
-            // .RXFIFO_WM_THRHD = 1,
+            .RXFIFO_WM_THRHD = 1,
             // TODO: esp-hal does .bits(32). But that's more than 5 bits?
             // .TXFIFO_WM_THRHD = 32,
+            .TXFIFO_WM_THRHD = 31,
         });
 
         // Shouldn't be needed, it's clear on write
@@ -282,6 +287,7 @@ pub const I2C = enum(u1) {
 
     /// Set the filter threshold in clock cycles
     fn set_filter(self: I2C, sda_threshold: ?u4, scl_threshold: ?u4) void {
+        std.log.debug("Setting filter", .{});
         // // TODO: Maybe do in two writes?
         // if (sda_threshold) |threshold| {
         //     self.get_regs().FILTER_CFG.modify(.{
@@ -311,6 +317,7 @@ pub const I2C = enum(u1) {
 
     /// Sets the frequency of the I2C interface
     fn set_frequency(self: I2C, source_clk: u32, bus_freq: u32) !void {
+        std.log.debug("Setting frequency", .{});
         // Calculate dividing factor (maximum possible)
         const sclk_div: u8 = @intCast((source_clk / (bus_freq * 1024) + 1));
         if (sclk_div >= 256) {
@@ -394,24 +401,18 @@ pub const I2C = enum(u1) {
         // Ensure configuration is propagated
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
 
-        //   DELETEME>>
-        for (0..8) |i| {
-            const v = self.get_regs().COMD[i].raw;
-            std.log.debug("command: {} 0x{x:0>8}", .{ i, v });
-        }
-        //   DELETEME<<
-
         // Start transmission, causes peripheral to read its commands from COMD
         self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
 
         // TODO: Maybe take a deadline and have the caller (read or write) change the timeout to a
         // deadline to account for time getting to here.
-        // const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        _ = timeout;
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        // _ = timeout;
 
         // Monitor for completion or errors
         while (true) {
             const interrupts = self.get_regs().INT_RAW.read();
+            // std.log.debug("Interrupts: {b:0>8}", .{@as(u32, @bitCast(interrupts))});
 
             // Check for errors
             if (interrupts.TIME_OUT_INT_RAW == 1) {
@@ -427,8 +428,8 @@ pub const I2C = enum(u1) {
                 break;
 
             // Check for timeout
-            // if (deadline.is_reached_by(time.get_time_since_boot()))
-            // return Error.Timeout;
+            if (deadline.is_reached_by(time.get_time_since_boot()))
+                return Error.Timeout;
         }
 
         // Verify all commands were executed
@@ -499,13 +500,6 @@ pub const I2C = enum(u1) {
             .COMMAND = Command.toValue(.Start),
             .COMMAND_DONE = 0,
         });
-        //   DELETEME>>
-        std.log.debug("Writing {b:0>14} to 0x{x:0>8}", .{
-            Command.toValue(.Start),
-            @intFromPtr(&self.get_regs().COMD[cmd_start_idx.*]),
-        });
-        std.log.debug("Read back: 0x{x:0>8}", .{self.get_regs().COMD[cmd_start_idx.*].raw});
-        //   DELETEME<<
         cmd_start_idx.* += 1;
 
         // Load address with READ bit into FIFO
@@ -524,12 +518,6 @@ pub const I2C = enum(u1) {
             .COMMAND = write_cmd.toValue(),
             .COMMAND_DONE = 0,
         });
-        //   DELETEME>>
-        std.log.debug("Writing {b:0>14} to 0x{x:0>8}", .{
-            Command.toValue(.Start),
-            @intFromPtr(&self.get_regs().COMD[cmd_start_idx.*]),
-        });
-        //   DELETEME<<
         cmd_start_idx.* += 1;
 
         // For reading multiple bytes, first n-1 bytes with ACK
@@ -542,12 +530,6 @@ pub const I2C = enum(u1) {
                 .COMMAND = read_cmd.toValue(),
                 .COMMAND_DONE = 0,
             });
-            //   DELETEME>>
-            std.log.debug("Writing {b:0>14} to 0x{x:0>8}", .{
-                read_cmd.toValue(),
-                @intFromPtr(&self.get_regs().COMD[cmd_start_idx.*]),
-            });
-            //   DELETEME<<
             cmd_start_idx.* += 1;
         }
 
@@ -560,12 +542,6 @@ pub const I2C = enum(u1) {
             .COMMAND = last_read_cmd.toValue(),
             .COMMAND_DONE = 0,
         });
-        //   DELETEME>>
-        std.log.debug("Writing {b:0>14} to 0x{x:0>8}", .{
-            last_read_cmd.toValue(),
-            @intFromPtr(&self.get_regs().COMD[cmd_start_idx.*]),
-        });
-        //   DELETEME<<
         cmd_start_idx.* += 1;
 
         // STOP command
@@ -573,18 +549,11 @@ pub const I2C = enum(u1) {
             .COMMAND = Command.toValue(.Stop),
             .COMMAND_DONE = 0,
         });
-        //   DELETEME>>
-        std.log.debug("Writing {b:0>14} to 0x{x:0>8}", .{
-            Command.toValue(.Stop),
-            @intFromPtr(&self.get_regs().COMD[cmd_start_idx.*]),
-        });
-        //   DELETEME<<
         cmd_start_idx.* += 1;
 
-        // NOTE: These read back as 0. What is going on?
         //   DELETEME>>
-        for (0..cmd_start_idx.*) |i|
-            std.log.debug("Command at {d}: {X:0>8}", .{ i, self.get_regs().COMD[i].raw });
+        // for (0..cmd_start_idx.*) |i|
+        //     std.log.info("Command at {d}: {X:0>8}", .{ i, self.get_regs().COMD[i].raw });
         //   DELETEME<<
     }
 
@@ -604,9 +573,7 @@ pub const I2C = enum(u1) {
 
         // Add read operation
         var cmd_idx: usize = 0;
-        self.add_read_op(addr, dst.len, &cmd_idx) catch |e| {
-            std.log.debug("Error adding read op {any}", .{e}); // DELETEME
-        };
+        try self.add_read_op(addr, dst.len, &cmd_idx);
 
         // Execute transmission
         try self.execute_transmission(timeout);
