@@ -8,6 +8,8 @@ pub const CPUOptions = struct {
     has_ram_vectors_section: bool = false,
 };
 
+pub const scb_base_offset = 0x0d00;
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,

@@ -3,6 +3,8 @@ const mmio = microzig.mmio;
 
 pub const CPUOptions = struct {};
 
+pub const scb_base_offset = 0x0d00;
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
