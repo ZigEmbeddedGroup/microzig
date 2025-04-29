@@ -26,6 +26,8 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
     };
@@ -99,6 +101,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu = .{
             .name = "hazard3",
             .root_source_file = b.path("src/cpus/hazard3.zig"),
+            .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+                .{
+                    .name = "riscv32-common",
+                    .module = riscv32_common_dep.module("riscv32-common"),
+                },
+            }) catch @panic("OOM"),
         },
         .chip = .{
             .name = "RP2350",

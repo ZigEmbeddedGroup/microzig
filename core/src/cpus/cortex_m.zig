@@ -38,7 +38,7 @@ pub const ExternalInterrupt = blk: {
     // Note: The value of each field is the interrupt number (VTOR offset),
     //       not the offset into the whole vector table.
 
-    const vector_info   = @typeInfo(Interrupt).@"enum";
+    const vector_info = @typeInfo(Interrupt).@"enum";
     const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
@@ -74,7 +74,7 @@ pub const Exception = blk: {
     // Note: The value of each field is the index into the whole
     //       vector table, not the negative offset from VTOR.
 
-    const vector_info   = @typeInfo(Interrupt).@"enum";
+    const vector_info = @typeInfo(Interrupt).@"enum";
     const vector_fields = vector_info.fields;
     var result_len: usize = 0;
 
@@ -106,7 +106,6 @@ pub const Exception = blk: {
 };
 
 pub const interrupt = struct {
-
     pub const Priority = enum(u8) {
         lowest = 0,
         highest = 15,
@@ -136,15 +135,11 @@ pub const interrupt = struct {
     }
 
     pub const exception = struct {
-
         const ppb = microzig.chip.peripherals.PPB;
 
         pub fn is_enabled(comptime excpt: Exception) bool {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
                         .UsageFault => return (raw & 0x0004_0000) != 0,
@@ -171,10 +166,7 @@ pub const interrupt = struct {
 
         pub fn enable(comptime excpt: Exception) void {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .UsageFault => ppb.SHCSR.raw |= 0x0004_0000,
                         .BusFault => ppb.SHCSR.raw |= 0x0002_0000,
@@ -195,14 +187,11 @@ pub const interrupt = struct {
                 },
                 else => @compileError("not supported on this platform"),
             }
-       }
+        }
 
         pub fn disable(comptime excpt: Exception) void {
             switch (cortex_m) {
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .UsageFault => ppb.SHCSR.raw &= ~@as(u32, 0x0004_0000),
                         .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0002_0000),
@@ -232,10 +221,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) return (ppb.SHCSR.raw & 0x0000_8000) != 0;
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     const raw = ppb.SHCSR.raw;
                     switch (excpt) {
                         .SVCall => return (raw & 0x0000_8000) != 0,
@@ -270,10 +256,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw |= 0x0000_8000;
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .SVCall => ppb.SHCSR.raw |= 0x0000_8000,
                         .BusFault => ppb.SHCSR.raw |= 0x0000_4000,
@@ -306,10 +289,7 @@ pub const interrupt = struct {
                     if (excpt == .SVCALL) ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000);
                     @compileError("not supported on this platform");
                 },
-                .cortex_m3,
-                .cortex_m4,
-                .cortex_m7
-                => {
+                .cortex_m3, .cortex_m4, .cortex_m7 => {
                     switch (excpt) {
                         .SVCall => ppb.SHCSR.raw &= ~@as(u32, 0x0000_8000),
                         .BusFault => ppb.SHCSR.raw &= ~@as(u32, 0x0000_4000),
@@ -357,7 +337,7 @@ pub const interrupt = struct {
                     ppb.SHPR2.raw &= ~(@as(u32, 0xFF) << shift);
                     ppb.SHPR2.raw |= @as(u32, @intFromEnum(priority)) << shift;
                 },
-                3 =>     {
+                3 => {
                     ppb.SHPR3.raw &= ~(@as(u32, 0xFF) << shift);
                     ppb.SHPR3.raw |= @as(u32, @intFromEnum(priority)) << shift;
                 },
@@ -379,7 +359,7 @@ pub const interrupt = struct {
         }
 
         pub fn set_handler(comptime excpt: Exception, handler: Handler) Handler {
-            if (@intFromEnum(exception) == 0) {
+            if (@intFromEnum(excpt) == 0) {
                 @compileError("Cannot set handler for slot 0 (initial stack pointer)");
             }
 
@@ -593,7 +573,7 @@ pub fn clrex() void {
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
-var ram_vectors: [vector_count]usize = undefined;
+var ram_vectors: [vector_count]usize align(256) = undefined;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -695,7 +675,7 @@ const tpi_base = 0xE0040000;
 const coredebug_base = 0xE000EDF0;
 const systick_base = scs_base + 0x0010;
 const nvic_base = scs_base + 0x0100;
-const scb_base = scs_base + 0x0D00;
+const scb_base = scs_base + core.scb_base_offset;
 const mpu_base = scs_base + 0x0D90;
 
 const properties = microzig.chip.properties;
@@ -777,30 +757,30 @@ pub const types = struct {
                 /// 0 = external clock
                 /// 1 = processor clock.
                 CLKSOURCE: u1,
-                reserved0: u13,
+                reserved0: u13 = 0,
                 /// Returns 1 if timer counted to 0 since last time this was read.
                 COUNTFLAG: u1,
-                reserved1: u15,
+                reserved1: u15 = 0,
             }),
             /// Reload Value Register.
             LOAD: mmio.Mmio(packed struct(u32) {
                 /// Value to load into the VAL register when the counter is enabled and when it reaches 0.
                 RELOAD: u24,
-                reserved0: u8,
+                reserved0: u8 = 0,
             }),
             /// Current Value Register.
             VAL: mmio.Mmio(packed struct(u32) {
                 /// Reads return the current value of the SysTick counter.
                 /// A write of any value clears the field to 0, and also clears the CTRL.COUNTFLAG bit to 0.
                 CURRENT: u24,
-                reserved0: u8,
+                reserved0: u8 = 0,
             }),
             /// Calibration Register.
             CALIB: mmio.Mmio(packed struct(u32) {
                 /// Reload value for 10ms (100Hz) timing, subject to system clock skew errors. If the value
                 /// reads as zero, the calibration value is not known.
                 TENMS: u24,
-                reserved0: u6,
+                reserved0: u6 = 0,
                 /// Indicates whether the TENMS value is exact.
                 /// 0 = TENMS value is exact
                 /// 1 = TENMS value is inexact, or not given.

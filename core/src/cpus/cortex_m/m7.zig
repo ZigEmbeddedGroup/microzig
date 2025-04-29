@@ -8,24 +8,26 @@ pub const CPUOptions = struct {
     has_ram_vectors_section: bool = false,
 };
 
+pub const scb_base_offset = 0x0d00;
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register
     CPUID: u32,
     /// Interrupt Control and State Register
     ICSR: mmio.Mmio(packed struct(u32) {
         VECTACTIVE: u9,
-        reserved0: u2,
+        reserved0: u2 = 0,
         RETTOBASE: u1,
         VECTPENDING: u9,
-        reserved1: u1,
+        reserved1: u1 = 0,
         ISRPENDING: u1,
         ISRPREEMPT: u1,
-        reserved2: u1,
+        reserved2: u1 = 0,
         PENDSTCLR: u1,
         PENDSTSET: u1,
         PENDSVCLR: u1,
         PENDSVSET: u1,
-        reserved3: u2,
+        reserved3: u2 = 0,
         NMIPENDSET: u1,
     }),
     /// Vector Table Offset Register
@@ -38,13 +40,13 @@ pub const SystemControlBlock = extern struct {
     CCR: mmio.Mmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
-        reserved0: u1,
+        reserved0: u1 = 0,
         UNALIGN_TRP: u1,
         DIV_0_TRP: u1,
-        reserved1: u3,
+        reserved1: u3 = 0,
         BFHFNMIGN: u1,
         STKALIGN: u1,
-        padding: u22,
+        padding: u22 = 0,
     }),
     /// System Handlers Priority Registers
     SHP: [3]u8,
@@ -109,22 +111,22 @@ pub const MemoryProtectionUnit = extern struct {
     /// MPU Type Register
     TYPE: mmio.Mmio(packed struct(u32) {
         SEPARATE: u1,
-        reserved0: u7,
+        reserved0: u7 = 0,
         DREGION: u8,
         IREGION: u8,
-        reserved1: u8,
+        reserved1: u8 = 0,
     }),
     /// MPU Control Register
     CTRL: mmio.Mmio(packed struct(u32) {
         ENABLE: u1,
         HFNMIENA: u1,
         PRIVDEFENA: u1,
-        padding: u29,
+        padding: u29 = 0,
     }),
     /// MPU RNRber Register
     RNR: mmio.Mmio(packed struct(u32) {
         REGION: u8,
-        padding: u24,
+        padding: u24 = 0,
     }),
     /// MPU Region Base Address Register
     RBAR: RBAR_Register,
@@ -154,7 +156,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Region Size
         SIZE: u5,
-        reserved0: u2,
+        reserved0: u2 = 0,
         /// Sub-Region Disable
         SRD: u8,
         /// ATTRS.B
@@ -165,29 +167,29 @@ pub const MemoryProtectionUnit = extern struct {
         S: u1,
         /// ATTRS.TEX
         TEX: u3,
-        reserved1: u2,
+        reserved1: u2 = 0,
         /// ATTRS.AP
         AP: u3,
         /// ATTRS.XN
         XN: u1,
-        padding: u4,
+        padding: u4 = 0,
     });
 };
 
 pub const DebugRegisters = extern struct {
     /// Debyg Halting Control and Status Register
     DHCSR: mmio.Mmio(packed struct {
-        reserved0: u6,
+        reserved0: u6 = 0,
         S_RESET_ST: u1,
         S_RETIRE_ST: u1,
-        reserved1: u4,
+        reserved1: u4 = 0,
         S_LOCKUP: u1,
         S_SLEEP: u1,
         S_HALT: u1,
         S_REGRDY: u1,
-        reserved2: u10,
+        reserved2: u10 = 0,
         C_SNAPSTALL: u1,
-        reserved3: u1,
+        reserved3: u1 = 0,
         C_MASKINTS: u1,
         C_STEP: u1,
         C_HALT: u1,
@@ -196,9 +198,9 @@ pub const DebugRegisters = extern struct {
     /// Debug Core Register Selector Register
     /// TODO: Reserved have values ? see armv7-m reference manual
     DCRSR: mmio.Mmio(packed struct {
-        reserved0: u15,
+        reserved0: u15 = 0,
         REGWnR: u1,
-        reserved1: u9,
+        reserved1: u9 = 0,
         REGSEL: u7,
     }),
     /// Debug Core Register Data Register
@@ -207,14 +209,14 @@ pub const DebugRegisters = extern struct {
     }),
     /// Debug exception and Monitor Control Register
     DEMCR: mmio.Mmio(packed struct {
-        reserved0: u7,
+        reserved0: u7 = 0,
         TRCENA: u1,
-        reserved1: u4,
+        reserved1: u4 = 0,
         MON_REQ: u1,
         MON_STEP: u1,
         MON_PEND: u1,
         MON_EN: u1,
-        reserved2: u5,
+        reserved2: u5 = 0,
         VC_HARDERR: u1,
         VC_INTERR: u1,
         VC_BUSERR: u1,
@@ -222,7 +224,7 @@ pub const DebugRegisters = extern struct {
         VC_CHKERR: u1,
         VC_NOCPERR: u1,
         VC_MMERR: u1,
-        reserved3: u3,
+        reserved3: u3 = 0,
         VC_CORERESET: u1,
     }),
 };
@@ -235,7 +237,7 @@ pub const ITM = extern struct {
         WRITE_U32: u32,
         READ: packed struct(u32) {
             FIFOREADY: u1,
-            reserved: u31,
+            reserved: u31 = 0,
         },
     }),
 
@@ -262,13 +264,13 @@ pub const ITM = extern struct {
         SYNCENA: u1, // Sync packet enable
         TXENA: u1, // DWT packet forwarding enable
         SWOENA: u1, // Async clock enable
-        reserved0: u3,
+        reserved0: u3 = 0,
         TSPrescale: u2, // Local timestamp prescaler
         GTSFREQ: u2, // Global timestamp frequency
-        reserved1: u4,
+        reserved1: u4 = 0,
         TraceBusID: u7, // Trace bus ID
         BUSY: u1, // ITM busy flag
-        reserved2: u8,
+        reserved2: u8 = 0,
     }),
 };
 
@@ -285,24 +287,24 @@ pub const TPIU = extern struct {
     /// Asynchronous Clock Prescaler Register
     ACPR: mmio.Mmio(packed struct(u32) {
         SWOSCALER: u16,
-        padding: u16,
+        padding: u16 = 0,
     }),
     reserved1: [55]u32,
     /// Selected Pin Protocol Register
     SPPR: mmio.Mmio(packed struct(u32) {
         TXMODE: u2,
-        padding: u30,
+        padding: u30 = 0,
     }),
     reserved2: [524]u32,
     /// TPIU Type Register
     TYPE: mmio.Mmio(packed struct(u32) {
-        reserved0: u6,
+        reserved0: u6 = 0,
         FIFOSZ: u3,
         PTINVALID: u1,
         MANCVALID: u1,
         NRZVALID: u1,
         implementation_defined0: u4,
-        padding: u16,
+        padding: u16 = 0,
     }),
     reserved3: [13]u32,
 };

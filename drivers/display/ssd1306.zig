@@ -10,6 +10,9 @@
 
 const std = @import("std");
 const mdf = @import("../framework.zig");
+const common = @import("common.zig");
+
+const I2C_ControlByte = common.I2C_ControlByte;
 
 /// SSD1306 driver for I²C based operation.
 pub const SSD1306_I2C = SSD1306_Generic(.{
@@ -43,6 +46,24 @@ pub const SSD1306_Options = struct {
     /// Which digital i/o interface should be used.
     Digital_IO: type = mdf.base.Digital_IO,
 };
+
+pub fn init(comptime mode: Driver_Mode, device: anytype, digital_io: anytype) !SSD1306_Generic(.{
+    .mode = mode,
+    .Datagram_Device = @TypeOf(device),
+    .Digital_IO = @TypeOf(digital_io),
+}) {
+    const Type = SSD1306_Generic(.{
+        .mode = mode,
+        .Datagram_Device = @TypeOf(device),
+        .Digital_IO = @TypeOf(digital_io),
+    });
+
+    return switch (mode) {
+        .i2c, .spi_3wire => Type.init_without_io(device),
+        .spi_4wire => Type.init_with_io(device, digital_io),
+        .dynamic => @compileError("unsupported, use SSD1306_Generic directly"),
+    };
+}
 
 pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
     switch (options.mode) {
@@ -156,7 +177,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
             try self.deactivate_scroll();
             try self.set_segment_remap(true); // Flip left/right
-            try self.set_com_ouput_scan_direction(true); // Flip up/down
+            try self.set_com_output_scan_direction(true); // Flip up/down
             try self.set_normal_or_inverse_display(.normal);
             try self.set_contrast(255);
 
@@ -310,7 +331,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
 
         /// false: normal (COM0 to COMn)
         /// true: remapped
-        pub fn set_com_ouput_scan_direction(self: Self, remap: bool) !void {
+        pub fn set_com_output_scan_direction(self: Self, remap: bool) !void {
             if (remap) {
                 try self.execute_command(0xC8, &.{});
             } else {
@@ -688,7 +709,7 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             try std.testing.expectEqual(err, InputError.InvalidEntry);
         }
 
-        test set_com_ouput_scan_direction {
+        test set_com_output_scan_direction {
             // Arrange
             var td = TestDevice.init_receiver_only();
             defer td.deinit();
@@ -696,8 +717,8 @@ pub fn SSD1306_Generic(comptime options: SSD1306_Options) type {
             const expected_data = &[_][]const u8{ &.{ 0x00, 0xC0 }, &.{ 0x00, 0xC8 } };
             // Act
             const driver = try SSD1306_I2C.init(td.datagram_device());
-            try driver.set_com_ouput_scan_direction(false);
-            try driver.set_com_ouput_scan_direction(true);
+            try driver.set_com_output_scan_direction(false);
+            try driver.set_com_output_scan_direction(true);
             // Assert
             try td.expect_sent(&recorded_init_sequence ++ expected_data);
         }
@@ -832,7 +853,7 @@ pub const Framebuffer = struct {
 
     /// Clears the framebuffer to `color`.
     pub fn clear(fb: *Framebuffer, color: Color) void {
-        fb.* = init(color);
+        fb.* = .init(color);
     }
 
     /// Sets the pixel at (`x`, `y`) to `color`.
@@ -851,7 +872,7 @@ pub const Framebuffer = struct {
 
     // Tests:
 
-    test init {
+    test "Framebuffer.init" {
         // .white
         {
             const fb = Framebuffer.init(.white);
@@ -915,41 +936,6 @@ pub const Framebuffer = struct {
         }
     }
 };
-
-const I2C_ControlByte = packed struct(u8) {
-    zero: u6 = 0,
-
-    /// The D/C# bit determines the next data byte is acted as a command or a data. If the D/C# bit is
-    /// set to logic “0”, it defines the following data byte as a command. If the D/C# bit is set to
-    /// logic “1”, it defines the following data byte as a data which will be stored at the GDDRAM.
-    /// The GDDRAM column address pointer will be increased by one automatically after each
-    /// data write.
-    mode: enum(u1) { command = 0, data = 1 },
-
-    /// If the Co bit is set as logic “0”, the transmission of the following information will contain data bytes only.
-    co_bit: u1,
-
-    const command: u8 = @bitCast(I2C_ControlByte{
-        .mode = .command,
-        .co_bit = 0,
-    });
-
-    const data_byte: u8 = @bitCast(I2C_ControlByte{
-        .mode = .data,
-        .co_bit = 1,
-    });
-
-    const data_stream: u8 = @bitCast(I2C_ControlByte{
-        .mode = .data,
-        .co_bit = 0,
-    });
-};
-
-comptime {
-    std.debug.assert(I2C_ControlByte.command == 0x00);
-    std.debug.assert(I2C_ControlByte.data_byte == 0xC0);
-    std.debug.assert(I2C_ControlByte.data_stream == 0x40);
-}
 
 // Fundamental Commands
 pub const DisplayOnMode = enum(u8) { resumeToRam = 0xA4, ignoreRam = 0xA5 };

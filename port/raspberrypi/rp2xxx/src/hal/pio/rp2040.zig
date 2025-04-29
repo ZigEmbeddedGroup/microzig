@@ -35,6 +35,7 @@ pub const Pio = enum(u1) {
     pub const add_program_at_offset_unlocked = PioImpl.add_program_at_offset_unlocked;
     pub const add_program = PioImpl.add_program;
     pub const claim_unused_state_machine = PioImpl.claim_unused_state_machine;
+    pub const set_input_sync_bypass = PioImpl.set_input_sync_bypass;
     pub const get_sm_regs = PioImpl.get_sm_regs;
     pub const get_irq_regs = PioImpl.get_irq_regs;
     pub const sm_set_clkdiv = PioImpl.sm_set_clkdiv;
@@ -54,7 +55,6 @@ pub const Pio = enum(u1) {
 
             .FJOIN_TX = @intFromBool(options.join_tx),
             .FJOIN_RX = @intFromBool(options.join_rx),
-            .reserved16 = 0,
         });
     }
 
@@ -86,8 +86,6 @@ pub const Pio = enum(u1) {
             .OUT_SHIFTDIR = 0,
             .PUSH_THRESH = 0,
             .PULL_THRESH = 0,
-
-            .reserved16 = 0,
         };
 
         xor_shiftctrl.write(mask);
@@ -102,4 +100,9 @@ pub const Pio = enum(u1) {
     pub const sm_init = PioImpl.sm_init;
     pub const sm_exec = PioImpl.sm_exec;
     pub const sm_load_and_start_program = PioImpl.sm_load_and_start_program;
+
+    pub const sm_exec_set_x = PioImpl.sm_exec_set_x;
+    pub const sm_exec_set_y = PioImpl.sm_exec_set_y;
+    pub const sm_exec_set_pindir = PioImpl.sm_exec_set_pindir;
+    pub const sm_exec_jmp = PioImpl.sm_exec_jmp;
 };
