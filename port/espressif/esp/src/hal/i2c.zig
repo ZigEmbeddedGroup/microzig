@@ -449,11 +449,11 @@ pub const I2C = enum(u1) {
             self.write_fifo(byte);
 
         // WRITE command
-        const write_cmd = Command.Write{
-            .ack_exp = .ACK,
-            .ack_check_en = 1,
+        const write_cmd = Command{ .Write = .{
+            .ack_exp = .Ack,
+            .ack_check_en = true,
             .length = @intCast(1 + bytes.len),
-        };
+        } };
         self.get_regs().COMD[cmd_start_idx.*].write(.{
             .COMMAND = write_cmd.toValue(),
             .COMMAND_DONE = 0,
