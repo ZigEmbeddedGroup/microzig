@@ -1,0 +1,14 @@
+---
+.title = "Documentation",
+.date = @date("2024-11-02T00:00:00"),
+.author = "Matthew Knight",
+.draft = false,
+.layout = "index.shtml",
+.description = "MicroZig: Documentation",
+.tags = []
+---
+
+# Documentation
+
+- [Getting Started](/docs/getting-started)
+- [MicroZig Internals](/docs/internals)

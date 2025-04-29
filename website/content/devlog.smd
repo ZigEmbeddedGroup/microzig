@@ -1,0 +1,28 @@
+---
+.title = "Devlog",
+.date = @date("2021-07-06T00:00:00"),
+.author = "ZEG contributors",
+.layout = "devlog.shtml",
+.alternatives = [{
+  .name = "rss",
+  .layout = "devlog.xml",
+  .output = "./devlog/index.xml",
+}],
+.draft = false,
+---
+
+[]($section.id('about'))
+## About
+
+This is a non-exhaustive, curated list of changes meant to help users quickly
+see what has improved since they last checked.
+
+You can [subscribe to this page via RSS]($link.alternative("rss")).
+
+## Changes
+
+[]section.id('Devlog Starts!').data('date', '2025-04-28')
+### Devlog Starts!
+
+The MicroZig devlog is now set up for contributors to showcase their work. When
+adding your work, add to the top of the list.

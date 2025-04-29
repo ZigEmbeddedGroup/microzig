@@ -1,0 +1,19 @@
+---
+.title = "Getting Started",
+.date = @date("2024-11-02T00:00:00"),
+.author = "Matthew Knight",
+.draft = false,
+.layout = "index.shtml",
+.description = "MicroZig: Contributing",
+.tags = []
+---
+
+# Contributing Guide
+
+## Coding Style
+
+## Monorepo
+
+## Naming Sub-packages
+
+## Versioning and Release Process

@@ -2,11 +2,19 @@
     .name = .microzig_website,
     .fingerprint = 0xc756ec109b390767,
     .version = "0.2.0",
-    .paths = .{"."},
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "zine.ziggy",
+        "content",
+        "assets",
+        "layouts",
+    },
     .dependencies = .{
         .zine = .{
-            .url = "git+https://github.com/kristoff-it/zine.git#92ef5f930a65773eb7730f714830a70c9dfebf73",
-            .hash = "zine-0.0.0-ou6nID_kBQDh3bzW8TpyF5-jtomG90qD3VLTRLb_KB3G",
+            .url = "https://github.com/kristoff-it/zine/archive/refs/tags/v0.10.2.tar.gz",
+            .hash = "zine-0.9.0-ou6nIBhRFgDpNRmprFMaArX3m_aaEasr__0o_5DpX7SG",
         },
     },
 }
