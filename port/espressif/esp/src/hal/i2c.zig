@@ -448,7 +448,7 @@ pub const I2C = enum(u1) {
         cmd_start_idx.* += 1;
 
         // Load address with WRITE bit into FIFO
-        self.write_fifo((addr << 1) | @intFromEnum(OperationType.WRITE));
+        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Read));
 
         // Load data bytes into FIFO
         for (bytes) |byte|
@@ -489,11 +489,8 @@ pub const I2C = enum(u1) {
         });
         cmd_start_idx.* += 1;
 
-        // Load address with READ bit into FIFO
-        // TODO: What is this doing?
-        self.get_regs().DATA.write(.{
-            .FIFO_RDATA = (@intFromEnum(addr) << 1) | @intFromEnum(OperationType.Read),
-        });
+        // Load address with READ bit set into FIFO
+        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Read));
 
         // WRITE command for address
         const write_cmd: Command = .{ .Write = .{
