@@ -26,16 +26,8 @@ pub fn main() !void {
     wifi.init(allocator) catch |err| std.debug.panic("{}", .{err});
     wifi.wifi_controller.init() catch |err| std.debug.panic("{}", .{err});
 
-    // microzig.cpu.interrupt.set_priority_threshold(.zero);
-    //
-    // microzig.cpu.interrupt.set_type(.interrupt1, .level);
-    // microzig.cpu.interrupt.set_priority(.interrupt1, .highest);
-    // microzig.cpu.interrupt.map(.systimer_target0, .interrupt1);
-    // microzig.cpu.interrupt.enable(.interrupt1);
-    //
-    // microzig.cpu.interrupt.enable_interrupts();
-
     while (true) {
-        microzig.cpu.wfi();
+        std.log.info("tick!", .{});
+        hal.time.sleep_ms(1000);
     }
 }

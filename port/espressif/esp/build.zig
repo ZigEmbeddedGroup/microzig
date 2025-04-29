@@ -11,19 +11,19 @@ chips: struct {
 
 boards: struct {},
 
+const esp32_c3_zig_target: std.Target.Query = .{
+    .cpu_arch = .riscv32,
+    .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+    .cpu_features_add = std.Target.riscv.featureSet(&.{
+        .c,
+        .m,
+    }),
+    .os_tag = .freestanding,
+    .abi = .eabi,
+};
+
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
-
-    const esp32_c3_zig_target: std.Target.Query = .{
-        .cpu_arch = .riscv32,
-        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            .c,
-            .m,
-        }),
-        .os_tag = .freestanding,
-        .abi = .eabi,
-    };
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
     const cpu_imports: []Import = b.allocator.dupe(Import, &.{
@@ -62,11 +62,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .root_source_file = b.path("src/hal.zig"),
             .imports = b.allocator.dupe(Import, &.{
                 .{
-                    .name = "wifi-driver-c",
-                    .module = b.dependency("wifi-driver-c", .{
-                        .target = esp32_c3_zig_target,
-                        .chip = .esp32_c3,
-                    }).module("wifi-driver-c"),
+                    .name = "wifi-c",
+                    .module = dep.module("wifi-c"),
                 },
             }) catch @panic("OOM"),
         },
@@ -101,4 +98,43 @@ pub fn build(b: *std.Build) void {
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
     test_step.dependOn(&unit_tests_run.step);
+
+    const esp32_c3_resolved_zig_target = b.resolveTargetQuery(esp32_c3_zig_target);
+
+    const esp_wifi_sys_dep = b.dependency("esp-wifi-sys", .{});
+
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/hal/wifi/wifi.c"),
+        .target = esp32_c3_resolved_zig_target,
+        .optimize = .ReleaseFast,
+        .link_libc = false,
+    });
+
+    const mod = translate_c.addModule("wifi-c");
+
+    translate_c.addIncludePath(b.path("src/hal/wifi/libc_dummy_include"));
+    translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/include"));
+    translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/headers"));
+
+    // esp32_c3 specific
+    translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/headers/esp32c3"));
+
+    mod.addLibraryPath(esp_wifi_sys_dep.path("esp-wifi-sys/libs/esp32c3"));
+    inline for (&.{
+        "btbb",
+        "btdm_app",
+        "coexist",
+        "core",
+        "espnow",
+        "mesh",
+        "net80211",
+        "phy",
+        "pp",
+        "smartconfig",
+        "wapi",
+        "wpa_supplicant",
+        "printf",
+    }) |library| {
+        mod.linkSystemLibrary(library, .{});
+    }
 }
