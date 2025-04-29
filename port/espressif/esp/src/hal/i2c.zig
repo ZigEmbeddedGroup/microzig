@@ -427,7 +427,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Add a write operation to the command sequence
-    fn add_write_op(self: I2C, addr: u8, bytes: []const u8, cmd_start_idx: *usize) !void {
+    fn add_write_op(self: I2C, addr: Address, bytes: []const u8, cmd_start_idx: *usize) !void {
         // Check if we have enough command registers
         // Need START, WRITE, STOP
         const needed_cmds: usize = 3;
@@ -558,7 +558,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Write data to an I2C slave
-    pub fn write_blocking(self: I2C, addr: u8, src: []const u8, timeout: ?mdf.time.Duration) !void {
+    pub fn write_blocking(self: I2C, addr: Address, src: []const u8, timeout: ?mdf.time.Duration) !void {
         // TODO: writev_blocking
         if (addr.is_reserved())
             return error.AddressInvalid;
