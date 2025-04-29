@@ -199,12 +199,8 @@ pub const I2C = enum(u1) {
         regs.CTR.write_raw(0);
         regs.CTR.modify(.{
             .MS_MODE = 1, // Set I2C controller to master mode
-            // The rs one sets 1, but doc says 0. esp-idf sets 1
-            // Seems we set this to 1 because we use the first method to set SCL and SDA as open drain (page 681)
             .SDA_FORCE_OUT = 1, // Use open drain output for SDA
             .SCL_FORCE_OUT = 1, // Use open drain output for SCL
-            // .SDA_FORCE_OUT = 0, // Use open drain output for SDA
-            // .SCL_FORCE_OUT = 0, // Use open drain output for SCL
             .TX_LSB_FIRST = 0, // MSB first for sending
             .RX_LSB_FIRST = 0, // MSB first for receiving
             .CLK_EN = 1, // Enable clock
@@ -214,6 +210,7 @@ pub const I2C = enum(u1) {
         self.set_filter(7, 7);
 
         // Configure frequency
+        // TODO: Take timeout as extra arg and handle saturation?
         try self.set_frequency(SOURCE_CLK_FREQ, frequency);
 
         // Propagate configuration changes
@@ -288,32 +285,31 @@ pub const I2C = enum(u1) {
     /// Sets the frequency of the I2C interface
     fn set_frequency(self: I2C, source_clk: u32, bus_freq: u32) !void {
         // Calculate dividing factor (maximum possible)
-        const sclk_div: u8 = @intCast((source_clk / (bus_freq * 1024) + 1));
+        const sclk_div: u32 = @intCast((source_clk / (bus_freq * 1024) + 1));
         if (sclk_div >= 256) {
             return ConfigError.InvalidClkConfig;
         }
 
         // Calculate half cycle
         const half_cycle: u32 = @intCast(source_clk / (bus_freq * @as(u32, sclk_div) * 2));
-        if (half_cycle > std.math.maxInt(u9)) {
+        if (half_cycle > std.math.maxInt(u9))
             return ConfigError.InvalidClkConfig;
-        }
 
-        const scl_low: u9 = @intCast(half_cycle);
-        const scl_high: u9 = @intCast(half_cycle);
+        const scl_low: u9 = @intCast(half_cycle - 1);
+        // NOTE: If we were not hardcoding the filter, we would have to conditionally set this based
+        // on the filter value.
+        const scl_high: u9 = @intCast(half_cycle - 1);
         const sda_hold: u9 = @intCast(half_cycle / 2);
         const sda_sample: u9 = @intCast(scl_high / 2);
         const setup: u9 = @intCast(half_cycle);
         const hold: u9 = @intCast(half_cycle);
         // Set timeout value to 10 bus cycles
-        // This value is the exponent e.g. 2^timeout cycles
-        // TODO: CLz
-        const timeout: u5 = @intCast(std.math.log2(half_cycle * 20));
+        const timeout: u5 = 10;
 
         // Set clock divider
         self.get_regs().CLK_CONF.modify(.{
             .SCLK_SEL = 0,
-            .SCLK_DIV_NUM = sclk_div,
+            .SCLK_DIV_NUM = @as(u8, @truncate(sclk_div - 1)),
         });
 
         // Set SCL period
