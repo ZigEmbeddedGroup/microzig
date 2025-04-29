@@ -281,7 +281,7 @@ pub const I2C = enum(u1) {
     fn reset_command_list(self: I2C) void {
         std.log.debug("Resetting command list", .{}); // DELETEME
         // Reset all command registers
-        for (0..8) |i|
+        for (0..self.get_regs().COMD.len) |i|
             self.get_regs().COMD[@intCast(i)].write_raw(0);
     }
 
@@ -326,8 +326,7 @@ pub const I2C = enum(u1) {
 
         // Calculate half cycle
         const half_cycle: u32 = @intCast(source_clk / (bus_freq * @as(u32, sclk_div) * 2));
-        // TODO: Max int u16 + 1?
-        if (half_cycle >= 65536) {
+        if (half_cycle > std.math.maxInt(u9)) {
             return ConfigError.InvalidClkConfig;
         }
 
@@ -373,8 +372,6 @@ pub const I2C = enum(u1) {
             .TIME_OUT_VALUE = timeout,
             .TIME_OUT_EN = 1,
         });
-
-        return;
     }
 
     /// Read data from FIFO
@@ -393,7 +390,7 @@ pub const I2C = enum(u1) {
     }
 
     /// Execute transmission and monitor for completion/errors
-    fn execute_transmission(self: I2C, timeout: ?mdf.time.Duration) !void {
+    fn execute_transmission(self: I2C, deadline: mdf.time.Deadline) !void {
         std.log.debug("Executing transaction", .{}); // DELETEME
         // Clear all I2C interrupts
         self.clear_interrupts();
@@ -404,15 +401,9 @@ pub const I2C = enum(u1) {
         // Start transmission, causes peripheral to read its commands from COMD
         self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
 
-        // TODO: Maybe take a deadline and have the caller (read or write) change the timeout to a
-        // deadline to account for time getting to here.
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        // _ = timeout;
-
         // Monitor for completion or errors
         while (true) {
             const interrupts = self.get_regs().INT_RAW.read();
-            // std.log.debug("Interrupts: {b:0>8}", .{@as(u32, @bitCast(interrupts))});
 
             // Check for errors
             if (interrupts.TIME_OUT_INT_RAW == 1) {
@@ -433,21 +424,21 @@ pub const I2C = enum(u1) {
         }
 
         // Verify all commands were executed
-        var i: usize = 0;
-        while (i < 8) : (i += 1) {
-            // while (i < 16) : (i += 1) {
+        for (0..self.get_regs().COMD.len) |i| {
             const cmd = self.get_regs().COMD[i].read();
             if (cmd.COMMAND != 0 and cmd.COMMAND_DONE == 0) {
                 return Error.ExecutionIncomplete;
             }
         }
     }
+
     /// Add a write operation to the command sequence
     fn add_write_op(self: I2C, addr: u8, bytes: []const u8, cmd_start_idx: *usize) !void {
         // Check if we have enough command registers
-        if (cmd_start_idx.* >= 14) { // Need 3 cmd registers
+        // Need START, WRITE, STOP
+        const needed_cmds: usize = 3;
+        if (cmd_start_idx.* + needed_cmds > self.get_regs().COMD.len)
             return Error.CommandNumberExceeded;
-        }
 
         // START command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
@@ -460,9 +451,8 @@ pub const I2C = enum(u1) {
         self.write_fifo((addr << 1) | @intFromEnum(OperationType.WRITE));
 
         // Load data bytes into FIFO
-        for (bytes) |byte| {
+        for (bytes) |byte|
             self.write_fifo(byte);
-        }
 
         // WRITE command
         const write_cmd = Command.Write{
@@ -489,11 +479,8 @@ pub const I2C = enum(u1) {
         // Check if we have enough command registers
         // If buffer > 1, we need START, WRITE, READ, READ, STOP
         const needed_cmds: usize = if (buffer_len > 1) 5 else 4;
-        // TODO: Isn't there only 8 commands?
-        if (cmd_start_idx.* + needed_cmds > 8) {
-            // if (cmd_start_idx.* + needed_cmds > 16) {
+        if (cmd_start_idx.* + needed_cmds > self.get_regs().COMD.len)
             return Error.CommandNumberExceeded;
-        }
 
         // START command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
@@ -576,12 +563,12 @@ pub const I2C = enum(u1) {
         try self.add_read_op(addr, dst.len, &cmd_idx);
 
         // Execute transmission
-        try self.execute_transmission(timeout);
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        try self.execute_transmission(deadline);
 
         // Read data from FIFO into dst
-        for (dst) |*byte| {
+        for (dst) |*byte|
             byte.* = self.read_fifo();
-        }
     }
 
     /// Write data to an I2C slave
@@ -608,7 +595,8 @@ pub const I2C = enum(u1) {
             try self.add_write_op(addr, chunk, &cmd_idx);
 
             // Execute transmission
-            try self.execute_transmission(timeout);
+            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+            try self.execute_transmission(deadline);
 
             // Move to next chunk
             chunk_start += chunk_size;
@@ -634,8 +622,7 @@ pub const I2C = enum(u1) {
         try self.execute_transmission(timeout);
 
         // Read data from FIFO into buffer
-        for (dst) |*byte| {
+        for (dst) |*byte|
             byte.* = self.read_fifo();
-        }
     }
 };
