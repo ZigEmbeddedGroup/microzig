@@ -79,13 +79,12 @@ const Command = union(enum) {
     Read: struct {
         /// ACK value to send after byte received
         ack_value: Ack,
-        // TODO: No ack_check_en for read? TRM says only for write, but examples set it (Page 696)
         /// Data length in bytes (1-255)
         length: u8,
     },
 
     /// Convert command to register value
-    pub fn toValue(self: Command) u14 {
+    pub fn to_value(self: Command) u14 {
         var cmd: u14 = 0;
 
         switch (self) {
@@ -282,26 +281,6 @@ pub const I2C = enum(u1) {
 
     /// Set the filter threshold in clock cycles
     fn set_filter(self: I2C, sda_threshold: ?u4, scl_threshold: ?u4) void {
-        std.log.debug("Setting filter", .{});
-        // // TODO: Maybe do in two writes?
-        // if (sda_threshold) |threshold| {
-        //     self.get_regs().FILTER_CFG.modify(.{
-        //         .SDA_FILTER_THRES = threshold,
-        //         .SDA_FILTER_EN = 1,
-        //     });
-        // } else {
-        //     self.get_regs().FILTER_CFG.modify(.{ .SDA_FILTER_EN = 0 });
-        // }
-        //
-        // // This UNSETs the SDA stuff (maybe) since we read back 0 in these bits
-        // if (scl_threshold) |threshold| {
-        //     self.get_regs().FILTER_CFG.modify(.{
-        //         .SCL_FILTER_THRES = threshold,
-        //         .SCL_FILTER_EN = 1,
-        //     });
-        // } else {
-        //     self.get_regs().FILTER_CFG.modify(.{ .SCL_FILTER_EN = 0 });
-        // }
         self.get_regs().FILTER_CFG.write(.{
             .SDA_FILTER_THRES = if (sda_threshold) |t| t else 0,
             .SDA_FILTER_EN = if (sda_threshold) |_| @as(u1, 1) else @as(u1, 0),
@@ -335,10 +314,6 @@ pub const I2C = enum(u1) {
         // This value is the exponent e.g. 2^timeout cycles
         // TODO: CLz
         const timeout: u5 = @intCast(std.math.log2(half_cycle * 20));
-        std.log.debug(
-            "scl low {} scl high {} sda hold {} sda sample {} setup {} hold {} timeout {}",
-            .{ scl_low, scl_high, sda_hold, sda_sample, setup, hold, timeout },
-        );
 
         // Set clock divider
         self.get_regs().CLK_CONF.modify(.{
@@ -436,7 +411,7 @@ pub const I2C = enum(u1) {
 
         // START command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.toValue(.Start),
+            .COMMAND = Command.to_value(.Start),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
@@ -455,14 +430,14 @@ pub const I2C = enum(u1) {
             .length = @intCast(1 + bytes.len),
         } };
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = write_cmd.toValue(),
+            .COMMAND = write_cmd.to_value(),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
 
         // STOP command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.toValue(.Stop),
+            .COMMAND = Command.to_value(.Stop),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
@@ -478,7 +453,7 @@ pub const I2C = enum(u1) {
 
         // START command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.toValue(.Start),
+            .COMMAND = Command.to_value(.Start),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
@@ -493,7 +468,7 @@ pub const I2C = enum(u1) {
             .length = 1,
         } };
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = write_cmd.toValue(),
+            .COMMAND = write_cmd.to_value(),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
@@ -505,7 +480,7 @@ pub const I2C = enum(u1) {
                 .length = @intCast(buffer_len - 1),
             } };
             self.get_regs().COMD[cmd_start_idx.*].write(.{
-                .COMMAND = read_cmd.toValue(),
+                .COMMAND = read_cmd.to_value(),
                 .COMMAND_DONE = 0,
             });
             cmd_start_idx.* += 1;
@@ -517,14 +492,14 @@ pub const I2C = enum(u1) {
             .length = 1,
         } };
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = last_read_cmd.toValue(),
+            .COMMAND = last_read_cmd.to_value(),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
 
         // STOP command
         self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.toValue(.Stop),
+            .COMMAND = Command.to_value(.Stop),
             .COMMAND_DONE = 0,
         });
         cmd_start_idx.* += 1;
