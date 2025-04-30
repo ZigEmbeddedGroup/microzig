@@ -10,12 +10,6 @@
 
 # Getting Started
 
-## Prerequisite Knowledge
-
-### If you're new to Zig
-
-### If you're new to embedded systems
-
 ## Blinky on the Raspberry Pi Pico
 
 This tutorial assumes that you're programming a [Raspberry Pi

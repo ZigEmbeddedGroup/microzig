@@ -8,7 +8,8 @@
 .tags = []
 ---
 
-MicroZig is a toolbox for building embedded applications in Zig.
+_MicroZig is a toolbox for building embedded applications in Zig._
+
 
 [Get Started](/docs/getting-started)
 
@@ -37,10 +38,11 @@ To learn more: [The Zig Language Reference](https://ziglang.org/documentation/0.
   - Generating a default linker script for your microcontroller (which you can
     override).
   - Giving you access to modules that provide high-level APIs for interacting
-    with your CPU. See [MicroZig's module structure](/docs/internals).
+    with your CPU.
 - **Low-cost Abstractions**: No abstraction is zero cost, but we've found the
-  right fit at different layers. For example, our [MMIO interface](/docs/internals)
-  feels high-level, but every call results in a single read-modify-write to a register.
+  right fit at different layers. For example, our MMIO interface feels
+  high-level, but every call results in a single read-modify-write to a
+  register.
 - **Bring your own hardware**: MicroZig is developed as a monorepo, but you can
   switch out any layer and use the overall framework. Provide your own register
   definitions for an uncontributed microcontroller, or build a custom PCB, yet
