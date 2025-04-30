@@ -17,13 +17,9 @@ const Clock_Device = drivers.Clock_Device;
 /// A datagram device attached to an I²C bus.
 ///
 pub const I2C_Device = struct {
-    // const BaseError = error{ IoError, Timeout }; // DELETEME
-    // pub const ConnectError = BaseError || error{DeviceBusy}; // DELETEME
     pub const ConnectError = Datagram_Device.ConnectError;
 
-    // const WriteError = BaseError || error{ Unsupported, NotConnected }; // DELETEME
     pub const WriteError = Datagram_Device.WriteError;
-    // pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun }; // DELETEME
     pub const ReadError = Datagram_Device.ReadError;
 
     /// Selects which I²C bus should be used.
@@ -46,14 +42,6 @@ pub const I2C_Device = struct {
         };
     }
 
-    pub fn connect(dev: I2C_Device) ConnectError!void {
-        _ = dev;
-    }
-
-    pub fn disconnect(dev: I2C_Device) void {
-        _ = dev;
-    }
-
     pub fn write(dev: I2C_Device, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address, datagram, null);
     }
@@ -74,28 +62,41 @@ pub const I2C_Device = struct {
     }
 
     const vtable = Datagram_Device.VTable{
-        .connect_fn = null,
-        .disconnect_fn = null,
+        .connect_fn = connect_fn,
+        .disconnect_fn = disconnect_fn,
         .writev_fn = writev_fn,
         .readv_fn = readv_fn,
     };
 
+    fn connect_fn(dd: *anyopaque) ConnectError!void {
+        _ = dd;
+        return;
+    }
+
+    fn disconnect_fn(dd: *anyopaque) void {
+        _ = dd;
+        return;
+    }
+
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        // TODO: Have to switch on the errors from readv, which are errors from read_blocking
-        return dev.writev(chunks) catch |e| {
-            std.log.info("Got error writing: {any}", .{e});
-            return WriteError.Unsupported;
-        };
+        return dev.writev(chunks) catch |e|
+            switch (e) {
+                hal.i2c.Error.Timeout => WriteError.Timeout,
+                else => WriteError.IoError,
+            };
     }
 
     fn readv_fn(dd: *anyopaque, chunks: []const []u8) ReadError!usize {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        // Map errors from i2c driver to datagram device errors
-        // TODO: Have to switch on the errors from readv, which are errors from read_blocking
-        return dev.readv(chunks) catch return ReadError.Unsupported;
+        return dev.readv(chunks) catch |e|
+            switch (e) {
+                hal.i2c.Error.Timeout => WriteError.Timeout,
+                else => WriteError.IoError,
+            };
     }
 };
+
 ///
 /// Implementation of a digital i/o device.
 ///
