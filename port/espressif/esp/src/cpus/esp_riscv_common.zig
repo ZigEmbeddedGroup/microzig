@@ -612,7 +612,7 @@ fn _update_priority() linksection(".trap") callconv(.c) u32 {
 
         if (@intFromEnum(priority) < 15) {
             // allow higher priority interrupts to preempt this one
-            interrupt.set_priority_threshold(priority);
+            interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
             interrupt.enable_interrupts();
         }
     }

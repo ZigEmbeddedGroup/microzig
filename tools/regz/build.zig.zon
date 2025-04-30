@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_tools_regz,
-    .fingerprint = 0xeaccc6a88ca8e632,
+    .name = .mz_tools_regz,
+    .fingerprint = 0x7886602f9b3c8b94,
     .version = "0.0.0",
     .paths = .{
         "README.md",

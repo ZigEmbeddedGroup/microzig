@@ -39,4 +39,4 @@ jobs:
           artifactErrorsFailBuild: true
           draft: true
           generateReleaseNotes: true
-          artifacts: boxzer-out/${{ MICROZIG_VERSION }}/*
+          artifacts: boxzer-out/${{ env.MICROZIG_VERSION }}/*

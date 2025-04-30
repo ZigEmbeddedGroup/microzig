@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_port_microchip_atsam,
-    .fingerprint = 0x36ce7a5f4fc389e2,
+    .name = .mz_port_microchip_atsam,
+    .fingerprint = 0x65a32a718f744d72,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
