@@ -38,8 +38,8 @@
           <a class="navlink" href="$site.link()">Home</a>
           <a class="navlink" href="$site.page('community').link()">Community</a>
           <a class="navlink" href="$site.page('devlog').link()">Devlog</a>
-          <a class="navlink" href="$site.page('docs').link()">Documentation</a>
-          <a class="navlink" href="https://github.com/ZigEmbeddedGroup/microzig">Source Code</a>
+          <a class="navlink" href="$site.page('docs').link()">Docs</a>
+          <a class="navlink" href="https://github.com/ZigEmbeddedGroup/microzig">Source</a>
         </div>
       </nav>
       <div id="main">
