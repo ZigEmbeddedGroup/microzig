@@ -524,7 +524,7 @@ pub const I2C = enum(u1) {
 
     fn wait_for_completion(self: I2C, deadline: mdf.time.Deadline) !void {
         // This stops working if I remove this wtf
-        std.log.debug("Waiting for completion", .{}); // DELETEME
+        // std.log.debug("Waiting for completion", .{}); // DELETEME
         // Monitor for completion or errors
         while (true) {
             const interrupts = self.get_regs().INT_RAW.read();
@@ -654,11 +654,40 @@ pub const I2C = enum(u1) {
         timeout: ?mdf.time.Duration,
     ) Error!void {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+        std.log.debug("Writing: {x}", .{chunks});
 
         // TODO: Write a new utility that does similar but that will coalesce into a specified size
         const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
         if (write_vec.size() == 0)
             return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
+
+        // // TODO: Can I go by chunk, without copying, as long as I set up the start/stop correctly?
+        // // Doesn't appear so
+        // var is_first_chunk = true;
+        // var iter = write_vec.iterator();
+        // const total_size = write_vec.size();
+        // // Process data in chunks of up to 31 bytes
+        // var remaining = total_size;
+        // // TODO: Function
+        // var max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
+        //     remaining
+        // else if (remaining > I2C_CHUNK_SIZE + 2)
+        //     I2C_CHUNK_SIZE
+        // else
+        //     I2C_CHUNK_SIZE - 2;
+        // while (iter.next_chunk(max_chunk_size)) |chunk| {
+        //     remaining -= chunk.len;
+        //     // TODO: Function, and at top of while
+        //     max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
+        //         remaining
+        //     else if (remaining > I2C_CHUNK_SIZE + 2)
+        //         I2C_CHUNK_SIZE
+        //     else
+        //         I2C_CHUNK_SIZE - 2;
+        //     std.log.debug("Chunk: {x} remaining: {} first {} stop {}", .{ chunk, remaining, is_first_chunk, remaining == 0 }); // DELETEME
+        //     try self.write_operation_blocking(addr, chunk, is_first_chunk, remaining == 0, deadline);
+        //     is_first_chunk = false;
+        // }
 
         var iter = write_vec.iterator();
 
@@ -682,6 +711,7 @@ pub const I2C = enum(u1) {
                 // Buffer is full, send it
                 remaining -= buffer_level;
                 const is_last_chunk = (remaining == 0);
+                std.log.debug("Chunk: {x} remaining: {} first {} stop {}", .{ buffer[0..buffer_level], remaining, is_first_chunk, remaining == 0 }); // DELETEME
                 try self.write_operation_blocking(addr, buffer[0..buffer_level], is_first_chunk, is_last_chunk, deadline);
                 is_first_chunk = false;
                 buffer_level = 0;
