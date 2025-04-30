@@ -291,6 +291,10 @@ pub const SPI = enum(u1) {
         }
     }
 
+    pub fn set_loopback_mode(spi: SPI, enabled: bool) void {
+        spi.get_regs().SSPCR1.modify(.{ .LBM = @intFromBool(enabled) });
+    }
+
     /// Write a number of packets and discard any data received back.
     ///
     /// PacketType specifies the bit width of each packet using any of

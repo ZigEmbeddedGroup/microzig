@@ -29,6 +29,18 @@ pub fn claim_unused_channel() ?Channel {
     return channel(@intCast(ch));
 }
 
+pub fn multi_channel_trigger(channels: []const Channel) void {
+    var value: u16 = 0;
+
+    for (channels) |chan| {
+        value |= chan.mask();
+    }
+
+    DMA.MULTI_CHAN_TRIGGER.write(.{
+        .MULTI_CHAN_TRIGGER = value,
+    });
+}
+
 pub const DmaReadTarget = struct {
     dreq: Dreq,
     addr: u32,
@@ -58,6 +70,10 @@ pub const Channel = enum(u4) {
         return claimed_channels.test_bit(@intFromEnum(chan)) == 1;
     }
 
+    pub fn mask(chan: Channel) u16 {
+        return @as(u16, 1) << @intFromEnum(chan);
+    }
+
     const Regs = extern struct {
         read_addr: u32,
         write_addr: u32,
@@ -65,19 +81,19 @@ pub const Channel = enum(u4) {
         ctrl_trig: @TypeOf(DMA.CH0_CTRL_TRIG),
 
         // alias 1
-        al1_ctrl: u32,
+        al1_ctrl: @TypeOf(DMA.CH0_CTRL_TRIG),
         al1_read_addr: u32,
         al1_write_addr: u32,
         al1_trans_count_trig: u32,
 
         // alias 2
-        al2_ctrl: u32,
+        al2_ctrl: @TypeOf(DMA.CH0_CTRL_TRIG),
         al2_trans_count: u32,
         al2_read_addr: u32,
         al2_write_addr_trig: u32,
 
         // alias 3
-        al3_ctrl: u32,
+        al3_ctrl: @TypeOf(DMA.CH0_CTRL_TRIG),
         al3_write_addr: u32,
         al3_trans_count: u32,
         al3_read_addr_trig: u32,
@@ -89,6 +105,7 @@ pub const Channel = enum(u4) {
     }
 
     pub const TransferConfig = struct {
+        trigger: bool = true,
         data_size: DataSize,
         enable: bool,
         read_increment: bool,
@@ -112,20 +129,31 @@ pub const Channel = enum(u4) {
         regs.read_addr = read_addr;
         regs.write_addr = write_addr;
         regs.trans_count = count;
-        regs.ctrl_trig.modify(.{
-            .EN = @intFromBool(config.enable),
-            .DATA_SIZE = config.data_size,
-            .INCR_READ = @intFromBool(config.read_increment),
-            .INCR_WRITE = @intFromBool(config.write_increment),
-            .TREQ_SEL = config.dreq,
-        });
+        if (config.trigger) {
+            regs.ctrl_trig.modify(.{
+                .EN = @intFromBool(config.enable),
+                .DATA_SIZE = config.data_size,
+                .INCR_READ = @intFromBool(config.read_increment),
+                .INCR_WRITE = @intFromBool(config.write_increment),
+                .TREQ_SEL = config.dreq,
+            });
+        } else {
+            regs.al1_ctrl.modify(.{
+                .EN = @intFromBool(config.enable),
+                .DATA_SIZE = config.data_size,
+                .INCR_READ = @intFromBool(config.read_increment),
+                .INCR_WRITE = @intFromBool(config.write_increment),
+                .TREQ_SEL = config.dreq,
+            });
+        }
     }
 
     pub const FancyTransferConfig = struct {
+        trigger: bool = false,
         enable: bool,
     };
 
-    pub fn trigger_transfer_fancy(
+    pub fn setup_transfer(
         chan: Channel,
         write: anytype,
         read: anytype,
@@ -244,10 +272,11 @@ pub const Channel = enum(u4) {
         const count = if (comptime H.is_peripheral(@TypeOf(write))) H.get_count(read) else H.get_count(write);
         const data_size = if (comptime H.is_peripheral(@TypeOf(write))) H.get_data_size(read) else H.get_data_size(write);
 
-        std.log.info("write_addr: {} read_addr: {} dreq: {} count: {} data_size: {}", .{
+        std.log.warn("channel: {}, write_addr: {} read_addr: {} dreq: {s} count: {} data_size: {}", .{
+            chan,
             write_addr,
             read_addr,
-            dreq,
+            @tagName(dreq),
             count,
             data_size,
         });
@@ -257,6 +286,7 @@ pub const Channel = enum(u4) {
             read_addr,
             count,
             .{
+                .trigger = config.trigger,
                 .enable = config.enable,
                 .read_increment = H.get_increment(read),
                 .write_increment = H.get_increment(write),

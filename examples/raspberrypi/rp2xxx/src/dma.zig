@@ -36,10 +36,11 @@ pub fn main() !void {
 
     const channel = dma.claim_unused_channel().?;
 
-    try channel.trigger_transfer_fancy(
+    try channel.setup_transfer(
         dst[0..dst.len],
         hello[0..hello.len],
         .{
+            .trigger = true,
             .enable = true,
         },
     );
