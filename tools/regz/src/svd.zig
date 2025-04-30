@@ -497,9 +497,6 @@ fn load_field(ctx: *Context, node: xml.Node, register_id: RegisterID) !void {
         if (elements.dim_name != null)
             return error.TodoDimElementsExtended;
 
-        // if (elements.dim_increment != bit_range.width)
-        // return error.DimIncrementSizeMismatch;
-
         break :count @intCast(elements.dim);
     } else null;
 
