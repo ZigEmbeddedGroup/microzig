@@ -414,6 +414,7 @@ pub const I2C = enum(u1) {
                 .length = 1,
             } });
 
+        // std.log.info("Setting up read. max_len {} initial_len {}"); // DELETEME
         if (initial_len > 0) {
             if (initial_len < 2) {
                 try self.add_cmd(cmd_start_idx, .{ .Read = .{
@@ -522,6 +523,8 @@ pub const I2C = enum(u1) {
     }
 
     fn wait_for_completion(self: I2C, deadline: mdf.time.Deadline) !void {
+        // This stops working if I remove this wtf
+        std.log.debug("Waiting for completion", .{}); // DELETEME
         // Monitor for completion or errors
         while (true) {
             const interrupts = self.get_regs().INT_RAW.read();
@@ -638,6 +641,7 @@ pub const I2C = enum(u1) {
     }
 
     pub fn writev_blocking(self: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
+        std.log.info("Writing chunks {x}", .{chunks}); // DELETEME
         return self.writev_operation_blocking(addr, chunks, true, true, timeout);
     }
 
