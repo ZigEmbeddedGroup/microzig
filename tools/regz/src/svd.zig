@@ -745,6 +745,14 @@ const DimElements = struct {
 
     // TODO: regex pattern not verified, function assumes valid node value
     fn dim_index_value(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
+        if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, '-')) {
+            return try self.dim_index_value_range(ctx, index);
+        } else if (std.mem.containsAtLeastScalar(u8, self.dim_index.?, 1, ',')) {
+            return try self.dim_index_value_csv(ctx, index);
+        } else return error.DimIndexInvalid;
+    }
+
+    fn dim_index_value_range(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
         var iter = std.mem.splitScalar(u8, self.dim_index.?, '-');
         const start_index = iter.next().?;
         const parse_start = std.fmt.parseInt(usize, start_index, 0);
@@ -756,7 +764,26 @@ const DimElements = struct {
             }
             return error.DimIndexInvalid;
         }
-        return error.DimIndexInvalid;
+    }
+
+    fn dim_index_value_csv(self: DimElements, ctx: *Context, index: usize) ![]const u8 {
+        var iter = std.mem.splitScalar(u8, self.dim_index.?, ',');
+        var iter_value: ?[]const u8 = iter.first();
+        for (0..index) |_| {
+            iter_value = iter.next().?;
+            if (iter_value == null)
+                return error.DimIndexCsvValueMissing;
+        }
+        const start_index = iter_value.?;
+        const parse_start = std.fmt.parseInt(usize, start_index, 0);
+        if (parse_start) |start| {
+            return try std.fmt.allocPrintZ(ctx.arena.allocator(), "{d}", .{start});
+        } else |_| {
+            if (start_index.len == 1 and std.ascii.isAlphabetic(start_index[0])) {
+                return start_index;
+            }
+            return error.DimIndexInvalid;
+        }
     }
 };
 
@@ -1442,6 +1469,52 @@ test "svd.register with dimElementGroup, %s in name with non-default dimIndex" {
     try expectEqual(null, register_124.count);
     try expectEqual(null, register_125.count);
     try expectEqual(null, register_126.count);
+}
+
+test "svd.register with dimElementGroup, dimIndex with CSV values, numbers" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <access>read-only</access>
+        \\  <resetValue>0x00000000</resetValue>
+        \\  <resetMask>0xffffffff</resetMask>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST%s_REGISTER</name>
+        \\          <addressOffset>0</addressOffset>
+        \\          <dim>4</dim>
+        \\          <dimIncrement>4</dimIncrement>
+        \\          <dimIndex>12,34,13,37</dimIndex>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_12 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST12_REGISTER");
+    const register_34 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST34_REGISTER");
+    const register_13 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST13_REGISTER");
+    const register_37 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST37_REGISTER");
+
+    try expectEqual(0x0, register_12.offset_bytes);
+    try expectEqual(0x4, register_34.offset_bytes);
+    try expectEqual(0x8, register_13.offset_bytes);
+    try expectEqual(0xC, register_37.offset_bytes);
 }
 
 test "svd.register with dimElementGroup, %s in name with alphabetical dimIndex" {
