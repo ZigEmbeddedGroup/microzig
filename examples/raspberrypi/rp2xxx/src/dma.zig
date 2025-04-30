@@ -36,16 +36,11 @@ pub fn main() !void {
 
     const channel = dma.claim_unused_channel().?;
 
-    channel.trigger_transfer(
-        @intFromPtr(dst[0..dst.len].ptr),
-        @intFromPtr(hello[0..hello.len].ptr),
-        hello.len,
+    try channel.trigger_transfer_fancy(
+        dst[0..dst.len],
+        hello[0..hello.len],
         .{
             .enable = true,
-            .read_increment = true,
-            .write_increment = true,
-            .data_size = .size_8,
-            .dreq = .permanent,
         },
     );
 
