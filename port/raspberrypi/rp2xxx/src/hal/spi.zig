@@ -5,6 +5,7 @@ const SPI0_reg = peripherals.SPI0;
 const SPI1_reg = peripherals.SPI1;
 
 const clocks = @import("clocks.zig");
+const dma = @import("dma.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
@@ -183,6 +184,20 @@ pub const SPI = enum(u1) {
     fn validate_bitwidth(comptime PacketType: type) void {
         if (@bitSizeOf(PacketType) < 4 or @bitSizeOf(PacketType) > 16)
             @compileError("PacketType must be a datatype with a size between 4 and 16 bits inclusive");
+    }
+
+    pub fn tx(self: SPI) dma.DmaWriteTarget {
+        return .{
+            .dreq = .spi0_tx,
+            .addr = @intFromPtr(&self.get_regs().SSPDR),
+        };
+    }
+
+    pub fn rx(self: SPI) dma.DmaReadTarget {
+        return .{
+            .dreq = .spi0_rx,
+            .addr = @intFromPtr(&self.get_regs().SSPDR),
+        };
     }
 
     const fifo_depth = 8;
