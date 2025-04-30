@@ -638,10 +638,10 @@ pub const I2C = enum(u1) {
     }
 
     pub fn writev_blocking(self: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
-        return self.writev_blocking_(addr, chunks, true, true, timeout);
+        return self.writev_operation_blocking(addr, chunks, true, true, timeout);
     }
 
-    fn writev_blocking_(
+    fn writev_operation_blocking(
         self: I2C,
         addr: Address,
         chunks: []const []const u8,
@@ -656,38 +656,41 @@ pub const I2C = enum(u1) {
         if (write_vec.size() == 0)
             return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
 
-        var is_first_chunk = true;
         var iter = write_vec.iterator();
-        // Always saving room for the address byte. With a custom iterator we could make sure only the first chunk is 31 (room for address)
-        var buffer: [31]u8 = undefined;
-        var buffer_index: usize = 0;
+
+        var is_first_chunk = true;
+        var buffer: [I2C_FIFO_SIZE]u8 = undefined;
+        var buffer_level: usize = 0;
         const total_size = write_vec.size();
-        var bytes_processed: usize = 0;
-        // Process data in chunks of up to 31 bytes
-        while (true) {
-            // Get next chunk (up to remaining buffer space)
-            const remaining = buffer.len - buffer_index;
-            if (remaining == 0) {
+        var remaining = total_size;
+        // Pack up 'vec' chunks into 'fifo' chunks of up to `max_chunk_size`, writing whenever we
+        // fill up.
+        while (remaining != 0) {
+            const max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
+                remaining
+            else if (remaining > I2C_CHUNK_SIZE + 2)
+                I2C_CHUNK_SIZE
+            else
+                I2C_CHUNK_SIZE - 2;
+
+            const buffer_remaining = max_chunk_size - buffer_level;
+            if (buffer_remaining == 0) {
                 // Buffer is full, send it
-                const is_last_chunk = (bytes_processed == total_size);
-                try self.write_operation_blocking(addr, buffer[0..buffer_index], is_first_chunk, is_last_chunk, deadline);
+                remaining -= buffer_level;
+                const is_last_chunk = (remaining == 0);
+                try self.write_operation_blocking(addr, buffer[0..buffer_level], is_first_chunk, is_last_chunk, deadline);
                 is_first_chunk = false;
-                buffer_index = 0;
+                buffer_level = 0;
                 continue;
             }
 
-            // Try to get next chunk
-            const chunk = iter.next_chunk(remaining) orelse {
-                // No more data, send whatever we have in buffer if anything
-                if (buffer_index > 0)
-                    try self.write_operation_blocking(addr, buffer[0..buffer_index], is_first_chunk, true, deadline);
-                break;
-            };
+            // Try to get next chunk. We should never not get a chunk here since we know ahead of
+            // time how much to request.
+            const chunk = iter.next_chunk(buffer_remaining) orelse return;
 
             // Copy chunk to buffer
-            @memcpy(buffer[buffer_index..][0..chunk.len], chunk);
-            buffer_index += chunk.len;
-            bytes_processed += chunk.len;
+            @memcpy(buffer[buffer_level..][0..chunk.len], chunk);
+            buffer_level += chunk.len;
         }
     }
 
@@ -701,11 +704,13 @@ pub const I2C = enum(u1) {
     ) Error!void {
         if (addr.is_reserved())
             return Error.TargetAddressReserved;
-        self.clear_interrupts();
+
         // Short circuit for zero length writes without start or end as that would be an
         // invalid operation write lengths in the TRM are 1-255
         if (bytes.len == 0 and !start and !stop)
             return;
+
+        self.clear_interrupts();
 
         try self.start_write_operation(addr, bytes, start);
         try self.wait_for_completion(deadline);
