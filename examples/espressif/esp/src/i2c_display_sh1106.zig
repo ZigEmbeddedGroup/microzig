@@ -34,15 +34,15 @@ pub fn main() !void {
     );
 
     // Create i2c datagram device
-    var i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x3C));
+    const i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x3C));
     // Pass i2c device to driver to create display instance
     const display_driver = SH1106(.{
         .mode = .i2c,
-        .Datagram_Device = microzig.drivers.base.Datagram_Device,
+        .Datagram_Device = I2C_Device,
     });
 
     // Configure device
-    const display = try display_driver.init(i2c_device.datagram_device());
+    const display = try display_driver.init(i2c_device);
 
     while (true) {
         std.log.debug("Clearing (white)", .{});

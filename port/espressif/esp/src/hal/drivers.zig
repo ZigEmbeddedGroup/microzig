@@ -42,6 +42,14 @@ pub const I2C_Device = struct {
         };
     }
 
+    pub fn connect(dev: I2C_Device) ConnectError!void {
+        _ = dev;
+    }
+
+    pub fn disconnect(dev: I2C_Device) void {
+        _ = dev;
+    }
+
     pub fn write(dev: I2C_Device, datagram: []const u8) !void {
         try dev.bus.write_blocking(dev.address, datagram, null);
     }
