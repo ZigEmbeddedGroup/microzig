@@ -602,8 +602,8 @@ pub const I2C = enum(u1) {
             return Error.TargetAddressReserved;
         self.clear_interrupts();
 
-        // Short circuit for zero length reads as that would be an invalid operation
-        // readlengths in the TRM are 1-255
+        // Short circuit for zero length reads as that would be an invalid operation.
+        // Read lengths in the TRM are 1-255.
         if (buffer.len == 0 and !start and !stop)
             return;
 
@@ -706,7 +706,7 @@ pub const I2C = enum(u1) {
             return Error.TargetAddressReserved;
 
         // Short circuit for zero length writes without start or end as that would be an
-        // invalid operation write lengths in the TRM are 1-255
+        // invalid operation. Write lengths in the TRM are 1-255.
         if (bytes.len == 0 and !start and !stop)
             return;
 
