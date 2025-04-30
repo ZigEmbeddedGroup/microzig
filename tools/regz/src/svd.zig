@@ -1331,22 +1331,21 @@ test "svd.register with dimElementGroup, %s in name with missing dimIndex" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const register0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
-    const register1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
-    const register2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
-    const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
+    const register_0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
+    const register_1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
+    const register_2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
+    const register_3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
 
-    try expectEqual(null, register0.count);
-    try expectEqual(0x0, register0.offset_bytes);
-    try expectEqual(null, register1.count);
-    try expectEqual(0x4, register1.offset_bytes);
-    try expectEqual(null, register2.count);
-    try expectEqual(0x8, register2.offset_bytes);
-    try expectEqual(null, register3.count);
-    try expectEqual(0xC, register3.offset_bytes);
+    try expectEqual(null, register_0.count);
+    try expectEqual(0x00, register_0.offset_bytes);
+    try expectEqual(null, register_1.count);
+    try expectEqual(0x04, register_1.offset_bytes);
+    try expectEqual(null, register_2.count);
+    try expectEqual(0x08, register_2.offset_bytes);
+    try expectEqual(null, register_3.count);
+    try expectEqual(0x0C, register_3.offset_bytes);
 }
 
 test "svd.register with dimElementGroup, %s in name with default dimIndex" {
@@ -1382,22 +1381,21 @@ test "svd.register with dimElementGroup, %s in name with default dimIndex" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const register0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
-    const register1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
-    const register2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
-    const register3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
+    const register_0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST0_REGISTER");
+    const register_1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST1_REGISTER");
+    const register_2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST2_REGISTER");
+    const register_3 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST3_REGISTER");
 
-    try expectEqual(null, register0.count);
-    try expectEqual(0x0, register0.offset_bytes);
-    try expectEqual(null, register1.count);
-    try expectEqual(0x8, register1.offset_bytes);
-    try expectEqual(null, register2.count);
-    try expectEqual(0x10, register2.offset_bytes);
-    try expectEqual(null, register3.count);
-    try expectEqual(0x18, register3.offset_bytes);
+    try expectEqual(null, register_0.count);
+    try expectEqual(0x00, register_0.offset_bytes);
+    try expectEqual(null, register_1.count);
+    try expectEqual(0x08, register_1.offset_bytes);
+    try expectEqual(null, register_2.count);
+    try expectEqual(0x10, register_2.offset_bytes);
+    try expectEqual(null, register_3.count);
+    try expectEqual(0x18, register_3.offset_bytes);
 }
 
 test "svd.register with dimElementGroup, %s in name with non-default dimIndex" {
@@ -1433,18 +1431,17 @@ test "svd.register with dimElementGroup, %s in name with non-default dimIndex" {
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const register123 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST123_REGISTER");
-    const register124 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST124_REGISTER");
-    const register125 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST125_REGISTER");
-    const register126 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST126_REGISTER");
+    const register_123 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST123_REGISTER");
+    const register_124 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST124_REGISTER");
+    const register_125 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST125_REGISTER");
+    const register_126 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST126_REGISTER");
 
-    try expectEqual(null, register123.count);
-    try expectEqual(null, register124.count);
-    try expectEqual(null, register125.count);
-    try expectEqual(null, register126.count);
+    try expectEqual(null, register_123.count);
+    try expectEqual(null, register_124.count);
+    try expectEqual(null, register_125.count);
+    try expectEqual(null, register_126.count);
 }
 
 test "svd.register with dimElementGroup, %s in name with alphabetical dimIndex" {
@@ -1480,18 +1477,85 @@ test "svd.register with dimElementGroup, %s in name with alphabetical dimIndex" 
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
 
-    // %s is dropped from name, it is redundant
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
-    const registerD = try db.get_register_by_name(arena.allocator(), struct_id, "TESTD_REGISTER");
-    const registerE = try db.get_register_by_name(arena.allocator(), struct_id, "TESTE_REGISTER");
-    const registerF = try db.get_register_by_name(arena.allocator(), struct_id, "TESTF_REGISTER");
-    const registerG = try db.get_register_by_name(arena.allocator(), struct_id, "TESTG_REGISTER");
+    const register_d = try db.get_register_by_name(arena.allocator(), struct_id, "TESTD_REGISTER");
+    const register_e = try db.get_register_by_name(arena.allocator(), struct_id, "TESTE_REGISTER");
+    const register_f = try db.get_register_by_name(arena.allocator(), struct_id, "TESTF_REGISTER");
+    const register_g = try db.get_register_by_name(arena.allocator(), struct_id, "TESTG_REGISTER");
 
-    try expectEqual(null, registerD.count);
-    try expectEqual(null, registerE.count);
-    try expectEqual(null, registerF.count);
-    try expectEqual(null, registerG.count);
+    try expectEqual(null, register_d.count);
+    try expectEqual(0x0, register_d.offset_bytes);
+    try expectEqual(null, register_e.count);
+    try expectEqual(0x4, register_e.offset_bytes);
+    try expectEqual(null, register_f.count);
+    try expectEqual(0x8, register_f.offset_bytes);
+    try expectEqual(null, register_g.count);
+    try expectEqual(0xC, register_g.offset_bytes);
+}
+
+test "svd.register with dimElementGroup, multiple registers" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <size>32</size>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <baseAddress>0x1000</baseAddress>
+        \\      <registers>
+        \\        <register>
+        \\          <name>TEST_REGISTER_A_CH%s</name>
+        \\          <addressOffset>0x0</addressOffset>
+        \\          <dim>3</dim>
+        \\          <dimIncrement>0xC</dimIncrement>
+        \\        </register>
+        \\        <register>
+        \\          <name>TEST_REGISTER_B_CH%s</name>
+        \\          <addressOffset>0x4</addressOffset>
+        \\          <dim>3</dim>
+        \\          <dimIncrement>0xC</dimIncrement>
+        \\        </register>
+        \\        <register>
+        \\          <name>TEST_REGISTER_C_CH%s</name>
+        \\          <addressOffset>0x8</addressOffset>
+        \\          <dim>3</dim>
+        \\          <dimIncrement>0xC</dimIncrement>
+        \\        </register>
+        \\      </registers>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
+    defer db.destroy();
+
+    const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const register_a_ch_0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_A_CH0");
+    const register_a_ch_1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_A_CH1");
+    const register_a_ch_2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_A_CH2");
+    const register_b_ch_0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_B_CH0");
+    const register_b_ch_1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_B_CH1");
+    const register_b_ch_2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_B_CH2");
+    const register_c_ch_0 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_C_CH0");
+    const register_c_ch_1 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_C_CH1");
+    const register_c_ch_2 = try db.get_register_by_name(arena.allocator(), struct_id, "TEST_REGISTER_C_CH2");
+
+    try expectEqual(0x00, register_a_ch_0.offset_bytes);
+    try expectEqual(0x04, register_b_ch_0.offset_bytes);
+    try expectEqual(0x08, register_c_ch_0.offset_bytes);
+    try expectEqual(0x0C, register_a_ch_1.offset_bytes);
+    try expectEqual(0x10, register_b_ch_1.offset_bytes);
+    try expectEqual(0x14, register_c_ch_1.offset_bytes);
+    try expectEqual(0x18, register_a_ch_2.offset_bytes);
+    try expectEqual(0x1C, register_b_ch_2.offset_bytes);
+    try expectEqual(0x20, register_c_ch_2.offset_bytes);
 }
 
 test "svd.field with dimElementGroup, suffixed with %s" {
@@ -1532,7 +1596,6 @@ test "svd.field with dimElementGroup, suffixed with %s" {
     const doc = try xml.Doc.from_memory(text);
     var db = try Database.create_from_doc(std.testing.allocator, .svd, doc);
     defer db.destroy();
-    _ = try db.backup("fields.sqlite");
 
     const peripheral_id = try db.get_peripheral_by_name("TEST_PERIPHERAL") orelse return error.MissingPeripheral;
     const struct_id = try db.get_peripheral_struct(peripheral_id);
@@ -1544,4 +1607,89 @@ test "svd.field with dimElementGroup, suffixed with %s" {
     try expectEqual(null, fields[0].count);
     try expectEqualStrings("TEST_FIELD1", fields[1].name);
     try expectEqual(null, fields[1].count);
+}
+
+test "svd.DimElements.parse missing dimIncrement" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <dim>4</dim>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    var root = try doc.get_root_element();
+    var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
+    const peripheral_node = iterator.next() orelse unreachable;
+    try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
+}
+
+test "svd.DimElements.parse missing dim" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <dimIncrement>4</dimIncrement>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    var root = try doc.get_root_element();
+    var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
+    const peripheral_node = iterator.next() orelse unreachable;
+    try expectError(error.DimElementGroupMalformed, DimElements.parse(&ctx, peripheral_node));
+}
+
+test "svd.DimElements.parse invalid name without %s or [%s]" {
+    const text =
+        \\<device>
+        \\  <name>TEST_DEVICE</name>
+        \\  <peripherals>
+        \\    <peripheral>
+        \\      <name>TEST_PERIPHERAL</name>
+        \\      <dim>4</dim>
+        \\      <dimIncrement>4</dimIncrement>
+        \\    </peripheral>
+        \\  </peripherals>
+        \\</device>
+    ;
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc = try xml.Doc.from_memory(text);
+    var ctx = Context{
+        .db = undefined,
+        .arena = arena,
+    };
+
+    var root = try doc.get_root_element();
+    var iterator = root.iterate(&.{"peripherals"}, &.{"peripheral"});
+    const peripheral_node = iterator.next() orelse unreachable;
+    try expectError(error.NameFieldMalformed, DimElements.parse(&ctx, peripheral_node));
 }
