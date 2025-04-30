@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_tools_uf2,
-    .fingerprint = 0x238801e5cc0675c2,
+    .name = .mz_tools_uf2,
+    .fingerprint = 0xbba01d2953527501,
     .version = "0.0.0",
     .paths = .{
         "README.md",

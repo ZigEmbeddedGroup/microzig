@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_tools_espimage,
-    .fingerprint = 0xc7f73fe9aad2fe1e,
+    .name = .mz_tools_espimage,
+    .fingerprint = 0x7e1bc55e5a45fa73,
     .version = "0.1.0",
     .dependencies = .{
         .clap = .{

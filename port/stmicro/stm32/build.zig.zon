@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_port_stmicro_stm32,
-    .fingerprint = 0x15e93a4a714e56a5,
+    .name = .mz_port_stmicro_stm32,
+    .fingerprint = 0x6d690da720c17d27,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
