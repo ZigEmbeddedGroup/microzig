@@ -66,10 +66,10 @@ const Opcode = enum(u4) {
 };
 
 const Command = union(enum) {
-    Start,
-    Stop,
-    End,
-    Write: struct {
+    start,
+    stop,
+    end,
+    write: struct {
         /// Expected ACK value for transmitter
         ack_exp: Ack,
         /// Enable ACK checking
@@ -77,7 +77,7 @@ const Command = union(enum) {
         /// Data length in bytes (1-255)
         length: u8,
     },
-    Read: struct {
+    read: struct {
         /// ACK value to send after byte received
         ack_value: Ack,
         /// Data length in bytes (1-255)
@@ -89,41 +89,41 @@ const Command = union(enum) {
         var cmd: u14 = 0;
 
         switch (self) {
-            .Start, .Stop, .End => {
+            .start, .stop, .end => {
                 cmd = 0;
             },
-            .Write => |write| {
+            .write => |write| {
                 cmd = @as(u14, write.length);
             },
-            .Read => |read| {
+            .read => |read| {
                 cmd = @as(u14, read.length);
             },
         }
 
         // Set opcode
         const opcode: Opcode = switch (self) {
-            .Start => .RSTART,
-            .Stop => .STOP,
-            .End => .END,
-            .Write => .WRITE,
-            .Read => .READ,
+            .start => .RSTART,
+            .stop => .STOP,
+            .end => .END,
+            .write => .WRITE,
+            .read => .READ,
         };
         cmd |= @as(u14, @intFromEnum(opcode)) << 11;
 
         // Set ack_check_en bit
-        if (self == .Write and self.Write.ack_check_en) {
+        if (self == .write and self.write.ack_check_en) {
             cmd |= 1 << 8;
         }
 
         // Set ack_exp bit
-        const ack_exp = if (self == .Write) self.Write.ack_exp else .Nack;
-        if (ack_exp == .Nack) {
+        const ack_exp = if (self == .write) self.write.ack_exp else .nack;
+        if (ack_exp == .nack) {
             cmd |= 1 << 9;
         }
 
         // Set ack_value bit
-        const ack_value = if (self == .Read) self.Read.ack_value else .Nack;
-        if (ack_value == .Nack) {
+        const ack_value = if (self == .read) self.read.ack_value else .nack;
+        if (ack_value == .nack) {
             cmd |= 1 << 10;
         }
 
@@ -132,19 +132,13 @@ const Command = union(enum) {
 };
 
 const Ack = enum(u1) {
-    Ack = 0,
-    Nack = 1,
+    ack = 0,
+    nack = 1,
 };
 
 const OperationType = enum(u1) {
-    Write = 0,
-    Read = 1,
-};
-
-/// Operation kind used during transactions
-const OpKind = enum(u1) {
-    Write,
-    Read,
+    write = 0,
+    read = 1,
 };
 
 /// Pins used by the I2C interface
@@ -408,46 +402,46 @@ pub const I2C = enum(u1) {
             return Error.FifoExceeded;
 
         if (start)
-            try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                .ack_exp = .Ack,
+            try self.add_cmd(cmd_start_idx, .{ .write = .{
+                .ack_exp = .ack,
                 .ack_check_en = true,
                 .length = 1,
             } });
 
         if (initial_len > 0) {
             if (initial_len < 2) {
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = @bitCast(initial_len),
                 } });
             } else if (!will_continue) {
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = @bitCast(initial_len - 1),
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = 1,
                 } });
             } else {
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = @bitCast(initial_len - 2),
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = 1,
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                    .ack_value = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
                     .length = 1,
                 } });
             }
         }
 
         if (!will_continue)
-            try self.add_cmd(cmd_start_idx, .{ .Read = .{
-                .ack_value = .Nack,
+            try self.add_cmd(cmd_start_idx, .{ .read = .{
+                .ack_value = .nack,
                 .length = 1,
             } });
 
@@ -455,7 +449,7 @@ pub const I2C = enum(u1) {
 
         // Load address and R/W bit
         if (start)
-            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Read));
+            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.read));
     }
 
     fn setup_write(self: I2C, addr: Address, bytes: []const u8, start: bool, cmd_start_idx: *usize) !void {
@@ -467,35 +461,35 @@ pub const I2C = enum(u1) {
 
         if (write_len > 0) {
             if (write_len < 2) {
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = @bitCast(write_len),
                 } });
             } else if (start) {
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = @bitCast(write_len - 1),
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = 1,
                 } });
             } else {
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = @bitCast(write_len - 2),
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = 1,
                 } });
-                try self.add_cmd(cmd_start_idx, .{ .Write = .{
-                    .ack_exp = .Ack,
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
                     .ack_check_en = true,
                     .length = 1,
                 } });
@@ -506,7 +500,7 @@ pub const I2C = enum(u1) {
 
         // Load address and R/W bit
         if (start)
-            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Write));
+            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.write));
 
         // Load data bytes into FIFO
         for (bytes) |byte|
@@ -551,7 +545,7 @@ pub const I2C = enum(u1) {
 
     fn stop_operation(self: I2C) !void {
         var cmd_idx: usize = 0;
-        try self.add_cmd(&cmd_idx, Command.Stop);
+        try self.add_cmd(&cmd_idx, Command.stop);
 
         self.start_transmission();
         try self.wait_for_completion(mdf.time.Deadline.init_absolute(null));
@@ -624,11 +618,11 @@ pub const I2C = enum(u1) {
         var cmd_idx: usize = 0;
 
         if (start)
-            try self.add_cmd(&cmd_idx, Command.Start);
+            try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_read(addr, buffer, start, will_continue, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.End);
+        try self.add_cmd(&cmd_idx, Command.end);
         self.start_transmission();
     }
 
@@ -726,11 +720,11 @@ pub const I2C = enum(u1) {
         var cmd_idx: usize = 0;
 
         if (start)
-            try self.add_cmd(&cmd_idx, Command.Start);
+            try self.add_cmd(&cmd_idx, Command.start);
 
         try self.setup_write(addr, bytes, start, &cmd_idx);
 
-        try self.add_cmd(&cmd_idx, Command.End);
+        try self.add_cmd(&cmd_idx, Command.end);
         self.start_transmission();
     }
 };
