@@ -4,11 +4,6 @@ const util = @import("util.zig");
 
 const spi_f1 = microzig.chip.types.peripherals.spi_f1;
 const SpiRegs = *volatile spi_f1.SPI;
-//NOTE: style test number 2:
-//create a peripheral enum for SPI based on the microzig.chip.peripherals
-//in this way we can use the same code for all STM32F1xx chips
-//avoid selecting invalid peripherals
-//avoid using panic on invalid peripherals
 
 const ChipSelect = enum {
     NSS, //hardware slave management using NSS pin
@@ -60,17 +55,81 @@ pub const SPI = struct {
         self.spi.CR1.modify(.{ .SPE = 1 }); // Enable SPI
     }
 
-    ///trasmite only procedure | RM008 page 721
+    fn check_TX(self: *const SPI) bool {
+        return self.spi.SR.read().TXE != 0;
+    }
+
+    fn check_RX(self: *const SPI) bool {
+        return self.spi.SR.read().RXNE != 0;
+    }
+
+    fn busy_wait(self: *const SPI) void {
+        while (self.spi.SR.read().BSY != 0) {}
+    }
+
+    //trasmite only procedure | RM008 page 721
     pub fn write_blocking(self: *const SPI, data: []const u8) void {
         for (data) |byte| {
             self.spi.DR.raw = byte;
-            while (self.spi.SR.read().TXE == 0) {}
+            while (!self.check_TX()) {}
         }
-        while (self.spi.SR.read().BSY != 0) {}
+        self.busy_wait();
 
-        //clear OVF flag
+        //clear flags
         std.mem.doNotOptimizeAway(self.spi.DR.read());
         std.mem.doNotOptimizeAway(self.spi.SR.read());
+    }
+
+    pub fn read_blocking(self: *const SPI, data: []u8) void {
+        self.spi.DR.raw = 0;
+        for (data) |*byte| {
+            //send dummy byte to generate clock
+            while (!(self.check_TX())) {}
+            self.spi.DR.raw = 0; // send dummy byte
+
+            //wait for data to be received
+            while (!(self.check_RX())) {}
+            byte.* = @intCast(self.spi.DR.raw & 0xFF);
+        }
+        self.busy_wait();
+
+        std.mem.doNotOptimizeAway(self.spi.DR.read());
+        std.mem.doNotOptimizeAway(self.spi.SR.read());
+    }
+
+    ///this function is full-duplex only and does not support 3-wire mode and data burst
+    /// if the revice buffer is bigger than the transmit buffer dummy bytes will be sent until the receive buffer is full
+    /// if the transmit buffer is bigger than the receive buffer, all additional bytes will be ignored
+    pub fn transceive_blocking(self: *const SPI, out: []const u8, in: []u8) void {
+        const out_len = out.len;
+        const in_len = in.len;
+        if (out_len == 0) {
+            self.read_blocking(in);
+        } else if (in_len == 0) {
+            self.write_blocking(out);
+        }
+
+        var out_remain = out_len - 1;
+        var in_remain = in_len;
+
+        //load the first byte
+        //the RX value will be loaded into the shift register, and will be loaded into the DR register after the first clock cycle
+        self.spi.DR.raw = out[0];
+        while ((out_remain > 0) or (in_remain > 0)) {
+            while (check_TX(self)) {}
+            if (out_remain > 0) {
+                self.spi.DR.raw = out[out_len - out_remain];
+                out_remain -= 1;
+            } else {
+                self.spi.DR.raw = 0; // send dummy byte
+            }
+
+            while (check_RX(self)) {}
+            if (in_remain > 0) {
+                in[in_len - in_remain] = @intCast(self.spi.DR.raw & 0xFF);
+                in_remain -= 1;
+            }
+        }
     }
 
     pub fn init(spi_inst: Instances) SPI {
