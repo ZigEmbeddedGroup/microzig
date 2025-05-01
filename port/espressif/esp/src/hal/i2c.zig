@@ -172,6 +172,11 @@ pub const I2C = enum(u1) {
     pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
         const regs = self.get_regs();
 
+        // Enable I2C peripheral clock
+        microzig.hal.system.clocks_enable_set(.{ .i2c_ext0 = true });
+        // Take I2C out of reset
+        microzig.hal.system.peripheral_reset_clear(.{ .i2c_ext0 = true });
+
         // Setup SDA pin
         pins.sda.set_open_drain_output(true);
         pins.sda.set_input_enable(true);

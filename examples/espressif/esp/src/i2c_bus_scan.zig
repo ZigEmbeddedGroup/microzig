@@ -19,12 +19,6 @@ pub fn main() !void {
     const sda_pin = gpio.num(5);
     const scl_pin = gpio.num(6);
 
-    // TODO: Should this be done in apply?
-    // Enable I2C peripheral clock
-    peripherals.SYSTEM.PERIP_CLK_EN0.modify(.{ .I2C_EXT0_CLK_EN = 1 });
-    // Take I2C out of reset
-    peripherals.SYSTEM.PERIP_RST_EN0.modify(.{ .I2C_EXT0_RST = 0 });
-
     try i2c0.apply(
         .{ .sda = sda_pin, .scl = scl_pin },
         100_000,
