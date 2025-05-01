@@ -116,7 +116,7 @@ pub const SPI = struct {
         //the RX value will be loaded into the shift register, and will be loaded into the DR register after the first clock cycle
         self.spi.DR.raw = out[0];
         while ((out_remain > 0) or (in_remain > 0)) {
-            while (check_TX(self)) {}
+            while (!check_TX(self)) {}
             if (out_remain > 0) {
                 self.spi.DR.raw = out[out_len - out_remain];
                 out_remain -= 1;
@@ -124,12 +124,14 @@ pub const SPI = struct {
                 self.spi.DR.raw = 0; // send dummy byte
             }
 
-            while (check_RX(self)) {}
+            while (!check_RX(self)) {}
             if (in_remain > 0) {
                 in[in_len - in_remain] = @intCast(self.spi.DR.raw & 0xFF);
                 in_remain -= 1;
             }
         }
+
+        self.busy_wait();
     }
 
     pub fn init(spi_inst: Instances) SPI {
