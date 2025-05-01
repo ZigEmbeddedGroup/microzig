@@ -418,7 +418,7 @@ fn load_register_with_dim_element_group(ctx: *Context, node: xml.Node, parent: S
     const name = node.get_value("name") orelse return error.MissingRegisterName;
     const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
     const size = register_props.size orelse return error.MissingRegisterSize;
-    const address_offset_string = node.get_value("addressOffset") orelse return error.MissinRegisterOffset;
+    const address_offset_string = node.get_value("addressOffset") orelse return error.MissingRegisterOffset;
     const address_offset = try std.fmt.parseUnsigned(usize, address_offset_string, 0);
 
     // Array type needs only one entry in db with set count, list type should be each register as a separate entry
@@ -683,7 +683,7 @@ const DimElements = struct {
     /// Define the number of elements in an array of registers. If "dimIncrement" is specified, this element becomes mandatory.
     type: DimType,
     dim: u64,
-    /// Specify the address increment, in Bytes, between two neighboring registers.
+    /// Specify the address increment, in Bytes, between two registers.
     dim_increment: u64,
 
     /// dimIndexType specifies the subset and sequence of characters used for specifying the sequence of indices in register arrays -->
@@ -731,12 +731,10 @@ const DimElements = struct {
 
         return DimElements{
             .type = if (is_array_type) DimType.array else DimType.list,
-            .dim = if (dim) |d| blk: {
-                break :blk d;
-            } else return null,
+            .dim = dim orelse return null,
             .dim_increment = dim_increment.?,
             .dim_index = dim_index,
-            .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name"
+            .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name" if available
         };
     }
 
