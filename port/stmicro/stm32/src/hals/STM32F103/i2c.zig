@@ -42,6 +42,7 @@ pub const Config = struct {
     speed: usize,
     mode: Mode = .standard,
     enable_duty: bool = false,
+    address_mode: AddressMode = .@"7bits",
 };
 
 pub const ConfigError = error{
@@ -274,6 +275,13 @@ pub const I2C = struct {
         }
     }
 
+    fn clear_flags(i2c: *const I2C) void {
+        const regs = i2c.regs;
+        //clear ADDR register
+        std.mem.doNotOptimizeAway(regs.SR1.raw);
+        std.mem.doNotOptimizeAway(regs.SR2.raw);
+    }
+
     fn send_7bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
         const regs = i2c.regs;
         const addr7 = @as(u8, @intCast(addr));
@@ -284,13 +292,47 @@ pub const I2C = struct {
             try i2c.check_error(timeout);
         }
 
-        std.mem.doNotOptimizeAway(regs.SR2.raw);
+        i2c.clear_flags();
+    }
+
+    fn send_10bits_addr(i2c: *const I2C, addr: u10, IO: u1, timeout: ?Timeout) IOError!void {
+        const regs = i2c.regs;
+
+        //10 bits address is sent in 2 bytes
+        //first byte is  made of a 5 bit prefix 111100 | the 2 MSB of the address + 0
+        //second byte is made of the 8 LSB of the address
+        //https://www.i2c-bus.org/addressing/10-bit-addressing/
+        const high: u8 = @as(u8, @intCast(addr >> 8)) & 0b11;
+        const low: u8 = @as(u8, @intCast(addr & 0xFF));
+        const header: u8 = ((0xF0 | (high << 1)) & 0b11110110); //first header is always in Write mode
+
+        regs.DR.modify(.{ .DR = header });
+        while (regs.SR1.read().ADD10 != 1) {
+            try i2c.check_error(timeout);
+        }
+
+        regs.DR.modify(.{ .DR = low });
+        while (regs.SR1.read().ADDR != 1) {
+            try i2c.check_error(timeout);
+        }
+        //clear ADDR register
+        i2c.clear_flags();
+        if (IO == 1) {
+            const read_header: u8 = header | 1;
+            try i2c.START(timeout);
+            regs.DR.modify(.{ .DR = read_header });
+            while (regs.SR1.read().ADDR != 1) {
+                try i2c.check_error(timeout);
+            }
+
+            i2c.clear_flags();
+        }
     }
 
     fn set_addr(i2c: *const I2C, address: Address, rw: u1, timeout: ?Timeout) IOError!void {
         switch (address.mode) {
             .@"7bits" => try i2c.send_7bits_addr(address.addr, rw, timeout),
-            .@"10bits" => @panic("10bits address not supported yet"),
+            .@"10bits" => try i2c.send_10bits_addr(address.addr, rw, timeout),
         }
     }
 
