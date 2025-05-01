@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_port_microchip_avr,
-    .fingerprint = 0xc77d64ef4164aac3,
+    .name = .mz_port_microchip_avr,
+    .fingerprint = 0xbffd53026e882bed,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
