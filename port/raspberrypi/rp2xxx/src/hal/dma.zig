@@ -15,11 +15,12 @@ const num_channels = switch (chip) {
     .RP2350 => 16,
 };
 var claimed_channels = microzig.concurrency.AtomicStaticBitSet(num_channels){};
+const MaskType = std.meta.Int(.unsigned, num_channels);
 
 pub fn channel(n: u4) Channel {
     assert(n < num_channels);
 
-    return @as(Channel, @enumFromInt(n));
+    return @enumFromInt(n);
 }
 
 pub fn claim_unused_channel() ?Channel {
@@ -30,7 +31,7 @@ pub fn claim_unused_channel() ?Channel {
 }
 
 pub fn multi_channel_trigger(channels: []const Channel) void {
-    var value: u16 = 0;
+    var value: MaskType = 0;
 
     for (channels) |chan| {
         value |= chan.mask();
@@ -41,12 +42,12 @@ pub fn multi_channel_trigger(channels: []const Channel) void {
     });
 }
 
-pub const DmaReadTarget = struct {
+pub const DMA_ReadTarget = struct {
     dreq: Dreq,
     addr: u32,
 };
 
-pub const DmaWriteTarget = struct {
+pub const DMA_WriteTarget = struct {
     dreq: Dreq,
     addr: u32,
 };
@@ -70,8 +71,8 @@ pub const Channel = enum(u4) {
         return claimed_channels.test_bit(@intFromEnum(chan)) == 1;
     }
 
-    pub fn mask(chan: Channel) u16 {
-        return @as(u16, 1) << @intFromEnum(chan);
+    pub fn mask(chan: Channel) MaskType {
+        return @as(MaskType, 1) << @intFromEnum(chan);
     }
 
     const Regs = extern struct {
@@ -118,7 +119,7 @@ pub const Channel = enum(u4) {
         // byte swapping
     };
 
-    pub fn trigger_transfer(
+    pub fn setup_transfer_raw(
         chan: Channel,
         write_addr: u32,
         read_addr: u32,
@@ -148,7 +149,7 @@ pub const Channel = enum(u4) {
         }
     }
 
-    pub const FancyTransferConfig = struct {
+    pub const SetupTransferConfig = struct {
         trigger: bool = false,
         enable: bool,
     };
@@ -157,11 +158,26 @@ pub const Channel = enum(u4) {
         chan: Channel,
         write: anytype,
         read: anytype,
-        config: FancyTransferConfig,
+        config: SetupTransferConfig,
     ) !void {
         const H = struct {
             fn is_peripheral(Type: type) bool {
-                return Type == DmaReadTarget or Type == DmaWriteTarget;
+                return Type == DMA_ReadTarget or Type == DMA_WriteTarget;
+            }
+
+            fn validate_type(Type: type) void {
+                const Info = @typeInfo(Type);
+                switch (Info) {
+                    .@"struct" => {
+                        if (!is_peripheral(Type))
+                            @compileError("only peripherals and pointers are supported");
+                    },
+                    .pointer => {
+                        if (get_data_size(Type) == null)
+                            @compileError("only pointers/slices/arrays of u8/u16/u32 are supported");
+                    },
+                    else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
+                }
             }
 
             inline fn get_addr(value: anytype) u32 {
@@ -174,7 +190,7 @@ pub const Channel = enum(u4) {
                     .pointer => {
                         return @intFromPtr(value);
                     },
-                    else => @compileError("unsupported type"),
+                    else => comptime unreachable,
                 }
             }
 
@@ -188,7 +204,7 @@ pub const Channel = enum(u4) {
                     .pointer => {
                         return .permanent;
                     },
-                    else => @compileError("unsupported type"),
+                    else => comptime unreachable,
                 }
             }
 
@@ -202,75 +218,89 @@ pub const Channel = enum(u4) {
                                 .array => |array| {
                                     return array.len;
                                 },
-                                else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
+                                else => return 1,
                             },
                             .many, .slice => return value.len,
-                            .c => @compileError("c pointers are unsupported"),
+                            .c => unreachable,
                         }
                     },
-                    else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
+                    else => unreachable,
                 }
             }
 
-            inline fn get_increment(value: anytype) bool {
-                const Type = @TypeOf(value);
+            inline fn get_increment(Type: type) bool {
                 const Info = @typeInfo(Type);
-                switch (Info) {
-                    .pointer => |ptr| {
-                        switch (ptr.size) {
-                            .one => switch (@typeInfo(ptr.child)) {
-                                .array => {
-                                    return true;
-                                },
-                                else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
-                            },
-                            .many, .slice => return true,
-                            .c => @compileError("c pointers are unsupported"),
-                        }
+                return switch (Info) {
+                    .pointer => |ptr| switch (ptr.size) {
+                        .one => switch (@typeInfo(ptr.child)) {
+                            .array => true,
+                            else => false,
+                        },
+                        .many, .slice => true,
+                        .c => unreachable,
                     },
-                    else => if (comptime is_peripheral(Type))
-                        return false
-                    else
-                        @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
-                }
+                    else => comptime if (is_peripheral(Type)) false else unreachable,
+                };
             }
 
-            inline fn get_data_size(value: anytype) DataSize {
-                const Type = @TypeOf(value);
+            fn type_to_data_size(Type: type) ?DataSize {
+                return switch (Type) {
+                    u8, i8 => .size_8,
+                    u16, i16 => .size_16,
+                    u32, i32 => .size_32,
+                    else => null,
+                };
+            }
+
+            fn get_data_size(Type: type) ?DataSize {
+                // at this point we are guarnteed that we have pointer type
                 const Info = @typeInfo(Type);
-                switch (Info) {
-                    .pointer => |ptr| {
-                        switch (ptr.child) {
-                            u8, i8 => return .size_8,
-                            u16, i16 => return .size_16,
-                            u32, i32 => return .size_32,
-                            else => switch (@typeInfo(ptr.child)) {
-                                .array => |array| {
-                                    switch (array.child) {
-                                        u8, i8 => return .size_8,
-                                        u16, i16 => return .size_16,
-                                        u32, i32 => return .size_32,
-                                        else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
-                                    }
-                                },
-                                else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
-                            },
-                        }
-                    },
-                    else => @compileError(std.fmt.comptimePrint("unsupported type {}", .{Type})),
-                }
+                const ChildType = Info.pointer.child;
+                return switch (@typeInfo(ChildType)) {
+                    .array => |array| type_to_data_size(array.child),
+                    .int => type_to_data_size(ChildType),
+                    else => null,
+                };
             }
         };
+
+        const WriteType = @TypeOf(write);
+        const ReadType = @TypeOf(read);
+
+        comptime H.validate_type(WriteType);
+        comptime H.validate_type(ReadType);
 
         const write_addr = H.get_addr(write);
         const read_addr = H.get_addr(read);
 
-        if (comptime H.is_peripheral(@TypeOf(read)) and H.is_peripheral(@TypeOf(write)))
-            return error.CrossPeripheralDmaUnsupported;
+        comptime if (H.is_peripheral(ReadType) and H.is_peripheral(WriteType))
+            @compileError("cross peripheral dma is unsupported");
 
-        const dreq = if (comptime H.is_peripheral(@TypeOf(write))) H.get_dreq(write) else H.get_dreq(read);
-        const count = if (comptime H.is_peripheral(@TypeOf(write))) H.get_count(read) else H.get_count(write);
-        const data_size = if (comptime H.is_peripheral(@TypeOf(write))) H.get_data_size(read) else H.get_data_size(write);
+        const data_size = comptime if (H.is_peripheral(WriteType))
+            H.get_data_size(ReadType).?
+        else
+            H.get_data_size(WriteType).?;
+
+        const dreq = if (comptime H.is_peripheral(WriteType)) H.get_dreq(write) else H.get_dreq(read);
+
+        const count = blk: {
+            if (comptime H.is_peripheral(WriteType))
+                break :blk H.get_count(read)
+            else if (comptime H.is_peripheral(ReadType))
+                break :blk H.get_count(write)
+            else {
+                const write_count = H.get_count(write);
+                const read_count = H.get_count(read);
+
+                // OPTIMIZATION: do this check at comptime, so we can avoid the read_count call
+                if (read_count == 1) // handle memset
+                    break :blk write_count
+                else if (read_count == write_count)
+                    break :blk read_count
+                else
+                    return error.LengthMismatch;
+            }
+        };
 
         std.log.warn("channel: {}, write_addr: {} read_addr: {} dreq: {s} count: {} data_size: {}", .{
             chan,
@@ -281,15 +311,15 @@ pub const Channel = enum(u4) {
             data_size,
         });
 
-        chan.trigger_transfer(
+        chan.setup_transfer_raw(
             write_addr,
             read_addr,
             count,
             .{
                 .trigger = config.trigger,
                 .enable = config.enable,
-                .read_increment = H.get_increment(read),
-                .write_increment = H.get_increment(write),
+                .read_increment = comptime H.get_increment(ReadType),
+                .write_increment = comptime H.get_increment(WriteType),
                 .data_size = data_size,
                 .dreq = dreq,
             },

@@ -186,17 +186,17 @@ pub const SPI = enum(u1) {
             @compileError("PacketType must be a datatype with a size between 4 and 16 bits inclusive");
     }
 
-    pub fn tx(self: SPI) dma.DmaWriteTarget {
+    pub fn tx(spi: SPI) dma.DMA_WriteTarget {
         return .{
-            .dreq = .spi0_tx,
-            .addr = @intFromPtr(&self.get_regs().SSPDR),
+            .dreq = if (@intFromEnum(spi) == 0) .spi0_tx else .spi1_tx,
+            .addr = @intFromPtr(&spi.get_regs().SSPDR),
         };
     }
 
-    pub fn rx(self: SPI) dma.DmaReadTarget {
+    pub fn rx(spi: SPI) dma.DMA_ReadTarget {
         return .{
-            .dreq = .spi0_rx,
-            .addr = @intFromPtr(&self.get_regs().SSPDR),
+            .dreq = if (@intFromEnum(spi) == 0) .spi0_rx else .spi1_rx,
+            .addr = @intFromPtr(&spi.get_regs().SSPDR),
         };
     }
 

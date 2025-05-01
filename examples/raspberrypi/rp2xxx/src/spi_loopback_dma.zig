@@ -18,7 +18,6 @@ pub const microzig_options = microzig.Options{
     .logFn = rp2xxx.uart.logFn,
 };
 
-// Communicate with another RP2040 over spi
 pub fn main() !void {
     uart_tx_pin.set_function(.uart);
 
@@ -50,6 +49,6 @@ pub fn main() !void {
     std.log.info("dma finished", .{});
 
     while (true) {
-        time.sleep_ms(1 * 1000);
+        time.sleep_ms(1000);
     }
 }

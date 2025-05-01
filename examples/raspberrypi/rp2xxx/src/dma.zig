@@ -36,20 +36,26 @@ pub fn main() !void {
 
     const channel = dma.claim_unused_channel().?;
 
-    try channel.setup_transfer(
-        dst[0..dst.len],
-        hello[0..hello.len],
-        .{
-            .trigger = true,
-            .enable = true,
-        },
-    );
-
+    try channel.setup_transfer(dst[0..dst.len], hello[0..hello.len], .{
+        .trigger = true,
+        .enable = true,
+    });
     channel.wait_for_finish_blocking();
 
-    var i: u32 = 0;
-    while (true) : (i += 1) {
-        std.log.info("{s}", .{dst});
+    if (!std.mem.eql(u8, &dst, hello))
+        @panic("dma failed");
+
+    var value: u8 = 0x41;
+    try channel.setup_transfer(&dst, &value, .{
+        .trigger = true,
+        .enable = true,
+    });
+    channel.wait_for_finish_blocking();
+
+    if (!std.mem.allEqual(u8, &dst, 0x41))
+        @panic("dma failed");
+
+    while (true) {
         time.sleep_ms(1000);
     }
 }
