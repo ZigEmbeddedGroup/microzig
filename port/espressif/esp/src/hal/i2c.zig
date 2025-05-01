@@ -66,9 +66,10 @@ const Opcode = enum(u4) {
 };
 
 const Command = union(enum) {
-    Start,
-    Stop,
-    Write: struct {
+    start,
+    stop,
+    end,
+    write: struct {
         /// Expected ACK value for transmitter
         ack_exp: Ack,
         /// Enable ACK checking
@@ -76,7 +77,7 @@ const Command = union(enum) {
         /// Data length in bytes (1-255)
         length: u8,
     },
-    Read: struct {
+    read: struct {
         /// ACK value to send after byte received
         ack_value: Ack,
         /// Data length in bytes (1-255)
@@ -88,40 +89,41 @@ const Command = union(enum) {
         var cmd: u14 = 0;
 
         switch (self) {
-            .Start, .Stop => {
+            .start, .stop, .end => {
                 cmd = 0;
             },
-            .Write => |write| {
+            .write => |write| {
                 cmd = @as(u14, write.length);
             },
-            .Read => |read| {
+            .read => |read| {
                 cmd = @as(u14, read.length);
             },
         }
 
         // Set opcode
         const opcode: Opcode = switch (self) {
-            .Start => .RSTART,
-            .Stop => .STOP,
-            .Write => .WRITE,
-            .Read => .READ,
+            .start => .RSTART,
+            .stop => .STOP,
+            .end => .END,
+            .write => .WRITE,
+            .read => .READ,
         };
         cmd |= @as(u14, @intFromEnum(opcode)) << 11;
 
         // Set ack_check_en bit
-        if (self == .Write and self.Write.ack_check_en) {
+        if (self == .write and self.write.ack_check_en) {
             cmd |= 1 << 8;
         }
 
         // Set ack_exp bit
-        const ack_exp = if (self == .Write) self.Write.ack_exp else .Nack;
-        if (ack_exp == .Nack) {
+        const ack_exp = if (self == .write) self.write.ack_exp else .nack;
+        if (ack_exp == .nack) {
             cmd |= 1 << 9;
         }
 
         // Set ack_value bit
-        const ack_value = if (self == .Read) self.Read.ack_value else .Nack;
-        if (ack_value == .Nack) {
+        const ack_value = if (self == .read) self.read.ack_value else .nack;
+        if (ack_value == .nack) {
             cmd |= 1 << 10;
         }
 
@@ -130,19 +132,13 @@ const Command = union(enum) {
 };
 
 const Ack = enum(u1) {
-    Ack = 0,
-    Nack = 1,
+    ack = 0,
+    nack = 1,
 };
 
 const OperationType = enum(u1) {
-    Write = 0,
-    Read = 1,
-};
-
-/// Operation kind used during transactions
-const OpKind = enum(u1) {
-    Write,
-    Read,
+    write = 0,
+    read = 1,
 };
 
 /// Pins used by the I2C interface
@@ -160,6 +156,10 @@ pub const instance = struct {
 
 const I2cRegs = microzig.chip.types.peripherals.I2C0;
 
+const I2C_FIFO_SIZE: usize = 32;
+// Chunk writes/reads by this size
+const I2C_CHUNK_SIZE: usize = I2C_FIFO_SIZE - 1;
+
 /// I2C Master peripheral driver
 pub const I2C = enum(u1) {
     _,
@@ -171,6 +171,11 @@ pub const I2C = enum(u1) {
 
     pub fn apply(self: I2C, pins: Pins, frequency: u32) ConfigError!void {
         const regs = self.get_regs();
+
+        // Enable I2C peripheral clock
+        microzig.hal.system.clocks_enable_set(.{ .i2c_ext0 = true });
+        // Take I2C out of reset
+        microzig.hal.system.peripheral_reset_clear(.{ .i2c_ext0 = true });
 
         // Setup SDA pin
         pins.sda.set_open_drain_output(true);
@@ -335,6 +340,21 @@ pub const I2C = enum(u1) {
         });
     }
 
+    fn check_errors(self: I2C) !void {
+        // Reset the peripheral in case of error
+        errdefer self.reset();
+
+        const interrupts = self.get_regs().INT_RAW.read();
+        if (interrupts.TIME_OUT_INT_RAW == 1) {
+            return Error.Timeout;
+        } else if (interrupts.NACK_INT_RAW == 1) {
+            return Error.AcknowledgeCheckFailed;
+        } else if (interrupts.ARBITRATION_LOST_INT_RAW == 1) {
+            return Error.ArbitrationLost;
+        } else if (interrupts.TRANS_COMPLETE_INT_RAW == 1 and self.get_regs().SR.read().RESP_REC == 0) {
+            return Error.AcknowledgeCheckFailed;
+        }
+    }
     /// Propagate configuration to the peripheral
     inline fn update_config(self: I2C) void {
         self.get_regs().CTR.modify(.{ .CONF_UPGATE = 1 });
@@ -355,35 +375,168 @@ pub const I2C = enum(u1) {
         self.get_regs().INT_CLR.write_raw(0x3ffff);
     }
 
-    /// Execute transmission and monitor for completion/errors
-    fn execute_transmission(self: I2C, deadline: mdf.time.Deadline) !void {
-        self.clear_interrupts();
+    inline fn start_transmission(self: I2C) void {
+        self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
+    }
+
+    inline fn add_cmd(self: I2C, cmd_start_idx: *usize, cmd: Command) !void {
+        if (cmd_start_idx.* + 1 > self.get_regs().COMD.len)
+            return Error.CommandNumberExceeded;
+
+        self.get_regs().COMD[cmd_start_idx.*].write(.{
+            .COMMAND = cmd.to_value(),
+            .COMMAND_DONE = 0,
+        });
+        cmd_start_idx.* += 1;
+    }
+
+    fn setup_read(
+        self: I2C,
+        addr: Address,
+        buffer: []const u8,
+        start: bool,
+        will_continue: bool,
+        cmd_start_idx: *usize,
+    ) !void {
+        if (buffer.len == 0)
+            return Error.ZeroLengthInvalid;
+
+        const max_len = if (will_continue) I2C_CHUNK_SIZE else I2C_CHUNK_SIZE + 1;
+        const initial_len: u8 = @truncate(if (will_continue) buffer.len else buffer.len - 1);
+        if (buffer.len > max_len)
+            return Error.FifoExceeded;
+
+        if (start)
+            try self.add_cmd(cmd_start_idx, .{ .write = .{
+                .ack_exp = .ack,
+                .ack_check_en = true,
+                .length = 1,
+            } });
+
+        if (initial_len > 0) {
+            if (initial_len < 2) {
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = @bitCast(initial_len),
+                } });
+            } else if (!will_continue) {
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = @bitCast(initial_len - 1),
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = 1,
+                } });
+            } else {
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = @bitCast(initial_len - 2),
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = 1,
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .read = .{
+                    .ack_value = .ack,
+                    .length = 1,
+                } });
+            }
+        }
+
+        if (!will_continue)
+            try self.add_cmd(cmd_start_idx, .{ .read = .{
+                .ack_value = .nack,
+                .length = 1,
+            } });
 
         self.update_config();
 
-        // Start transmission, causes peripheral to read its commands from COMD
-        self.get_regs().CTR.modify(.{ .TRANS_START = 1 });
+        // Load address and R/W bit
+        if (start)
+            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.read));
+    }
 
+    fn setup_write(self: I2C, addr: Address, bytes: []const u8, start: bool, cmd_start_idx: *usize) !void {
+        const max_len = if (start) I2C_CHUNK_SIZE else I2C_CHUNK_SIZE + 1;
+        if (bytes.len > max_len)
+            return Error.FifoExceeded;
+
+        const write_len: u8 = @truncate(if (start) bytes.len + 1 else bytes.len);
+
+        if (write_len > 0) {
+            if (write_len < 2) {
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = @bitCast(write_len),
+                } });
+            } else if (start) {
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = @bitCast(write_len - 1),
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = 1,
+                } });
+            } else {
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = @bitCast(write_len - 2),
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = 1,
+                } });
+                try self.add_cmd(cmd_start_idx, .{ .write = .{
+                    .ack_exp = .ack,
+                    .ack_check_en = true,
+                    .length = 1,
+                } });
+            }
+        }
+
+        self.update_config();
+
+        // Load address and R/W bit
+        if (start)
+            self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.write));
+
+        // Load data bytes into FIFO
+        for (bytes) |byte|
+            self.write_fifo(byte);
+    }
+
+    fn read_all_from_fifo(self: I2C, buffer: []u8) !void {
+        if (self.get_regs().SR.read().RXFIFO_CNT < buffer.len)
+            return Error.ExecutionIncomplete;
+
+        for (buffer) |*byte|
+            byte.* = self.read_fifo();
+    }
+
+    fn wait_for_completion(self: I2C, deadline: mdf.time.Deadline) !void {
         // Monitor for completion or errors
         while (true) {
             const interrupts = self.get_regs().INT_RAW.read();
 
             // Check for errors
-            if (interrupts.TIME_OUT_INT_RAW == 1) {
-                return Error.Timeout;
-            } else if (interrupts.NACK_INT_RAW == 1) {
-                return Error.AcknowledgeCheckFailed;
-            } else if (interrupts.ARBITRATION_LOST_INT_RAW == 1) {
-                return Error.ArbitrationLost;
-            }
+            try self.check_errors();
 
             // Check for completion
             if (interrupts.TRANS_COMPLETE_INT_RAW == 1 or interrupts.END_DETECT_INT_RAW == 1)
                 break;
 
             // Check for timeout
-            if (deadline.is_reached_by(time.get_time_since_boot()))
+            if (deadline.is_reached_by(time.get_time_since_boot())) {
+                self.reset();
                 return Error.Timeout;
+            }
         }
 
         // Verify all commands were executed
@@ -395,192 +548,188 @@ pub const I2C = enum(u1) {
         }
     }
 
-    /// Add a write operation to the command sequence
-    fn add_write_op(self: I2C, addr: Address, bytes: []const u8, cmd_start_idx: *usize) !void {
-        // Check if we have enough command registers
-        // Need START, WRITE, STOP
-        const needed_cmds: usize = 3;
-        if (cmd_start_idx.* + needed_cmds > self.get_regs().COMD.len)
-            return Error.CommandNumberExceeded;
+    fn stop_operation(self: I2C) !void {
+        var cmd_idx: usize = 0;
+        try self.add_cmd(&cmd_idx, Command.stop);
 
-        // START command
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.to_value(.Start),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-
-        // Load address with WRITE bit into FIFO
-        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Write));
-
-        // Load data bytes into FIFO
-        for (bytes) |byte|
-            self.write_fifo(byte);
-
-        // WRITE command
-        const write_cmd = Command{ .Write = .{
-            .ack_exp = .Ack,
-            .ack_check_en = true,
-            .length = @intCast(1 + bytes.len),
-        } };
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = write_cmd.to_value(),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-
-        // STOP command
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.to_value(.Stop),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-    }
-
-    /// Add a read operation to the command sequence
-    fn add_read_op(self: I2C, addr: Address, buffer_len: usize, cmd_start_idx: *usize) !void {
-        // Check if we have enough command registers
-        // If buffer > 1, we need START, WRITE, READ, READ, STOP
-        const needed_cmds: usize = if (buffer_len > 1) 5 else 4;
-        if (cmd_start_idx.* + needed_cmds > self.get_regs().COMD.len)
-            return Error.CommandNumberExceeded;
-
-        // START command
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.to_value(.Start),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-
-        // Load address with READ bit set into FIFO
-        self.write_fifo(@as(u8, @intFromEnum(addr)) << 1 | @intFromEnum(OperationType.Read));
-
-        // WRITE command for address
-        const write_cmd: Command = .{ .Write = .{
-            .ack_exp = .Ack,
-            .ack_check_en = true,
-            .length = 1,
-        } };
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = write_cmd.to_value(),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-
-        // For reading multiple bytes, first n-1 bytes with ACK
-        if (buffer_len > 1) {
-            const read_cmd = Command{ .Read = .{
-                .ack_value = .Ack,
-                .length = @intCast(buffer_len - 1),
-            } };
-            self.get_regs().COMD[cmd_start_idx.*].write(.{
-                .COMMAND = read_cmd.to_value(),
-                .COMMAND_DONE = 0,
-            });
-            cmd_start_idx.* += 1;
-        }
-
-        // Last byte with NACK
-        const last_read_cmd = Command{ .Read = .{
-            .ack_value = .Nack,
-            .length = 1,
-        } };
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = last_read_cmd.to_value(),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
-
-        // STOP command
-        self.get_regs().COMD[cmd_start_idx.*].write(.{
-            .COMMAND = Command.to_value(.Stop),
-            .COMMAND_DONE = 0,
-        });
-        cmd_start_idx.* += 1;
+        self.start_transmission();
+        try self.wait_for_completion(mdf.time.Deadline.init_absolute(null));
     }
 
     /// Read data from an I2C slave
     pub fn read_blocking(self: I2C, addr: Address, dst: []u8, timeout: ?mdf.time.Duration) !void {
-        // TODO: readv_blocking
-        if (addr.is_reserved())
-            return error.TargetAddressReserved;
-
-        // Check if buffer exceeds FIFO size
-        if (dst.len > 31)
-            return Error.FifoExceeded;
-
-        // Reset FIFO and command list
-        self.reset_fifo();
-        self.reset_command_list();
-
-        // Add read operation
-        var cmd_idx: usize = 0;
-        try self.add_read_op(addr, dst.len, &cmd_idx);
-
-        // Execute transmission
-        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-        try self.execute_transmission(deadline);
-
-        // Read data from FIFO into dst
-        for (dst) |*byte|
-            byte.* = self.read_fifo();
+        return self.readv_blocking(addr, &.{dst}, timeout);
     }
 
-    /// Write data to an I2C slave
-    pub fn write_blocking(self: I2C, addr: Address, src: []const u8, timeout: ?mdf.time.Duration) !void {
-        // TODO: writev_blocking
-        if (addr.is_reserved())
-            return error.TargetAddressReserved;
+    pub fn readv_blocking(self: I2C, addr: Address, chunks: []const []u8, timeout: ?mdf.time.Duration) !void {
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // Split data into chunks that fit in TX FIFO (31 bytes max + 1 addr byte)
-        var chunk_start: usize = 0;
+        const read_vec = microzig.utilities.Slice_Vector([]u8).init(chunks);
 
-        while (chunk_start < src.len) {
-            // Reset FIFO and command list
-            self.reset_fifo();
-            self.reset_command_list();
+        var is_first_chunk = true;
+        // Always saving room for the address byte. With a custom iterator we could make sure only the first chunk is 31 (room for address)
+        const total_size = read_vec.size();
+        var bytes_processed: usize = 0;
 
-            // Calculate chunk size (max 31 bytes)
-            const remaining = src.len - chunk_start;
-            const chunk_size = if (remaining > 31) 31 else remaining;
-            const chunk = src[chunk_start .. chunk_start + chunk_size];
-
-            // Add write operation
-            var cmd_idx: usize = 0;
-            try self.add_write_op(addr, chunk, &cmd_idx);
-
-            // Execute transmission
-            const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
-            try self.execute_transmission(deadline);
-
-            // Move to next chunk
-            chunk_start += chunk_size;
+        var iter = read_vec.iterator();
+        // TODO: Maybe we don't need 31 byte limit for reads
+        while (iter.next_chunk(31)) |chunk| {
+            const is_last_chunk = (bytes_processed + chunk.len == total_size);
+            try self.read_operation_blocking(
+                addr,
+                chunk,
+                is_first_chunk,
+                is_last_chunk,
+                !is_last_chunk,
+                deadline,
+            );
+            is_first_chunk = false;
+            bytes_processed += chunk.len;
         }
     }
 
-    /// Write data then read data from an I2C slave
-    pub fn write_then_read_blocking(self: I2C, addr: Address, src: []const u8, dst: []u8, timeout: ?mdf.time.Duration) !void {
+    fn read_operation_blocking(
+        self: I2C,
+        addr: Address,
+        buffer: []u8,
+        start: bool,
+        stop: bool,
+        will_continue: bool,
+        deadline: mdf.time.Deadline,
+    ) !void {
         if (addr.is_reserved())
-            return error.TargetAddressReserved;
+            return Error.TargetAddressReserved;
+        self.clear_interrupts();
 
-        // Check if buffers exceed FIFO size
-        if (src.len > 31 or dst.len > 31)
-            return Error.FifoExceeded;
+        // Short circuit for zero length reads as that would be an invalid operation.
+        // Read lengths in the TRM are 1-255.
+        if (buffer.len == 0 and !start and !stop)
+            return;
 
-        // Reset FIFO and command list
+        try self.start_read_operation(addr, buffer, start, will_continue);
+        try self.wait_for_completion(deadline);
+
+        // Read data from FIFO into buffer
+        try self.read_all_from_fifo(buffer);
+
+        if (stop)
+            try self.stop_operation();
+    }
+
+    fn start_read_operation(self: I2C, addr: Address, buffer: []u8, start: bool, will_continue: bool) !void {
         self.reset_fifo();
         self.reset_command_list();
 
-        // Add write operation followed by read operation
         var cmd_idx: usize = 0;
-        try self.add_write_op(addr, src, &cmd_idx);
-        try self.add_read_op(addr, dst.len, &cmd_idx);
 
-        // Execute transmission
-        try self.execute_transmission(timeout);
+        if (start)
+            try self.add_cmd(&cmd_idx, Command.start);
 
-        // Read data from FIFO into buffer
-        for (dst) |*byte|
-            byte.* = self.read_fifo();
+        try self.setup_read(addr, buffer, start, will_continue, &cmd_idx);
+
+        try self.add_cmd(&cmd_idx, Command.end);
+        self.start_transmission();
+    }
+
+    /// Write data to an I2C slave
+    pub fn write_blocking(self: I2C, addr: Address, data: []const u8, timeout: ?mdf.time.Duration) !void {
+        return self.writev_blocking(addr, &.{data}, timeout);
+    }
+
+    pub fn writev_blocking(self: I2C, addr: Address, chunks: []const []const u8, timeout: ?mdf.time.Duration) Error!void {
+        return self.writev_operation_blocking(addr, chunks, true, true, timeout);
+    }
+
+    fn writev_operation_blocking(
+        self: I2C,
+        addr: Address,
+        chunks: []const []const u8,
+        start: bool,
+        stop: bool,
+        timeout: ?mdf.time.Duration,
+    ) Error!void {
+        const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
+
+        // TODO: Write a new utility that does similar but that will coalesce into a specified size
+        const write_vec = microzig.utilities.Slice_Vector([]const u8).init(chunks);
+        if (write_vec.size() == 0)
+            return self.write_operation_blocking(addr, &.{}, start, stop, deadline);
+
+        var iter = write_vec.iterator();
+
+        var is_first_chunk = true;
+        var buffer: [I2C_FIFO_SIZE]u8 = undefined;
+        var buffer_level: usize = 0;
+        const total_size = write_vec.size();
+        var remaining = total_size;
+        // Pack up 'vec' chunks into 'fifo' chunks of up to `max_chunk_size`, writing whenever we
+        // fill up.
+        while (remaining != 0) {
+            const max_chunk_size = if (remaining <= I2C_CHUNK_SIZE)
+                remaining
+            else if (remaining > I2C_CHUNK_SIZE + 2)
+                I2C_CHUNK_SIZE
+            else
+                I2C_CHUNK_SIZE - 2;
+
+            const buffer_remaining = max_chunk_size - buffer_level;
+            if (buffer_remaining == 0) {
+                // Buffer is full, send it
+                remaining -= buffer_level;
+                const is_last_chunk = (remaining == 0);
+                try self.write_operation_blocking(addr, buffer[0..buffer_level], is_first_chunk, is_last_chunk, deadline);
+                is_first_chunk = false;
+                buffer_level = 0;
+                continue;
+            }
+
+            // Try to get next chunk. We should never not get a chunk here since we know ahead of
+            // time how much to request.
+            const chunk = iter.next_chunk(buffer_remaining) orelse return;
+
+            // Copy chunk to buffer
+            @memcpy(buffer[buffer_level..][0..chunk.len], chunk);
+            buffer_level += chunk.len;
+        }
+    }
+
+    fn write_operation_blocking(
+        self: I2C,
+        addr: Address,
+        bytes: []const u8,
+        start: bool,
+        stop: bool,
+        deadline: mdf.time.Deadline,
+    ) Error!void {
+        if (addr.is_reserved())
+            return Error.TargetAddressReserved;
+
+        // Short circuit for zero length writes without start or end as that would be an
+        // invalid operation. Write lengths in the TRM are 1-255.
+        if (bytes.len == 0 and !start and !stop)
+            return;
+
+        self.clear_interrupts();
+
+        try self.start_write_operation(addr, bytes, start);
+        try self.wait_for_completion(deadline);
+
+        if (stop)
+            try self.stop_operation();
+    }
+
+    fn start_write_operation(self: I2C, addr: Address, bytes: []const u8, start: bool) !void {
+        self.reset_fifo();
+        self.reset_command_list();
+
+        var cmd_idx: usize = 0;
+
+        if (start)
+            try self.add_cmd(&cmd_idx, Command.start);
+
+        try self.setup_write(addr, bytes, start, &cmd_idx);
+
+        try self.add_cmd(&cmd_idx, Command.end);
+        self.start_transmission();
     }
 };

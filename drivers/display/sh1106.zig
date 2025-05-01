@@ -176,7 +176,7 @@ pub fn SH1106(comptime options: Options) type {
             try self.set_display(.on);
         }
 
-        pub fn write_full_display(self: Self, data: *const [cols * 8]u8) !void {
+        pub fn write_full_display(self: Self, data: *const [cols * rows / 8]u8) !void {
             for (0..8) |page| {
                 try self.set_page_address(@intCast(page));
                 const start = cols * page;
