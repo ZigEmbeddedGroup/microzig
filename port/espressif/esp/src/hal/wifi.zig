@@ -378,7 +378,7 @@ const osi_functions = struct {
         ._mutex_lock = osi_functions.mutex_lock,
         ._mutex_unlock = osi_functions.mutex_unlock,
         ._queue_create = osi_functions.queue_create,
-        ._queue_delete = @ptrCast(&osi_functions.queue_delete),
+        ._queue_delete = &osi_functions.queue_delete,
         ._queue_send = @ptrCast(&osi_functions.queue_send),
         ._queue_send_from_isr = @ptrCast(&osi_functions.queue_send_from_isr),
         ._queue_send_to_back = @ptrCast(&osi_functions.queue_send_to_back),
@@ -731,18 +731,18 @@ const osi_functions = struct {
 
     const Queue = struct {
         capacity: usize,
-        item_size: usize,
-        read_index: usize,
-        write_index: usize,
+        item_len: usize,
+        read_index: usize = 0,
+        write_index: usize = 0,
         storage: []u8,
 
-        pub fn init(capacity: usize, item_size: usize) error{OutOfMemory}!Queue {
+        pub fn init(capacity: usize, item_len: usize) error{OutOfMemory}!Queue {
             return .{
                 .capacity = capacity,
-                .item_size = item_size,
+                .item_len = item_len,
                 .read_index = 0,
                 .write_index = 0,
-                .storage = try allocator_alloc_in_cs(u8, capacity * item_size),
+                .storage = try allocator_alloc_in_cs(u8, capacity * item_len),
             };
         }
 
@@ -763,21 +763,21 @@ const osi_functions = struct {
         }
 
         pub fn get(self: Queue, index: usize) []u8 {
-            const item_start = self.item_size * index;
-            return self.storage[item_start..][0..self.item_size];
+            const item_start = self.item_len * index;
+            return self.storage[item_start..][0..self.item_len];
         }
 
-        pub fn enqueue(self: Queue, data: []const u8) error{QueueFull}!void {
+        pub fn enqueue(self: *Queue, item: [*]const u8) error{QueueFull}!void {
             if (self.len() == self.capacity) {
                 return error.QueueFull;
             }
 
             const slot = self.get(self.write_index);
-            @memcpy(slot, data);
+            @memcpy(slot, item[0..self.item_len]);
             self.write_index = (self.write_index + 1) % self.capacity;
         }
 
-        pub fn dequeue(self: Queue, data: []u8) error{QueueEmpty}!void {
+        pub fn dequeue(self: *Queue, data: [*]u8) error{QueueEmpty}!void {
             if (self.len() == 0) {
                 return error.QueueEmpty;
             }
@@ -788,16 +788,40 @@ const osi_functions = struct {
         }
     };
 
-    pub fn queue_create(queue_len: u32, item_len: u32) callconv(.c) ?*anyopaque {
-        @panic("queue_create: not implemented");
+    pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
+        log.debug("queue_create {} {}", .{capacity, item_len});
+
+        const queue = allocator_create_in_cs(Queue) catch {
+            log.warn("failed to allocate queue", .{});
+            return null;
+        };
+
+        queue.* = .init(capacity, item_len) catch {
+            allocator_destroy_in_cs(queue);
+            log.warn("failed to init queue", .{});
+            return null;
+        };
+
+        return queue;
     }
 
-    pub fn queue_delete() callconv(.c) void {
-        @panic("queue_delete: not implemented");
+    pub fn queue_delete(ptr: ?*anyopaque) callconv(.c) void {
+        log.debug("queue_delete {?}", .{ptr});
+
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
+        allocator_destroy_in_cs(queue);
     }
 
-    pub fn queue_send() callconv(.c) void {
-        @panic("queue_send: not implemented");
+    pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
+        log.debug("queue_send {?} {?} {}", .{ptr, item_ptr, block_time_tick});
+
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
+        const item: [*]const u8 = @alignCast(@ptrCast(ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        queue.enqueue(item);
     }
 
     pub fn queue_send_from_isr() callconv(.c) void {
