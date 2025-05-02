@@ -14,7 +14,6 @@ pub fn build(b: *std.Build) void {
     const stm32 = mb.ports.stm32;
 
     const available_examples = [_]Example{
-        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F103C8", .file = "src/blinky.zig" },
         .{ .target = stm32.boards.stm32f3discovery, .name = "stm32f3discovery", .file = "src/blinky.zig" },
         // TODO: stm32.pins.GlobalConfiguration is not available on those targets
         // .{ .target = stm32.chips.stm32f303vc, .name = "stm32f303vc", .file = "src/blinky.zig" },
@@ -23,7 +22,15 @@ pub fn build(b: *std.Build) void {
         // .{ .target = stm32.boards.stm32f4discovery, .name = "stm32f4discovery", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm3240geval, .name = "stm3240geval", .file = "src/blinky.zig" },
         // .{ .target = stm32.boards.stm32f429idiscovery, .name = "stm32f429idiscovery", .file = "src/blinky.zig" },
-        .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_blink", .file = "src/blinky.zig" },
+        .{ .target = stm32.chips.STM32F100RB, .name = "STM32F1xx_semihost", .file = "src/semihosting.zig" }, //QEMU target: stm32vldiscovery
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_gpio", .file = "src/stm32f1xx/gpio.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_echo", .file = "src/stm32f1xx/uart_echo.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_uart_log", .file = "src/stm32f1xx/uart_log.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c", .file = "src/stm32f1xx/i2c.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_i2c_bus_scan", .file = "src/stm32f1xx/i2c_bus_scan.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_hd44780", .file = "src/stm32f1xx/hd44780.zig" },
+        .{ .target = stm32.chips.STM32F103C8, .name = "STM32F1xx_spi", .file = "src/stm32f1xx/spi.zig" },
     };
 
     for (available_examples) |example| {
