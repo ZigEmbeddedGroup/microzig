@@ -53,11 +53,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         // QingKe V2C is RV32EC
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic },
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            .@"32bit",
-            .e,
-            .c,
-        }),
+        .cpu_features_add = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .c, .xwchc }),
         .os_tag = .freestanding,
         .abi = .eabi,
     };
@@ -71,11 +67,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            std.Target.riscv.Feature.c,
-            std.Target.riscv.Feature.a,
-            std.Target.riscv.Feature.m,
-        }),
+        .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .a, .m, .xwchc }),
         .os_tag = .freestanding,
         .abi = .eabi,
     };
@@ -89,11 +81,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            std.Target.riscv.Feature.c,
-            std.Target.riscv.Feature.a,
-            std.Target.riscv.Feature.m,
-        }),
+        .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .a, .m, .xwchc }),
         .os_tag = .freestanding,
         .abi = .eabi,
     };
@@ -102,12 +90,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_arch = .riscv32,
         .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
         // generic_rv32 has feature I.
-        .cpu_features_add = std.Target.riscv.featureSet(&.{
-            std.Target.riscv.Feature.c,
-            std.Target.riscv.Feature.a,
-            std.Target.riscv.Feature.m,
-            std.Target.riscv.Feature.f,
-        }),
+        .cpu_features_add = std.Target.riscv.featureSet(&.{ .c, .a, .m, .f, .xwchc }),
         .os_tag = .freestanding,
         .abi = .eabi,
     };
