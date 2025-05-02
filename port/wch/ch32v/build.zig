@@ -11,6 +11,7 @@ chips: struct {
     ch32v103x8: *const microzig.Target,
     ch32v203x6: *const microzig.Target,
     ch32v203x8: *const microzig.Target,
+    ch32v305xb: *const microzig.Target,
     ch32v307xc: *const microzig.Target,
 },
 
@@ -23,6 +24,9 @@ boards: struct {
     },
     ch32v203: struct {
         suzuduino_uno_v1b: *const microzig.Target,
+    },
+    ch32v305: struct {
+        nano_ch32v305: *const microzig.Target,
     },
     ch32v307: struct {
         ch32v307v_r1_1v0: *const microzig.Target,
@@ -203,6 +207,24 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal_ch32v203,
     };
 
+    const chip_ch32v305xb: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .bin,
+        .zig_target = qingkev4f_target,
+        .cpu = qingkev4_cpu,
+        .chip = .{
+            .name = "CH32V30xxx", // <name/> from SVD
+            .memory_regions = &.{
+                .{ .offset = 0x08000000, .length = 128 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 32 * KiB, .kind = .ram },
+            },
+            .register_definition = .{
+                .svd = b.path("src/chips/ch32v30x.svd"),
+            },
+        },
+        .hal = hal_ch32v307,
+    };
+
     const chip_ch32v307xc: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .bin,
@@ -211,14 +233,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "CH32V30xxx", // <name/> from SVD
             .memory_regions = &.{
-                // FLASH + RAM supports the following configuration
-                // FLASH-192K + RAM-128K
-                // FLASH-224K + RAM-96K
-                // FLASH-256K + RAM-64K
-                // FLASH-288K + RAM-32K
-                // FLASH-128K + RAM-192K
-                .{ .offset = 0x08000000, .length = 128 * KiB, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 32 * KiB, .kind = .ram },
+                // From datasheet:
+                // The products with 256K FLASH+64K SRAM support user select word to be configured as one of several
+                // combinations of (192K FLASH+128K SRAM), (224K FLASH+96K SRAM), (256K FLASH+64K SRAM),
+                // (288K FLASH+32K SRAM). On this basis, the 256K FLASH+64K SRAM product with the sixth inverted
+                // batch number not equal to 0 has also added a configuration combination: (128K FLASH+192K SRAM).
+                // FLASH flash represents the zero-waiting running area R0WAIT, and the product of 256K FLASH+64K
+                // SRAM supports the non-zero waiting area of (480K-R0WAIT) bytes.
+                .{ .offset = 0x08000000, .length = 256 * KiB, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 64 * KiB, .kind = .ram },
             },
             .register_definition = .{
                 .svd = b.path("src/chips/ch32v30x.svd"),
@@ -251,6 +274,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
     });
 
+    const board_nano_ch32v305 = chip_ch32v305xb.derive(.{
+        .board = .{
+            .name = "WCH nanoCH32V305",
+            .url = "https://github.com/wuxx/nanoCH32V305",
+            .root_source_file = b.path("src/boards/nanoCH32V305.zig"),
+        },
+    });
+
     const board_ch32v307v_r1_1v0 = chip_ch32v307xc.derive(.{
         .board = .{
             .name = "WCH CH32V307V-R1-1V0",
@@ -266,6 +297,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .ch32v103x8 = chip_ch32v103x8.derive(.{}),
             .ch32v203x6 = chip_ch32v203x6.derive(.{}),
             .ch32v203x8 = chip_ch32v203x8.derive(.{}),
+            .ch32v305xb = chip_ch32v305xb.derive(.{}),
             .ch32v307xc = chip_ch32v307xc.derive(.{}),
         },
 
@@ -278,6 +310,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
             .ch32v203 = .{
                 .suzuduino_uno_v1b = board_suzuduino_uno_v1b,
+            },
+            .ch32v305 = .{
+                .nano_ch32v305 = board_nano_ch32v305,
             },
             .ch32v307 = .{
                 .ch32v307v_r1_1v0 = board_ch32v307v_r1_1v0,
