@@ -33,11 +33,10 @@ pub fn init(allocator: Allocator) Error!void {
 
     setup_interrupts();
     setup_timer_periodic_alarm();
-    try allocate_main_task(allocator);
-    // allocate timer task
+    try init_main_task(allocator);
 
-    // enable yield software interrupt
-    microzig.cpu.interrupt.enable(.interrupt3);
+    const task = try Task.create(allocator, timer_task, null, 200);
+    schedule_task(task);
 
     microzig.cpu.interrupt.enable_interrupts();
 
@@ -45,7 +44,7 @@ pub fn init(allocator: Allocator) Error!void {
     // NOTE: we could probably remove this and wait for the first preemption interrupt
     yield_task();
 
-    // NOTE: should be configurable
+    // NOTE: wifi driver log level should be configurable.
     try c_result(c.esp_wifi_internal_set_log_level(c.WIFI_LOG_VERBOSE));
 }
 
@@ -136,11 +135,15 @@ fn enable_wifi_power_domain_and_init_clocks() void {
     const wifi_bt_sdio_clk: u32 = system_wifi_clk_i2c_clk_en | system_wifi_clk_unused_bit12;
     const system_wifi_clk_en: u32 = 0x00FB9FCF;
 
-    APB_CTRL.WIFI_CLK_EN.write(.{ .WIFI_CLK_EN = APB_CTRL.WIFI_CLK_EN.read().WIFI_CLK_EN & ~wifi_bt_sdio_clk | system_wifi_clk_en });
+    APB_CTRL.WIFI_CLK_EN.write(.{
+        .WIFI_CLK_EN = APB_CTRL.WIFI_CLK_EN.read().WIFI_CLK_EN &
+            ~wifi_bt_sdio_clk |
+            system_wifi_clk_en,
+    });
 }
 
 fn setup_interrupts() void {
-    // TODO: should be configurable
+    // TODO: which interrupts are used should be configurable.
 
     microzig.cpu.interrupt.set_priority_threshold(.zero);
 
@@ -179,14 +182,56 @@ fn setup_timer_periodic_alarm() void {
 
 const Task = struct {
     trap_frame: TrapFrame,
-    stack: []const u8,
+    stack: []u8,
     semaphore: u32 = 0,
     next: *Task,
+
+    pub fn create(
+        allocator: Allocator,
+        entry: *const fn (param: ?*anyopaque) callconv(.c) noreturn,
+        param: ?*anyopaque,
+        stack_size: usize,
+    ) !*Task {
+        const stack: []u8 = try allocator.alloc(u8, stack_size);
+        errdefer allocator.free(stack);
+
+        const task: *Task = try allocator.create(Task);
+        errdefer allocator.destroy(task);
+
+        const trap_frame: TrapFrame = blk: {
+            const stack_top_addr: usize = @intFromPtr(stack.ptr) + stack.len;
+
+            var frame: TrapFrame = undefined;
+            @memset(std.mem.asBytes(&frame), 0);
+
+            frame.pc = @intFromPtr(entry);
+            frame.a0 = @intFromPtr(param);
+            frame.sp = stack_top_addr - stack_top_addr % 16;
+
+            break :blk frame;
+        };
+
+        task.* = .{
+            .trap_frame = trap_frame,
+            .stack = stack,
+            .next = task, // loop back to this task
+        };
+
+        return task;
+    }
+
+    pub fn destroy(task: *Task, allocator: Allocator) void {
+        allocator.free(task.stack);
+        allocator.destroy(task);
+    }
 };
 
+var main_task: *Task = undefined;
+/// SAFETY: we don't need optionals because there will always be the main task
+/// running. It can't be deleted.
 var current_task: *Task = undefined;
 
-fn allocate_main_task(allocator: Allocator) !void {
+fn init_main_task(allocator: Allocator) !void {
     const task: *Task = try allocator.create(Task);
     task.* = .{
         .trap_frame = undefined,
@@ -194,6 +239,12 @@ fn allocate_main_task(allocator: Allocator) !void {
         .next = task, // loop back to this task
     };
     current_task = task;
+    main_task = task;
+}
+
+fn schedule_task(task: *Task) void {
+    task.next = current_task.next;
+    current_task.next = task;
 }
 
 fn switch_task(trap_frame: *TrapFrame) void {
@@ -216,6 +267,82 @@ fn yield_task() void {
     SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
         .CPU_INTR_FROM_CPU_0 = 1,
     });
+}
+
+const Timer = struct {
+    ets_timer: *c.ets_timer,
+    deadline: time.Deadline,
+    periodic: ?time.Duration,
+};
+
+const TimerList = std.SinglyLinkedList(Timer);
+const TimerListNode = TimerList.Node;
+
+var timer_list: TimerList = .{};
+
+fn add_timer(allocator: Allocator, ets_timer: *c.ets_timer) !void {
+    const timer: Timer = .{
+        .ets_timer = ets_timer,
+        .deadline = .init_absolute(null),
+        .period = null,
+    };
+
+    const node = try allocator.create(TimerListNode);
+    node = .{
+        .data = timer,
+    };
+
+}
+
+fn find_timer(ets_timer: *c.ets_timer) ?*Timer {
+    var current_node = timer_list.first;
+    while (current_node) |node| : (current_node = node.next) {
+        const timer = &node.data;
+        if (timer.ets_timer == ets_timer) {
+            return timer;
+        }
+    }
+    return null;
+}
+
+fn find_next_timer_due(now: time.Absolute) ?*Timer {
+    var current_node = timer_list.first;
+    while (current_node) |node| : (current_node = node.next) {
+        const timer = &node.data;
+        if (timer.deadline.is_reached_by(now)) {
+            return timer;
+        }
+    }
+    return null;
+}
+
+fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
+    while (true) {
+        const now = hal.time.get_time_since_boot();
+
+        const maybe_call, const arg = blk: {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            if (find_next_timer_due(now)) |timer| {
+                if (timer.periodic) |period| {
+                    timer.deadline = .init_relative(now, period);
+                } else {
+                    timer.deadline = .init_absolute(null);
+                }
+
+                break :blk .{ timer.ets_timer.func, timer.ets_timer.priv };
+            } else {
+                break :blk .{ null, null };
+            }
+        };
+
+        if (maybe_call) |callback| {
+            callback(arg);
+        } else {
+            yield_task();
+        }
+    }
 }
 
 var wifi_interrupt_handler: struct {
@@ -264,7 +391,7 @@ fn allocator_destroy_in_cs(memory: anytype) void {
     wifi_allocator.destroy(memory);
 }
 
-fn allocator_alloc_in_cs(comptime T: type, n: usize) Allocator.Error!*T {
+fn allocator_alloc_in_cs(comptime T: type, n: usize) Allocator.Error![]T {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
@@ -278,35 +405,21 @@ fn allocator_free_in_cs(memory: anytype) void {
     return wifi_allocator.free(memory);
 }
 
+extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void;
+
+const log_wifi_internal = std.log.scoped(.esp_wifi_internal);
+
+fn syslog(fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void {
+    var buf: [512]u8 = undefined;
+    vsnprintf(&buf, 512, fmt, va_list);
+    log_wifi_internal.debug("{s}", .{&buf});
+}
+
 const c_other_exports = struct {
     pub export var WIFI_EVENT: c.esp_event_base_t = "WIFI_EVENT";
 };
 
 const c_functions = struct {
-    pub export fn _putchar(byte: u8) callconv(.c) void {
-        // NOTE: not interrupt safe
-
-        const static = struct {
-            var buf: [256]u8 = undefined;
-            var bytes_written: usize = 0;
-        };
-
-        static.buf[static.bytes_written] = byte;
-        static.bytes_written += 1;
-
-        if (static.bytes_written >= 256) {
-            log.debug("_putchar: {s}", .{&static.buf});
-            static.bytes_written = 0;
-        }
-    }
-
-    pub export fn puts(ptr: ?*anyopaque) callconv(.c) void {
-        // NOTE: not interrupt safe
-
-        const s: []const u8 = std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
-        log.info("{s}", .{s});
-    }
-
     pub export fn strlen(ptr: ?*anyopaque) callconv(.c) usize {
         return std.mem.len(@as([*:0]const u8, @ptrCast(ptr)));
     }
@@ -334,6 +447,15 @@ const c_functions = struct {
         }
     }
 
+    pub export fn calloc(number: usize, size: usize) callconv(.c) ?*anyopaque {
+        const total_size: usize = number * size;
+        if (malloc(total_size)) |ptr| {
+            @memset(@as([*]u8, @ptrCast(ptr))[0..total_size], 0);
+            return ptr;
+        }
+        return null;
+    }
+
     pub export fn free(ptr: ?*anyopaque) callconv(.c) void {
         std.debug.assert(ptr != null);
 
@@ -344,6 +466,50 @@ const c_functions = struct {
         defer cs.leave();
 
         wifi_allocator.rawFree(alloc[0 .. 4 + alloc_len.*], .@"4", @returnAddress());
+    }
+
+    pub export fn _putchar(byte: u8) callconv(.c) void {
+        // NOTE: not interrupt safe
+
+        const static = struct {
+            var buf: [256]u8 = undefined;
+            var bytes_written: usize = 0;
+        };
+
+        static.buf[static.bytes_written] = byte;
+        static.bytes_written += 1;
+
+        if (static.bytes_written >= 256) {
+            log_wifi_internal.debug("_putchar: {s}", .{&static.buf});
+            static.bytes_written = 0;
+        }
+    }
+
+    pub export fn puts(ptr: ?*anyopaque) callconv(.c) void {
+        // NOTE: not interrupt safe
+
+        const s: []const u8 = std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
+        log_wifi_internal.debug("{s}", .{s});
+    }
+
+    pub export fn rtc_printf(fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
+    }
+
+    pub export fn phy_printf(fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
+    }
+
+    pub export fn coexist_printf(fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
+    }
+
+    pub export fn net80211_printf(fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
+    }
+
+    pub export fn pp_printf(fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
     }
 };
 
@@ -378,49 +544,49 @@ const osi_functions = struct {
         ._mutex_lock = osi_functions.mutex_lock,
         ._mutex_unlock = osi_functions.mutex_unlock,
         ._queue_create = osi_functions.queue_create,
-        ._queue_delete = &osi_functions.queue_delete,
-        ._queue_send = @ptrCast(&osi_functions.queue_send),
-        ._queue_send_from_isr = @ptrCast(&osi_functions.queue_send_from_isr),
+        ._queue_delete = osi_functions.queue_delete,
+        ._queue_send = osi_functions.queue_send,
+        ._queue_send_from_isr = osi_functions.queue_send_from_isr,
         ._queue_send_to_back = @ptrCast(&osi_functions.queue_send_to_back),
         ._queue_send_to_front = @ptrCast(&osi_functions.queue_send_to_front),
-        ._queue_recv = @ptrCast(&osi_functions.queue_recv),
-        ._queue_msg_waiting = @ptrCast(&osi_functions.queue_msg_waiting),
+        ._queue_recv = osi_functions.queue_recv,
+        ._queue_msg_waiting = osi_functions.queue_msg_waiting,
         ._event_group_create = @ptrCast(&osi_functions.event_group_create),
         ._event_group_delete = @ptrCast(&osi_functions.event_group_delete),
         ._event_group_set_bits = @ptrCast(&osi_functions.event_group_set_bits),
         ._event_group_clear_bits = @ptrCast(&osi_functions.event_group_clear_bits),
         ._event_group_wait_bits = @ptrCast(&osi_functions.event_group_wait_bits),
-        ._task_create_pinned_to_core = @ptrCast(&osi_functions.task_create_pinned_to_core),
-        ._task_create = @ptrCast(&osi_functions.task_create),
+        ._task_create_pinned_to_core = osi_functions.task_create_pinned_to_core,
+        ._task_create = osi_functions.task_create,
         ._task_delete = @ptrCast(&osi_functions.task_delete),
-        ._task_delay = @ptrCast(&osi_functions.task_delay),
-        ._task_ms_to_tick = @ptrCast(&osi_functions.task_ms_to_tick),
-        ._task_get_current_task = @ptrCast(&osi_functions.task_get_current_task),
-        ._task_get_max_priority = @ptrCast(&osi_functions.task_get_max_priority),
-        ._malloc = @ptrCast(&osi_functions.malloc),
-        ._free = @ptrCast(&osi_functions.free),
+        ._task_delay = osi_functions.task_delay,
+        ._task_ms_to_tick = osi_functions.task_ms_to_tick,
+        ._task_get_current_task = osi_functions.task_get_current_task,
+        ._task_get_max_priority = osi_functions.task_get_max_priority,
+        ._malloc = osi_functions.malloc,
+        ._free = &osi_functions.free,
         ._event_post = @ptrCast(&osi_functions.event_post),
         ._get_free_heap_size = @ptrCast(&osi_functions.get_free_heap_size),
-        ._rand = @ptrCast(&osi_functions.rand),
-        ._dport_access_stall_other_cpu_start_wrap = @ptrCast(&osi_functions.dport_access_stall_other_cpu_start_wrap),
-        ._dport_access_stall_other_cpu_end_wrap = @ptrCast(&osi_functions.dport_access_stall_other_cpu_end_wrap),
-        ._wifi_apb80m_request = @ptrCast(&osi_functions.wifi_apb80m_request),
-        ._wifi_apb80m_release = @ptrCast(&osi_functions.wifi_apb80m_release),
-        ._phy_disable = @ptrCast(&osi_functions.phy_disable),
-        ._phy_enable = @ptrCast(&osi_functions.phy_enable),
-        ._phy_update_country_info = @ptrCast(&osi_functions.phy_update_country_info),
-        ._read_mac = @ptrCast(&osi_functions.read_mac),
-        ._timer_arm = @ptrCast(&osi_functions.timer_arm),
-        ._timer_disarm = @ptrCast(&osi_functions.timer_disarm),
+        ._rand = osi_functions.rand,
+        ._dport_access_stall_other_cpu_start_wrap = osi_functions.dport_access_stall_other_cpu_start_wrap,
+        ._dport_access_stall_other_cpu_end_wrap = osi_functions.dport_access_stall_other_cpu_end_wrap,
+        ._wifi_apb80m_request = osi_functions.wifi_apb80m_request,
+        ._wifi_apb80m_release = osi_functions.wifi_apb80m_release,
+        ._phy_disable = osi_functions.phy_disable,
+        ._phy_enable = osi_functions.phy_enable,
+        ._phy_update_country_info = osi_functions.phy_update_country_info,
+        ._read_mac = osi_functions.read_mac,
+        ._timer_arm = osi_functions.timer_arm,
+        ._timer_disarm = osi_functions.timer_disarm,
         ._timer_done = @ptrCast(&osi_functions.timer_done),
         ._timer_setfn = @ptrCast(&osi_functions.timer_setfn),
-        ._timer_arm_us = @ptrCast(&osi_functions.timer_arm_us),
-        ._wifi_reset_mac = @ptrCast(&osi_functions.wifi_reset_mac),
-        ._wifi_clock_enable = @ptrCast(&osi_functions.wifi_clock_enable),
-        ._wifi_clock_disable = @ptrCast(&osi_functions.wifi_clock_disable),
+        ._timer_arm_us = osi_functions.timer_arm_us,
+        ._wifi_reset_mac = osi_functions.wifi_reset_mac,
+        ._wifi_clock_enable = osi_functions.wifi_clock_enable,
+        ._wifi_clock_disable = osi_functions.wifi_clock_disable,
         ._wifi_rtc_enable_iso = @ptrCast(&osi_functions.wifi_rtc_enable_iso),
         ._wifi_rtc_disable_iso = @ptrCast(&osi_functions.wifi_rtc_disable_iso),
-        ._esp_timer_get_time = @ptrCast(&osi_functions.esp_timer_get_time),
+        ._esp_timer_get_time = osi_functions.esp_timer_get_time,
         ._nvs_set_i8 = @ptrCast(&osi_functions.nvs_set_i8),
         ._nvs_get_i8 = @ptrCast(&osi_functions.nvs_get_i8),
         ._nvs_set_u8 = @ptrCast(&osi_functions.nvs_set_u8),
@@ -433,23 +599,23 @@ const osi_functions = struct {
         ._nvs_set_blob = @ptrCast(&osi_functions.nvs_set_blob),
         ._nvs_get_blob = @ptrCast(&osi_functions.nvs_get_blob),
         ._nvs_erase_key = @ptrCast(&osi_functions.nvs_erase_key),
-        ._get_random = &osi_functions.get_random,
+        ._get_random = osi_functions.get_random,
         ._get_time = @ptrCast(&osi_functions.get_time),
         ._random = &osi_functions.random,
-        ._slowclk_cal_get = @ptrCast(&osi_functions.slowclk_cal_get),
-        ._log_write = @ptrCast(&osi_functions.log_write),
-        ._log_writev = @ptrCast(&osi_functions.log_writev),
-        ._log_timestamp = @ptrCast(&osi_functions.log_timestamp),
-        ._malloc_internal = @ptrCast(&osi_functions.malloc_internal),
+        ._slowclk_cal_get = osi_functions.slowclk_cal_get,
+        ._log_write = osi_functions.log_write,
+        ._log_writev = osi_functions.log_writev,
+        ._log_timestamp = osi_functions.log_timestamp,
+        ._malloc_internal = osi_functions.malloc_internal,
         ._realloc_internal = @ptrCast(&osi_functions.realloc_internal),
-        ._calloc_internal = @ptrCast(&osi_functions.calloc_internal),
-        ._zalloc_internal = @ptrCast(&osi_functions.zalloc_internal),
-        ._wifi_malloc = @ptrCast(&osi_functions.wifi_malloc),
+        ._calloc_internal = osi_functions.calloc_internal,
+        ._zalloc_internal = osi_functions.zalloc_internal,
+        ._wifi_malloc = osi_functions.wifi_malloc,
         ._wifi_realloc = @ptrCast(&osi_functions.wifi_realloc),
-        ._wifi_calloc = @ptrCast(&osi_functions.wifi_calloc),
-        ._wifi_zalloc = @ptrCast(&osi_functions.wifi_zalloc),
-        ._wifi_create_queue = @ptrCast(&osi_functions.wifi_create_queue),
-        ._wifi_delete_queue = @ptrCast(&osi_functions.wifi_delete_queue),
+        ._wifi_calloc = osi_functions.wifi_calloc,
+        ._wifi_zalloc = osi_functions.wifi_zalloc,
+        ._wifi_create_queue = osi_functions.wifi_create_queue,
+        ._wifi_delete_queue = osi_functions.wifi_delete_queue,
         ._coex_init = @ptrCast(&osi_functions.coex_init),
         ._coex_deinit = @ptrCast(&osi_functions.coex_deinit),
         ._coex_enable = @ptrCast(&osi_functions.coex_enable),
@@ -736,18 +902,24 @@ const osi_functions = struct {
         write_index: usize = 0,
         storage: []u8,
 
-        pub fn init(capacity: usize, item_len: usize) error{OutOfMemory}!Queue {
-            return .{
+        pub fn create(allocator: Allocator, capacity: usize, item_len: usize) error{OutOfMemory}!*Queue {
+            const queue = try allocator.create(Queue);
+            errdefer allocator.destroy(queue);
+
+            queue.* = .{
                 .capacity = capacity,
                 .item_len = item_len,
                 .read_index = 0,
                 .write_index = 0,
-                .storage = try allocator_alloc_in_cs(u8, capacity * item_len),
+                .storage = try allocator.alloc(u8, capacity * item_len),
             };
+
+            return queue;
         }
 
-        pub fn deinit(self: Queue) void {
-            allocator_free_in_cs(self.storage);
+        pub fn destroy(self: *Queue, allocator: Allocator) void {
+            allocator.free(self.storage);
+            allocator.destroy(self);
         }
 
         pub fn len(self: Queue) usize {
@@ -756,10 +928,6 @@ const osi_functions = struct {
             } else {
                 return self.capacity - self.read_index + self.write_index;
             }
-        }
-
-        pub fn is_full(self: Queue) bool {
-            return self.len() == self.capacity;
         }
 
         pub fn get(self: Queue, index: usize) []u8 {
@@ -777,28 +945,25 @@ const osi_functions = struct {
             self.write_index = (self.write_index + 1) % self.capacity;
         }
 
-        pub fn dequeue(self: *Queue, data: [*]u8) error{QueueEmpty}!void {
+        pub fn dequeue(self: *Queue, item: [*]u8) error{QueueEmpty}!void {
             if (self.len() == 0) {
                 return error.QueueEmpty;
             }
 
             const slot = self.get(self.read_index);
-            @memcpy(data, slot);
+            @memcpy(item[0..self.item_len], slot);
             self.read_index = (self.read_index + 1) % self.capacity;
         }
     };
 
     pub fn queue_create(capacity: u32, item_len: u32) callconv(.c) ?*anyopaque {
-        log.debug("queue_create {} {}", .{capacity, item_len});
+        log.debug("queue_create {} {}", .{ capacity, item_len });
 
-        const queue = allocator_create_in_cs(Queue) catch {
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        const queue = Queue.create(wifi_allocator, capacity, item_len) catch {
             log.warn("failed to allocate queue", .{});
-            return null;
-        };
-
-        queue.* = .init(capacity, item_len) catch {
-            allocator_destroy_in_cs(queue);
-            log.warn("failed to init queue", .{});
             return null;
         };
 
@@ -809,23 +974,40 @@ const osi_functions = struct {
         log.debug("queue_delete {?}", .{ptr});
 
         const queue: *Queue = @alignCast(@ptrCast(ptr));
-        allocator_destroy_in_cs(queue);
-    }
-
-    pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
-        log.debug("queue_send {?} {?} {}", .{ptr, item_ptr, block_time_tick});
-
-        const queue: *Queue = @alignCast(@ptrCast(ptr));
-        const item: [*]const u8 = @alignCast(@ptrCast(ptr));
 
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
 
-        queue.enqueue(item);
+        queue.destroy(wifi_allocator);
     }
 
-    pub fn queue_send_from_isr() callconv(.c) void {
-        @panic("queue_send_from_isr: not implemented");
+    // NOTE: here we ignore the timeout. The rust version doesn't use it.
+    fn queue_send_common(ptr: ?*anyopaque, item_ptr: ?*anyopaque) callconv(.c) i32 {
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
+        const item: [*]const u8 = @alignCast(@ptrCast(item_ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        queue.enqueue(item) catch {
+            log.warn("failed to add item to queue", .{});
+            return 0;
+        };
+
+        return 1;
+    }
+
+    pub fn queue_send(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
+        log.debug("queue_send {?} {?} {}", .{ ptr, item_ptr, block_time_tick });
+
+        return queue_send_common(ptr, item_ptr);
+    }
+
+    pub fn queue_send_from_isr(ptr: ?*anyopaque, item_ptr: ?*anyopaque, _hptw: ?*anyopaque) callconv(.c) i32 {
+        log.debug("queue_send_from_isr {?} {?} {?}", .{ ptr, item_ptr, _hptw });
+
+        @as(*u32, @alignCast(@ptrCast(_hptw))).* = 1;
+        return queue_send_common(ptr, item_ptr);
     }
 
     pub fn queue_send_to_back() callconv(.c) void {
@@ -836,12 +1018,41 @@ const osi_functions = struct {
         @panic("queue_send_to_front: not implemented");
     }
 
-    pub fn queue_recv() callconv(.c) void {
-        @panic("queue_recv: not implemented");
+    pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32) callconv(.c) i32 {
+        log.debug("queue_recv {?} {?} {}", .{ ptr, item_ptr, block_time_tick });
+
+        const forever = block_time_tick == c.OSI_FUNCS_TIME_BLOCKING;
+        const timeout = block_time_tick;
+        const start = hal.time.get_time_since_boot();
+
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
+        const item: [*]u8 = @alignCast(@ptrCast(item_ptr));
+
+        while (true) {
+            const cs = microzig.interrupt.enter_critical_section();
+            defer cs.leave();
+
+            if (queue.dequeue(item)) |_| {
+                return 1;
+            } else |_| {}
+
+            if (!forever and hal.time.get_time_since_boot().diff(start).to_us() > timeout) {
+                return -1;
+            }
+
+            yield_task();
+        }
     }
 
-    pub fn queue_msg_waiting() callconv(.c) void {
-        @panic("queue_msg_waiting: not implemented");
+    pub fn queue_msg_waiting(ptr: ?*anyopaque) callconv(.c) u32 {
+        log.debug("queue_msg_waiting {?}", .{ptr});
+
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        return queue.len();
     }
 
     pub fn event_group_create() callconv(.c) void {
@@ -864,24 +1075,99 @@ const osi_functions = struct {
         @panic("event_group_wait_bits: not implemented");
     }
 
-    pub fn task_create_pinned_to_core() callconv(.c) void {
-        @panic("task_create_pinned_to_core: not implemented");
+    fn task_create_common(
+        task_func: ?*anyopaque,
+        name: [*c]const u8,
+        stack_depth: u32,
+        param: ?*anyopaque,
+        prio: u32,
+        task_handle: ?*anyopaque,
+        core_id: u32,
+    ) i32 {
+        _ = name; // autofix
+        _ = prio; // autofix
+        _ = core_id; // autofix
+
+        const cs = microzig.interrupt.enter_critical_section();
+        cs.leave();
+
+        const task: *Task = Task.create(
+            wifi_allocator,
+            @alignCast(@ptrCast(task_func)),
+            param,
+            stack_depth,
+        ) catch {
+            log.warn("failed to create task", .{});
+            return 0;
+        };
+        schedule_task(task);
+
+        @as(*usize, @alignCast(@ptrCast(task_handle))).* = @intFromPtr(task);
+
+        return 1;
     }
 
-    pub fn task_create() callconv(.c) void {
-        @panic("task_create: not implemented");
+    pub fn task_create_pinned_to_core(
+        task_func: ?*anyopaque,
+        name: [*c]const u8,
+        stack_depth: u32,
+        param: ?*anyopaque,
+        prio: u32,
+        task_handle: ?*anyopaque,
+        core_id: u32,
+    ) callconv(.c) i32 {
+        log.debug("task_create_pinned_to_core {?} {s} {} {?} {} {?} {}", .{
+            task_func,
+            name,
+            stack_depth,
+            param,
+            prio,
+            task_handle,
+            core_id,
+        });
+
+        return task_create_common(task_func, name, stack_depth, param, prio, task_handle, core_id);
+    }
+
+    pub fn task_create(
+        task_func: ?*anyopaque,
+        name: [*c]const u8,
+        stack_depth: u32,
+        param: ?*anyopaque,
+        prio: u32,
+        task_handle: ?*anyopaque,
+    ) callconv(.c) i32 {
+        log.debug("task_create {?} {s} {} {?} {} {?}", .{
+            task_func,
+            name,
+            stack_depth,
+            param,
+            prio,
+            task_handle,
+        });
+
+        return task_create_common(task_func, name, stack_depth, param, prio, task_handle, 0);
     }
 
     pub fn task_delete() callconv(.c) void {
         @panic("task_delete: not implemented");
     }
 
-    pub fn task_delay() callconv(.c) void {
-        @panic("task_delay: not implemented");
+    pub fn task_delay(tick: u32) callconv(.c) void {
+        log.debug("task_delay {}", .{tick});
+
+        const start = hal.time.get_time_since_boot();
+        const delay: time.Duration = .from_us(tick);
+
+        while (hal.time.get_time_since_boot().diff(start).less_than(delay)) {
+            yield_task();
+        }
     }
 
-    pub fn task_ms_to_tick(ms: u64) callconv(.c) u64 {
-        return ms * 1_000;
+    // NOTE: we could probably use milliseconds directly.
+    pub fn task_ms_to_tick(ms: u32) callconv(.c) i32 {
+        // NOTE: idk about bitcast here. Seems weird that it returns i32.
+        return @intCast(ms * 1_000);
     }
 
     pub fn task_get_current_task() callconv(.c) ?*anyopaque {
@@ -903,72 +1189,173 @@ const osi_functions = struct {
         @panic("get_free_heap_size: not implemented");
     }
 
-    pub fn rand() callconv(.c) void {
-        @panic("(): not implemented");
+    pub fn rand() callconv(.c) u32 {
+        return hal.rng.random_u32();
     }
 
     pub fn dport_access_stall_other_cpu_start_wrap() callconv(.c) void {
-        @panic("dport_access_stall_other_cpu_start_wrap: not implemented");
+        log.debug("dport_access_stall_other_cpu_start_wrap", .{});
     }
 
     pub fn dport_access_stall_other_cpu_end_wrap() callconv(.c) void {
-        @panic("dport_access_stall_other_cpu_end_wrap: not implemented");
+        log.debug("dport_access_stall_other_cpu_end_wrap", .{});
     }
 
     pub fn wifi_apb80m_request() callconv(.c) void {
-        @panic("wifi_apb80m_request: not implemented");
+        log.debug("wifi_apb80m_request", .{});
     }
 
     pub fn wifi_apb80m_release() callconv(.c) void {
-        @panic("wifi_apb80m_release: not implemented");
+        log.debug("wifi_apb80m_release", .{});
+    }
+
+    fn phy_set_enabled(enable: bool) void {
+        log.debug("phy_set_enabled", .{});
+
+        const system_wifi_clk_wifi_bt_common_m: u32 = 0x78078F;
+
+        var wifi_clk_en = APB_CTRL.WIFI_CLK_EN.read().WIFI_CLK_EN;
+        if (enable) {
+            wifi_clk_en |= system_wifi_clk_wifi_bt_common_m;
+        } else {
+            wifi_clk_en &= ~system_wifi_clk_wifi_bt_common_m;
+        }
+        APB_CTRL.WIFI_CLK_EN.write(.{ .WIFI_CLK_EN = wifi_clk_en });
     }
 
     pub fn phy_disable() callconv(.c) void {
-        @panic("phy_disable: not implemented");
+        log.debug("phy_disable", .{});
+        phy_set_enabled(false);
     }
 
     pub fn phy_enable() callconv(.c) void {
-        @panic("phy_enable: not implemented");
+        log.debug("phy_enable", .{});
+        phy_set_enabled(true);
     }
 
-    pub fn phy_update_country_info() callconv(.c) void {
-        @panic("phy_update_country_info: not implemented");
+    pub fn phy_update_country_info(country: [*c]const u8) callconv(.c) c_int {
+        log.debug("phy_update_country_info {s}", .{country});
+        return -1;
     }
 
-    pub fn read_mac() callconv(.c) void {
-        @panic("read_mac: not implemented");
+    pub fn read_mac(mac: [*c]u8, typ: c_uint) callconv(.c) c_int {
+        log.debug("read_mac {*} {}", .{ mac, typ });
+
+        const EFUSE = microzig.chip.peripherals.EFUSE;
+
+        const low_32_bits: u32 = EFUSE.RD_MAC_SPI_SYS_0.read().MAC_0;
+        const high_16_bits: u16 = EFUSE.RD_MAC_SPI_SYS_1.read().MAC_1;
+        @memcpy(mac[0..4], std.mem.asBytes(&low_32_bits));
+        @memcpy(mac[4..6], std.mem.asBytes(&high_16_bits));
+
+        // idk what this means
+        switch (typ) {
+            // esp_mac_wifi_softap
+            1 => {
+                const tmp = mac[0];
+                var i: u6 = 0;
+                while (i < 64) : (i += 1) {
+                    mac[0] |= 0x02;
+                    mac[0] ^= @intCast(i << 2);
+
+                    if (mac[0] != tmp) {
+                        break;
+                    }
+                }
+            },
+            // esp_mac_bt
+            2 => {
+                const tmp = mac[0];
+                var i: u6 = 0;
+                while (i < 64) : (i += 1) {
+                    mac[0] |= 0x02;
+                    mac[0] ^= @intCast(i << 2);
+
+                    if (mac[0] != tmp) {
+                        break;
+                    }
+                }
+                mac[5] += 1;
+            },
+            else => {},
+        }
+
+        return 0;
     }
 
-    pub fn timer_arm() callconv(.c) void {
-        @panic("timer_arm: not implemented");
+    pub fn timer_arm(ets_timer_ptr: ?*anyopaque, ms: u32, repeat: bool) callconv(.c) void {
+        timer_arm_us(ets_timer_ptr, ms * 1_000, repeat);
     }
 
-    pub fn timer_disarm() callconv(.c) void {
-        @panic("timer_disarm: not implemented");
+    pub fn timer_disarm(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
+        log.debug("timer_disarm {?}", .{ets_timer_ptr});
+
+        const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        if (find_timer(ets_timer)) |timer| {
+            timer.deadline = .init_absolute(null);
+        } else {
+            log.warn("timer not found based on ets_timer", .{});
+        }
     }
 
     pub fn timer_done() callconv(.c) void {
         @panic("timer_done: not implemented");
     }
 
-    pub fn timer_setfn() callconv(.c) void {
-        @panic("timer_setfn: not implemented");
+    pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?*anyopaque) callconv(.c) void {
+        log.debug("timer_setfn {?} {?} {?}", .{ ets_timer_ptr, callback_ptr, arg });
+
+        const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        if (find_timer(ets_timer)) |timer| {
+            timer.ets_timer.func = @alignCast(@ptrCast(callback_ptr));
+            timer.ets_timer.priv = arg;
+        } else {
+            wifi_allocator.alloc();
+        }
     }
 
-    pub fn timer_arm_us() callconv(.c) void {
-        @panic("timer_arm_us: not implemented");
+    pub fn timer_arm_us(ets_timer_ptr: ?*anyopaque, us: u32, repeat: bool) callconv(.c) void {
+        log.debug("timer_arm_us {?} {} {}", .{ ets_timer_ptr, us, repeat });
+
+        const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        if (find_timer(ets_timer)) |timer| {
+            const period: time.Duration = .from_us(us);
+            timer.deadline = .init_relative(hal.time.get_time_since_boot(), period);
+            timer.periodic = if (repeat) period else null;
+        } else {
+            log.warn("timer not found based on ets_timer", .{});
+        }
     }
 
     pub fn wifi_reset_mac() callconv(.c) void {
-        @panic("wifi_reset_mac: not implemented");
+        log.debug("wifi_reset_mac", .{});
+
+        APB_CTRL.WIFI_RST_EN.write(.{ .WIFI_RST = APB_CTRL.WIFI_RST_EN.read().WIFI_RST | (1 << 2) });
+        APB_CTRL.WIFI_RST_EN.write(.{ .WIFI_RST = APB_CTRL.WIFI_RST_EN.read().WIFI_RST & ~@as(u32, 1 << 2) });
     }
 
     pub fn wifi_clock_enable() callconv(.c) void {
-        @panic("wifi_clock_enable: not implemented");
+        log.debug("wifi_clock_enable", .{});
+
+        // no op on esp32c3
     }
 
     pub fn wifi_clock_disable() callconv(.c) void {
-        @panic("wifi_clock_disable: not implemented");
+        log.debug("wifi_clock_disable", .{});
+
+        // no op on esp32c3
     }
 
     pub fn wifi_rtc_enable_iso() callconv(.c) void {
@@ -979,8 +1366,11 @@ const osi_functions = struct {
         @panic("wifi_rtc_disable_iso: not implemented");
     }
 
-    pub fn esp_timer_get_time() callconv(.c) void {
-        @panic("esp_timer_get_time: not implemented");
+    pub fn esp_timer_get_time() callconv(.c) i64 {
+        log.debug("esp_timer_get_time", .{});
+
+        // TODO: or bit cast?
+        return @intCast(hal.time.get_time_since_boot().to_us());
     }
 
     pub fn nvs_set_i8() callconv(.c) void {
@@ -1044,60 +1434,74 @@ const osi_functions = struct {
         return hal.rng.random_u32();
     }
 
-    pub fn slowclk_cal_get() callconv(.c) void {
-        @panic("slowclk_cal_get: not implemented");
+    pub fn slowclk_cal_get() callconv(.c) u32 {
+        // NOTE: esp32c3 specific
+        return 28639;
     }
 
-    pub fn log_write() callconv(.c) void {
-        @panic("log_write: not implemented");
+    pub fn log_write(_: c_uint, _: [*c]const u8, fmt: [*c]const u8, ...) callconv(.c) void {
+        syslog(fmt, @cVaStart());
     }
 
-    pub fn log_writev() callconv(.c) void {
-        @panic("log_writev: not implemented");
+    pub fn log_writev(_: c_uint, _: [*c]const u8, fmt: [*c]const u8, va_list: c.va_list) callconv(.c) void {
+        syslog(fmt, @ptrCast(va_list));
     }
 
-    pub fn log_timestamp() callconv(.c) void {
-        @panic("log_timestamp: not implemented");
+    pub fn log_timestamp() callconv(.c) u32 {
+        return @truncate(hal.time.get_time_since_boot().to_us() * 1_000);
     }
 
-    pub fn malloc_internal() callconv(.c) void {
-        @panic("malloc_internal: not implemented");
-    }
+    pub const malloc_internal = malloc;
 
     pub fn realloc_internal() callconv(.c) void {
         @panic("realloc_internal: not implemented");
     }
 
-    pub fn calloc_internal() callconv(.c) void {
-        @panic("calloc_internal: not implemented");
+    pub const calloc_internal = c_functions.calloc;
+
+    pub fn zalloc_internal(len: usize) callconv(.c) ?*anyopaque {
+        if (malloc(len)) |ptr| {
+            @memset(@as([*]u8, @ptrCast(ptr))[0..len], 0);
+            return ptr;
+        }
+
+        return null;
     }
 
-    pub fn zalloc_internal() callconv(.c) void {
-        @panic("zalloc_internal: not implemented");
-    }
-
-    pub fn wifi_malloc() callconv(.c) void {
-        @panic("wifi_malloc: not implemented");
-    }
+    pub const wifi_malloc = malloc;
 
     pub fn wifi_realloc() callconv(.c) void {
         @panic("wifi_realloc: not implemented");
     }
 
-    pub fn wifi_calloc() callconv(.c) void {
-        @panic("wifi_calloc: not implemented");
+    pub const wifi_calloc = c_functions.calloc;
+    pub const wifi_zalloc = zalloc_internal;
+
+    var wifi_queue_handle: *Queue = undefined;
+
+    pub fn wifi_create_queue(capacity: c_int, item_len: c_int) callconv(.c) ?*anyopaque {
+        log.debug("wifi_create_queue {} {}", .{ capacity, item_len });
+
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        wifi_queue_handle = Queue.create(wifi_allocator, @intCast(capacity), @intCast(item_len)) catch {
+            log.warn("failed to allocate wifi queue", .{});
+            return null;
+        };
+
+        return @ptrCast(&wifi_queue_handle);
     }
 
-    pub fn wifi_zalloc() callconv(.c) void {
-        @panic("wifi_zalloc: not implemented");
-    }
+    pub fn wifi_delete_queue(ptr: ?*anyopaque) callconv(.c) void {
+        log.debug("wifi_delete_queue", .{});
 
-    pub fn wifi_create_queue() callconv(.c) void {
-        @panic("wifi_create_queue: not implemented");
-    }
+        const queue: *Queue = @alignCast(@ptrCast(ptr));
 
-    pub fn wifi_delete_queue() callconv(.c) void {
-        @panic("wifi_delete_queue: not implemented");
+        const cs = microzig.interrupt.enter_critical_section();
+        defer cs.leave();
+
+        queue.destroy(wifi_allocator);
     }
 
     pub fn coex_init() callconv(.c) void {

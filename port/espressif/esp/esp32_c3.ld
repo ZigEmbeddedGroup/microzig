@@ -83,10 +83,6 @@ SECTIONS
     PROVIDE(__global_pointer$ = microzig_data_start + 0x800);
 }
 
-PROVIDE(pp_printf = printf);
-PROVIDE(net80211_printf = printf);
-PROVIDE(phy_printf = printf);
-
 /* ROM function interface esp32c3.rom.ld for esp32c3
  *
  *
