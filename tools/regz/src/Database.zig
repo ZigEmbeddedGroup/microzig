@@ -1669,9 +1669,9 @@ pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOpt
 
     try db.exec(
         \\INSERT INTO struct_fields
-        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, stride)
+        \\  (struct_id, name, description, size_bits, offset_bits, enum_id, count, stride)
         \\VALUES
-        \\  (?, ?, ?, ?, ?, ?, ?)
+        \\  (?, ?, ?, ?, ?, ?, ?, ?)
     , .{
         .struct_id = parent,
         .name = opts.name,
@@ -1679,17 +1679,19 @@ pub fn add_struct_field(db: *Database, parent: StructID, opts: AddStructFieldOpt
         .size_bits = opts.size_bits,
         .offset_bits = opts.offset_bits,
         .enum_id = opts.enum_id,
+        .count = opts.count,
         .stride = opts.stride,
     });
 
     savepoint.commit();
 
-    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} stride={?}", .{
+    log.debug("add_struct_field: parent={} name='{s}' offset_bits={} size_bits={} enum_id={?} count={?} stride={?}", .{
         parent,
         opts.name,
         opts.offset_bits,
         opts.size_bits,
         opts.enum_id,
+        opts.count,
         opts.stride,
     });
 }
