@@ -15,7 +15,7 @@ pub const microzig_options: microzig.Options = .{
     },
 };
 
-var buffer: [1024]u8 = undefined;
+var buffer: [70 * 1024]u8 = undefined;
 
 pub fn main() !void {
     std.log.info("hello world!", .{});
@@ -25,6 +25,7 @@ pub fn main() !void {
 
     wifi.init(allocator) catch |err| std.debug.panic("{}", .{err});
     wifi.wifi_controller.init() catch |err| std.debug.panic("{}", .{err});
+
 
     while (true) {
         std.log.info("tick!", .{});
