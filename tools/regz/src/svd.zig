@@ -731,7 +731,7 @@ const DimElements = struct {
 
         return DimElements{
             .type = if (is_array_type) DimType.array else DimType.list,
-            .dim = dim orelse return null,
+            .dim = dim.?,
             .dim_increment = dim_increment.?,
             .dim_index = dim_index,
             .dim_name = node.get_value("dimName"), // TODO: use this if it exists instead "name" if available
