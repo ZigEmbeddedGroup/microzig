@@ -12,7 +12,31 @@ var free_lists: [free_list_count]?*Chunk = undefined;
 var low_boundary: usize = undefined;
 var high_boundary: usize = undefined;
 
-var mutex: microzig.hal.mutex.Mutex = .{};
+// const Mutex = if (microzig.config.has_hal and @hasDecl(microzig, "mutex") and @hasDecl(microzig.mutex, "Mutex"))
+//     microzig.hal.mutex.Mutex
+// else
+//     microzig.interrupt.Mutex;
+
+var mutex = microzig.interrupt.Mutex.init(.{});
+
+// This function initializes the allocator to use all memory that is not otherwise
+// used by the program.  It relies on the linker script to define the
+// microzig_heap_start and microzig_heap_end symbols.
+pub fn useUnallocatedMemory() void {
+
+    // std.log.debug("microzig_heap_start: 0x{x:08}", .{@intFromPtr(&microzig_heap_start)});
+    // std.log.debug("microzig_heap_end: 0x{x:08}", .{@intFromPtr(&microzig_heap_end)});
+
+    const unalloc: [*]u8 = @ptrCast(&microzig_heap_start);
+    const unalloc_len: usize = @intFromPtr(&microzig_heap_end) - @intFromPtr(&microzig_heap_start);
+
+    // std.log.debug("unalloc_len: {d}", .{unalloc_len});
+
+    initialize(unalloc[0..unalloc_len]);
+}
+
+extern var microzig_heap_start: u8;
+extern var microzig_heap_end: u8;
 
 /// Set up the initial heap computing a low and high boundary and adding all
 /// available memory to the free list as a single chunk.
@@ -142,7 +166,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
                 // See if there is trailing space that we can trim off.
 
                 const trim_addr = Chunk.alignment.forward(data_addr + len);
-                const next_addr = @intFromPtr(our_chunk.next());
+                const next_addr = @intFromPtr(our_chunk.get_next());
 
                 if (trim_addr + Chunk.min_size < next_addr) {
                     const our_address = @intFromPtr(our_chunk);
@@ -190,10 +214,10 @@ fn resize(_: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) b
     if (new_len > chunk.size() - Chunk.header_size) {
         // We need to grow the chunk, which means the next chunk must be free.
 
-        if (!chunk.next().is_free()) return false;
+        if (!chunk.get_next().is_free()) return false;
 
         const target_size = new_len + Chunk.header_size;
-        const combined_size = chunk.size() + chunk.next().size();
+        const combined_size = chunk.size() + chunk.get_next().size();
 
         // We can't grow the chunk if there isn't enough space.
 
@@ -201,7 +225,7 @@ fn resize(_: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) b
 
         // OK, we can grow the chunk.
 
-        chunk.next().unlink();
+        chunk.get_next().unlink();
 
         chunk._size = target_size;
     }
@@ -210,7 +234,7 @@ fn resize(_: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usize) b
 
     const data_addr = @intFromPtr(chunk.data());
     const trim_addr = Chunk.alignment.forward(data_addr + new_len);
-    const next_addr = @intFromPtr(chunk.next());
+    const next_addr = @intFromPtr(chunk.get_next());
 
     if (trim_addr + Chunk.min_size < next_addr) {
         const our_address = @intFromPtr(chunk);
@@ -273,7 +297,7 @@ fn free_index_for_size(size: usize) usize {
 ///
 /// Since the actual size of a chunk is always even, we can use the least
 /// significant bit of the size field to mark the chunk as in use.
-const Chunk = extern struct {
+pub const Chunk = struct {
     previous_size: usize = 0,
     _size: usize = 0, // chunk size and in-use flag
     next_free: ?*Chunk = null,
@@ -287,13 +311,13 @@ const Chunk = extern struct {
     pub fn from_data(data_slice: []u8) *Chunk {
         // If we are built with .Debug or .ReleaseSafe, we need to do a slow
         // search to make sure the slice is valid.
-        std.debug.assert( blk: {
+        std.debug.assert(blk: {
             var chunk: *Chunk = @ptrFromInt(low_boundary);
             while (@intFromPtr(chunk) < high_boundary) {
                 if (data_slice.ptr == chunk.data()) {
                     break :blk true;
                 }
-                chunk = chunk.next();
+                chunk = chunk.get_next();
             }
             break :blk false;
         });
@@ -313,8 +337,9 @@ const Chunk = extern struct {
     }
 
     /// Returns true of the chunk is marked as free.  That is the low order bit
-    /// of the size value is clear. An out of range Chunk pointer will return
-    /// not free.
+    /// of the size value is clear.
+    ///
+    /// An out-of-range Chunk pointer will return `false` (not free).
     pub fn is_free(self: *Chunk) bool {
         const addr: usize = @intFromPtr(self);
         if (addr < low_boundary or addr >= high_boundary) return false;
@@ -324,33 +349,47 @@ const Chunk = extern struct {
 
     /// Returns a pointer to the previous chunk in the heap.
     /// Note: this can return an out of range Chunk pointer.
-    pub fn prior(self: *Chunk) *Chunk {
+    pub fn get_prior(self: *Chunk) *Chunk {
         return @ptrFromInt(@intFromPtr(self) - self.previous_size);
     }
 
     /// Returns a pointer to the next chunk in the heap.
     /// Note: this can return an out of range Chunk pointer.
-    pub fn next(self: *Chunk) *Chunk {
+    pub fn get_next(self: *Chunk) *Chunk {
         return @ptrFromInt(@intFromPtr(self) + self.size());
     }
 
     /// Combine this chunk with any neighboring free chunks and
     /// add the result to the appropriate free list.
     pub fn combine_and_free(self: *Chunk) void {
+        // std.log.debug("Freeing chunk 0x{x:08}", .{ @intFromPtr(self) });
+
         var chunk = self;
 
-        if (chunk.next().is_free()) {
-            chunk.next().unlink();
-            chunk._size += chunk.next().size();
+        var next = chunk.get_next();
+        if (next.is_free()) {
+            // std.log.debug("Combining chunk 0x{x:08} with next chunk 0x{x:08}", .{ @intFromPtr(chunk), @intFromPtr(next) });
+            // combine the chunks
+            next.unlink();
+            chunk._size = chunk.size() + next.size();
+
+            // update the next pointer and the next chunk's previous size
+            next = next.get_next();
+            if (@intFromPtr(next) < high_boundary) next.previous_size = chunk.size();
         }
 
-        if (chunk.prior().is_free()) {
+        const prior = chunk.get_prior();
+        if (chunk.previous_size != 0 and prior.is_free()) {
+            // std.log.debug("Combining chunk 0x{x:08} with prior chunk 0x{x:08}", .{ @intFromPtr(chunk), @intFromPtr(prior) });
+            // combine the chunks
             const our_size = chunk.size();
-
-            chunk = chunk.prior();
+            chunk = prior;
             chunk.unlink();
-            chunk._size += our_size;
+            chunk._size = chunk.size() + our_size;
         }
+
+        // next chunk's previous size
+        if (@intFromPtr(next) < high_boundary) next.previous_size = chunk.size();
 
         const free_index = free_index_for_size(chunk.size());
         const list = free_lists[free_index];
@@ -366,14 +405,150 @@ const Chunk = extern struct {
 
     /// Unlink the chunk from the free list.
     pub fn unlink(self: *Chunk) void {
-        if (!self.is_free()) return;
+        if (!self.is_free()) @panic("unlink - Chunk is not free");
 
         if (self.prior_free) |p| {
             p.next_free = self.next_free;
         } else {
-            free_lists[free_index_for_size(self.size())] = self.next_free;
+            const free_list = free_index_for_size(self.size());
+            free_lists[free_list] = self.next_free;
         }
 
         if (self.next_free) |n| n.prior_free = self.prior_free;
     }
 };
+
+//------------------------------------------------------------------------------
+// Debugging Functions
+
+
+pub fn dbg_log_free_chains() void {
+    for (0..free_list_count) |i| {
+        var chunks = free_lists[i];
+
+        if (chunks == null) continue;
+
+        std.log.debug("Free list {d}: ", .{i});
+
+        while (chunks) |chunk| {
+            if (chunk.is_free()) {
+                std.log.debug("  0x{x:08} {d:6} {x:08} {x:08} ", .{ @intFromPtr(chunk), chunk.size(), @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+            } else {
+                std.log.debug("  0x{x:08} {d:6} {x:08} {x:08} <NOT FREE>", .{ @intFromPtr(chunk), chunk.size(), @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+            }
+
+            chunks = chunk.next_free;
+        }
+    }
+}
+
+pub fn dbg_log_chunk_list() void {
+    var address: usize = low_boundary;
+    while (address < high_boundary) {
+        const chunk: *Chunk = @ptrFromInt(address);
+
+        if (chunk.is_free()) {
+            std.log.debug("0x{x:08} s:{d:6} p:{d:6} {x:08} {x:08}; ", .{ @intFromPtr(chunk), chunk.size(), chunk.previous_size, @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+        } else {
+            std.log.debug("0x{x:08} s:{d:6} p:{d:6}; ", .{ @intFromPtr(chunk), chunk.size(), chunk.previous_size });
+        }
+
+        address += chunk.size();
+    }
+}
+
+
+pub fn dbg_integrity_check() bool {
+    var valid: bool = true;
+
+
+    var previous_size: usize = 0;
+
+    // If we skip over memory based on chunk size we should end up exactly at the end of the heap.
+    // Also, each previous_size should match the size of prior chunk.
+
+    // We mark each chunk here by setting the low order bit of the previous size to 1.
+
+    var address: usize = low_boundary;
+    while (address < high_boundary) {
+        const chunk: *Chunk = @ptrFromInt(address);
+
+        if (chunk.previous_size != previous_size) {
+            valid = false;
+            std.log.debug("Chunk list integrity check failed: chunk 0x{x:08} previous_size {d} != {d}\n", .{ @intFromPtr(chunk), chunk.previous_size, previous_size });
+        }
+
+        previous_size = chunk.size();
+        address += chunk.size();
+
+        chunk.previous_size |= 0x01;
+    }
+
+    if (address > high_boundary) {
+        valid = false;
+        std.log.debug("Chunk list integrity check failed: address 0x{x:08} > high_boundary 0x{x:08}\n", .{address, high_boundary});
+    }
+
+    // Every chunk on one of the fre lists should be marked free and should be a valid chunk
+    // reachable by skipping over memory based on chunk size.
+
+    // We clear the low order bit of the previous size to 0 for any free chunks.
+
+    for (0..free_list_count) |i| {
+        var chunks = free_lists[i];
+
+        if (chunks == null) continue;
+
+        while (chunks) |chunk| {
+            if (!chunk.is_free()) {
+                valid = false;
+                std.log.debug("Chunk free list integrity check failed: chunk on free list 0x{x:08} is not free\n", .{@intFromPtr(chunk)});
+            }
+
+            var found: bool = false;
+
+            var test_address: usize = low_boundary;
+            while (test_address < high_boundary) {
+                const test_chunk: *Chunk = @ptrFromInt(test_address);
+                test_address += test_chunk.size();
+
+                if (chunk == test_chunk) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                valid = false;
+                std.log.debug("Chunk free list integrity check failed: chunk on free list 0x{x:08} is not in the chunk list\n", .{@intFromPtr(chunk)});
+            }
+
+            chunk.previous_size &= ~@as(usize, 0x01);
+
+            chunks = chunk.next_free;
+        }
+    }
+
+    // Make sure any chunk with the low order bit of the previous size set also has the
+    // low order bit of the size set.
+
+    //  Unmark each chunk here by clearing the low order bit of the previous size to 0.
+
+    address = low_boundary;
+    while (address < high_boundary) {
+        const chunk: *Chunk = @ptrFromInt(address);
+        if (chunk.previous_size & 0x01 != 0 and chunk._size & 0x01 == 0) {
+            valid = false;
+            std.log.debug("Chunk integrity check failed: Chunk 0x{x:08} in-use chunk marked as free\n", .{ @intFromPtr(chunk) });
+        }
+        chunk.previous_size &= ~@as(usize, 0x01);
+        address += chunk.size();
+    }
+
+    if (!valid) {
+      dbg_log_free_chains();
+      dbg_log_chunk_list();
+    }
+
+    return valid;
+}
