@@ -23,14 +23,15 @@ pub fn main() !void {
         // }
         pins.led.toggle();
 
-        busyloop();
+        busy_delay(1000);
     }
 }
 
-// cpu_frequency
-
-inline fn busyloop() void {
-    const limit = board.cpu_frequency / 4;
+inline fn busy_delay(comptime ms: u32) void {
+    const cpu_frequency = board.cpu_frequency;
+    const cycles_per_ms = cpu_frequency / 1_000;
+    const loop_cycles = 3;
+    const limit = cycles_per_ms * ms / loop_cycles;
 
     var i: u32 = 0;
     while (i < limit) : (i += 1) {
