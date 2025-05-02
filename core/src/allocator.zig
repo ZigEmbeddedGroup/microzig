@@ -421,7 +421,6 @@ pub const Chunk = struct {
 //------------------------------------------------------------------------------
 // Debugging Functions
 
-
 pub fn dbg_log_free_chains() void {
     for (0..free_list_count) |i| {
         var chunks = free_lists[i];
@@ -457,10 +456,8 @@ pub fn dbg_log_chunk_list() void {
     }
 }
 
-
 pub fn dbg_integrity_check() bool {
     var valid: bool = true;
-
 
     var previous_size: usize = 0;
 
@@ -486,7 +483,7 @@ pub fn dbg_integrity_check() bool {
 
     if (address > high_boundary) {
         valid = false;
-        std.log.debug("Chunk list integrity check failed: address 0x{x:08} > high_boundary 0x{x:08}\n", .{address, high_boundary});
+        std.log.debug("Chunk list integrity check failed: address 0x{x:08} > high_boundary 0x{x:08}\n", .{ address, high_boundary });
     }
 
     // Every chunk on one of the fre lists should be marked free and should be a valid chunk
@@ -539,15 +536,15 @@ pub fn dbg_integrity_check() bool {
         const chunk: *Chunk = @ptrFromInt(address);
         if (chunk.previous_size & 0x01 != 0 and chunk._size & 0x01 == 0) {
             valid = false;
-            std.log.debug("Chunk integrity check failed: Chunk 0x{x:08} in-use chunk marked as free\n", .{ @intFromPtr(chunk) });
+            std.log.debug("Chunk integrity check failed: Chunk 0x{x:08} in-use chunk marked as free\n", .{@intFromPtr(chunk)});
         }
         chunk.previous_size &= ~@as(usize, 0x01);
         address += chunk.size();
     }
 
     if (!valid) {
-      dbg_log_free_chains();
-      dbg_log_chunk_list();
+        dbg_log_free_chains();
+        dbg_log_chunk_list();
     }
 
     return valid;
