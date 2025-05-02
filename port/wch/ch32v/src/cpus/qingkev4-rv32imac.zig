@@ -48,6 +48,17 @@ pub const startup_logic = struct {
         asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
         microzig.cpu.interrupt.enable_interrupts();
 
+        // init system clock
+        const RCC = microzig.chip.peripherals.RCC;
+        RCC.CTLR.modify(.{ .HSION = 1 });
+        RCC.CFGR0.raw &= 0xF8FF0000;
+        RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0 });
+        RCC.CTLR.modify(.{ .HSEBYP = 0 });
+        RCC.CFGR0.raw &= 0xFF80FFFF;
+        RCC.CTLR.raw &= 0xEBFFFFFF;
+        RCC.INTR.raw = 0x00FF0000;
+        RCC.CFGR2.raw = 0x00000000;
+
         microzig_main();
     }
 
