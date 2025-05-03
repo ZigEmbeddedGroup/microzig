@@ -487,12 +487,14 @@ pub fn field_with_count_width_of_one_offset_and_padding(allocator: Allocator) !*
         .offset_bytes = 0,
     });
 
-    try db.add_register_field(portb_id, .{
-        .name = "TEST_FIELD",
-        .size_bits = 1,
-        .offset_bits = 2,
-        .count = 5,
-    });
+    inline for (0..5) |i| {
+        const suffix = std.fmt.comptimePrint("{d}", .{i});
+        try db.add_register_field(portb_id, .{
+            .name = "TEST_FIELD" ++ suffix,
+            .size_bits = 1,
+            .offset_bits = 2 + i,
+        });
+    }
 
     return db;
 }
@@ -513,12 +515,14 @@ pub fn field_with_count_multi_bit_width_offset_and_padding(allocator: Allocator)
         .offset_bytes = 0,
     });
 
-    try db.add_register_field(portb_id, .{
-        .name = "TEST_FIELD",
-        .size_bits = 2,
-        .offset_bits = 2,
-        .count = 2,
-    });
+    inline for (0..2) |i| {
+        const suffix = std.fmt.comptimePrint("{d}", .{i});
+        try db.add_register_field(portb_id, .{
+            .name = "TEST_FIELD" ++ suffix,
+            .size_bits = 2,
+            .offset_bits = 2 + (i * 2),
+        });
+    }
 
     return db;
 }
