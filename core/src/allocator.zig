@@ -120,9 +120,11 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
     mutex.lock();
     defer mutex.unlock();
 
-    // std.log.debug( "\n *** Allocating {} bytes of memory with alignment {d}\n", .{ len, alignment.toByteUnits() } );
+    // std.log.debug("\n *** Allocating {} bytes of memory with alignment {d}", .{ len, alignment.toByteUnits() });
 
-    var free_index = free_index_for_size(len + Chunk.header_size);
+    const needed = @max(len, @sizeOf(Chunk) - Chunk.header_size);
+
+    var free_index = free_index_for_size(needed);
 
     while (free_index < free_list_count) {
         var maybe_chunk = free_lists[free_index];
@@ -147,7 +149,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
                 trim_leading = true;
             }
 
-            if (available >= len) {
+            if (available >= needed) {
                 // OK, We have enough space to fit the requested memory, unlink the chunk.
 
                 c.unlink();
@@ -165,7 +167,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
 
                 // See if there is trailing space that we can trim off.
 
-                const trim_addr = Chunk.alignment.forward(data_addr + len);
+                const trim_addr = Chunk.alignment.forward(data_addr + needed);
                 const next_addr = @intFromPtr(our_chunk.get_next());
 
                 if (trim_addr + Chunk.min_size < next_addr) {
@@ -183,6 +185,7 @@ fn alloc(_: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
                 }
 
                 our_chunk._size |= 0x01;
+
                 return our_chunk.data();
             }
 
@@ -297,11 +300,11 @@ fn free_index_for_size(size: usize) usize {
 ///
 /// Since the actual size of a chunk is always even, we can use the least
 /// significant bit of the size field to mark the chunk as in use.
-pub const Chunk = struct {
+pub const Chunk = extern struct {
     previous_size: usize = 0,
     _size: usize = 0, // chunk size and in-use flag
-    next_free: ?*Chunk = null,
     prior_free: ?*Chunk = null,
+    next_free: ?*Chunk = null,
 
     const header_size = 2 * @sizeOf(usize);
     const min_size = header_size + 2 * @sizeOf(?*Chunk);
@@ -362,42 +365,43 @@ pub const Chunk = struct {
     /// Combine this chunk with any neighboring free chunks and
     /// add the result to the appropriate free list.
     pub fn combine_and_free(self: *Chunk) void {
-        // std.log.debug("Freeing chunk 0x{x:08}", .{ @intFromPtr(self) });
-
         var chunk = self;
+
+        chunk._size &= ~@as(usize, 0x01); // Make sure the chunk is marked free.
 
         var next = chunk.get_next();
         if (next.is_free()) {
             // std.log.debug("Combining chunk 0x{x:08} with next chunk 0x{x:08}", .{ @intFromPtr(chunk), @intFromPtr(next) });
             // combine the chunks
             next.unlink();
-            chunk._size = chunk.size() + next.size();
+            chunk._size += next._size;
 
-            // update the next pointer and the next chunk's previous size
+            // update the next pointer
             next = next.get_next();
-            if (@intFromPtr(next) < high_boundary) next.previous_size = chunk.size();
         }
 
-        const prior = chunk.get_prior();
-        if (chunk.previous_size != 0 and prior.is_free()) {
-            // std.log.debug("Combining chunk 0x{x:08} with prior chunk 0x{x:08}", .{ @intFromPtr(chunk), @intFromPtr(prior) });
-            // combine the chunks
-            const our_size = chunk.size();
-            chunk = prior;
-            chunk.unlink();
-            chunk._size = chunk.size() + our_size;
+        if (chunk.previous_size != 0) {
+            const prior = chunk.get_prior();
+            if (prior.is_free()) {
+                // std.log.debug("Combining chunk 0x{x:08} with prior chunk 0x{x:08}", .{ @intFromPtr(chunk), @intFromPtr(prior) });
+                // combine the chunks
+                const our_size = chunk._size;
+                chunk = prior;
+                chunk.unlink();
+                chunk._size += our_size;
+            }
         }
 
-        // next chunk's previous size
-        if (@intFromPtr(next) < high_boundary) next.previous_size = chunk.size();
+        // set next chunk's previous size
+        if (@intFromPtr(next) < high_boundary) {
+            next.previous_size = chunk._size;
+        }
 
         const free_index = free_index_for_size(chunk.size());
         const list = free_lists[free_index];
 
         chunk.prior_free = null;
         chunk.next_free = list;
-
-        chunk._size &= ~@as(usize, 0x01);
 
         if (list) |head| head.prior_free = chunk;
         free_lists[free_index] = chunk;
@@ -443,16 +447,19 @@ pub fn dbg_log_free_chains() void {
 
 pub fn dbg_log_chunk_list() void {
     var address: usize = low_boundary;
+    var idx: usize = 0;
+
     while (address < high_boundary) {
         const chunk: *Chunk = @ptrFromInt(address);
 
         if (chunk.is_free()) {
-            std.log.debug("0x{x:08} s:{d:6} p:{d:6} {x:08} {x:08}; ", .{ @intFromPtr(chunk), chunk.size(), chunk.previous_size, @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
+            std.log.debug("{d:6}: 0x{x:08} s:{d:6} p:{d:6} {x:08} {x:08}; ", .{ idx, @intFromPtr(chunk), chunk.size(), chunk.previous_size, @intFromPtr(chunk.prior_free), @intFromPtr(chunk.next_free) });
         } else {
-            std.log.debug("0x{x:08} s:{d:6} p:{d:6}; ", .{ @intFromPtr(chunk), chunk.size(), chunk.previous_size });
+            std.log.debug("{d:6}: 0x{x:08} s:{d:6} p:{d:6}; ", .{ idx, @intFromPtr(chunk), chunk.size(), chunk.previous_size });
         }
 
         address += chunk.size();
+        idx += 1;
     }
 }
 
