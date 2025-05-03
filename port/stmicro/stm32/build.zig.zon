@@ -1,13 +1,13 @@
 .{
-    .name = .microzig_port_stmicro_stm32,
-    .fingerprint = 0x15e93a4a714e56a5,
+    .name = .mz_port_stmicro_stm32,
+    .fingerprint = 0x6d690da720c17d27,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
         .@"microzig/tools/regz" = .{ .path = "../../../tools/regz" },
         .@"stm32-data-generated" = .{
             .url = "git+https://github.com/embassy-rs/stm32-data-generated.git#5198a6e36b24f6d79c4ac91af5e61e8d54667d88",
-            .hash = "12204e87e362907155063cd01341752a2c602a35566279628cf3665f981f4c960232",
+            .hash = "N-V-__8AAFi8WBlOh-NikHFVBjzQE0F1KixgKjVWYnlijPNm",
             .lazy = true,
         },
     },

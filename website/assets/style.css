@@ -1,4 +1,14 @@
 body {
+    font-family: "Noto Sans", sans-serif;
+}
+
+a {
+    color: var(--srcery-blue);
+    text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 .upper-header {
@@ -70,9 +80,23 @@ pre {
     overflow-x: auto;
 }
 
-code {
-  white-space: pre;
+pre code {
+    white-space: pre;
+    font-family: "Sometype Mono", monospace;
+    padding: 0px;
+    color: var(--srcery-white-bright);
+    background-color: var(--srcery-black);
+}
 
+code {
+    background-color: var(--srcery-black);
+    padding-right: 3px;
+    padding-left: 3px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    color: var(--srcery-yellow);
+    white-space: pre;
+    font-family: "Sometype Mono", monospace;
 }
 
 code .attribute             { color: var(--srcery-white-bright)   }

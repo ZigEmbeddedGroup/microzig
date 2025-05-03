@@ -1,7 +1,6 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const drivers = microzig.drivers;
-const lcd_driver = drivers.display.hd44780;
 const lcd = drivers.display.HD44780;
 const PCF8574 = drivers.IO_expander.PCF8574;
 const State = drivers.base.Digital_IO.State;

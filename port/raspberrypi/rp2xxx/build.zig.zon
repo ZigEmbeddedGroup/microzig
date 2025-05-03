@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_port_raspberrypi_rp2xxx,
-    .fingerprint = 0x644d4e07832b69f5,
+    .name = .mz_port_raspberrypi_rp2xxx,
+    .fingerprint = 0xdf26650f89ed2bc0,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },

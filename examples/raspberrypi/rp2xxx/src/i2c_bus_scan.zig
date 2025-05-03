@@ -42,9 +42,6 @@ pub fn main() !void {
     for (0..std.math.maxInt(u7)) |addr| {
         const a: i2c.Address = @enumFromInt(addr);
 
-        // Skip over any reserved addresses.
-        if (a.is_reserved()) continue;
-
         var rx_data: [1]u8 = undefined;
         _ = i2c0.read_blocking(a, &rx_data, time.Duration.from_ms(100)) catch continue;
 

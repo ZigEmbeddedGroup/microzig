@@ -1,6 +1,6 @@
 .{
-    .name = .modules_riscv32common,
-    .fingerprint = 0x6420fe5345654450,
+    .name = .riscv32common,
+    .fingerprint = 0xde1ed91db6b5dcf9,
     .version = "0.0.0",
     .paths = .{
         "README.md",

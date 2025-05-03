@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_package_test,
-    .fingerprint = 0x2cd1f8220dc1754c,
+    .name = .mz_package_test,
+    .fingerprint = 0x67a6623979baa54d,
     .version = "0.0.0",
     .dependencies = .{},
     .paths = .{

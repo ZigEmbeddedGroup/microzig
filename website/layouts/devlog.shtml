@@ -1,0 +1,19 @@
+<extend template="base.shtml">
+<title id="title" var="$page.title"></title>
+<div id="main">
+  <div id="page" :loop="$page.contentSections()">
+    <ctx :if="$loop.first" :html="$loop.it.html()"></ctx>
+    <ctx
+      :if="$loop.first.not().and($loop.last.not())"
+    >
+      <div id="$loop.it.id">
+        <h3><a :text="$loop.it.id" href="$loop.it.id.prefix('#')"></a></h3>
+        <h4 :text="$loop.it.data.get('date')"></h4>
+        <ctx :html="$loop.it.html()"></ctx>
+      </div>
+    </ctx>
+    <ctx :if="$loop.last">
+      <div id="old" :html="$loop.it.html()"></div>
+    </ctx>
+  </div>
+</div>

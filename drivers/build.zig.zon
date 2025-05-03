@@ -1,6 +1,6 @@
 .{
-    .name = .microzig_drivers,
-    .fingerprint = 0x642972f04265d547,
+    .name = .mz_drivers,
+    .fingerprint = 0x576453eedc5af46e,
     .version = "0.0.1",
     .paths = .{
         "build.zig",
