@@ -82,7 +82,7 @@ pub const unhandled: Handler = .{
 /// try to lock it (non-blocking) with `const success: bool = aMutex.try_lock();`,
 /// and unlock it with `aMutex.unlock();`.
 ///
-pub const Mutex = if (microzig.config.has_hal and @hasDecl(microzig, "mutex") and @hasDecl(microzig.mutex, "Mutex"))
+pub const Mutex = if (microzig.config.has_hal and @hasDecl(microzig.hal, "mutex") and @hasDecl(microzig.hal.mutex, "Mutex"))
     microzig.hal.mutex.Mutex
 else
     CriticalSectionMutex;

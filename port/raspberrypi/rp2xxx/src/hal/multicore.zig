@@ -110,7 +110,13 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         0,
         0,
         1,
-        microzig.cpu.peripherals.scb.VTOR,
+        if (microzig.hal.compatibility.arch == .riscv)
+            @intFromPtr(if (microzig.cpu.interrupt.has_ram_vectors())
+                &microzig.cpu.ram_vectors
+            else
+                &microzig.cpu.startup_logic.external_interrupt_table)
+        else
+            microzig.cpu.peripherals.scb.VTOR,
         stack_ptr,
         @intFromPtr(if (microzig.hal.compatibility.arch == .riscv) wrapper_riscv else wrapper),
     };

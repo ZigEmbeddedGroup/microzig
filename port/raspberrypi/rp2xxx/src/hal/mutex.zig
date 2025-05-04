@@ -22,7 +22,7 @@ pub const Mutex = struct {
     spinlock: Spinlock = .mutexes,
 
     // The core that currently holds the mutex.
-    core: u8 = 0,
+    core: ?u8 = null,
 
     // Set to true to enable interrupts when the mutex is locked.
     enable_interrupts: bool = false,
@@ -65,11 +65,11 @@ pub const Mutex = struct {
     /// If the mutex is held by the same core it will panic.
     /// If the mutex is held by the other core we will wait until the mutex becomes available.
     pub fn lock(self: *Mutex) void {
-        if (self.core == microzig.hal.get_cpu_id()) {
-            @panic("mutex already locked by this core");
-        }
-
         while (!self.try_lock()) {
+            if (self.core != null and self.core.? == microzig.hal.get_cpu_id()) {
+                @panic("mutex already locked by this core");
+            }
+
             microzig.cpu.wfe();
         }
     }
@@ -77,6 +77,7 @@ pub const Mutex = struct {
     /// Unlock the mutex by leaving the critical section
     pub fn unlock(self: *Mutex) void {
         self.spinlock.lock();
+        self.core = null;
 
         if (self.critical_section) |cs| {
             self.critical_section = null;
