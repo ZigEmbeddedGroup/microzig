@@ -137,14 +137,16 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
             // of at least Chunk.min_size bytes.
 
             if (!alignment.check(data_addr)) {
+
                 data_addr = alignment.forward(data_addr);
                 var offset = data_addr - @intFromPtr(c.data());
+
                 while (offset < Chunk.min_size) {
-                    data_addr = alignment.forward(data_addr);
+                    data_addr += alignment.toByteUnits();
                     offset += alignment.toByteUnits();
                 }
 
-                available -= offset;
+                available = if (offset > available) 0 else available - offset;
                 trim_leading = true;
             }
 
@@ -156,13 +158,24 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
 
                 // Trim off leading bytes
                 if (trim_leading) {
+
+                    const next_chunk: *Chunk = c.get_next();
+
                     our_chunk = @ptrCast(@alignCast(@as(*u8, @ptrFromInt(data_addr - Chunk.header_size))));
-                    our_chunk.previous_size = data_addr - @intFromPtr(c.data());
-                    our_chunk._size = (available + Chunk.header_size) | 0x01;
+                    our_chunk.previous_size = data_addr - @intFromPtr(c.data()) ;
+                    our_chunk._size = (available + Chunk.header_size);
 
                     c._size = our_chunk.previous_size;
+
+                    if (@intFromPtr(next_chunk) < self.high_boundary) {
+                        next_chunk.previous_size = our_chunk._size;
+                    }
+
+                    our_chunk._size |= 0x01; // so we don't recombine it
+
                     c.combine_and_free(self);
                 }
+
 
                 // See if there is trailing space that we can trim off.
 
@@ -170,6 +183,7 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
                 const next_addr = @intFromPtr(our_chunk.get_next());
 
                 if (trim_addr + Chunk.min_size < next_addr) {
+
                     const our_address = @intFromPtr(our_chunk);
 
                     const our_new_size = trim_addr - our_address;
