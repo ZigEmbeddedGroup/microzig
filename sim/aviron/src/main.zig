@@ -88,12 +88,12 @@ pub fn main() !u8 {
                     if (phdr.p_type != std.elf.PT_LOAD)
                         continue; // Header isn't lodead
 
-                    const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
+                    const dest_mem = if (phdr.p_paddr >= 0x0080_0000)
                         &sram.data
                     else
                         &flash_storage.data;
 
-                    const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+                    const addr_masked: u24 = @intCast(phdr.p_paddr & 0x007F_FFFF);
 
                     try source.seekTo(phdr.p_offset);
                     try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
