@@ -18,9 +18,18 @@ high_boundary: usize,
 
 mutex: microzig.interrupt.Mutex = .{},
 
-/// Set up the allocator by adding all the memory that is not otherwise used by the program.
+/// Set up an allocator by adding all the memory that is not otherwise used by the program.
 /// It relies on the linker script to define the microzig_heap_start and microzig_heap_end
 /// symbols.
+///
+/// Example of use:
+/// ```
+/// // Get a heap allocator instance reserving 1024 bytes for the stack.
+/// var heap_allocator = microzig.core.Allocator.setupWithHeap(1024);
+///
+/// // Get the std.mem.Allocator from the heap allocator.
+/// const allocator : std.mem.Allocator = heap_allocator.allocator();
+/// ```
 ///
 /// aParameters:
 /// - `reserve`: The number of bytes to omit at the end of the heap.
@@ -33,7 +42,18 @@ pub fn setupWithHeap(reserve: usize) Alloc {
     return setupWithBuffer(unalloc[0..unalloc_len]);
 }
 
-/// Set up the allocator using the supplied buffer.
+/// Set up an allocator using the supplied buffer.
+///
+/// Example of use:
+/// ```
+/// const buffer: [4096]u8 = undefined;
+///
+/// // Get a buffer allocator instance reserving 1024 bytes for the stack.
+/// var buffer_allocator = microzig.core.Allocator.setupWithBuffer(buffer);
+///
+/// // Get the std.mem.Allocator from the buffer allocator.
+/// const allocator : std.mem.Allocator = buffer_allocator.allocator();
+/// ```
 ///
 /// Parameters:
 /// - `buffer`: The buffer to use for allocation.
@@ -58,7 +78,7 @@ pub fn setupWithBuffer(buffer: []u8) Alloc {
     return self;
 }
 
-/// Returns the allocator
+/// Returns a std.mem.Allocator for the allocator
 pub fn allocator(self: *Alloc) std.mem.Allocator {
     return .{
         .ptr = self,
@@ -137,7 +157,6 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
             // of at least Chunk.min_size bytes.
 
             if (!alignment.check(data_addr)) {
-
                 data_addr = alignment.forward(data_addr);
                 var offset = data_addr - @intFromPtr(c.data());
 
@@ -158,11 +177,10 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
 
                 // Trim off leading bytes
                 if (trim_leading) {
-
                     const next_chunk: *Chunk = c.get_next();
 
                     our_chunk = @ptrCast(@alignCast(@as(*u8, @ptrFromInt(data_addr - Chunk.header_size))));
-                    our_chunk.previous_size = data_addr - @intFromPtr(c.data()) ;
+                    our_chunk.previous_size = data_addr - @intFromPtr(c.data());
                     our_chunk._size = (available + Chunk.header_size);
 
                     c._size = our_chunk.previous_size;
@@ -176,14 +194,12 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
                     c.combine_and_free(self);
                 }
 
-
                 // See if there is trailing space that we can trim off.
 
                 const trim_addr = Chunk.alignment.forward(data_addr + needed);
                 const next_addr = @intFromPtr(our_chunk.get_next());
 
                 if (trim_addr + Chunk.min_size < next_addr) {
-
                     const our_address = @intFromPtr(our_chunk);
 
                     const our_new_size = trim_addr - our_address;
@@ -440,6 +456,12 @@ pub const Chunk = extern struct {
 //------------------------------------------------------------------------------
 // Debugging Functions
 
+/// Displays free chunk chains.
+///
+/// All chunks show address, size, and  prior and next free chunks addresses.
+///
+/// This function is intended for use in a debug build.
+/// It writes to the debug log.
 pub fn dbg_log_free_chains(self: *Alloc) void {
     std.log.debug("", .{});
 
@@ -462,6 +484,12 @@ pub fn dbg_log_free_chains(self: *Alloc) void {
     }
 }
 
+/// Displays the chunk list.
+/// All chunks show address, size and previous chunk size.
+/// Free chunks show prior and next free chunks addresses.
+///
+/// This function is intended for use in a debug build.
+/// It writes to the debug log.
 pub fn dbg_log_chunk_list(self: *Alloc) void {
     var address: usize = self.low_boundary;
     var idx: usize = 0;
@@ -484,6 +512,9 @@ pub fn dbg_log_chunk_list(self: *Alloc) void {
     }
 }
 
+/// Check the integrity of the allocator memory pool.
+/// This function is intended for use in a debug build.
+/// It will log any errors to the debug log.
 pub fn dbg_integrity_check(self: *Alloc) bool {
     var valid: bool = true;
 
