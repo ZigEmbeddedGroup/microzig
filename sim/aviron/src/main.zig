@@ -85,19 +85,20 @@ pub fn main() !u8 {
 
                 var pheaders = header.program_header_iterator(&source);
                 while (try pheaders.next()) |phdr| {
+                    // Only consider segments that are type LOAD
                     if (phdr.p_type != std.elf.PT_LOAD)
-                        continue; // Header isn't lodead
+                        continue;
 
-                    const dest_mem = if (phdr.p_vaddr >= 0x0080_0000)
-                        &sram.data
-                    else
-                        &flash_storage.data;
+                    // Skip segments that ONLY exist in SRAM (e.g. .bss)
+                    if (phdr.p_paddr >= 0x0080_0000)
+                        continue;
 
-                    const addr_masked: u24 = @intCast(phdr.p_vaddr & 0x007F_FFFF);
+                    const dest_mem = &flash_storage.data;
+                    const addr: u24 = @truncate(phdr.p_paddr);
 
                     try source.seekTo(phdr.p_offset);
-                    try source.reader().readNoEof(dest_mem[addr_masked..][0..phdr.p_filesz]);
-                    @memset(dest_mem[addr_masked + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0);
+                    try source.reader().readNoEof(dest_mem[addr..][0..phdr.p_filesz]);
+                    @memset(dest_mem[addr + phdr.p_filesz ..][0 .. phdr.p_memsz - phdr.p_filesz], 0xFF);
                 }
             },
             .binary, .bin => {
