@@ -22,6 +22,10 @@ mutex: microzig.interrupt.Mutex = .{},
 /// It relies on the linker script to define the microzig_heap_start and microzig_heap_end
 /// symbols.
 ///
+/// The allocator provided a `reserve` parameter to allow the user to reserve a small amount of
+/// memory at the end of the heap.  This prevents the allocator from using memory that is reserved
+/// for other purposes, such as the stack.
+///
 /// Example of use:
 /// ```
 /// // Get a heap allocator instance reserving 1024 bytes for the stack.
@@ -33,7 +37,6 @@ mutex: microzig.interrupt.Mutex = .{},
 ///
 /// aParameters:
 /// - `reserve`: The number of bytes to omit at the end of the heap.
-///              This is used to reserve space for the stack.
 ///
 pub fn setupWithHeap(reserve: usize) Alloc {
     const unalloc: [*]u8 = @ptrCast(&microzig_heap_start);
