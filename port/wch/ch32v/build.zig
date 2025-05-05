@@ -109,12 +109,22 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+
+    const cpu_imports: []std.Build.Module.Import = b.allocator.dupe(std.Build.Module.Import, &.{
+        .{
+            .name = "riscv32-common",
+            .module = riscv32_common_dep.module("riscv32-common"),
+        },
+    }) catch @panic("OOM");
+
     const chip_ch32v003_base: BaseChip = .{
         .name = "CH32V00xxx", // <name/> from SVD
         .cpu_features = std.Target.riscv.featureSet(&.{ .@"32bit", .e, .c, .xwchc }),
         .cpu = .{
             .name = "qingkev2-rv32ec",
             .root_source_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
+            .imports = cpu_imports,
         },
         .hal = .{
             .root_source_file = b.path("src/hals/ch32v003.zig"),
@@ -128,6 +138,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu = .{
             .name = "qingkev3-rv32imac",
             .root_source_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
+            .imports = cpu_imports,
         },
         .hal = .{
             .root_source_file = b.path("src/hals/ch32v103.zig"),
@@ -141,6 +152,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu = .{
             .name = "qingkev4-rv32imac",
             .root_source_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
+            .imports = cpu_imports,
         },
         .hal = .{
             .root_source_file = b.path("src/hals/ch32v20x.zig"),
@@ -156,6 +168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .root_source_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
             // TODO
             //.root_source_file = b.path("src/cpus/qingkev4-rv32imafc.zig"),
+            .imports = cpu_imports,
         },
         .hal = .{
             .root_source_file = b.path("src/hals/ch32v30x.zig"),
