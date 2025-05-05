@@ -50,6 +50,8 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
     };
 }
 
+// TODO: deinit
+
 fn enable_wifi_power_domain_and_init_clocks() void {
     const system_wifibb_rst: u32 = 1 << 0;
     const system_fe_rst: u32 = 1 << 1;
