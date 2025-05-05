@@ -62,8 +62,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .root_source_file = b.path("src/hal.zig"),
             .imports = b.allocator.dupe(Import, &.{
                 .{
-                    .name = "wifi-c",
-                    .module = dep.module("wifi-c"),
+                    .name = "esp-wifi-driver",
+                    .module = dep.module("esp-wifi-driver"),
                 },
             }) catch @panic("OOM"),
         },
@@ -104,15 +104,15 @@ pub fn build(b: *std.Build) void {
     const esp_wifi_sys_dep = b.dependency("esp-wifi-sys", .{});
 
     const translate_c = b.addTranslateC(.{
-        .root_source_file = b.path("src/hal/wifi/wifi.c"),
+        .root_source_file = esp_wifi_sys_dep.path("esp-wifi-sys/include/include.h"),
         .target = esp32_c3_resolved_zig_target,
         .optimize = .ReleaseFast,
         .link_libc = false,
     });
 
-    const mod = translate_c.addModule("wifi-c");
+    const mod = translate_c.addModule("esp-wifi-driver");
 
-    translate_c.addIncludePath(b.path("src/hal/wifi/libc_dummy_include"));
+    translate_c.addIncludePath(b.path("src/hal/radio/libc_dummy_include"));
     translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/include"));
     translate_c.addIncludePath(esp_wifi_sys_dep.path("esp-wifi-sys/headers"));
 

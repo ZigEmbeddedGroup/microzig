@@ -30,7 +30,7 @@ SECTIONS
         . = ALIGN(0x10000) + 0x20;
     } > drom
 
-    .drom.rodata : ALIGN(4)
+    .drom.rodata : ALIGN(0x10)
     {
         KEEP(*(.app_desc))
         *(.rodata*)
@@ -62,7 +62,7 @@ SECTIONS
         . = ALIGN(ALIGNOF(.iram.rwtext)) + SIZEOF(.iram.rwtext);
     } > dram
 
-    .dram.data : ALIGN(4)
+    .dram.data :
     {
         microzig_data_start = .;
         *(.sdata*)

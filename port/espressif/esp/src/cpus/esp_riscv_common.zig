@@ -535,7 +535,7 @@ fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
         \\    sw ra, 0(sp)
         \\    jal ra, _update_priority
         \\    lw ra, 0(sp)
-        \\    sw a0, 0(sp) #reuse old stack, a0 is return of _handle_priority
+        \\    sw a0, 0(sp) #reuse old stack, a0 is return of _update_priority
         \\    addi a0, sp, 16 #the proper stack pointer is an argument to the HAL handler
         \\
         \\    jalr ra, ra #jump to label loaded in _start_trapx
