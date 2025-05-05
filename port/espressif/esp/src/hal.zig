@@ -4,6 +4,7 @@ pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
+pub const radio = @import("hal/radio.zig");
 pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
 pub const system = @import("hal/system.zig");
