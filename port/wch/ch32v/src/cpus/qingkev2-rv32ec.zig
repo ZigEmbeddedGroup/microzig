@@ -78,3 +78,5 @@ pub fn export_startup_logic() void {
     @export(&startup_logic._start, .{ .name = "_start" });
     @export(&startup_logic._start_c, .{ .name = "_start_c" });
 }
+
+pub const csr = common.csr;
