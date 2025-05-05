@@ -3,7 +3,7 @@ const log = std.log.scoped(.esp_radio_wifi);
 
 const microzig = @import("microzig");
 
-const osi = @import("interface.zig").osi;
+const osi = @import("osi.zig");
 
 const c = @import("esp-wifi-driver");
 
@@ -58,6 +58,115 @@ pub fn deinit() void {
     inited = false;
 }
 
+pub const Config = union(enum) {
+    client: ClientConfig,
+    access_point: AccessPointConfiguration,
+    mixed: struct {
+        client: ClientConfig,
+        access_point: AccessPointConfiguration,
+    },
+
+    pub fn is_valid(self: Config) bool {
+        switch (self) {
+            .client => |config| config.is_valid(),
+            .access_point => |config| config.is_valid(),
+            .mixed => |config| config.client.is_valid() and config.access_point.is_valid(),
+        }
+    }
+
+    pub fn apply(self: Config) void {
+
+    }
+};
+
+pub const ClientConfig = struct {
+    /// The SSID of the Wi-Fi network.
+    ssid: []const u8,
+
+    /// The BSSID (MAC address) of the client.
+    bssid: ?[6]u8,
+
+    /// Protocol.
+    protocol: Protocol,
+
+    /// The authentication method for the Wi-Fi connection.
+    auth_method: AuthMethod,
+
+    /// The password for the Wi-Fi connection.
+    password: []const u8,
+
+    /// The Wi-Fi channel to connect to.
+    channel: ?u8,
+
+    pub fn is_valid(self: ClientConfig) bool {
+        if (self.ssid.len > 32) {
+            return false;
+        }
+
+        if (self.password.len > 64) {
+            return false;
+        }
+
+        return true;
+    }
+
+    pub fn to_config(self: Config) c.wifi_sta_config_t {
+        return .{
+            .ssid
+        };
+    }
+};
+
+pub const AccessPointConfiguration = struct {
+    /// The SSID of the access point.
+    ssid: []const u8,
+
+    /// Whether the SSID is hidden or visible.
+    ssid_hidden: bool,
+
+    /// The channel the access point will operate on.
+    channel: u8,
+
+    /// The secondary channel configuration.
+    secondary_channel: ?u8,
+
+    /// The set of protocols supported by the access point.
+    protocols: []const Protocol,
+
+    /// The authentication method to be used by the access point.
+    auth_method: AuthMethod,
+
+    /// The password for securing the access point (if applicable).
+    password: []const u8,
+
+    /// The maximum number of connections allowed on the access point.
+    max_connections: u16,
+
+    pub fn is_valid(self: AccessPointConfiguration) bool {
+        if (self.ssid.len > 32) {
+            return false;
+        }
+
+        if (self.password.len > 64) {
+            return false;
+        }
+
+        return true;
+    }
+};
+
+pub const ConfigError = InternalError || error {
+    InvalidConfig,
+};
+
+pub fn apply(config: Config) ConfigError!void {
+    if (config.is_valid()) {
+        return error.InvalidConfig;
+    }
+
+
+}
+
 pub const PowerSaveMode = enum(u32) {
     none = c.WIFI_PS_NONE,
     min = c.WIFI_PS_MIN_MODEM,
@@ -67,6 +176,93 @@ pub const PowerSaveMode = enum(u32) {
 pub fn set_power_save_mode(mode: PowerSaveMode) InternalError!void {
     try c_result(c.esp_wifi_set_ps(@intFromEnum(mode)));
 }
+
+pub const WifiMode = enum(u32) {
+    sta = c.WIFI_MODE_STA,
+    ap = c.WIFI_MODE_AP,
+    ap_sta = c.WIFI_MODE_APSTA,
+};
+
+pub fn get_mode() InternalError!WifiMode {
+    var mode: c.wifi_mode_t = undefined;
+    try c_result(c.esp_wifi_get_mode(&mode));
+    return @enumFromInt(mode);
+}
+
+pub fn set_mode(mode: WifiMode) InternalError!void {
+    try c_result(c.esp_wifi_set_mode(@intFromEnum(mode)));
+}
+
+
+pub const Protocol = enum(u8) {
+    /// 802.11b protocol.
+    P802D11B = c.WIFI_PROTOCOL_11B,
+
+    /// 802.11b/g protocol.
+    P802D11BG = c.WIFI_PROTOCOL_11B | c.WIFI_PROTOCOL_11G,
+
+    /// 802.11b/g/n protocol (default).
+    P802D11BGN = c.WIFI_PROTOCOL_11B | c.WIFI_PROTOCOL_11G | c.WIFI_PROTOCOL_11N,
+
+    /// 802.11b/g/n long-range (LR) protocol.
+    P802D11BGNLR = c.WIFI_PROTOCOL_11B | c.WIFI_PROTOCOL_11G | c.WIFI_PROTOCOL_11N | c.WIFI_PROTOCOL_LR,
+
+    /// 802.11 long-range (LR) protocol.
+    P802D11LR = c.WIFI_PROTOCOL_LR,
+
+    /// 802.11b/g/n/ax protocol.
+    P802D11BGNAX = c.WIFI_PROTOCOL_11B | c.WIFI_PROTOCOL_11G | c.WIFI_PROTOCOL_11N | c.WIFI_PROTOCOL_11AX,
+};
+
+pub fn set_protocol(protocols: []const Protocol) InternalError!void {
+    var combined: u8 = 0;
+    for (protocols) |protocol| {
+        combined |= @intFromEnum(protocol);
+    }
+
+    const mode = try get_mode();
+    switch (mode) {
+        .sta => {
+            try c_result(c.esp_wifi_set_protocol(c.WIFI_IF_STA, combined));
+        },
+        .ap => {
+            try c_result(c.esp_wifi_set_protocol(c.WIFI_IF_AP, combined));
+        },
+        .ap_sta => {
+            try c_result(c.esp_wifi_set_protocol(c.WIFI_IF_STA, combined));
+            try c_result(c.esp_wifi_set_protocol(c.WIFI_IF_AP, combined));
+        },
+    }
+}
+
+pub const AuthMethod = enum(u32) {
+    /// No authentication (open network).
+    none = c.WIFI_AUTH_OPEN,
+
+    /// Wired Equivalent Privacy (WEP) authentication.
+    wep = c.WIFI_AUTH_WEP,
+
+    /// Wi-Fi Protected Access (WPA) authentication.
+    wpa = c.WIFI_AUTH_WPA_PSK,
+
+    /// Wi-Fi Protected Access 2 (WPA2) Personal authentication (default).
+    wpa2_personal = c.WIFI_AUTH_WPA2_PSK,
+
+    /// WPA/WPA2 Personal authentication (supports both).
+    wpa_wpa2_personal = c.WIFI_AUTH_WPA_WPA2_PSK,
+
+    /// WPA2 Enterprise authentication.
+    wpa2_enterprise = c.WIFI_AUTH_WPA2_ENTERPRISE,
+
+    /// WPA3 Personal authentication.
+    wpa3_personal = c.WIFI_AUTH_WPA3_PSK,
+
+    /// WPA2/WPA3 Personal authentication (supports both).
+    wpa2_wpa3_personal = c.WIFI_AUTH_WPA2_WPA3_PSK,
+
+    /// WLAN Authentication and Privacy Infrastructure (WAPI).
+    wapi_personal = c.WIFI_AUTH_WAPI_PSK,
+};
 
 var wifi_tx_in_flight: usize = 0;
 
@@ -347,3 +543,31 @@ pub fn c_result(err_code: i32) InternalError!void {
         return error.InternalError;
     }
 }
+
+pub const wifi_sta_config_t = extern struct {
+    ssid: [32]u8,
+    password: [64]u8,
+    scan_method: c.wifi_scan_method_t,
+    bssid_set: bool,
+    bssid: [6]u8,
+    channel: u8,
+    listen_interval: u16,
+    sort_method: c.wifi_sort_method_t,
+    threshold: c.wifi_scan_threshold_t,
+    pmf_cfg: c.wifi_pmf_config_t,
+    rm_enabled: u32,
+    btm_enabled: u32,
+    mbo_enabled: u32,
+    ft_enabled: u32,
+    owe_enabled: u32,
+    transition_disable: u32,
+    reserved: u32,
+    sae_pwe_h2e: c.wifi_sae_pwe_method_t,
+    sae_pk_mode: c.wifi_sae_pk_mode_t,
+    failure_retry_cnt: u8,
+    he_dcm_set: u32,
+    he_dcm_max_constellation_tx: u32,
+    he_dcm_max_constellation_rx: u32,
+    _bitfield_2: __BindgenBitfieldUnit<[u8; 4usize]>,
+    sae_h2e_identifier: [u8; 32usize],
+};

@@ -2,16 +2,16 @@ const std = @import("std");
 const microzig = @import("microzig");
 const interrupt = microzig.cpu.interrupt;
 const hal = microzig.hal;
-const wifi = hal.wifi;
+const radio = hal.radio;
 const usb_serial_jtag = hal.usb_serial_jtag;
 
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
     .logFn = logFn,
     .interrupts = .{
-        .interrupt1 = wifi.interrupt_handlers.wifi_xxx,
-        .interrupt2 = wifi.interrupt_handlers.timer,
-        .interrupt3 = wifi.interrupt_handlers.software,
+        .interrupt1 = radio.interrupt_handlers.wifi_xxx,
+        .interrupt2 = radio.interrupt_handlers.timer,
+        .interrupt3 = radio.interrupt_handlers.software,
     },
 };
 
@@ -35,8 +35,8 @@ pub fn main() !void {
     var fba: std.heap.FixedBufferAllocator = .init(&buffer);
     const allocator = fba.allocator();
 
-    wifi.init(allocator) catch |err| std.debug.panic("{}", .{err});
-    wifi.wifi_controller.init() catch |err| std.debug.panic("{}", .{err});
+    radio.init(allocator) catch |err| std.debug.panic("{}", .{err});
+    radio.wifi.init() catch |err| std.debug.panic("{}", .{err});
 
     while (true) {
         std.log.info("tick!", .{});
