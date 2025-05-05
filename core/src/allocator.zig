@@ -262,7 +262,8 @@ fn do_resize(ptr: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usi
 
         chunk.get_next().unlink(self);
 
-        chunk._size = target_size;
+        chunk._size = combined_size;
+        chunk.get_next().previous_size = combined_size;
     }
 
     // See if there is trailing space that we can trim off.
