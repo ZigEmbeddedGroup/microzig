@@ -394,12 +394,14 @@ fn load_cluster(
         break :count .{ elements.dim, elements.dim_increment };
     } else .{ null, null };
 
-    const struct_id = try ctx.db.create_nested_struct_field(parent, .{
+    const struct_id = try ctx.db.create_struct(.{});
+    try ctx.db.add_nested_struct_field(parent, .{
         .name = name,
+        .struct_id = struct_id,
         .description = description,
         .offset_bytes = try std.fmt.parseInt(u32, address_offset_str, 0),
         .count = count,
-        .size = size,
+        .size_bytes = size,
     });
 
     const register_props = try ctx.derive_register_properties_from(node, .{ .@"struct" = parent });
