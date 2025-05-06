@@ -1,27 +1,236 @@
-const microzig = @import("microzig");
+const std = @import("std");
 const root = @import("root");
-
+const microzig_options = root.microzig_options;
+const microzig = @import("microzig");
+const peripherals = microzig.chip.peripherals;
 const riscv32_common = @import("riscv32-common");
 
-pub const interrupt = struct {
-    pub inline fn enable_interrupts() void {
-        asm volatile ("csrsi mstatus, 0b1000");
-    }
+const PFIC = peripherals.PFIC;
 
-    pub inline fn disable_interrupts() void {
-        asm volatile ("csrci mstatus, 0b1000");
-    }
+pub const riscv_calling_convention: std.builtin.CallingConvention = .{ .riscv32_interrupt = .{ .mode = .machine } };
+
+pub const Exception = enum(u32) {
+    InstructionMisaligned = 0x0,
+    InstructionFault = 0x1,
+    IllegalInstruction = 0x2,
+    Breakpoint = 0x3,
+    LoadMisaligned = 0x4,
+    LoadFault = 0x5,
+    StoreMisaligned = 0x6,
+    StoreFault = 0x7,
+    UserEnvCall = 0x8,
+    MachineEnvCall = 0xb,
 };
 
+pub const InterruptHandler = *const fn () callconv(riscv_calling_convention) void;
+
+pub fn GenerateInterruptFuncs(comptime Interrupt: type) type {
+    const type_info = @typeInfo(Interrupt);
+    if (type_info != .@"enum")
+        @compileError("Interrupt must have a enum type!");
+
+    return struct {
+        pub inline fn globally_enabled() bool {
+            return csr.mstatus.read().mie == 1;
+        }
+
+        pub inline fn enable_interrupts() void {
+            csr.mstatus.set(.{ .mie = 1 });
+        }
+
+        pub inline fn disable_interrupts() void {
+            csr.mstatus.clear(.{ .mie = 1 });
+        }
+
+        pub inline fn is_enabled(irq: Interrupt) bool {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            const v = switch (num) {
+                0 => getBit(PFIC.ISR1, pos),
+                1 => getBit(PFIC.ISR2, pos),
+                2 => getBit(PFIC.ISR3, pos),
+                3 => getBit(PFIC.ISR4, pos),
+                else => @compileError("Invalid interrupt number!"),
+            };
+            return v != 0;
+        }
+
+        pub inline fn enable(irq: Interrupt) void {
+            comptime {
+                const irq_name = @tagName(irq);
+                if (@field(root.microzig_options.interrupts, irq_name) == null) {
+                    @compileError(
+                        irq_name ++ " interrupt handler should be defined.\n" ++
+                            "Add to your main file:\n" ++
+                            "    pub const microzig_options: microzig.Options = .{\n" ++
+                            "        .interrupts = .{\n" ++
+                            "            ." ++ irq_name ++ " = your_handler_for_" ++ irq_name ++ ",\n" ++
+                            "        },\n" ++
+                            "    };\n",
+                    );
+                }
+            }
+
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            switch (num) {
+                0 => PFIC.IENR1.raw |= @as(u32, 1) << pos,
+                1 => PFIC.IENR2.raw |= @as(u32, 1) << pos,
+                2 => PFIC.IENR3.raw |= @as(u32, 1) << pos,
+                3 => PFIC.IENR4.raw |= @as(u32, 1) << pos,
+                else => @compileError("Invalid interrupt number!"),
+            }
+        }
+
+        pub inline fn disable(irq: Interrupt) void {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            switch (num) {
+                0 => PFIC.IRER1.raw |= @as(u32, 1) << pos,
+                1 => PFIC.IRER2.raw |= @as(u32, 1) << pos,
+                2 => PFIC.IRER3.raw |= @as(u32, 1) << pos,
+                3 => PFIC.IRER4.raw |= @as(u32, 1) << pos,
+                else => @compileError("Invalid interrupt number!"),
+            }
+        }
+
+        pub inline fn is_pending(irq: Interrupt) bool {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            const v = switch (num) {
+                0 => getBit(PFIC.IPR1, pos),
+                1 => getBit(PFIC.IPR2, pos),
+                2 => getBit(PFIC.IPR3, pos),
+                3 => getBit(PFIC.IPR4, pos),
+                else => @compileError("Invalid interrupt number!"),
+            };
+            return v != 0;
+        }
+
+        pub inline fn set_pending(irq: Interrupt) void {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            switch (num) {
+                0 => PFIC.IPSR1.raw |= @as(u32, 1) << pos,
+                1 => PFIC.IPSR2.raw |= @as(u32, 1) << pos,
+                2 => PFIC.IPSR3.raw |= @as(u32, 1) << pos,
+                3 => PFIC.IPSR4.raw |= @as(u32, 1) << pos,
+                else => @compileError("Invalid interrupt number!"),
+            }
+        }
+
+        pub inline fn clear_pending(irq: Interrupt) void {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            switch (num) {
+                0 => PFIC.IPRR1.raw |= @as(u32, 1) << pos,
+                1 => PFIC.IPRR2.raw |= @as(u32, 1) << pos,
+                2 => PFIC.IPRR3.raw |= @as(u32, 1) << pos,
+                3 => PFIC.IPRR4.raw |= @as(u32, 1) << pos,
+                else => @compileError("Invalid interrupt number!"),
+            }
+        }
+
+        pub inline fn is_active(irq: Interrupt) void {
+            const irq_num = @intFromEnum(irq);
+            const num = irq_num >> 5;
+            const pos = irq_num & 0x1F;
+            const v = switch (num) {
+                0 => getBit(PFIC.IACTR1, pos),
+                1 => getBit(PFIC.IACTR2, pos),
+                2 => getBit(PFIC.IACTR3, pos),
+                3 => getBit(PFIC.IACTR4, pos),
+                else => @compileError("Invalid interrupt number!"),
+            };
+            return v != 0;
+        }
+
+        /// Interrupt priority configuration.
+        /// priority -
+        /// bit7 - pre-emption priority
+        /// bit6~bit4 - subpriority
+        /// bit3~bit0 - reserved (must be 0)
+        pub inline fn set_priority(comptime irq: Interrupt, priority: u8) void {
+            const irq_num = @intFromEnum(irq);
+            const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
+            @field(PFIC, "IPRIOR" ++ irq_num_str) = @intFromEnum(priority) & 0b1111_0000;
+        }
+
+        pub inline fn get_priority(comptime irq: Interrupt) u8 {
+            const irq_num = @intFromEnum(irq);
+            const irq_num_str = std.fmt.comptimePrint("{}", .{irq_num});
+            return @field(PFIC, "IPRIOR" ++ irq_num_str);
+        }
+
+        inline fn getBit(self: anytype, pos: u5) u1 {
+            return @truncate(self.raw >> pos);
+        }
+    };
+}
+
 pub inline fn wfi() void {
+    PFIC.SCTLR.modify(.{ .WFITOWFE = 0 });
     asm volatile ("wfi");
 }
 
 pub inline fn wfe() void {
-    const PFIC = microzig.chip.peripherals.PFIC;
-    // Treats the subsequent wfi instruction as wfe
     PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
     asm volatile ("wfi");
+}
+
+const vector_table_offset = 1; // First entry is reserved for the _reset_vector.
+
+fn vector_table_size(comptime Interrupt: type) usize {
+    const type_info = @typeInfo(Interrupt);
+
+    const interrupts_list = type_info.@"enum".fields;
+    const last_interrupt = interrupts_list[interrupts_list.len - 1];
+    const last_interrupt_idx = last_interrupt.value;
+
+    return last_interrupt_idx + 1 - vector_table_offset;
+}
+
+pub fn generate_vector_table(comptime Interrupt: type) [vector_table_size(Interrupt)]InterruptHandler {
+    const type_info = @typeInfo(Interrupt);
+    const interrupts_list = type_info.@"enum".fields;
+
+    var temp: [vector_table_size(Interrupt)]InterruptHandler = @splat(microzig_options.interrupts.Exception orelse unhandled);
+    for (&temp, vector_table_offset..) |_, idx| {
+        // Find name of the interrupt by its number.
+        var name: ?[:0]const u8 = null;
+        for (interrupts_list) |decl| {
+            if (decl.value == idx) {
+                name = decl.name;
+                break;
+            }
+        }
+
+        if (name) |n| {
+            if (@field(microzig_options.interrupts, n)) |h| {
+                temp[idx - vector_table_offset] = h;
+            }
+        }
+    }
+
+    return temp;
+}
+
+pub fn unhandled() callconv(riscv_calling_convention) void {
+    const mcause = csr.mcause.read();
+
+    if (mcause.is_interrupt != 0) {
+        std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
+    } else {
+        std.log.err("exception 0x{x} occurred!", .{mcause.code});
+    }
+
+    @panic("unhandled interrupt");
 }
 
 pub inline fn initialize_system_memories() void {
