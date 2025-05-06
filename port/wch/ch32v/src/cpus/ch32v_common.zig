@@ -24,6 +24,36 @@ pub inline fn wfe() void {
     asm volatile ("wfi");
 }
 
+pub inline fn initialize_system_memories() void {
+    // Clear .bss section.
+    asm volatile (
+        \\    li a0, 0
+        \\    la a1, microzig_bss_start
+        \\    la a2, microzig_bss_end
+        \\    beq a1, a2, clear_bss_done
+        \\clear_bss_loop:
+        \\    sw a0, 0(a1)
+        \\    addi a1, a1, 4
+        \\    blt a1, a2, clear_bss_loop
+        \\clear_bss_done:
+    );
+
+    // Copy .data from FLASH to RAM.
+    asm volatile (
+        \\    la a0, microzig_data_load_start
+        \\    la a1, microzig_data_start
+        \\    la a2, microzig_data_end
+        \\copy_data_loop:
+        \\    beq a1, a2, copy_done
+        \\    lw a3, 0(a0)
+        \\    sw a3, 0(a1)
+        \\    addi a0, a0, 4
+        \\    addi a1, a1, 4
+        \\    bne a1, a2, copy_data_loop
+        \\copy_done:
+    );
+}
+
 pub const csr = struct {
     pub const Csr = riscv32_common.csr.Csr;
 
