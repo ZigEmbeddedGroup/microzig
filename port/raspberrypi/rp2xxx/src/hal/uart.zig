@@ -7,9 +7,9 @@ const UART1_reg = peripherals.UART1;
 
 const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
+const dma = @import("dma.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
-const dma = @import("dma.zig");
 
 const UartRegs = microzig.chip.types.peripherals.UART0;
 
@@ -225,6 +225,20 @@ pub const UART = enum(u1) {
 
     pub inline fn is_busy(uart: UART) bool {
         return (1 == uart.get_regs().UARTFR.read().BUSY);
+    }
+
+    pub fn tx(uart: UART) dma.DMA_WriteTarget {
+        return .{
+            .dreq = if (@intFromEnum(uart) == 0) .uart0_tx else .uart1_tx,
+            .addr = @intFromPtr(&uart.get_regs().UARTDR),
+        };
+    }
+
+    pub fn rx(uart: UART) dma.DMA_ReadTarget {
+        return .{
+            .dreq = if (@intFromEnum(uart) == 0) .uart0_rx else .uart1_rx,
+            .addr = @intFromPtr(&uart.get_regs().UARTDR),
+        };
     }
 
     /// Write bytes to uart TX line and block until transaction is complete.

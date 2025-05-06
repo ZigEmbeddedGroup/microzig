@@ -145,7 +145,8 @@ pub const Cyw43PioSpi = struct {
         const dma_ch = hal.dma.claim_unused_channel().?;
         defer dma_ch.unclaim();
 
-        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
+        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(&cmd), 1, .{
+            .trigger = true,
             .data_size = .size_32,
             .enable = true,
             .read_increment = true,
@@ -155,7 +156,8 @@ pub const Cyw43PioSpi = struct {
 
         dma_ch.wait_for_finish_blocking();
 
-        dma_ch.trigger_transfer(@intFromPtr(buffer.ptr), self.get_pio_rx_fifo_addr(), buffer.len, .{
+        dma_ch.setup_transfer_raw(@intFromPtr(buffer.ptr), self.get_pio_rx_fifo_addr(), buffer.len, .{
+            .trigger = true,
             .data_size = .size_32,
             .enable = true,
             .read_increment = false,
@@ -166,7 +168,7 @@ pub const Cyw43PioSpi = struct {
         dma_ch.wait_for_finish_blocking();
 
         var status: u32 = 0;
-        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
+        dma_ch.setup_transfer_raw(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
             .data_size = .size_32,
             .enable = true,
             .read_increment = false,
@@ -195,7 +197,7 @@ pub const Cyw43PioSpi = struct {
         const dma_ch = hal.dma.claim_unused_channel().?;
         defer dma_ch.unclaim();
 
-        dma_ch.trigger_transfer(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{
+        dma_ch.setup_transfer_raw(self.get_pio_tx_fifo_addr(), @intFromPtr(buffer.ptr), buffer.len, .{
             .data_size = .size_32,
             .enable = true,
             .read_increment = true,
@@ -206,7 +208,7 @@ pub const Cyw43PioSpi = struct {
         dma_ch.wait_for_finish_blocking();
 
         var status: u32 = 0;
-        dma_ch.trigger_transfer(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
+        dma_ch.setup_transfer_raw(@intFromPtr(&status), self.get_pio_rx_fifo_addr(), 1, .{
             .data_size = .size_32,
             .enable = true,
             .read_increment = false,
