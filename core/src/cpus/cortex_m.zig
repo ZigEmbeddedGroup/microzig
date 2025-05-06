@@ -582,37 +582,31 @@ var ram_vectors: [vector_count]usize align(256) = undefined;
 // TODO: Get this defined with some compile-time target config
 const flash = false;
 
-pub const ram_image_entry = struct {
-    // TODO: Remove export in favour of @export?
-    // export fn _entry_point() callconv(.c) void {
-    // export fn _entry_point() callconv(.c) void {
-    // export fn _entry_point() callconv(.naked) noreturn {
-    pub fn _entry_point() callconv(.c) void {
-        asm volatile (
-            \\
-            // Get address of vector table
-            \\mov r0, %[_vector_table]
-            // Get address of VTOR register
-            \\mov r1, %[_VTOR_ADDRESS]
-            // Set VTOR to point to ram table
-            \\str r0, [r1]
-            // Needed?
-            //\\eor r2, r2
-            // Load stack address from vector table
-            \\ldm r0!, {r1, r2}
-            // Set sp
-            \\msr msp, r1
-            // Branch to _start (reset vector)
-            \\bx r2
-            :
-            : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
-              // TODO: Why not use &microzig.hal.PPB.VTOR?
-              [_VTOR_ADDRESS] "r" (peripherals.scb.VTOR),
-              // [_VTOR_ADDRESS] "r" (0xe000ed08),
-            : "memory", "r0", "r1", "r2"
-        );
-    }
-};
+pub fn _entry_point() linksection(".hello") callconv(.c) void {
+    asm volatile (
+        \\
+        // Get address of vector table
+        \\mov r0, %[_vector_table]
+        // Get address of VTOR register
+        \\mov r1, %[_VTOR_ADDRESS]
+        // Set VTOR to point to ram table
+        \\str r0, [r1]
+        // Needed?
+        //\\eor r2, r2
+        // Load stack address from vector table
+        \\ldm r0!, {r1, r2}
+        // Set sp
+        \\msr msp, r1
+        // Branch to _start (reset vector)
+        \\bx r2
+        :
+        : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
+          // TODO: Why not use &microzig.hal.PPB.VTOR?
+          [_VTOR_ADDRESS] "r" (peripherals.scb.VTOR),
+          // [_VTOR_ADDRESS] "r" (0xe000ed08),
+        : "memory", "r0", "r1", "r2"
+    );
+}
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
@@ -703,9 +697,11 @@ pub const startup_logic = struct {
 // Called by core/src/start.zig at comptime
 pub fn export_startup_logic() void {
     // TODO: only if ram image
-    @export(&ram_image_entry._entry_point, .{
+    // TODO: Export it as _start? But that symbol is in the vector table.
+    // Though it seems that it is considered the 'default' entry point in zig when building freestanding
+    @export(&_entry_point, .{
         .name = "_entry_point",
-        .section = ".hello",
+        // .section = ".hello",
         .linkage = .strong,
     });
 

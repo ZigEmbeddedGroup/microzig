@@ -5,12 +5,18 @@
  * Target Chip: RP2040
  */
 
+/* For ELFs this would set the entry, but for ucs it basically doesn't matter,
+ * though it shoudl tell the linker that the symbol is referenced and to not
+ * optimize it away.
+ */
 ENTRY(_entry_point);
+/* ENTRY(_start); */
 
 MEMORY
 {
   hello  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
   ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x0003ff00
+  /* ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x1003ff00 */
   /* ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000 */
 }
 /* A RAM only binary */
@@ -21,8 +27,9 @@ SECTIONS
 {
   .hello :
   {
-     KEEP(*(.hello*))
-     *(.hello*)
+     KEEP(*(_entry_point))
+     /* KEEP(*(.hello*)) */
+     /* *(.hello*) */
   } > hello
 
   .text :
@@ -66,6 +73,14 @@ SECTIONS
   {
     KEEP(*(ram_vectors))
   } > ram0
+  /* needed if we don't gc */
+  /* .bootmeta : */
+  /* { */
+  /*   __bootmeta_start__ = .; */
+  /*   KEEP (*(.bootmeta)) */
+  /*   __bootmeta_end__ = .; */
+  /* } > ram0 */
+
 
   /* .flash_end : */
   /* { */
