@@ -55,14 +55,14 @@ pub const csr = struct {
         /// [10:8] Reserved
         reserved2: u3 = 0,
         /// [12:11] Privileged mode before entering break
-        mpp: u2,
+        mpp: u2 = 0,
         /// [14:13] Reserved
         reserved1: u2 = 0,
         /// [14:13] Floating-point unit status
         /// Valid only for WCH-V4F
-        fs: Fs,
+        fs: Fs = .off,
         /// [31:15] Reserved
-        reserved0: u17 = 0,
+        reserved0: u15 = 0,
     });
     pub const misa = riscv32_common.csr.misa;
     /// Machine Mode Exception Base Address Register
