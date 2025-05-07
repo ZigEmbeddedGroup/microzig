@@ -2,7 +2,7 @@ pub const cpu_frequency = 8_000_000; // 8 MHz
 
 pub const Interrupt = enum(u8) {
     /// Reset
-    Reset = 1,
+    // Reset = 1,
     /// Non-maskable interrupt
     NMI = 2,
     /// Exception interrupt
