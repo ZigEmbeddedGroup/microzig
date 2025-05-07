@@ -12,7 +12,13 @@ const BaseChip = struct {
     hal: microzig.HardwareAbstractionLayer,
     svd: std.Build.LazyPath,
 
-    fn create(self: BaseChip, dep: *std.Build.Dependency, mem: []const microzig.MemoryRegion) *microzig.Target {
+    fn create(self: BaseChip, dep: *std.Build.Dependency, flash_size: u64, ram_size: u64) *microzig.Target {
+        const mem: []const microzig.MemoryRegion = &.{
+            .{ .offset = 0x08000000, .length = flash_size, .kind = .flash },
+            .{ .offset = 0x20000000, .length = ram_size, .kind = .ram },
+        };
+        const mem_alloc = dep.builder.allocator.dupe(microzig.MemoryRegion, mem) catch @panic("out of memory");
+
         const ret = dep.builder.allocator.create(microzig.Target) catch @panic("out of memory");
         ret.* = .{
             .dep = dep,
@@ -27,12 +33,39 @@ const BaseChip = struct {
             .cpu = self.cpu,
             .chip = .{
                 .name = self.name,
-                .memory_regions = mem,
+                .memory_regions = mem_alloc,
                 .register_definition = .{
                     .svd = self.svd,
                 },
             },
             .hal = self.hal,
+            .linker_script = blk: {
+                const GenerateLinkerScriptArgs = @import("generate_linker_script.zig").Args;
+
+                const generate_linker_script_exe = dep.builder.addExecutable(.{
+                    .name = "generate_linker_script",
+                    .root_source_file = dep.builder.path("generate_linker_script.zig"),
+                    .target = dep.builder.graph.host,
+                    .optimize = .ReleaseSafe,
+                });
+
+                const generate_linker_script_args: GenerateLinkerScriptArgs = .{
+                    .cpu_name = self.cpu.name,
+                    .chip_name = self.name,
+                    .flash_size = flash_size,
+                    .ram_size = ram_size,
+                };
+
+                const args_str = std.json.stringifyAlloc(
+                    dep.builder.allocator,
+                    generate_linker_script_args,
+                    .{},
+                ) catch @panic("out of memory");
+
+                const generate_linker_script_run = dep.builder.addRunArtifact(generate_linker_script_exe);
+                generate_linker_script_run.addArg(args_str);
+                break :blk generate_linker_script_run.addOutputFileArg("linker.ld");
+            },
         };
 
         return ret;
@@ -75,31 +108,6 @@ boards: struct {
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
-
-    const mem_16k_2k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 16 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 2 * KiB, .kind = .ram },
-    };
-    const mem_32k_10k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 32 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 10 * KiB, .kind = .ram },
-    };
-    const mem_64k_20k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 64 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 20 * KiB, .kind = .ram },
-    };
-    const mem_128k_32k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 128 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 32 * KiB, .kind = .ram },
-    };
-    const mem_128k_64k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 128 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 64 * KiB, .kind = .ram },
-    };
-    const mem_256k_64k: []const microzig.MemoryRegion = &.{
-        .{ .offset = 0x08000000, .length = 256 * KiB, .kind = .flash },
-        .{ .offset = 0x20000000, .length = 64 * KiB, .kind = .ram },
-    };
 
     const chip_ch32v003_base: BaseChip = .{
         .name = "CH32V00xxx", // <name/> from SVD
@@ -155,17 +163,17 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .svd = b.path("src/chips/ch32v30x.svd"),
     };
 
-    const chip_ch32v003x4 = chip_ch32v003_base.create(dep, mem_16k_2k);
-    const chip_ch32v103x6 = chip_ch32v103_base.create(dep, mem_32k_10k);
-    const chip_ch32v103x8 = chip_ch32v103_base.create(dep, mem_64k_20k);
-    const chip_ch32v203x6 = chip_ch32v20x_base.create(dep, mem_32k_10k);
-    const chip_ch32v203x8 = chip_ch32v20x_base.create(dep, mem_64k_20k);
-    const chip_ch32v203xb = chip_ch32v20x_base.create(dep, mem_128k_64k);
-    const chip_ch32v208xb = chip_ch32v20x_base.create(dep, mem_128k_64k);
-    const chip_ch32v303xb = chip_ch32v30x_base.create(dep, mem_128k_32k);
-    const chip_ch32v303xc = chip_ch32v30x_base.create(dep, mem_256k_64k);
-    const chip_ch32v305xb = chip_ch32v30x_base.create(dep, mem_128k_32k);
-    const chip_ch32v307xc = chip_ch32v30x_base.create(dep, mem_256k_64k);
+    const chip_ch32v003x4 = chip_ch32v003_base.create(dep, 16 * KiB, 2 * KiB);
+    const chip_ch32v103x6 = chip_ch32v103_base.create(dep, 32 * KiB, 10 * KiB);
+    const chip_ch32v103x8 = chip_ch32v103_base.create(dep, 64 * KiB, 20 * KiB);
+    const chip_ch32v203x6 = chip_ch32v20x_base.create(dep, 32 * KiB, 10 * KiB);
+    const chip_ch32v203x8 = chip_ch32v20x_base.create(dep, 64 * KiB, 20 * KiB);
+    const chip_ch32v203xb = chip_ch32v20x_base.create(dep, 128 * KiB, 64 * KiB);
+    const chip_ch32v208xb = chip_ch32v20x_base.create(dep, 128 * KiB, 64 * KiB);
+    const chip_ch32v303xb = chip_ch32v30x_base.create(dep, 128 * KiB, 32 * KiB);
+    const chip_ch32v303xc = chip_ch32v30x_base.create(dep, 256 * KiB, 64 * KiB);
+    const chip_ch32v305xb = chip_ch32v30x_base.create(dep, 128 * KiB, 32 * KiB);
+    const chip_ch32v307xc = chip_ch32v30x_base.create(dep, 256 * KiB, 64 * KiB);
 
     const board_ch32v003f4p6_r0_1v1 = chip_ch32v003x4.derive(.{
         .board = .{
