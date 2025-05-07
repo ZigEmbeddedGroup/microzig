@@ -110,7 +110,10 @@ pub fn launch_core1_with_stack(entrypoint: *const fn () void, stack: []u32) void
         0,
         0,
         1,
-        microzig.cpu.peripherals.scb.VTOR,
+        if (microzig.hal.compatibility.arch == .riscv)
+            microzig.cpu.csr.mtvec.read_raw()
+        else
+            microzig.cpu.peripherals.scb.VTOR,
         stack_ptr,
         @intFromPtr(if (microzig.hal.compatibility.arch == .riscv) wrapper_riscv else wrapper),
     };
