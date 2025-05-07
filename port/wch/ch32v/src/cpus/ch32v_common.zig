@@ -197,6 +197,8 @@ fn vector_table_size(comptime Interrupt: type) usize {
 }
 
 pub fn generate_vector_table(comptime Interrupt: type) [vector_table_size(Interrupt)]InterruptHandler {
+    @setEvalBranchQuota(100_000);
+
     const type_info = @typeInfo(Interrupt);
     const interrupts_list = type_info.@"enum".fields;
 
@@ -377,13 +379,13 @@ pub const csr = struct {
         /// [3:2] Interrupt nesting depth configuration
         pmtcfg: u2,
         /// [4] Interrupt enable after HPE overflow
-        hwstkoven: u1,
+        hwstkoven: u1 = 0,
         /// [5] Global interrupt and HPE off enable
-        gihwstknen: u1,
+        gihwstknen: u1 = 0,
         /// [7:6] Reserved
         reserved1: u2 = 0,
         /// [15:8] Preemption status indication
-        pmtsta: u8,
+        pmtsta: u8 = 0,
         /// [31:16] Reserved
         reserved0: u16 = 0,
     });

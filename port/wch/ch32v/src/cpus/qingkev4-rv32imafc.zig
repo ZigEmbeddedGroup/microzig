@@ -109,6 +109,10 @@ pub const Interrupt = enum(u8) {
     TIM8_TRG_COM = 61,
     /// TIM8 Capture Compare interrupt
     TIM8_CC = 62,
+    /// RNG interrupt
+    RNG = 63,
+    /// SDIO global interrupt
+    SDIO = 65,
     /// TIM5 global interrupt
     TIM5 = 66,
     /// SPI3 global interrupt
@@ -117,16 +121,40 @@ pub const Interrupt = enum(u8) {
     UART4 = 68,
     /// UART5 global interrupt
     UART5 = 69,
+    /// TIM6 Basic interrupt
+    TIM6 = 70,
+    /// TIM8 Basic interrupt
+    TIM7 = 71,
+    /// DMA2 Channel1 global interrupt
+    DMA2_Channel1 = 72,
+    /// DMA2 Channel2 global interrupt
+    DMA2_Channel2 = 73,
+    /// DMA2 Channel3 global interrupt
+    DMA2_Channel3 = 74,
+    /// DMA2 Channel4 global interrupt
+    DMA2_Channel4 = 75,
+    /// DMA2 Channel5 global interrupt
+    DMA2_Channel5 = 76,
     /// Ethernet global interrupt
     ETH = 77,
     /// Ethernet Wakeup through EXTI line interrupt
     ETH_WKUP = 78,
+    /// CAN2 TX interrupts
+    CAN2_TX = 79,
+    /// CAN2 RX0 interrupts
+    CAN2_RX0 = 80,
+    /// CAN2 RX1 interrupt
+    CAN2_RX1 = 81,
+    /// CAN2 SCE interrupt
+    CAN2_SCE = 82,
     /// OTG_FS
     OTG_FS = 83,
     /// USBHSWakeup
     USBHSWakeup = 84,
     /// USBHS
     USBHS = 85,
+    /// DVP global Interrupt interrupt
+    DVP = 86,
     /// UART6 global interrupt
     UART6 = 87,
     /// UART7 global interrupt
@@ -149,9 +177,21 @@ pub const Interrupt = enum(u8) {
     TIM10_TRG_COM = 96,
     /// TIM10 Capture Compare interrupt
     TIM10_CC = 97,
+    /// DMA2 Channel6 global interrupt
+    DMA2_Channel6 = 98,
+    /// DMA2 Channel7 global interrupt
+    DMA2_Channel7 = 99,
+    /// DMA2 Channel8 global interrupt
+    DMA2_Channel8 = 100,
+    /// DMA2 Channel9 global interrupt
+    DMA2_Channel9 = 101,
+    /// DMA2 Channel10 global interrupt
+    DMA2_Channel10 = 102,
+    /// DMA2 Channel11 global interrupt
+    DMA2_Channel11 = 103,
 };
 
-// https://github.com/openwch/ch32v20x/blob/6209b6e7f910e313eaa93354dc3b29608431f725/EVT/EXAM/RCC/MCO/User/system_ch32v20x.c#L111
+// https://github.com/openwch/ch32v307/blob/d4771d341779c8b9dc205b9cc1bc5d77ceeaacf3/EVT/EXAM/RCC/MCO/User/system_ch32v30x.c#L111
 pub inline fn system_init(comptime chip: anytype) void {
     const RCC = chip.peripherals.RCC;
 
@@ -167,13 +207,13 @@ pub inline fn system_init(comptime chip: anytype) void {
         .ADCPRE = 0,
         .MCO = 0,
     });
-    // RCC->CTLR &= (uint32_t)0xFEF6FFFF;
-    RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0, .PLLON = 0 });
+    // RCC->CTLR &= (uint32_t)0xFEF6FFFF; and RCC->CTLR &= (uint32_t)0xEBFFFFFF;
+    RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0, .PLLON = 0, .PLL2ON = 0 });
     // RCC->CTLR &= (uint32_t)0xFFFBFFFF;
     RCC.CTLR.modify(.{ .HSEBYP = 0 });
     // RCC->CFGR0 &= (uint32_t)0xFF00FFFF;
     RCC.CFGR0.modify(.{ .PLLSRC = 0, .PLLXTPRE = 0, .PLLMUL = 0, .USBPRE = 0 });
-    // RCC->INTR = 0x009F0000;
+    // RCC->INTR = 0x00FF0000;
     RCC.INTR.write(.{
         // Read-only ready flags.
         .LSIRDYF = 0,
@@ -181,6 +221,8 @@ pub inline fn system_init(comptime chip: anytype) void {
         .HSIRDYF = 0,
         .HSERDYF = 0,
         .PLLRDYF = 0,
+        .PLL2RDYF = 0,
+        .PLL3RDYF = 0,
         .CSSF = 0,
         // Disable ready interrupts.
         .LSIRDYIE = 0,
@@ -188,12 +230,18 @@ pub inline fn system_init(comptime chip: anytype) void {
         .HSIRDYIE = 0,
         .HSERDYIE = 0,
         .PLLRDYIE = 0,
+        .PLL2RDYIE = 0,
+        .PLL3RDYIE = 0,
         // Clear ready flags.
         .LSIRDYC = 1,
         .LSERDYC = 1,
         .HSIRDYC = 1,
         .HSERDYC = 1,
         .PLLRDYC = 1,
+        .PLL2RDYC = 1,
+        .PLL3RDYC = 1,
         .CSSC = 1,
     });
+    // RCC->CFGR2 = 0x00000000;
+    RCC.CFGR2.raw = 0;
 }
