@@ -29,7 +29,7 @@ mutex: microzig.interrupt.Mutex = .{},
 /// Example of use:
 /// ```
 /// // Get a heap allocator instance reserving 1024 bytes for the stack.
-/// var heap_allocator = microzig.core.Allocator.setupWithHeap(1024);
+/// var heap_allocator = microzig.core.Allocator.init_with_heap(1024);
 ///
 /// // Get the std.mem.Allocator from the heap allocator.
 /// const allocator : std.mem.Allocator = heap_allocator.allocator();
@@ -38,11 +38,11 @@ mutex: microzig.interrupt.Mutex = .{},
 /// aParameters:
 /// - `reserve`: The number of bytes to omit at the end of the heap.
 ///
-pub fn setupWithHeap(reserve: usize) Alloc {
+pub fn init_with_heap(reserve: usize) Alloc {
     const unalloc: [*]u8 = @ptrCast(&microzig_heap_start);
     const unalloc_len: usize = @intFromPtr(&microzig_heap_end) - @intFromPtr(&microzig_heap_start) - reserve;
 
-    return setupWithBuffer(unalloc[0..unalloc_len]);
+    return init_with_buffer(unalloc[0..unalloc_len]);
 }
 
 /// Set up an allocator using the supplied buffer.
@@ -52,7 +52,7 @@ pub fn setupWithHeap(reserve: usize) Alloc {
 /// const buffer: [4096]u8 = undefined;
 ///
 /// // Get a buffer allocator instance reserving 1024 bytes for the stack.
-/// var buffer_allocator = microzig.core.Allocator.setupWithBuffer(buffer);
+/// var buffer_allocator = microzig.core.Allocator.init_with_buffer(buffer);
 ///
 /// // Get the std.mem.Allocator from the buffer allocator.
 /// const allocator : std.mem.Allocator = buffer_allocator.allocator();
@@ -61,7 +61,7 @@ pub fn setupWithHeap(reserve: usize) Alloc {
 /// Parameters:
 /// - `buffer`: The buffer to use for allocation.
 ///
-pub fn setupWithBuffer(buffer: []u8) Alloc {
+pub fn init_with_buffer(buffer: []u8) Alloc {
     var self = Alloc{
         .low_boundary = Chunk.alignment.forward(@intFromPtr(buffer.ptr)),
         .high_boundary = Chunk.alignment.backward(@intFromPtr(buffer.ptr + buffer.len) - Chunk.header_size),
