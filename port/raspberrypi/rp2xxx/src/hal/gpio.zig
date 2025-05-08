@@ -15,35 +15,35 @@ const log = std.log.scoped(.gpio);
 
 pub const Function =
     switch (chip) {
-    .RP2040 => enum(u5) {
-        xip = 0,
-        spi,
-        uart,
-        i2c,
-        pwm,
-        sio,
-        pio0,
-        pio1,
-        gpck,
-        usb,
-        disabled = 0x1f,
-    },
-    .RP2350, .RP2350_QFN80 => enum(u5) {
-        hstx = 0,
-        spi,
-        uart,
-        i2c,
-        pwm,
-        sio,
-        pio0,
-        pio1,
-        pio2,
-        gpck,
-        usb,
-        uart_alt,
-        disabled = 0x1f,
-    },
-};
+        .RP2040 => enum(u5) {
+            xip = 0,
+            spi,
+            uart,
+            i2c,
+            pwm,
+            sio,
+            pio0,
+            pio1,
+            gpck,
+            usb,
+            disabled = 0x1f,
+        },
+        .RP2350, .RP2350_QFN80 => enum(u5) {
+            hstx = 0,
+            spi,
+            uart,
+            i2c,
+            pwm,
+            sio,
+            pio0,
+            pio1,
+            pio2,
+            gpck,
+            usb,
+            uart_alt,
+            disabled = 0x1f,
+        },
+    };
 
 pub const Direction = enum(u1) {
     in,
@@ -183,12 +183,12 @@ pub const Mask =
                 SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @intFromEnum(self);
             }
 
-        pub fn read(self: Mask) u32 {
-            return SIO.GPIO_IN.raw & @intFromEnum(self);
-        }
-    },
-    .RP2350, .RP2350_QFN80 => enum(u48) {
-        _,
+            pub fn read(self: Mask) u32 {
+                return SIO.GPIO_IN.raw & @intFromEnum(self);
+            }
+        },
+        .RP2350, .RP2350_QFN80 => enum(u48) {
+            _,
 
             fn lower_32_mask(self: Mask) u32 {
                 return @truncate(@intFromEnum(self));
@@ -282,35 +282,35 @@ pub const Pin = enum(u6) {
 
     pub const Regs =
         switch (chip) {
-        .RP2040 => extern struct {
-            status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-            ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: Function,
-                reserved8: u3,
-                OUTOVER: Override,
-                reserved12: u2,
-                OEOVER: Override,
-                reserved16: u2,
-                INOVER: Override,
-                reserved28: u10,
-                IRQOVER: Override,
-                padding: u2,
-            }),
-        },
-        .RP2350, .RP2350_QFN80 => extern struct {
-            status: @TypeOf(IO_BANK0.GPIO0_STATUS),
-            ctrl: microzig.mmio.Mmio(packed struct(u32) {
-                FUNCSEL: Function,
-                reserved12: u7,
-                OUTOVER: Override,
-                OEOVER: Override,
-                INOVER: Override,
-                reserved28: u10,
-                IRQOVER: Override,
-                padding: u2,
-            }),
-        },
-    };
+            .RP2040 => extern struct {
+                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+                ctrl: microzig.mmio.Mmio(packed struct(u32) {
+                    FUNCSEL: Function,
+                    reserved8: u3,
+                    OUTOVER: Override,
+                    reserved12: u2,
+                    OEOVER: Override,
+                    reserved16: u2,
+                    INOVER: Override,
+                    reserved28: u10,
+                    IRQOVER: Override,
+                    padding: u2,
+                }),
+            },
+            .RP2350, .RP2350_QFN80 => extern struct {
+                status: @TypeOf(IO_BANK0.GPIO0_STATUS),
+                ctrl: microzig.mmio.Mmio(packed struct(u32) {
+                    FUNCSEL: Function,
+                    reserved12: u7,
+                    OUTOVER: Override,
+                    OEOVER: Override,
+                    INOVER: Override,
+                    reserved28: u10,
+                    IRQOVER: Override,
+                    padding: u2,
+                }),
+            },
+        };
 
     pub const RegsArray = switch (chip) {
         .RP2040 => *volatile [30]Regs,
