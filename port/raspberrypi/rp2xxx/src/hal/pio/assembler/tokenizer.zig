@@ -745,7 +745,7 @@ pub fn Tokenizer(chip: Chip) type {
             const dest_str = try self.peek_arg(diags) orelse return error.MissingArg;
             const dest_lower = try lowercase_bounded(256, dest_str.str);
             // If the destination is rxfifo_ or rxfifoy, then it's a mov (to) rx instruction
-            if (chip == .RP2350 or chip == .RP2350_QFN80 and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
+            if ((chip == .RP2350 or chip == .RP2350_QFN80) and std.mem.startsWith(u8, dest_lower.slice(), "rxfifo")) {
                 return try self.get_movrx(diags);
             }
 
