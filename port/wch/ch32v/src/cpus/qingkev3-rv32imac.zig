@@ -137,3 +137,22 @@ pub inline fn system_init(comptime chip: anytype) void {
         .CSSC = 1,
     });
 }
+
+pub const csr_types = struct {
+    pub const intsyscr = packed struct(u32) {
+        /// [0] Hardware stack enable
+        hwstken: u1,
+        /// [1] Interrupt nesting enable
+        inesten: u1,
+        /// [3:2] Priority preemption configuration
+        pmtcfg: u2,
+        /// [4] Reserved
+        reserved0: u1 = 0,
+        /// [5] Global interrupt and hardware stack shutdown enable
+        gihwstknen: u1 = 0,
+        /// [30:6] Reserved
+        reserved1: u25 = 0x380,
+        /// [31] Lock
+        lock: u1 = 0,
+    };
+};

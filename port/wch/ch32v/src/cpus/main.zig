@@ -11,6 +11,14 @@ const PFIC = peripherals.PFIC;
 
 pub const cpu_frequency = cpu_impl.cpu_frequency;
 
+pub const CpuName = enum {
+    @"qingkev2-rv32ec",
+    @"qingkev3-rv32imac",
+    @"qingkev4-rv32imac",
+    @"qingkev4-rv32imafc",
+};
+pub const cpu_name: CpuName = std.meta.stringToEnum(CpuName, microzig.config.cpu_name) orelse @compileError("Unknown CPU name: " ++ microzig.config.cpu_name);
+
 // Interrupt
 
 pub const Interrupt = cpu_impl.Interrupt;
@@ -220,16 +228,31 @@ pub const startup_logic = struct {
 
         @call(.always_inline, &startup_logic.initialize_system_memories, .{});
 
-        // Configure the interrupts.
-        // FIXME
-        // csr.intsyscr_v2.write(.{ .hwstken = 1, .inesten = 1, .eabien = 1 });
-        csr.intsyscr_v4.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0b10 });
-        csr.corecfgr.write_raw(0x1f);
-        csr.mstatus.write(.{ .mie = 1, .mpie = 1, .fs = .dirty });
+        // Configure the CPU.
+        switch (cpu_name) {
+            .@"qingkev2-rv32ec" => csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .eabien = 1 }),
+            .@"qingkev3-rv32imac" => {},
+            .@"qingkev4-rv32imac" => {
+                // Configure pipelining and instruction prediction.
+                csr.corecfgr.write_raw(0x1f);
+                // Enable interrupt nesting and hardware stack.
+                csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0 });
+            },
+            .@"qingkev4-rv32imafc" => {
+                // Configure pipelining and instruction prediction.
+                csr.corecfgr.write_raw(0x1f);
+                // Enable interrupt nesting and hardware stack.
+                csr.intsyscr.write(.{ .hwstken = 1, .inesten = 1, .pmtcfg = 0b10 });
+            },
+        }
 
-        csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
         // Enable interrupts.
-        // csr.mstatus.write(.{ .mie = 1, .mpie = 1 });
+        csr.mtvec.write(.{ .mode0 = 1, .mode1 = 1, .base = 0 });
+        csr.mstatus.write(.{
+            .mie = 1,
+            .mpie = 1,
+            .fs = if (cpu_name == .@"qingkev4-rv32imafc") .dirty else .off,
+        });
 
         // Initialize the system.
         @export(&startup_logic._system_init, .{ .name = "_system_init" });
@@ -422,50 +445,7 @@ pub const csr = struct {
     pub const dscratch1 = riscv32_common.csr.dscratch1;
 
     pub const gintenr = Csr(0x800, u32);
-    pub const intsyscr_v2 = Csr(0x804, packed struct(u32) {
-        /// [0] HPE enable
-        hwstken: u1,
-        /// [1] Interrupt nesting enable
-        inesten: u1,
-        /// [2] EABI enable
-        eabien: u1,
-        /// [31:3] Reserved
-        reserved0: u29 = 0,
-    });
-    pub const intsyscr_v3 = Csr(0x804, packed struct(u32) {
-        /// [0] Hardware stack enable
-        hwstken: u1,
-        /// [1] Interrupt nesting enable
-        inesten: u1,
-        /// [3:2] Priority preemption configuration
-        pmtcfg: u2,
-        /// [4] Reserved
-        reserved0: u1 = 0,
-        /// [5] Global interrupt and hardware stack shutdown enable
-        gihwstknen: u1,
-        /// [30:6] Reserved
-        reserved1: u25 = 0x380,
-        /// [31] Lock
-        lock: u1,
-    });
-    pub const intsyscr_v4 = Csr(0x804, packed struct(u32) {
-        /// [0] HPE enable
-        hwstken: u1,
-        /// [1] Interrupt nesting enable
-        inesten: u1,
-        /// [3:2] Interrupt nesting depth configuration
-        pmtcfg: u2,
-        /// [4] Interrupt enable after HPE overflow
-        hwstkoven: u1 = 0,
-        /// [5] Global interrupt and HPE off enable
-        gihwstknen: u1 = 0,
-        /// [7:6] Reserved
-        reserved1: u2 = 0,
-        /// [15:8] Preemption status indication
-        pmtsta: u8 = 0,
-        /// [31:16] Reserved
-        reserved0: u16 = 0,
-    });
+    pub const intsyscr = Csr(0x804, cpu_impl.csr_types.intsyscr);
     pub const corecfgr = Csr(0xBC0, u32);
     pub const cstrcr = Csr(0xBC2, u32);
     pub const cpmpocr = Csr(0xBC3, u32);

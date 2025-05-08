@@ -245,3 +245,24 @@ pub inline fn system_init(comptime chip: anytype) void {
     // RCC->CFGR2 = 0x00000000;
     RCC.CFGR2.raw = 0;
 }
+
+pub const csr_types = struct {
+    pub const intsyscr = packed struct(u32) {
+        /// [0] HPE enable
+        hwstken: u1,
+        /// [1] Interrupt nesting enable
+        inesten: u1,
+        /// [3:2] Interrupt nesting depth configuration
+        pmtcfg: u2,
+        /// [4] Interrupt enable after HPE overflow
+        hwstkoven: u1 = 0,
+        /// [5] Global interrupt and HPE off enable
+        gihwstknen: u1 = 0,
+        /// [7:6] Reserved
+        reserved1: u2 = 0,
+        /// [15:8] Preemption status indication
+        pmtsta: u8 = 0,
+        /// [31:16] Reserved
+        reserved0: u16 = 0,
+    };
+};

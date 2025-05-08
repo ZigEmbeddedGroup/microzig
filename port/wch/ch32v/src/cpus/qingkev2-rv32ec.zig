@@ -104,3 +104,16 @@ pub inline fn system_init(comptime chip: anytype) void {
     // Adjusts the Internal High Speed oscillator (HSI) calibration value.
     RCC.CTLR.modify(.{ .HSITRIM = 0x10 });
 }
+
+pub const csr_types = struct {
+    pub const intsyscr = packed struct(u32) {
+        /// [0] HPE enable
+        hwstken: u1,
+        /// [1] Interrupt nesting enable
+        inesten: u1,
+        /// [2] EABI enable
+        eabien: u1,
+        /// [31:3] Reserved
+        reserved0: u29 = 0,
+    };
+};
