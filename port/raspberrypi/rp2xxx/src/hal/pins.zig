@@ -248,7 +248,7 @@ pub const Function = if (chip == .RP2350_QFN80) enum {
         };
     }
 
-    fn is_pwm(function: Function) bool {
+    pub fn is_pwm(function: Function) bool {
         return switch (function) {
             .PWM0_A,
             .PWM0_B,
@@ -279,7 +279,25 @@ pub const Function = if (chip == .RP2350_QFN80) enum {
         };
     }
 
-    fn pwm_channel(comptime function: Function) pwm.Channel {
+    pub fn pwm_slice(comptime function: Function) u32 {
+        return switch (function) {
+            .PWM0_A, .PWM0_B => 0,
+            .PWM1_A, .PWM1_B => 1,
+            .PWM2_A, .PWM2_B => 2,
+            .PWM3_A, .PWM3_B => 3,
+            .PWM4_A, .PWM4_B => 4,
+            .PWM5_A, .PWM5_B => 5,
+            .PWM6_A, .PWM6_B => 6,
+            .PWM7_A, .PWM7_B => 7,
+            .PWM8_A, .PWM8_B => 8,
+            .PWM9_A, .PWM9_B => 9,
+            .PWM10_A, .PWM10_B => 10,
+            .PWM11_A, .PWM11_B => 11,
+            else => @compileError("not pwm"),
+        };
+    }
+
+    pub fn pwm_channel(comptime function: Function) pwm.Channel {
         return switch (function) {
             .PWM0_A,
             .PWM1_A,
@@ -408,7 +426,7 @@ pub const Function = if (chip == .RP2350_QFN80) enum {
         };
     }
 
-    fn is_pwm(function: Function) bool {
+    pub fn is_pwm(function: Function) bool {
         return switch (function) {
             .PWM0_A,
             .PWM0_B,
@@ -431,7 +449,22 @@ pub const Function = if (chip == .RP2350_QFN80) enum {
         };
     }
 
-    fn pwm_channel(comptime function: Function) pwm.Channel {
+    pub fn pwm_slice(comptime function: Function) u32 {
+        return switch (function) {
+            .PWM0_A, .PWM0_B => 0,
+            .PWM1_A, .PWM1_B => 1,
+            .PWM2_A, .PWM2_B => 2,
+            .PWM3_A, .PWM3_B => 3,
+            .PWM4_A, .PWM4_B => 4,
+            .PWM5_A, .PWM5_B => 5,
+            .PWM6_A, .PWM6_B => 6,
+            .PWM7_A, .PWM7_B => 7,
+
+            else => @compileError("not pwm"),
+        };
+    }
+
+    pub fn pwm_channel(comptime function: Function) pwm.Channel {
         return switch (function) {
             .PWM0_A,
             .PWM1_A,
