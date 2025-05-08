@@ -367,7 +367,6 @@ fn load_cluster(
     node: xml.Node,
     parent: StructID,
 ) !void {
-
     // Note that dimable identifier type means that it can include a %s in the name, it's a copy of a previous identifier
     const name = node.get_value("name") orelse return error.MissingClusterName;
     const description = node.get_value("description");
@@ -387,7 +386,7 @@ fn load_cluster(
     if (derived_from != null)
         return error.TodoClusterDerivation;
 
-    const count: ?u64, const size: ?u64 = if (try DimElements.parse(node)) |elements| count: {
+    const count: ?u64, const size: ?u64 = if (try DimElements.parse(ctx, node)) |elements| count: {
         if (elements.dim_index != null or elements.dim_name != null)
             return error.TodoDimElementsExtended;
 

@@ -516,7 +516,7 @@ fn write_struct_decl(
     if (description) |d|
         try write_doc_comment(arena, d, writer);
 
-    try writer.print( "pub const {} = ", .{
+    try writer.print("pub const {} = ", .{
         std.zig.fmtId(name),
     });
 
@@ -825,12 +825,13 @@ const StructFieldIterator = struct {
             const next_register_offset = it.get_current_register_offset();
             const next_nested_struct_field_offset = it.get_current_nested_struct_field_offset();
 
-            const next_offset = next_register_offset orelse
-                next_nested_struct_field_offset orelse break;
+            const next_offset = if (next_register_offset != null and next_nested_struct_field_offset != null)
+                @min(next_register_offset.?, next_nested_struct_field_offset.?)
+            else
+                next_register_offset orelse
+                    next_nested_struct_field_offset orelse break;
 
-            std.log.info("it.offset={} next_offset={}", .{ it.offset, next_offset });
             if (it.offset != next_offset) {
-                std.log.info("sending reserved", .{});
                 defer it.offset = next_offset;
                 return .{
                     .reserved = .{
@@ -930,15 +931,12 @@ fn write_nested_struct_field(db: *Database, arena: Allocator, nsf: *const Nested
 
     try writer.print("{}: ", .{std.zig.fmtId(nsf.name)});
 
-
     // TODO: if it's a struct decl then refer to it by name
     if (try db.get_struct_decl_by_struct_id(arena, nsf.struct_id)) |struct_decl| {
         if (struct_decl.parent_id != nsf.parent_id)
             return error.TodoDifferentParentStructDecl;
 
         try writer.print("{},\n", .{std.zig.fmtId(struct_decl.name)});
-
-
     } else {
         try write_struct(db, arena, null, nsf.struct_id, writer);
         try writer.writeAll(",\n");
@@ -2485,15 +2483,7 @@ test "gen.nested struct field next to register" {
         \\    pub const peripherals = struct {
         \\        /// test peripheral
         \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            //// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                /// test field 1
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\            /// test nested struct
-        \\            /// offset: 0x04
-        \\            TEST_NESTED: extern struct {
+        \\            pub const TEST_NESTED_TYPE = extern struct {
         \\                /// test register
         \\                /// offset: 0x00
         \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
@@ -2501,23 +2491,21 @@ test "gen.nested struct field next to register" {
         \\                    TEST_FIELD: u1,
         \\                    padding: u31 = 0,
         \\                }),
-        \\            },
+        \\            };
+        \\
+        \\            /// test nested struct
+        \\            /// offset: 0x00
+        \\            TEST_NESTED: TEST_NESTED_TYPE,
+        \\            /// test register
+        \\            /// offset: 0x04
+        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+        \\                /// test field 1
+        \\                TEST_FIELD: u1,
+        \\                padding: u31 = 0,
+        \\            }),
         \\        };
         \\    };
         \\};
         \\
     , buffer.items);
-
 }
-//test "gen.nested struct field repeated" {}
-//test "gen.multiple nested struct fields of shared type" {}
-//test "gen.nested struct field next to moded register" {}
-//test "gen.nested struct field with moded registers" {}
-//test "gen.nested struct fields overlapping" {}
-//test "gen.nested struct field overlapping with register" {}
-
-// FIXME: Additional unit tests to create
-//
-// - Registers with shared struct
-// - Moded Register
-// - Moded Field
