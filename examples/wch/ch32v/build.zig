@@ -15,8 +15,8 @@ pub fn build(b: *std.Build) void {
     const available_examples = [_]Example{
         // CH32V003
         .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "empty_ch32v003", .file = "src/empty.zig" },
-        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "blinky_ch32v003", .file = "src/blinky_ch32v003.zig" },
-        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "blinky_systick_ch32v003", .file = "src/blinky_systick_ch32v003.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "blinky_ch32v003", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.ch32v.chips.ch32v003x4, .name = "blinky_systick_ch32v003", .file = "src/blinky_systick.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_empty", .file = "src/empty.zig" },
         .{ .target = mb.ports.ch32v.boards.ch32v003.ch32v003f4p6_r0_1v1, .name = "ch32v003f4p6_r0_1v1_blinky", .file = "src/blinky.zig" },
 

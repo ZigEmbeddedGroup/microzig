@@ -1,5 +1,4 @@
 const microzig = @import("microzig");
-// const hal = microzig.hal;
 const board = microzig.board;
 
 // Can define in the board file.

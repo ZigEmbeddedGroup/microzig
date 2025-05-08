@@ -4,7 +4,10 @@ const hal = microzig.hal;
 const cpu = microzig.cpu;
 const peripherals = microzig.chip.peripherals;
 
-const led = hal.gpio.Pin.init(0, 3);
+const led = if (cpu.cpu_name == .@"qingkev2-rv32ec")
+    hal.gpio.Pin.init(2, 0) // PC0
+else
+    hal.gpio.Pin.init(0, 3); // PA3
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
@@ -21,8 +24,12 @@ fn sys_tick_handler() callconv(cpu.riscv_calling_convention) void {
 }
 
 pub fn main() !void {
-    // Enable PortA.
-    peripherals.RCC.APB2PCENR.modify(.{ .IOPAEN = 1 });
+    // Enable Port
+    if (cpu.cpu_name == .@"qingkev2-rv32ec")
+        peripherals.RCC.APB2PCENR.modify(.{ .IOPCEN = 1 })
+    else
+        peripherals.RCC.APB2PCENR.modify(.{ .IOPAEN = 1 });
+
     // Set the LED pin as output.
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
 
