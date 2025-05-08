@@ -97,7 +97,7 @@ fn format_compile_error(comptime message: []const u8, comptime source: []const u
     var line_str: []const u8 = "";
     var line_num: u32 = 1;
     var column: u32 = 0;
-    var line_it = std.mem.tokenize(u8, source, "\n\r");
+    var line_it = std.mem.tokenizeAny(u8, source, "\n\r");
     while (line_it.next()) |line| : (line_num += 1) {
         line_str = line_str ++ "\n" ++ line;
         if (line_it.index >= index) {
