@@ -25791,7 +25791,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           (DMA_INTFCR)used in ch32v30x_D8/D8C</description>
           <addressOffset>0xD4</addressOffset>
           <size>0x20</size>
-          <access>write-read</access>
+          <access>read-write</access>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
@@ -32162,7 +32162,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <description>regular data register_start and discharge time register</description>
           <addressOffset>0x4C</addressOffset>
           <size>0x20</size>
-          <access>read-only_write-only</access>
+          <access>read-write</access>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
@@ -33120,7 +33120,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <description>regular data register_start and discharge time register</description>
           <addressOffset>0x4C</addressOffset>
           <size>0x20</size>
-          <access>read-only_write-only</access>
+          <access>read-write</access>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
