@@ -6,6 +6,8 @@ const StructField = std.builtin.Type.StructField;
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
+const chip = @import("compatibility.zig").chip;
+
 const gpio = @import("gpio.zig");
 const pwm = @import("pwm.zig");
 const adc = @import("adc.zig");

@@ -114,7 +114,7 @@ pub const mask = switch (chip) {
             return @as(Mask, @enumFromInt(m));
         }
     }.mask,
-    RP2350, .RP2350_QFN80 => struct {
+    .RP2350, .RP2350_QFN80 => struct {
         pub fn mask(m: u48) Mask {
             return @as(Mask, @enumFromInt(m));
         }
@@ -178,7 +178,7 @@ pub const Mask =
             return SIO.GPIO_IN.raw & @intFromEnum(self);
         }
     },
-    RP2350, .RP2350_QFN80 => enum(u48) {
+    .RP2350, .RP2350_QFN80 => enum(u48) {
         _,
 
         fn lower_32_mask(self: Mask) u32 {
@@ -279,7 +279,7 @@ pub const Pin = enum(u6) {
                 padding: u2,
             }),
         },
-        RP2350, .RP2350_QFN80 => extern struct {
+        .RP2350, .RP2350_QFN80 => extern struct {
             status: @TypeOf(IO_BANK0.GPIO0_STATUS),
             ctrl: microzig.mmio.Mmio(packed struct(u32) {
                 FUNCSEL: Function,
@@ -296,13 +296,13 @@ pub const Pin = enum(u6) {
 
     pub const RegsArray = switch (chip) {
         .RP2040 => *volatile [30]Regs,
-        RP2350, .RP2350_QFN80 => *volatile [48]Regs,
+        .RP2350, .RP2350_QFN80 => *volatile [48]Regs,
     };
 
     pub const PadsReg = @TypeOf(PADS_BANK0.GPIO0);
     pub const PadsRegArray = switch (chip) {
         .RP2040 => *volatile [30]PadsReg,
-        RP2350, .RP2350_QFN80 => *volatile [48]PadsReg,
+        .RP2350, .RP2350_QFN80 => *volatile [48]PadsReg,
     };
 
     fn get_regs(gpio: Pin) *volatile Regs {
@@ -323,7 +323,7 @@ pub const Pin = enum(u6) {
     pub fn mask(gpio: Pin) u32 {
         const bitshift_val: u5 = switch (chip) {
             .RP2040 => @intCast(@intFromEnum(gpio)),
-            RP2350, .RP2350_QFN80 =>
+            .RP2350, .RP2350_QFN80 =>
             // There are seperate copies of registers for GPIO32->47 on RP2350,
             // so upper GPIOs should present as bits 0 -> 15
             if (gpio.is_upper()) @intCast(@intFromEnum(gpio) - 32) else @intCast(@intFromEnum(gpio)),
@@ -349,7 +349,7 @@ pub const Pin = enum(u6) {
                     .out => SIO.GPIO_OE_SET.raw = gpio.mask(),
                 }
             },
-            RP2350, .RP2350_QFN80 => {
+            .RP2350, .RP2350_QFN80 => {
                 if (gpio.is_upper()) {
                     switch (direction) {
                         .in => SIO.GPIO_HI_OE_CLR.raw = gpio.mask(),
@@ -374,7 +374,7 @@ pub const Pin = enum(u6) {
                     1 => SIO.GPIO_OUT_SET.raw = gpio.mask(),
                 }
             },
-            RP2350, .RP2350_QFN80 => {
+            .RP2350, .RP2350_QFN80 => {
                 if (gpio.is_upper()) {
                     switch (value) {
                         0 => SIO.GPIO_HI_OUT_CLR.raw = gpio.mask(),
@@ -395,7 +395,7 @@ pub const Pin = enum(u6) {
             .RP2040 => {
                 SIO.GPIO_OUT_XOR.raw = gpio.mask();
             },
-            RP2350, .RP2350_QFN80 => {
+            .RP2350, .RP2350_QFN80 => {
                 if (gpio.is_upper()) {
                     SIO.GPIO_HI_OUT_XOR.raw = gpio.mask();
                 } else {
@@ -413,7 +413,7 @@ pub const Pin = enum(u6) {
                 else
                     0;
             },
-            RP2350, .RP2350_QFN80 => {
+            .RP2350, .RP2350_QFN80 => {
                 if (gpio.is_upper()) {
                     return if ((SIO.GPIO_HI_IN.raw & gpio.mask()) != 0)
                         1
@@ -452,7 +452,7 @@ pub const Pin = enum(u6) {
 
         switch (chip) {
             .RP2040 => {},
-            RP2350, .RP2350_QFN80 => {
+            .RP2350, .RP2350_QFN80 => {
                 // RP2350 added pad isolation that must be removed to actually connect the GPIO
                 pads_reg.modify(.{
                     .ISO = 0,

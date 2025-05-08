@@ -389,7 +389,7 @@ pub fn Encoder(comptime chip: Chip, comptime options: Options) type {
                                 },
                             };
                         },
-                        RP2350, .RP2350_QFN80 => {
+                        .RP2350, .RP2350_QFN80 => {
                             const irq_num = try self.evaluate(u3, program.*, irq.num, token_index, diags);
                             break :blk .{
                                 .irq = .{

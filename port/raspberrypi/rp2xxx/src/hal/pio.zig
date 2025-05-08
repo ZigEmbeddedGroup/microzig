@@ -9,7 +9,7 @@ const chip = @import("compatibility.zig").chip;
 const common = @import("pio/common.zig");
 const chip_specific = switch (chip) {
     .RP2040 => @import("pio/rp2040.zig"),
-    RP2350, .RP2350_QFN80 => @import("pio/rp2350.zig"),
+    .RP2350, .RP2350_QFN80 => @import("pio/rp2350.zig"),
 };
 pub const StateMachine = common.StateMachine;
 pub const Instruction = common.Instruction(chip);
@@ -34,7 +34,7 @@ pub fn num(n: u2) Pio {
             if (n > 1)
                 @panic("the RP2040 only has PIO0 and PIO1");
         },
-        RP2350, .RP2350_QFN80 => {
+        .RP2350, .RP2350_QFN80 => {
             if (n > 2)
                 @panic("the RP2350 only has PIO0-2");
         },

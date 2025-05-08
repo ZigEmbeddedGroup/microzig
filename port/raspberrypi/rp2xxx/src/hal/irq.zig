@@ -38,7 +38,7 @@ pub const Mask = switch (chip) {
         RTC_IRQ = 25,
     },
     // RP2350 has two different sets of registers for interrupts since there's >32 available interrupts
-    RP2350, .RP2350_QFN80 => enum(u6) {
+    .RP2350, .RP2350_QFN80 => enum(u6) {
         // Register group 0
         TIMER0_IRQ_0 = 0,
         TIMER0_IRQ_1 = 1,
@@ -102,7 +102,7 @@ pub fn enable(mask: Mask) void {
             PPB.NVIC_ICPR.write(.{ .CLRPEND = @as(u32, 1) << @intFromEnum(mask) });
             PPB.NVIC_ISER.write(.{ .SETENA = @as(u32, 1) << @intFromEnum(mask) });
         },
-        RP2350, .RP2350_QFN80 => {
+        .RP2350, .RP2350_QFN80 => {
 
             // Since ICPR/ISER registers are just sequential 32 bit registers where the entire 32 bits are used,
             // we can cast to a volatile *u32 array to avoid having to branch on what range the mask is in
@@ -126,7 +126,7 @@ pub fn disable(mask: Mask) void {
         .RP2040 => {
             PPB.NVIC_ICER.write(.{ .CLRENA = @as(u32, 1) << @as(u5, @intFromEnum(mask)) });
         },
-        RP2350, .RP2350_QFN80 => {
+        .RP2350, .RP2350_QFN80 => {
 
             // Since ICER registers are just sequential 32 bit registers where the entire 32 bits are used,
             // we can cast to a volatile *u32 array to avoid having to branch on what range the mask is in

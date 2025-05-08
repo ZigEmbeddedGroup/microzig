@@ -12,7 +12,7 @@ pub const Config =
         duration_us: u23,
         pause_during_debug: bool,
     },
-    RP2350, .RP2350_QFN80 => struct {
+    .RP2350, .RP2350_QFN80 => struct {
         duration_us: u24,
         pause_during_debug: bool,
     },
@@ -48,7 +48,7 @@ pub fn apply(config: Config) void {
             .PROC1 = 1,
             .padding = 0,
         }),
-        RP2350, .RP2350_QFN80 => hw.set_alias(&PSM.WDSEL).write(.{
+        .RP2350, .RP2350_QFN80 => hw.set_alias(&PSM.WDSEL).write(.{
             .PROC_COLD = 1,
             .OTP = 1,
             .ROSC = 0,
@@ -171,7 +171,7 @@ pub fn remaining_us() u24 {
     const rd = WATCHDOG.CTRL.read();
     return switch (chip) {
         .RP2040 => rd.TIME / 2,
-        RP2350, .RP2350_QFN80 => rd.TIME,
+        .RP2350, .RP2350_QFN80 => rd.TIME,
     };
 }
 
