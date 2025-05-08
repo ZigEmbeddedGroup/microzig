@@ -951,7 +951,7 @@ pub fn Tokenizer(chip: Chip) type {
                         },
                     };
                 },
-                .RP2350 => {
+                .RP2350, .RP2350_QFN80 => {
                     const IdxMode = Token(chip).Instruction.Irq.IdxMode;
                     const idx_mode: IdxMode = if (try self.peek_arg(diags)) |result| blk: {
                         const idxmode_lower = try lowercase_bounded(256, result.str);
