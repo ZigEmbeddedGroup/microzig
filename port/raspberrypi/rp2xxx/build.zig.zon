@@ -16,5 +16,7 @@
         "rp2040.ld",
         "rp2350_arm.ld",
         "rp2350_riscv.ld",
+        "rp2350_psram_8m_arm.ld",
+        "rp2350_psram_8m_riscv.ld",
     },
 }
