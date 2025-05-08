@@ -1,106 +1,119 @@
-const microzig = @import("microzig");
-const root = @import("root");
-
 pub const cpu_frequency = 24_000_000; // 24 MHz
 
-pub const interrupt = struct {
-    pub inline fn enable_interrupts() void {
-        asm volatile ("csrsi mstatus, 0b1000");
-    }
-
-    pub inline fn disable_interrupts() void {
-        asm volatile ("csrci mstatus, 0b1000");
-    }
+pub const Interrupt = enum(u8) {
+    /// Non-maskable interrupt
+    NMI = 2,
+    /// Abnormal interruptions
+    HardFault = 3,
+    /// System timer interrupt
+    SysTick = 12,
+    /// Software interrupt
+    SW = 14,
+    /// Window Watchdog interrupt
+    WWDG = 16,
+    /// PVD through EXTI line detection interrupt
+    PVD = 17,
+    /// Flash global interrupt
+    FLASH = 18,
+    /// Reset and clock control interrupt
+    RCC = 19,
+    /// EXTI Line[7:0] interrupt
+    EXTI7_0 = 20,
+    /// AWU global interrupt
+    AWU = 21,
+    /// DMA1 Channel 1 global interrupt
+    DMA1_Channel1 = 22,
+    /// DMA1 Channel 2 global interrupt
+    DMA1_Channel2 = 23,
+    /// DMA1 Channel 3 global interrupt
+    DMA1_Channel3 = 24,
+    /// DMA1 Channel 4 global interrupt
+    DMA1_Channel4 = 25,
+    /// DMA1 Channel 5 global interrupt
+    DMA1_Channel5 = 26,
+    /// DMA1 Channel 6 global interrupt
+    DMA1_Channel6 = 27,
+    /// DMA1 Channel 7 global interrupt
+    DMA1_Channel7 = 28,
+    /// ADC global interrupt
+    ADC = 29,
+    /// I2C1 event interrupt
+    I2C1_EV = 30,
+    /// I2C1 error interrupt
+    I2C1_ER = 31,
+    /// USART1 global interrupt
+    USART1 = 32,
+    /// SPI1 global interrupt
+    SPI1 = 33,
+    /// TIM1 Break interrupt
+    TIM1BRK = 34,
+    /// TIM1 Update interrupt
+    TIM1UP = 35,
+    /// TIM1 Trigger and Commutation interrupts
+    TIM1RG = 36,
+    /// TIM1 Capture Compare interrupt
+    TIM1CC = 37,
+    /// TIM2 global interrupt
+    TIM2 = 38,
 };
 
-pub inline fn wfi() void {
-    asm volatile ("wfi");
-}
+// https://github.com/openwch/ch32v003/blob/27f871a42060b06c381df2d199fd4ac28adaacd7/EVT/EXAM/RCC/MCO/User/system_ch32v00x.c#L73
+pub inline fn system_init(comptime chip: anytype) void {
+    const FLASH = chip.peripherals.FLASH;
+    const RCC = chip.peripherals.RCC;
 
-pub inline fn wfe() void {
-    const PFIC = microzig.chip.peripherals.PFIC;
-    // Treats the subsequent wfi instruction as wfe
-    PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
-    asm volatile ("wfi");
-}
+    FLASH.ACTLR.modify(.{ .LATENCY = 0 });
 
-pub const startup_logic = struct {
-    extern fn microzig_main() noreturn;
-
-    pub fn _start() callconv(.c) void {
-        // set global pointer
-        asm volatile (
-            \\.option push
-            \\.option norelax
-            \\la gp, __global_pointer$
-            \\.option pop
-        );
-        // set stack pointer
-        asm volatile ("mv sp, %[eos]"
-            :
-            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
-        );
-
-        // It is not allowed to call the function directly from the interrupt, the MCU does not start after a power-off.
-        @export(&initialize_system_memories, .{ .name = "initialize_system_memories" });
-        asm volatile (
-            \\jal initialize_system_memories
-        );
-
-        // Vendor-defined CSRs
-        // 3.2 Interrupt-related CSR Registers
-        asm volatile ("csrsi 0x804, 0b111"); // INTSYSCR: enable EABI + Interrupt nesting + HPE
-        asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
-
-        // Enable interrupts.
-        // Set MPIE and MIE.
-        asm volatile (
-            \\li t0, 0x88
-            \\csrw mstatus, t0
-        );
-
-        // init system clock
-        const RCC = microzig.chip.peripherals.RCC;
-        RCC.CTLR.modify(.{ .HSION = 1 });
-        RCC.CFGR0.raw &= 0xF8FF0000;
-        RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0 });
-        RCC.CTLR.modify(.{ .HSEBYP = 0 });
-        RCC.CFGR0.raw &= 0xFFFEFFFF;
-        RCC.INTR.raw = 0x009F0000;
-
-        // Load the address of the `microzig_main` function into the `mepc` register
-        // and transfer control to it using the `mret` instruction.
-        // This is necessary to ensure proper MCU startup after a power-off.
-        // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
-        asm volatile (
-            \\la t0, microzig_main
-            \\csrw mepc, t0
-            \\mret
-        );
-    }
-
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
-        asm volatile ("j _start");
-    }
-
-    fn initialize_system_memories() callconv(.c) void {
-        root.initialize_system_memories();
-    }
-};
-
-pub fn export_startup_logic() void {
-    @export(&startup_logic._start, .{
-        .name = "_start",
+    // RCC->CTLR |= (uint32_t)0x00000001;
+    RCC.CTLR.modify(.{ .HSION = 1 });
+    // RCC->CFGR0 &= (uint32_t)0xF8FF0000;
+    RCC.CFGR0.modify(.{
+        .SW = 0,
+        .SWS = 0,
+        .HPRE = 0,
+        .ADCPRE = 0,
+        .MCO = 0,
     });
+    // RCC->CTLR &= (uint32_t)0xFEF6FFFF;
+    RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0, .PLLON = 0 });
+    // RCC->CTLR &= (uint32_t)0xFFFBFFFF;
+    RCC.CTLR.modify(.{ .HSEBYP = 0 });
+    // RCC->CFGR0 &= (uint32_t)0xFFFEFFFF;
+    RCC.CFGR0.modify(.{ .PLLSRC = 0 });
+    // RCC->INTR = 0x009F0000;
+    RCC.INTR.write(.{
+        // Read-only ready flags.
+        .LSIRDYF = 0,
+        .HSIRDYF = 0,
+        .HSERDYF = 0,
+        .PLLRDYF = 0,
+        .CSSF = 0,
+        // Disable ready interrupts.
+        .LSIRDYIE = 0,
+        .HSIRDYIE = 0,
+        .HSERDYIE = 0,
+        .PLLRDYIE = 0,
+        // Clear ready flags.
+        .LSIRDYC = 1,
+        .HSIRDYC = 1,
+        .HSERDYC = 1,
+        .PLLRDYC = 1,
+        .CSSC = 1,
+    });
+
+    // Adjusts the Internal High Speed oscillator (HSI) calibration value.
+    RCC.CTLR.modify(.{ .HSITRIM = 0x10 });
 }
 
-const VectorTable = microzig.chip.VectorTable;
-pub const vector_table: VectorTable = blk: {
-    var tmp: VectorTable = .{};
-    if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(microzig.VectorTableOptions).@"struct".fields) |field|
-            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
-    }
-
-    break :blk tmp;
+pub const csr_types = struct {
+    pub const intsyscr = packed struct(u32) {
+        /// [0] HPE enable
+        hwstken: u1,
+        /// [1] Interrupt nesting enable
+        inesten: u1,
+        /// [2] EABI enable
+        eabien: u1,
+        /// [31:3] Reserved
+        reserved0: u29 = 0,
+    };
 };

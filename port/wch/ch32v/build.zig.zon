@@ -4,6 +4,7 @@
     .fingerprint = 0x8915ccee5ae76972,
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
     },
     .paths = .{
         "README.md",
