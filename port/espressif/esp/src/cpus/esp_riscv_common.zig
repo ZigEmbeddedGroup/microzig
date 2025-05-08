@@ -3,6 +3,18 @@ const microzig = @import("microzig");
 const root = @import("root");
 const microzig_options = root.microzig_options;
 
+const riscv32_common = @import("riscv32-common");
+
+pub const Exception = enum(u5) {
+    InstructionFault = 0x1,
+    IllegalInstruction = 0x2,
+    Breakpoint = 0x3,
+    LoadFault = 0x5,
+    StoreFault = 0x7,
+    UserEnvCall = 0x8,
+    MachineEnvCall = 0xb,
+};
+
 pub const Interrupt = enum(u5) {
     interrupt1 = 1,
     interrupt2 = 2,
@@ -37,7 +49,7 @@ pub const Interrupt = enum(u5) {
     interrupt31 = 31,
 };
 
-pub const InterruptHandler = *const fn (*InterruptStack) callconv(.c) void;
+pub const InterruptHandler = *const fn (*TrapFrame) callconv(.c) void;
 
 pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
     .{ .InterruptEnum = enum { Exception }, .HandlerFn = InterruptHandler },
@@ -45,22 +57,9 @@ pub const InterruptOptions = microzig.utilities.GenerateInterruptOptions(&.{
 });
 
 pub const interrupt = struct {
-    // TODO: to be replaced by a common riscv implementation
-    pub fn globally_enabled() bool {
-        return asm volatile ("csrr %[value], mstatus"
-            : [value] "=r" (-> u32),
-        ) & 0x8 != 0;
-    }
-
-    // TODO: to be replaced by a common riscv implementation
-    pub fn enable_interrupts() void {
-        asm volatile ("csrs mstatus, 0x8");
-    }
-
-    // TODO: to be replaced by a common riscv implementation
-    pub fn disable_interrupts() void {
-        asm volatile ("csrc mstatus, 0x8");
-    }
+    pub const globally_enabled = riscv32_common.interrupt.globally_enabled;
+    pub const enable_interrupts = riscv32_common.interrupt.enable_interrupts;
+    pub const disable_interrupts = riscv32_common.interrupt.disable_interrupts;
 
     const INTERRUPT_CORE0 = microzig.chip.peripherals.INTERRUPT_CORE0;
 
@@ -120,7 +119,6 @@ pub const interrupt = struct {
     pub fn set_priority_threshold(priority: Priority) void {
         INTERRUPT_CORE0.CPU_INT_THRESH.write(.{
             .CPU_INT_THRESH = @intFromEnum(priority),
-            .padding = 0,
         });
     }
 
@@ -231,19 +229,10 @@ pub const interrupt = struct {
     }
 };
 
-// TODO: to be replaced by common riscv implementation
-pub fn wfi() void {
-    asm volatile ("wfi");
-}
+pub const nop = riscv32_common.nop;
+pub const wfi = riscv32_common.wfi;
 
-// TODO: to be replaced by a common riscv implementation
-pub fn wfe() void {
-    asm volatile ("csrs 0x810, 0x1");
-    wfi();
-    asm volatile ("csrs 0x810, 0x1");
-}
-
-pub const InterruptStack = extern struct {
+pub const TrapFrame = extern struct {
     ra: usize,
     t0: usize,
     t1: usize,
@@ -296,12 +285,10 @@ pub fn init_interrupts() void {
         interrupt.disable(int);
     }
 
-    @export(&_vector_table, .{ .name = "_vector_table" });
-    asm volatile (
-        \\la a0, _vector_table
-        \\ori a0, a0, 1
-        \\csrw mtvec, a0
-    );
+    csr.mtvec.write(.{
+        .mode = .vectored,
+        .base = @intCast(@intFromPtr(&_vector_table) >> 2),
+    });
 }
 
 fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
@@ -344,163 +331,163 @@ fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _exception_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt1:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt1_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt2:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt2_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt3:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt3_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt4:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt4_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt5:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt5_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt6:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt6_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt7:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt7_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt8:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt8_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt9:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt9_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt10:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt10_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt11:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt11_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt12:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt12_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt13:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt13_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt14:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt14_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt15:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt15_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt16:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt16_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt17:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt17_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt18:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt18_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt19:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt19_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt20:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt20_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt21:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt21_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt22:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt22_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt23:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt23_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt24:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt24_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt25:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt25_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt26:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt26_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt27:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt27_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt28:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt28_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt29:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt29_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt30:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt30_handler
-        \\    j interrupt_common
+        \\    j trap_common
         \\interrupt31:
         \\    addi sp, sp, -40*4
         \\    sw ra, 0(sp)
         \\    la ra, _interrupt31_handler
-        \\    j interrupt_common
-        \\interrupt_common:
+        \\    j trap_common
+        \\trap_common:
         \\    sw t0, 1*4(sp)
         \\    sw t1, 2*4(sp)
         \\    sw t2, 3*4(sp)
@@ -599,37 +586,33 @@ fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
     );
 }
 
-fn unhandled() linksection(".trap") callconv(.c) void {
-    // TODO: replace with friendly csr struct after we make a common riscv implementation.
-    const mcause = asm volatile ("csrr %[mcause], mcause"
-        : [mcause] "=r" (-> u32),
-    );
+fn unhandled(_: *TrapFrame) linksection(".trap") callconv(.c) void {
+    const mcause = csr.mcause.read();
 
-    std.log.err("unhandled {s} with number {} occurred!", .{
-        if (mcause & (1 << 31) != 0) "interrupt" else "exception",
-        mcause & 0x1f,
-    });
+    if (mcause.is_interrupt != 0) {
+        std.log.err("unhandled interrupt {} occurred!", .{mcause.code});
+    } else {
+        const exception: Exception = @enumFromInt(mcause.code);
+        std.log.err("exception {s} occurred!", .{@tagName(exception)});
+    }
 
-    @panic("unhandled interrupt");
+    @panic("unhandled trap");
 }
 
 fn _update_priority() linksection(".trap") callconv(.c) u32 {
-    // TODO: replace with friendly csr struct after we make a common riscv implementation.
-    const mcause = asm volatile ("csrr %[mcause], mcause"
-        : [mcause] "=r" (-> u32),
-    );
+    const mcause = csr.mcause.read();
 
     const prev_priority = interrupt.get_priority_threshold();
 
-    if (mcause & (1 << 31) != 0) {
+    if (mcause.is_interrupt != 0) {
         // this is an interrupt (can also be exception in which case we don't enable interrupts).
 
-        const int: Interrupt = @enumFromInt(mcause & 0x1f);
+        const int: Interrupt = @enumFromInt(mcause.code);
         const priority = interrupt.get_priority(int);
 
         if (@intFromEnum(priority) < 15) {
             // allow higher priority interrupts to preempt this one
-            interrupt.set_priority_threshold(priority);
+            interrupt.set_priority_threshold(@enumFromInt(@intFromEnum(priority) + 1));
             interrupt.enable_interrupts();
         }
     }
@@ -641,3 +624,84 @@ fn _restore_priority(priority_raw: u32) linksection(".trap") callconv(.c) void {
     interrupt.disable_interrupts();
     interrupt.set_priority_threshold(@enumFromInt(priority_raw));
 }
+
+pub const csr = struct {
+    pub const mvendorid = riscv32_common.csr.mvendorid;
+    pub const marchid = riscv32_common.csr.marchid;
+    pub const mimpid = riscv32_common.csr.mimpid;
+    pub const mhartid = riscv32_common.csr.mhartid;
+
+    pub const mstatus = riscv32_common.csr.mstatus;
+    pub const misa = riscv32_common.csr.misa;
+    pub const mtvec = riscv32_common.csr.mtvec;
+
+    pub const mscratch = riscv32_common.csr.mscratch;
+    pub const mepc = riscv32_common.csr.mepc;
+    pub const mcause = riscv32_common.csr.mcause;
+    pub const mtval = riscv32_common.csr.mtval;
+
+    pub const pmpcfg0 = riscv32_common.csr.pmpcfg0;
+    pub const pmpcfg1 = riscv32_common.csr.pmpcfg1;
+    pub const pmpcfg2 = riscv32_common.csr.pmpcfg2;
+    pub const pmpcfg3 = riscv32_common.csr.pmpcfg3;
+
+    pub const pmpaddr0 = riscv32_common.csr.pmpaddr0;
+    pub const pmpaddr1 = riscv32_common.csr.pmpaddr1;
+    pub const pmpaddr2 = riscv32_common.csr.pmpaddr2;
+    pub const pmpaddr3 = riscv32_common.csr.pmpaddr3;
+    pub const pmpaddr4 = riscv32_common.csr.pmpaddr4;
+    pub const pmpaddr5 = riscv32_common.csr.pmpaddr5;
+    pub const pmpaddr6 = riscv32_common.csr.pmpaddr6;
+    pub const pmpaddr7 = riscv32_common.csr.pmpaddr7;
+    pub const pmpaddr8 = riscv32_common.csr.pmpaddr8;
+    pub const pmpaddr9 = riscv32_common.csr.pmpaddr9;
+    pub const pmpaddr10 = riscv32_common.csr.pmpaddr10;
+    pub const pmpaddr11 = riscv32_common.csr.pmpaddr11;
+    pub const pmpaddr12 = riscv32_common.csr.pmpaddr12;
+    pub const pmpaddr13 = riscv32_common.csr.pmpaddr13;
+    pub const pmpaddr14 = riscv32_common.csr.pmpaddr14;
+    pub const pmpaddr15 = riscv32_common.csr.pmpaddr15;
+
+    pub const tselect = riscv32_common.csr.tselect;
+    pub const tdata1 = riscv32_common.csr.tdata1;
+    pub const tdata2 = riscv32_common.csr.tdata2;
+    pub const tcontrol = Csr(0x7A5, packed struct {
+        reserved0: u3,
+        mte: u1,
+        reserved1: u3,
+        mpte: u1,
+        reserved2: u24,
+    });
+
+    pub const dcsr = riscv32_common.csr.dcsr;
+    pub const dpc = riscv32_common.csr.dpc;
+    pub const dscratch0 = riscv32_common.csr.dscratch0;
+    pub const dscratch1 = riscv32_common.csr.dscratch1;
+
+    pub const mpcer = Csr(0x7E0, packed struct {
+        cycle: u1,
+        inst: u1,
+        ld_hazard: u1,
+        jmp_hazard: u1,
+        idle: u1,
+        load: u1,
+        store: u1,
+        jmp_uncond: u1,
+        branch: u1,
+        branch_taken: u1,
+        inst_comp: u1,
+        reserved0: u21,
+    });
+    pub const mpcmr = Csr(0x7E1, packed struct {
+        count_en: u1,
+        count_sat: u1,
+        reserved0: u30,
+    });
+    pub const mpccr = Csr(0x7E2, u32);
+
+    pub const cpu_gpio_oen = Csr(0x803, u32);
+    pub const cpu_gpio_in = Csr(0x804, u32);
+    pub const cpu_gpio_out = Csr(0x805, u32);
+
+    pub const Csr = riscv32_common.csr.Csr;
+};

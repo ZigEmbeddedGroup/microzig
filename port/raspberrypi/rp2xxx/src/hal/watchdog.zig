@@ -7,16 +7,16 @@ const chip = @import("compatibility.zig").chip;
 
 pub const Config =
     switch (chip) {
-    .RP2040 => struct {
-        // See errata RP2040-E1, duration ends up getting multiplied by 2 reducing the allowable delay range
-        duration_us: u23,
-        pause_during_debug: bool,
-    },
-    .RP2350, .RP2350_QFN80 => struct {
-        duration_us: u24,
-        pause_during_debug: bool,
-    },
-};
+        .RP2040 => struct {
+            // See errata RP2040-E1, duration ends up getting multiplied by 2 reducing the allowable delay range
+            duration_us: u23,
+            pause_during_debug: bool,
+        },
+        .RP2350, .RP2350_QFN80 => struct {
+            duration_us: u24,
+            pause_during_debug: bool,
+        },
+    };
 
 var previous_watchdog_delay: ?u24 = null;
 
@@ -46,7 +46,6 @@ pub fn apply(config: Config) void {
             .SIO = 1,
             .PROC0 = 1,
             .PROC1 = 1,
-            .padding = 0,
         }),
         .RP2350, .RP2350_QFN80 => hw.set_alias(&PSM.WDSEL).write(.{
             .PROC_COLD = 1,
@@ -74,7 +73,6 @@ pub fn apply(config: Config) void {
             .ACCESSCTRL = 1,
             .PROC0 = 1,
             .PROC1 = 1,
-            .padding = 0,
         }),
     }
     // Tell RESETS hardware to reset everything except ROSC/XOSC on a watchdog reset
@@ -83,14 +81,12 @@ pub fn apply(config: Config) void {
     const duration: u24 = if (chip == .RP2040) @as(u24, config.duration_us) << 1 else config.duration_us;
     WATCHDOG.LOAD.write(.{
         .LOAD = duration,
-        .padding = 0,
     });
     hw.set_alias(&WATCHDOG.CTRL).write(.{
         .TIME = 0,
         .PAUSE_JTAG = if (config.pause_during_debug) 1 else 0,
         .PAUSE_DBG0 = if (config.pause_during_debug) 1 else 0,
         .PAUSE_DBG1 = if (config.pause_during_debug) 1 else 0,
-        .reserved30 = 0,
         .ENABLE = 0,
         .TRIGGER = 0,
     });
@@ -113,7 +109,6 @@ pub fn enable() void {
         .PAUSE_JTAG = 0,
         .PAUSE_DBG0 = 0,
         .PAUSE_DBG1 = 0,
-        .reserved30 = 0,
         .ENABLE = 1,
         .TRIGGER = 0,
     });
@@ -126,7 +121,6 @@ pub inline fn disable() void {
         .PAUSE_JTAG = 0,
         .PAUSE_DBG0 = 0,
         .PAUSE_DBG1 = 0,
-        .reserved30 = 0,
         .ENABLE = 1,
         .TRIGGER = 0,
     });
@@ -143,7 +137,6 @@ pub fn update(delay_us: ?u24) void {
     if (chip == .RP2040) duration_us = duration_us << 1;
     WATCHDOG.LOAD.write(.{
         .LOAD = duration_us,
-        .padding = 0,
     });
 }
 
@@ -156,7 +149,6 @@ pub inline fn force() void {
         .PAUSE_JTAG = 0,
         .PAUSE_DBG0 = 0,
         .PAUSE_DBG1 = 0,
-        .reserved30 = 0,
         .ENABLE = 0,
         .TRIGGER = 1,
     });

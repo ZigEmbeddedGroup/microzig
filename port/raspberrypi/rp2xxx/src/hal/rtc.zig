@@ -30,7 +30,7 @@ pub fn apply(comptime clock_config: clocks.config.Global) void {
     const MAX_RTC_FREQ = 65536;
     const rtc_freq = comptime clock_config.rtc.?.frequency();
     comptime std.debug.assert((rtc_freq <= MAX_RTC_FREQ) and (rtc_freq >= 1));
-    RTC.CLKDIV_M1.write(.{ .CLKDIV_M1 = @as(u16, @truncate(rtc_freq - 1)), .padding = 0 });
+    RTC.CLKDIV_M1.write(.{ .CLKDIV_M1 = @as(u16, @truncate(rtc_freq - 1)) });
 
     enable();
 }
@@ -41,11 +41,8 @@ pub inline fn disable() void {
     hw.clear_alias(&RTC.CTRL).write(.{
         .RTC_ENABLE = 1,
         .RTC_ACTIVE = 0,
-        .reserved4 = 0,
         .LOAD = 0,
-        .reserved8 = 0,
         .FORCE_NOTLEAPYEAR = 0,
-        .padding = 0,
     });
     // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
     while (RTC.CTRL.read().RTC_ACTIVE != 0) {}
@@ -56,11 +53,8 @@ pub inline fn enable() void {
     hw.set_alias(&RTC.CTRL).write(.{
         .RTC_ENABLE = 1,
         .RTC_ACTIVE = 0,
-        .reserved4 = 0,
         .LOAD = 0,
-        .reserved8 = 0,
         .FORCE_NOTLEAPYEAR = 0,
-        .padding = 0,
     });
     // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
     while (RTC.CTRL.read().RTC_ACTIVE != 1) {}
@@ -82,11 +76,8 @@ pub inline fn set_datetime(datetime: DateTime) void {
     hw.set_alias(&RTC.CTRL).write(.{
         .RTC_ENABLE = 0,
         .RTC_ACTIVE = 0,
-        .reserved4 = 0,
         .LOAD = 1,
-        .reserved8 = 0,
         .FORCE_NOTLEAPYEAR = 0,
-        .padding = 0,
     });
 }
 
@@ -197,16 +188,13 @@ pub const alarm = struct {
         // Set alias to atomically enable Alarm
         hw.set_alias(&RTC.IRQ_SETUP_0).write(.{
             .DAY = 0,
-            .reserved8 = 0,
             .MONTH = 0,
             .YEAR = 0,
             .DAY_ENA = 0,
             .MONTH_ENA = 0,
             .YEAR_ENA = 0,
-            .reserved28 = 0,
             .MATCH_ENA = 1,
             .MATCH_ACTIVE = 0,
-            .padding = 0,
         });
         // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
         while (RTC.IRQ_SETUP_0.read().MATCH_ACTIVE != 1) {}
@@ -221,16 +209,13 @@ pub const alarm = struct {
         // Clear alias to atomically disable Alarm
         hw.clear_alias(&RTC.IRQ_SETUP_0).write(.{
             .DAY = 0,
-            .reserved8 = 0,
             .MONTH = 0,
             .YEAR = 0,
             .DAY_ENA = 0,
             .MONTH_ENA = 0,
             .YEAR_ENA = 0,
-            .reserved28 = 0,
             .MATCH_ENA = 1,
             .MATCH_ACTIVE = 0,
-            .padding = 0,
         });
         // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
         while (RTC.IRQ_SETUP_0.read().MATCH_ACTIVE != 0) {}
@@ -244,7 +229,6 @@ pub const irq = struct {
         // Clear alias to atomically disable IRQ
         hw.clear_alias(&RTC.INTE).write(.{
             .RTC = 1,
-            .padding = 0,
         });
     }
 
@@ -253,7 +237,6 @@ pub const irq = struct {
         // Set alias to atomically enable IRQ
         hw.set_alias(&RTC.INTE).write(.{
             .RTC = 1,
-            .padding = 0,
         });
     }
 };

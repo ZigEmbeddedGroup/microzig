@@ -2,8 +2,8 @@
     .name = .microzig,
     // Note: This should be changed if you fork microzig!
     .fingerprint = 0x605a83a849186d0f,
-    .version = "0.13.2",
-    .minimum_zig_version = "0.13.0",
+    .version = "0.14.0",
+    .minimum_zig_version = "0.14.0",
     .dependencies = .{
         .@"build-internals" = .{ .path = "build-internals" },
         .core = .{ .path = "core" },
@@ -12,10 +12,14 @@
         // tools
         .@"tools/regz" = .{ .path = "tools/regz" },
         .@"tools/uf2" = .{ .path = "tools/uf2" },
-        .@"tools/esp_image" = .{ .path = "tools/esp_image" },
+        .@"tools/esp-image" = .{ .path = "tools/esp-image" },
 
         // modules
         .@"modules/foundation-libc" = .{ .path = "modules/foundation-libc" },
+        .@"modules/riscv32-common" = .{ .path = "modules/riscv32-common" },
+
+        // simulators
+        .@"sim/aviron" = .{ .path = "sim/aviron", .lazy = true },
 
         // ports
         .@"port/espressif/esp" = .{ .path = "port/espressif/esp", .lazy = true },
@@ -30,8 +34,8 @@
 
         // used for creating package tarballs
         .boxzer = .{
-            .url = "git+https://github.com/mattnite/boxzer.git#ba48dc0beed520d3fd91738e3717776ac02df175",
-            .hash = "boxzer-0.1.0-UECMFB7WAAAOQio_OOb84Tmeft26gQ6Ec6jL5MUU_h1r",
+            .url = "git+https://github.com/mattnite/boxzer.git#d50d7916b1f850048b2ad7e63a7abf05bd73c0e6",
+            .hash = "boxzer-0.1.0--ed-MLzlAADinFJMGZncIcYAE07MoAbAr8a2R7Cr-xln",
         },
     },
     .paths = .{

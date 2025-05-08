@@ -123,56 +123,65 @@ pub const mask = switch (chip) {
 
 pub const Mask =
     switch (chip) {
-    .RP2040 => enum(u30) {
-        _,
+        .RP2040 => enum(u30) {
+            _,
 
-        pub fn set_function(self: Mask, function: Function) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u5, @intCast(i));
-                if (0 != raw_mask & (@as(u32, 1) << bit))
-                    num(bit).set_function(function);
+            pub fn set_function(self: Mask, function: Function) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u5, @intCast(i));
+                    if (0 != raw_mask & (@as(u32, 1) << bit))
+                        num(bit).set_function(function);
+                }
             }
-        }
 
-        pub fn set_direction(self: Mask, direction: Direction) void {
-            const raw_mask = @intFromEnum(self);
-            switch (direction) {
-                .out => SIO.GPIO_OE_SET.raw = raw_mask,
-                .in => SIO.GPIO_OE_CLR.raw = raw_mask,
+            pub fn set_direction(self: Mask, direction: Direction) void {
+                const raw_mask = @intFromEnum(self);
+                switch (direction) {
+                    .out => SIO.GPIO_OE_SET.raw = raw_mask,
+                    .in => SIO.GPIO_OE_CLR.raw = raw_mask,
+                }
             }
-        }
 
-        pub fn set_pull(self: Mask, pull: Pull) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u5, @intCast(i));
-                if (0 != raw_mask & (@as(u32, 1) << bit))
-                    num(bit).set_pull(pull);
+            pub fn set_pull(self: Mask, pull: Pull) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u5, @intCast(i));
+                    if (0 != raw_mask & (@as(u32, 1) << bit))
+                        num(bit).set_pull(pull);
+                }
             }
-        }
 
-        pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u5, @intCast(i));
-                if (0 != raw_mask & (@as(u32, 1) << bit))
-                    num(bit).set_slew_rate(slew_rate);
+            pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u5, @intCast(i));
+                    if (0 != raw_mask & (@as(u32, 1) << bit))
+                        num(bit).set_slew_rate(slew_rate);
+                }
             }
-        }
 
-        pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u5, @intCast(i));
-                if (0 != raw_mask & (@as(u32, 1) << bit))
-                    num(bit).set_schmitt_trigger(enabled);
+            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u5, @intCast(i));
+                    if (0 != raw_mask & (@as(u32, 1) << bit))
+                        num(bit).set_schmitt_trigger(enabled);
+                }
             }
-        }
 
-        pub fn put(self: Mask, value: u32) void {
-            SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @intFromEnum(self);
-        }
+            pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u5, @intCast(i));
+                    if (0 != raw_mask & (@as(u32, 1) << bit))
+                        num(bit).set_drive_strength(drive_strength);
+                }
+            }
+
+            pub fn put(self: Mask, value: u32) void {
+                SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ value) & @intFromEnum(self);
+            }
 
         pub fn read(self: Mask) u32 {
             return SIO.GPIO_IN.raw & @intFromEnum(self);
@@ -181,83 +190,92 @@ pub const Mask =
     .RP2350, .RP2350_QFN80 => enum(u48) {
         _,
 
-        fn lower_32_mask(self: Mask) u32 {
-            return @truncate(@intFromEnum(self));
-        }
-
-        fn upper_16_mask(self: Mask) u16 {
-            return @truncate(@intFromEnum(self) >> 32);
-        }
-
-        pub fn set_function(self: Mask, function: Function) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u6, @intCast(i));
-                if (0 != raw_mask & (@as(u48, 1) << bit))
-                    num(bit).set_function(function);
+            fn lower_32_mask(self: Mask) u32 {
+                return @truncate(@intFromEnum(self));
             }
-        }
 
-        pub fn set_direction(self: Mask, direction: Direction) void {
-            const lower_mask = self.lower_32_mask();
-            const upper_mask = self.upper_16_mask();
-            switch (direction) {
-                .out => {
-                    SIO.GPIO_OE_SET.raw = lower_mask;
-                    SIO.GPIO_HI_OE_SET.raw = upper_mask;
-                },
-                .in => {
-                    SIO.GPIO_OE_CLR.raw = lower_mask;
-                    SIO.GPIO_HI_OE_CLR.raw = lower_mask;
-                },
+            fn upper_16_mask(self: Mask) u16 {
+                return @truncate(@intFromEnum(self) >> 32);
             }
-        }
 
-        pub fn set_pull(self: Mask, pull: Pull) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u6, @intCast(i));
-                if (0 != raw_mask & (@as(u48, 1) << bit))
-                    num(bit).set_pull(pull);
+            pub fn set_function(self: Mask, function: Function) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u6, @intCast(i));
+                    if (0 != raw_mask & (@as(u48, 1) << bit))
+                        num(bit).set_function(function);
+                }
             }
-        }
 
-        pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u6, @intCast(i));
-                if (0 != raw_mask & (@as(u48, 1) << bit))
-                    num(bit).set_slew_rate(slew_rate);
+            pub fn set_direction(self: Mask, direction: Direction) void {
+                const lower_mask = self.lower_32_mask();
+                const upper_mask = self.upper_16_mask();
+                switch (direction) {
+                    .out => {
+                        SIO.GPIO_OE_SET.raw = lower_mask;
+                        SIO.GPIO_HI_OE_SET.raw = upper_mask;
+                    },
+                    .in => {
+                        SIO.GPIO_OE_CLR.raw = lower_mask;
+                        SIO.GPIO_HI_OE_CLR.raw = lower_mask;
+                    },
+                }
             }
-        }
 
-        pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
-            const raw_mask = @intFromEnum(self);
-            for (0..@bitSizeOf(Mask)) |i| {
-                const bit = @as(u6, @intCast(i));
-                if (0 != raw_mask & (@as(u48, 1) << bit))
-                    num(bit).set_schmitt_trigger(enabled);
+            pub fn set_pull(self: Mask, pull: Pull) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u6, @intCast(i));
+                    if (0 != raw_mask & (@as(u48, 1) << bit))
+                        num(bit).set_pull(pull);
+                }
             }
-        }
 
-        pub fn put(self: Mask, value: u48) void {
-            const lower_mask = self.lower_32_mask();
-            const lower_val: u32 = @truncate(value);
-            const upper_mask = self.upper_16_mask();
-            const upper_val: u16 = @truncate(value >> 32);
-            SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ lower_val) & lower_mask;
-            SIO.GPIO_HI_OUT_XOR.raw = (SIO.GPIO_HI_OUT.raw ^ upper_val) & upper_mask;
-        }
+            pub fn set_slew_rate(self: Mask, slew_rate: SlewRate) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u6, @intCast(i));
+                    if (0 != raw_mask & (@as(u48, 1) << bit))
+                        num(bit).set_slew_rate(slew_rate);
+                }
+            }
 
-        pub fn read(self: Mask) u48 {
-            const lower_mask = self.lower_32_mask();
-            const lower_val: u32 = SIO.GPIO_IN & lower_mask;
-            const upper_mask = self.upper_16_mask();
-            const upper_val: u16 = @truncate(SIO.GPIO_HI_IN.raw & upper_mask);
-            return (@as(u48, upper_val) << 32) | @as(u48, lower_val);
-        }
-    },
-};
+            pub fn set_schmitt_trigger(self: Mask, enabled: Enabled) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u6, @intCast(i));
+                    if (0 != raw_mask & (@as(u48, 1) << bit))
+                        num(bit).set_schmitt_trigger(enabled);
+                }
+            }
+
+            pub fn set_drive_strength(self: Mask, drive_strength: DriveStrength) void {
+                const raw_mask = @intFromEnum(self);
+                for (0..@bitSizeOf(Mask)) |i| {
+                    const bit = @as(u6, @intCast(i));
+                    if (0 != raw_mask & (@as(u48, 1) << bit))
+                        num(bit).set_drive_strength(drive_strength);
+                }
+            }
+
+            pub fn put(self: Mask, value: u48) void {
+                const lower_mask = self.lower_32_mask();
+                const lower_val: u32 = @truncate(value);
+                const upper_mask = self.upper_16_mask();
+                const upper_val: u16 = @truncate(value >> 32);
+                SIO.GPIO_OUT_XOR.raw = (SIO.GPIO_OUT.raw ^ lower_val) & lower_mask;
+                SIO.GPIO_HI_OUT_XOR.raw = (SIO.GPIO_HI_OUT.raw ^ upper_val) & upper_mask;
+            }
+
+            pub fn read(self: Mask) u48 {
+                const lower_mask = self.lower_32_mask();
+                const lower_val: u32 = SIO.GPIO_IN & lower_mask;
+                const upper_mask = self.upper_16_mask();
+                const upper_val: u16 = @truncate(SIO.GPIO_HI_IN.raw & upper_mask);
+                return (@as(u48, upper_val) << 32) | @as(u48, lower_val);
+            }
+        },
+    };
 
 pub const Pin = enum(u6) {
     _,
@@ -434,6 +452,11 @@ pub const Pin = enum(u6) {
         pads_reg.modify(.{ .IE = @intFromBool(enabled) });
     }
 
+    pub inline fn set_output_disabled(pin: Pin, disabled: bool) void {
+        const pads_reg = pin.get_pads_reg();
+        pads_reg.modify(.{ .OD = @intFromBool(disabled) });
+    }
+
     pub inline fn set_function(gpio: Pin, function: Function) void {
         const pads_reg = gpio.get_pads_reg();
         pads_reg.modify(.{
@@ -477,6 +500,18 @@ pub const Pin = enum(u6) {
             .SCHMITT = switch (enabled) {
                 .enabled => @as(u1, 1),
                 .disabled => @as(u1, 0),
+            },
+        });
+    }
+
+    pub fn set_drive_strength(gpio: Pin, drive_strength: DriveStrength) void {
+        const pads_reg = gpio.get_pads_reg();
+        pads_reg.modify(.{
+            .DRIVE = switch (drive_strength) {
+                .@"2mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"2mA",
+                .@"4mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"4mA",
+                .@"8mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"8mA",
+                .@"12mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"12mA",
             },
         });
     }

@@ -116,7 +116,6 @@ pub fn init() void {
 }
 
 pub fn main() !void {
-
     // Don't forget to bring a blinky!
     const led_gpio = gpio.num(25);
     led_gpio.set_direction(.out);

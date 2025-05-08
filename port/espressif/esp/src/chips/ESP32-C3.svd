@@ -11190,7 +11190,7 @@
         <register>
           <dim>26</dim>
           <dimIncrement>0x4</dimIncrement>
-          <name>PIN%s</name>
+          <name>PIN[%s]</name>
           <description>GPIO pin configuration register</description>
           <addressOffset>0x74</addressOffset>
           <size>0x20</size>
@@ -11264,7 +11264,7 @@
         <register>
           <dim>128</dim>
           <dimIncrement>0x4</dimIncrement>
-          <name>FUNC%s_IN_SEL_CFG</name>
+          <name>FUNC_IN_SEL_CFG[%s]</name>
           <description>GPIO input function configuration register</description>
           <addressOffset>0x154</addressOffset>
           <size>0x20</size>
@@ -11295,7 +11295,7 @@
         <register>
           <dim>26</dim>
           <dimIncrement>0x4</dimIncrement>
-          <name>FUNC%s_OUT_SEL_CFG</name>
+          <name>FUNC_OUT_SEL_CFG[%s]</name>
           <description>GPIO output function select register</description>
           <addressOffset>0x554</addressOffset>
           <size>0x20</size>
@@ -12846,7 +12846,7 @@
         <register>
           <dim>8</dim>
           <dimIncrement>0x4</dimIncrement>
-          <name>COMD%s</name>
+          <name>COMD[%s]</name>
           <description>I2C_COMD%s_REG</description>
           <addressOffset>0x58</addressOffset>
           <size>0x20</size>
@@ -15904,7 +15904,7 @@
         <register>
           <dim>22</dim>
           <dimIncrement>0x4</dimIncrement>
-          <name>GPIO%s</name>
+          <name>GPIO[%s]</name>
           <description>IO MUX Configure Register for pad XTAL_32K_P</description>
           <addressOffset>0x4</addressOffset>
           <size>0x20</size>

@@ -26,7 +26,7 @@ pub const arch: Arch = switch (chip) {
         @compileError(std.fmt.comptimePrint("Unsupported cpu for RP2040: \"{s}\"", .{microzig.config.cpu_name})),
     .RP2350, .RP2350_QFN80 => if (std.mem.eql(u8, microzig.config.cpu_name, "cortex_m33"))
         .arm
-    else if (std.mem.eql(u8, microzig.config.cpu_name, "generic_rv32"))
+    else if (std.mem.eql(u8, microzig.config.cpu_name, "hazard3"))
         .riscv
     else
         @compileError(std.fmt.comptimePrint("Unsupported cpu for RP2350: \"{s}\"", .{microzig.config.cpu_name})),

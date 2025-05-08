@@ -1,24 +1,33 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
+pub const CPUOptions = struct {
+    /// When true, interrupt vectors are moved to RAM so handlers can be set at runtime.
+    ram_vectors: bool = false,
+    /// When true, the RAM vectors are placed in section `ram_vectors`.
+    has_ram_vectors_section: bool = false,
+};
+
+pub const scb_base_offset = 0x0d00;
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
     /// Interrupt Control and State Register.
     ICSR: mmio.Mmio(packed struct(u32) {
         VECTACTIVE: u9,
-        reserved0: u2,
+        reserved0: u2 = 0,
         RETTOBASE: u1,
         VECTPENDING: u6,
-        reserved1: u4,
+        reserved1: u4 = 0,
         ISRPENDING: u1,
         ISRPREEMPT: u1,
-        reserved2: u1,
+        reserved2: u1 = 0,
         PENDSTCLR: u1,
         PENDSTSET: u1,
         PENDSVCLR: u1,
         PENDSVSET: u1,
-        reserved3: u2,
+        reserved3: u2 = 0,
         NMIPENDSET: u1,
     }),
     /// Vector Table Offset Register.
@@ -28,32 +37,32 @@ pub const SystemControlBlock = extern struct {
         VECTRESET: u1,
         VECTCLRACTIVE: u1,
         SYSRESETREQ: u1,
-        reserved0: u5,
+        reserved0: u5 = 0,
         PRIGROUP: u3,
-        reserved1: u4,
+        reserved1: u4 = 0,
         ENDIANNESS: u1,
         VECTKEY: u16,
     }),
     /// System Control Register.
     SCR: mmio.Mmio(packed struct {
-        reserved0: u1,
+        reserved0: u1 = 0,
         SLEEPONEXIT: u1,
         SLEEPDEEP: u1,
-        reserved1: u1,
+        reserved1: u1 = 0,
         SEVONPEND: u1,
-        reserved2: u27,
+        reserved2: u27 = 0,
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
         NONBASETHRDENA: u1,
         USERSETMPEND: u1,
-        reserved0: u1,
+        reserved0: u1 = 0,
         UNALIGN_TRP: u1,
         DIV_0_TRP: u1,
-        reserved1: u3,
+        reserved1: u3 = 0,
         BFHFNMIGN: u1,
         STKALIGN: u1,
-        reserved2: u22,
+        reserved2: u22 = 0,
     }),
     /// System Handlers Priority Registers.
     SHP: [12]u8,
@@ -108,12 +117,12 @@ pub const MemoryProtectionUnit = extern struct {
     TYPE: mmio.Mmio(packed struct(u32) {
         /// Indicates support for unified or separate instructions and data address regions.
         SEPARATE: u1,
-        reserved0: u7,
+        reserved0: u7 = 0,
         /// Number of data regions supported by the MPU.
         DREGION: u8,
         /// Number of instruction regions supported by the MPU.
         IREGION: u8,
-        reserved1: u8,
+        reserved1: u8 = 0,
     }),
     /// MPU Control Register.
     CTRL: mmio.Mmio(packed struct(u32) {
@@ -123,13 +132,13 @@ pub const MemoryProtectionUnit = extern struct {
         HFNMIENA: u1,
         /// Enables priviledged software access to default memory map.
         PRIVDEFENA: u1,
-        reserved0: u29,
+        reserved0: u29 = 0,
     }),
     /// MPU Region Number Register.
     RNR: mmio.Mmio(packed struct(u32) {
         /// Indicates the memory region accessed by MPU RBAR and PMU RLAR.
         REGION: u8,
-        reserved0: u24,
+        reserved0: u24 = 0,
     }),
     /// MPU Region Base Address Register.
     RBAR: RBAR_Register,
@@ -162,7 +171,7 @@ pub const MemoryProtectionUnit = extern struct {
         ENABLE: u1,
         /// Specifies the size of the MPU protection region.
         SIZE: u5,
-        reserved0: u2,
+        reserved0: u2 = 0,
         /// Subregion disable bits.
         SRD: u8,
         /// Shareable bit.
@@ -173,11 +182,11 @@ pub const MemoryProtectionUnit = extern struct {
         C: u1,
         /// Memory Access Attribute.
         TEX: u3,
-        reserved1: u2,
+        reserved1: u2 = 0,
         /// Access permission field.
         AP: u3,
         /// Instruction access disable bit.
         XN: u1,
-        reserved2: u3,
+        reserved2: u3 = 0,
     });
 };

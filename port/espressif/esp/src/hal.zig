@@ -1,10 +1,15 @@
 const microzig = @import("microzig");
 
-pub const gpio = @import("hal/gpio.zig");
-pub const uart = @import("hal/uart.zig");
-pub const compatibility = @import("hal/compatibility.zig");
-pub const rom = @import("hal/rom.zig");
 pub const clocks = @import("hal/clocks.zig");
+pub const compatibility = @import("hal/compatibility.zig");
+pub const drivers = @import("hal/drivers.zig");
+pub const gpio = @import("hal/gpio.zig");
+pub const i2c = @import("hal/i2c.zig");
+pub const rom = @import("hal/rom.zig");
+pub const system = @import("hal/system.zig");
+pub const systimer = @import("hal/systimer.zig");
+pub const time = @import("hal/time.zig");
+pub const uart = @import("hal/uart.zig");
 pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 
 /// Clock config applied by the default `init()` function of the hal.
@@ -22,8 +27,10 @@ pub fn init_sequence(clock_cfg: clocks.Config) void {
 
     clock_cfg.apply();
 
-    // TODO: reset peripherals
-    // TODO: disable peripheral clocks
+    // Disable all peripherals. Only enable them when we use them.
+    system.clocks_enable_clear(.all_but_keep_enabled);
+
+    time.initialize();
 }
 
 // NOTE: might be esp32c3 specific only + temporary until timers hal.

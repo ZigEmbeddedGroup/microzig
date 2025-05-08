@@ -1,6 +1,10 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
+pub const CPUOptions = struct {};
+
+pub const scb_base_offset = 0x0d00;
+
 pub const SystemControlBlock = extern struct {
     /// CPUID Base Register.
     CPUID: u32,
@@ -10,17 +14,17 @@ pub const SystemControlBlock = extern struct {
         /// 0 = Thread mode
         /// Nonzero = The exception number[a] of the currently active exception.
         VECTACTIVE: u6,
-        reserved0: u6,
+        reserved0: u6 = 0,
         /// Indicates the exception number of the highest priority pending enabled exception:
         /// 0 = no pending exceptions
         /// Nonzero = the exception number of the highest priority pending enabled exception.
         VECTPENDING: u6,
-        reserved1: u4,
+        reserved1: u4 = 0,
         /// Interrupt pending flag, excluding NMI and Faults:
         /// 0 = interrupt not pending
         /// 1 = interrupt pending.
         ISRPENDING: u1,
-        reserved2: u2,
+        reserved2: u2 = 0,
         /// SysTick exception clear-pending bit.
         ///
         /// Write:
@@ -57,7 +61,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// Writing 1 to this bit is the only way to set the PendSV exception state to pending.
         PENDSVSET: u1,
-        reserved3: u2,
+        reserved3: u2 = 0,
         /// NMI set-pending bit.
         ///
         /// Write:
@@ -73,10 +77,10 @@ pub const SystemControlBlock = extern struct {
         /// returns 1 only if the NMI signal is reasserted while the processor is executing that handler.
         NMIPENDSET: u1,
     }),
-    reserved0: u32,
+    reserved0: u32 = 0,
     /// Application Interrupt and Reset Control Register.
     AIRCR: mmio.Mmio(packed struct {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Reserved for debug use. This bit reads as 0. When writing to the register you must
         /// write 0 to this bit, otherwise behavior is Unpredictable.
         VECTCLRACTIVE: u1,
@@ -86,7 +90,7 @@ pub const SystemControlBlock = extern struct {
         ///
         /// This bit reads as 0.
         SYSRESETREQ: u1,
-        reserved1: u12,
+        reserved1: u12 = 0,
         /// Data endianness implemented:
         /// 0 = Little-endian
         /// 1 = Big-endian.
@@ -98,7 +102,7 @@ pub const SystemControlBlock = extern struct {
     }),
     /// System Control Register.
     SCR: mmio.Mmio(packed struct(u32) {
-        reserved0: u1,
+        reserved0: u1 = 0,
         /// Indicates sleep-on-exit when returning from Handler mode to Thread mode:
         /// 0 = do not sleep when returning to Thread mode.
         /// 1 = enter sleep, or deep sleep, on return from an ISR to Thread mode.
@@ -113,7 +117,7 @@ pub const SystemControlBlock = extern struct {
         /// If your device does not support two sleep modes, the effect of changing the value
         /// of this bit is implementation-defined.
         SLEEPDEEP: u1,
-        reserved1: u1,
+        reserved1: u1 = 0,
         /// Send Event on Pending bit:
         /// 0 = only enabled interrupts or events can wakeup the processor, disabled interrupts are excluded
         /// 1 = enabled events and all interrupts, including disabled interrupts, can wakeup the processor.
@@ -123,21 +127,21 @@ pub const SystemControlBlock = extern struct {
         ///
         /// The processor also wakes up on execution of an SEV instruction or an external event.
         SEVONPEND: u1,
-        reserved2: u17,
+        reserved2: u17 = 0,
     }),
     /// Configuration Control Register.
     CCR: mmio.Mmio(packed struct(u32) {
-        reserved0: u3,
+        reserved0: u3 = 0,
         /// Always reads as one, indicates that all unaligned accesses generate a HardFault.
         UNALIGN_TRP: u1,
-        reserved1: u5,
+        reserved1: u5 = 0,
         /// Always reads as one, indicates 8-byte stack alignment on exception entry.
         ///
         /// On exception entry, the processor uses bit[9] of the stacked PSR to indicate the stack
         /// alignment. On return from the exception it uses this stacked bit to restore the correct
         /// stack alignment.
         STKALIGN: u1,
-        reserved2: u22,
+        reserved2: u22 = 0,
     }),
     /// System Handlers Priority Registers.
     SHPR: [3]u32,

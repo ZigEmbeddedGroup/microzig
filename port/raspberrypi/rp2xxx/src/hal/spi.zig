@@ -5,6 +5,7 @@ const SPI0_reg = peripherals.SPI0;
 const SPI1_reg = peripherals.SPI1;
 
 const clocks = @import("clocks.zig");
+const dma = @import("dma.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
@@ -185,6 +186,20 @@ pub const SPI = enum(u1) {
             @compileError("PacketType must be a datatype with a size between 4 and 16 bits inclusive");
     }
 
+    pub fn tx(spi: SPI) dma.DMA_WriteTarget {
+        return .{
+            .dreq = if (@intFromEnum(spi) == 0) .spi0_tx else .spi1_tx,
+            .addr = @intFromPtr(&spi.get_regs().SSPDR),
+        };
+    }
+
+    pub fn rx(spi: SPI) dma.DMA_ReadTarget {
+        return .{
+            .dreq = if (@intFromEnum(spi) == 0) .spi0_rx else .spi1_rx,
+            .addr = @intFromPtr(&spi.get_regs().SSPDR),
+        };
+    }
+
     const fifo_depth = 8;
 
     /// Disable SPI, pre-fill the TX FIFO as much as possible, and then re-enable to start transmission.
@@ -274,6 +289,10 @@ pub const SPI = enum(u1) {
                 rx_remaining -= 1;
             }
         }
+    }
+
+    pub fn set_loopback_mode(spi: SPI, enabled: bool) void {
+        spi.get_regs().SSPCR1.modify(.{ .LBM = @intFromBool(enabled) });
     }
 
     /// Write a number of packets and discard any data received back.

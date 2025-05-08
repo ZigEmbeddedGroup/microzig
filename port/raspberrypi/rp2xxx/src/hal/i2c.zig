@@ -11,9 +11,8 @@ const peripherals = microzig.chip.peripherals;
 const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
 
-const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
-const resets = @import("resets.zig");
+const dma = @import("dma");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
 
@@ -229,7 +228,6 @@ pub const I2C = enum(u1) {
             .ENABLE = .DISABLED,
             .ABORT = .DISABLE,
             .TX_CMD_BLOCK = .NOT_BLOCKED,
-            .padding = 0,
         });
     }
 
@@ -238,7 +236,6 @@ pub const I2C = enum(u1) {
             .ENABLE = .ENABLED,
             .ABORT = .DISABLE,
             .TX_CMD_BLOCK = .NOT_BLOCKED,
-            .padding = 0,
         });
     }
 
@@ -263,18 +260,16 @@ pub const I2C = enum(u1) {
             .STOP_DET_IFADDRESSED = @enumFromInt(0),
             .RX_FIFO_FULL_HLD_CTRL = @enumFromInt(0),
             .STOP_DET_IF_MASTER_ACTIVE = 0,
-            .padding = 0,
         });
 
         // TX and RX FIFO thresholds
-        regs.IC_RX_TL.write(.{ .RX_TL = 0, .padding = 0 });
-        regs.IC_TX_TL.write(.{ .TX_TL = 0, .padding = 0 });
+        regs.IC_RX_TL.write(.{ .RX_TL = 0 });
+        regs.IC_TX_TL.write(.{ .TX_TL = 0 });
 
         // DREQ signal control
         regs.IC_DMA_CR.write(.{
             .RDMAE = .ENABLED,
             .TDMAE = .ENABLED,
-            .padding = 0,
         });
 
         const peripheral_block_freq = (comptime config.clock_config.get_frequency(.clk_sys)) orelse @compileError("clk_sys must be set for I²C");
@@ -297,9 +292,9 @@ pub const I2C = enum(u1) {
         const reg_vals = try translate_baudrate(baud_rate, freq_in);
         i2c.disable();
         const regs = i2c.get_regs();
-        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt, .padding = 0 });
-        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt, .padding = 0 });
-        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen, .padding = 0 });
+        regs.IC_FS_SCL_HCNT.write(.{ .IC_FS_SCL_HCNT = reg_vals.scl_hcnt });
+        regs.IC_FS_SCL_LCNT.write(.{ .IC_FS_SCL_LCNT = reg_vals.scl_lcnt });
+        regs.IC_FS_SPKLEN.write(.{ .IC_FS_SPKLEN = reg_vals.spklen });
         regs.IC_SDA_HOLD.modify(.{ .IC_SDA_TX_HOLD = reg_vals.sda_tx_hold_count });
         i2c.enable();
     }
@@ -319,7 +314,6 @@ pub const I2C = enum(u1) {
             .IC_TAR = @intFromEnum(addr),
             .GC_OR_START = .GENERAL_CALL,
             .SPECIAL = .DISABLED,
-            .padding = 0,
         });
         i2c.enable();
     }
@@ -370,6 +364,20 @@ pub const I2C = enum(u1) {
         _ = regs.IC_CLR_STOP_DET.read();
     }
 
+    pub fn tx(i2c: I2C) dma.DMA_WriteTarget {
+        return .{
+            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_tx else .i2c1_tx,
+            .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
+        };
+    }
+
+    pub fn rx(i2c: I2C) dma.DMA_ReadTarget {
+        return .{
+            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_rx else .i2c1_rx,
+            .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
+        };
+    }
+
     /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:
     /// - Bytes have been transmitted successfully
     /// - An error occurs and the transaction is aborted
@@ -415,7 +423,6 @@ pub const I2C = enum(u1) {
                 .DAT = element.value,
 
                 .FIRST_DATA_BYTE = .INACTIVE,
-                .padding = 0,
             });
             // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
@@ -494,7 +501,6 @@ pub const I2C = enum(u1) {
                 .DAT = 0,
 
                 .FIRST_DATA_BYTE = .INACTIVE,
-                .padding = 0,
             });
 
             while (true) {
@@ -565,7 +571,6 @@ pub const I2C = enum(u1) {
                 .DAT = element.value,
 
                 .FIRST_DATA_BYTE = .INACTIVE,
-                .padding = 0,
             });
             // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
@@ -597,7 +602,6 @@ pub const I2C = enum(u1) {
                 .DAT = 0,
 
                 .FIRST_DATA_BYTE = .INACTIVE,
-                .padding = 0,
             });
 
             while (true) {

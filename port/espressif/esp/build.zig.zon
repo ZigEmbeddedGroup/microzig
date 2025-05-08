@@ -1,11 +1,12 @@
 .{
-    .name = .port_espressif_esp,
+    .name = .mz_port_espressif_esp,
+    .fingerprint = 0xc3590b2e08d3bdbc,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig.zon",
         "build.zig",

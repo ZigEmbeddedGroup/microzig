@@ -1,6 +1,6 @@
 .{
-    .name = .package_test,
-    .fingerprint = 0x63321bc42367f374,
+    .name = .mz_package_test,
+    .fingerprint = 0x67a6623979baa54d,
     .version = "0.0.0",
     .dependencies = .{},
     .paths = .{

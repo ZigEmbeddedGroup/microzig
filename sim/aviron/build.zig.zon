@@ -1,0 +1,27 @@
+.{
+    .name = .mz_sim_aviron,
+    .version = "0.1.0",
+    .fingerprint = 0xfc536f957aeaeb54,
+    .dependencies = .{
+        .args = .{
+            .url = "git+https://github.com/MasterQ32/zig-args#9425b94c103a031777fdd272c555ce93a7dea581",
+            .hash = "args-0.0.0-CiLiqv_NAAC97fGpk9hS2K681jkiqPsWP6w3ucb_ctGH",
+        },
+        .ihex = .{
+            .url = "git+https://github.com/ikskuh/zig-ihex#2c399fc3ab2669df8b0c8a514ca194757f41f826",
+            .hash = "ihex-0.1.0-1POu20MyAABXXjtXpHXpEZXrNYl34xVCTO8ye1BHOtF_",
+        },
+    },
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "doc",
+        "linker.ld",
+        "samples",
+        "src",
+        "testsuite",
+        "testsuite.avr-gcc",
+        "tools",
+    },
+}

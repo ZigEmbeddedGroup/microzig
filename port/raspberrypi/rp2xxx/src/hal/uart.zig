@@ -7,9 +7,9 @@ const UART1_reg = peripherals.UART1;
 
 const gpio = @import("gpio.zig");
 const clocks = @import("clocks.zig");
+const dma = @import("dma.zig");
 const resets = @import("resets.zig");
 const time = @import("time.zig");
-const dma = @import("dma.zig");
 
 const UartRegs = microzig.chip.types.peripherals.UART0;
 
@@ -227,6 +227,20 @@ pub const UART = enum(u1) {
         return (1 == uart.get_regs().UARTFR.read().BUSY);
     }
 
+    pub fn tx(uart: UART) dma.DMA_WriteTarget {
+        return .{
+            .dreq = if (@intFromEnum(uart) == 0) .uart0_tx else .uart1_tx,
+            .addr = @intFromPtr(&uart.get_regs().UARTDR),
+        };
+    }
+
+    pub fn rx(uart: UART) dma.DMA_ReadTarget {
+        return .{
+            .dreq = if (@intFromEnum(uart) == 0) .uart0_rx else .uart1_rx,
+            .addr = @intFromPtr(&uart.get_regs().UARTDR),
+        };
+    }
+
     /// Write bytes to uart TX line and block until transaction is complete.
     ///
     /// Note that this does NOT disable reception while this is happening,
@@ -299,7 +313,6 @@ pub const UART = enum(u1) {
             .BE = 1,
             .PE = 1,
             .FE = 1,
-            .padding = 0,
         });
     }
 
@@ -408,8 +421,8 @@ pub const UART = enum(u1) {
             break :baud_fbrd 0;
         } else @as(u6, @intCast(((@as(u7, @truncate(baud_rate_div))) + 1) / 2));
 
-        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd, .padding = 0 });
-        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd, .padding = 0 });
+        uart_regs.UARTIBRD.write(.{ .BAUD_DIVINT = baud_ibrd });
+        uart_regs.UARTFBRD.write(.{ .BAUD_DIVFRAC = baud_fbrd });
 
         // PL011 needs a (dummy) LCR_H write to latch in the divisors.
         // We don't want to actually change LCR_H contents here.
@@ -473,4 +486,19 @@ pub fn logFn(
 
         uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
+}
+
+var log_mutex: microzig.hal.mutex.Mutex = .{};
+
+/// This log function wraps logFn in a semaphore so that calls to it from
+/// different cores or interrupts don't collide.
+pub fn logFnThreadsafe(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    log_mutex.lock();
+    logFn(level, scope, format, args);
+    log_mutex.unlock();
 }

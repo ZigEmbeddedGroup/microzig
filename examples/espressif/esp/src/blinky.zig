@@ -4,9 +4,9 @@ const peripherals = microzig.chip.peripherals;
 const hal = microzig.hal;
 const gpio = hal.gpio;
 const usb_serial_jtag = hal.usb_serial_jtag;
+const time = hal.time;
 
 pub const microzig_options: microzig.Options = .{
-    .log_level = .debug,
     .logFn = usb_serial_jtag.logger.logFn,
 };
 
@@ -16,9 +16,9 @@ pub fn main() !void {
         .drive_strength = gpio.DriveStrength.@"40mA",
     };
 
-    const led_r_pin = gpio.instance.GPIO3;
-    const led_g_pin = gpio.instance.GPIO4;
-    const led_b_pin = gpio.instance.GPIO5;
+    const led_r_pin = gpio.num(3);
+    const led_g_pin = gpio.num(4);
+    const led_b_pin = gpio.num(5);
 
     led_r_pin.apply(pin_config);
     led_g_pin.apply(pin_config);
@@ -27,22 +27,22 @@ pub fn main() !void {
     std.log.info("Hello from Zig!", .{});
 
     while (true) {
-        led_r_pin.write(gpio.Level.high);
-        led_g_pin.write(gpio.Level.low);
-        led_b_pin.write(gpio.Level.low);
+        led_r_pin.write(.high);
+        led_g_pin.write(.low);
+        led_b_pin.write(.low);
         std.log.info("R", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
 
-        led_r_pin.write(gpio.Level.low);
-        led_g_pin.write(gpio.Level.high);
-        led_b_pin.write(gpio.Level.low);
+        led_r_pin.write(.low);
+        led_g_pin.write(.high);
+        led_b_pin.write(.low);
         std.log.info("G", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
 
-        led_r_pin.write(gpio.Level.low);
-        led_g_pin.write(gpio.Level.low);
-        led_b_pin.write(gpio.Level.high);
+        led_r_pin.write(.low);
+        led_g_pin.write(.low);
+        led_b_pin.write(.high);
         std.log.info("B", .{});
-        microzig.hal.rom.delay_us(500_000);
+        time.sleep_ms(500);
     }
 }

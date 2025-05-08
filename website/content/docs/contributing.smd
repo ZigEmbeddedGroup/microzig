@@ -1,0 +1,69 @@
+---
+.title = "Contributing Guide",
+.date = @date("2024-11-02T00:00:00"),
+.author = "Matthew Knight",
+.draft = false,
+.layout = "index.shtml",
+.description = "MicroZig: Contributing",
+.tags = []
+---
+
+# Contributing Guide
+
+## Coding Style
+
+In MicroZig we break from the suggested coding style by the ZSF:
+
+- Use `snake_case` for functions and methods.
+- When there is an acronym in a type name, we keep the acronym uppercase, and
+  separate it from other components in the name with underscores. Some examples:
+  - `GpioMask -> GPIO_Mask`
+  - `DigitalIo -> Digital_IO`
+  - `HttpsOverCan -> HTTPS_Over_CAN`
+
+Like any naming convention, it is broken when appropriate. In the future we
+will have linters suggest naming changes when you make a PR, but they will
+never be mandatory.
+
+## Monorepo
+
+MicroZig is developed as a monorepo. In the past we had it split into a number
+of small repos, but we found it difficult to maintain all those separate
+components. The monorepo has shown a significant improvement in development
+velocity and confidence in changes.
+
+### Packaging
+
+MicroZig does not force users to download the entire codebase if they use a
+released version. This is done through a small project called
+[boxzer](https://github.com/mattnite/boxzer), which creates a separate tarball
+for each package in MicroZig. With the use of lazy dependencies in the Zig
+build system, a user will download the `esp` package for their hardware, but
+nothing related to `stm32`. This will enable us to support a lot of hardware
+without MicroZig users needing to download gigabytes everytime they run their
+CI.
+
+## Naming Sub-packages
+
+We try to keep package names identical to their path in the project, with
+underscores replacing path separators. Package names in Zig are limted to 32
+bytes, so the earlier components are often shortened. We also try to keep `mz`
+the first component in the name to denote the package as being part of
+MicroZig. For example the `examples/stmicro/stm32` package has the name
+`mz_ex_stmicro_stm32` as we've hit the name length limit
+
+If a package is under `modules`, then the package has a single name for itself,
+such as `foundationlibc`.
+
+## Versioning and Release Process
+
+MicroZig follows semantic versioning, and while all packages have their own
+version, they are released as a single group.
+
+- **Major**: Micro MicroZig will have a 0 for the major version until Zig reaches 1.0.
+- **Minor**: We always depend on a stable release of Zig, and the minor version of
+  MicroZig will always match the minor version of the compiler we depend on.
+  Patch versions of the compiler are not reflected in this scheme.
+- **Patch**: The patch number is incremented once every time we release, note that
+  since MicroZig is 0.x, semantic versioning allows for breaks even between
+  patch versions.

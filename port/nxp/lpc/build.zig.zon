@@ -1,12 +1,11 @@
 .{
-    .name = .port_nxp_lpc,
-    .fingerprint = 0xa34b3f0c0a15a836,
+    .name = .mz_port_nxp_lpc,
+    .fingerprint = 0xa7df46f19167a09e,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig",
         "build.zig.zon",

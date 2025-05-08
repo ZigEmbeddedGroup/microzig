@@ -550,43 +550,44 @@ fn generate_chips_file(
             \\    ret.{}.* = .{{
             \\        .dep = dep,
             \\        .preferred_binary_format = .elf,
-            \\        .chip = .{{
-            \\            .name = "{s}",
-            \\            .cpu = .{{
-            \\                .cpu_arch = .thumb,
-            \\                .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
-            \\                .os_tag = .freestanding,
+            \\        .zig_target = .{{
+            \\            .cpu_arch = .thumb,
+            \\            .cpu_model = .{{ .explicit = &std.Target.arm.cpu.{s} }},
+            \\            .os_tag = .freestanding,
             \\
         , .{
             std.zig.fmtId(chip_file.name),
             std.zig.fmtId(chip_file.name),
-            chip_file.name,
             core_to_cpu.get(core.name).?,
         });
 
         if (with_fpu) {
             try writer.print(
-                \\                .cpu_features_add = std.Target.arm.featureSet(&.{{.{s}}}),
-                \\                .abi = .eabihf,
-                \\            }},
+                \\            .cpu_features_add = std.Target.arm.featureSet(&.{{.{s}}}),
+                \\            .abi = .eabihf,
+                \\        }},
                 \\
             , .{
                 fpu_feature.get(core.name).?,
             });
         } else {
             try writer.writeAll(
-                \\                .abi = .eabi,
-                \\            },
+                \\            .abi = .eabi,
+                \\        },
                 \\
             );
         }
 
-        try writer.writeAll(
-            \\            .register_definition = .{
+        try writer.print(
+            \\        .chip = .{{
+            \\            .name = "{s}",
+            \\            .register_definition = .{{
             \\                .zig = register_definition_path,
-            \\            },
-            \\            .memory_regions = &.{
+            \\            }},
+            \\            .memory_regions = &.{{
             \\
+        ,
+            .{chip_file.name},
         );
 
         {

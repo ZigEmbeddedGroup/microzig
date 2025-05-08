@@ -1,0 +1,11 @@
+.{
+    .name = .riscv32common,
+    .fingerprint = 0xde1ed91db6b5dcf9,
+    .version = "0.0.0",
+    .paths = .{
+        "README.md",
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

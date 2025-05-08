@@ -1081,13 +1081,13 @@ pub fn get_register_field_by_name(
 ) !StructField {
     const query =
         std.fmt.comptimePrint(
-        \\SELECT {s}
-        \\FROM struct_fields AS sf
-        \\JOIN registers AS r ON sf.struct_id = r.struct_id
-        \\WHERE r.id = ? AND sf.name = ?
-    , .{
-        comptime gen_field_list(StructField, .{ .prefix = "sf" }),
-    });
+            \\SELECT {s}
+            \\FROM struct_fields AS sf
+            \\JOIN registers AS r ON sf.struct_id = r.struct_id
+            \\WHERE r.id = ? AND sf.name = ?
+        , .{
+            comptime gen_field_list(StructField, .{ .prefix = "sf" }),
+        });
     return db.one_alloc(StructField, allocator, query, .{
         .register_id = register_id,
         .name = name,

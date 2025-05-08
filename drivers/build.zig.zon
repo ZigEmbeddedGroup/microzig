@@ -1,9 +1,8 @@
 .{
-    .name = .driverframework,
-    .fingerprint = 0xfec1b5453a206a46,
+    .name = .mz_drivers,
+    .fingerprint = 0x576453eedc5af46e,
     .version = "0.0.1",
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
         "framework.zig",
@@ -13,5 +12,6 @@
         "io_expander",
         "sensor",
         "stepper",
+        "wireless",
     },
 }

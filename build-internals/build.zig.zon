@@ -1,14 +1,13 @@
 .{
-    .name = .buildinternals,
-    .fingerprint = 0x48ef72ba051e13e8,
+    .name = .mz_buildinternals,
+    .fingerprint = 0xc02420463a42482c,
     .version = "0.0.0",
     .dependencies = .{
         .regz = .{ .path = "../tools/regz" },
         .uf2 = .{ .path = "../tools/uf2" },
-        .esp_image = .{ .path = "../tools/esp_image" },
+        .@"esp-image" = .{ .path = "../tools/esp-image" },
     },
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
     },

@@ -1,12 +1,12 @@
 .{
-    .name = .examples_stmicro_stm32,
+    .name = .examples_nohal,
+    .fingerprint = 0xb5843068ef5ae13,
     .version = "0.0.0",
     .dependencies = .{
         .microzig = .{ .path = "../../.." },
     },
 
     .paths = .{
-        "LICENSE",
         "build.zig",
         "build.zig.zon",
         "src",

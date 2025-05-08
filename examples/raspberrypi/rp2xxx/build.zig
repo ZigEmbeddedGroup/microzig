@@ -43,6 +43,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "uart-log", .file = "src/uart_log.zig" },
         .{ .name = "spi-master", .file = "src/spi_master.zig" },
         .{ .name = "spi-slave", .file = "src/spi_slave.zig" },
+        .{ .name = "spi-loopback-dma", .file = "src/spi_loopback_dma.zig" },
         .{ .name = "squarewave", .file = "src/squarewave.zig" },
         .{ .name = "ws2812", .file = "src/ws2812.zig" },
         .{ .name = "blinky", .file = "src/blinky.zig" },
@@ -51,8 +52,11 @@ pub fn build(b: *std.Build) void {
         .{ .name = "custom-clock-config", .file = "src/custom_clock_config.zig" },
         .{ .name = "watchdog-timer", .file = "src/watchdog_timer.zig" },
         .{ .name = "interrupts", .file = "src/interrupts.zig" },
-        .{ .name = "stepper", .file = "src/stepper.zig" },
+        .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
+        .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "usb-cdc", .file = "src/usb_cdc.zig" },
+        .{ .name = "dma", .file = "src/dma.zig" },
+        .{ .name = "cyw43", .file = "src/cyw43.zig" },
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);

@@ -7,9 +7,22 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: master
+  ZIG_VERSION: 0.14.0
 
 jobs:
+  formatting-check:
+    name: Formatting check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Zig
+      uses: mlugg/setup-zig@v1
+      with:
+        version: ${{ env.ZIG_VERSION }}
+    - name: Run zig fmt
+      run: zig fmt --check .
+
   unit-test-regz:
     name: Unit Test Regz
     continue-on-error: true
@@ -62,7 +75,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test ESP Image
         run: zig build test
-        working-directory: tools/esp_image
+        working-directory: tools/esp-image
 
   stm32-gen-check:
     name: Check that stm32 generated code is up to date
@@ -141,8 +154,7 @@ jobs:
             nxp/lpc,
             stmicro/stm32,
             raspberrypi/rp2xxx,
-            # TODO: investigate why these take up too much flash
-            #wch/ch32v,
+            wch/ch32v,
           ]
     steps:
       - name: Checkout
@@ -177,14 +189,17 @@ jobs:
   build-website:
     name: Build Website
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
-          version: ${{ env.ZIG_VERSION }}
+          version: 0.14.0
       - name: Build Website
         run: zig build
         working-directory: website

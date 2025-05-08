@@ -1,0 +1,23 @@
+<rss version="2.0">
+ <channel>
+  <title>MicroZig Devlog</title>
+  <link>https://microzig.tech/</link>
+  <description>Curated list of changes to MicroZig</description>
+  <generator>Zine -- https://zine-ssg.io</generator>
+  <language>en-us</language>
+  <lastBuildDate :text="$build.generated.formatHTTP()"></lastBuildDate>
+  <ctx :loop="$page.contentSections()">
+   <ctx :if="$loop.first.not().and($loop.last.not())">
+    <item>
+     <pubDate
+      :text="$loop.it.data.get('date').parseDate().formatHTTP()"
+     ></pubDate>
+     <link :text="$site.host_url.addPath($page.link()).suffix('#', $loop.it.id)"></link>
+     <guid :text="$site.host_url.addPath($page.link()).suffix('#', $loop.it.id)"></guid>
+     <title :text="$loop.it.id"></title>
+     <description :text="$loop.it.html()"></description>
+    </item>
+   </ctx>
+  </ctx>
+ </channel>
+</rss>

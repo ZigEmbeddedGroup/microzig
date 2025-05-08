@@ -1,9 +1,8 @@
 .{
-    .name = .core,
-    .fingerprint = 0x6b8d854f5061dc46,
+    .name = .mz_core,
+    .fingerprint = 0x2d3edeb5b42fbb10,
     .version = "0.0.1",
     .paths = .{
-        "LICENSE",
         "thoughts.md",
         "build.zig",
         "build.zig.zon",

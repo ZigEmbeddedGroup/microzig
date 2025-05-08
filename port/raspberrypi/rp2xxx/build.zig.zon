@@ -1,12 +1,12 @@
 .{
-    .name = .port_raspberrypi_rp2xxx,
-    .fingerprint = 0x841efcfeb290b1e6,
+    .name = .mz_port_raspberrypi_rp2xxx,
+    .fingerprint = 0xdf26650f89ed2bc0,
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .@"microzig/modules/riscv32-common" = .{ .path = "../../../modules/riscv32-common" },
     },
     .paths = .{
-        "LICENSE",
         "README.md",
         "build.zig.zon",
         "build.zig",

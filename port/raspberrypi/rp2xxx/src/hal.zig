@@ -4,12 +4,14 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
+pub const atomic = @import("hal/atomic.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const irq = @import("hal/irq.zig");
 pub const multicore = @import("hal/multicore.zig");
+pub const mutex = @import("hal/mutex.zig");
 pub const pins = @import("hal/pins.zig");
 pub const pio = @import("hal/pio.zig");
 pub const pwm = @import("hal/pwm.zig");
@@ -26,6 +28,7 @@ pub const time = @import("hal/time.zig");
 pub const uart = @import("hal/uart.zig");
 pub const usb = @import("hal/usb.zig");
 pub const watchdog = @import("hal/watchdog.zig");
+pub const cyw49_pio_spi = @import("hal/cyw43_pio_spi.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const image_def = @import("hal/image_def.zig");
@@ -34,6 +37,8 @@ comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test) {
         _ = image_def;
+
+        _ = @import("hal/atomic.zig");
     }
 }
 
@@ -82,7 +87,7 @@ pub fn init_sequence(comptime clock_cfg: clocks.config.Global) void {
 }
 
 pub fn get_cpu_id() u32 {
-    return SIO.CPUID.*;
+    return SIO.CPUID.read().CPUID;
 }
 
 test "hal tests" {

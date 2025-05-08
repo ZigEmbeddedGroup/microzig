@@ -55,11 +55,6 @@ pub fn apply(config: Config) void {
                 @as(u5, @bitCast(rr))
             else
                 0,
-
-            .reserved8 = 0,
-            .reserved12 = 0,
-            .reserved16 = 0,
-            .padding = 0,
         }),
         .RP2350, .RP2350_QFN80 => ADC.CS.write(.{
             .EN = 0,
@@ -75,10 +70,6 @@ pub fn apply(config: Config) void {
                 @as(u5, @bitCast(rr))
             else
                 0,
-
-            .reserved8 = 0,
-            .reserved12 = 0,
-            .padding = 0,
         }),
     }
 
@@ -87,8 +78,6 @@ pub fn apply(config: Config) void {
         ADC.DIV.write(.{
             .FRAC = @as(u8, @truncate(cycles)),
             .INT = @as(u16, @intCast((cycles >> 8) - 1)),
-
-            .padding = 0,
         });
     }
 
@@ -266,11 +255,6 @@ pub const fifo = struct {
             // Writing 1 to these will clear them if they're already set
             .UNDER = 1,
             .OVER = 1,
-
-            .reserved8 = 0,
-            .reserved16 = 0,
-            .reserved24 = 0,
-            .padding = 0,
         });
 
         irq_set_enabled(config.irq_enabled);
@@ -283,7 +267,6 @@ pub const fifo = struct {
         // TODO: check if this works
         ADC.INTE.write(.{
             .FIFO = @intFromBool(enable),
-            .padding = 0,
         });
     }
 
