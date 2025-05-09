@@ -576,9 +576,6 @@ const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
-// TODO: Get this defined with some compile-time target config
-const flash = false;
-
 pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
     asm volatile (
         \\
@@ -688,6 +685,7 @@ pub const startup_logic = struct {
 
 fn is_ramimage() bool {
     // HACK
+    // TODO: Use microzig_options?
     if (microzig.config.board_name) |board_name|
         return (std.mem.containsAtLeast(u8, board_name, 1, "ram image"));
     return false;
