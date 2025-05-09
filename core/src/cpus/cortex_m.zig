@@ -578,17 +578,13 @@ var ram_vectors: [vector_count]usize align(256) = undefined;
 pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
     asm volatile (
         \\
-        // Get address of vector table
-        \\mov r0, %[_vector_table]
-        // Get address of VTOR register
-        \\mov r1, %[_VTOR_ADDRESS]
         // Set VTOR to point to ram table
+        \\mov r0, %[_vector_table]
+        \\mov r1, %[_VTOR_ADDRESS]
         \\str r0, [r1]
-        // Load stack address and entry point
+        // Set up stack and jump to _start
         \\ldm r0!, {r1, r2}
-        // Set sp
         \\msr msp, r1
-        // Branch to _start (reset vector)
         \\bx r2
         :
         : [_vector_table] "r" (&startup_logic._vector_table),
@@ -630,7 +626,6 @@ pub const startup_logic = struct {
         }
 
         // Move vector table to RAM if requested
-        // TODO: Make sure that this isn't set for ram image
         if (interrupt.has_ram_vectors()) {
             // Copy vector table to RAM and set VTOR to point to it
 
@@ -689,6 +684,7 @@ fn is_ramimage() bool {
         return (std.mem.containsAtLeast(u8, board_name, 1, "ram image"));
     return false;
 }
+
 pub fn export_startup_logic() void {
     if (is_ramimage())
         @export(&ram_image_entrypoint, .{

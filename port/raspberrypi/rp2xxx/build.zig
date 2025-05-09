@@ -131,9 +131,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
     };
 
     const bootrom_rp2040 = get_bootrom(b, &chip_rp2040, .w25q080);
-    // Create a "bootloader" 'import', but it's actucally used to embed the file.
-    // This file is just the flash xip bis?
-    // But then why is the PICO_NO_FLASH relevant in the bootloader?
     const rp2040_bootrom_imports = b.allocator.dupe(std.Build.Module.Import, &.{
         .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
     }) catch @panic("out of memory");
@@ -141,16 +138,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
     return .{
         .chips = .{
             .rp2040 = chip_rp2040.derive(.{}),
-            // This should probably be a board? Here it's a mix of a flash-less pico, so rp2040 on its own, but with an external oscillator
+            // This should probably be a board? Here it's a mix of a flash-less pico, so rp2040 on
+            // its own, but with an external oscillator
             .rp2040_ram_image = chip_rp2040.derive(.{
                 .linker_script = b.path("rp2040_ram_image.ld"),
                 .board = .{
                     .name = "RaspberryPi Pico (ram image)",
                     .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
-                    // Using pico2 because it doesn't need a bootloader, and we don't have flash for one
                     .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                 },
-                // TODO: Support overriding the memory regions? It's only used for linker generation?
             }),
             .rp2350_arm = chip_rp2350_arm.derive(.{}),
             .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
