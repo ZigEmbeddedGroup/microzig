@@ -713,9 +713,9 @@ const StructFieldIterator = struct {
     nested_struct_field_idx: usize = 0,
     byte_offset: usize = 0,
 
-    fn init(registers: []Register, nested_struct_fields: []NestedStructField) StructFieldIterator {
-        std.sort.insertion(Register, registers, {}, Register.less_than);
-        std.sort.insertion(NestedStructField, nested_struct_fields, {}, NestedStructField.less_than);
+    fn init(registers: []const Register, nested_struct_fields: []const NestedStructField) StructFieldIterator {
+        assert(std.sort.isSorted(Register, registers, {}, Register.less_than));
+        assert(std.sort.isSorted(NestedStructField, nested_struct_fields, {}, NestedStructField.less_than));
         return StructFieldIterator{
             .registers = registers,
             .nested_struct_fields = nested_struct_fields,
