@@ -151,6 +151,10 @@ pub const Register = struct {
             @intCast(single_size_bytes);
     }
 
+    pub fn less_than(_: void, lhs: Register, rhs: Register) bool {
+        return lhs.offset_bytes < rhs.offset_bytes;
+    }
+
     pub fn format(
         register: Register,
         comptime fmt: []const u8,
@@ -264,6 +268,27 @@ pub const StructRegister = struct {
             .{ .name = "register_id", .on_delete = .cascade, .on_update = .cascade },
         },
     };
+};
+
+pub const NestedStructField = struct {
+    parent_id: StructID,
+    struct_id: StructID,
+    offset_bytes: u32,
+    name: []const u8,
+    description: ?[]const u8 = null,
+    count: ?u64 = null,
+    size_bytes: ?u64 = null,
+
+    pub const sql_opts = SQL_Options{
+        .foreign_keys = &.{
+            .{ .name = "parent_id", .on_delete = .cascade, .on_update = .cascade },
+            .{ .name = "struct_id", .on_delete = .cascade, .on_update = .cascade },
+        },
+    };
+
+    pub fn less_than(_: void, lhs: NestedStructField, rhs: NestedStructField) bool {
+        return lhs.offset_bytes < rhs.offset_bytes;
+    }
 };
 
 pub const Peripheral = struct {
@@ -444,6 +469,7 @@ const schema: []const []const u8 = &.{
     gen_sql_table("struct_fields", StructField),
     gen_sql_table("struct_decls", StructDecl),
     gen_sql_table("struct_registers", StructRegister),
+    gen_sql_table("nested_struct_fields", NestedStructField),
     gen_sql_table("enums", Enum),
     gen_sql_table("enum_fields", EnumField),
     gen_sql_table("devices", Device),
@@ -559,7 +585,7 @@ pub const CreateDeviceOptions = struct {
 };
 
 fn exec(db: *Database, comptime query: []const u8, args: anytype) !void {
-    db.sql.exec(query, .{ .diags = &db.diags }, args) catch |err| {
+    db.sql.execDynamic(query, .{ .diags = &db.diags }, args) catch |err| {
         std.log.err("Failed Query:\n{s}", .{query});
         if (err == error.SQLiteError)
             std.log.err("{}", .{db.diags});
@@ -777,7 +803,8 @@ pub fn get_registers_with_mode(
         \\    sr.struct_id = ?
         \\  AND (
         \\        rm.mode_id = ? OR rm.mode_id IS NULL
-        \\    );
+        \\    )
+        \\ORDER BY r.offset_bytes;
     , .{
         comptime gen_field_list(Register, .{ .prefix = "r" }),
     });
@@ -807,6 +834,102 @@ pub fn get_struct_registers(
     return db.all(Register, query, allocator, .{
         .struct_id = struct_id,
     });
+}
+
+// Way beyond anything reasonable
+const max_recursion_depth = 32;
+
+pub fn get_nested_struct_fields(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+) ![]NestedStructField {
+    const query = std.fmt.comptimePrint(
+        \\SELECT {s}
+        \\FROM nested_struct_fields AS nsf
+        \\JOIN structs AS s ON nsf.struct_id = s.id
+        \\WHERE nsf.parent_id = ?
+        \\ORDER BY nsf.offset_bytes ASC
+    , .{
+        comptime gen_field_list(NestedStructField, .{ .prefix = "nsf" }),
+    });
+
+    return db.all(NestedStructField, query, allocator, .{
+        .struct_id = struct_id,
+    });
+}
+
+fn recursively_calculate_struct_size(
+    db: *Database,
+    depth: *u8,
+    cache: *std.AutoArrayHashMap(StructID, u64),
+    allocator: Allocator,
+    struct_id: StructID,
+) !u64 {
+    if (depth.* >= max_recursion_depth)
+        return error.MaxRecursionDepth;
+
+    const registers = try db.get_struct_registers(allocator, struct_id);
+    defer allocator.free(registers);
+
+    const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
+    defer allocator.free(nested_struct_fields);
+
+    var max_end: ?u32 = null;
+    for (registers) |register| {
+        const register_end = register.offset_bytes + ((register.size_bits / 8) * (register.count orelse 1));
+        if (max_end) |end| {
+            if (register_end > end)
+                max_end = @intCast(register_end);
+        } else {
+            max_end = @intCast(register_end);
+        }
+    }
+
+    for (nested_struct_fields) |nsf| {
+        const nested_struct_field_end = nsf.offset_bytes + ((nsf.size_bytes orelse
+            cache.get(nsf.struct_id) orelse
+            try db.recursively_calculate_struct_size(depth, cache, allocator, nsf.struct_id)) * (nsf.count orelse 1));
+        if (max_end) |end| {
+            if (nested_struct_field_end > end)
+                max_end = @intCast(nested_struct_field_end);
+        } else {
+            max_end = @intCast(nested_struct_field_end);
+        }
+    }
+
+    return max_end orelse 0;
+}
+
+/// This queries for the nested struct fields for a given struct, and
+/// calculates the byte size of that field if it is not explicit. If the size
+/// is calculated to be zero, the nested struct field will not be reported.
+pub fn get_nested_struct_fields_with_calculated_size(
+    db: *Database,
+    allocator: Allocator,
+    struct_id: StructID,
+) ![]NestedStructField {
+    var ret: std.ArrayList(NestedStructField) = .init(allocator);
+    defer ret.deinit();
+
+    const nested_struct_fields = try db.get_nested_struct_fields(allocator, struct_id);
+    defer allocator.free(nested_struct_fields);
+
+    var size_cache: std.AutoArrayHashMap(StructID, u64) = .init(allocator);
+    defer size_cache.deinit();
+
+    for (nested_struct_fields) |*nsf| {
+        if (nsf.size_bytes != null)
+            continue;
+
+        var depth: u8 = 0;
+        const size_bytes = try db.recursively_calculate_struct_size(&depth, &size_cache, allocator, nsf.struct_id);
+        std.log.debug("Calculated struct size: struct_id={} size_bytes={}", .{ nsf.struct_id, size_bytes });
+        nsf.size_bytes = if (size_bytes > 0) size_bytes else continue;
+        try ret.append(nsf.*);
+    }
+
+    return ret.toOwnedSlice();
 }
 
 pub fn get_struct_modes(
@@ -1313,6 +1436,45 @@ pub fn get_interrupt_idx(db: *Database, interrupt_id: InterruptID) !i32 {
     return if (row) |idx| idx else error.NoInterruptForID;
 }
 
+pub const AddNestedStructFieldOptions = struct {
+    name: []const u8,
+    struct_id: StructID,
+    offset_bytes: u64,
+    description: ?[]const u8 = null,
+    size_bytes: ?u64 = null,
+    count: ?u64 = null,
+};
+
+pub fn add_nested_struct_field(
+    db: *Database,
+    parent: StructID,
+    opts: AddNestedStructFieldOptions,
+) !void {
+    try db.exec(
+        \\INSERT INTO nested_struct_fields
+        \\  (parent_id, struct_id, name, description, offset_bytes, size_bytes, count)
+        \\VALUES
+        \\  (?, ?, ?, ?, ?, ?, ?)
+    , .{
+        .parent_id = parent,
+        .struct_id = opts.struct_id,
+        .name = opts.name,
+        .description = opts.description,
+        .offset_bytes = opts.offset_bytes,
+        .size_bytes = opts.size_bytes,
+        .count = opts.count,
+    });
+
+    log.debug("add_nested_struct_field: parent={} name='{s}' struct_id={} offset_bytes={} size_bytes={?} count={?}", .{
+        parent,
+        opts.name,
+        opts.struct_id,
+        opts.offset_bytes,
+        opts.size_bytes,
+        opts.count,
+    });
+}
+
 pub const CreateNestedStructOptions = struct {
     name: []const u8,
     description: ?[]const u8 = null,
@@ -1601,9 +1763,10 @@ pub fn create_register(db: *Database, parent: StructID, opts: CreateRegisterOpti
 
     savepoint.commit();
 
-    log.debug("created {}: name='{s}' offset_bytes={} size_bits={}", .{
+    log.debug("created {}: name='{s}' parent_id={} offset_bytes={} size_bits={}", .{
         register_id,
         opts.name,
+        parent,
         opts.offset_bytes,
         opts.size_bits,
     });
