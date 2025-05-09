@@ -19,11 +19,7 @@ pub const config = @import("config");
 pub const cpu = @import("cpu");
 
 /// Provides access to the low level features of the current microchip.
-pub const chip = struct {
-    const inner = @import("chip");
-    pub const types = inner.types;
-    pub usingnamespace @field(inner.devices, config.chip_name);
-};
+pub const chip = @import("chip");
 
 /// Provides higher level APIs for interacting with hardware
 pub const hal = if (config.has_hal) @import("hal") else void;
