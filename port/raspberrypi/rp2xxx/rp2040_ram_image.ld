@@ -23,12 +23,21 @@ MEMORY
 /* ▪ 0x20000000-0x20042000 Main RAM: Blocks can be positioned with byte alignment. */
 /* ▪ 0x15000000-0x15004000 Flash Cache: (since flash is not being targeted, the Flash Cache is available for use */
 /*   as RAM with same properties as Main RAM). */
+/* TODO: .isr_vector is the traditional name of the section containes the vector table. Maybe we should use that name */
+/* Syntax:
+ * .outputsection:
+ * {
+ *     inputfile(.sectioninfile)
+ *     *(.sectioninanyfile)
+ * }
+ */
 SECTIONS
 {
   .hello :
   {
+	  /* KEEP is (supposed to) make it so that this symbol survives --gc-sections */
      KEEP(*(_entry_point))
-     /* KEEP(*(.hello*)) */
+     KEEP(*(.hello*))
      /* *(.hello*) */
   } > hello
 
@@ -73,6 +82,7 @@ SECTIONS
   {
     KEEP(*(ram_vectors))
   } > ram0
+
   /* needed if we don't gc */
   /* .bootmeta : */
   /* { */
