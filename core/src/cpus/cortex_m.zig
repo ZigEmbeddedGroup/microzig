@@ -582,7 +582,8 @@ var ram_vectors: [vector_count]usize align(256) = undefined;
 // TODO: Get this defined with some compile-time target config
 const flash = false;
 
-pub fn _entry_point() linksection(".hello") callconv(.c) void {
+// TODO: Should be naked, otherwise the prologue might push onto a bad sp
+pub fn _entry_point() linksection(".entry") callconv(.c) void {
     asm volatile (
         \\
         // Get address of vector table
@@ -697,7 +698,7 @@ pub fn export_startup_logic() void {
     // Though it seems that it is considered the 'default' entry point in zig when building freestanding
     @export(&_entry_point, .{
         .name = "_entry_point",
-        // .section = ".hello",
+        // .section = ".entry",
         .linkage = .strong,
     });
 

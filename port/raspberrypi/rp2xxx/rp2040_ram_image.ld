@@ -14,7 +14,7 @@ ENTRY(_entry_point);
 
 MEMORY
 {
-  hello  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
+  entry  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
   ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x0003ff00
   /* ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x1003ff00 */
   /* ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000 */
@@ -33,13 +33,13 @@ MEMORY
  */
 SECTIONS
 {
-  .hello :
+  .entry :
   {
-	  /* KEEP is (supposed to) make it so that this symbol survives --gc-sections */
+     /* KEEP is (supposed to) make it so that this symbol survives --gc-sections */
      KEEP(*(_entry_point))
-     KEEP(*(.hello*))
-     /* *(.hello*) */
-  } > hello
+     KEEP(*(.entry*))
+     /* *(.entry*) */
+  } > entry
 
   .text :
   {
