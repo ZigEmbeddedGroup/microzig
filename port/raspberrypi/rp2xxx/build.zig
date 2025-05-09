@@ -145,11 +145,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .rp2040_ram_image = chip_rp2040.derive(.{
                 .linker_script = b.path("rp2040_ram_image.ld"),
                 .board = .{
-                    // TODO: Check the doc for boot sequence 2.8
                     .name = "RaspberryPi Pico (ram image)",
                     .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                     // Using pico2 because it doesn't need a bootloader, and we don't have flash for one
-                    // TODO: How do we change the entry point? We don't need microzig.main because we don't need to clear out .bss and .data
                     .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                 },
                 // TODO: Support overriding the memory regions? It's only used for linker generation?

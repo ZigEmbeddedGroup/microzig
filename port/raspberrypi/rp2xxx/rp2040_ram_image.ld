@@ -6,39 +6,22 @@
  */
 
 /* For ELFs this would set the entry, but for ucs it basically doesn't matter,
- * though it shoudl tell the linker that the symbol is referenced and to not
+ * though it should tell the linker that the symbol is referenced and to not
  * optimize it away.
  */
 ENTRY(_entry_point);
-/* ENTRY(_start); */
 
 MEMORY
 {
   entry  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
   ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x0003ff00
-  /* ram0   (rwx) : ORIGIN = 0x20000100, LENGTH = 0x1003ff00 */
-  /* ram0   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00040000 */
 }
-/* A RAM only binary */
-/* ▪ 0x20000000-0x20042000 Main RAM: Blocks can be positioned with byte alignment. */
-/* ▪ 0x15000000-0x15004000 Flash Cache: (since flash is not being targeted, the Flash Cache is available for use */
-/*   as RAM with same properties as Main RAM). */
-/* TODO: .isr_vector is the traditional name of the section containes the vector table. Maybe we should use that name */
-/* Syntax:
- * .outputsection:
- * {
- *     inputfile(.sectioninfile)
- *     *(.sectioninanyfile)
- * }
- */
+
 SECTIONS
 {
   .entry :
   {
-     /* KEEP is (supposed to) make it so that this symbol survives --gc-sections */
      KEEP(*(_entry_point))
-     KEEP(*(.entry*))
-     /* *(.entry*) */
   } > entry
 
   .text :
@@ -57,45 +40,26 @@ SECTIONS
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } > ram0
 
-  /* .flash1 : */
-  /* { */
-  /*   *(.flash1) */
-  /* } > flash1 */
-
   /* TODO: We would like to skip over the clearing of bss and writing of data since it's already in ram */
   .data :
   {
-     /* microzig_data_start = .; */
+     microzig_data_start = .;
      KEEP(*(.time_critical*))
      *(.data*)
-     /* microzig_data_end = .; */
+     microzig_data_end = .;
   } > ram0
 
   .bss :
   {
-      /* microzig_bss_start = .; */
+      microzig_bss_start = .;
       *(.bss*)
-      /* microzig_bss_end = .; */
+      microzig_bss_end = .;
   } > ram0
 
   .ram_vectors (NOLOAD) :
   {
     KEEP(*(ram_vectors))
   } > ram0
-
-  /* needed if we don't gc */
-  /* .bootmeta : */
-  /* { */
-  /*   __bootmeta_start__ = .; */
-  /*   KEEP (*(.bootmeta)) */
-  /*   __bootmeta_end__ = .; */
-  /* } > ram0 */
-
-
-  /* .flash_end : */
-  /* { */
-  /*   microzig_flash_end = .; */
-  /* } > flash0 */
 
   /* Would not be used */
   microzig_data_load_start = LOADADDR(.data);

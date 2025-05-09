@@ -582,8 +582,7 @@ var ram_vectors: [vector_count]usize align(256) = undefined;
 // TODO: Get this defined with some compile-time target config
 const flash = false;
 
-// TODO: Should be naked, otherwise the prologue might push onto a bad sp
-pub fn _entry_point() linksection(".entry") callconv(.naked) void {
+pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
     asm volatile (
         \\
         // Get address of vector table
@@ -618,27 +617,24 @@ pub const startup_logic = struct {
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.c) noreturn {
-        // TODO: Can't be comptime, since we don't have the microzig_xxx symbols until we link
-        comptime if (flash) {
-            // fill .bss with zeroes
-            {
-                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+        // fill .bss with zeroes
+        {
+            const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
+            const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
+            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
 
-                @memset(bss_start[0..bss_len], 0);
-            }
+            @memset(bss_start[0..bss_len], 0);
+        }
 
-            // load .data from flash
-            {
-                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
+        // load .data from flash
+        {
+            const data_start: [*]u8 = @ptrCast(&microzig_data_start);
+            const data_end: [*]u8 = @ptrCast(&microzig_data_end);
+            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+            const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
 
-                @memcpy(data_start[0..data_len], data_src[0..data_len]);
-            }
-        };
+            @memcpy(data_start[0..data_len], data_src[0..data_len]);
+        }
 
         // Move vector table to RAM if requested
         // TODO: Make sure that this isn't set for ram image
@@ -668,16 +664,18 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
+    pub fn ramimage_start() callconv(.c) noreturn {
+        microzig_main();
+    }
+
     const VectorTable = microzig.chip.VectorTable;
 
     // will be imported by microzig.zig to allow system startup.
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            // TODO: This is _after_ the entrypoint? We need code that actually respects it
-            // For some reason the ELF entry point is set to this, even if i try to set ENTRYPOINT
-            // in the linker script
-            .Reset = .{ .c = microzig.cpu.startup_logic._start },
+            // TODO: _ramimage_start if that target?
+            .Reset = .{ .c = if (is_ramimage()) microzig.cpu.startup_logic.ramimage_start else microzig.cpu.startup_logic._start },
         };
 
         for (@typeInfo(@TypeOf(microzig_options.interrupts)).@"struct".fields) |field| {
@@ -691,16 +689,18 @@ pub const startup_logic = struct {
     };
 };
 
-// Called by core/src/start.zig at comptime
+fn is_ramimage() bool {
+    // HACK
+    if (microzig.config.board_name) |board_name|
+        return (std.mem.containsAtLeast(u8, board_name, 1, "ram image"));
+    return false;
+}
 pub fn export_startup_logic() void {
-    // TODO: only if ram image
-    // TODO: Export it as _start? But that symbol is in the vector table.
-    // Though it seems that it is considered the 'default' entry point in zig when building freestanding
-    @export(&_entry_point, .{
-        .name = "_entry_point",
-        // .section = ".entry",
-        .linkage = .strong,
-    });
+    if (is_ramimage())
+        @export(&ram_image_entrypoint, .{
+            .name = "_entry_point",
+            .linkage = .strong,
+        });
 
     // Jumps to microzig_main
     @export(&startup_logic._start, .{
