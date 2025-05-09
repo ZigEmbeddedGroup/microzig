@@ -514,7 +514,6 @@ pub const interrupt = struct {
         return @enumFromInt(peripherals.nvic.IPR[@intFromEnum(int)]);
     }
 
-    // TODO: Do similar for ram only images?
     pub inline fn has_ram_vectors() bool {
         return @hasField(@TypeOf(microzig_options.cpu), "ram_vectors") and microzig_options.cpu.ram_vectors;
     }
@@ -575,8 +574,6 @@ pub fn clrex() void {
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
-// TODO: If we want to reuse this, we would set this at comptime since the flash version would never
-// make it into the binary
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
 // TODO: Get this defined with some compile-time target config
@@ -702,7 +699,6 @@ pub fn export_startup_logic() void {
             .linkage = .strong,
         });
 
-    // Jumps to microzig_main
     @export(&startup_logic._start, .{
         .name = "_start",
     });
