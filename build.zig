@@ -414,7 +414,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .atdf, .svd, .embassy => |file| blk: {
+                .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
                     regz_run.addArg("--microzig");
@@ -443,6 +443,37 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     }
 
                     regz_run.addFileArg(file);
+                    break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
+                },
+                .embassy => |path| blk: {
+                    const regz_run = b.addRunArtifact(regz_exe);
+
+                    regz_run.addArg("--microzig");
+                    regz_run.addArg("--format");
+                    regz_run.addArg(@tagName(target.chip.register_definition));
+
+                    regz_run.addArg("--output_path"); // Write to a file
+
+                    const chips_dir = regz_run.addOutputDirectoryArg("chips");
+                    var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
+
+                    // From chip definition
+                    patches.appendSlice(target.chip.patches) catch @panic("OOM");
+
+                    // From user invoking `add_firmware`
+                    patches.appendSlice(options.patches) catch @panic("OOM");
+
+                    if (patches.items.len > 0) {
+                        // write patches to file
+                        const patch_ndjson = serialize_patches(b, patches.items);
+                        const write_file_step = b.addWriteFiles();
+                        const patch_file = write_file_step.add("patch.ndjson", patch_ndjson);
+
+                        regz_run.addArg("--patch_path");
+                        regz_run.addFileArg(patch_file);
+                    }
+
+                    regz_run.addDirectoryArg(path);
                     break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
 
