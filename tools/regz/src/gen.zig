@@ -47,23 +47,24 @@ fn write_device_files(
     }
 }
 
-fn write_imports(opts: ToZigOptions, types_path: []const u8, writer: anytype) !void {
+fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: anytype) !void {
+    const public: []const u8 = if (types_public) "pub" else "";
     if (opts.for_microzig) {
         try writer.print(
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
             \\
-            \\pub const types = @import("{s}");
+            \\{s} const types = @import("{s}");
             \\
             \\
-        , .{types_path});
+        , .{ public, types_path });
     } else {
         try writer.print(
             \\const mmio = @import("mmio");
-            \\pub const types = @import("{s}");
+            \\{s} const types = @import("{s}");
             \\
             \\
-        , .{types_path});
+        , .{ public, types_path });
     }
 }
 
@@ -82,7 +83,7 @@ fn write_device_file(
         try write_file_comment(arena, description, writer);
     }
 
-    try write_imports(opts, "types.zig", writer);
+    try write_imports(opts, true, "types.zig", writer);
 
     try writer.writeAll(
         \\pub const Interrupt = struct {
@@ -166,7 +167,7 @@ fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts
     for (peripherals) |peripheral| {
         var periph_content = std.ArrayList(u8).init(arena);
         const writer = periph_content.writer();
-        try write_imports(opts, "../../types.zig", writer);
+        try write_imports(opts, false, "../../types.zig", writer);
         write_peripheral(db, arena, &peripheral, writer) catch |err| {
             log.warn("failed to generate peripheral '{s}': {}", .{
                 peripheral.name,

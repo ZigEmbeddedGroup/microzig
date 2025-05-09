@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const CCDS = enum(u1) {
     /// CCx DMA request sent when CCx event occurs

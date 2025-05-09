@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const ADCPRE = enum(u2) {
     /// PCLK2 divided by 2

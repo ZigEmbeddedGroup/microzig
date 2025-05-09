@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const CLKDIV = enum(u4) {
     /// Internal RNG clock after divider is similar to incoming RNG clock

@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const HIZ = enum(u1) {
     /// VREF+ pin is internally connected to the voltage reference buffer output.

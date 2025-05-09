@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const CKPOL = enum(u2) {
     /// the rising edge is the active edge used for counting. If the LPTIM is configured in Encoder mode (ENC bit is set), the encoder sub-mode 1 is active.

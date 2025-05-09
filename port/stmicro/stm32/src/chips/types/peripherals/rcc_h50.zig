@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const ADCDACSEL = enum(u3) {
     /// rcc_hclk selected as kernel clock (default after reset)

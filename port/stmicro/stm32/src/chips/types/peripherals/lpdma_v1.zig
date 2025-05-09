@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const BREQ = enum(u1) {
     /// the selected hardware request is driven by a peripheral with a hardware request/acknowledge protocol at a burst level.

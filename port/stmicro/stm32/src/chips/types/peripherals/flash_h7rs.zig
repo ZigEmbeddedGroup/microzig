@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const BOR_LEV = enum(u2) {
     /// BOR OFF, POR/PDR reset threshold level is applied.

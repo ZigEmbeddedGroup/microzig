@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const LATENCY = enum(u3) {
     /// Zero wait state, if 0 < SYSCLK≤ 24 MHz

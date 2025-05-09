@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const ADFSDMSEL = enum(u1) {
     /// SAI1 clock selected as DFSDM1 Audio clock source

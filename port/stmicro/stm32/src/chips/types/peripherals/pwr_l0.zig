@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const DS_EE_KOFF = enum(u1) {
     /// NVM woken up when exiting from Deepsleep mode even if the bit RUN_PD is set

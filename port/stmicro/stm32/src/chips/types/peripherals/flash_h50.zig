@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const BKSEL = enum(u1) {
     /// Bank1 is selected for Bank erase / sector erase / interrupt enable

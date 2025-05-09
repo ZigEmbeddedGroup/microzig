@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 /// DFLT trigger mode. This bitfield is set and cleared by software. It is used to select the trigger mode of the DFLT0.
 pub const ACQMOD = enum(u3) {

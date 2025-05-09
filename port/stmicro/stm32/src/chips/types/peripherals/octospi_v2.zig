@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const FlashSelect = enum(u1) {
     /// FLASH 1 selected (data exchanged over IO[3:0])

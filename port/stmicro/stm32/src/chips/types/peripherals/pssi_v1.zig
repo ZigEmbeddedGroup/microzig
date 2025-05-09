@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const CKPOL = enum(u1) {
     /// Falling edge active for inputs or rising edge active for outputs.

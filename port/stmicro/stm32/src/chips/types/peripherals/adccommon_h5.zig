@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const CKMODE = enum(u2) {
     /// Use Kernel Clock adc_ker_ck_input divided by PRESC. Asynchronous to AHB clock

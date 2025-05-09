@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const types = @import("../../types.zig");
+const types = @import("../../types.zig");
 
 pub const KEY = enum(u16) {
     /// Enable access to PR, RLR and WINR registers (0x5555)
