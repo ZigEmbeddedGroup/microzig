@@ -599,7 +599,7 @@ pub fn _entry_point() linksection(".entry") callconv(.naked) void {
         // Branch to _start (reset vector)
         \\bx r2
         :
-        : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
+        : [_vector_table] "r" (&startup_logic._vector_table),
           [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
         : "memory", "r0", "r1", "r2"
     );
