@@ -591,9 +591,7 @@ pub fn _entry_point() linksection(".hello") callconv(.c) void {
         \\mov r1, %[_VTOR_ADDRESS]
         // Set VTOR to point to ram table
         \\str r0, [r1]
-        // Needed?
-        //\\eor r2, r2
-        // Load stack address from vector table
+        // Load stack address and entry point
         \\ldm r0!, {r1, r2}
         // Set sp
         \\msr msp, r1
@@ -601,9 +599,7 @@ pub fn _entry_point() linksection(".hello") callconv(.c) void {
         \\bx r2
         :
         : [_vector_table] "r" (@as(u32, @intFromPtr(&startup_logic._vector_table))),
-          // TODO: Why not use &microzig.hal.PPB.VTOR?
-          [_VTOR_ADDRESS] "r" (peripherals.scb.VTOR),
-          // [_VTOR_ADDRESS] "r" (0xe000ed08),
+          [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
         : "memory", "r0", "r1", "r2"
     );
 }
