@@ -662,8 +662,10 @@ pub const startup_logic = struct {
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            // TODO: _ramimage_start if that target?
-            .Reset = .{ .c = if (is_ramimage()) microzig.cpu.startup_logic.ramimage_start else microzig.cpu.startup_logic._start },
+            .Reset = .{ .c = if (is_ramimage())
+                microzig.cpu.startup_logic.ramimage_start
+            else
+                microzig.cpu.startup_logic._start },
         };
 
         for (@typeInfo(@TypeOf(microzig_options.interrupts)).@"struct".fields) |field| {
@@ -681,7 +683,7 @@ fn is_ramimage() bool {
     // HACK
     // TODO: Use microzig_options?
     if (microzig.config.board_name) |board_name|
-        return (std.mem.containsAtLeast(u8, board_name, 1, "ram image"));
+        return std.mem.containsAtLeast(u8, board_name, 1, "ram image");
     return false;
 }
 
