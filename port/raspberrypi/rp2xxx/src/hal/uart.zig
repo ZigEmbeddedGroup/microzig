@@ -490,8 +490,11 @@ pub fn logFn(
 
 var log_mutex: microzig.hal.mutex.Mutex = .{};
 
-/// This log function wraps logFn in a semaphore so that calls to it from
+/// This log function wraps logFn in a mutex so that calls to it from
 /// different cores or interrupts don't collide.
+///
+/// It is NOT safe to use in code that could be suspended on one core and
+/// resumed on another.
 pub fn logFnThreadsafe(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
