@@ -583,7 +583,7 @@ var ram_vectors: [vector_count]usize align(256) = undefined;
 const flash = false;
 
 // TODO: Should be naked, otherwise the prologue might push onto a bad sp
-pub fn _entry_point() linksection(".entry") callconv(.c) void {
+pub fn _entry_point() linksection(".entry") callconv(.naked) void {
     asm volatile (
         \\
         // Get address of vector table
