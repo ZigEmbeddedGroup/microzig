@@ -18,13 +18,30 @@ high_boundary: usize,
 
 mutex: microzig.interrupt.Mutex = .{},
 
-/// Set up an allocator by adding all the memory that is not otherwise used by the program.
-/// It relies on the linker script to define the microzig_heap_start and microzig_heap_end
-/// symbols.
+/// Return a []u8 slice that contains the memory located between the
+/// microzig_heap_start and microzig_heap_end.  This is the RAM that
+/// is not used by any static allocations. It relies on the linker script
+/// to define the microzig_heap_start and microzig_heap_end symbols
 ///
-/// The allocator provided a `reserve` parameter to allow the user to reserve a small amount of
-/// memory at the end of the heap.  This prevents the allocator from using memory that is reserved
-/// for other purposes, such as the stack.
+/// In the default configurations, the stack will occupy the end of this
+/// memory area. The `reserve` parameter is used to reduce the size of the
+/// returned slice to reserve some memory for the stack's exclusive use.
+///
+/// Parameters:
+/// - `reserve`: The number of bytes to omit at the end of the heap.
+///
+pub fn heap(reserve: usize) []u8 {
+    const heapPtr: [*]u8 = @ptrCast(&microzig_heap_start);
+    const heap_len: usize = @intFromPtr(&microzig_heap_end) - @intFromPtr(&microzig_heap_start) - reserve;
+    return heapPtr[0..heap_len];
+}
+
+/// Set up an allocator by adding all the memory that is not otherwise used by the program.
+///
+/// In normal configurations, the heap allocations will grow down from the start of the heap to
+/// the end of memory, while the stack will grow from up from the end of memory.  To help prevent
+/// the heap and stack from overlapping, the allocator can reserve a small amount of memory at the
+/// end of the heap for the stack's exclusive use.
 ///
 /// Example of use:
 /// ```
@@ -35,14 +52,11 @@ mutex: microzig.interrupt.Mutex = .{},
 /// const allocator : std.mem.Allocator = heap_allocator.allocator();
 /// ```
 ///
-/// aParameters:
+/// Parameters:
 /// - `reserve`: The number of bytes to omit at the end of the heap.
 ///
 pub fn init_with_heap(reserve: usize) Alloc {
-    const unalloc: [*]u8 = @ptrCast(&microzig_heap_start);
-    const unalloc_len: usize = @intFromPtr(&microzig_heap_end) - @intFromPtr(&microzig_heap_start) - reserve;
-
-    return init_with_buffer(unalloc[0..unalloc_len]);
+    return init_with_buffer(heap(reserve));
 }
 
 /// Set up an allocator using the supplied buffer.
