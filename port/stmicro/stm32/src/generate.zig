@@ -477,12 +477,16 @@ pub fn main() !void {
 
     try generate_chips_file(allocator, chips_file.writer(), chip_files.items);
 
-    const out_file = try std.fs.cwd().createFile("src/chips/all.zig", .{});
-    defer out_file.close();
-
     try db.backup("stm32.regz");
 
-    db.to_zig(out_file.writer(), .{ .for_microzig = true }) catch |err| {
+    // output_path is the directory to write files
+    var output_dir = try std.fs.cwd().makeOpenPath("src/chips", .{});
+    defer output_dir.close();
+
+    var fs = regz.FS_Directory.init(output_dir);
+    try db.to_zig(fs.directory(), .{ .for_microzig = true });
+
+    db.to_zig(fs.directory(), .{ .for_microzig = true }) catch |err| {
         std.log.err("Failed to write", .{});
         return err;
     };
@@ -520,7 +524,6 @@ fn generate_chips_file(
         \\
         \\pub fn init(dep: *std.Build.Dependency) Self {
         \\    const b = dep.builder;
-        \\    const register_definition_path = b.path("src/chips/all.zig");
         \\
         \\    var ret: Self = undefined;
         \\
@@ -582,12 +585,12 @@ fn generate_chips_file(
             \\        .chip = .{{
             \\            .name = "{s}",
             \\            .register_definition = .{{
-            \\                .zig = register_definition_path,
+            \\                .zig = b.path("src/chips/{s}.zig"),
             \\            }},
             \\            .memory_regions = &.{{
             \\
         ,
-            .{chip_file.name},
+            .{ chip_file.name, chip_file.name },
         );
 
         {

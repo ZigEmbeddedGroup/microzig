@@ -693,3 +693,176 @@ pub fn register_fields_with_name_collision(allocator: Allocator) !*Database {
 
     return db;
 }
+
+pub fn nested_struct_field_in_a_peripheral(allocator: Allocator, offset_bytes: u64) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    defer db.backup("nested_struct_field_in_a_peripheral.regz") catch {};
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_struct(.{});
+
+    const register_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = offset_bytes,
+        .struct_id = nested_struct_id,
+    });
+
+    return db;
+}
+
+pub fn nested_struct_field_in_a_peripheral_that_has_a_named_type(allocator: Allocator, offset_bytes: u64) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    defer db.backup("nested_struct_field_in_a_peripheral_that_has_a_named_type.regz") catch {};
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_nested_struct(struct_id, .{
+        .name = "TEST_NESTED_TYPE",
+    });
+
+    const register_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = offset_bytes,
+        .struct_id = nested_struct_id,
+    });
+
+    return db;
+}
+
+pub fn nested_struct_field_in_a_nested_struct_field(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_struct(.{});
+    const nested_nested_struct_id = try db.create_struct(.{});
+
+    const register_id = try db.create_register(nested_nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
+
+    try db.add_nested_struct_field(nested_struct_id, .{
+        .name = "TEST_NESTED_NESTED",
+        .offset_bytes = 0,
+        .struct_id = nested_nested_struct_id,
+    });
+
+    return db;
+}
+
+pub fn nested_struct_field_next_to_register(allocator: Allocator) !*Database {
+    var db = try Database.create(allocator);
+    errdefer db.destroy();
+
+    const peripheral_id = try db.create_peripheral(.{
+        .name = "TEST_PERIPHERAL",
+        .description = "test peripheral",
+    });
+
+    const struct_id = try db.get_peripheral_struct(peripheral_id);
+    const nested_struct_id = try db.create_nested_struct(struct_id, .{
+        .name = "TEST_NESTED_TYPE",
+    });
+
+    const register1_id = try db.create_register(nested_struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 0,
+    });
+
+    try db.add_register_field(register1_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    try db.add_nested_struct_field(struct_id, .{
+        .name = "TEST_NESTED",
+        .description = "test nested struct",
+        .offset_bytes = 0,
+        .struct_id = nested_struct_id,
+    });
+
+    const register2_id = try db.create_register(struct_id, .{
+        .name = "TEST_REGISTER",
+        .description = "test register",
+        .size_bits = 32,
+        .offset_bytes = 4,
+    });
+
+    try db.add_register_field(register2_id, .{
+        .name = "TEST_FIELD",
+        .description = "test field 1",
+        .size_bits = 1,
+        .offset_bits = 0,
+    });
+
+    return db;
+}

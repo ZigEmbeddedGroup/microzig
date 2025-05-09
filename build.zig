@@ -412,7 +412,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             cpu_mod.addImport("microzig", core_mod);
             core_mod.addImport("cpu", cpu_mod);
 
-            const regz_exe = b.dependency("tools/regz", .{ .optimize = .ReleaseSafe }).artifact("regz");
+            const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
                 .atdf, .svd => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
@@ -422,8 +422,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file
-                    const zig_file = regz_run.addOutputFileArg("chip.zig");
 
+                    const chips_dir = regz_run.addOutputDirectoryArg("chips");
                     var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
 
                     // From chip definition
@@ -443,8 +443,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     }
 
                     regz_run.addFileArg(file);
-
-                    break :blk zig_file;
+                    break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
 
                 .zig => |src| src,

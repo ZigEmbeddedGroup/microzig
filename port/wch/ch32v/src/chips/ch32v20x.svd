@@ -3,17 +3,9 @@
 xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
   <vendor>WCH Ltd.</vendor>                                       <!-- device vendor name -->
   <vendorID>WCH</vendorID>                                        <!-- device vendor short name -->
-  <name>CH32V20xxx</name>
-  <version>1.0</version>
-  <description>CH32V20xxx View File</description>
-  <cpu>
-    <name>QINGKEV4</name>
-    <revision>r0p0</revision>
-    <endian>little</endian>
-    <fpuPresent>false</fpuPresent>
-    <mpuPresent>false</mpuPresent>
-    <nvicPrioBits>2</nvicPrioBits>
-  </cpu>
+  <name>CH32V20x</name>
+  <version>1.1</version>
+  <description>CH32V20x View File</description>
   <!--Bus Interface Properties-->
   <!--RISC-V is byte addressable-->
 
@@ -43,8 +35,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <registers>
         <register>
-          <name>EP0R</name>
-          <displayName>EP0R</displayName>
+          <name>EPR0</name>
+          <displayName>EPR0</displayName>
           <description>endpoint 0 register</description>
           <addressOffset>0x0</addressOffset>
           <size>0x10</size>
@@ -59,15 +51,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -92,37 +82,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP1R</name>
-          <displayName>EP1R</displayName>
+          <name>EPR1</name>
+          <displayName>EPR1</displayName>
           <description>endpoint 1 register</description>
           <addressOffset>0x4</addressOffset>
           <size>0x10</size>
@@ -137,22 +123,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -170,37 +153,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP2R</name>
-          <displayName>EP2R</displayName>
+          <name>EPR2</name>
+          <displayName>EPR2</displayName>
           <description>endpoint 2 register</description>
           <addressOffset>0x8</addressOffset>
           <size>0x10</size>
@@ -215,22 +194,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -248,37 +224,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP3R</name>
-          <displayName>EP3R</displayName>
+          <name>EPR3</name>
+          <displayName>EPR3</displayName>
           <description>endpoint 3 register</description>
           <addressOffset>0xC</addressOffset>
           <size>0x10</size>
@@ -293,22 +265,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -326,37 +295,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP4R</name>
-          <displayName>EP4R</displayName>
+          <name>EPR4</name>
+          <displayName>EPR4</displayName>
           <description>endpoint 4 register</description>
           <addressOffset>0x10</addressOffset>
           <size>0x10</size>
@@ -371,22 +336,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -433,8 +395,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>EP5R</name>
-          <displayName>EP5R</displayName>
+          <name>EPR5</name>
+          <displayName>EPR5</displayName>
           <description>endpoint 5 register</description>
           <addressOffset>0x14</addressOffset>
           <size>0x10</size>
@@ -449,22 +411,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -482,37 +441,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP6R</name>
-          <displayName>EP6R</displayName>
+          <name>EPR6</name>
+          <displayName>EPR6</displayName>
           <description>endpoint 6 register</description>
           <addressOffset>0x18</addressOffset>
           <size>0x10</size>
@@ -527,22 +482,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -560,37 +512,33 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
           </fields>
         </register>
         <register>
-          <name>EP7R</name>
-          <displayName>EP7R</displayName>
+          <name>EPR7</name>
+          <displayName>EPR7</displayName>
           <description>endpoint 7 register</description>
           <addressOffset>0x1C</addressOffset>
           <size>0x10</size>
@@ -605,22 +553,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>STAT_TX</name>
-              <description>Status bits, for transmission
-              transfers</description>
+              <description>Status bits, for transmission transfers</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_TX</name>
-              <description>Data Toggle, for transmission
-              transfers</description>
+              <description>Data Toggle, for transmission transfers</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_TX</name>
-              <description>Correct Transfer for
-              transmission</description>
+              <description>Correct Transfer for transmission</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -638,29 +583,25 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>SETUP</name>
-              <description>Setup transaction
-              completed</description>
+              <description>Setup transaction completed</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>STAT_RX</name>
-              <description>Status bits, for reception
-              transfers</description>
+              <description>Status bits, for reception transfers</description>
               <bitOffset>12</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
             <field>
               <name>DTOG_RX</name>
-              <description>Data Toggle, for reception
-              transfers</description>
+              <description>Data Toggle, for reception transfers</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>CTR_RX</name>
-              <description>Correct transfer for
-              reception</description>
+              <description>Correct transfer for reception</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -707,15 +648,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>ESOFM</name>
-              <description>Expected start of frame interrupt
-              mask</description>
+              <description>Expected start of frame interrupt mask</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>SOFM</name>
-              <description>Start of frame interrupt
-              mask</description>
+              <description>Start of frame interrupt mask</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -794,7 +733,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>RESET</name>
+              <name>RST</name>
               <description>reset request</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
@@ -819,8 +758,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>PMAOVR</name>
-              <description>Packet memory area over /
-              underrun</description>
+              <description>Packet memory area over / underrun</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -963,7 +901,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>RESET</name>
+              <name>RST</name>
               <description>Software master reset</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1354,7 +1292,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <fields>
             <field>
               <name>SLKIE</name>
-              <description>Sleep interrupt
+              <description>Sleep interrupt 
               enable</description>
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1362,7 +1300,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>WKUIE</name>
-              <description>Wakeup interrupt
+              <description>Wakeup interrupt 
               enable</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1370,7 +1308,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>ERRIE</name>
-              <description>Error interrupt
+              <description>Error interrupt 
               enable</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1378,7 +1316,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>LECIE</name>
-              <description>Last error code interrupt
+              <description>Last error code interrupt 
               enable</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1386,7 +1324,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>BOFIE</name>
-              <description>Bus-off interrupt
+              <description>Bus-off interrupt 
               enable</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1394,7 +1332,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EPVIE</name>
-              <description>Error passive interrupt
+              <description>Error passive interrupt 
               enable</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1402,7 +1340,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EWGIE</name>
-              <description>Error warning interrupt
+              <description>Error warning interrupt 
               enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1410,7 +1348,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FOVIE1</name>
-              <description>FIFO overrun interrupt
+              <description>FIFO overrun interrupt 
               enable</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1418,7 +1356,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FFIE1</name>
-              <description>FIFO full interrupt
+              <description>FIFO full interrupt 
               enable</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1426,7 +1364,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FMPIE1</name>
-              <description>FIFO message pending interrupt
+              <description>FIFO message pending interrupt 
               enable</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1434,7 +1372,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FOVIE0</name>
-              <description>FIFO overrun interrupt
+              <description>FIFO overrun interrupt 
               enable</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1442,7 +1380,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FFIE0</name>
-              <description>FIFO full interrupt
+              <description>FIFO full interrupt 
               enable</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1450,7 +1388,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>FMPIE0</name>
-              <description>FIFO message pending interrupt
+              <description>FIFO message pending interrupt 
               enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1458,7 +1396,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>TMEIE</name>
-              <description>Transmit mailbox empty interrupt
+              <description>Transmit mailbox empty interrupt 
               enable</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1498,7 +1436,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>BOFF</name>
-              <description>Bus-off
+              <description>Bus-off 
               flag</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1506,7 +1444,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EPVF</name>
-              <description>Error passive
+              <description>Error passive 
               flag</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -1514,7 +1452,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>EWGF</name>
-              <description>Error warning
+              <description>Error warning 
               flag</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2085,7 +2023,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>RXMDTR0</name>
           <displayName>RXMDTR0</displayName>
-          <description>CAN receive FIFO mailbox data length control and time stamp
+          <description>CAN receive FIFO mailbox data length control and time stamp 
           register</description>
           <addressOffset>0x1B4</addressOffset>
           <size>0x20</size>
@@ -2235,7 +2173,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>RXMDTR1</name>
           <displayName>RXMDTR1</displayName>
-          <description>CAN receive FIFO mailbox data length control and time stamp
+          <description>CAN receive FIFO mailbox data length control and time stamp 
           register</description>
           <addressOffset>0x1C4</addressOffset>
           <size>0x20</size>
@@ -14180,7 +14118,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
     </registers>
-  </peripheral>
+  </peripheral>	
 	<peripheral>
       <name>ETHERNET_MAC</name>
       <description>Ethernet: media access control</description>
@@ -14188,7 +14126,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       <baseAddress>0x40028000</baseAddress>
       <addressBlock>
         <offset>0x0</offset>
-        <size>0x400</size>
+        <size>0x100</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -14211,7 +14149,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x0</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x00008000</resetValue>
+          <resetValue>0x00000000</resetValue>
           <fields>
 			  <field>
               <name>TCES</name>
@@ -14305,18 +14243,18 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>3</bitWidth>
             </field>
 			<field>
-              <name>IRE</name>
-              <description>10MPHY 50Ω set</description>
+              <name>PR</name>
+              <description>10MPHY 50 Ohm set</description>
               <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>PDI</name>
+              <name>PI</name>
               <description>10MPHY TX DRIVER bisa current</description>
               <bitOffset>21</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-
+			
             <field>
               <name>JD</name>
               <description>Jabber disable</description>
@@ -14329,7 +14267,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>23</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-
+			
 			<field>
               <name>TCD</name>
               <description>SEND clock delay</description>
@@ -14552,18 +14490,6 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PLT</name>
-              <description>Pause low threshold</description>
-              <bitOffset>4</bitOffset>
-              <bitWidth>2</bitWidth>
-            </field>
-            <field>
-              <name>ZQPD</name>
-              <description>Zero-quanta pause disable</description>
-              <bitOffset>7</bitOffset>
-              <bitWidth>1</bitWidth>
-            </field>
-            <field>
               <name>PT</name>
               <description>Pass control frames</description>
               <bitOffset>16</bitOffset>
@@ -14735,7 +14661,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           (ETH_MACA0HR)</description>
           <addressOffset>0x40</addressOffset>
           <size>0x20</size>
-          <resetValue>0x0010FFFF</resetValue>
+          <resetValue>0x8000FFFF</resetValue>
           <fields>
             <field>
               <name>MACA0H</name>
@@ -15475,7 +15401,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x0</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x00002101</resetValue>
+          <resetValue>0x00000000</resetValue>
           <fields>
             <field>
               <name>SR</name>
@@ -15624,7 +15550,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>Transmit status</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>TPSS</name>
@@ -15632,7 +15558,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>TBUS</name>
@@ -15640,7 +15566,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>TJTS</name>
@@ -15648,28 +15574,28 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>ROS</name>
               <description>Receive overflow status</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>TUS</name>
               <description>Transmit underflow status</description>
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>RS</name>
               <description>Receive status</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>RBUS</name>
@@ -15677,7 +15603,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>RPSS</name>
@@ -15685,7 +15611,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>PWTS</name>
@@ -15693,42 +15619,42 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               status</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>ETS</name>
               <description>Early transmit status</description>
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>FBES</name>
               <description>Fatal bus error status</description>
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>ERS</name>
               <description>Early receive status</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>AIS</name>
               <description>Abnormal interrupt summary</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>NIS</name>
               <description>Normal interrupt summary</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
+              <access>read/clear</access>
             </field>
             <field>
               <name>RPS</name>
@@ -16102,9 +16028,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
       </registers>
     </peripheral>
-
-
-
+	
+  	
+	
 	<peripheral>
       <name>DAC</name>
       <description>Digital to analog converter</description>
@@ -16478,7 +16404,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
       </registers>
-    </peripheral>
+    </peripheral>	
     <peripheral>
       <name>PWR</name>
       <description>Power control</description>
@@ -16622,7 +16548,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
       </registers>
-    </peripheral>
+    </peripheral>  
 	<peripheral>
       <name>RCC</name>
       <description>Reset and clock control</description>
@@ -16752,23 +16678,23 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>HPRE</name>
-              <description>AHB prescaler</description>
+              <description>HB prescaler</description>
               <bitOffset>4</bitOffset>
               <bitWidth>4</bitWidth>
               <access>read-write</access>
             </field>
             <field>
               <name>PPRE1</name>
-              <description>APB Low speed prescaler
-              (APB1)</description>
+              <description>PB Low speed prescaler
+              (PB1)</description>
               <bitOffset>8</bitOffset>
               <bitWidth>3</bitWidth>
               <access>read-write</access>
             </field>
             <field>
               <name>PPRE2</name>
-              <description>APB High speed prescaler
-              (APB2)</description>
+              <description>PB High speed prescaler
+              (PB2)</description>
               <bitOffset>11</bitOffset>
               <bitWidth>3</bitWidth>
               <access>read-write</access>
@@ -16967,7 +16893,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>APB2PRSTR</name>
           <displayName>APB2PRSTR</displayName>
-          <description>APB2 peripheral reset register
+          <description>PB2 peripheral reset register
           (RCC_APB2PRSTR)</description>
           <addressOffset>0x0C</addressOffset>
           <size>0x20</size>
@@ -17065,7 +16991,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>APB1PRSTR</name>
           <displayName>APB1PRSTR</displayName>
-          <description>APB1 peripheral reset register
+          <description>PB1 peripheral reset register
           (RCC_APB1PRSTR)</description>
           <addressOffset>0x10</addressOffset>
           <size>0x20</size>
@@ -17221,7 +17147,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>AHBPCENR</name>
           <displayName>AHBPCENR</displayName>
-          <description>AHB Peripheral Clock enable register
+          <description>HB Peripheral Clock enable register
           (RCC_AHBPCENR)</description>
           <addressOffset>0x14</addressOffset>
           <size>0x20</size>
@@ -17320,7 +17246,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>APB2PCENR</name>
           <displayName>APB2PCENR</displayName>
-          <description>APB2 peripheral clock enable register
+          <description>PB2 peripheral clock enable register
           (RCC_APB2PCENR)</description>
           <addressOffset>0x18</addressOffset>
           <size>0x20</size>
@@ -17401,7 +17327,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>USART1 clock enable</description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field>   
 			<field>
               <name>TIM9_EN</name>
               <description>TIM9 Timer clock enable</description>
@@ -17413,13 +17339,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>TIM10 Timer clock enable</description>
               <bitOffset>20</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field>			
           </fields>
         </register>
         <register>
           <name>APB1PCENR</name>
           <displayName>APB1PCENR</displayName>
-          <description>APB1 peripheral clock enable register
+          <description>PB1 peripheral clock enable register
           (RCC_APB1PCENR)</description>
           <addressOffset>0x1C</addressOffset>
           <size>0x20</size>
@@ -17473,13 +17399,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>USART 7 clock enable</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field>  
             <field>
               <name>USART8_EN</name>
               <description>USART 8 clock enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field>  			
             <field>
               <name>WWDGEN</name>
               <description>Window watchdog clock
@@ -17712,7 +17638,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>AHBRSTR</name>
           <displayName>AHBRSTR</displayName>
-          <description>AHB reset register
+          <description>HB reset register
           (RCC_APHBRSTR)</description>
           <addressOffset>0x28</addressOffset>
           <size>0x20</size>
@@ -17724,7 +17650,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
             <field>
               <name>DVPRST</name>
               <description>DVP reset</description>
@@ -17738,7 +17664,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>         
           </fields>
         </register>
 	<register>
@@ -17794,50 +17720,50 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
 		      	<field>
-              <name>TRNG_SRC</name>
+              <name>TRNGSRC</name>
               <description>TRNG clock source</description>
               <bitOffset>19</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
 		      	<field>
-              <name>ETH1G_SRC</name>
+              <name>ETH1GSRC</name>
               <description>ETH1G clock source</description>
               <bitOffset>20</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
-			      <field>
-              <name>ETH1G_125M_EN</name>
+		      	<field>
+              <name>ETH1GEN</name>
               <description>ETH1G _125M clock enable</description>
               <bitOffset>22</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
-			      <field>
-              <name>USBHS_PREDIY</name>
+		      	<field>
+              <name>USBHSDIV</name>
               <description>USB HS PREDIV division factor</description>
               <bitOffset>24</bitOffset>
               <bitWidth>3</bitWidth>
             </field>
 			<field>
-              <name>USBHS_PLL_SRC</name>
+              <name>USBHSPLLSRC</name>
               <description>USB HS Multiplication Factor clock source</description>
               <bitOffset>27</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>USBHS_CKPEF_SEL</name>
+              <name>USBHSCLK</name>
               <description>USB HS Peference Clock source </description>
               <bitOffset>28</bitOffset>
               <bitWidth>2</bitWidth>
             </field>
 			<field>
-              <name>USBHS_PLLALIVE</name>
+              <name>USBHSPLL</name>
               <description>USB HS Multiplication control </description>
               <bitOffset>30</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>USBHS_CLK_SRC</name>
-              <description>USB HS clock source </description>
+              <name>USBFSSRC</name>
+              <description>USB FS clock source </description>
               <bitOffset>31</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -17862,7 +17788,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <description>EXTEND register</description>
           <addressOffset>0x00</addressOffset>
           <size>0x20</size>
-          <resetValue>0x00000A00</resetValue>
+          <resetValue>0x00000A40</resetValue>
           <fields>
             <field>
               <name>USBDLS</name>
@@ -17870,90 +17796,77 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
             <field>
               <name>USBDPU</name>
               <description>USBD pullup Enable</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
             <field>
-              <name>ETH_10M_EN</name>
+              <name>ETH10M</name>
               <description>ETH 10M Enable</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>ETH_RGMII_EN</name>
+              <name>ETHRGMII</name>
               <description>ETH RGMII Enable</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
             <field>
-              <name>PLL_HSI_PRE</name>
+              <name>HSIPRE</name>
               <description>Whether HSI is divided </description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>LOCKUP_EN</name>
+              <name>LKUPEN</name>
               <description>LOCKUP_Eable</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
             <field>
               <name>LOCKUP_RSTF</name>
               <description>LOCKUP RESET</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-write</access>
-            </field>
+              <access>read/clear</access>
+            </field>    
             <field>
-              <name>ULLDO_TRIM</name>
+              <name>ULLDOTRIM</name>
               <description>ULLDO_TRIM</description>
               <bitOffset>8</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
             <field>
-              <name>LDO_TRIM</name>
+              <name>LDOTRIM</name>
               <description>LDO_TRIM</description>
               <bitOffset>10</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>HSE_KEEP_LP</name>
+              <name>HSEKPLP</name>
               <description>HSE_KEEP_LP</description>
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>    
           </fields>
         </register>
-      </registers>
-    </peripheral>
-	<peripheral>
-      <name>OPA</name>
-      <description> OPA configuration</description>
-      <groupName>OPA</groupName>
-      <baseAddress>0x40023804</baseAddress>
-      <addressBlock>
-        <offset>0x0</offset>
-        <size>0x200</size>
-        <usage>registers</usage>
-      </addressBlock>
-      <registers>
         <register>
           <name>CR</name>
-          <displayName>CR</displayName>
-          <description>Control register</description>
-          <addressOffset>0x0</addressOffset>
+          <displayName>OPA_CR</displayName>
+          <description>OPA Control register</description>
+          <addressOffset>0x04</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
@@ -17963,14 +17876,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
                <field>
               <name>MODE1</name>
               <description>OPA MODE1</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
                <field>
               <name>NSEL1</name>
               <description>OPA NSEL1</description>
@@ -17984,7 +17897,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
                <field>
               <name>EN2</name>
               <description>OPA Enable2</description>
@@ -18005,21 +17918,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
                <field>
               <name>PSEL2</name>
               <description>OPA PSEL2</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>    
                   <field>
               <name>EN3</name>
               <description>OPA Eable3</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field>  
                  <field>
               <name>MODE3</name>
               <description>OPA MODE3</description>
@@ -18033,46 +17946,46 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitOffset>10</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
                  <field>
               <name>PSEL3</name>
               <description>OPA PSEL3</description>
               <bitOffset>11</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
                  <field>
               <name>EN4</name>
               <description>OPA Enable4</description>
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 
                  <field>
               <name>MODE4</name>
               <description>OPA MODE4</description>
               <bitOffset>13</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 	
                  <field>
               <name>NSEL4</name>
               <description>OPA NSEL4 </description>
               <bitOffset>14</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 	
                  <field>
               <name>PSEL4</name>
               <description>OPA PSEL4</description>
               <bitOffset>15</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
-            </field>
+            </field> 				
           </fields>
         </register>
       </registers>
-    </peripheral>
+    </peripheral> 
 	<peripheral>
       <name>GPIOA</name>
       <description>General purpose I/O</description>
@@ -19018,86 +18931,86 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>PCFR</name>
-          <displayName>PCFR</displayName>
+          <name>PCFR1</name>
+          <displayName>PCFR1</displayName>
           <description>AF remap and debug I/O configuration
-          register (AFIO_PCFR)</description>
+          register (AFIO_PCFR1)</description>
           <addressOffset>0x4</addressOffset>
           <size>0x20</size>
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>SPI1RM</name>
+              <name>SPI1_RM</name>
               <description>SPI1 remapping</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>I2C1RM</name>
+              <name>I2C1_RM</name>
               <description>I2C1 remapping</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>USART1RM</name>
+              <name>USART1_RM</name>
               <description>USART1 remapping</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>USART2RM</name>
+              <name>USART2_RM</name>
               <description>USART2 remapping</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>USART3RM</name>
+              <name>USART3_RM</name>
               <description>USART3 remapping</description>
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM1RM</name>
+              <name>TIM1_RM</name>
               <description>TIM1 remapping</description>
               <bitOffset>6</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM2RM</name>
+              <name>TIM2_RM</name>
               <description>TIM2 remapping</description>
               <bitOffset>8</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM3RM</name>
+              <name>TIM3_RM</name>
               <description>TIM3 remapping</description>
               <bitOffset>10</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM4RM</name>
+              <name>TIM4_RM</name>
               <description>TIM4 remapping</description>
               <bitOffset>12</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>CAN1RM</name>
+              <name>CAN1_RM</name>
               <description>CAN1 remapping</description>
               <bitOffset>13</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>PD01RM</name>
+              <name>PD01_RM</name>
               <description>Port D0/Port D1 mapping on
               OSCIN/OSCOUT</description>
               <bitOffset>15</bitOffset>
@@ -19105,7 +19018,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM5CH4RM</name>
+              <name>TIM5CH4_RM</name>
               <description>TIM5 channel4 internal remap</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
@@ -19140,14 +19053,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>ETHRM</name>
+              <name>ETH_RM</name>
               <description>Ethernet remapping</description>
               <bitOffset>21</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>CAN2RM</name>
+              <name>CAN2_RM</name>
               <description>CAN2 remapping</description>
               <bitOffset>22</bitOffset>
               <bitWidth>1</bitWidth>
@@ -19161,7 +19074,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>SWCFG</name>
+              <name>SW_CFG</name>
               <description>Serial wire JTAG
               configuration</description>
               <bitOffset>24</bitOffset>
@@ -19176,14 +19089,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM2ITRA_RM</name>
+              <name>TIM2ITR1_RM</name>
               <description>TIM2 internally triggers 1 remapping</description>
               <bitOffset>29</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>PTP_PPSP_RM</name>
+              <name>PTP_PPS_RM</name>
               <description>Ethernet PTP_PPS remapping</description>
               <bitOffset>30</bitOffset>
               <bitWidth>1</bitWidth>
@@ -19345,21 +19258,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>TIM8_REMAP</name>
+              <name>TIM8_RM</name>
               <description>TIM8 remapping</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM9_REMAP</name>
+              <name>TIM9_RM</name>
               <description>TIM9 remapping</description>
               <bitOffset>3</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>TIM10_REMAP</name>
+              <name>TIM10_RM</name>
               <description>TIM10 remapping</description>
               <bitOffset>5</bitOffset>
               <bitWidth>2</bitWidth>
@@ -19373,42 +19286,42 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>UART4_REMAP</name>
+              <name>UART4_RM</name>
               <description>UART4 remapping</description>
               <bitOffset>16</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>UART5_REMAP</name>
+              <name>UART5_RM</name>
               <description>UART5 remapping</description>
               <bitOffset>18</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>UART6_REMAP</name>
+              <name>UART6_RM</name>
               <description>UART6 remapping</description>
               <bitOffset>20</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>UART7_REMAP</name>
+              <name>UART7_RM</name>
               <description>UART7 remapping</description>
               <bitOffset>22</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
             <field>
-              <name>UART8_REMAP</name>
+              <name>UART8_RM</name>
               <description>UART8 remapping</description>
               <bitOffset>24</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-write</access>
             </field>
 			 <field>
-              <name>UART1_REMAP2</name>
+              <name>UART1_RM1</name>
               <description>UART1 remapping</description>
               <bitOffset>26</bitOffset>
               <bitWidth>1</bitWidth>
@@ -20332,37 +20245,37 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>DMA1_CH1</name>
+        <name>DMA1_Channel1</name>
         <description>DMA1 Channel1 global interrupt</description>
         <value>27</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH2</name>
+        <name>DMA1_Channel2</name>
         <description>DMA1 Channel2 global interrupt</description>
         <value>28</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH3</name>
+        <name>DMA1_Channel3</name>
         <description>DMA1 Channel3 global interrupt</description>
         <value>29</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH4</name>
+        <name>DMA1_Channel4</name>
         <description>DMA1 Channel4 global interrupt</description>
         <value>30</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH5</name>
+        <name>DMA1_Channel5</name>
         <description>DMA1 Channel5 global interrupt</description>
         <value>31</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH6</name>
+        <name>DMA1_Channel6</name>
         <description>DMA1 Channel6 global interrupt</description>
         <value>32</value>
       </interrupt>
       <interrupt>
-        <name>DMA1_CH7</name>
+        <name>DMA1_Channel7</name>
         <description>DMA1 Channel7 global interrupt</description>
         <value>33</value>
       </interrupt>
@@ -20841,7 +20754,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
         <register>
           <name>CFGR1</name>
-          <displayName>CFGR1</displayName>
+          <displayName>CFGR</displayName>
           <description>DMA channel configuration register
           (DMA_CFGR)</description>
           <addressOffset>0x8</addressOffset>
@@ -20928,7 +20841,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </register>
         <register>
           <name>CNTR1</name>
-          <displayName>CNTR1</displayName>
+          <displayName>CNTR</displayName>
           <description>DMA channel 1 number of data
           register</description>
           <addressOffset>0xC</addressOffset>
@@ -22084,7 +21997,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>PRLH</name>
+              <name>PRL</name>
               <description>RTC Prescaler Load Register
               High</description>
               <bitOffset>0</bitOffset>
@@ -22103,7 +22016,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x8000</resetValue>
           <fields>
             <field>
-              <name>PRLL</name>
+              <name>PRL</name>
               <description>RTC Prescaler Divider Register
               Low</description>
               <bitOffset>0</bitOffset>
@@ -22122,7 +22035,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>DIVH</name>
+              <name>DIV</name>
               <description>RTC prescaler divider register
               high</description>
               <bitOffset>0</bitOffset>
@@ -22141,7 +22054,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x8000</resetValue>
           <fields>
             <field>
-              <name>DIVL</name>
+              <name>DIV</name>
               <description>RTC prescaler divider register
               Low</description>
               <bitOffset>0</bitOffset>
@@ -22159,7 +22072,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>CNTH</name>
+              <name>CNT</name>
               <description>RTC counter register high</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -22176,7 +22089,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>CNTL</name>
+              <name>CNT</name>
               <description>RTC counter register Low</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -22193,7 +22106,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0xFFFF</resetValue>
           <fields>
             <field>
-              <name>ALRH</name>
+              <name>ALR</name>
               <description>RTC alarm register high</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -22210,7 +22123,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0xFFFF</resetValue>
           <fields>
             <field>
-              <name>ALRL</name>
+              <name>ALR</name>
               <description>RTC alarm register low</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -22968,15 +22881,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
             </field>
             <field>
               <name>ASOE</name>
-              <description>Alarm or second output
-              enable</description>
+              <description>Alarm or second output enable</description>
               <bitOffset>8</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
               <name>ASOS</name>
-              <description>Alarm or second output
-              selection</description>
+              <description>Alarm or second output selection</description>
               <bitOffset>9</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
@@ -23064,7 +22975,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <offset>0x0</offset>
         <size>0x400</size>
         <usage>registers</usage>
-      </addressBlock>
+      </addressBlock>  
       <registers>
         <register>
           <name>CTLR</name>
@@ -23085,7 +22996,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           </fields>
         </register>
         <register>
-          <name>PSCR</name>
+          <name>PSCR</name>  
           <displayName>PSCR</displayName>
           <description>Prescaler register (IWDG_PSCR)</description>
           <addressOffset>0x4</addressOffset>
@@ -23195,7 +23106,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <name>CFGR</name>
           <displayName>CFGR</displayName>
           <description>Configuration register
-          (WWDG_CFR)</description>
+          (WWDG_CFGR)</description>
           <addressOffset>0x4</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
@@ -23261,8 +23172,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <value>40</value>
       </interrupt>
       <interrupt>
-        <name>TIM1_UP</name>
-        <description>TIM1 Update
+        <name>TIM1_UP_</name>
+        <description>TIM1 Update 
         interrupt</description>
         <value>41</value>
       </interrupt>
@@ -23748,7 +23659,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x18</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x0000</resetValue>
+          <resetValue>0x00000000</resetValue>
           <fields>
             <field>
               <name>OC2CE</name>
@@ -23960,7 +23871,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x1C</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
+          <resetValue>0x0000</resetValue>
           <fields>
             <field>
               <name>IC4F</name>
@@ -24153,7 +24064,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x2C</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x0000</resetValue>
+          <resetValue>0xFFFF</resetValue>
           <fields>
             <field>
               <name>ATRLR</name>
@@ -24190,7 +24101,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH1CVR</name>
+              <name>CCR1</name>
               <description>Capture/Compare 1 value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -24207,7 +24118,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH2CVR</name>
+              <name>CCR2</name>
               <description>Capture/Compare 2 value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -24224,7 +24135,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH3CVR</name>
+              <name>CCR3</name>
               <description>Capture/Compare value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -24241,7 +24152,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH4CVR</name>
+              <name>CCR4</name>
               <description>Capture/Compare value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -24363,7 +24274,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM8_UP_</name>
-        <description>TIM8 Update
+        <description>TIM8 Update 
         interrupt</description>
         <value>60</value>
       </interrupt>
@@ -24389,7 +24300,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM9_UP_</name>
-        <description>TIM9 Update
+        <description>TIM9 Update 
         interrupt</description>
         <value>91</value>
       </interrupt>
@@ -24415,7 +24326,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </interrupt>
       <interrupt>
         <name>TIM10_UP_</name>
-        <description>TIM10 Update
+        <description>TIM10 Update 
         interrupt</description>
         <value>95</value>
       </interrupt>
@@ -25213,10 +25124,10 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x2C</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x0000</resetValue>
+          <resetValue>0xFFFF</resetValue>
           <fields>
             <field>
-              <name>ATRLR</name>
+              <name>ARR</name>
               <description>Auto-reload value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -25233,7 +25144,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH1CVR</name>
+              <name>CCR1</name>
               <description>Capture/Compare 1 value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -25250,7 +25161,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH2CVR</name>
+              <name>CCR2</name>
               <description>Capture/Compare 2 value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -25267,7 +25178,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH3CVR</name>
+              <name>CCR3</name>
               <description>Capture/Compare value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -25284,7 +25195,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>CH4CVR</name>
+              <name>CCR4</name>
               <description>Capture/Compare value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -25360,7 +25271,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <description>TIM5 global interrupt</description>
         <value>66</value>
       </interrupt>
-    </peripheral>
+    </peripheral>	
 	<peripheral>
       <name>I2C1</name>
       <description>Inter integrated circuit</description>
@@ -26063,7 +25974,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
               <access>read-only</access>
             </field>
-
+			
             <field>
               <name>TXE</name>
               <description>Transmit buffer empty</description>
@@ -26090,7 +26001,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>DATAR</name>
+              <name>DR</name>
               <description>Data register</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -26134,7 +26045,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <register>
           <name>TCRCR</name>
           <displayName>TCRCR</displayName>
-          <description>send CRC register</description>
+          <description>TX CRC register</description>
           <addressOffset>0x18</addressOffset>
           <size>0x20</size>
           <access>read-only</access>
@@ -26451,7 +26362,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x0000</resetValue>
           <fields>
             <field>
-              <name>DATAR</name>
+              <name>DR</name>
               <description>Data register</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
@@ -26628,7 +26539,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <description>SPI3 global interrupt</description>
         <value>67</value>
       </interrupt>
-    </peripheral>
+    </peripheral>	
     <peripheral>
       <name>USART1</name>
       <description>Universal synchronous asynchronous receiver
@@ -27107,7 +27018,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>ADC1_2</name>
+        <name>ADC</name>
         <description>ADC global interrupt</description>
         <value>34</value>
       </interrupt>
@@ -27608,7 +27519,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x24</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
+          <resetValue>0x00000FFF</resetValue>
           <fields>
             <field>
               <name>HT</name>
@@ -28441,7 +28352,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <addressOffset>0x24</addressOffset>
           <size>0x20</size>
           <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
+          <resetValue>0x00000FFF</resetValue>
           <fields>
             <field>
               <name>HT</name>
@@ -28816,7 +28727,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>DEG_TIM1</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field>                            
             <field>
               <name>DEG_TIM2</name>
               <description>DEG_TIM2</description>
@@ -28834,7 +28745,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <description>DEG_TIM4</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
-            </field>
+            </field> 
           </fields>
         </register>
         <register>
@@ -28869,9 +28780,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       </registers>
     </peripheral>
 	<peripheral>
-		<name>USBHD</name>
+		<name>USBHS</name>
 		<description>USB register</description>
-		<groupName>USBHD</groupName>
+		<groupName>USBHS</groupName>
 		<baseAddress>0x40023400</baseAddress>
 		<addressBlock>
 			<offset>0x00</offset>
@@ -28900,7 +28811,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<field>
 						<name>RB_UC_DMA_EN</name>
 						<description>DMA enable and DMA interrupt enable for USB</description>
-						<bitRange>[0:0]</bitRange>
+						<bitRange>[0:0]</bitRange>		
 					</field>
 					<field>
 						<name>RB_UC_CLR_ALL</name>
@@ -28908,7 +28819,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:1]</bitRange>
 					</field>
 					<field>
-						<name>RB_UC_RESET_SIE</name>
+						<name>RB_UC_RST_SIE</name>
 						<description>force reset USB SIE, need software clear</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
@@ -28941,43 +28852,43 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<size>0x08</size>
 				<fields>
 					<field>
-						<name>bUH_TX_BUS_RESET</name>
+						<name>RB_UH_TX_BUS_RST</name>
 						<description>USB host bus reset status</description>
 						<bitRange>[0:0]</bitRange>
 						<access>read-write</access>
 					</field>
 					<field>
-						<name>bUH_TX_BUS_SUSPEND</name>
+						<name>bUH_TX_BUS_SUSPENDRB_UH_TX_BUS_SUSPEND</name>
 						<description>the host sends  hang sigal</description>
 						<bitRange>[1:1]</bitRange>
 						<access>read-write</access>
 					</field>
 					<field>
-						<name>bUH_TX_BUS_RESUME</name>
+						<name>RB_UH_TX_BUS_RESUME</name>
 						<description>host wake up device</description>
 						<bitRange>[2:2]</bitRange>
 						<access>read-write</access>
 					</field>
 					<field>
-						<name>bUH_REMOTE_WKUP</name>
+						<name>RB_UH_REMOTE_WKUP</name>
 						<description>the remoke wake-up</description>
 						<bitRange>[3:3]</bitRange>
 						<access>read-write</access>
 					</field>
 					<field>
-						<name>bUH_PHY_SUSPENDM</name>
+						<name>RB_UH_PHY_SUSPENDM</name>
 						<description>USB-PHY thesuspended state the internal USB-PLL is turned off</description>
 						<bitRange>[4:4]</bitRange>
 						<access>read-write</access>
 					</field>
 					<field>
-						<name>bUH_SOF_FREE</name>
+						<name>RB_UH_SOF_FREE</name>
 						<description>the bus is idle </description>
 						<bitRange>[6:6]</bitRange>
 						<access>read-only</access>
 					</field>
 					<field>
-						<name>bUH_SOF_EN</name>
+						<name>RB_UH_SOF_EN</name>
 						<description>automatically generate the SOF packet enabling control bit </description>
 						<bitRange>[7:7]</bitRange>
 						<access>read-write</access>
@@ -29008,7 +28919,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>RB_UIE_SOF_ACT</name>
+						<name>RB_UIE_HST_SOF</name>
 						<description>indicate host SOF timer action status for USB host</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -29067,7 +28978,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<description>USB_FRAME_NO</description>
 						<bitRange>[15:0]</bitRange>
 					</field>
-
+	
 				</fields>
 			</register>
 			<register>
@@ -29110,7 +29021,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 					</fields>
 			</register>
-
+			
 			<register>
 				<name>USB_MIS_ST</name>
 				<description>USB miscellaneous status</description>
@@ -29166,7 +29077,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<description>USB interrupt flag</description>
 				<addressOffset>0x0A</addressOffset>
 				<size>0x08</size>
-
+				
 				<resetValue>0x20</resetValue>
 				<fields>
 					<field>
@@ -29263,20 +29174,20 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
         </fields>
 			</register>
 			<register>
-				<name>UEP_CONFIG</name>
+				<name>UEP_CONFIG__UHOST_CTRL</name>
 				<description>USB endpoint configuration</description>
 				<addressOffset>0x10</addressOffset>
 				<size>0X20</size>
 				<access>read-write</access>
 			<fields>
 			<field>
-            <name>bUEP_R_EN__UH_EP_MOD</name>
+            <name>RB_UEP_T_EN__UH_EP_MOD</name>
 						<description>endpoint RX enable/bUH_TX_EN</description>
 						<bitRange>[31:17]</bitRange>
 						<access>read-write</access>
 			</field>
 		    <field>
-            <name>bUEP_T_EN_bUH_TX_EN</name>
+            <name>RB_UEP_T_EN_bUH_TX_EN</name>
 						<description>endpoint TX enable/bUH_TX_EN</description>
 						<bitRange>[15:1]</bitRange>
 						<access>read-write</access>
@@ -29291,13 +29202,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<access>read-write</access>
 			<fields>
 			<field>
-            <name>bUEP_R_TYPE</name>
+            <name>RB_UEP_R_TYPE</name>
 						<description>endpoint RX type</description>
 						<bitRange>[31:17]</bitRange>
 						<access>read-write</access>
 			</field>
 		    <field>
-            <name>bUEP_T_TYPE</name>
+            <name>RB_UEP_T_TYPE</name>
 						<description>endpoint TX type</description>
 						<bitRange>[15:1]</bitRange>
 						<access>read-write</access>
@@ -29312,13 +29223,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<access>read-write</access>
 			<fields>
 			<field>
-            <name>bUEP_ISO_BUF_MOD</name>
+            <name>RB_UEP_ISO_BUF_MOD</name>
 						<description>buffer mode of USB endpoint</description>
 						<bitRange>[31:16]</bitRange>
 						<access>read-write</access>
 			</field>
 		    <field>
-            <name>bUEP_BUF_MOD</name>
+            <name>RB_UEP_BUF_MOD</name>
 						<description>buffer mode of USB endpoint</description>
 						<bitRange>[15:0]</bitRange>
 						<access>read-write</access>
@@ -29329,13 +29240,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<name>UEP0_DMA</name>
 				<description>B endpoint 0 DMA buffer address</description>
 				<addressOffset>0x1C</addressOffset>
-				<size>0x10</size>
+				<size>0x20</size>
 				<access>read-write</access>
 			<fields>
 			<field>
             <name>UEP0_DMA</name>
 					<description> endpoint 0 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29344,13 +29255,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP1_RX_DMA</name>
 			<description>endpoint 1 DMA RX buffer address</description>
 			<addressOffset>0x20</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP1_RX_DMA</name>
 					<description> endpoint 1 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29359,13 +29270,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP2_RX_DMA__UH_RX_DMA</name>
 			<description>endpoint 2 DMA RX buffer address/UH_RX_DMA</description>
 			<addressOffset>0x24</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP2_RX_DMA__UH_RX_DMA</name>
 					<description> endpoint 2 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29374,13 +29285,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP3_RX_DMA</name>
 			<description>endpoint 3 DMA RX buffer address</description>
 			<addressOffset>0x28</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP3_RX_DMA</name>
 					<description> endpoint 3 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29389,13 +29300,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP4_RX_DMA</name>
 			<description>endpoint 4 DMA RX buffer address</description>
 			<addressOffset>0x2C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP4_RX_DMA</name>
 					<description> endpoint 4 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29404,13 +29315,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP5_RX_DMA</name>
 			<description>endpoint 5 DMA RX buffer address</description>
 			<addressOffset>0x30</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP5_DMA</name>
 					<description> endpoint 5 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29419,13 +29330,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP6_RX_DMA</name>
 			<description>endpoint 6 DMA RX buffer address</description>
 			<addressOffset>0x34</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP6_RX_DMA</name>
 					<description> endpoint 6 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29434,13 +29345,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP7_RX_DMA</name>
 			<description>endpoint 7 DMA RX buffer address</description>
 			<addressOffset>0x38</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP7_RX_DMA</name>
 					<description> endpoint 7 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29449,13 +29360,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP8_RX_DMA</name>
 			<description>endpoint 8 DMA RX buffer address</description>
 			<addressOffset>0x3C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP8_RX_DMA</name>
 					<description> endpoint 8 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29464,13 +29375,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP9_RX_DMA</name>
 			<description>endpoint 9 DMA RX buffer address</description>
 			<addressOffset>0x40</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP9_RX_DMA</name>
 					<description> endpoint 9 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29479,13 +29390,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP10_RX_DMA</name>
 			<description>endpoint 10 DMA RX buffer address</description>
 			<addressOffset>0x44</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP10_RX_DMA</name>
 					<description> endpoint 10 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29494,13 +29405,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP11_RX_DMA</name>
 			<description>endpoint 11 DMA RX buffer address</description>
 			<addressOffset>0x48</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP11_RX_DMA</name>
 					<description> endpoint 11 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29510,13 +29421,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP12_RX_DMA</name>
 			<description>endpoint 12 DMA RX buffer address</description>
 			<addressOffset>0x4C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP12_RX_DMA</name>
 					<description> endpoint 12 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29525,13 +29436,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP13_RX_DMA</name>
 			<description>endpoint 13 DMA RX buffer address</description>
 			<addressOffset>0x50</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP13_RX_DMA</name>
 					<description> endpoint 13 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29540,13 +29451,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP14_RX_DMA</name>
 			<description>endpoint 14 DMA RX buffer address</description>
 			<addressOffset>0x54</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP14_RX_DMA</name>
 					<description> endpoint 14 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29555,13 +29466,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP15_RX_DMA</name>
 			<description>endpoint 15 DMA RX buffer address</description>
 			<addressOffset>0x58</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP15_RX_DMA</name>
 					<description> endpoint 15 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29570,13 +29481,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP1_TX_DMA</name>
 			<description>endpoint 1 DMA TX buffer address</description>
 			<addressOffset>0X5C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP1_TX_DMA</name>
 					<description> endpoint 1 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29585,13 +29496,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP2_TX_DMA</name>
 			<description>endpoint 2 DMA TX buffer address</description>
 			<addressOffset>0x60</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP2_TX_DMA</name>
 					<description> endpoint 2 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29600,13 +29511,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP3_TX_DMA__UH_TX_DMA</name>
 			<description>endpoint 3 DMA TX buffer address</description>
 			<addressOffset>0x64</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP3_TX_DMA__UH_TX_DMA</name>
 					<description> endpoint 3 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29615,13 +29526,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP4_TX_DMA</name>
 			<description>endpoint 4 DMA TX buffer address</description>
 			<addressOffset>0x68</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP4_TX_DMA</name>
 					<description> endpoint 4 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29630,13 +29541,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP5_TX_DMA</name>
 			<description>endpoint 5 DMA TX buffer address</description>
 			<addressOffset>0x6C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP5_TX_DMA</name>
 					<description> endpoint 5 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29645,13 +29556,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP6_TX_DMA</name>
 			<description>endpoint 6 DMA TX buffer address</description>
 			<addressOffset>0x70</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP6_TX_DMA</name>
 					<description> endpoint 6 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29660,13 +29571,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP7_TX_DMA</name>
 			<description>endpoint 7 DMA TX buffer address</description>
 			<addressOffset>0x74</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP7_TX_DMA</name>
 					<description> endpoint 7 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29675,13 +29586,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP8_TX_DMA</name>
 			<description>endpoint 8 DMA TX buffer address</description>
 			<addressOffset>0x78</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP8_TX_DMA</name>
 					<description> endpoint 8 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29690,13 +29601,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP9_TX_DMA</name>
 			<description>endpoint 9 DMA TX buffer address</description>
 			<addressOffset>0x7C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP9_TX_DMA</name>
 					<description> endpoint 9 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29705,13 +29616,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP10_TX_DMA</name>
 			<description>endpoint 10 DMA TX buffer address</description>
 			<addressOffset>0x80</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP10_TX_DMA</name>
 					<description> endpoint 10 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29720,13 +29631,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP11_TX_DMA</name>
 			<description>endpoint 11 DMA TX buffer address</description>
 			<addressOffset>0x84</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP11_TX_DMA</name>
 					<description> endpoint 11 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29736,13 +29647,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP12_TX_DMA____UH_SPLIT_DATA</name>
 			<description>endpoint 12 DMA TX buffer address</description>
 			<addressOffset>0x88</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP12_TX_DMA___UH_SPLIT_DATA</name>
 					<description> endpoint 12 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29751,13 +29662,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP13_TX_DMA</name>
 			<description>endpoint 13 DMA TX buffer address</description>
 			<addressOffset>0x8C</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP13_TX_DMA</name>
 					<description> endpoint 13 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29766,13 +29677,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP14_TX_DMA</name>
 			<description>endpoint 14 DMA TX buffer address</description>
 			<addressOffset>0x90</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP14_TX_DMA</name>
 					<description> endpoint 14 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
@@ -29781,17 +29692,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<name>UEP15_TX_DMA</name>
 			<description>endpoint 15 DMA TX buffer address</description>
 			<addressOffset>0x94</addressOffset>
-			<size>0x10</size>
+			<size>0x20</size>
 			<access>read-write</access>
 			<fields>
 			<field>
 			<name>UEP15_TX_DMA</name>
 					<description> endpoint 15 DMA buffer address</description>
-					<bitRange>[15:0]</bitRange>
+					<bitRange>[31:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
 			<name>UEP0_MAX_LEN</name>
 			<description>endpoint 0 max acceptable length</description>
@@ -30032,8 +29943,8 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP0_T_LEN</name>
 			<description>endpoint 0 send the length</description>
@@ -30044,13 +29955,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 			<field>
 			<name>UEP0_T_LEN</name>
 					<description> endpoint 0 send the length</description>
-					<bitRange>[10:0]</bitRange>
+					<bitRange>[6:0]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP0_T_CTRL</name>
+			<name>UEP0_TX_CTRL</name>
 			<description>endpoint 0  send control</description>
 			<addressOffset>0xDA</addressOffset>
 			<size>0x08</size>
@@ -30069,15 +29980,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 0 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP0_R_CTRL</name>
+			<name>UEP0_RX_CTRL</name>
 			<description>endpoint 0  send control</description>
 			<addressOffset>0xDB</addressOffset>
 			<size>0x08</size>
@@ -30096,14 +30007,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 0 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP1_T_LEN</name>
 			<description>endpoint 1 send the length</description>
@@ -30118,9 +30029,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP1_T_CTRL</name>
+			<name>UEP1_TX_CTRL</name>
 			<description>endpoint 1  send control</description>
 			<addressOffset>0xDE</addressOffset>
 			<size>0x08</size>
@@ -30139,15 +30050,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 1 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP1_R_CTRL</name>
+			<name>UEP1_RX_CTRL</name>
 			<description>endpoint 1  send control</description>
 			<addressOffset>0xDF</addressOffset>
 			<size>0x08</size>
@@ -30166,14 +30077,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 1 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP2_T_LEN__UH_EP_PID</name>
 			<description>endpoint 2 send the length</description>
@@ -30188,9 +30099,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP2_T_CTRL</name>
+			<name>UEP2_TX_CTRL</name>
 			<description>endpoint 2  send control</description>
 			<addressOffset>0xE2</addressOffset>
 			<size>0x08</size>
@@ -30209,15 +30120,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 2 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP2_R_CTRL__UH_RX_CTRL</name>
+			<name>UEP2_RX_CTRL__UH_RX_CTRL</name>
 			<description>endpoint 2 send control</description>
 			<addressOffset>0xE3</addressOffset>
 			<size>0x08</size>
@@ -30248,14 +30159,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-only</access>
 			</field>
 			<field>
-			<name>bUH_R_DATA_NO</name>
+			<name>RB_UH_R_DATA_NO</name>
 					<description> bUH_R_DATA_NO</description>
 					<bitRange>[6:6]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP3_T_LEN___UH_TX_LEN_H</name>
 			<description>endpoint 3 send the length</description>
@@ -30270,9 +30181,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP3_T_CTRL___UH_TX_CTRL</name>
+			<name>UEP3_TX_CTRL___UH_TX_CTRL</name>
 			<description>endpoint 3  send control</description>
 			<addressOffset>0xE6</addressOffset>
 			<size>0x08</size>
@@ -30297,12 +30208,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			<field>
-			<name>bUEP_T_TOG_AUTO____bUH_T_AUTO_TOG</name>
+			<name>RB_UEP_T_TOG_AUTO____bUH_T_AUTO_TOG</name>
 					<description> endpoint 3 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
-
+			
 			<field>
 			<name>bUH_T_DATA_NO</name>
 					<description> bUH_T_DATA_NO</description>
@@ -30310,9 +30221,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP3_R_CTRL</name>
+			<name>UEP3_RX_CTRL</name>
 			<description>endpoint 3  send control</description>
 			<addressOffset>0xE7</addressOffset>
 			<size>0x08</size>
@@ -30331,14 +30242,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 3 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP4_T_LEN</name>
 			<description>endpoint 4 send the length</description>
@@ -30353,9 +30264,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP4_T_CTRL</name>
+			<name>UEP4_TX_CTRL</name>
 			<description>endpoint 4  send control</description>
 			<addressOffset>0xEA</addressOffset>
 			<size>0x08</size>
@@ -30374,15 +30285,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 4 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP4_R_CTRL</name>
+			<name>UEP4_RX_CTRL</name>
 			<description>endpoint 4  send control</description>
 			<addressOffset>0xEB</addressOffset>
 			<size>0x08</size>
@@ -30401,14 +30312,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 4 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP5_T_LEN</name>
 			<description>endpoint 5 send the length</description>
@@ -30423,9 +30334,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP5_T_CTRL</name>
+			<name>UEP5_TX_CTRL</name>
 			<description>endpoint 5  send control</description>
 			<addressOffset>0xEE</addressOffset>
 			<size>0x08</size>
@@ -30444,15 +30355,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 5 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP5_R_CTRL</name>
+			<name>UEP5_RX_CTRL</name>
 			<description>endpoint 5  send control</description>
 			<addressOffset>0xEF</addressOffset>
 			<size>0x08</size>
@@ -30471,14 +30382,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 5 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP6_T_LEN</name>
 			<description>endpoint 6 send the length</description>
@@ -30493,9 +30404,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP6_T_CTRL</name>
+			<name>UEP6_TX_CTRL</name>
 			<description>endpoint 6  send control</description>
 			<addressOffset>0xF2</addressOffset>
 			<size>0x08</size>
@@ -30514,15 +30425,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 6 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP6_R_CTRL</name>
+			<name>UEP6_RX_CTRL</name>
 			<description>endpoint 6  send control</description>
 			<addressOffset>0xF3</addressOffset>
 			<size>0x08</size>
@@ -30541,14 +30452,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 6 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 						<register>
 			<name>UEP7_T_LEN</name>
 			<description>endpoint 7 send the length</description>
@@ -30563,9 +30474,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP7_T_CTRL</name>
+			<name>UEP7_TX_CTRL</name>
 			<description>endpoint 7  send control</description>
 			<addressOffset>0xF6</addressOffset>
 			<size>0x08</size>
@@ -30584,15 +30495,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 7 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP7_R_CTRL</name>
+			<name>UEP7_RX_CTRL</name>
 			<description>endpoint 7 send control</description>
 			<addressOffset>0xF7</addressOffset>
 			<size>0x08</size>
@@ -30611,14 +30522,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 7 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 						<register>
 			<name>UEP8_T_LEN</name>
 			<description>endpoint 8 send the length</description>
@@ -30633,9 +30544,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP8_T_CTRL</name>
+			<name>UEP8_TX_CTRL</name>
 			<description>endpoint 8  send control</description>
 			<addressOffset>0xFA</addressOffset>
 			<size>0x08</size>
@@ -30654,15 +30565,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 8 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP8_R_CTRL</name>
+			<name>UEP8_RX_CTRL</name>
 			<description>endpoint 8  send control</description>
 			<addressOffset>0xFB</addressOffset>
 			<size>0x08</size>
@@ -30681,14 +30592,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 8 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 			<register>
 			<name>UEP9_T_LEN</name>
 			<description>endpoint9 send the length</description>
@@ -30703,9 +30614,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP9_T_CTRL</name>
+			<name>UEP9_TX_CTRL</name>
 			<description>endpoint 9  send control</description>
 			<addressOffset>0xFE</addressOffset>
 			<size>0x08</size>
@@ -30724,15 +30635,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 9 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP9_R_CTRL</name>
+			<name>UEP9_RX_CTRL</name>
 			<description>endpoint 9  send control</description>
 			<addressOffset>0xFF</addressOffset>
 			<size>0x08</size>
@@ -30751,14 +30662,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 9 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 						<register>
 			<name>UEP10_T_LEN</name>
 			<description>endpoint 10 send the length</description>
@@ -30773,9 +30684,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP10_T_CTRL</name>
+			<name>UEP10_TX_CTRL</name>
 			<description>endpoint 10  send control</description>
 			<addressOffset>0x102</addressOffset>
 			<size>0x08</size>
@@ -30794,15 +30705,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 10 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP10_R_CTRL</name>
+			<name>UEP10_RX_CTRL</name>
 			<description>endpoint 10  send control</description>
 			<addressOffset>0x103</addressOffset>
 			<size>0x08</size>
@@ -30821,14 +30732,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 10 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 						<register>
 			<name>UEP11_T_LEN</name>
 			<description>endpoint 11 send the length</description>
@@ -30843,9 +30754,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP11_T_CTRL</name>
+			<name>UEP11_TX_CTRL</name>
 			<description>endpoint 11  send control</description>
 			<addressOffset>0x106</addressOffset>
 			<size>0x08</size>
@@ -30864,15 +30775,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 11 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP11_R_CTRL</name>
+			<name>UEP11_RX_CTRL</name>
 			<description>endpoint 11 send control</description>
 			<addressOffset>0x107</addressOffset>
 			<size>0x08</size>
@@ -30891,14 +30802,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 11 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 						<register>
 			<name>UEP12_T_LEN</name>
 			<description>endpoint 12 send the length</description>
@@ -30913,9 +30824,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP12_T_CTRL</name>
+			<name>UEP12_TX_CTRL</name>
 			<description>endpoint 12  send control</description>
 			<addressOffset>0x10A</addressOffset>
 			<size>0x08</size>
@@ -30934,15 +30845,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 12 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP12_R_CTRL</name>
+			<name>UEP12_RX_CTRL</name>
 			<description>endpoint 12 send control</description>
 			<addressOffset>0x10B</addressOffset>
 			<size>0x08</size>
@@ -30961,14 +30872,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 12 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 		<register>
 			<name>UEP13_T_LEN</name>
 			<description>endpoint 13 send the length</description>
@@ -30983,9 +30894,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP13_T_CTRL</name>
+			<name>UEP13_TX_CTRL</name>
 			<description>endpoint 13  send control</description>
 			<addressOffset>0x10E</addressOffset>
 			<size>0x08</size>
@@ -31004,15 +30915,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 13 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP13_R_CTRL</name>
+			<name>UEP13_RX_CTRL</name>
 			<description>endpoint 13  send control</description>
 			<addressOffset>0x10F</addressOffset>
 			<size>0x08</size>
@@ -31031,14 +30942,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 13 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 		<register>
 			<name>UEP14_T_LEN</name>
 			<description>endpoint 14 send the length</description>
@@ -31053,9 +30964,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 		<register>
-			<name>UEP14_T_CTRL</name>
+			<name>UEP14_TX_CTRL</name>
 			<description>endpoint 14  send control</description>
 			<addressOffset>0x112</addressOffset>
 			<size>0x08</size>
@@ -31074,15 +30985,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 14 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 		<register>
-			<name>UEP14_R_CTRL</name>
+			<name>UEP14_RX_CTRL</name>
 			<description>endpoint 14 send control</description>
 			<addressOffset>0x113</addressOffset>
 			<size>0x08</size>
@@ -31101,14 +31012,14 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 14 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
-
+			</register>	
+			
 		<register>
 			<name>UEP15_T_LEN</name>
 			<description>endpoint 15 send the length</description>
@@ -31123,9 +31034,9 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP15_T_CTRL</name>
+			<name>UEP15_TX_CTRL</name>
 			<description>endpoint 15  send control</description>
 			<addressOffset>0x116</addressOffset>
 			<size>0x08</size>
@@ -31144,15 +31055,15 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_T_TOG_AUTO</name>
+			<name>RB_UEP_T_TOG_AUTO</name>
 					<description> endpoint 15 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-write</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 			<register>
-			<name>UEP15_R_CTRL</name>
+			<name>UEP15_RX_CTRL</name>
 			<description>endpoint 15  send control</description>
 			<addressOffset>0x117</addressOffset>
 			<size>0x08</size>
@@ -31171,13 +31082,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					<access>read-write</access>
 			</field>
 				<field>
-			<name>bUEP_R_TOG_AUTO</name>
+			<name>RB_UEP_R_TOG_AUTO</name>
 					<description> endpoint 15 synchronous trigger bit automatic filp enables the control bit</description>
 					<bitRange>[5:5]</bitRange>
 					<access>read-only</access>
 			</field>
 			</fields>
-			</register>
+			</register>	
 		</registers>
 	</peripheral>
 	<peripheral>
@@ -31235,7 +31146,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
             <field>
-              <name>RESET</name>
+              <name>RST</name>
               <description>Reset bit</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31303,7 +31214,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <resetValue>0x00000000</resetValue>
           <fields>
           <field>
-              <name>ENHANCE_MOD_STA</name>
+              <name>EHMODS</name>
               <description>Enhance mode start</description>
               <bitOffset>7</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31324,7 +31235,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <access>read-write</access>
             </field>
             <field>
-              <name>WR_BSY</name>
+              <name>WRBSY</name>
               <description>Quick page programming</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31416,13 +31327,13 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PAGE_PG</name>
+              <name>FTPG</name>
               <description>Fast programming</description>
               <bitOffset>16</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>PAGE_ER</name>
+              <name>FTER</name>
               <description>Fast erase</description>
               <bitOffset>17</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31440,7 +31351,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>PGSTART</name>
+              <name>PGSTRT</name>
               <description>Page Programming Start</description>
               <bitOffset>21</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31452,7 +31363,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
 			<field>
-              <name>ENHANCEMODE</name>
+              <name>EHMOD</name>
               <description>Flash Enhance read mode</description>
               <bitOffset>24</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31504,19 +31415,19 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>IWDG_SW</name>
+              <name>IWDGSW</name>
               <description>IWDG_SW</description>
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>STOP_RST</name>
+              <name>STOPRST</name>
               <description>STOP_RST</description>
               <bitOffset>3</bitOffset>
               <bitWidth>1</bitWidth>
             </field>
             <field>
-              <name>STANDY_RST</name>
+              <name>STANDYRST</name>
               <description>STANDY_RST</description>
               <bitOffset>4</bitOffset>
               <bitWidth>1</bitWidth>
@@ -31592,39 +31503,39 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 		</interrupt>
 		<registers>
 			<register>
-				<name>USBHD_BASE_CTRL</name>
+				<name>R8_USB_CTRL</name>
 				<description>USB base control</description>
 				<addressOffset>0x00</addressOffset>
 				<size>8</size>
 				<access>read-write</access>
 				<fields>
 					<field>
-						<name>USBHD_UC_DMA_EN</name>
+						<name>RB_UC_DMA_EN</name>
 						<description>DMA enable and DMA interrupt enable for USB</description>
-						<bitRange>[0:0]</bitRange>
+						<bitRange>[0:0]</bitRange>		
 					</field>
 					<field>
-						<name>USBHD_UC_CLR_ALL</name>
+						<name>RB_UC_CLR_ALL</name>
 						<description>force clear FIFO and count of USB</description>
 						<bitRange>[1:1]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UC_RESET_SIE</name>
+						<name>RB_UC_RST_SIE</name>
 						<description>force reset USB SIE, need software clear</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UC_INT_BUSY</name>
+						<name>RB_UC_INT_BUSY</name>
 						<description>enable automatic responding busy for device mode or automatic pause for host mode during interrupt flag UIF_TRANSFER valid</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UC_SYS_CTRL_MASK</name>
+						<name>MASK_UC_SYS_CTRL_RB_UC_DEV_PU_EN</name>
 						<description>USB device enable and internal pullup resistance enable</description>
 						<bitRange>[5:4]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UC_LOW_SPEED</name>
+						<name>RB_UC_LOW_SPEED</name>
 						<description>enable USB low speed: 0=12Mbps, 1=1.5Mbps</description>
 						<bitRange>[6:6]</bitRange>
 					</field>
@@ -31636,7 +31547,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				</fields>
 				</register>
 			<register>
-				<name>USBHD_UDEV_CTRL__USBHD_UHOST_CTRL</name>
+				<name>UDEV_CTRL__UHOST_CTRL</name>
 				<description>USB device/host physical prot control</description>
 				<addressOffset>0x01</addressOffset>
 				<size>8</size>
@@ -31644,34 +31555,34 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<resetValue>0x00</resetValue>
 				<fields>
 					<field>
-						<name>USBHD_UH_PORT_EN__USBHD_UD_PORT_EN</name>
+						<name>RB_UH_PORT_EN__RB_UD_PORT_EN</name>
 						<description>enable USB port: 0=disable, 1=enable port, automatic disabled if USB device detached</description>
-						<bitRange>[0:0]</bitRange>
+						<bitRange>[0:0]</bitRange>		
 					</field>
 					<field>
-						<name>USBHD_UH_BUS_RESET__USBHD_UD_GP_BIT</name>
+						<name>RB_UH_BUS_RESET__RB_UD_GP_BIT</name>
 						<description>force clear FIFO and count of USB</description>
 						<bitRange>[1:1]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UH_LOW_SPEED__USBHD_UD_LOW_SPEED</name>
+						<name>RB_UH_LOW_SPEED__RB_UD_LOW_SPEED</name>
 						<description>enable USB port low speed: 0=full speed, 1=low speed</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UH_DM_PIN__USBHD_UD_DM_PIN</name>
+						<name>RB_UH_DM_PIN__RB_UD_DM_PIN</name>
 						<description>ReadOnly: indicate current UDM pin level</description>
 						<bitRange>[4:4]</bitRange>
-						<access>read-only</access>
+						<access>read-opnly</access>
 					</field>
 					<field>
-						<name>USBHD_UH_DP_PIN__USBHD_UD_DP_PIN</name>
+						<name>RB_UH_DP_PIN__RB_UD_DP_PIN</name>
 						<description>USB device enable and internal pullup resistance enable</description>
 						<bitRange>[5:5]</bitRange>
-						<access>read-only</access>
+						<access>read-opnly</access>
 					</field>
 					<field>
-						<name>USBHD_UH_PD_DIS__USBHD_UD_PD_DIS</name>
+						<name>RB_UH_PD_DIS__RB_UD_PD_DIS</name>
 						<description>disable USB UDP/UDM pulldown resistance: 0=enable pulldown, 1=disable</description>
 						<bitRange>[7:7]</bitRange>
 					</field>
@@ -31685,45 +31596,45 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<access>read-write</access>
 				<fields>
 					<field>
-						<name>USBHD_UIE_BUS_RST__USBHD_UIE_DETECT</name>
+						<name>RB_UIE_BUS_RST__RB_UIE_DETECT</name>
 						<description>enable interrupt for USB bus reset event for USB device mode</description>
 						<bitRange>[0:0]</bitRange>
-
+					
 					</field>
 					<field>
-						<name>USBHD_UIE_TRANSFER</name>
+						<name>RB_UIE_TRANSFER</name>
 						<description>enable interrupt for USB transfer completion</description>
 						<bitRange>[1:1]</bitRange>
-
+						
 					</field>
 					<field>
-						<name>USBHD_UIE_SUSPEND</name>
+						<name>RB_UIE_SUSPEND</name>
 						<description>enable interrupt for USB suspend or resume event</description>
 						<bitRange>[2:2]</bitRange>
-
+						
 					</field>
 					<field>
-						<name>USBHD_UIE_HST_SOF</name>
+						<name>RB_UIE_HST_SOF</name>
 						<description>enable interrupt for host SOF timer action for USB host mode</description>
 						<bitRange>[3:3]</bitRange>
-
+						
 					</field>
 					<field>
-						<name>USBHD_UIE_FIFO_OV</name>
+						<name>RB_UIE_FIFO_OV</name>
 						<description>enable interrupt for FIFO overflow</description>
 						<bitRange>[4:4]</bitRange>
-
+					
 					</field>
 					<field>
-						<name>USBHD_UIE_DEV_NAK</name>
+						<name>RB_UIE_DEV_NAK</name>
 						<description>enable interrupt for NAK responded for USB device mode</description>
 						<bitRange>[6:6]</bitRange>
 					</field>
 						<field>
-						<name>USBHD_UIE_DEV_SOF</name>
+						<name>RB_UIE_DEV_SOF</name>
 						<description>enable interrupt for SOF received for USB device mode</description>
 						<bitRange>[7:7]</bitRange>
-
+					
 					</field>
 				</fields>
 				</register>
@@ -31957,7 +31868,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 			</register>
-			<register>
+			<register>        
 				<name>R8_UEP5_6_MOD</name>
 				<description>endpoint 5/6 mode</description>
 				<addressOffset>0x0e</addressOffset>
@@ -31997,7 +31908,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 					</field>
 				</fields>
 			</register>
-			<register>
+			<register>        
 				<name>R8_UEP7_MOD</name>
 				<description>endpoint 7 mode</description>
 				<addressOffset>0x0f</addressOffset>
@@ -32063,21 +31974,21 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<addressOffset>0x24</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-				</register>
+				</register>   
 			<register>
 				<name>R32_UEP6_DMA</name>
 				<description>endpoint 6 DMA buffer address</description>
 				<addressOffset>0x28</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-				</register>
+				</register>   
 			<register>
 				<name>R32_UEP7_DMA</name>
 				<description>endpoint 7 DMA buffer address</description>
 				<addressOffset>0x2c</addressOffset>
 				<size>0x20</size>
 				<access>read-write</access>
-			</register>
+			</register>  
 			<register>
 				<name>R8_UEP0_T_LEN</name>
 				<description>endpoint 0 transmittal length</description>
@@ -32099,12 +32010,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG</name>
+						<name>RB_UEP_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32124,17 +32035,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-			</register>
+			</register>			
 			<register>
 				<name>R8_UEP1_T_LEN</name>
 				<description>endpoint 1 transmittal length</description>
@@ -32156,22 +32067,22 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG_</name>
+						<name>RB_UEP_T_TOG_</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 						<field>
-						<name>USBHD_UH_SOF_EN</name>
+						<name>RB_UH_SOF_EN</name>
 						<description>USB host automatic SOF enable</description>
 						<bitRange>[6:6]</bitRange>
 						</field>
 						<field>
-						<name>USBHD_UH_PRE_PID_EN</name>
+						<name>RB_UH_PRE_PID_EN</name>
 						<description>USB host PRE PID enable for low speed device via hub</description>
 						<bitRange>[7:7]</bitRange>
 						</field>
@@ -32191,12 +32102,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32210,12 +32121,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<access>read-write</access>
 				<fields>
 					<field>
-						<name>USBHD_UH_ENDP_MASK</name>
+						<name>RB_UH_ENDP_MASK</name>
 						<description>bit mask of endpoint number for USB host transfer</description>
 						<bitRange>[3:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UH_TOKEN_MASK</name>
+						<name>RB_UH_TOKEN_MASK</name>
 						<description>bit mask of token PID for USB host transfer</description>
 						<bitRange>[7:4]</bitRange>
 					</field>
@@ -32235,12 +32146,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG_</name>
+						<name>RB_UEP_T_TOG_</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32255,17 +32166,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<resetValue>0x00</resetValue>
 				<fields>
 					<field>
-						<name>MASK_UEP_R_RES___USBHD_UH_R_RES</name>
+						<name>MASK_UEP_R_RES___RB_UH_R_RES</name>
 						<description>bit mask of handshake response type for USB endpoint X receiving (OUT)</description>
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG___USBHD_UH_R_TOG</name>
+						<name>RB_UEP_R_TOG___RB_UH_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG___USBHD_UH_R_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG___RB_UH_R_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32287,17 +32198,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 				<resetValue>0x00</resetValue>
 				<fields>
 					<field>
-						<name>MASK_UEP_T_RES___USBHD_UH_T_RES</name>
+						<name>MASK_UEP_T_RES___RB_UH_T_RES</name>
 						<description>bit mask of handshake response type for USB endpoint X transmittal (IN)</description>
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG___USBHD_UH_T_TOG</name>
+						<name>RB_UEP_T_TOG___RB_UH_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG__USBHD_UH_T_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG__RB_UH_T_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32317,18 +32228,18 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
 				</register>
-
+				
 			<register>
 				<name>R8_UEP4_T_LEN</name>
 				<description>endpoint 4 transmittal length</description>
@@ -32350,12 +32261,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG___USBHD_UH_T_TOG</name>
+						<name>RB_UEP_T_TOG___RB_UH_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG__USBHD_UH_T_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG__RB_UH_T_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32375,18 +32286,18 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
 				</register>
-
+				
 			<register>
 				<name>R8_UEP5_T_LEN</name>
 				<description>endpoint 5 transmittal length</description>
@@ -32408,12 +32319,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG___USBHD_UH_T_TOG</name>
+						<name>RB_UEP_T_TOG___RB_UH_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG__USBHD_UH_T_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG__RB_UH_T_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32433,18 +32344,18 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
 				</register>
-
+			
 			<register>
 				<name>R8_UEP6_T_LEN</name>
 				<description>endpoint 6 transmittal length</description>
@@ -32466,12 +32377,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG___USBHD_UH_T_TOG</name>
+						<name>RB_UEP_T_TOG___RB_UH_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG__USBHD_UH_T_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG__RB_UH_T_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32491,17 +32402,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-				</register>
+				</register>				
 			<register>
 				<name>R8_UEP7_T_LEN</name>
 				<description>endpoint 7 transmittal length</description>
@@ -32523,12 +32434,12 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_T_TOG___USBHD_UH_T_TOG</name>
+						<name>RB_UEP_T_TOG___RB_UH_T_TOG</name>
 						<description>prepared data toggle flag of USB endpoint X transmittal (IN): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG__USBHD_UH_T_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG__RB_UH_T_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
@@ -32548,17 +32459,17 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[1:0]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_R_TOG</name>
+						<name>RB_UEP_R_TOG</name>
 						<description>expected data toggle flag of USB endpoint X receiving (OUT): 0=DATA0, 1=DATA1</description>
 						<bitRange>[2:2]</bitRange>
 					</field>
 					<field>
-						<name>USBHD_UEP_AUTO_TOG</name>
+						<name>RB_UEP_AUTO_TOG</name>
 						<description>enable automatic toggle after successful transfer completion on endpoint 1/2/3: 0=manual toggle, 1=automatic toggle</description>
 						<bitRange>[3:3]</bitRange>
 					</field>
 				</fields>
-				</register>
+				</register>		
 			<register>
 				<name>USB_OTG_CR</name>
 				<description>usb otg control</description>
@@ -32628,7 +32539,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
 						<bitRange>[3:3]</bitRange>
 					</field>
 					</fields>
-				</register>
+				</register>	
 		</registers>
 	</peripheral>
 	<peripheral>
@@ -32639,7 +32550,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
       <baseAddress>0xE000E000</baseAddress>
       <addressBlock>
         <offset>0x00</offset>
-        <size>0x1100</size>
+        <size>0x1100</size>					
         <usage>registers</usage>
       </addressBlock>
       <registers>
@@ -32818,7 +32729,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <displayName>CFGR</displayName>
           <description>Interrupt Config Register</description>
           <addressOffset>0x48</addressOffset>
-          <size>0x20</size>
+          <size>0x20</size>        
           <resetValue>0x00000000</resetValue>
           <fields>
 			<field>
@@ -33454,7 +33365,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR11</name>
           <displayName>IPRIOR11</displayName>
@@ -33545,7 +33456,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR21</name>
           <displayName>IPRIOR21</displayName>
@@ -33627,7 +33538,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR30</name>
           <displayName>IPRIOR30</displayName>
@@ -33718,7 +33629,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR40</name>
           <displayName>IPRIOR40</displayName>
@@ -33809,7 +33720,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+	
 			<register>
           <name>IPRIOR50</name>
           <displayName>IPRIOR50</displayName>
@@ -33991,7 +33902,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR70</name>
           <displayName>IPRIOR70</displayName>
@@ -34082,7 +33993,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR80</name>
           <displayName>IPRIOR80</displayName>
@@ -34173,7 +34084,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR90</name>
           <displayName>IPRIOR90</displayName>
@@ -34263,7 +34174,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x8</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
-        </register>
+        </register>	
 				<register>
           <name>IPRIOR100</name>
           <displayName>IPRIOR100</displayName>
@@ -34363,7 +34274,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR111</name>
           <displayName>IPRIOR111</displayName>
@@ -34454,7 +34365,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR121</name>
           <displayName>IPRIOR121</displayName>
@@ -34536,7 +34447,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR130</name>
           <displayName>IPRIOR130</displayName>
@@ -34627,7 +34538,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR140</name>
           <displayName>IPRIOR140</displayName>
@@ -34718,7 +34629,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+	
 			<register>
           <name>IPRIOR150</name>
           <displayName>IPRIOR150</displayName>
@@ -34900,7 +34811,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR170</name>
           <displayName>IPRIOR170</displayName>
@@ -34991,7 +34902,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR180</name>
           <displayName>IPRIOR180</displayName>
@@ -35082,7 +34993,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 				<register>
           <name>IPRIOR190</name>
           <displayName>IPRIOR190</displayName>
@@ -35172,7 +35083,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <size>0x8</size>
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
-        </register>
+        </register>	
 				<register>
           <name>IPRIOR200</name>
           <displayName>IPRIOR200</displayName>
@@ -35182,7 +35093,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR201</name>
           <displayName>IPRIOR201</displayName>
@@ -35273,7 +35184,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR211</name>
           <displayName>IPRIOR211</displayName>
@@ -35364,7 +35275,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR221</name>
           <displayName>IPRIOR221</displayName>
@@ -35446,7 +35357,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR230</name>
           <displayName>IPRIOR230</displayName>
@@ -35537,7 +35448,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 		<register>
           <name>IPRIOR240</name>
           <displayName>IPRIOR240</displayName>
@@ -35628,7 +35539,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+	
 			<register>
           <name>IPRIOR250</name>
           <displayName>IPRIOR250</displayName>
@@ -35683,7 +35594,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
           <access>read-write</access>
           <resetValue>0x00000000</resetValue>
         </register>
-
+		
 			<register>
           <name>SCTLR</name>
           <displayName>SCTLR</displayName>
@@ -35789,7 +35700,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
           </fields>
-        </register>
+        </register> 
 	<register>
           <name>STK_SR</name>
           <description>System START</description>
@@ -35805,7 +35716,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>1</bitWidth>
             </field>
           </fields>
-        </register>
+        </register> 
     <register>
           <name>STK_CNTL</name>
           <description>System counter low register</description>
@@ -35821,7 +35732,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>
+        </register>   
     <register>
           <name>STK_CNTH</name>
           <description>System counter high register</description>
@@ -35837,7 +35748,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>
+        </register> 
     <register>
           <name>STK_CMPLR</name>
           <description>System compare low register</description>
@@ -35853,7 +35764,7 @@ xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocatio
               <bitWidth>32</bitWidth>
             </field>
           </fields>
-        </register>
+        </register>    
         <register>
           <name>STK_CMPHR</name>
           <description>System compare high register</description>
