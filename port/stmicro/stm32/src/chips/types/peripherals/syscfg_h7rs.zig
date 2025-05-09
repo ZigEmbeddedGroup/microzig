@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const AXIRAM_WS = enum(u1) {
     /// No wait state added when accessing any AXIRAM with ECC = 0.

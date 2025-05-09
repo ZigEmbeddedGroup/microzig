@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const BKPSRAM_ECC = enum(u1) {
     /// Backup RAM ECC check enabled

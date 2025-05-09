@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ADC12_EXT13_RMP = enum(u1) {
     /// Trigger source is TIM6_TRGO

@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ABRMOD = enum(u2) {
     /// Measurement of the start bit is used to detect the baud rate

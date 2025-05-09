@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const BOR_LEV = enum(u3) {
     /// BOR level 0 (reset level threshold around 1.7�V)

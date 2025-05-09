@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const BKINP = enum(u1) {
     /// input polarity is not inverted (active low if BKxP = 0, active high if BKxP = 1)

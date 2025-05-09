@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ADVREGEN = enum(u2) {
     /// Intermediate state required when moving the ADC voltage regulator between states

@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const WDGTB = enum(u3) {
     /// Counter clock (PCLK1 div 4096) div 1

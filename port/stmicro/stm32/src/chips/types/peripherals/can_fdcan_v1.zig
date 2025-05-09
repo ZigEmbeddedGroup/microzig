@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ACT = enum(u2) {
     /// Synchronizing: node is synchronizing on CAN communication.

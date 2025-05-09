@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const DISCNUM = enum(u3) {
     /// 1 conversions are discontinued and the conversion is carried out on one channel

@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ADC_CFG = enum(u1) {
     /// Bank A selected for channels ADC_IN0..31

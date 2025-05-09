@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const BOOT_SEL = enum(u1) {
     /// BOOT0 signal is defined by nBOOT0 option bit

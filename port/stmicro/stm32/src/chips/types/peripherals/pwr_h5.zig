@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-const types = @import("types.zig");
+pub const types = @import("../../types.zig");
 
 pub const ALS = enum(u2) {
     /// AVD level0 (VAVD0 ~ 1.7 V)
