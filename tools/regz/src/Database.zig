@@ -803,7 +803,8 @@ pub fn get_registers_with_mode(
         \\    sr.struct_id = ?
         \\  AND (
         \\        rm.mode_id = ? OR rm.mode_id IS NULL
-        \\    );
+        \\    )
+        \\ORDER BY r.offset_bytes;
     , .{
         comptime gen_field_list(Register, .{ .prefix = "r" }),
     });
