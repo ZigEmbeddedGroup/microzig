@@ -95,7 +95,7 @@ const system_clock_cfg: GlobalConfig = val: {
                 .integer_divisor = 3,
             };
         },
-        .RP2350 => {
+        .RP2350, .RP2350_QFN80 => {
             // Drive HSTX off SYS
             temp.hstx = .{
                 .input = .{

@@ -7,6 +7,8 @@ chips: struct {
     rp2040: *const microzig.Target,
     rp2350_arm: *const microzig.Target,
     rp2350_riscv: *const microzig.Target,
+    rp2350_qfn_80_arm: *const microzig.Target,
+    rp2350_qfn_80_riscv: *const microzig.Target,
 },
 
 boards: struct {
@@ -20,6 +22,12 @@ boards: struct {
         rp2040_plus_16m: *const microzig.Target,
         rp2040_eth: *const microzig.Target,
         rp2040_matrix: *const microzig.Target,
+    },
+    adafruit: struct {
+        metro_rp2350_arm: *const microzig.Target,
+        metro_rp2350_riscv: *const microzig.Target,
+        metro_rp2350_psram_arm: *const microzig.Target,
+        metro_rp2350_psram_riscv: *const microzig.Target,
     },
 },
 
@@ -129,6 +137,80 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .linker_script = b.path("rp2350_riscv.ld"),
     };
 
+    const chip_rp2350_qfn_80_arm: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .{ .uf2 = .RP2350_ARM_S },
+        .zig_target = .{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m33 },
+            .os_tag = .freestanding,
+            .abi = .eabihf,
+        },
+        .chip = .{
+            .name = "RP2350_QFN-80",
+            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .memory_regions = &.{
+                .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
+                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+            },
+            .patches = @import("patches/rp2350.zig").patches,
+        },
+        .hal = hal,
+        .linker_script = b.path("rp2350_arm.ld"),
+    };
+
+    const chip_rp2350_qfn_80_riscv: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .{ .uf2 = .RP2350_RISC_V },
+        .zig_target = .{
+            .cpu_arch = .riscv32,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv32 },
+            .cpu_features_add = std.Target.riscv.featureSet(&.{
+                .a,
+                .m,
+                .c,
+                .zba,
+                .zbb,
+                .zbs,
+                .zcb,
+                .zcmp,
+                .zbkb,
+                .zifencei,
+            }),
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+        .cpu = .{
+            .name = "hazard3",
+            .root_source_file = b.path("src/cpus/hazard3.zig"),
+            .imports = b.allocator.dupe(std.Build.Module.Import, &.{
+                .{
+                    .name = "riscv32-common",
+                    .module = riscv32_common_dep.module("riscv32-common"),
+                },
+            }) catch @panic("OOM"),
+        },
+        .chip = .{
+            .name = "RP2350_QFN-80",
+            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .memory_regions = &.{
+                .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+                .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+            },
+            .patches = @import("patches/rp2350.zig").patches ++ [_]microzig.Patch{
+                .{
+                    .override_arch = .{
+                        .device_name = "RP2350",
+                        .arch = .hazard3,
+                    },
+                },
+            },
+        },
+        .hal = hal,
+        .linker_script = b.path("rp2350_riscv.ld"),
+    };
+
     const bootrom_rp2040 = get_bootrom(b, &chip_rp2040, .w25q080);
     const rp2040_bootrom_imports = b.allocator.dupe(std.Build.Module.Import, &.{
         .{ .name = "bootloader", .module = b.createModule(.{ .root_source_file = bootrom_rp2040 }) },
@@ -139,6 +221,8 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .rp2040 = chip_rp2040.derive(.{}),
             .rp2350_arm = chip_rp2350_arm.derive(.{}),
             .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
+            .rp2350_qfn_80_arm = chip_rp2350_qfn_80_arm.derive(.{}),
+            .rp2350_qfn_80_riscv = chip_rp2350_qfn_80_riscv.derive(.{}),
         },
         .boards = .{
             .raspberrypi = .{
@@ -197,6 +281,66 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .root_source_file = b.path("src/boards/waveshare_rp2040_matrix.zig"),
                         .imports = rp2040_bootrom_imports,
                     },
+                }),
+            },
+            .adafruit = .{
+                .metro_rp2350_arm = chip_rp2350_qfn_80_arm.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350",
+                        .url = "https://www.adafruit.com/product/6003",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                }),
+                .metro_rp2350_riscv = chip_rp2350_qfn_80_riscv.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350",
+                        .url = "https://www.adafruit.com/product/6003",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                }),
+                .metro_rp2350_psram_arm = chip_rp2350_qfn_80_arm.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350 with PSRAM",
+                        .url = "https://www.adafruit.com/product/6267",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                    .chip = .{
+                        .name = "RP2350_QFN-80",
+                        .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+                        .memory_regions = &.{
+                            .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
+                            .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+                            .{ .kind = .ram, .offset = 0x11000000, .length = 8 * 1024 * 1024 },
+                        },
+                        .patches = @import("patches/rp2350.zig").patches,
+                    },
+                    .linker_script = b.path("rp2350_psram_8m_arm.ld"),
+                }),
+                .metro_rp2350_psram_riscv = chip_rp2350_qfn_80_riscv.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350 with PSRAM",
+                        .url = "https://www.adafruit.com/product/6267",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                    .chip = .{
+                        .name = "RP2350_QFN-80",
+                        .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+                        .memory_regions = &.{
+                            .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
+                            .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
+                            .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
+                            .{ .kind = .ram, .offset = 0x11000000, .length = 8 * 1024 * 1024 },
+                        },
+                        .patches = @import("patches/rp2350.zig").patches ++ [_]microzig.Patch{
+                            .{
+                                .override_arch = .{
+                                    .device_name = "RP2350",
+                                    .arch = .hazard3,
+                                },
+                            },
+                        },
+                    },
+                    .linker_script = b.path("rp2350_psram_8m_riscv.ld"),
                 }),
             },
         },

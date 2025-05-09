@@ -14,7 +14,7 @@ const system_clock_cfg = clocks.config.preset.system(
     // Reduce the system clock by a factor of 4 (different default clock speeds for RP2350/RP2040)
     switch (chip) {
         .RP2040 => 125_000_000 / 4,
-        .RP2350 => 150_000_000 / 4,
+        .RP2350, .RP2350_QFN80 => 150_000_000 / 4,
     },
     // Reduce reference clock by a factor of 3
     12_000_000 / 3,
