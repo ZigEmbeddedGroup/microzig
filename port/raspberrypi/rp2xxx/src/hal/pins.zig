@@ -42,6 +42,24 @@ pub const Pin = enum {
     GPIO27,
     GPIO28,
     GPIO29,
+    GPIO30,
+    GPIO31,
+    GPIO32,
+    GPIO33,
+    GPIO34,
+    GPIO35,
+    GPIO36,
+    GPIO37,
+    GPIO38,
+    GPIO39,
+    GPIO40,
+    GPIO41,
+    GPIO42,
+    GPIO43,
+    GPIO44,
+    GPIO45,
+    GPIO46,
+    GPIO47,
 
     pub const Configuration = struct {
         name: ?[:0]const u8 = null,
@@ -76,7 +94,7 @@ pub const Function = enum {
 
     PIO0,
     PIO1,
-    // TODO: PIO2 for RP2350
+    PIO2,
 
     SPI0_RX,
     SPI0_CSn,
@@ -144,6 +162,11 @@ pub const Function = enum {
     ADC1,
     ADC2,
     ADC3,
+    ADC4,
+    ADC5,
+    ADC6,
+    ADC7,
+    TEMP,
 
     pub fn is_pwm(function: Function) bool {
         return switch (function) {
@@ -232,6 +255,11 @@ pub const Function = enum {
             .ADC1,
             .ADC2,
             .ADC3,
+            .ADC4,
+            .ADC5,
+            .ADC6,
+            .ADC7,
+            .TEMP,
             => true,
             else => false,
         };
@@ -288,26 +316,27 @@ const function_table = [@typeInfo(Function).@"enum".fields.len][30]u1{
     all(), // SIO
     all(), // PIO0
     all(), // PIO1
-    list(&.{ 0, 4, 16, 20 }), // SPI0_RX
-    list(&.{ 1, 5, 17, 21 }), // SPI0_CSn
-    list(&.{ 2, 6, 18, 22 }), // SPI0_SCK
-    list(&.{ 3, 7, 19, 23 }), // SPI0_TX
-    list(&.{ 8, 12, 24, 28 }), // SPI1_RX
-    list(&.{ 9, 13, 25, 29 }), // SPI1_CSn
-    list(&.{ 10, 14, 26 }), // SPI1_SCK
-    list(&.{ 11, 15, 27 }), // SPI1_TX
-    list(&.{ 0, 12, 16, 28 }), // UART0_TX
-    list(&.{ 1, 13, 17, 29 }), // UART0_RX
-    list(&.{ 2, 14, 18 }), // UART0_CTS
-    list(&.{ 3, 15, 19 }), // UART0_RTS
-    list(&.{ 4, 8, 20, 24 }), // UART1_TX
-    list(&.{ 5, 9, 21, 25 }), // UART1_RX
-    list(&.{ 6, 10, 22, 26 }), // UART1_CTS
-    list(&.{ 7, 11, 23, 27 }), // UART1_RTS
-    list(&.{ 0, 4, 8, 12, 16, 20, 24, 28 }), // I2C0_SDA
-    list(&.{ 1, 5, 9, 13, 17, 21, 25, 29 }), // I2C0_SCL
-    list(&.{ 2, 6, 10, 14, 18, 22, 26 }), // I2C1_SDA
-    list(&.{ 3, 7, 11, 15, 19, 23, 27 }), // I2C1_SCL
+    all(), // PIO2
+    list(&.{ 0, 4, 16, 20, 32, 36 }), // SPI0_RX
+    list(&.{ 1, 5, 17, 21, 33, 37 }), // SPI0_CSn
+    list(&.{ 2, 6, 18, 22, 34, 38 }), // SPI0_SCK
+    list(&.{ 3, 7, 19, 23, 35, 39 }), // SPI0_TX
+    list(&.{ 8, 12, 24, 28, 40, 44 }), // SPI1_RX
+    list(&.{ 9, 13, 25, 29, 37, 41 }), // SPI1_CSn
+    list(&.{ 10, 14, 26, 30, 42 }), // SPI1_SCK
+    list(&.{ 11, 15, 27, 31, 43 }), // SPI1_TX
+    list(&.{ 0, 12, 16, 28, 32, 44 }), // UART0_TX
+    list(&.{ 1, 13, 17, 29, 33, 45 }), // UART0_RX
+    list(&.{ 2, 14, 18, 30, 34, 46 }), // UART0_CTS
+    list(&.{ 3, 15, 19, 31, 35, 47 }), // UART0_RTS
+    list(&.{ 4, 8, 20, 24, 36, 40 }), // UART1_TX
+    list(&.{ 5, 9, 21, 25, 37, 41 }), // UART1_RX
+    list(&.{ 6, 10, 22, 26, 38, 42 }), // UART1_CTS
+    list(&.{ 7, 11, 23, 27, 39, 43 }), // UART1_RTS
+    list(&.{ 0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44 }), // I2C0_SDA
+    list(&.{ 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45 }), // I2C0_SCL
+    list(&.{ 2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46 }), // I2C1_SDA
+    list(&.{ 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47 }), // I2C1_SCL
     list(&.{ 0, 16 }), // PWM0_A
     list(&.{ 1, 17 }), // PWM0_B
     list(&.{ 2, 18 }), // PWM1_A
@@ -333,10 +362,15 @@ const function_table = [@typeInfo(Function).@"enum".fields.len][30]u1{
     list(&.{ 0, 3, 6, 9, 12, 15, 18, 21, 24, 27 }), // USB_OVCUR_DET
     list(&.{ 1, 4, 7, 10, 13, 16, 19, 22, 25, 28 }), // USB_VBUS_DET
     list(&.{ 2, 5, 8, 11, 14, 17, 20, 23, 26, 29 }), // USB_VBUS_EN
-    single(26), // ADC0
-    single(27), // ADC1
-    single(28), // ADC2
-    single(29), // ADC3
+    single(40), // ADC0
+    single(41), // ADC1
+    single(42), // ADC2
+    single(43), // ADC3
+    single(44), // ADC4
+    single(45), // ADC5
+    single(46), // ADC6
+    single(47), // ADC7
+    single(48), // TEMP
 };
 
 pub const GlobalConfiguration = struct {
@@ -370,6 +404,25 @@ pub const GlobalConfiguration = struct {
     GPIO27: ?Pin.Configuration = null,
     GPIO28: ?Pin.Configuration = null,
     GPIO29: ?Pin.Configuration = null,
+    GPIO30: ?Pin.Configuration = null,
+    GPIO31: ?Pin.Configuration = null,
+    GPIO32: ?Pin.Configuration = null,
+    GPIO33: ?Pin.Configuration = null,
+    GPIO34: ?Pin.Configuration = null,
+    GPIO35: ?Pin.Configuration = null,
+    GPIO36: ?Pin.Configuration = null,
+    GPIO37: ?Pin.Configuration = null,
+    GPIO38: ?Pin.Configuration = null,
+    GPIO39: ?Pin.Configuration = null,
+    GPIO40: ?Pin.Configuration = null,
+    GPIO41: ?Pin.Configuration = null,
+    GPIO42: ?Pin.Configuration = null,
+    GPIO43: ?Pin.Configuration = null,
+    GPIO44: ?Pin.Configuration = null,
+    GPIO45: ?Pin.Configuration = null,
+    GPIO46: ?Pin.Configuration = null,
+    GPIO47: ?Pin.Configuration = null,
+    GPIO48: ?Pin.Configuration = null,
 
     comptime {
         const pin_field_count = @typeInfo(Pin).@"enum".fields.len;
@@ -437,6 +490,11 @@ pub const GlobalConfiguration = struct {
                         .ADC1 => 1,
                         .ADC2 => 2,
                         .ADC3 => 3,
+                        .ADC4 => 4,
+                        .ADC5 => 5,
+                        .ADC6 => 6,
+                        .ADC7 => 7,
+                        .TEMP => 8,
                         else => unreachable,
                     }));
                 }
