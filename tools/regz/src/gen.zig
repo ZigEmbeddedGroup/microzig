@@ -14,6 +14,7 @@ const EnumID = Database.EnumID;
 const StructID = Database.StructID;
 const NestedStructField = Database.NestedStructField;
 
+const Directory = @import("Directory.zig");
 const arm = @import("arch/arm.zig");
 const avr = @import("arch/avr.zig");
 const riscv = @import("arch/riscv.zig");
@@ -24,53 +25,119 @@ pub const ToZigOptions = struct {
     for_microzig: bool = false,
 };
 
-pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
+pub fn to_zig(db: *Database, dir: Directory, opts: ToZigOptions) !void {
     var arena = std.heap.ArenaAllocator.init(db.gpa);
     defer arena.deinit();
 
-    const allocator = arena.allocator();
+    try write_device_files(db, arena.allocator(), dir, opts);
+    try write_types_files(db, arena.allocator(), dir, opts);
+}
 
-    var buffer = std.ArrayList(u8).init(allocator);
-    defer buffer.deinit();
+fn write_device_files(
+    db: *Database,
+    arena: Allocator,
+    dir: Directory,
+    opts: ToZigOptions,
+) !void {
+    const devices = try db.get_devices(arena);
+    for (devices) |device| {
+        write_device_file(db, arena, &device, dir, opts) catch |err| {
+            log.warn("failed to write device: {}", .{err});
+        };
+    }
+}
 
-    const writer = buffer.writer();
+fn write_imports(opts: ToZigOptions, types_public: bool, types_path: []const u8, writer: anytype) !void {
+    const public: []const u8 = if (types_public) "pub" else "";
     if (opts.for_microzig) {
-        try writer.writeAll(
+        try writer.print(
             \\const microzig = @import("microzig");
             \\const mmio = microzig.mmio;
             \\
-        );
-    } else {
-        try writer.writeAll(
-            \\const mmio = @import("mmio");
+            \\{s} const types = @import("{s}");
             \\
-        );
+            \\
+        , .{ public, types_path });
+    } else {
+        try writer.print(
+            \\const mmio = @import("mmio");
+            \\{s} const types = @import("{s}");
+            \\
+            \\
+        , .{ public, types_path });
+    }
+}
+
+fn write_device_file(
+    db: *Database,
+    arena: Allocator,
+    device: *const Database.Device,
+    dir: Directory,
+    opts: ToZigOptions,
+) !void {
+    var buffer = std.ArrayList(u8).init(arena);
+    defer buffer.deinit();
+
+    const writer = buffer.writer();
+    if (device.description) |description| {
+        try write_file_comment(arena, description, writer);
     }
 
+    try write_imports(opts, true, "types.zig", writer);
+
     try writer.writeAll(
-        \\
         \\pub const Interrupt = struct {
         \\    name: [:0]const u8,
         \\    index: i16,
         \\    description: ?[:0]const u8,
         \\};
         \\
+        \\
     );
 
-    try write_devices(db, allocator, writer);
-    try write_types(db, allocator, writer);
-    try writer.writeByte(0);
+    const properties = try db.get_device_properties(arena, device.id);
+    if (properties.len > 0) {
+        try writer.writeAll("pub const properties = struct {\n");
+        for (properties) |prop| {
+            try writer.print("pub const {} = ", .{
+                std.zig.fmtId(prop.key),
+            });
 
-    // format the generated code
-    var ast = try std.zig.Ast.parse(allocator, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
-    defer ast.deinit(allocator);
+            try write_string(prop.value orelse "", writer);
+            try writer.writeAll(";\n");
+        }
+
+        try writer.writeAll("};\n");
+    }
+
+    write_interrupt_list(db, arena, device, writer) catch |err|
+        log.warn("failed to write interrupt list: {}", .{err});
+
+    write_vector_table(db, arena, device, writer) catch |err|
+        log.warn("failed to write vector table: {}", .{err});
+
+    const device_peripherals = try db.get_device_peripherals(arena, device.id);
+    log.debug("peripheral instances: {}", .{device_peripherals.len});
+    if (device_peripherals.len > 0) {
+        try writer.writeAll("pub const peripherals = struct {\n");
+        for (device_peripherals) |instance| {
+            write_device_peripheral(db, arena, &instance, writer) catch |err| {
+                log.warn("failed to serialize peripheral instance: {}", .{err});
+            };
+        }
+        try writer.writeAll("};\n");
+    }
+
+    try buffer.writer().writeByte(0);
+    var ast = try std.zig.Ast.parse(arena, buffer.items[0 .. buffer.items.len - 1 :0], .zig);
+    defer ast.deinit(arena);
 
     if (ast.errors.len > 0) {
         log.err("Failed to parse:\n{s}", .{buffer.items});
-        try out_writer.writeAll(buffer.items);
+        //try out_writer.writeAll(buffer.items);
         for (ast.errors) |err| {
             std.log.err("err: {}", .{err});
-            var err_msg = std.ArrayList(u8).init(allocator);
+            var err_msg = std.ArrayList(u8).init(arena);
             defer err_msg.deinit();
 
             try ast.renderError(err, err_msg.writer());
@@ -79,31 +146,73 @@ pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
         return error.FailedToParse;
     }
 
-    const text = try ast.render(allocator);
-    defer allocator.free(text);
-
-    try out_writer.writeAll(text);
+    const text = try ast.render(arena);
+    const filename = try std.fmt.allocPrint(arena, "{s}.zig", .{device.name});
+    try dir.create_file(filename, text);
 }
 
-fn write_devices(db: *Database, arena: Allocator, writer: anytype) !void {
-    const devices = try db.get_devices(arena);
-    if (devices.len == 0)
-        return;
-
-    try writer.writeAll(
-        \\
-        \\pub const devices = struct {
+fn write_types_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
+    try dir.create_file("types.zig",
+        \\pub const peripherals = @import("types/peripherals.zig");
         \\
     );
 
-    // TODO: order devices alphabetically
-    for (devices) |device| {
-        write_device(db, arena, &device, writer) catch |err| {
-            log.warn("failed to write device: {}", .{err});
+    try write_peripherals_files(db, arena, dir, opts);
+}
+
+fn write_peripherals_files(db: *Database, arena: Allocator, dir: Directory, opts: ToZigOptions) !void {
+    var index_content = std.ArrayList(u8).init(arena);
+    const index_writer = index_content.writer();
+    const peripherals = try db.get_peripherals(arena);
+    for (peripherals) |peripheral| {
+        var periph_content = std.ArrayList(u8).init(arena);
+        const writer = periph_content.writer();
+        try write_imports(opts, false, "../../types.zig", writer);
+        write_peripheral(db, arena, &peripheral, writer) catch |err| {
+            log.warn("failed to generate peripheral '{s}': {}", .{
+                peripheral.name,
+                err,
+            });
+
+            continue;
         };
+
+        const path = try std.fmt.allocPrint(arena, "types/peripherals/{s}.zig", .{
+            peripheral.name,
+        });
+
+        try writer.writeByte(0);
+        var ast = try std.zig.Ast.parse(arena, periph_content.items[0 .. periph_content.items.len - 1 :0], .zig);
+        defer ast.deinit(arena);
+
+        const text = try ast.render(arena);
+        try dir.create_file(path, text);
+
+        if (try db.struct_is_zero_sized(arena, peripheral.struct_id)) {
+            try index_writer.print(
+                \\pub const {} = @import("peripherals/{s}.zig");
+                \\
+            , .{
+                std.zig.fmtId(peripheral.name),
+                peripheral.name,
+            });
+        } else {
+            try index_writer.print(
+                \\pub const {} = @import("peripherals/{s}.zig").{};
+                \\
+            , .{
+                std.zig.fmtId(peripheral.name),
+                peripheral.name,
+                std.zig.fmtId(peripheral.name),
+            });
+        }
     }
 
-    try writer.writeAll("};\n");
+    try dir.create_file("types/peripherals.zig", index_content.items);
+}
+
+pub fn write_file_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
+    try write_comment(allocator, "//!", comment, writer);
 }
 
 pub fn write_doc_comment(allocator: Allocator, comment: []const u8, writer: anytype) !void {
@@ -419,32 +528,6 @@ fn write_device_peripheral(
     try out_writer.writeAll(buffer.items);
 }
 
-fn write_types(db: *Database, arena: Allocator, writer: anytype) !void {
-    const peripherals = try db.get_peripherals(arena);
-    if (peripherals.len == 0)
-        return;
-
-    try writer.writeAll(
-        \\
-        \\pub const types = struct {
-        \\
-    );
-
-    try writer.writeAll("pub const peripherals = struct {\n");
-
-    for (peripherals) |peripheral| {
-        write_peripheral(db, arena, &peripheral, writer) catch |err| {
-            log.warn("failed to generate peripheral '{s}': {}", .{
-                peripheral.name,
-                err,
-            });
-        };
-    }
-
-    try writer.writeAll("};\n");
-    try writer.writeAll("};\n");
-}
-
 fn write_struct(
     db: *Database,
     arena: Allocator,
@@ -465,6 +548,21 @@ fn write_struct(
         if (zero_sized) "" else "extern",
         if (has_modes) "union" else "struct",
     });
+
+    try write_struct_body(db, arena, block_size_bytes, struct_id, writer);
+    try writer.writeAll("\n}");
+}
+
+fn write_struct_body(
+    db: *Database,
+    arena: Allocator,
+    block_size_bytes: ?u64,
+    struct_id: StructID,
+    writer: anytype,
+) !void {
+    const registers = try db.get_struct_registers(arena, struct_id);
+    const nested_struct_fields = try db.get_nested_struct_fields_with_calculated_size(arena, struct_id);
+    const modes = try db.get_struct_modes(arena, struct_id);
 
     var written = false;
     if (modes.len > 0) {
@@ -494,8 +592,6 @@ fn write_struct(
 
     try write_newline_if_written(writer, &written);
     try write_registers_and_nested_structs(db, arena, struct_id, block_size_bytes, modes, registers, nested_struct_fields, writer);
-
-    try writer.writeAll("\n}");
 }
 
 fn write_struct_decl(
@@ -532,15 +628,25 @@ fn write_peripheral(
     out_writer: anytype,
 ) !void {
     log.debug("writing peripheral: name='{s}'", .{peripheral.name});
-    try write_struct_decl(
-        db,
-        arena,
-        peripheral.name,
-        peripheral.description,
-        peripheral.size_bytes,
-        peripheral.struct_id,
-        out_writer,
-    );
+    if (try db.struct_is_zero_sized(arena, peripheral.struct_id)) {
+        try write_struct_body(
+            db,
+            arena,
+            peripheral.size_bytes,
+            peripheral.struct_id,
+            out_writer,
+        );
+    } else {
+        try write_struct_decl(
+            db,
+            arena,
+            peripheral.name,
+            peripheral.description,
+            peripheral.size_bytes,
+            peripheral.struct_id,
+            out_writer,
+        );
+    }
 }
 
 fn write_newline_if_written(writer: anytype, written: *bool) !void {
@@ -1421,1090 +1527,1090 @@ test "gen.StructFieldIterator.one nested struct field and a register" {
     try std.testing.expect(it.next() == null);
 }
 
-test "gen.peripheral instantiation" {
-    var db = try tests.peripheral_instantiation(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const TEST_DEVICE = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripherals with a shared type" {
-    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const TEST_DEVICE = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
-        \\            pub const TEST1: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x2000);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with modes" {
-    var db = try tests.peripheral_with_modes(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern union {
-        \\            pub const Mode = enum {
-        \\                TEST_MODE1,
-        \\                TEST_MODE2,
-        \\            };
-        \\
-        \\            pub fn get_mode(self: *volatile @This()) Mode {
-        \\                {
-        \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
-        \\                    switch (value) {
-        \\                        0,
-        \\                        => return .TEST_MODE1,
-        \\                        else => {},
-        \\                    }
-        \\                }
-        \\                {
-        \\                    const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
-        \\                    switch (value) {
-        \\                        1,
-        \\                        => return .TEST_MODE2,
-        \\                        else => {},
-        \\                    }
-        \\                }
-        \\
-        \\                unreachable;
-        \\            }
-        \\
-        \\            TEST_MODE1: extern struct {
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER1: u32,
-        \\                /// offset: 0x04
-        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            },
-        \\            TEST_MODE2: extern struct {
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER2: u32,
-        \\                /// offset: 0x04
-        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            },
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with enum" {
-    var db = try tests.peripheral_with_enum(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            pub const TEST_ENUM = enum(u4) {
-        \\                TEST_ENUM_FIELD1 = 0x0,
-        \\                TEST_ENUM_FIELD2 = 0x1,
-        \\                _,
-        \\            };
-        \\
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with enum, enum is exhausted of values" {
-    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            pub const TEST_ENUM = enum(u1) {
-        \\                TEST_ENUM_FIELD1 = 0x0,
-        \\                TEST_ENUM_FIELD2 = 0x1,
-        \\            };
-        \\
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.field with named enum" {
-    var db = try tests.field_with_named_enum(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            pub const TEST_ENUM = enum(u4) {
-        \\                TEST_ENUM_FIELD1 = 0x0,
-        \\                TEST_ENUM_FIELD2 = 0x1,
-        \\                _,
-        \\            };
-        \\
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: TEST_ENUM,
-        \\                padding: u4 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.field with anonymous enum" {
-    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    TEST_ENUM_FIELD2 = 0x1,
-        \\                    _,
-        \\                },
-        \\                padding: u4 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.namespaced register groups" {
-    var db = try tests.namespaced_register_groups(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile types.peripherals.PORT.PORTB = @ptrFromInt(0x23);
-        \\            pub const PORTC: *volatile types.peripherals.PORT.PORTC = @ptrFromInt(0x26);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORT = struct {
-        \\            pub const PORTB = extern struct {
-        \\                /// offset: 0x00
-        \\                PORTB: u8,
-        \\                /// offset: 0x01
-        \\                DDRB: u8,
-        \\                /// offset: 0x02
-        \\                PINB: u8,
-        \\            };
-        \\
-        \\            pub const PORTC = extern struct {
-        \\                /// offset: 0x00
-        \\                PORTC: u8,
-        \\                /// offset: 0x01
-        \\                DDRC: u8,
-        \\                /// offset: 0x02
-        \\                PINC: u8,
-        \\            };
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with reserved register" {
-    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: u32,
-        \\            /// offset: 0x04
-        \\            reserved4: [4]u8,
-        \\            /// offset: 0x08
-        \\            PINB: u32,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with count" {
-    var db = try tests.peripheral_with_count(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: u8,
-        \\            /// offset: 0x01
-        \\            DDRB: u8,
-        \\            /// offset: 0x02
-        \\            PINB: u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral with count, padding required" {
-    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: u8,
-        \\            /// offset: 0x01
-        \\            DDRB: u8,
-        \\            /// offset: 0x02
-        \\            PINB: u8,
-        \\            padding: [1]u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.register with count" {
-    var db = try tests.register_with_count(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: [4]u8,
-        \\            /// offset: 0x04
-        \\            DDRB: u8,
-        \\            /// offset: 0x05
-        \\            PINB: u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.register with count and fields" {
-    var db = try tests.register_with_count_and_fields(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const peripherals = struct {
-        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
-        \\        };
-        \\    };
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: u4,
-        \\                padding: u4 = 0,
-        \\            }),
-        \\            /// offset: 0x04
-        \\            DDRB: u8,
-        \\            /// offset: 0x05
-        \\            PINB: u8,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.field with count, width of one, offset, and padding" {
-    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: mmio.Mmio(packed struct(u8) {
-        \\                reserved2: u2 = 0,
-        \\                TEST_FIELD0: u1,
-        \\                TEST_FIELD1: u1,
-        \\                TEST_FIELD2: u1,
-        \\                TEST_FIELD3: u1,
-        \\                TEST_FIELD4: u1,
-        \\                padding: u1 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.field with count, multi-bit width, offset, and padding" {
-    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const PORTB = extern struct {
-        \\            /// offset: 0x00
-        \\            PORTB: mmio.Mmio(packed struct(u8) {
-        \\                reserved2: u2 = 0,
-        \\                TEST_FIELD0: u2,
-        \\                TEST_FIELD1: u2,
-        \\                padding: u2 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.interrupts.avr" {
-    var db = try tests.interrupts_avr(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const devices = struct {
-        \\    pub const ATmega328P = struct {
-        \\        pub const interrupts: []const Interrupt = &.{
-        \\            .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
-        \\            .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
-        \\        };
-        \\
-        \\        pub const VectorTable = extern struct {
-        \\            const Handler = microzig.interrupt.Handler;
-        \\            const unhandled = microzig.interrupt.unhandled;
-        \\
-        \\            RESET: Handler,
-        \\            TEST_VECTOR1: Handler = unhandled,
-        \\            reserved2: [1]u16 = undefined,
-        \\            TEST_VECTOR2: Handler = unhandled,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.peripheral type with register and field" {
-    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// test register
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                /// test field
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.name collisions in enum name cause them to be anonymous" {
-    var db = try tests.enums_with_name_collision(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD1: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    TEST_ENUM_FIELD2 = 0x1,
-        \\                    _,
-        \\                },
-        \\                TEST_FIELD2: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    TEST_ENUM_FIELD2 = 0x1,
-        \\                    _,
-        \\                },
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.pick one enum field in value collisions" {
-    var db = try tests.enum_with_value_collision(std.testing.allocator);
-    defer db.destroy();
-
-    try db.backup("value_collision.regz");
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    _,
-        \\                },
-        \\                padding: u4 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.pick one enum field in name collisions" {
-    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
-        \\                TEST_FIELD: enum(u4) {
-        \\                    TEST_ENUM_FIELD1 = 0x0,
-        \\                    _,
-        \\                },
-        \\                padding: u4 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.register fields with name collision" {
-    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// test register
-        \\            /// offset: 0x00
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                /// test field 1
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.nested struct field in a peripheral" {
-    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 0);
-    defer db.destroy();
-
-    try db.backup("nested_struct_field_in_a_peripheral.regz");
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// test nested struct
-        \\            /// offset: 0x00
-        \\            TEST_NESTED: extern struct {
-        \\                /// test register
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    /// test field 1
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            },
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.nested struct field in a peripheral that has a named type" {
-    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            pub const TEST_NESTED_TYPE = extern struct {
-        \\                /// test register
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    /// test field 1
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            };
-        \\
-        \\            /// test nested struct
-        \\            /// offset: 0x00
-        \\            TEST_NESTED: TEST_NESTED_TYPE,
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.nested struct field in a peripheral with offset" {
-    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// offset: 0x00
-        \\            reserved0: [4]u8,
-        \\            /// test nested struct
-        \\            /// offset: 0x04
-        \\            TEST_NESTED: extern struct {
-        \\                /// test register
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    /// test field 1
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            },
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.nested struct field in nested struct field" {
-    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            /// test nested struct
-        \\            /// offset: 0x00
-        \\            TEST_NESTED: extern struct {
-        \\                /// offset: 0x00
-        \\                TEST_NESTED_NESTED: extern struct {
-        \\                    /// test register
-        \\                    /// offset: 0x00
-        \\                    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                        /// test field 1
-        \\                        TEST_FIELD: u1,
-        \\                        padding: u31 = 0,
-        \\                    }),
-        \\                },
-        \\            },
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
-
-test "gen.nested struct field next to register" {
-    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
-    defer db.destroy();
-
-    var buffer = std.ArrayList(u8).init(std.testing.allocator);
-    defer buffer.deinit();
-
-    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
-    try std.testing.expectEqualStrings(
-        \\const microzig = @import("microzig");
-        \\const mmio = microzig.mmio;
-        \\
-        \\pub const Interrupt = struct {
-        \\    name: [:0]const u8,
-        \\    index: i16,
-        \\    description: ?[:0]const u8,
-        \\};
-        \\
-        \\pub const types = struct {
-        \\    pub const peripherals = struct {
-        \\        /// test peripheral
-        \\        pub const TEST_PERIPHERAL = extern struct {
-        \\            pub const TEST_NESTED_TYPE = extern struct {
-        \\                /// test register
-        \\                /// offset: 0x00
-        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                    /// test field 1
-        \\                    TEST_FIELD: u1,
-        \\                    padding: u31 = 0,
-        \\                }),
-        \\            };
-        \\
-        \\            /// test nested struct
-        \\            /// offset: 0x00
-        \\            TEST_NESTED: TEST_NESTED_TYPE,
-        \\            /// test register
-        \\            /// offset: 0x04
-        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
-        \\                /// test field 1
-        \\                TEST_FIELD: u1,
-        \\                padding: u31 = 0,
-        \\            }),
-        \\        };
-        \\    };
-        \\};
-        \\
-    , buffer.items);
-}
+//test "gen.peripheral instantiation" {
+//    var db = try tests.peripheral_instantiation(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const TEST_DEVICE = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                TEST_FIELD: u1,
+//        \\                padding: u31 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripherals with a shared type" {
+//    var db = try tests.peripherals_with_shared_type(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const TEST_DEVICE = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const TEST0: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x1000);
+//        \\            pub const TEST1: *volatile types.peripherals.TEST_PERIPHERAL = @ptrFromInt(0x2000);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                TEST_FIELD: u1,
+//        \\                padding: u31 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with modes" {
+//    var db = try tests.peripheral_with_modes(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern union {
+//        \\            pub const Mode = enum {
+//        \\                TEST_MODE1,
+//        \\                TEST_MODE2,
+//        \\            };
+//        \\
+//        \\            pub fn get_mode(self: *volatile @This()) Mode {
+//        \\                {
+//        \\                    const value = self.TEST_MODE1.COMMON_REGISTER.read().TEST_FIELD;
+//        \\                    switch (value) {
+//        \\                        0,
+//        \\                        => return .TEST_MODE1,
+//        \\                        else => {},
+//        \\                    }
+//        \\                }
+//        \\                {
+//        \\                    const value = self.TEST_MODE2.COMMON_REGISTER.read().TEST_FIELD;
+//        \\                    switch (value) {
+//        \\                        1,
+//        \\                        => return .TEST_MODE2,
+//        \\                        else => {},
+//        \\                    }
+//        \\                }
+//        \\
+//        \\                unreachable;
+//        \\            }
+//        \\
+//        \\            TEST_MODE1: extern struct {
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER1: u32,
+//        \\                /// offset: 0x04
+//        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            },
+//        \\            TEST_MODE2: extern struct {
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER2: u32,
+//        \\                /// offset: 0x04
+//        \\                COMMON_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            },
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with enum" {
+//    var db = try tests.peripheral_with_enum(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            pub const TEST_ENUM = enum(u4) {
+//        \\                TEST_ENUM_FIELD1 = 0x0,
+//        \\                TEST_ENUM_FIELD2 = 0x1,
+//        \\                _,
+//        \\            };
+//        \\
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with enum, enum is exhausted of values" {
+//    var db = try tests.peripheral_with_enum_and_its_exhausted_of_values(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            pub const TEST_ENUM = enum(u1) {
+//        \\                TEST_ENUM_FIELD1 = 0x0,
+//        \\                TEST_ENUM_FIELD2 = 0x1,
+//        \\            };
+//        \\
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.field with named enum" {
+//    var db = try tests.field_with_named_enum(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            pub const TEST_ENUM = enum(u4) {
+//        \\                TEST_ENUM_FIELD1 = 0x0,
+//        \\                TEST_ENUM_FIELD2 = 0x1,
+//        \\                _,
+//        \\            };
+//        \\
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD: TEST_ENUM,
+//        \\                padding: u4 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.field with anonymous enum" {
+//    var db = try tests.field_with_anonymous_enum(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD: enum(u4) {
+//        \\                    TEST_ENUM_FIELD1 = 0x0,
+//        \\                    TEST_ENUM_FIELD2 = 0x1,
+//        \\                    _,
+//        \\                },
+//        \\                padding: u4 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.namespaced register groups" {
+//    var db = try tests.namespaced_register_groups(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile types.peripherals.PORT.PORTB = @ptrFromInt(0x23);
+//        \\            pub const PORTC: *volatile types.peripherals.PORT.PORTC = @ptrFromInt(0x26);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORT = struct {
+//        \\            pub const PORTB = extern struct {
+//        \\                /// offset: 0x00
+//        \\                PORTB: u8,
+//        \\                /// offset: 0x01
+//        \\                DDRB: u8,
+//        \\                /// offset: 0x02
+//        \\                PINB: u8,
+//        \\            };
+//        \\
+//        \\            pub const PORTC = extern struct {
+//        \\                /// offset: 0x00
+//        \\                PORTC: u8,
+//        \\                /// offset: 0x01
+//        \\                DDRC: u8,
+//        \\                /// offset: 0x02
+//        \\                PINC: u8,
+//        \\            };
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with reserved register" {
+//    var db = try tests.peripheral_with_reserved_register(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: u32,
+//        \\            /// offset: 0x04
+//        \\            reserved4: [4]u8,
+//        \\            /// offset: 0x08
+//        \\            PINB: u32,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with count" {
+//    var db = try tests.peripheral_with_count(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: u8,
+//        \\            /// offset: 0x01
+//        \\            DDRB: u8,
+//        \\            /// offset: 0x02
+//        \\            PINB: u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral with count, padding required" {
+//    var db = try tests.peripheral_with_count_padding_required(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile [4]types.peripherals.PORTB = @ptrFromInt(0x23);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: u8,
+//        \\            /// offset: 0x01
+//        \\            DDRB: u8,
+//        \\            /// offset: 0x02
+//        \\            PINB: u8,
+//        \\            padding: [1]u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.register with count" {
+//    var db = try tests.register_with_count(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: [4]u8,
+//        \\            /// offset: 0x04
+//        \\            DDRB: u8,
+//        \\            /// offset: 0x05
+//        \\            PINB: u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.register with count and fields" {
+//    var db = try tests.register_with_count_and_fields(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const peripherals = struct {
+//        \\            pub const PORTB: *volatile types.peripherals.PORTB = @ptrFromInt(0x23);
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: [4]mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD: u4,
+//        \\                padding: u4 = 0,
+//        \\            }),
+//        \\            /// offset: 0x04
+//        \\            DDRB: u8,
+//        \\            /// offset: 0x05
+//        \\            PINB: u8,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.field with count, width of one, offset, and padding" {
+//    var db = try tests.field_with_count_width_of_one_offset_and_padding(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: mmio.Mmio(packed struct(u8) {
+//        \\                reserved2: u2 = 0,
+//        \\                TEST_FIELD0: u1,
+//        \\                TEST_FIELD1: u1,
+//        \\                TEST_FIELD2: u1,
+//        \\                TEST_FIELD3: u1,
+//        \\                TEST_FIELD4: u1,
+//        \\                padding: u1 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.field with count, multi-bit width, offset, and padding" {
+//    var db = try tests.field_with_count_multi_bit_width_offset_and_padding(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const PORTB = extern struct {
+//        \\            /// offset: 0x00
+//        \\            PORTB: mmio.Mmio(packed struct(u8) {
+//        \\                reserved2: u2 = 0,
+//        \\                TEST_FIELD0: u2,
+//        \\                TEST_FIELD1: u2,
+//        \\                padding: u2 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.interrupts.avr" {
+//    var db = try tests.interrupts_avr(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const devices = struct {
+//        \\    pub const ATmega328P = struct {
+//        \\        pub const interrupts: []const Interrupt = &.{
+//        \\            .{ .name = "TEST_VECTOR1", .index = 1, .description = null },
+//        \\            .{ .name = "TEST_VECTOR2", .index = 3, .description = null },
+//        \\        };
+//        \\
+//        \\        pub const VectorTable = extern struct {
+//        \\            const Handler = microzig.interrupt.Handler;
+//        \\            const unhandled = microzig.interrupt.unhandled;
+//        \\
+//        \\            RESET: Handler,
+//        \\            TEST_VECTOR1: Handler = unhandled,
+//        \\            reserved2: [1]u16 = undefined,
+//        \\            TEST_VECTOR2: Handler = unhandled,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.peripheral type with register and field" {
+//    var db = try tests.peripheral_type_with_register_and_field(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// test register
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                /// test field
+//        \\                TEST_FIELD: u1,
+//        \\                padding: u31 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.name collisions in enum name cause them to be anonymous" {
+//    var db = try tests.enums_with_name_collision(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD1: enum(u4) {
+//        \\                    TEST_ENUM_FIELD1 = 0x0,
+//        \\                    TEST_ENUM_FIELD2 = 0x1,
+//        \\                    _,
+//        \\                },
+//        \\                TEST_FIELD2: enum(u4) {
+//        \\                    TEST_ENUM_FIELD1 = 0x0,
+//        \\                    TEST_ENUM_FIELD2 = 0x1,
+//        \\                    _,
+//        \\                },
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.pick one enum field in value collisions" {
+//    var db = try tests.enum_with_value_collision(std.testing.allocator);
+//    defer db.destroy();
+//
+//    try db.backup("value_collision.regz");
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD: enum(u4) {
+//        \\                    TEST_ENUM_FIELD1 = 0x0,
+//        \\                    _,
+//        \\                },
+//        \\                padding: u4 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.pick one enum field in name collisions" {
+//    var db = try tests.enum_fields_with_name_collision(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u8) {
+//        \\                TEST_FIELD: enum(u4) {
+//        \\                    TEST_ENUM_FIELD1 = 0x0,
+//        \\                    _,
+//        \\                },
+//        \\                padding: u4 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.register fields with name collision" {
+//    var db = try tests.register_fields_with_name_collision(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// test register
+//        \\            /// offset: 0x00
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                /// test field 1
+//        \\                TEST_FIELD: u1,
+//        \\                padding: u31 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.nested struct field in a peripheral" {
+//    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 0);
+//    defer db.destroy();
+//
+//    try db.backup("nested_struct_field_in_a_peripheral.regz");
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// test nested struct
+//        \\            /// offset: 0x00
+//        \\            TEST_NESTED: extern struct {
+//        \\                /// test register
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    /// test field 1
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            },
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.nested struct field in a peripheral that has a named type" {
+//    var db = try tests.nested_struct_field_in_a_peripheral_that_has_a_named_type(std.testing.allocator, 0);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            pub const TEST_NESTED_TYPE = extern struct {
+//        \\                /// test register
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    /// test field 1
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            };
+//        \\
+//        \\            /// test nested struct
+//        \\            /// offset: 0x00
+//        \\            TEST_NESTED: TEST_NESTED_TYPE,
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.nested struct field in a peripheral with offset" {
+//    var db = try tests.nested_struct_field_in_a_peripheral(std.testing.allocator, 4);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// offset: 0x00
+//        \\            reserved0: [4]u8,
+//        \\            /// test nested struct
+//        \\            /// offset: 0x04
+//        \\            TEST_NESTED: extern struct {
+//        \\                /// test register
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    /// test field 1
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            },
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.nested struct field in nested struct field" {
+//    var db = try tests.nested_struct_field_in_a_nested_struct_field(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            /// test nested struct
+//        \\            /// offset: 0x00
+//        \\            TEST_NESTED: extern struct {
+//        \\                /// offset: 0x00
+//        \\                TEST_NESTED_NESTED: extern struct {
+//        \\                    /// test register
+//        \\                    /// offset: 0x00
+//        \\                    TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                        /// test field 1
+//        \\                        TEST_FIELD: u1,
+//        \\                        padding: u31 = 0,
+//        \\                    }),
+//        \\                },
+//        \\            },
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}
+//
+//test "gen.nested struct field next to register" {
+//    var db = try tests.nested_struct_field_next_to_register(std.testing.allocator);
+//    defer db.destroy();
+//
+//    var buffer = std.ArrayList(u8).init(std.testing.allocator);
+//    defer buffer.deinit();
+//
+//    try db.to_zig(buffer.writer(), .{ .for_microzig = true });
+//    try std.testing.expectEqualStrings(
+//        \\const microzig = @import("microzig");
+//        \\const mmio = microzig.mmio;
+//        \\
+//        \\pub const Interrupt = struct {
+//        \\    name: [:0]const u8,
+//        \\    index: i16,
+//        \\    description: ?[:0]const u8,
+//        \\};
+//        \\
+//        \\pub const types = struct {
+//        \\    pub const peripherals = struct {
+//        \\        /// test peripheral
+//        \\        pub const TEST_PERIPHERAL = extern struct {
+//        \\            pub const TEST_NESTED_TYPE = extern struct {
+//        \\                /// test register
+//        \\                /// offset: 0x00
+//        \\                TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                    /// test field 1
+//        \\                    TEST_FIELD: u1,
+//        \\                    padding: u31 = 0,
+//        \\                }),
+//        \\            };
+//        \\
+//        \\            /// test nested struct
+//        \\            /// offset: 0x00
+//        \\            TEST_NESTED: TEST_NESTED_TYPE,
+//        \\            /// test register
+//        \\            /// offset: 0x04
+//        \\            TEST_REGISTER: mmio.Mmio(packed struct(u32) {
+//        \\                /// test field 1
+//        \\                TEST_FIELD: u1,
+//        \\                padding: u31 = 0,
+//        \\            }),
+//        \\        };
+//        \\    };
+//        \\};
+//        \\
+//    , buffer.items);
+//}

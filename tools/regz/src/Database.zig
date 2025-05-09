@@ -11,12 +11,15 @@ const sqlite = @import("sqlite");
 const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
+const embassy = @import("embassy.zig");
 const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
+const Directory = @import("Directory.zig");
 
 const log = std.log.scoped(.db);
+const file_size_max = 100 * 1024 * 1024;
 
 // Actual instances will have "Instance" in the type name for the ID
 pub const DeviceID = ID(u32, "devices");
@@ -489,6 +492,15 @@ const schema: []const []const u8 = &.{
 pub const Format = enum {
     svd,
     atdf,
+    // embassy's stm32-data format: https://github.com/embassy-rs/stm32-data-generated
+    embassy,
+
+    pub fn is_XML(format: Format) bool {
+        return switch (format) {
+            .svd, .atdf => true,
+            .embassy => false,
+        };
+    }
 };
 
 fn ID(comptime T: type, comptime table_name: []const u8) type {
@@ -566,12 +578,32 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
         .atdf => try atdf.load_into_db(db, doc),
+        .embassy => return error.InvalidFormat,
     }
 
     return db;
 }
 
+pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) !*Database {
+    return switch (format) {
+        .embassy => blk: {
+            var db = try Database.create(allocator);
+            errdefer db.destroy();
+
+            try embassy.load_into_db(db, path);
+            break :blk db;
+        },
+        .svd, .atdf => blk: {
+            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
+            defer allocator.free(text);
+
+            break :blk create_from_xml(allocator, format, text);
+        },
+    };
+}
+
 pub fn create_from_xml(allocator: Allocator, format: Format, xml_text: []const u8) !*Database {
+    assert(format.is_XML());
     var doc = try xml.Doc.from_memory(xml_text);
     defer doc.deinit();
 
@@ -1930,6 +1962,16 @@ pub fn create_struct(db: *Database, opts: CreateStructOptions) !StructID {
     return struct_id;
 }
 
+pub fn struct_is_zero_sized(db: *Database, allocator: Allocator, struct_id: StructID) !bool {
+    const registers = try db.get_struct_registers(allocator, struct_id);
+    defer allocator.free(registers);
+
+    const nested_struct_fields = try db.get_nested_struct_fields_with_calculated_size(allocator, struct_id);
+    defer allocator.free(nested_struct_fields);
+
+    return (registers.len == 0) and (nested_struct_fields.len == 0);
+}
+
 /// Returns the last part of the reference, and the beginning part of the
 /// reference
 fn get_ref_last_component(ref: []const u8) !struct { []const u8, ?[]const u8 } {
@@ -2123,8 +2165,8 @@ pub fn apply_patch(db: *Database, ndjson: []const u8) !void {
 
 pub const ToZigOptions = gen.ToZigOptions;
 
-pub fn to_zig(db: *Database, out_writer: anytype, opts: ToZigOptions) !void {
-    try gen.to_zig(db, out_writer, opts);
+pub fn to_zig(db: *Database, output_dir: Directory, opts: ToZigOptions) !void {
+    try gen.to_zig(db, output_dir, opts);
 }
 
 test "all" {
