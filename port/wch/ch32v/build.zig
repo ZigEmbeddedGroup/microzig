@@ -136,7 +136,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_name = .@"qingkev2-rv32ec",
         .cpu_file = b.path("src/cpus/qingkev2-rv32ec.zig"),
         .hal_file = b.path("src/hals/ch32v003.zig"),
-        .svd = b.path("src/chips/CH32V003.svd"),
+        .svd = b.path("src/chips/ch32v003.svd"),
     };
 
     const chip_ch32v103_base: BaseChip = .{
@@ -145,7 +145,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_name = .@"qingkev3-rv32imac",
         .cpu_file = b.path("src/cpus/qingkev3-rv32imac.zig"),
         .hal_file = b.path("src/hals/ch32v103.zig"),
-        .svd = b.path("src/chips/CH32V103.svd"),
+        .svd = b.path("src/chips/ch32v103.svd"),
     };
 
     const chip_ch32v20x_base: BaseChip = .{
@@ -154,7 +154,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_name = .@"qingkev4-rv32imac",
         .cpu_file = b.path("src/cpus/qingkev4-rv32imac.zig"),
         .hal_file = b.path("src/hals/ch32v20x.zig"),
-        .svd = b.path("src/chips/CH32V20X.svd"),
+        .svd = b.path("src/chips/ch32v20x.svd"),
     };
 
     const chip_ch32v30x_base: BaseChip = .{
@@ -163,7 +163,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .cpu_name = .@"qingkev4-rv32imafc",
         .cpu_file = b.path("src/cpus/qingkev4-rv32imafc.zig"),
         .hal_file = b.path("src/hals/ch32v30x.zig"),
-        .svd = b.path("src/chips/CH32V30X.svd"),
+        .svd = b.path("src/chips/ch32v30x.svd"),
     };
 
     const chip_ch32v003x4 = chip_ch32v003_base.create(dep, 16 * KiB, 2 * KiB);
