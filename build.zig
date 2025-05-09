@@ -422,8 +422,8 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     regz_run.addArg(@tagName(target.chip.register_definition));
 
                     regz_run.addArg("--output_path"); // Write to a file
-                    const zig_file = regz_run.addOutputFileArg("chip.zig");
 
+                    const chips_dir = regz_run.addOutputDirectoryArg("chips");
                     var patches = std.ArrayList(regz.patch.Patch).init(b.allocator);
 
                     // From chip definition
@@ -443,8 +443,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
                     }
 
                     regz_run.addFileArg(file);
-
-                    break :blk zig_file;
+                    break :blk chips_dir.path(b, b.fmt("{s}.zig", .{target.chip.name}));
                 },
 
                 .zig => |src| src,
