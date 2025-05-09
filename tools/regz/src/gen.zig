@@ -666,8 +666,8 @@ fn write_registers_and_nested_structs(
     struct_id: StructID,
     block_size_bytes: ?u64,
     modes: []const Mode,
-    registers: []const Register,
-    nested_struct_fields: []const NestedStructField,
+    registers: []Register,
+    nested_struct_fields: []NestedStructField,
     out_writer: anytype,
 ) !void {
     log.debug("write_registers: modes.len={}", .{modes.len});
@@ -946,8 +946,8 @@ fn write_registers_and_nested_structs_base(
     db: *Database,
     arena: Allocator,
     block_size_bytes: ?u64,
-    registers: []const Register,
-    nested_struct_fields: []const NestedStructField,
+    registers: []Register,
+    nested_struct_fields: []NestedStructField,
     out_writer: anytype,
 ) !void {
     var it: StructFieldIterator = .init(registers, nested_struct_fields);
