@@ -1406,7 +1406,7 @@ STM32WLE5JC: *microzig.Target,
 
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
-
+    const embassy = b.dependency("stm32-data-generated", .{}).path(".");
     var ret: Self = undefined;
 
     ret.STM32C011D6 = b.allocator.create(microzig.Target) catch @panic("out of memory");
@@ -1422,7 +1422,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C011D6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C011D6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1444,7 +1444,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C011F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C011F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1466,7 +1466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C011F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C011F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1488,7 +1488,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C011J4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C011J4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1510,7 +1510,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C011J6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C011J6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1532,7 +1532,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1554,7 +1554,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1576,7 +1576,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1598,7 +1598,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1620,7 +1620,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1642,7 +1642,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1664,7 +1664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1686,7 +1686,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32C031K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32C031K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1708,7 +1708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1730,7 +1730,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -1752,7 +1752,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -1774,7 +1774,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1796,7 +1796,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1818,7 +1818,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -1840,7 +1840,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F030RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F030RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -1862,7 +1862,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1884,7 +1884,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1906,7 +1906,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031E6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031E6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1928,7 +1928,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1950,7 +1950,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -1972,7 +1972,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -1994,7 +1994,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2016,7 +2016,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2038,7 +2038,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F031K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F031K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2060,7 +2060,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F038C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F038C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2082,7 +2082,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F038E6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F038E6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2104,7 +2104,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F038F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F038F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2126,7 +2126,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F038G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F038G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2148,7 +2148,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F038K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F038K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2170,7 +2170,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2192,7 +2192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2214,7 +2214,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2236,7 +2236,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2258,7 +2258,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2280,7 +2280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2302,7 +2302,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2324,7 +2324,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2346,7 +2346,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F042T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F042T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2368,7 +2368,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F048C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F048C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2390,7 +2390,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F048G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F048G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2412,7 +2412,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F048T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F048T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2434,7 +2434,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2456,7 +2456,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2478,7 +2478,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2500,7 +2500,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2522,7 +2522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2544,7 +2544,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2566,7 +2566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051R4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051R4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -2588,7 +2588,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2610,7 +2610,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2632,7 +2632,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F051T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F051T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2654,7 +2654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F058C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F058C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2676,7 +2676,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F058R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F058R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2698,7 +2698,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F058T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F058T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2720,7 +2720,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F070C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F070C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2742,7 +2742,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F070CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F070CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2764,7 +2764,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F070F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F070F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -2786,7 +2786,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F070RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F070RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2808,7 +2808,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F071C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F071C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2830,7 +2830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F071CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F071CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2852,7 +2852,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F071RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F071RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2874,7 +2874,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F071V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F071V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2896,7 +2896,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F071VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F071VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2918,7 +2918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2940,7 +2940,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -2962,7 +2962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -2984,7 +2984,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3006,7 +3006,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3028,7 +3028,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F072VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F072VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3050,7 +3050,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F078CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F078CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3072,7 +3072,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F078RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F078RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3094,7 +3094,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F078VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F078VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3116,7 +3116,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3138,7 +3138,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3160,7 +3160,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3182,7 +3182,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3204,7 +3204,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3226,7 +3226,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F091VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F091VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3248,7 +3248,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F098CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F098CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3270,7 +3270,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F098RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F098RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3292,7 +3292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F098VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F098VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3314,7 +3314,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -3336,7 +3336,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -3358,7 +3358,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3380,7 +3380,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3402,7 +3402,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100R4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100R4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -3424,7 +3424,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -3446,7 +3446,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3468,7 +3468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3490,7 +3490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3512,7 +3512,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -3534,7 +3534,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -3556,7 +3556,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3578,7 +3578,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3600,7 +3600,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3622,7 +3622,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -3644,7 +3644,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -3666,7 +3666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3688,7 +3688,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -3710,7 +3710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F100ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F100ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -3732,7 +3732,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -3754,7 +3754,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -3776,7 +3776,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3798,7 +3798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3820,7 +3820,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101R4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101R4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -3842,7 +3842,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -3864,7 +3864,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -3886,7 +3886,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -3908,7 +3908,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -3930,7 +3930,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -3952,7 +3952,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -3974,7 +3974,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -3997,7 +3997,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4020,7 +4020,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101T4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101T4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4042,7 +4042,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4064,7 +4064,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4086,7 +4086,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101TB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101TB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4108,7 +4108,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4130,7 +4130,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4152,7 +4152,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -4174,7 +4174,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -4196,7 +4196,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4218,7 +4218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4241,7 +4241,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4264,7 +4264,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -4286,7 +4286,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -4308,7 +4308,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4330,7 +4330,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101ZF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101ZF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4353,7 +4353,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F101ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F101ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4376,7 +4376,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4398,7 +4398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4420,7 +4420,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4442,7 +4442,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4464,7 +4464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102R4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102R4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4486,7 +4486,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4508,7 +4508,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4530,7 +4530,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F102RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F102RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4552,7 +4552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4577,7 +4577,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4602,7 +4602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4627,7 +4627,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4652,7 +4652,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103R4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103R4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4677,7 +4677,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4702,7 +4702,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4727,7 +4727,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4752,7 +4752,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -4777,7 +4777,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -4802,7 +4802,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4827,7 +4827,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4853,7 +4853,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -4879,7 +4879,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103T4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103T4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -4904,7 +4904,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -4929,7 +4929,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -4954,7 +4954,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103TB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103TB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -4979,7 +4979,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -5004,7 +5004,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5029,7 +5029,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5054,7 +5054,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -5079,7 +5079,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5104,7 +5104,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5130,7 +5130,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5156,7 +5156,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5181,7 +5181,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -5206,7 +5206,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5231,7 +5231,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103ZF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103ZF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5257,7 +5257,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F103ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F103ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5283,7 +5283,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -5305,7 +5305,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5327,7 +5327,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5349,7 +5349,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -5371,7 +5371,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5393,7 +5393,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F105VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F105VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5415,7 +5415,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F107RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F107RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5437,7 +5437,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F107RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F107RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5459,7 +5459,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F107VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F107VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5481,7 +5481,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F107VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F107VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5503,7 +5503,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5526,7 +5526,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5549,7 +5549,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5572,7 +5572,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205RF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205RF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -5595,7 +5595,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -5618,7 +5618,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -5641,7 +5641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5664,7 +5664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5687,7 +5687,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205VF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205VF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -5710,7 +5710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -5733,7 +5733,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5756,7 +5756,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5779,7 +5779,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205ZF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205ZF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -5802,7 +5802,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F205ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F205ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -5825,7 +5825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207IC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207IC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5848,7 +5848,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5871,7 +5871,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207IF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207IF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -5894,7 +5894,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -5917,7 +5917,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -5940,7 +5940,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -5963,7 +5963,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207VF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207VF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -5986,7 +5986,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6009,7 +6009,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -6032,7 +6032,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6055,7 +6055,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207ZF",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207ZF.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xC0000, .kind = .flash },
@@ -6078,7 +6078,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F207ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F207ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6101,7 +6101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6124,7 +6124,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6147,7 +6147,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6170,7 +6170,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6193,7 +6193,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6216,7 +6216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F215ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F215ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6239,7 +6239,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6262,7 +6262,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6285,7 +6285,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6308,7 +6308,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6331,7 +6331,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6354,7 +6354,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F217ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F217ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -6378,7 +6378,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6401,7 +6401,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6424,7 +6424,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6447,7 +6447,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6470,7 +6470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6493,7 +6493,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F301R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F301R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6516,7 +6516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6539,7 +6539,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6562,7 +6562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -6585,7 +6585,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -6608,7 +6608,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6631,7 +6631,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6654,7 +6654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6677,7 +6677,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6700,7 +6700,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -6723,7 +6723,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -6746,7 +6746,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -6769,7 +6769,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6792,7 +6792,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -6815,7 +6815,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -6838,7 +6838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -6861,7 +6861,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6884,7 +6884,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -6907,7 +6907,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F302ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F302ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -6930,7 +6930,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -6954,7 +6954,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -6978,7 +6978,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7002,7 +7002,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7026,7 +7026,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -7050,7 +7050,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7074,7 +7074,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -7098,7 +7098,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7122,7 +7122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7146,7 +7146,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7170,7 +7170,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -7194,7 +7194,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -7218,7 +7218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7242,7 +7242,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7266,7 +7266,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -7290,7 +7290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -7314,7 +7314,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -7338,7 +7338,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F303ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F303ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -7362,7 +7362,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F318C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F318C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7385,7 +7385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F318K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F318K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7408,7 +7408,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F328C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F328C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7432,7 +7432,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -7456,7 +7456,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -7480,7 +7480,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7504,7 +7504,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -7528,7 +7528,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -7552,7 +7552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7576,7 +7576,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -7600,7 +7600,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F334R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F334R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7624,7 +7624,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F358CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F358CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7648,7 +7648,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F358RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F358RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7672,7 +7672,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F358VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F358VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7696,7 +7696,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7719,7 +7719,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7742,7 +7742,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7765,7 +7765,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7788,7 +7788,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7811,7 +7811,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7834,7 +7834,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -7857,7 +7857,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -7880,7 +7880,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F373VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F373VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7903,7 +7903,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F378CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F378CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7926,7 +7926,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F378RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F378RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7949,7 +7949,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F378VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F378VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -7972,7 +7972,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F398VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F398VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -7996,7 +7996,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8019,7 +8019,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8042,7 +8042,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401CD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401CD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -8065,7 +8065,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8088,7 +8088,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8111,7 +8111,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8134,7 +8134,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -8157,7 +8157,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8180,7 +8180,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8203,7 +8203,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8226,7 +8226,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x60000, .kind = .flash },
@@ -8249,7 +8249,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F401VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F401VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8272,7 +8272,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F405OE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F405OE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8297,7 +8297,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F405OG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F405OG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8322,7 +8322,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F405RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F405RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8347,7 +8347,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F405VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F405VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8372,7 +8372,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F405ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F405ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8397,7 +8397,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8422,7 +8422,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8447,7 +8447,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8472,7 +8472,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8497,7 +8497,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8522,7 +8522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F407ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F407ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8547,7 +8547,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -8570,7 +8570,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8593,7 +8593,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -8616,7 +8616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8639,7 +8639,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -8662,7 +8662,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F410TB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F410TB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -8685,7 +8685,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8708,7 +8708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8731,7 +8731,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8754,7 +8754,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8777,7 +8777,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -8800,7 +8800,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F411VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F411VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8823,7 +8823,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8846,7 +8846,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8869,7 +8869,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8892,7 +8892,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8915,7 +8915,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8938,7 +8938,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -8961,7 +8961,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -8984,7 +8984,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F412ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F412ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9007,7 +9007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9030,7 +9030,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413CH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413CH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9053,7 +9053,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413MG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413MG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9076,7 +9076,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413MH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413MH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9099,7 +9099,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9122,7 +9122,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413RH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413RH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9145,7 +9145,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9168,7 +9168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413VH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413VH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9191,7 +9191,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9214,7 +9214,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F413ZH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F413ZH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9237,7 +9237,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F415OG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F415OG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9261,7 +9261,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F415RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F415RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9285,7 +9285,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F415VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F415VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9309,7 +9309,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F415ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F415ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9333,7 +9333,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -9357,7 +9357,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9381,7 +9381,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -9405,7 +9405,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9429,7 +9429,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -9453,7 +9453,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F417ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F417ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9477,7 +9477,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F423CH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F423CH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9500,7 +9500,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F423MH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F423MH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9523,7 +9523,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F423RH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F423RH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9546,7 +9546,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F423VH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F423VH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9569,7 +9569,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F423ZH",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F423ZH.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x180000, .kind = .flash },
@@ -9592,7 +9592,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9616,7 +9616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9642,7 +9642,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9666,7 +9666,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9692,7 +9692,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9716,7 +9716,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9742,7 +9742,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9766,7 +9766,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F427ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F427ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9792,7 +9792,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9816,7 +9816,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9842,7 +9842,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429BE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429BE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -9866,7 +9866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9890,7 +9890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9916,7 +9916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -9940,7 +9940,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9964,7 +9964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -9990,7 +9990,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10014,7 +10014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10038,7 +10038,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10064,7 +10064,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10088,7 +10088,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10112,7 +10112,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10138,7 +10138,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10162,7 +10162,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10186,7 +10186,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F429ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F429ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10212,7 +10212,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10238,7 +10238,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10262,7 +10262,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10288,7 +10288,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10312,7 +10312,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10338,7 +10338,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10362,7 +10362,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F437ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F437ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10388,7 +10388,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10414,7 +10414,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10438,7 +10438,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10464,7 +10464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10488,7 +10488,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10514,7 +10514,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10538,7 +10538,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10564,7 +10564,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10588,7 +10588,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10614,7 +10614,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10638,7 +10638,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F439ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F439ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10664,7 +10664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -10687,7 +10687,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10710,7 +10710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -10733,7 +10733,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10756,7 +10756,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -10779,7 +10779,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10802,7 +10802,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -10825,7 +10825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F446ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F446ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10848,7 +10848,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469AE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469AE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10872,7 +10872,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10896,7 +10896,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10922,7 +10922,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469BE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469BE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -10946,7 +10946,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10970,7 +10970,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -10996,7 +10996,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11020,7 +11020,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11044,7 +11044,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11070,7 +11070,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11094,7 +11094,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11118,7 +11118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11144,7 +11144,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11168,7 +11168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11192,7 +11192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11218,7 +11218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11242,7 +11242,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11266,7 +11266,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F469ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F469ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11292,7 +11292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11316,7 +11316,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11342,7 +11342,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11366,7 +11366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11392,7 +11392,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11416,7 +11416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11442,7 +11442,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11466,7 +11466,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11492,7 +11492,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11516,7 +11516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11542,7 +11542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11566,7 +11566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F479ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F479ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -11592,7 +11592,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722IC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722IC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11616,7 +11616,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11640,7 +11640,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11664,7 +11664,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11688,7 +11688,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11712,7 +11712,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11736,7 +11736,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11760,7 +11760,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F722ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F722ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11784,7 +11784,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723IC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723IC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11808,7 +11808,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11832,7 +11832,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11856,7 +11856,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11880,7 +11880,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -11904,7 +11904,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F723ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F723ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -11928,7 +11928,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F730I8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F730I8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -11952,7 +11952,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F730R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F730R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -11976,7 +11976,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F730V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F730V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -12000,7 +12000,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F730Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F730Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -12024,7 +12024,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F732IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F732IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12048,7 +12048,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F732RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F732RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12072,7 +12072,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F732VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F732VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12096,7 +12096,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F732ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F732ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12120,7 +12120,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F733IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F733IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12144,7 +12144,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F733VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F733VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12168,7 +12168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F733ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F733ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12192,7 +12192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12216,7 +12216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12240,7 +12240,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12264,7 +12264,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12288,7 +12288,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12312,7 +12312,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F745ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F745ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12336,7 +12336,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746BE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746BE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12360,7 +12360,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12384,7 +12384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12408,7 +12408,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12432,7 +12432,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12456,7 +12456,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12480,7 +12480,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12504,7 +12504,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12528,7 +12528,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -12552,7 +12552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F746ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F746ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12576,7 +12576,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F750N8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F750N8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -12600,7 +12600,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F750V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F750V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -12624,7 +12624,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F750Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F750Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -12648,7 +12648,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F756BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F756BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12672,7 +12672,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F756IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F756IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12696,7 +12696,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F756NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F756NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12720,7 +12720,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F756VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F756VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12744,7 +12744,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F756ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F756ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12768,7 +12768,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12792,7 +12792,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -12816,7 +12816,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12840,7 +12840,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -12864,7 +12864,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12888,7 +12888,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -12912,7 +12912,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12936,7 +12936,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -12960,7 +12960,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -12984,7 +12984,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F765ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F765ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13008,7 +13008,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13032,7 +13032,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13056,7 +13056,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13080,7 +13080,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13104,7 +13104,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13128,7 +13128,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13152,7 +13152,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13176,7 +13176,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13200,7 +13200,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13224,7 +13224,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F767ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F767ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13248,7 +13248,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F768AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F768AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13272,7 +13272,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13296,7 +13296,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13320,7 +13320,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13344,7 +13344,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13368,7 +13368,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13392,7 +13392,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13416,7 +13416,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -13440,7 +13440,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F769NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F769NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13464,7 +13464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F777BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F777BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13488,7 +13488,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F777II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F777II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13512,7 +13512,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F777NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F777NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13536,7 +13536,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F777VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F777VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13560,7 +13560,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F777ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F777ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13584,7 +13584,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F778AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F778AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13608,7 +13608,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F779AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F779AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13632,7 +13632,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F779BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F779BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13656,7 +13656,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F779II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F779II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13680,7 +13680,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32F779NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32F779NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -13703,7 +13703,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13725,7 +13725,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -13747,7 +13747,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13769,7 +13769,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030J6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030J6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13791,7 +13791,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13813,7 +13813,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G030K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G030K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -13835,7 +13835,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -13857,7 +13857,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13879,7 +13879,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -13901,7 +13901,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -13923,7 +13923,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -13945,7 +13945,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031F8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031F8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -13967,7 +13967,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -13989,7 +13989,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14011,7 +14011,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14033,7 +14033,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031J4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031J4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -14055,7 +14055,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031J6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031J6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14077,7 +14077,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -14099,7 +14099,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14121,7 +14121,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14143,7 +14143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G031Y8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G031Y8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14165,7 +14165,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14187,7 +14187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14209,7 +14209,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14231,7 +14231,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041F8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041F8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14253,7 +14253,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14275,7 +14275,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14297,7 +14297,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041J6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041J6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14319,7 +14319,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14341,7 +14341,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14363,7 +14363,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G041Y8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G041Y8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14385,7 +14385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G050C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G050C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14407,7 +14407,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G050C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G050C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14429,7 +14429,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G050F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G050F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14451,7 +14451,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G050K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G050K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14473,7 +14473,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G050K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G050K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14495,7 +14495,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14517,7 +14517,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14539,7 +14539,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14561,7 +14561,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051F8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051F8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14583,7 +14583,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14605,7 +14605,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14627,7 +14627,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14649,7 +14649,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G051K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G051K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14671,7 +14671,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14693,7 +14693,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14715,7 +14715,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14737,7 +14737,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061F8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061F8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14759,7 +14759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14781,7 +14781,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14803,7 +14803,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14825,7 +14825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G061K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G061K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14847,7 +14847,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G070CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G070CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14869,7 +14869,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G070KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G070KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14891,7 +14891,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G070RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G070RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14913,7 +14913,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -14935,7 +14935,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -14957,7 +14957,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -14979,7 +14979,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071EB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071EB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15001,7 +15001,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -15023,7 +15023,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -15045,7 +15045,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071GB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071GB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15067,7 +15067,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -15089,7 +15089,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -15111,7 +15111,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15133,7 +15133,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -15155,7 +15155,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -15177,7 +15177,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G071RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G071RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15199,7 +15199,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G081CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G081CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15221,7 +15221,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G081EB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G081EB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15243,7 +15243,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G081GB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G081GB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15265,7 +15265,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G081KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G081KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15287,7 +15287,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G081RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G081RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15309,7 +15309,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B0CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B0CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15332,7 +15332,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B0KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B0KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15355,7 +15355,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B0RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B0RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15378,7 +15378,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B0VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B0VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15401,7 +15401,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15423,7 +15423,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15445,7 +15445,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15468,7 +15468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15490,7 +15490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15512,7 +15512,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15535,7 +15535,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15557,7 +15557,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15579,7 +15579,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15602,7 +15602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15625,7 +15625,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15647,7 +15647,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15669,7 +15669,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15692,7 +15692,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -15714,7 +15714,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15736,7 +15736,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0B1VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0B1VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15759,7 +15759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15781,7 +15781,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15804,7 +15804,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15826,7 +15826,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15849,7 +15849,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15871,7 +15871,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15894,7 +15894,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15917,7 +15917,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15939,7 +15939,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15962,7 +15962,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -15984,7 +15984,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G0C1VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G0C1VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16008,7 +16008,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -16034,7 +16034,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16060,7 +16060,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16086,7 +16086,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -16112,7 +16112,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16138,7 +16138,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16164,7 +16164,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431M6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431M6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -16190,7 +16190,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431M8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431M8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16216,7 +16216,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16242,7 +16242,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -16268,7 +16268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16294,7 +16294,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16320,7 +16320,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431V6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431V6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -16346,7 +16346,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -16372,7 +16372,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G431VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G431VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16398,7 +16398,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G441CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G441CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16424,7 +16424,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G441KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G441KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16450,7 +16450,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G441MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G441MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16476,7 +16476,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G441RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G441RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16502,7 +16502,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G441VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G441VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16528,7 +16528,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16554,7 +16554,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16580,7 +16580,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16606,7 +16606,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16632,7 +16632,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16658,7 +16658,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16684,7 +16684,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16710,7 +16710,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16736,7 +16736,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16762,7 +16762,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G471VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G471VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16788,7 +16788,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16814,7 +16814,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16840,7 +16840,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16866,7 +16866,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16892,7 +16892,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16918,7 +16918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -16944,7 +16944,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473PB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473PB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -16970,7 +16970,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473PC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473PC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -16996,7 +16996,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473PE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473PE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17022,7 +17022,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473QB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473QB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17048,7 +17048,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17074,7 +17074,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17100,7 +17100,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17126,7 +17126,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17152,7 +17152,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17178,7 +17178,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17204,7 +17204,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17230,7 +17230,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G473VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G473VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17256,7 +17256,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17282,7 +17282,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17308,7 +17308,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17334,7 +17334,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17360,7 +17360,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17386,7 +17386,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17412,7 +17412,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474PB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474PB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17438,7 +17438,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474PC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474PC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17464,7 +17464,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474PE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474PE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17490,7 +17490,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474QB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474QB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17516,7 +17516,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17542,7 +17542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17568,7 +17568,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17594,7 +17594,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17620,7 +17620,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17646,7 +17646,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -17672,7 +17672,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -17698,7 +17698,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G474VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G474VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17724,7 +17724,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17750,7 +17750,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17776,7 +17776,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483PE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483PE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17802,7 +17802,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17828,7 +17828,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17854,7 +17854,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G483VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G483VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17880,7 +17880,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17906,7 +17906,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17932,7 +17932,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484PE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484PE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17958,7 +17958,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -17984,7 +17984,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18010,7 +18010,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G484VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G484VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18036,7 +18036,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18062,7 +18062,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18088,7 +18088,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18114,7 +18114,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18140,7 +18140,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18166,7 +18166,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18192,7 +18192,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18218,7 +18218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18244,7 +18244,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18270,7 +18270,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G491VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G491VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18296,7 +18296,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G4A1CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G4A1CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18322,7 +18322,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G4A1KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G4A1KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18348,7 +18348,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G4A1ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G4A1ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18374,7 +18374,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G4A1RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G4A1RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18400,7 +18400,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32G4A1VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32G4A1VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18426,7 +18426,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H503CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H503CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -18451,7 +18451,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H503EB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H503EB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -18476,7 +18476,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H503KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H503KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -18501,7 +18501,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H503RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H503RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -18526,7 +18526,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -18552,7 +18552,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18578,7 +18578,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523HE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523HE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18604,7 +18604,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -18630,7 +18630,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18656,7 +18656,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -18682,7 +18682,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18708,7 +18708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -18734,7 +18734,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H523ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H523ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18760,7 +18760,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H533CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H533CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18786,7 +18786,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H533HE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H533HE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18812,7 +18812,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H533RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H533RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18838,7 +18838,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H533VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H533VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18864,7 +18864,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H533ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H533ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -18890,7 +18890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18916,7 +18916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -18942,7 +18942,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -18968,7 +18968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -18994,7 +18994,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19020,7 +19020,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19046,7 +19046,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19072,7 +19072,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19098,7 +19098,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19124,7 +19124,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H562ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H562ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19150,7 +19150,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19176,7 +19176,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19202,7 +19202,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19228,7 +19228,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19254,7 +19254,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563MI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563MI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19280,7 +19280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19306,7 +19306,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19332,7 +19332,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19358,7 +19358,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19384,7 +19384,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -19410,7 +19410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H563ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H563ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19436,7 +19436,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19462,7 +19462,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19488,7 +19488,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573MI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573MI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19514,7 +19514,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19540,7 +19540,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19566,7 +19566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H573ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H573ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -19592,7 +19592,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H723VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H723VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19619,7 +19619,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H723VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H723VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19646,7 +19646,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H723ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H723ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19673,7 +19673,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H723ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H723ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19700,7 +19700,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725AE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725AE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19727,7 +19727,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19754,7 +19754,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725IE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725IE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19781,7 +19781,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19808,7 +19808,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19835,7 +19835,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19862,7 +19862,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19889,7 +19889,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19916,7 +19916,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19943,7 +19943,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H725ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H725ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19970,7 +19970,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H730AB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H730AB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -19997,7 +19997,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H730IB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H730IB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20024,7 +20024,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H730VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H730VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20051,7 +20051,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H730ZB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H730ZB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20078,7 +20078,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H733VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H733VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20105,7 +20105,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H733ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H733ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20132,7 +20132,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H735AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H735AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20159,7 +20159,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H735IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H735IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20186,7 +20186,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H735RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H735RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20213,7 +20213,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H735VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H735VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20240,7 +20240,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H735ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H735ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20267,7 +20267,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20296,7 +20296,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20325,7 +20325,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20354,7 +20354,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20383,7 +20383,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20412,7 +20412,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20441,7 +20441,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20470,7 +20470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20499,7 +20499,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742XG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742XG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20528,7 +20528,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20557,7 +20557,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20586,7 +20586,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H742ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H742ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20615,7 +20615,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20643,7 +20643,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20671,7 +20671,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20699,7 +20699,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20727,7 +20727,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20755,7 +20755,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20783,7 +20783,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20811,7 +20811,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20839,7 +20839,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743XG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743XG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20867,7 +20867,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20895,7 +20895,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20923,7 +20923,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H743ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H743ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20951,7 +20951,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -20979,7 +20979,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21007,7 +21007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21035,7 +21035,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21063,7 +21063,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745XG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745XG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21091,7 +21091,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21119,7 +21119,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21147,7 +21147,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H745ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H745ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21175,7 +21175,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21203,7 +21203,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21231,7 +21231,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747BG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747BG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21259,7 +21259,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21287,7 +21287,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21315,7 +21315,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21343,7 +21343,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747XG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747XG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21371,7 +21371,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21399,7 +21399,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H747ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H747ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21427,7 +21427,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H750IB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H750IB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21454,7 +21454,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H750VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H750VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21481,7 +21481,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H750XB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H750XB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21508,7 +21508,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H750ZB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H750ZB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21535,7 +21535,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21563,7 +21563,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21591,7 +21591,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21619,7 +21619,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21647,7 +21647,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21675,7 +21675,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H753ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H753ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21703,7 +21703,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H755BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H755BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21731,7 +21731,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H755II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H755II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21759,7 +21759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H755XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H755XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21787,7 +21787,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H755ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H755ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21815,7 +21815,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H757AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H757AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21843,7 +21843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H757BI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H757BI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21871,7 +21871,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H757II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H757II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21899,7 +21899,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H757XI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H757XI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21927,7 +21927,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H757ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H757ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21955,7 +21955,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -21981,7 +21981,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22007,7 +22007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3IG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3IG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22033,7 +22033,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22059,7 +22059,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3LG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3LG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22085,7 +22085,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3LI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3LI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22111,7 +22111,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3NG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3NG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22137,7 +22137,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22163,7 +22163,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22189,7 +22189,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22215,7 +22215,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22241,7 +22241,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22267,7 +22267,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22293,7 +22293,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22319,7 +22319,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7A3ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7A3ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22345,7 +22345,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B0AB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B0AB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22370,7 +22370,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B0IB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B0IB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22395,7 +22395,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B0RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B0RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22420,7 +22420,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B0VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B0VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22445,7 +22445,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B0ZB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B0ZB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22470,7 +22470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22496,7 +22496,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3II",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3II.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22522,7 +22522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3LI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3LI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22548,7 +22548,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22574,7 +22574,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22600,7 +22600,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22626,7 +22626,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22652,7 +22652,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7B3ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7B3ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x10000, .kind = .ram },
@@ -22678,7 +22678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3A8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3A8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22708,7 +22708,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3I8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3I8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22738,7 +22738,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3L8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3L8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22768,7 +22768,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22798,7 +22798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22828,7 +22828,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R3Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R3Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22858,7 +22858,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R7A8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R7A8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22888,7 +22888,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R7I8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R7I8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22918,7 +22918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R7L8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R7L8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22948,7 +22948,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7R7Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7R7Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -22978,7 +22978,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3A8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3A8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23008,7 +23008,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3I8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3I8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23038,7 +23038,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3L8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3L8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23068,7 +23068,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23098,7 +23098,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23128,7 +23128,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S3Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S3Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23158,7 +23158,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S7A8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S7A8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23188,7 +23188,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S7I8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S7I8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23218,7 +23218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S7L8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S7L8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23248,7 +23248,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32H7S7Z8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32H7S7Z8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x0, .length = 0x30000, .kind = .ram },
@@ -23277,7 +23277,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23299,7 +23299,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23321,7 +23321,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23343,7 +23343,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -23365,7 +23365,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -23387,7 +23387,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L010RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L010RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -23409,7 +23409,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011D3",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011D3.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
@@ -23431,7 +23431,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011D4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011D4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23453,7 +23453,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011E3",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011E3.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
@@ -23475,7 +23475,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011E4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011E4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23497,7 +23497,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011F3",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011F3.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
@@ -23519,7 +23519,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23541,7 +23541,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011G3",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011G3.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
@@ -23563,7 +23563,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23585,7 +23585,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011K3",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011K3.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x2000, .kind = .flash },
@@ -23607,7 +23607,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L011K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L011K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23629,7 +23629,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L021D4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L021D4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23651,7 +23651,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L021F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L021F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23673,7 +23673,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L021G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L021G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23695,7 +23695,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L021K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L021K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23717,7 +23717,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23739,7 +23739,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23761,7 +23761,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031E4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031E4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23783,7 +23783,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031E6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031E6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23805,7 +23805,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23827,7 +23827,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23849,7 +23849,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031G4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031G4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23871,7 +23871,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23893,7 +23893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23915,7 +23915,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L031K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L031K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23937,7 +23937,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041C4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041C4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -23959,7 +23959,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -23981,7 +23981,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041E6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041E6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24003,7 +24003,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24025,7 +24025,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24047,7 +24047,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L041K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L041K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24069,7 +24069,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24091,7 +24091,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24113,7 +24113,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24135,7 +24135,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24157,7 +24157,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24179,7 +24179,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24201,7 +24201,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24223,7 +24223,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L051T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L051T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24245,7 +24245,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24267,7 +24267,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24289,7 +24289,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24311,7 +24311,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24333,7 +24333,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24355,7 +24355,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24377,7 +24377,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052T6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052T6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24399,7 +24399,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L052T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L052T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24421,7 +24421,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L053C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L053C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24443,7 +24443,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L053C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L053C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24465,7 +24465,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L053R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L053R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -24487,7 +24487,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L053R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L053R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24509,7 +24509,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L062C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L062C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24531,7 +24531,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L062K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L062K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24553,7 +24553,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L063C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L063C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24575,7 +24575,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L063R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L063R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24597,7 +24597,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24619,7 +24619,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24641,7 +24641,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24663,7 +24663,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24685,7 +24685,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24707,7 +24707,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071KZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071KZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24729,7 +24729,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24751,7 +24751,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071RZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071RZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24773,7 +24773,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24795,7 +24795,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24817,7 +24817,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L071VZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L071VZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24839,7 +24839,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24861,7 +24861,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24883,7 +24883,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24905,7 +24905,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072KZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072KZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24927,7 +24927,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -24949,7 +24949,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072RZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072RZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -24971,7 +24971,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -24993,7 +24993,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25015,7 +25015,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L072VZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L072VZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25037,7 +25037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25059,7 +25059,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25081,7 +25081,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25103,7 +25103,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073RZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073RZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25125,7 +25125,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25147,7 +25147,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25169,7 +25169,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L073VZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L073VZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25191,7 +25191,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L081CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L081CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25213,7 +25213,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L081CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L081CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25235,7 +25235,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L081KZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L081KZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25257,7 +25257,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L082CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L082CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25279,7 +25279,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L082KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L082KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25301,7 +25301,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L082KZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L082KZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25323,7 +25323,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25345,7 +25345,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083CZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083CZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25367,7 +25367,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25389,7 +25389,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083RZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083RZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25411,7 +25411,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25433,7 +25433,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25455,7 +25455,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L083VZ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L083VZ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25477,7 +25477,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25499,7 +25499,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100C6-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100C6-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25521,7 +25521,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25543,7 +25543,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100R8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100R8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25565,7 +25565,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25587,7 +25587,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100RB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100RB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25609,7 +25609,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L100RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L100RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -25631,7 +25631,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25653,7 +25653,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151C6-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151C6-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25675,7 +25675,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25697,7 +25697,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151C8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151C8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25719,7 +25719,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25741,7 +25741,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151CB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151CB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25763,7 +25763,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -25785,7 +25785,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -25807,7 +25807,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151QD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151QD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -25830,7 +25830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -25853,7 +25853,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25875,7 +25875,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151R6-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151R6-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -25897,7 +25897,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25919,7 +25919,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151R8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151R8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -25941,7 +25941,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25963,7 +25963,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -25985,7 +25985,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26007,7 +26007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26029,7 +26029,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26052,7 +26052,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26075,7 +26075,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151UC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151UC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26097,7 +26097,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26119,7 +26119,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151V8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151V8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26141,7 +26141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26163,7 +26163,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26185,7 +26185,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26207,7 +26207,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26229,7 +26229,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26252,7 +26252,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VD-X",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VD-X.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26275,7 +26275,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26298,7 +26298,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26320,7 +26320,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26343,7 +26343,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L151ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L151ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26366,7 +26366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -26388,7 +26388,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152C6-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152C6-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -26410,7 +26410,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26432,7 +26432,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152C8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152C8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26454,7 +26454,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26476,7 +26476,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152CB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152CB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26498,7 +26498,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26520,7 +26520,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26542,7 +26542,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152QD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152QD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26565,7 +26565,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26588,7 +26588,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -26610,7 +26610,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152R6-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152R6-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -26632,7 +26632,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26654,7 +26654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152R8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152R8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26676,7 +26676,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26698,7 +26698,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26720,7 +26720,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26742,7 +26742,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26764,7 +26764,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26787,7 +26787,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26810,7 +26810,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152UC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152UC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26832,7 +26832,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152V8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152V8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26854,7 +26854,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152V8-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152V8-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -26876,7 +26876,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26898,7 +26898,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VB-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VB-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -26920,7 +26920,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26942,7 +26942,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -26964,7 +26964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -26987,7 +26987,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VD-X",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VD-X.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27010,7 +27010,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27033,7 +27033,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27055,7 +27055,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27078,7 +27078,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L152ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L152ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27101,7 +27101,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27123,7 +27123,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162QD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162QD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27146,7 +27146,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27168,7 +27168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162RC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162RC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27190,7 +27190,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162RD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162RD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27213,7 +27213,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27236,7 +27236,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27258,7 +27258,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162VC-A",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162VC-A.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27280,7 +27280,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162VD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162VD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27303,7 +27303,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162VD-X",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162VD-X.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27326,7 +27326,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27349,7 +27349,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27371,7 +27371,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162ZD",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162ZD.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x30000, .kind = .flash },
@@ -27394,7 +27394,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L162ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L162ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27418,7 +27418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -27443,7 +27443,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27468,7 +27468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -27493,7 +27493,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27518,7 +27518,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -27543,7 +27543,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27568,7 +27568,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412T8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412T8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -27593,7 +27593,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L412TB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L412TB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27618,7 +27618,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L422CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L422CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27643,7 +27643,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L422KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L422KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27668,7 +27668,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L422RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L422RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27693,7 +27693,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L422TB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L422TB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27718,7 +27718,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27743,7 +27743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27768,7 +27768,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27793,7 +27793,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27818,7 +27818,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27843,7 +27843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27868,7 +27868,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L431VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L431VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27893,7 +27893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L432KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L432KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27918,7 +27918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L432KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L432KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27943,7 +27943,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L433CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L433CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -27968,7 +27968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L433CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L433CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -27993,7 +27993,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L433RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L433RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -28018,7 +28018,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L433RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L433RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28043,7 +28043,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L433VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L433VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28068,7 +28068,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L442KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L442KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28093,7 +28093,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L443CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L443CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28118,7 +28118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L443RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L443RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28143,7 +28143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L443VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L443VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28168,7 +28168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28193,7 +28193,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28218,7 +28218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28243,7 +28243,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28268,7 +28268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28293,7 +28293,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L451VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L451VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28318,7 +28318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28343,7 +28343,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28368,7 +28368,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28393,7 +28393,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28418,7 +28418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28443,7 +28443,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L452VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L452VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28468,7 +28468,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L462CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L462CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28493,7 +28493,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L462RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L462RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28518,7 +28518,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L462VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L462VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28543,7 +28543,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28568,7 +28568,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28593,7 +28593,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28618,7 +28618,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28643,7 +28643,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28668,7 +28668,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28693,7 +28693,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28718,7 +28718,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L471ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L471ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28743,7 +28743,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -28768,7 +28768,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28793,7 +28793,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28818,7 +28818,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -28843,7 +28843,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28868,7 +28868,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L475VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L475VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28893,7 +28893,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476JE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476JE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28918,7 +28918,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476JG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476JG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28943,7 +28943,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -28968,7 +28968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476MG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476MG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -28993,7 +28993,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29018,7 +29018,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29043,7 +29043,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -29068,7 +29068,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29093,7 +29093,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29118,7 +29118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -29143,7 +29143,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29168,7 +29168,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29193,7 +29193,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29218,7 +29218,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L476ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L476ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29243,7 +29243,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L486JG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L486JG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29268,7 +29268,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L486QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L486QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29293,7 +29293,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L486RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L486RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29318,7 +29318,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L486VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L486VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29343,7 +29343,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L486ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L486ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29368,7 +29368,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496AE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496AE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29394,7 +29394,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29420,7 +29420,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29446,7 +29446,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29472,7 +29472,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29498,7 +29498,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29524,7 +29524,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29550,7 +29550,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29576,7 +29576,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496WG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496WG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29602,7 +29602,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -29628,7 +29628,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L496ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L496ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29654,7 +29654,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4A6AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4A6AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29680,7 +29680,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4A6QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4A6QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29706,7 +29706,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4A6RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4A6RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29732,7 +29732,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4A6VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4A6VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29758,7 +29758,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4A6ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4A6ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29784,7 +29784,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5AE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5AE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29807,7 +29807,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -29830,7 +29830,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29853,7 +29853,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -29876,7 +29876,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29899,7 +29899,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -29922,7 +29922,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29945,7 +29945,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -29968,7 +29968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -29991,7 +29991,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30014,7 +30014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -30037,7 +30037,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4P5ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4P5ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30060,7 +30060,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30083,7 +30083,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30106,7 +30106,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30129,7 +30129,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30152,7 +30152,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30175,7 +30175,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4Q5ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4Q5ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30198,7 +30198,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30221,7 +30221,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30244,7 +30244,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30267,7 +30267,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30290,7 +30290,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30313,7 +30313,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30336,7 +30336,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30359,7 +30359,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R5ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R5ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30382,7 +30382,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R7AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R7AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30405,7 +30405,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R7VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R7VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30428,7 +30428,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R7ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R7ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30451,7 +30451,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30474,7 +30474,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30497,7 +30497,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30520,7 +30520,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30543,7 +30543,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -30566,7 +30566,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4R9ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4R9ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30589,7 +30589,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S5AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S5AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30612,7 +30612,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S5QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S5QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30635,7 +30635,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S5VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S5VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30658,7 +30658,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S5ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S5ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30681,7 +30681,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S7AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S7AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30704,7 +30704,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S7VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S7VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30727,7 +30727,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S7ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S7ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30750,7 +30750,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S9AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S9AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30773,7 +30773,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S9VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S9VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30796,7 +30796,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L4S9ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L4S9ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -30819,7 +30819,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -30842,7 +30842,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -30865,7 +30865,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -30888,7 +30888,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552QC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552QC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -30911,7 +30911,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -30934,7 +30934,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -30957,7 +30957,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -30980,7 +30980,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31003,7 +31003,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31026,7 +31026,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552ZC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552ZC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31049,7 +31049,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L552ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L552ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31072,7 +31072,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31095,7 +31095,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562ME",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562ME.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31118,7 +31118,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562QE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562QE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31141,7 +31141,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31164,7 +31164,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31187,7 +31187,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32L562ZE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32L562ZE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -31209,7 +31209,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031C6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031C6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -31231,7 +31231,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31253,7 +31253,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031F4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031F4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -31275,7 +31275,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031F6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031F6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -31297,7 +31297,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031F8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031F8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31319,7 +31319,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031G6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031G6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -31341,7 +31341,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031G8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031G8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31363,7 +31363,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031K4",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031K4.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x4000, .kind = .flash },
@@ -31385,7 +31385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031K6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031K6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -31407,7 +31407,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31429,7 +31429,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031R6",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031R6.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x8000, .kind = .flash },
@@ -31451,7 +31451,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U031R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U031R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31473,7 +31473,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31495,7 +31495,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31517,7 +31517,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31539,7 +31539,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073H8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073H8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31561,7 +31561,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073HB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073HB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31583,7 +31583,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073HC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073HC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31605,7 +31605,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073K8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073K8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31627,7 +31627,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073KB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073KB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31649,7 +31649,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31671,7 +31671,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073M8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073M8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31693,7 +31693,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073MB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073MB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31715,7 +31715,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31737,7 +31737,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073R8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073R8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31759,7 +31759,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31781,7 +31781,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U073RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U073RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31803,7 +31803,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U083CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U083CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31825,7 +31825,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U083HC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U083HC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31847,7 +31847,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U083KC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U083KC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31869,7 +31869,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U083MC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U083MC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31891,7 +31891,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U083RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U083RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31914,7 +31914,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -31939,7 +31939,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -31964,7 +31964,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -31989,7 +31989,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535JE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535JE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32014,7 +32014,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535NC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535NC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -32039,7 +32039,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32064,7 +32064,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535RB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535RB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -32089,7 +32089,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -32114,7 +32114,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32139,7 +32139,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -32164,7 +32164,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U535VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U535VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32189,7 +32189,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U545CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U545CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32214,7 +32214,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U545JE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U545JE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32239,7 +32239,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U545NE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U545NE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32264,7 +32264,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U545RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U545RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32289,7 +32289,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U545VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U545VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -32314,7 +32314,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575AG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575AG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32340,7 +32340,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32366,7 +32366,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32392,7 +32392,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575CI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575CI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32418,7 +32418,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575OG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575OG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32444,7 +32444,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575OI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575OI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32470,7 +32470,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575QG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575QG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32496,7 +32496,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32522,7 +32522,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32548,7 +32548,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32574,7 +32574,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32600,7 +32600,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32626,7 +32626,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575ZG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575ZG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -32652,7 +32652,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U575ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U575ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32678,7 +32678,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32704,7 +32704,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585CI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585CI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32730,7 +32730,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585OI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585OI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32756,7 +32756,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32782,7 +32782,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32808,7 +32808,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32834,7 +32834,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U585ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U585ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32860,7 +32860,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595AI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595AI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32887,7 +32887,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595AJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595AJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -32914,7 +32914,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32941,7 +32941,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595QJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595QJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -32968,7 +32968,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595RI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595RI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -32995,7 +32995,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595RJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595RJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33022,7 +33022,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33049,7 +33049,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33076,7 +33076,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33103,7 +33103,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U595ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U595ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33130,7 +33130,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599BJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599BJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33157,7 +33157,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599NI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599NI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33184,7 +33184,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599NJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599NJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33211,7 +33211,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33238,7 +33238,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33265,7 +33265,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33292,7 +33292,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U599ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U599ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33319,7 +33319,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5AJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5AJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33346,7 +33346,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5QI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5QI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33373,7 +33373,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5QJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5QJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33400,7 +33400,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5RJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5RJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33427,7 +33427,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33454,7 +33454,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A5ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A5ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33481,7 +33481,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A9BJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A9BJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33508,7 +33508,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A9NJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A9NJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33535,7 +33535,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A9VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A9VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33562,7 +33562,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5A9ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5A9ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33589,7 +33589,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F7VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F7VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33617,7 +33617,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F7VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F7VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33645,7 +33645,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9BJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9BJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33673,7 +33673,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9NJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9NJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33701,7 +33701,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9VI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9VI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33729,7 +33729,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33757,7 +33757,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9ZI",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9ZI.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -33785,7 +33785,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5F9ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5F9ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33813,7 +33813,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5G7VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5G7VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33841,7 +33841,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5G9BJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5G9BJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33869,7 +33869,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5G9NJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5G9NJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33897,7 +33897,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5G9VJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5G9VJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33925,7 +33925,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32U5G9ZJ",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32U5G9ZJ.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x200000, .kind = .flash },
@@ -33953,7 +33953,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB10CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB10CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x50000, .kind = .flash },
@@ -33980,7 +33980,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB15CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB15CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x50000, .kind = .flash },
@@ -34007,7 +34007,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB30CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB30CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34034,7 +34034,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB35CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB35CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34061,7 +34061,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB35CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB35CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34088,7 +34088,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB50CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB50CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34115,7 +34115,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34142,7 +34142,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34169,7 +34169,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34196,7 +34196,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55RC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55RC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34223,7 +34223,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55RE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55RE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34250,7 +34250,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55RG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55RG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34277,7 +34277,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55VC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55VC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34304,7 +34304,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55VE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55VE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34331,7 +34331,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55VG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55VG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34358,7 +34358,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WB55VY",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WB55VY.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0xA0000, .kind = .flash },
@@ -34385,7 +34385,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA50KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA50KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34408,7 +34408,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA50KG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA50KG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34431,7 +34431,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA52CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA52CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34454,7 +34454,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA52CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA52CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34477,7 +34477,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA52KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA52KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34500,7 +34500,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA52KG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA52KG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34523,7 +34523,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA54CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA54CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34546,7 +34546,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA54CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA54CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34569,7 +34569,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA54KE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA54KE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34592,7 +34592,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA54KG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA54KG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34615,7 +34615,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55CE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55CE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34638,7 +34638,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55CG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55CG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34661,7 +34661,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55HE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55HE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34684,7 +34684,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55HG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55HG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34707,7 +34707,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55UE",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55UE.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x80000, .kind = .flash },
@@ -34730,7 +34730,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WBA55UG",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WBA55UG.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x100000, .kind = .flash },
@@ -34752,7 +34752,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WL54CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WL54CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34775,7 +34775,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WL54JC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WL54JC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34798,7 +34798,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WL55CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WL55CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34821,7 +34821,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WL55JC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WL55JC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34844,7 +34844,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -34867,7 +34867,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -34890,7 +34890,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34913,7 +34913,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4J8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4J8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -34936,7 +34936,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4JB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4JB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -34959,7 +34959,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE4JC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE4JC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -34982,7 +34982,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5C8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5C8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -35005,7 +35005,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5CB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5CB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -35028,7 +35028,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5CC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5CC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },
@@ -35051,7 +35051,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5J8",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5J8.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x10000, .kind = .flash },
@@ -35074,7 +35074,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5JB",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5JB.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x20000, .kind = .flash },
@@ -35097,7 +35097,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .chip = .{
             .name = "STM32WLE5JC",
             .register_definition = .{
-                .zig = b.path("src/chips/STM32WLE5JC.zig"),
+                .embassy = embassy,
             },
             .memory_regions = &.{
                 .{ .offset = 0x8000000, .length = 0x40000, .kind = .flash },

@@ -8,7 +8,6 @@ const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const file_size_max = 100 * 1024 * 1024;
 pub const std_options = std.Options{
     .log_level = .warn,
 };
@@ -120,21 +119,15 @@ fn main_impl() anyerror!void {
         return;
     }
 
-    // TODO: if format not specified, try using file extension
-    const text = if (args.input_path) |input_path| blk: {
-        break :blk try std.fs.cwd().readFileAlloc(allocator, input_path, file_size_max);
-    } else blk: {
-        const stdin = std.io.getStdIn().reader().any();
-        break :blk try stdin.readAllAlloc(allocator, file_size_max);
-    };
-    defer allocator.free(text);
+    const input_path = args.input_path orelse return error.MissingInputPath;
+    const output_path = args.output_path orelse return error.MissingOutputPath;
 
     const format = args.format orelse {
         std.log.err("Format not specified", .{});
         return error.Explained;
     };
 
-    var db = try Database.create_from_xml(allocator, format, text);
+    var db = try Database.create_from_path(allocator, format, input_path);
     defer db.destroy();
 
     if (args.patch_path) |patch_path| {
@@ -159,7 +152,6 @@ fn main_impl() anyerror!void {
     }
 
     if (args.dump) {
-        const output_path = args.output_path orelse return error.MissingOutputPath;
         try db.backup(output_path);
         return;
     }

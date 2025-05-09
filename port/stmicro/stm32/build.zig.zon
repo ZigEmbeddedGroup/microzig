@@ -8,7 +8,6 @@
         .@"stm32-data-generated" = .{
             .url = "git+https://github.com/embassy-rs/stm32-data-generated.git#5198a6e36b24f6d79c4ac91af5e61e8d54667d88",
             .hash = "N-V-__8AAFi8WBlOh-NikHFVBjzQE0F1KixgKjVWYnlijPNm",
-            .lazy = true,
         },
     },
     .paths = .{

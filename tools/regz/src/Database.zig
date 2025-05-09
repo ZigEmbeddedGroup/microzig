@@ -11,6 +11,7 @@ const sqlite = @import("sqlite");
 const xml = @import("xml.zig");
 const svd = @import("svd.zig");
 const atdf = @import("atdf.zig");
+const embassy = @import("embassy.zig");
 const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
@@ -18,6 +19,7 @@ const Arch = @import("arch.zig").Arch;
 const Directory = @import("Directory.zig");
 
 const log = std.log.scoped(.db);
+const file_size_max = 100 * 1024 * 1024;
 
 // Actual instances will have "Instance" in the type name for the ID
 pub const DeviceID = ID(u32, "devices");
@@ -490,6 +492,15 @@ const schema: []const []const u8 = &.{
 pub const Format = enum {
     svd,
     atdf,
+    // embassy's stm32-data format: https://github.com/embassy-rs/stm32-data-generated
+    embassy,
+
+    pub fn is_XML(format: Format) bool {
+        return switch (format) {
+            .svd, .atdf => true,
+            .embassy => false,
+        };
+    }
 };
 
 fn ID(comptime T: type, comptime table_name: []const u8) type {
@@ -567,12 +578,32 @@ pub fn create_from_doc(allocator: Allocator, format: Format, doc: xml.Doc) !*Dat
     switch (format) {
         .svd => try svd.load_into_db(db, doc),
         .atdf => try atdf.load_into_db(db, doc),
+        .embassy => return error.InvalidFormat,
     }
 
     return db;
 }
 
+pub fn create_from_path(allocator: Allocator, format: Format, path: []const u8) !*Database {
+    return switch (format) {
+        .embassy => blk: {
+            var db = try Database.create(allocator);
+            errdefer db.destroy();
+
+            try embassy.load_into_db(db, path);
+            break :blk db;
+        },
+        .svd, .atdf => blk: {
+            const text = try std.fs.cwd().readFileAlloc(allocator, path, file_size_max);
+            defer allocator.free(text);
+
+            break :blk create_from_xml(allocator, format, text);
+        },
+    };
+}
+
 pub fn create_from_xml(allocator: Allocator, format: Format, xml_text: []const u8) !*Database {
+    assert(format.is_XML());
     var doc = try xml.Doc.from_memory(xml_text);
     defer doc.deinit();
 

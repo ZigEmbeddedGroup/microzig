@@ -414,7 +414,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             const regz_exe = b.dependency("tools/regz", .{ .optimize = .Debug }).artifact("regz");
             const chip_source = switch (target.chip.register_definition) {
-                .atdf, .svd => |file| blk: {
+                .atdf, .svd, .embassy => |file| blk: {
                     const regz_run = b.addRunArtifact(regz_exe);
 
                     regz_run.addArg("--microzig");
