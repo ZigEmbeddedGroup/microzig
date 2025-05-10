@@ -575,6 +575,24 @@ const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
+pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
+    asm volatile (
+        \\
+        // Set VTOR to point to ram table
+        \\mov r0, %[_vector_table]
+        \\mov r1, %[_VTOR_ADDRESS]
+        \\str r0, [r1]
+        // Set up stack and jump to _start
+        \\ldm r0!, {r1, r2}
+        \\msr msp, r1
+        \\bx r2
+        :
+        : [_vector_table] "r" (&startup_logic._vector_table),
+          [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+        : "memory", "r0", "r1", "r2"
+    );
+}
+
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
@@ -588,7 +606,6 @@ pub const startup_logic = struct {
     extern const microzig_data_load_start: u8;
 
     pub fn _start() callconv(.c) noreturn {
-
         // fill .bss with zeroes
         {
             const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
@@ -612,7 +629,7 @@ pub const startup_logic = struct {
         if (interrupt.has_ram_vectors()) {
             // Copy vector table to RAM and set VTOR to point to it
 
-            if (interrupt.has_ram_vectors_section()) {
+            if (comptime interrupt.has_ram_vectors_section()) {
                 @export(&ram_vectors, .{
                     .name = "_ram_vectors",
                     .section = "ram_vectors",
@@ -635,13 +652,20 @@ pub const startup_logic = struct {
         microzig_main();
     }
 
+    pub fn ramimage_start() callconv(.c) noreturn {
+        microzig_main();
+    }
+
     const VectorTable = microzig.chip.VectorTable;
 
     // will be imported by microzig.zig to allow system startup.
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            .Reset = .{ .c = microzig.cpu.startup_logic._start },
+            .Reset = .{ .c = if (is_ramimage())
+                microzig.cpu.startup_logic.ramimage_start
+            else
+                microzig.cpu.startup_logic._start },
         };
 
         for (@typeInfo(@TypeOf(microzig_options.interrupts)).@"struct".fields) |field| {
@@ -655,7 +679,21 @@ pub const startup_logic = struct {
     };
 };
 
+fn is_ramimage() bool {
+    // HACK
+    // TODO: Use microzig_options?
+    if (microzig.config.board_name) |board_name|
+        return std.mem.containsAtLeast(u8, board_name, 1, "ram image");
+    return false;
+}
+
 pub fn export_startup_logic() void {
+    if (is_ramimage())
+        @export(&ram_image_entrypoint, .{
+            .name = "_entry_point",
+            .linkage = .strong,
+        });
+
     @export(&startup_logic._start, .{
         .name = "_start",
     });
