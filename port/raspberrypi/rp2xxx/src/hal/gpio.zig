@@ -38,7 +38,7 @@ pub const Function =
             pio0,
             pio1,
             pio2,
-            gpck,
+            gpck, // Also QMI_CS1 and Trace
             usb,
             uart_alt,
             disabled = 0x1f,
@@ -76,6 +76,11 @@ pub const DriveStrength = enum(u2) {
     @"4mA",
     @"8mA",
     @"12mA",
+};
+
+pub const SchmittTrigger = enum(u1) {
+    enabled,
+    disabled,
 };
 
 pub const Enabled = enum {
