@@ -68,6 +68,12 @@ export fn microzig_main() noreturn {
             // - Compute maximum size on the type of "err"
             // - Do not emit error names when std.builtin.strip is set.
             var msg: [64]u8 = undefined;
+            if (@errorReturnTrace()) |trace| {
+                std.log.err("error trace:", .{});
+                for (trace.instruction_addresses, 0..) |address, index| {
+                    std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
+                }
+            }
             @panic(std.fmt.bufPrint(&msg, "main() returned error {s}", .{@errorName(err)}) catch @panic("main() returned error."));
         };
     } else {

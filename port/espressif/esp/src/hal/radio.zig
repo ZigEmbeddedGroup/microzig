@@ -28,21 +28,21 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
     enable_wifi_power_domain_and_init_clocks();
     // phy_mem_init(); // only sets some global variable on esp32c3
 
-    {
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
+    microzig.cpu.interrupt.disable_interrupts();
+    osi.allocator = allocator;
 
-        osi.allocator = allocator;
+    setup_interrupts();
+    setup_timer_periodic_alarm();
 
-        setup_interrupts();
-        setup_timer_periodic_alarm();
+    // TODO: errdefer deinit
+    try multitasking.init(allocator);
+    try timer.init(allocator);
 
-        // TODO: errdefer deinit
-        try multitasking.init(allocator);
-        try timer.init(allocator);
+    microzig.cpu.interrupt.enable_interrupts();
 
-        log.debug("initialization complete", .{});
-    }
+    multitasking.yield_task();
+
+    log.debug("initialization complete", .{});
 
     // TODO: config
     wifi.c_result(c.esp_wifi_internal_set_log_level(c.WIFI_LOG_VERBOSE)) catch {
@@ -51,6 +51,20 @@ pub fn init(allocator: Allocator) Allocator.Error!void {
 }
 
 // TODO: deinit
+
+// TODO: maybe this can be moved in an efuse hal
+pub fn read_mac() [6]u8 {
+    const EFUSE = microzig.chip.peripherals.EFUSE;
+
+    var mac: [6]u8 = undefined;
+
+    const low_32_bits: u32 = EFUSE.RD_MAC_SPI_SYS_0.read().MAC_0;
+    const high_16_bits: u16 = EFUSE.RD_MAC_SPI_SYS_1.read().MAC_1;
+    @memcpy(mac[0..4], std.mem.asBytes(&low_32_bits));
+    @memcpy(mac[4..6], std.mem.asBytes(&high_16_bits));
+
+    return mac;
+}
 
 fn enable_wifi_power_domain_and_init_clocks() void {
     const system_wifibb_rst: u32 = 1 << 0;

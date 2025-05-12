@@ -504,6 +504,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             };
 
             fw.artifact.bundle_compiler_rt = options.bundle_compiler_rt orelse target.bundle_compiler_rt;
+            // fw.artifact.bundle_ubsan_rt = false;
 
             fw.artifact.link_gc_sections = options.strip_unused_symbols;
             fw.artifact.link_function_sections = options.strip_unused_symbols;

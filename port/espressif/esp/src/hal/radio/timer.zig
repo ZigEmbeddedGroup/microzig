@@ -9,8 +9,12 @@ const multitasking = @import("multitasking.zig");
 
 const c = @import("esp-wifi-driver");
 
+pub const CallbackFn = *const fn (?*anyopaque) callconv(.c) void;
+
 pub const Timer = struct {
     ets_timer: *c.ets_timer,
+    callback: CallbackFn,
+    arg: ?*anyopaque,
     deadline: time.Deadline,
     periodic: ?time.Duration,
 };
@@ -21,13 +25,15 @@ const TimerListNode = TimerList.Node;
 var timer_list: TimerList = .{};
 
 pub fn init(allocator: Allocator) !void {
-    const task = try multitasking.Task.create(allocator, timer_task, null, 1024);
+    const task = try multitasking.Task.create(allocator, timer_task, null, 8096);
     multitasking.schedule_task(task);
 }
 
-pub fn add(allocator: Allocator, ets_timer: *c.ets_timer) !void {
+pub fn add(allocator: Allocator, ets_timer: *c.ets_timer, callback: CallbackFn, arg: ?*anyopaque) !void {
     const timer: Timer = .{
         .ets_timer = ets_timer,
+        .callback = callback,
+        .arg = arg,
         .deadline = .init_absolute(null),
         .periodic = null,
     };
@@ -83,7 +89,7 @@ fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
                     tim.deadline = .init_absolute(null);
                 }
 
-                break :blk .{ tim.ets_timer.func, tim.ets_timer.priv };
+                break :blk .{ tim.callback, tim.arg };
             } else {
                 break :blk .{ null, null };
             }

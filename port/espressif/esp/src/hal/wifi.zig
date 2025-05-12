@@ -21,11 +21,6 @@ pub const Error = error{
     InternalWifiError,
 };
 
-// TODO: add option for wifi callbacks trace logs
-
-// TODO: config
-const coex_enabled: bool = false;
-
 pub fn init(allocator: Allocator) Error!void {
     wifi_allocator = allocator;
 
@@ -40,7 +35,7 @@ pub fn init(allocator: Allocator) Error!void {
     setup_timer_periodic_alarm();
     try init_main_task(allocator);
 
-    const task = try Task.create(allocator, timer_task, null, 1024);
+    const task = try Task.create(allocator, timer_task, null, 8096);
     schedule_task(task);
 
     microzig.cpu.interrupt.enable_interrupts();
@@ -54,21 +49,24 @@ pub fn init(allocator: Allocator) Error!void {
 }
 
 pub const wifi_controller = struct {
-    var inited: bool = false;
-
     pub fn init() Error!void {
         init_config.wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs;
 
-        if (coex_enabled) try c_result(c.coex_init());
+        // coex init
+
+        // TODO: if coex enabled
+        if (false) try c_result(c.coex_init());
 
         try c_result(c.esp_wifi_init_internal(&init_config));
+
         try c_result(c.esp_wifi_set_mode(c.WIFI_MODE_NULL));
+
         try c_result(c.esp_supplicant_init());
 
-        try c_result(c.esp_wifi_set_tx_done_cb(tx_done_cb));
-
-        try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_STA, recv_cb_sta));
-        try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_AP, recv_cb_ap));
+        // try c_result(c.esp_wifi_set_tx_done_cb(tx_done_cb));
+        //
+        // try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_STA, recv_cb_sta));
+        // try c_result(c.esp_wifi_internal_reg_rxcb(c.ESP_IF_WIFI_AP, recv_cb_ap));
 
         {
             // TODO: config
@@ -83,78 +81,12 @@ pub const wifi_controller = struct {
             try c_result(c.esp_wifi_set_country(&country));
         }
 
-        try set_power_save_mode(.none);
-
-        inited = true;
-    }
-
-    pub fn deinit() void {
-        if (!inited) {
-            @panic("trying to deinit the wifi controller but it isn't initialized");
-        }
-
-        _ = c.esp_wifi_stop();
-        _ = c.esp_wifi_deinit_internal();
-        _ = c.esp_supplicant_deinit();
-
-        inited = false;
-    }
-
-    pub const PowerSaveMode = enum(u32) {
-        none = c.WIFI_PS_NONE,
-        min = c.WIFI_PS_MIN_MODEM,
-        max = c.WIFI_PS_MAX_MODEM,
-    };
-
-    pub fn set_power_save_mode(mode: PowerSaveMode) Error!void {
-        try c_result(c.esp_wifi_set_ps(@intFromEnum(mode)));
-    }
-
-    var wifi_tx_in_flight: usize = 0;
-
-    fn tx_done_cb(
-        _: u8,
-        _: [*c]u8,
-        _: [*c]u16,
-        _: bool,
-    ) callconv(.c) void {
-        log.debug("tx_done_cb", .{});
-
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
-
-        if (wifi_tx_in_flight > 0) {
-            wifi_tx_in_flight -= 1;
-        }
-    }
-
-    fn recv_cb_sta(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
-        _ = buf; // autofix
-        _ = len; // autofix
-        _ = eb; // autofix
-
-        log.debug("recv_cb_sta", .{});
-
-        @panic("recv_cb_sta");
-
-        // return c.ESP_OK;
-    }
-
-    fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_err_t {
-        _ = buf; // autofix
-        _ = len; // autofix
-        _ = eb; // autofix
-
-        log.debug("recv_cb_ap", .{});
-
-        @panic("recv_cb_ap");
-
-        // return c.ESP_OK;
+        try c_result(c.esp_wifi_start());
     }
 
     // I pupulated this with the defaults from rust. Some of it should be configurable.
     var init_config: c.wifi_init_config_t = .{
-        .osi_funcs = &osi_functions.g_wifi_osi_funcs,
+        .osi_funcs = &osi_functions.table,
         // .wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs,
         .static_rx_buf_num = 10,
         .dynamic_rx_buf_num = 32,
@@ -191,128 +123,6 @@ pub const wifi_controller = struct {
     // const wifi_enable_11r: u64 = 1 << 6;
 
     const wifi_feature_caps: u64 = wifi_enable_wpa3_sae | wifi_enable_enterprise;
-
-    export var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
-        ._version = c.ESP_WIFI_OS_ADAPTER_VERSION,
-        ._env_is_chip = osi_functions.env_is_chip,
-        ._set_intr = osi_functions.set_intr,
-        ._clear_intr = osi_functions.clear_intr,
-        ._set_isr = osi_functions.set_isr,
-        ._ints_on = osi_functions.ints_on,
-        ._ints_off = osi_functions.ints_off,
-        ._is_from_isr = osi_functions.is_from_isr,
-        ._spin_lock_create = osi_functions.spin_lock_create,
-        ._spin_lock_delete = osi_functions.spin_lock_delete,
-        ._wifi_int_disable = osi_functions.wifi_int_disable,
-        ._wifi_int_restore = osi_functions.wifi_int_restore,
-        ._task_yield_from_isr = osi_functions.task_yield_from_isr,
-        ._semphr_create = osi_functions.semphr_create,
-        ._semphr_delete = osi_functions.semphr_delete,
-        ._semphr_take = osi_functions.semphr_take,
-        ._semphr_give = osi_functions.semphr_give,
-        ._wifi_thread_semphr_get = osi_functions.wifi_thread_semphr_get,
-        ._mutex_create = osi_functions.mutex_create,
-        ._recursive_mutex_create = osi_functions.recursive_mutex_create,
-        ._mutex_delete = osi_functions.mutex_delete,
-        ._mutex_lock = osi_functions.mutex_lock,
-        ._mutex_unlock = osi_functions.mutex_unlock,
-        ._queue_create = osi_functions.queue_create,
-        ._queue_delete = osi_functions.queue_delete,
-        ._queue_send = osi_functions.queue_send,
-        ._queue_send_from_isr = osi_functions.queue_send_from_isr,
-        ._queue_send_to_back = @ptrCast(&osi_functions.queue_send_to_back),
-        ._queue_send_to_front = @ptrCast(&osi_functions.queue_send_to_front),
-        ._queue_recv = osi_functions.queue_recv,
-        ._queue_msg_waiting = osi_functions.queue_msg_waiting,
-        ._event_group_create = @ptrCast(&osi_functions.event_group_create),
-        ._event_group_delete = @ptrCast(&osi_functions.event_group_delete),
-        ._event_group_set_bits = @ptrCast(&osi_functions.event_group_set_bits),
-        ._event_group_clear_bits = @ptrCast(&osi_functions.event_group_clear_bits),
-        ._event_group_wait_bits = @ptrCast(&osi_functions.event_group_wait_bits),
-        ._task_create_pinned_to_core = osi_functions.task_create_pinned_to_core,
-        ._task_create = osi_functions.task_create,
-        ._task_delete = @ptrCast(&osi_functions.task_delete),
-        ._task_delay = osi_functions.task_delay,
-        ._task_ms_to_tick = osi_functions.task_ms_to_tick,
-        ._task_get_current_task = osi_functions.task_get_current_task,
-        ._task_get_max_priority = osi_functions.task_get_max_priority,
-        ._malloc = osi_functions.malloc,
-        ._free = &osi_functions.free,
-        ._event_post = @ptrCast(&osi_functions.event_post),
-        ._get_free_heap_size = @ptrCast(&osi_functions.get_free_heap_size),
-        ._rand = osi_functions.rand,
-        ._dport_access_stall_other_cpu_start_wrap = osi_functions.dport_access_stall_other_cpu_start_wrap,
-        ._dport_access_stall_other_cpu_end_wrap = osi_functions.dport_access_stall_other_cpu_end_wrap,
-        ._wifi_apb80m_request = osi_functions.wifi_apb80m_request,
-        ._wifi_apb80m_release = osi_functions.wifi_apb80m_release,
-        ._phy_disable = osi_functions.phy_disable,
-        ._phy_enable = osi_functions.phy_enable,
-        ._phy_update_country_info = osi_functions.phy_update_country_info,
-        ._read_mac = osi_functions.read_mac,
-        ._timer_arm = osi_functions.timer_arm,
-        ._timer_disarm = osi_functions.timer_disarm,
-        ._timer_done = osi_functions.timer_done,
-        ._timer_setfn = osi_functions.timer_setfn,
-        ._timer_arm_us = osi_functions.timer_arm_us,
-        ._wifi_reset_mac = osi_functions.wifi_reset_mac,
-        ._wifi_clock_enable = osi_functions.wifi_clock_enable,
-        ._wifi_clock_disable = osi_functions.wifi_clock_disable,
-        ._wifi_rtc_enable_iso = @ptrCast(&osi_functions.wifi_rtc_enable_iso),
-        ._wifi_rtc_disable_iso = @ptrCast(&osi_functions.wifi_rtc_disable_iso),
-        ._esp_timer_get_time = osi_functions.esp_timer_get_time,
-        ._nvs_set_i8 = @ptrCast(&osi_functions.nvs_set_i8),
-        ._nvs_get_i8 = @ptrCast(&osi_functions.nvs_get_i8),
-        ._nvs_set_u8 = @ptrCast(&osi_functions.nvs_set_u8),
-        ._nvs_get_u8 = @ptrCast(&osi_functions.nvs_get_u8),
-        ._nvs_set_u16 = @ptrCast(&osi_functions.nvs_set_u16),
-        ._nvs_get_u16 = @ptrCast(&osi_functions.nvs_get_u16),
-        ._nvs_open = @ptrCast(&osi_functions.nvs_open),
-        ._nvs_close = @ptrCast(&osi_functions.nvs_close),
-        ._nvs_commit = @ptrCast(&osi_functions.nvs_commit),
-        ._nvs_set_blob = @ptrCast(&osi_functions.nvs_set_blob),
-        ._nvs_get_blob = @ptrCast(&osi_functions.nvs_get_blob),
-        ._nvs_erase_key = @ptrCast(&osi_functions.nvs_erase_key),
-        ._get_random = osi_functions.get_random,
-        ._get_time = @ptrCast(&osi_functions.get_time),
-        ._random = &osi_functions.random,
-        ._slowclk_cal_get = osi_functions.slowclk_cal_get,
-        ._log_write = osi_functions.log_write,
-        ._log_writev = osi_functions.log_writev,
-        ._log_timestamp = osi_functions.log_timestamp,
-        ._malloc_internal = osi_functions.malloc_internal,
-        ._realloc_internal = @ptrCast(&osi_functions.realloc_internal),
-        ._calloc_internal = osi_functions.calloc_internal,
-        ._zalloc_internal = osi_functions.zalloc_internal,
-        ._wifi_malloc = osi_functions.wifi_malloc,
-        ._wifi_realloc = @ptrCast(&osi_functions.wifi_realloc),
-        ._wifi_calloc = osi_functions.wifi_calloc,
-        ._wifi_zalloc = osi_functions.wifi_zalloc,
-        ._wifi_create_queue = osi_functions.wifi_create_queue,
-        ._wifi_delete_queue = osi_functions.wifi_delete_queue,
-        ._coex_init = osi_functions.coex_init,
-        ._coex_deinit = osi_functions.coex_deinit,
-        ._coex_enable = @ptrCast(&osi_functions.coex_enable),
-        ._coex_disable = @ptrCast(&osi_functions.coex_disable),
-        ._coex_status_get = @ptrCast(&osi_functions.coex_status_get),
-        ._coex_condition_set = null,
-        ._coex_wifi_request = osi_functions.coex_wifi_request,
-        ._coex_wifi_release = osi_functions.coex_wifi_release,
-        ._coex_wifi_channel_set = osi_functions.coex_wifi_channel_set,
-        ._coex_event_duration_get = osi_functions.coex_event_duration_get,
-        ._coex_pti_get = osi_functions.coex_pti_get,
-        ._coex_schm_status_bit_clear = osi_functions.coex_schm_status_bit_clear,
-        ._coex_schm_status_bit_set = osi_functions.coex_schm_status_bit_set,
-        ._coex_schm_interval_set = osi_functions.coex_schm_interval_set,
-        ._coex_schm_interval_get = osi_functions.coex_schm_interval_get,
-        ._coex_schm_curr_period_get = osi_functions.coex_schm_curr_period_get,
-        ._coex_schm_curr_phase_get = osi_functions.coex_schm_curr_phase_get,
-        ._coex_schm_process_restart = osi_functions.coex_schm_process_restart,
-        ._coex_schm_register_cb = osi_functions.coex_schm_register_cb,
-        ._coex_register_start_cb = osi_functions.coex_register_start_cb,
-        ._coex_schm_flexible_period_set = osi_functions.coex_schm_flexible_period_set,
-        ._coex_schm_flexible_period_get = osi_functions.coex_schm_flexible_period_get,
-        ._magic = @bitCast(c.ESP_WIFI_OS_ADAPTER_MAGIC),
-    };
 };
 
 fn enable_wifi_power_domain_and_init_clocks() void {
@@ -379,11 +189,10 @@ fn setup_interrupts() void {
     }
 }
 
-fn setup_timer_periodic_alarm() void {
-    // TODO: config
-    const timer_alarm: systimer.Alarm = .alarm0;
-    const preemt_interval: time.Duration = .from_ms(10);
+const timer_alarm: systimer.Alarm = .alarm0;
+const preemt_interval: time.Duration = .from_ms(10);
 
+fn setup_timer_periodic_alarm() void {
     // unit0 is already enabled as it is used by `hal.time`.
     timer_alarm.set_unit(.unit0);
 
@@ -476,6 +285,7 @@ fn switch_task(trap_frame: *TrapFrame) void {
 }
 
 fn copy_context(dst: *TrapFrame, src: *const TrapFrame) void {
+    // don't restore csrs
     const size = @offsetOf(TrapFrame, "mstatus");
     @memcpy(std.mem.asBytes(dst)[0..size], std.mem.asBytes(src)[0..size]);
 }
@@ -508,14 +318,7 @@ fn add_timer(allocator: Allocator, ets_timer: *c.ets_timer) !void {
     node.* = .{
         .data = timer,
     };
-
     timer_list.prepend(node);
-}
-
-fn remove_timer(allocator: Allocator, timer: *Timer) void {
-    const node: *TimerListNode = @fieldParentPtr("data", timer);
-    timer_list.remove(node);
-    allocator.destroy(node);
 }
 
 fn find_timer(ets_timer: *c.ets_timer) ?*Timer {
@@ -569,6 +372,36 @@ fn timer_task(_: ?*anyopaque) callconv(.c) noreturn {
     }
 }
 
+var wifi_interrupt_handler: struct {
+    f: *const fn (?*anyopaque) callconv(.c) void,
+    arg: ?*anyopaque,
+} = undefined;
+
+pub const interrupt_handlers = struct {
+    pub fn wifi_xxx(_: *TrapFrame) linksection(".trap") callconv(.c) void {
+        log.debug("interrupt WIFI_xxx {} {?}", .{
+            wifi_interrupt_handler.f,
+            wifi_interrupt_handler.arg,
+        });
+
+        wifi_interrupt_handler.f(wifi_interrupt_handler.arg);
+    }
+
+    pub fn timer(trap_frame: *TrapFrame) linksection(".trap") callconv(.c) void {
+        switch_task(trap_frame);
+
+        timer_alarm.clear_interrupt();
+    }
+
+    pub fn software(trap_frame: *TrapFrame) linksection(".trap") callconv(.c) void {
+        switch_task(trap_frame);
+
+        SYSTEM.CPU_INTR_FROM_CPU_0.write(.{
+            .CPU_INTR_FROM_CPU_0 = 0,
+        });
+    }
+};
+
 var wifi_allocator: Allocator = undefined;
 
 fn allocator_create_in_cs(comptime T: type) Error!*T {
@@ -603,10 +436,10 @@ extern fn vsnprintf(buffer: [*c]u8, len: usize, fmt: [*c]const u8, va_list: std.
 
 const log_wifi_internal = std.log.scoped(.esp_wifi_internal);
 
-fn syslog(fmt: ?[*:0]const u8, va_list: std.builtin.VaList) callconv(.c) void {
-    var buf: [512:0]u8 = undefined;
+fn syslog(fmt: [*c]const u8, va_list: std.builtin.VaList) callconv(.c) void {
+    var buf: [512]u8 = undefined;
     vsnprintf(&buf, 512, fmt, va_list);
-    log_wifi_internal.debug("{s}", .{std.mem.span((&buf).ptr)});
+    log_wifi_internal.debug("{s}", .{&buf});
 }
 
 const c_other_exports = struct {
@@ -614,38 +447,13 @@ const c_other_exports = struct {
 };
 
 const c_functions = struct {
-    // TODO: foundation libc for some of these.
-
-    pub export fn strlen(str: ?[*:0]const u8) callconv(.c) usize {
-        const s = str orelse return 0;
-
-        return std.mem.len(s);
+    pub export fn strlen(ptr: ?*anyopaque) callconv(.c) usize {
+        return std.mem.len(@as([*:0]const u8, @ptrCast(ptr)));
     }
 
-    pub export fn strnlen(str: ?[*:0]const u8, _: usize) callconv(.c) usize {
-        const s = str orelse return 0;
-
+    pub export fn strnlen(ptr: ?*anyopaque, _: usize) callconv(.c) usize {
         // TODO Actually provide a complete implementation.
-        return std.mem.len(s);
-    }
-
-    pub export fn strrchr(_: ?[*:0]const u8, _: u32) callconv(.c) usize {
-        @panic("strrchr");
-    }
-
-    pub export fn __assert_func(
-        file: ?[*:0]const u8,
-        line: u32,
-        func: ?[*:0]const u8,
-        failed_expr: ?[*:0]const u8,
-    ) void {
-        log.err("assertion `{s}` failed: file `{s}`, line {}, function `{s}`", .{
-            failed_expr orelse "",
-            file orelse "",
-            line,
-            func orelse "",
-        });
-        @panic("assertion failed");
+        return std.mem.len(@as([*:0]const u8, @ptrCast(ptr)));
     }
 
     pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
@@ -711,48 +519,24 @@ const c_functions = struct {
         log_wifi_internal.debug("{s}", .{s});
     }
 
-    pub export fn rtc_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    pub export fn rtc_printf(fmt: [*c]const u8, ...) callconv(.c) void {
         syslog(fmt, @cVaStart());
     }
 
-    pub export fn phy_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    pub export fn phy_printf(fmt: [*c]const u8, ...) callconv(.c) void {
         syslog(fmt, @cVaStart());
     }
 
-    pub export fn coexist_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    pub export fn coexist_printf(fmt: [*c]const u8, ...) callconv(.c) void {
         syslog(fmt, @cVaStart());
     }
 
-    pub export fn net80211_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    pub export fn net80211_printf(fmt: [*c]const u8, ...) callconv(.c) void {
         syslog(fmt, @cVaStart());
     }
 
-    pub export fn pp_printf(fmt: ?[*:0]const u8, ...) callconv(.c) void {
+    pub export fn pp_printf(fmt: [*c]const u8, ...) callconv(.c) void {
         syslog(fmt, @cVaStart());
-    }
-
-    pub export fn gettimeofday(tv: ?*c.timeval, _: ?*anyopaque) i32 {
-        if (tv) |time_val| {
-            const usec = hal.time.get_time_since_boot().to_us();
-            time_val.tv_sec = usec / 1_000_000;
-            time_val.tv_usec = @intCast(usec % 1_000_000);
-        }
-
-        return 0;
-    }
-
-    pub export fn sleep(time_sec: c_uint) callconv(.c) c_int {
-        hal.time.sleep_ms(time_sec * 1_000);
-        return 0;
-    }
-
-    pub export fn usleep(time_us: u32) callconv(.c) c_int {
-        hal.time.sleep_us(time_us);
-        return 0;
-    }
-
-    pub export fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
-        hal.rng.read(buf[0..len]);
     }
 };
 
@@ -762,6 +546,128 @@ comptime {
 }
 
 const osi_functions = struct {
+    pub var table: c.wifi_osi_funcs_t = .{
+        ._version = c.ESP_WIFI_OS_ADAPTER_VERSION,
+        ._env_is_chip = osi_functions.env_is_chip,
+        ._set_intr = osi_functions.set_intr,
+        ._clear_intr = osi_functions.clear_intr,
+        ._set_isr = osi_functions.set_isr,
+        ._ints_on = osi_functions.ints_on,
+        ._ints_off = osi_functions.ints_off,
+        ._is_from_isr = osi_functions.is_from_isr,
+        ._spin_lock_create = osi_functions.spin_lock_create,
+        ._spin_lock_delete = osi_functions.spin_lock_delete,
+        ._wifi_int_disable = osi_functions.wifi_int_disable,
+        ._wifi_int_restore = osi_functions.wifi_int_restore,
+        ._task_yield_from_isr = osi_functions.task_yield_from_isr,
+        ._semphr_create = osi_functions.semphr_create,
+        ._semphr_delete = osi_functions.semphr_delete,
+        ._semphr_take = osi_functions.semphr_take,
+        ._semphr_give = osi_functions.semphr_give,
+        ._wifi_thread_semphr_get = osi_functions.wifi_thread_semphr_get,
+        ._mutex_create = osi_functions.mutex_create,
+        ._recursive_mutex_create = osi_functions.recursive_mutex_create,
+        ._mutex_delete = osi_functions.mutex_delete,
+        ._mutex_lock = osi_functions.mutex_lock,
+        ._mutex_unlock = osi_functions.mutex_unlock,
+        ._queue_create = osi_functions.queue_create,
+        ._queue_delete = osi_functions.queue_delete,
+        ._queue_send = osi_functions.queue_send,
+        ._queue_send_from_isr = osi_functions.queue_send_from_isr,
+        ._queue_send_to_back = @ptrCast(&osi_functions.queue_send_to_back),
+        ._queue_send_to_front = @ptrCast(&osi_functions.queue_send_to_front),
+        ._queue_recv = osi_functions.queue_recv,
+        ._queue_msg_waiting = osi_functions.queue_msg_waiting,
+        ._event_group_create = @ptrCast(&osi_functions.event_group_create),
+        ._event_group_delete = @ptrCast(&osi_functions.event_group_delete),
+        ._event_group_set_bits = @ptrCast(&osi_functions.event_group_set_bits),
+        ._event_group_clear_bits = @ptrCast(&osi_functions.event_group_clear_bits),
+        ._event_group_wait_bits = @ptrCast(&osi_functions.event_group_wait_bits),
+        ._task_create_pinned_to_core = osi_functions.task_create_pinned_to_core,
+        ._task_create = osi_functions.task_create,
+        ._task_delete = @ptrCast(&osi_functions.task_delete),
+        ._task_delay = osi_functions.task_delay,
+        ._task_ms_to_tick = osi_functions.task_ms_to_tick,
+        ._task_get_current_task = osi_functions.task_get_current_task,
+        ._task_get_max_priority = osi_functions.task_get_max_priority,
+        ._malloc = osi_functions.malloc,
+        ._free = &osi_functions.free,
+        ._event_post = @ptrCast(&osi_functions.event_post),
+        ._get_free_heap_size = @ptrCast(&osi_functions.get_free_heap_size),
+        ._rand = osi_functions.rand,
+        ._dport_access_stall_other_cpu_start_wrap = osi_functions.dport_access_stall_other_cpu_start_wrap,
+        ._dport_access_stall_other_cpu_end_wrap = osi_functions.dport_access_stall_other_cpu_end_wrap,
+        ._wifi_apb80m_request = osi_functions.wifi_apb80m_request,
+        ._wifi_apb80m_release = osi_functions.wifi_apb80m_release,
+        ._phy_disable = osi_functions.phy_disable,
+        ._phy_enable = osi_functions.phy_enable,
+        ._phy_update_country_info = osi_functions.phy_update_country_info,
+        ._read_mac = osi_functions.read_mac,
+        ._timer_arm = osi_functions.timer_arm,
+        ._timer_disarm = osi_functions.timer_disarm,
+        ._timer_done = @ptrCast(&osi_functions.timer_done),
+        ._timer_setfn = @ptrCast(&osi_functions.timer_setfn),
+        ._timer_arm_us = osi_functions.timer_arm_us,
+        ._wifi_reset_mac = osi_functions.wifi_reset_mac,
+        ._wifi_clock_enable = osi_functions.wifi_clock_enable,
+        ._wifi_clock_disable = osi_functions.wifi_clock_disable,
+        ._wifi_rtc_enable_iso = @ptrCast(&osi_functions.wifi_rtc_enable_iso),
+        ._wifi_rtc_disable_iso = @ptrCast(&osi_functions.wifi_rtc_disable_iso),
+        ._esp_timer_get_time = osi_functions.esp_timer_get_time,
+        ._nvs_set_i8 = @ptrCast(&osi_functions.nvs_set_i8),
+        ._nvs_get_i8 = @ptrCast(&osi_functions.nvs_get_i8),
+        ._nvs_set_u8 = @ptrCast(&osi_functions.nvs_set_u8),
+        ._nvs_get_u8 = @ptrCast(&osi_functions.nvs_get_u8),
+        ._nvs_set_u16 = @ptrCast(&osi_functions.nvs_set_u16),
+        ._nvs_get_u16 = @ptrCast(&osi_functions.nvs_get_u16),
+        ._nvs_open = @ptrCast(&osi_functions.nvs_open),
+        ._nvs_close = @ptrCast(&osi_functions.nvs_close),
+        ._nvs_commit = @ptrCast(&osi_functions.nvs_commit),
+        ._nvs_set_blob = @ptrCast(&osi_functions.nvs_set_blob),
+        ._nvs_get_blob = @ptrCast(&osi_functions.nvs_get_blob),
+        ._nvs_erase_key = @ptrCast(&osi_functions.nvs_erase_key),
+        ._get_random = osi_functions.get_random,
+        ._get_time = @ptrCast(&osi_functions.get_time),
+        ._random = &osi_functions.random,
+        ._slowclk_cal_get = osi_functions.slowclk_cal_get,
+        ._log_write = osi_functions.log_write,
+        ._log_writev = osi_functions.log_writev,
+        ._log_timestamp = osi_functions.log_timestamp,
+        ._malloc_internal = osi_functions.malloc_internal,
+        ._realloc_internal = @ptrCast(&osi_functions.realloc_internal),
+        ._calloc_internal = osi_functions.calloc_internal,
+        ._zalloc_internal = osi_functions.zalloc_internal,
+        ._wifi_malloc = osi_functions.wifi_malloc,
+        ._wifi_realloc = @ptrCast(&osi_functions.wifi_realloc),
+        ._wifi_calloc = osi_functions.wifi_calloc,
+        ._wifi_zalloc = osi_functions.wifi_zalloc,
+        ._wifi_create_queue = osi_functions.wifi_create_queue,
+        ._wifi_delete_queue = osi_functions.wifi_delete_queue,
+        ._coex_init = @ptrCast(&osi_functions.coex_init),
+        ._coex_deinit = @ptrCast(&osi_functions.coex_deinit),
+        ._coex_enable = @ptrCast(&osi_functions.coex_enable),
+        ._coex_disable = @ptrCast(&osi_functions.coex_disable),
+        ._coex_status_get = @ptrCast(&osi_functions.coex_status_get),
+        ._coex_condition_set = null,
+        ._coex_wifi_request = @ptrCast(&osi_functions.coex_wifi_request),
+        ._coex_wifi_release = @ptrCast(&osi_functions.coex_wifi_release),
+        ._coex_wifi_channel_set = @ptrCast(&osi_functions.coex_wifi_channel_set),
+        ._coex_event_duration_get = @ptrCast(&osi_functions.coex_event_duration_get),
+        ._coex_pti_get = @ptrCast(&osi_functions.coex_pti_get),
+        ._coex_schm_status_bit_clear = @ptrCast(&osi_functions.coex_schm_status_bit_clear),
+        ._coex_schm_status_bit_set = @ptrCast(&osi_functions.coex_schm_status_bit_set),
+        ._coex_schm_interval_set = @ptrCast(&osi_functions.coex_schm_interval_set),
+        ._coex_schm_interval_get = @ptrCast(&osi_functions.coex_schm_interval_get),
+        ._coex_schm_curr_period_get = @ptrCast(&osi_functions.coex_schm_curr_period_get),
+        ._coex_schm_curr_phase_get = @ptrCast(&osi_functions.coex_schm_curr_phase_get),
+        ._coex_schm_process_restart = @ptrCast(&osi_functions.coex_schm_process_restart),
+        ._coex_schm_register_cb = @ptrCast(&osi_functions.coex_schm_register_cb),
+        ._coex_register_start_cb = @ptrCast(&osi_functions.coex_register_start_cb),
+        ._coex_schm_flexible_period_set = @ptrCast(&osi_functions.coex_schm_flexible_period_set),
+        ._coex_schm_flexible_period_get = @ptrCast(&osi_functions.coex_schm_flexible_period_get),
+        ._magic = @bitCast(c.ESP_WIFI_OS_ADAPTER_MAGIC),
+    };
+
     pub fn env_is_chip() callconv(.c) bool {
         return true;
     }
@@ -1423,33 +1329,23 @@ const osi_functions = struct {
         }
     }
 
-    pub fn timer_done(ets_timer_ptr: ?*anyopaque) callconv(.c) void {
-        log.debug("timer_done {?}", .{ets_timer_ptr});
-
-        const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
-
-        const cs = microzig.interrupt.enter_critical_section();
-        defer cs.leave();
-
-        if (find_timer(ets_timer)) |timer| {
-            remove_timer(wifi_allocator, timer);
-        } else {
-            log.warn("timer not found based on ets_timer", .{});
-        }
+    pub fn timer_done() callconv(.c) void {
+        @panic("timer_done: not implemented");
     }
 
     pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?*anyopaque) callconv(.c) void {
         log.debug("timer_setfn {?} {?} {?}", .{ ets_timer_ptr, callback_ptr, arg });
 
         const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
+
         ets_timer.func = @alignCast(@ptrCast(callback_ptr));
         ets_timer.priv = arg;
 
         const cs = microzig.interrupt.enter_critical_section();
         defer cs.leave();
 
-        if (find_timer(ets_timer)) |timer| {
-            timer.deadline = .init_absolute(null);
+        if (find_timer(ets_timer)) |tim| {
+            tim.deadline = .init_absolute(null);
         } else {
             add_timer(wifi_allocator, ets_timer) catch {
                 log.warn("failed to allocate timer", .{});
@@ -1638,6 +1534,7 @@ const osi_functions = struct {
 
         queue.destroy(wifi_allocator);
     }
+    const coex_enabled = false;
 
     pub fn coex_init() callconv(.c) c_int {
         log.debug("coex_init", .{});
@@ -1778,7 +1675,7 @@ const osi_functions = struct {
     }
 };
 
-pub fn c_result(err_code: i32) Error!void {
+fn c_result(err_code: i32) Error!void {
     const InternalWifiError = enum(i32) {
         /// Out of memory
         esp_err_no_mem = 0x101,

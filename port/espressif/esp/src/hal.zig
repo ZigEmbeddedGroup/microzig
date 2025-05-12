@@ -14,10 +14,6 @@ pub const uart = @import("hal/uart.zig");
 pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 // pub const wifi = @import("hal/wifi.zig");
 
-comptime {
-    rom.export_functions();
-}
-
 /// Clock config applied by the default `init()` function of the hal.
 pub const clock_config: clocks.Config = .default;
 

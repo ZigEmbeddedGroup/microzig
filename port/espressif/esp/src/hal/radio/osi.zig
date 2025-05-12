@@ -10,6 +10,7 @@ const hal = microzig.hal;
 
 const multitasking = @import("multitasking.zig");
 const timer = @import("timer.zig");
+const wifi = @import("wifi.zig");
 
 const c = @import("esp-wifi-driver");
 
@@ -70,6 +71,8 @@ pub export fn __assert_func(
 }
 
 pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
+    log.debug("malloc {}", .{len});
+
     const maybe_alloc = blk: {
         const cs = enter_critical_section();
         defer cs.leave();
@@ -83,6 +86,7 @@ pub export fn malloc(len: usize) callconv(.c) ?*anyopaque {
 
         return @ptrFromInt(@intFromPtr(alloc) + @sizeOf(usize));
     } else {
+        log.warn("failed to allocate memory: {}", .{len});
         return null;
     }
 }
@@ -173,6 +177,8 @@ pub export fn usleep(time_us: u32) callconv(.c) c_int {
 }
 
 pub export fn esp_fill_random(buf: [*c]u8, len: usize) callconv(.c) void {
+    log.debug("esp_fill_random {any} {}", .{buf, len});
+
     hal.rng.read(buf[0..len]);
 }
 
@@ -247,10 +253,12 @@ pub fn set_isr(
 // NOTE: temp until I see what bits are set.
 pub fn ints_on(mask: u32) callconv(.c) void {
     std.debug.panic("ints_on {}", .{mask});
+    @panic("ints on");
 }
 
 pub fn ints_off(mask: u32) callconv(.c) void {
     std.debug.panic("ints_off {}", .{mask});
+    @panic("ints off");
 }
 
 pub fn is_from_isr() callconv(.c) bool {
@@ -267,8 +275,6 @@ pub fn spin_lock_delete(_: ?*anyopaque) callconv(.c) void {
     log.debug("spin_lock_delete", .{});
 }
 
-// NOTE: critical section for now. If we decide to run the code on multiple cpus (on other chips) we
-// should change this.
 pub fn wifi_int_disable(_: ?*anyopaque) callconv(.c) u32 {
     log.debug("wifi_int_disable", .{});
 
@@ -468,7 +474,8 @@ pub fn mutex_unlock(ptr: ?*anyopaque) callconv(.c) i32 {
     }
 }
 
-const Queue = struct {
+pub const Queue = struct {
+    len: usize = 0,
     capacity: usize,
     item_len: usize,
     read_index: usize = 0,
@@ -482,8 +489,6 @@ const Queue = struct {
         queue.* = .{
             .capacity = capacity,
             .item_len = item_len,
-            .read_index = 0,
-            .write_index = 0,
             .storage = try allocator.alloc(u8, capacity * item_len),
         };
 
@@ -495,37 +500,31 @@ const Queue = struct {
         allocator.destroy(self);
     }
 
-    pub fn len(self: Queue) usize {
-        if (self.write_index >= self.read_index) {
-            return self.write_index - self.read_index;
-        } else {
-            return self.capacity - self.read_index + self.write_index;
-        }
-    }
-
     pub fn get(self: Queue, index: usize) []u8 {
         const item_start = self.item_len * index;
         return self.storage[item_start..][0..self.item_len];
     }
 
     pub fn enqueue(self: *Queue, item: [*]const u8) error{QueueFull}!void {
-        if (self.len() == self.capacity) {
+        if (self.len >= self.capacity) {
             return error.QueueFull;
         }
 
         const slot = self.get(self.write_index);
         @memcpy(slot, item[0..self.item_len]);
         self.write_index = (self.write_index + 1) % self.capacity;
+        self.len += 1;
     }
 
     pub fn dequeue(self: *Queue, item: [*]u8) error{QueueEmpty}!void {
-        if (self.len() == 0) {
+        if (self.len == 0) {
             return error.QueueEmpty;
         }
 
         const slot = self.get(self.read_index);
         @memcpy(item[0..self.item_len], slot);
         self.read_index = (self.read_index + 1) % self.capacity;
+        self.len -= 1;
     }
 };
 
@@ -610,6 +609,7 @@ pub fn queue_recv(ptr: ?*anyopaque, item_ptr: ?*anyopaque, block_time_tick: u32)
         } else |_| {}
 
         if (!forever and hal.time.get_time_since_boot().diff(start).to_us() > timeout) {
+            log.warn("failed to add item to queue: timeout", .{});
             return -1;
         }
 
@@ -625,7 +625,7 @@ pub fn queue_msg_waiting(ptr: ?*anyopaque) callconv(.c) u32 {
     const cs = enter_critical_section();
     defer cs.leave();
 
-    return queue.len();
+    return queue.len;
 }
 
 pub fn event_group_create() callconv(.c) void {
@@ -751,8 +751,24 @@ pub fn task_get_max_priority() callconv(.c) i32 {
     return -1;
 }
 
-pub fn event_post() callconv(.c) void {
-    @panic("event_post: not implemented");
+pub fn event_post(
+    base: [*c]const u8,
+    id: i32,
+    data: ?*anyopaque,
+    data_size: usize,
+    ticks_to_wait: u32,
+) callconv(.c) i32 {
+    _ = base; // autofix
+    _ = data; // autofix
+    _ = data_size; // autofix
+    _ = ticks_to_wait; // autofix
+
+    const event: wifi.Event = @enumFromInt(id);
+    std.log.debug("received event: {s}", .{@tagName(event)});
+
+    microzig.cpu.fence();
+
+    return 0;
 }
 
 pub fn get_free_heap_size() callconv(.c) void {
@@ -779,9 +795,146 @@ pub fn wifi_apb80m_release() callconv(.c) void {
     log.debug("wifi_apb80m_release", .{});
 }
 
-fn phy_set_enabled(enable: bool) void {
-    log.debug("phy_set_enabled", .{});
+const CONFIG_ESP32_PHY_MAX_TX_POWER: u8 = 20;
 
+fn limit(val: u8, low: u8, high: u8) u8 {
+    return if (val < low) low else if (val > high) high else val;
+}
+
+var phy_init_data_default: c.esp_phy_init_data_t = .{
+    .params = .{
+        0x00,
+        0x00,
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x50),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x50),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x50),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x4c),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x4c),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x48),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x4c),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x48),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x48),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x44),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x4a),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x46),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x46),
+        limit(CONFIG_ESP32_PHY_MAX_TX_POWER * 4, 0, 0x42),
+        0x00,
+        0x00,
+        0x00,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0x74,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    },
+};
+
+fn clocks_phy_set_enabled(enable: bool) void {
     const system_wifi_clk_wifi_bt_common_m: u32 = 0x78078F;
 
     var wifi_clk_en = APB_CTRL.WIFI_CLK_EN.read().WIFI_CLK_EN;
@@ -793,14 +946,30 @@ fn phy_set_enabled(enable: bool) void {
     APB_CTRL.WIFI_CLK_EN.write(.{ .WIFI_CLK_EN = wifi_clk_en });
 }
 
+// extern fn phy_bbpll_usb_en(param: bool) callconv(.c) void;
+fn phy_calibrate() void {
+    var cal_data: c.esp_phy_calibration_data_t = std.mem.zeroes(c.esp_phy_calibration_data_t);
+
+    const phy_version = c.get_phy_version_str();
+    log.debug("phy_version {s}", .{std.mem.span(phy_version)});
+
+    _ = c.register_chipv7_phy(&phy_init_data_default, &cal_data, c.PHY_RF_CAL_FULL);
+}
+
 pub fn phy_disable() callconv(.c) void {
     log.debug("phy_disable", .{});
-    phy_set_enabled(false);
+    clocks_phy_set_enabled(false);
 }
 
 pub fn phy_enable() callconv(.c) void {
     log.debug("phy_enable", .{});
-    phy_set_enabled(true);
+
+    const cs = enter_critical_section();
+    defer cs.leave();
+
+    clocks_phy_set_enabled(true);
+
+    phy_calibrate();
 }
 
 pub fn phy_update_country_info(country: [*c]const u8) callconv(.c) c_int {
@@ -811,12 +980,8 @@ pub fn phy_update_country_info(country: [*c]const u8) callconv(.c) c_int {
 pub fn read_mac(mac: [*c]u8, typ: c_uint) callconv(.c) c_int {
     log.debug("read_mac {*} {}", .{ mac, typ });
 
-    const EFUSE = microzig.chip.peripherals.EFUSE;
-
-    const low_32_bits: u32 = EFUSE.RD_MAC_SPI_SYS_0.read().MAC_0;
-    const high_16_bits: u16 = EFUSE.RD_MAC_SPI_SYS_1.read().MAC_1;
-    @memcpy(mac[0..4], std.mem.asBytes(&low_32_bits));
-    @memcpy(mac[4..6], std.mem.asBytes(&high_16_bits));
+    const mac_tmp: [6]u8 = hal.radio.read_mac();
+    @memcpy(mac[0..6], &mac_tmp);
 
     // idk what this means
     switch (typ) {
@@ -891,16 +1056,17 @@ pub fn timer_setfn(ets_timer_ptr: ?*anyopaque, callback_ptr: ?*anyopaque, arg: ?
     log.debug("timer_setfn {?} {?} {?}", .{ ets_timer_ptr, callback_ptr, arg });
 
     const ets_timer: *c.ets_timer = @alignCast(@ptrCast(ets_timer_ptr));
-    ets_timer.func = @alignCast(@ptrCast(callback_ptr));
-    ets_timer.priv = arg;
+    const callback: timer.CallbackFn = @alignCast(@ptrCast(callback_ptr));
 
     const cs = enter_critical_section();
     defer cs.leave();
 
     if (timer.find(ets_timer)) |tim| {
+        tim.callback = callback;
+        tim.arg = arg;
         tim.deadline = .init_absolute(null);
     } else {
-        timer.add(allocator, ets_timer) catch {
+        timer.add(allocator, ets_timer, callback, arg) catch {
             log.warn("failed to allocate timer", .{});
         };
     }

@@ -56,12 +56,12 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
             std.log.err("{d: >3}: 0x{X:0>8}", .{ index, address });
         }
     }
-    if (@import("builtin").mode == .Debug) {
-        // attach a breakpoint, this might trigger another
-        // panic internally, so only do that in debug mode.
-        std.log.info("triggering breakpoint...", .{});
-        @breakpoint();
-    }
+    // if (@import("builtin").mode == .Debug) {
+    //     // attach a breakpoint, this might trigger another
+    //     // panic internally, so only do that in debug mode.
+    //     std.log.info("triggering breakpoint...", .{});
+    //     @breakpoint();
+    // }
     hang();
 }
 
