@@ -5,22 +5,26 @@ const microzig = @import("microzig");
 
 const osi = @import("osi.zig");
 
-const c = @import("esp-wifi-driver");
+pub const c = @import("esp-wifi-driver");
 
 pub const InternalError = error{InternalError};
 
 var inited: bool = false;
 
-const InitError = InternalError;
-
 pub fn init() InternalError!void {
+    if (inited) {
+        @panic("wifi already initialized");
+    }
+
     init_config.wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs;
 
     // TODO: if coex enabled
     if (false) try c_result(c.coex_init());
 
     try c_result(c.esp_wifi_init_internal(&init_config));
+
     try c_result(c.esp_wifi_set_mode(c.WIFI_MODE_NULL));
+
     try c_result(c.esp_supplicant_init());
 
     try c_result(c.esp_wifi_set_tx_done_cb(tx_done_cb));
@@ -46,6 +50,10 @@ pub fn init() InternalError!void {
     inited = true;
 }
 
+pub fn callback(_: ?*anyopaque) callconv(.c) void {
+    log.info("hello world", .{});
+}
+
 pub fn deinit() void {
     if (!inited) {
         @panic("trying to deinit the wifi controller but it isn't initialized");
@@ -58,25 +66,8 @@ pub fn deinit() void {
     inited = false;
 }
 
-pub const Config = union(enum) {
-    client: ClientConfig,
-    access_point: AccessPointConfiguration,
-    mixed: struct {
-        client: ClientConfig,
-        access_point: AccessPointConfiguration,
-    },
-
-    pub fn is_valid(self: Config) bool {
-        switch (self) {
-            .client => |config| config.is_valid(),
-            .access_point => |config| config.is_valid(),
-            .mixed => |config| config.client.is_valid() and config.access_point.is_valid(),
-        }
-    }
-
-    pub fn apply(self: Config) void {
-
-    }
+pub const SetConfigError = InternalError || error{
+    InvalidConfig,
 };
 
 pub const ClientConfig = struct {
@@ -84,40 +75,61 @@ pub const ClientConfig = struct {
     ssid: []const u8,
 
     /// The BSSID (MAC address) of the client.
-    bssid: ?[6]u8,
+    bssid: ?[6]u8 = null,
 
-    /// Protocol.
-    protocol: Protocol,
-
-    /// The authentication method for the Wi-Fi connection.
-    auth_method: AuthMethod,
-
-    /// The password for the Wi-Fi connection.
-    password: []const u8,
+    /// Authentication config for the Wi-Fi connection.
+    auth: ?AuthConfig = null,
 
     /// The Wi-Fi channel to connect to.
-    channel: ?u8,
+    channel: u8 = 0,
 
-    pub fn is_valid(self: ClientConfig) bool {
-        if (self.ssid.len > 32) {
-            return false;
-        }
+    scan_method: ScanMethod = .fast,
 
-        if (self.password.len > 64) {
-            return false;
-        }
+    listen_interval: u16 = 3,
 
-        return true;
-    }
-
-    pub fn to_config(self: Config) c.wifi_sta_config_t {
-        return .{
-            .ssid
-        };
-    }
+    failure_retry_cnt: u8 = 1,
 };
 
-pub const AccessPointConfiguration = struct {
+pub fn set_client_config(config: ClientConfig) SetConfigError!void {
+    if (config.ssid.len > 32) {
+        return error.InvalidConfig;
+    }
+
+    if (config.auth) |auth| {
+        if (auth.password.len > 64) {
+            return error.InvalidConfig;
+        }
+    }
+
+    var sta_cfg: wifi_sta_config_t = .{
+        .scan_method = @intFromEnum(config.scan_method),
+        .bssid_set = config.bssid != null,
+        .bssid = config.bssid orelse @splat(0),
+        .channel = config.channel,
+        // TODO: config
+        .listen_interval = config.listen_interval,
+        .sort_method = c.WIFI_CONNECT_AP_BY_SIGNAL,
+        .threshold = .{
+            .rssi = -99,
+            .authmode = if (config.auth) |auth| @intFromEnum(auth.method) else c.WIFI_AUTH_OPEN,
+        },
+        .pmf_cfg = .{
+            .capable = true,
+            .required = false,
+        },
+        .failure_retry_cnt = config.failure_retry_cnt,
+    };
+
+    @memcpy(sta_cfg.ssid[0..config.ssid.len], config.ssid);
+    if (config.auth) |auth| {
+        @memcpy(sta_cfg.password[0..auth.password.len], auth.password);
+    }
+
+    var tmp: wifi_config_t = .{ .sta = sta_cfg };
+    try c_result(esp_wifi_set_config(c.WIFI_IF_STA, &tmp));
+}
+
+pub const AccessPointConfig = struct {
     /// The SSID of the access point.
     ssid: []const u8,
 
@@ -133,39 +145,86 @@ pub const AccessPointConfiguration = struct {
     /// The set of protocols supported by the access point.
     protocols: []const Protocol,
 
-    /// The authentication method to be used by the access point.
-    auth_method: AuthMethod,
-
-    /// The password for securing the access point (if applicable).
-    password: []const u8,
+    /// Authentication config to be used by the access point.
+    auth: ?AuthConfig,
 
     /// The maximum number of connections allowed on the access point.
-    max_connections: u16,
-
-    pub fn is_valid(self: AccessPointConfiguration) bool {
-        if (self.ssid.len > 32) {
-            return false;
-        }
-
-        if (self.password.len > 64) {
-            return false;
-        }
-
-        return true;
-    }
+    max_connections: u8,
 };
 
-pub const ConfigError = InternalError || error {
-    InvalidConfig,
-};
-
-pub fn apply(config: Config) ConfigError!void {
-    if (config.is_valid()) {
+pub fn set_access_point_config(config: AccessPointConfig) SetConfigError!void {
+    if (config.ssid.len > 32) {
         return error.InvalidConfig;
     }
 
+    if (config.auth) |auth| {
+        if (auth.password.len > 64) {
+            return error.InvalidConfig;
+        }
+    }
 
+    var ap_cfg: wifi_ap_config_t = .{
+        .ssid_len = @intCast(config.ssid.len),
+        .channel = config.channel,
+        .authmode = if (config.auth) |auth| @intFromEnum(auth.method) else c.WIFI_AUTH_OPEN,
+        .ssid_hidden = @intFromBool(config.ssid_hidden),
+        .max_connection = config.max_connections,
+        .beacon_interval = 100,
+        .pairwise_cipher = c.WIFI_CIPHER_TYPE_CCMP,
+        .ftm_responder = false,
+        .pmf_cfg = .{
+            .capable = true,
+            .required = false,
+        },
+        .sae_pwe_h2e = 0,
+        .csa_count = 3,
+        .dtim_period = 2,
+    };
+
+    @memcpy(ap_cfg.ssid[0..config.ssid.len], config.ssid);
+    if (config.auth) |auth| {
+        @memcpy(ap_cfg.password[0..auth.password.len], auth.password);
+    }
+
+    var tmp: wifi_config_t = .{ .ap = ap_cfg };
+    try c_result(esp_wifi_set_config(c.WIFI_IF_AP, &tmp));
 }
+
+pub const AuthConfig = struct {
+    password: []const u8,
+    method: Method,
+
+    pub const Method = enum(u32) {
+        /// Wired Equivalent Privacy (WEP) authentication.
+        wep = c.WIFI_AUTH_WEP,
+
+        /// Wi-Fi Protected Access (WPA) authentication.
+        wpa = c.WIFI_AUTH_WPA_PSK,
+
+        /// Wi-Fi Protected Access 2 (WPA2) Personal authentication (default).
+        wpa2_personal = c.WIFI_AUTH_WPA2_PSK,
+
+        /// WPA/WPA2 Personal authentication (supports both).
+        wpa_wpa2_personal = c.WIFI_AUTH_WPA_WPA2_PSK,
+
+        /// WPA2 Enterprise authentication.
+        wpa2_enterprise = c.WIFI_AUTH_WPA2_ENTERPRISE,
+
+        /// WPA3 Personal authentication.
+        wpa3_personal = c.WIFI_AUTH_WPA3_PSK,
+
+        /// WPA2/WPA3 Personal authentication (supports both).
+        wpa2_wpa3_personal = c.WIFI_AUTH_WPA2_WPA3_PSK,
+
+        /// WLAN Authentication and Privacy Infrastructure (WAPI).
+        wapi_personal = c.WIFI_AUTH_WAPI_PSK,
+    };
+};
+
+pub const ScanMethod = enum(u32) {
+    fast = c.WIFI_FAST_SCAN,
+    all_channel = c.WIFI_ALL_CHANNEL_SCAN,
+};
 
 pub const PowerSaveMode = enum(u32) {
     none = c.WIFI_PS_NONE,
@@ -193,7 +252,6 @@ pub fn set_mode(mode: WifiMode) InternalError!void {
     try c_result(c.esp_wifi_set_mode(@intFromEnum(mode)));
 }
 
-
 pub const Protocol = enum(u8) {
     /// 802.11b protocol.
     P802D11B = c.WIFI_PROTOCOL_11B,
@@ -214,7 +272,7 @@ pub const Protocol = enum(u8) {
     P802D11BGNAX = c.WIFI_PROTOCOL_11B | c.WIFI_PROTOCOL_11G | c.WIFI_PROTOCOL_11N | c.WIFI_PROTOCOL_11AX,
 };
 
-pub fn set_protocol(protocols: []const Protocol) InternalError!void {
+fn set_protocol(protocols: []const Protocol) InternalError!void {
     var combined: u8 = 0;
     for (protocols) |protocol| {
         combined |= @intFromEnum(protocol);
@@ -235,33 +293,111 @@ pub fn set_protocol(protocols: []const Protocol) InternalError!void {
     }
 }
 
-pub const AuthMethod = enum(u32) {
-    /// No authentication (open network).
-    none = c.WIFI_AUTH_OPEN,
+pub fn start() InternalError!void {
+    try c_result(c.esp_wifi_start());
+}
 
-    /// Wired Equivalent Privacy (WEP) authentication.
-    wep = c.WIFI_AUTH_WEP,
+pub const Event = enum(i32) {
+    /// Wi-Fi is ready for operation.
+    WifiReady = 0,
+    /// Scan operation has completed.
+    ScanDone,
+    /// Station mode started.
+    StaStart,
+    /// Station mode stopped.
+    StaStop,
+    /// Station connected to a network.
+    StaConnected,
+    /// Station disconnected from a network.
+    StaDisconnected,
+    /// Station authentication mode changed.
+    StaAuthmodeChange,
 
-    /// Wi-Fi Protected Access (WPA) authentication.
-    wpa = c.WIFI_AUTH_WPA_PSK,
+    /// Station WPS succeeds in enrollee mode.
+    StaWpsErSuccess,
+    /// Station WPS fails in enrollee mode.
+    StaWpsErFailed,
+    /// Station WPS timeout in enrollee mode.
+    StaWpsErTimeout,
+    /// Station WPS pin code in enrollee mode.
+    StaWpsErPin,
+    /// Station WPS overlap in enrollee mode.
+    StaWpsErPbcOverlap,
 
-    /// Wi-Fi Protected Access 2 (WPA2) Personal authentication (default).
-    wpa2_personal = c.WIFI_AUTH_WPA2_PSK,
+    /// Soft-AP start.
+    ApStart,
+    /// Soft-AP stop.
+    ApStop,
+    /// A station connected to Soft-AP.
+    ApStaconnected,
+    /// A station disconnected from Soft-AP.
+    ApStadisconnected,
+    /// Received probe request packet in Soft-AP interface.
+    ApProbereqrecved,
 
-    /// WPA/WPA2 Personal authentication (supports both).
-    wpa_wpa2_personal = c.WIFI_AUTH_WPA_WPA2_PSK,
+    /// Received report of FTM procedure.
+    FtmReport,
 
-    /// WPA2 Enterprise authentication.
-    wpa2_enterprise = c.WIFI_AUTH_WPA2_ENTERPRISE,
+    /// AP's RSSI crossed configured threshold.
+    StaBssRssiLow,
+    /// Status indication of Action Tx operation.
+    ActionTxStatus,
+    /// Remain-on-Channel operation complete.
+    RocDone,
 
-    /// WPA3 Personal authentication.
-    wpa3_personal = c.WIFI_AUTH_WPA3_PSK,
+    /// Station beacon timeout.
+    StaBeaconTimeout,
 
-    /// WPA2/WPA3 Personal authentication (supports both).
-    wpa2_wpa3_personal = c.WIFI_AUTH_WPA2_WPA3_PSK,
+    /// Connectionless module wake interval has started.
+    ConnectionlessModuleWakeIntervalStart,
 
-    /// WLAN Authentication and Privacy Infrastructure (WAPI).
-    wapi_personal = c.WIFI_AUTH_WAPI_PSK,
+    /// Soft-AP WPS succeeded in registrar mode.
+    ApWpsRgSuccess,
+    /// Soft-AP WPS failed in registrar mode.
+    ApWpsRgFailed,
+    /// Soft-AP WPS timed out in registrar mode.
+    ApWpsRgTimeout,
+    /// Soft-AP WPS pin code in registrar mode.
+    ApWpsRgPin,
+    /// Soft-AP WPS overlap in registrar mode.
+    ApWpsRgPbcOverlap,
+
+    /// iTWT setup.
+    ItwtSetup,
+    /// iTWT teardown.
+    ItwtTeardown,
+    /// iTWT probe.
+    ItwtProbe,
+    /// iTWT suspended.
+    ItwtSuspend,
+    /// TWT wakeup event.
+    TwtWakeup,
+    /// bTWT setup.
+    BtwtSetup,
+    /// bTWT teardown.
+    BtwtTeardown,
+
+    /// NAN (Neighbor Awareness Networking) discovery has started.
+    NanStarted,
+    /// NAN discovery has stopped.
+    NanStopped,
+    /// NAN service discovery match found.
+    NanSvcMatch,
+    /// Replied to a NAN peer with service discovery match.
+    NanReplied,
+    /// Received a follow-up message in NAN.
+    NanReceive,
+    /// Received NDP (Neighbor Discovery Protocol) request from a NAN peer.
+    NdpIndication,
+    /// NDP confirm indication.
+    NdpConfirm,
+    /// NAN datapath terminated indication.
+    NdpTerminated,
+    /// Wi-Fi home channel change, doesn't occur when scanning.
+    HomeChannelChange,
+
+    /// Received Neighbor Report response.
+    StaNeighborRep,
 };
 
 var wifi_tx_in_flight: usize = 0;
@@ -309,42 +445,32 @@ fn recv_cb_ap(buf: ?*anyopaque, len: u16, eb: ?*anyopaque) callconv(.c) c.esp_er
 // I pupulated this with the defaults from rust. Some of it should be configurable.
 var init_config: c.wifi_init_config_t = .{
     .osi_funcs = &g_wifi_osi_funcs,
-    // .wpa_crypto_funcs = c.g_wifi_default_wpa_crypto_funcs,
-    .static_rx_buf_num = 10,
-    .dynamic_rx_buf_num = 32,
+    // .wpa_crypto_funcs = g_wifi_default_wpa_crypto_funcs,
+    .static_rx_buf_num = c.CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM,
+    .dynamic_rx_buf_num = c.CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM,
     .tx_buf_type = c.CONFIG_ESP_WIFI_TX_BUFFER_TYPE,
-    .static_tx_buf_num = 0,
-    .dynamic_tx_buf_num = 32,
+    .static_tx_buf_num = c.WIFI_STATIC_TX_BUFFER_NUM,
+    .dynamic_tx_buf_num = c.WIFI_DYNAMIC_TX_BUFFER_NUM,
     .rx_mgmt_buf_type = c.CONFIG_ESP_WIFI_DYNAMIC_RX_MGMT_BUF,
-    .rx_mgmt_buf_num = c.CONFIG_ESP_WIFI_RX_MGMT_BUF_NUM_DEF,
+    .rx_mgmt_buf_num = c.WIFI_RX_MGMT_BUF_NUM_DEF,
     .cache_tx_buf_num = c.WIFI_CACHE_TX_BUFFER_NUM,
-    .csi_enable = 0, // TODO: WiFi channel state information enable flag.
-    .ampdu_rx_enable = 1,
-    .ampdu_tx_enable = 1,
-    .amsdu_tx_enable = 0,
-    .nvs_enable = 0,
-    .nano_enable = 0,
-    .rx_ba_win = 6,
-    .wifi_task_core_id = 0,
+    .csi_enable = c.WIFI_CSI_ENABLED,
+    .ampdu_rx_enable = c.WIFI_AMPDU_RX_ENABLED,
+    .ampdu_tx_enable = c.WIFI_AMPDU_TX_ENABLED,
+    .amsdu_tx_enable = c.WIFI_AMSDU_TX_ENABLED,
+    .nvs_enable = c.WIFI_NVS_ENABLED,
+    .nano_enable = c.WIFI_NANO_FORMAT_ENABLED,
+    .rx_ba_win = c.WIFI_DEFAULT_RX_BA_WIN,
+    .wifi_task_core_id = c.WIFI_TASK_CORE_ID,
     .beacon_max_len = c.WIFI_SOFTAP_BEACON_MAX_LEN,
     .mgmt_sbuf_num = c.WIFI_MGMT_SBUF_NUM,
-    .feature_caps = wifi_feature_caps,
-    .sta_disconnected_pm = false,
+    .feature_caps = c.WIFI_FEATURE_CAPS,
+    .sta_disconnected_pm = c.WIFI_STA_DISCONNECTED_PM_ENABLED == 1,
     .espnow_max_encrypt_num = c.CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM,
-    .tx_hetb_queue_num = 3,
-    .dump_hesigb_enable = false,
-    .magic = c.WIFI_INIT_CONFIG_MAGIC,
+    .tx_hetb_queue_num = c.WIFI_TX_HETB_QUEUE_NUM,
+    .dump_hesigb_enable = c.WIFI_DUMP_HESIGB_ENABLED == 1,
+    .magic = c.WIFI_INIT_CONFIG_MAGIC
 };
-
-const wifi_enable_wpa3_sae: u64 = 1 << 0;
-const wifi_enable_enterprise: u64 = 1 << 7;
-// const wifi_ftm_initiator: u64 = 1 << 2;
-// const wifi_ftm_responder: u64 = 1 << 3;
-// const wifi_enable_gcmp: u64 = 1 << 4;
-// const wifi_enable_gmac: u64 = 1 << 5;
-// const wifi_enable_11r: u64 = 1 << 6;
-
-const wifi_feature_caps: u64 = wifi_enable_wpa3_sae | wifi_enable_enterprise;
 
 export var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._version = c.ESP_WIFI_OS_ADAPTER_VERSION,
@@ -391,8 +517,8 @@ export var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._task_get_current_task = osi.task_get_current_task,
     ._task_get_max_priority = osi.task_get_max_priority,
     ._malloc = osi.malloc,
-    ._free = &osi.free,
-    ._event_post = @ptrCast(&osi.event_post),
+    ._free = osi.free,
+    ._event_post = osi.event_post,
     ._get_free_heap_size = @ptrCast(&osi.get_free_heap_size),
     ._rand = osi.rand,
     ._dport_access_stall_other_cpu_start_wrap = osi.dport_access_stall_other_cpu_start_wrap,
@@ -445,9 +571,9 @@ export var g_wifi_osi_funcs: c.wifi_osi_funcs_t = .{
     ._wifi_delete_queue = osi.wifi_delete_queue,
     ._coex_init = osi.coex_init,
     ._coex_deinit = osi.coex_deinit,
-    ._coex_enable = @ptrCast(&osi.coex_enable),
-    ._coex_disable = @ptrCast(&osi.coex_disable),
-    ._coex_status_get = @ptrCast(&osi.coex_status_get),
+    ._coex_enable = osi.coex_enable,
+    ._coex_disable = osi.coex_disable,
+    ._coex_status_get = osi.coex_status_get,
     ._coex_condition_set = null,
     ._coex_wifi_request = osi.coex_wifi_request,
     ._coex_wifi_release = osi.coex_wifi_release,
@@ -544,30 +670,76 @@ pub fn c_result(err_code: i32) InternalError!void {
     }
 }
 
-pub const wifi_sta_config_t = extern struct {
-    ssid: [32]u8,
-    password: [64]u8,
-    scan_method: c.wifi_scan_method_t,
-    bssid_set: bool,
-    bssid: [6]u8,
-    channel: u8,
-    listen_interval: u16,
-    sort_method: c.wifi_sort_method_t,
-    threshold: c.wifi_scan_threshold_t,
-    pmf_cfg: c.wifi_pmf_config_t,
-    rm_enabled: u32,
-    btm_enabled: u32,
-    mbo_enabled: u32,
-    ft_enabled: u32,
-    owe_enabled: u32,
-    transition_disable: u32,
-    reserved: u32,
-    sae_pwe_h2e: c.wifi_sae_pwe_method_t,
-    sae_pk_mode: c.wifi_sae_pk_mode_t,
-    failure_retry_cnt: u8,
-    he_dcm_set: u32,
-    he_dcm_max_constellation_tx: u32,
-    he_dcm_max_constellation_rx: u32,
-    _bitfield_2: __BindgenBitfieldUnit<[u8; 4usize]>,
-    sae_h2e_identifier: [u8; 32usize],
+pub const wifi_ap_config_t = extern struct {
+    ssid: [32]u8 = std.mem.zeroes([32]u8),
+    password: [64]u8 = std.mem.zeroes([64]u8),
+    ssid_len: u8 = std.mem.zeroes(u8),
+    channel: u8 = std.mem.zeroes(u8),
+    authmode: c.wifi_auth_mode_t = std.mem.zeroes(c.wifi_auth_mode_t),
+    ssid_hidden: u8 = std.mem.zeroes(u8),
+    max_connection: u8 = std.mem.zeroes(u8),
+    beacon_interval: u16 = std.mem.zeroes(u16),
+    csa_count: u8 = std.mem.zeroes(u8),
+    dtim_period: u8 = std.mem.zeroes(u8),
+    pairwise_cipher: c.wifi_cipher_type_t = std.mem.zeroes(c.wifi_cipher_type_t),
+    ftm_responder: bool = std.mem.zeroes(bool),
+    pmf_cfg: c.wifi_pmf_config_t = std.mem.zeroes(c.wifi_pmf_config_t),
+    sae_pwe_h2e: c.wifi_sae_pwe_method_t = std.mem.zeroes(c.wifi_sae_pwe_method_t),
 };
+
+pub const wifi_sta_config_t = extern struct {
+    // NOTE: maybe a little more imagination
+    pub const Packed1 = packed struct {
+        rm_enabled: bool,
+        btm_enabled: bool,
+        mbo_enabled: bool,
+        ft_enabled: bool,
+        owe_enabled: bool,
+        transition_disable: bool,
+        reserved: u26,
+    };
+
+    pub const Packed2 = packed struct {
+        he_dcm_set: u1,
+        he_dcm_max_constellation_tx: u2,
+        he_dcm_max_constellation_rx: u2,
+        he_mcs9_enabled: u1,
+        he_su_beamformee_disabled: u1,
+        he_trig_su_bmforming_feedback_disabled: u1,
+        he_trig_mu_bmforming_partial_feedback_disabled: u1,
+        he_trig_cqi_feedback_disable: u1,
+        he_reserved: u22,
+    };
+
+    ssid: [32]u8 = std.mem.zeroes([32]u8),
+    password: [64]u8 = std.mem.zeroes([64]u8),
+    scan_method: c.wifi_scan_method_t = std.mem.zeroes(c.wifi_scan_method_t),
+    bssid_set: bool = std.mem.zeroes(bool),
+    bssid: [6]u8 = std.mem.zeroes([6]u8),
+    channel: u8 = std.mem.zeroes(u8),
+    listen_interval: u16 = std.mem.zeroes(u16),
+    sort_method: c.wifi_sort_method_t = std.mem.zeroes(c.wifi_sort_method_t),
+    threshold: c.wifi_scan_threshold_t = std.mem.zeroes(c.wifi_scan_threshold_t),
+    pmf_cfg: c.wifi_pmf_config_t = std.mem.zeroes(c.wifi_pmf_config_t),
+    packed1: Packed1 = std.mem.zeroes(Packed1),
+    sae_pwe_h2e: c.wifi_sae_pwe_method_t = std.mem.zeroes(c.wifi_sae_pwe_method_t),
+    sae_pk_mode: c.wifi_sae_pk_mode_t = std.mem.zeroes(c.wifi_sae_pk_mode_t),
+    failure_retry_cnt: u8 = std.mem.zeroes(u8),
+    packed2: Packed2 = std.mem.zeroes(Packed2),
+    sae_h2e_identifier: [32]u8 = std.mem.zeroes([32]u8),
+};
+
+pub const wifi_nan_config_t = extern struct {
+    op_channel: u8 = std.mem.zeroes(u8),
+    master_pref: u8 = std.mem.zeroes(u8),
+    scan_time: u8 = std.mem.zeroes(u8),
+    warm_up_sec: u16 = std.mem.zeroes(u16),
+};
+
+pub const wifi_config_t = extern union {
+    ap: wifi_ap_config_t,
+    sta: wifi_sta_config_t,
+    nan: wifi_nan_config_t,
+};
+
+extern fn esp_wifi_set_config(interface: c.wifi_interface_t, conf: ?*wifi_config_t) c.esp_err_t;

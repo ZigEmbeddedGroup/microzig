@@ -34,6 +34,7 @@ SECTIONS
     {
         KEEP(*(.app_desc))
         *(.rodata*)
+        *(.srodata*)
 
         /* wifi rodata */
         *(.rodata_wlog_*.*)
@@ -41,8 +42,10 @@ SECTIONS
         . = ALIGN(0x10);
     } > drom
 
-    .iram.rwtext :
+    .iram.rwtext : ALIGN(4)
     {
+        . = ALIGN(4);
+
         KEEP(*(.trap))
         *(.rwtext*)
 
