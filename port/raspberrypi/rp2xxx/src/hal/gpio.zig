@@ -94,7 +94,7 @@ pub const Pull = enum {
     disabled,
 };
 
-pub fn num(n: u6) Pin {
+pub fn num(n: u9) Pin {
     switch (chip) {
         .RP2040 => {
             if (n > 29)

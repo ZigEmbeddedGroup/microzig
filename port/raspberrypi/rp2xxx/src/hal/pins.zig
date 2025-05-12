@@ -14,8 +14,7 @@ const resets = @import("resets.zig");
 const compatibility = @import("compatibility.zig");
 const chip = compatibility.chip;
 
-const has_qfn_80 = chip == .RP2350 and @hasDecl(microzig.board, "has_qfn_80") and microzig.board.has_qfn_80;
-
+const has_rp2350b = chip == .RP2350 and @hasDecl(microzig.board, "has_rp2350b") and microzig.board.has_rp2350b;
 
 pub const Direction = enum(u2) {
     in,
@@ -54,24 +53,24 @@ pub const Pin = enum {
     GPIO27,
     GPIO28,
     GPIO29,
-    GPIO30,  // RP2340 qfn_80 only
-    GPIO31,  // RP2340 qfn_80 only
-    GPIO32,  // RP2340 qfn_80 only
-    GPIO33,  // RP2340 qfn_80 only
-    GPIO34,  // RP2340 qfn_80 only
-    GPIO35,  // RP2340 qfn_80 only
-    GPIO36,  // RP2340 qfn_80 only
-    GPIO37,  // RP2340 qfn_80 only
-    GPIO38,  // RP2340 qfn_80 only
-    GPIO39,  // RP2340 qfn_80 only
-    GPIO40,  // RP2340 qfn_80 only
-    GPIO41,  // RP2340 qfn_80 only
-    GPIO42,  // RP2340 qfn_80 only
-    GPIO43,  // RP2340 qfn_80 only
-    GPIO44,  // RP2340 qfn_80 only
-    GPIO45,  // RP2340 qfn_80 only
-    GPIO46,  // RP2340 qfn_80 only
-    GPIO47,  // RP2340 qfn_80 only
+    GPIO30, // RP2340B only
+    GPIO31, // RP2340B only
+    GPIO32, // RP2340B only
+    GPIO33, // RP2340B only
+    GPIO34, // RP2340B only
+    GPIO35, // RP2340B only
+    GPIO36, // RP2340B only
+    GPIO37, // RP2340B only
+    GPIO38, // RP2340B only
+    GPIO39, // RP2340B only
+    GPIO40, // RP2340B only
+    GPIO41, // RP2340B only
+    GPIO42, // RP2340B only
+    GPIO43, // RP2340B only
+    GPIO44, // RP2340B only
+    GPIO45, // RP2340B only
+    GPIO46, // RP2340B only
+    GPIO47, // RP2340B only
 
     pub const Configuration = struct {
         name: ?[:0]const u8 = null,
@@ -130,8 +129,8 @@ pub const Function = enum {
     UART0_RX,
     UART0_CTS,
     UART0_RTS,
-    UART0_ALT_TX,  // RP2340 only
-    UART0_ALT_RX,  // RP2340 only
+    UART0_ALT_TX, // RP2340 only
+    UART0_ALT_RX, // RP2340 only
 
     UART1_TX,
     UART1_RX,
@@ -170,17 +169,17 @@ pub const Function = enum {
     PWM7_A,
     PWM7_B,
 
-    PWM8_A, // RP2340 qfn_80 only
-    PWM8_B, // RP2340 qfn_80 only
+    PWM8_A, // RP2340B only
+    PWM8_B, // RP2340B only
 
-    PWM9_A, // RP2340 qfn_80 only
-    PWM9_B, // RP2340 qfn_80 only
+    PWM9_A, // RP2340B only
+    PWM9_B, // RP2340B only
 
-    PWM10_A, // RP2340 qfn_80 only
-    PWM10_B, // RP2340 qfn_80 only
+    PWM10_A, // RP2340B only
+    PWM10_B, // RP2340B only
 
-    PWM11_A, // RP2340 qfn_80 only
-    PWM11_B, // RP2340 qfn_80 only
+    PWM11_A, // RP2340B only
+    PWM11_B, // RP2340B only
 
     CLOCK_GPIN0,
     CLOCK_GPIN1,
@@ -198,12 +197,14 @@ pub const Function = enum {
     ADC1,
     ADC2,
     ADC3,
-    ADC4, // RP2340 qfn_80 only
-    ADC5, // RP2340 qfn_80 only
-    ADC6, // RP2340 qfn_80 only
-    ADC7, // RP2340 qfn_80 only
+    ADC4, // RP2340B only
+    ADC5, // RP2340B only
+    ADC6, // RP2340B only
+    ADC7, // RP2340B only
 
     QMI_CS1, // RP2340 only
+
+    HSTX, // RP2350 only
 
     pub fn is_uart_tx(function: Function) bool {
         return switch (function) {
@@ -457,7 +458,7 @@ pub const Function = enum {
 fn all() [48]u1 {
     var ret: [48]u1 = @splat(1);
 
-    if (!has_qfn_80) {
+    if (!has_rp2350b) {
         for (30..48) |i|
             ret[i] = 0;
     }
@@ -554,8 +555,9 @@ const function_table = if (chip == .RP2040)
         none(), // ADC6
         none(), // ADC7
         none(), // QMI_CS1
+        none(), // HSTX
     }
-else if (has_qfn_80)
+else if (has_rp2350b)
     [@typeInfo(Function).@"enum".fields.len][48]u1{
         all(), // SIO
         all(), // PIO0
@@ -575,8 +577,8 @@ else if (has_qfn_80)
         list(&.{ 3, 15, 19, 31, 35, 47 }), // UART0_RTS
         list(&.{ 2, 14, 18, 30, 34, 46 }), // UART0_ALT_TX
         list(&.{ 3, 15, 19, 31, 35, 47 }), // UART0_ALT_RX
-        list(&.{ 4,  8, 20, 24, 36, 40 }), // UART1_TX
-        list(&.{ 5,  9, 21, 25, 37, 41 }), // UART1_RX
+        list(&.{ 4, 8, 20, 24, 36, 40 }), // UART1_TX
+        list(&.{ 5, 9, 21, 25, 37, 41 }), // UART1_RX
         list(&.{ 6, 10, 22, 26, 38, 42 }), // UART1_CTS
         list(&.{ 7, 11, 23, 27, 39, 43 }), // UART1_RTS
         list(&.{ 6, 10, 22, 26, 38, 42 }), // UART1_ALT_TX
@@ -627,6 +629,7 @@ else if (has_qfn_80)
         single(46), // ADC6
         single(47), // ADC7
         list(&.{ 0, 8, 19, 47 }), // QMI_CS1
+        list(&.{ 12, 13, 14, 15, 16, 17, 18, 19 }), // HSTX
     }
 else
     [@typeInfo(Function).@"enum".fields.len][48]u1{
@@ -648,8 +651,8 @@ else
         list(&.{ 3, 15, 19 }), // UART0_RTS
         list(&.{ 2, 14, 18 }), // UART0_ALT_TX
         list(&.{ 3, 15, 19 }), // UART0_ALT_RX
-        list(&.{ 4,  8, 20, 24 }), // UART1_TX
-        list(&.{ 5,  9, 21, 25 }), // UART1_RX
+        list(&.{ 4, 8, 20, 24 }), // UART1_TX
+        list(&.{ 5, 9, 21, 25 }), // UART1_RX
         list(&.{ 6, 10, 22, 26 }), // UART1_CTS
         list(&.{ 7, 11, 23, 27 }), // UART1_RTS
         list(&.{ 6, 10, 22, 26 }), // UART1_ALT_TX
@@ -700,6 +703,7 @@ else
         none(), // ADC6
         none(), // ADC7
         list(&.{ 0, 8, 19 }), // QMI_CS1
+        list(&.{ 12, 13, 14, 15, 16, 17, 18, 19 }), // HSTX
     };
 
 pub const GlobalConfiguration = struct {
@@ -880,54 +884,42 @@ pub const GlobalConfiguration = struct {
 
         inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field| {
             if (@field(config, field.name)) |pin_config| {
-                const pin = gpio.num(@intFromEnum(@field(Pin, field.name)));
+                const gpio_pin = gpio.num(@intFromEnum(@field(Pin, field.name)));
                 const func = pin_config.function;
 
-                // xip = 0,
-                // spi,
-                // uart,
-                // i2c,
-                // pio0,
-                // pio1,
-                // pio2 (rp2350 only)
-                // gpck,
-                // usb,
-                // uart_alt (rp2350 only)
-                // @"null" = 0x1f,
-
                 if (func == .SIO) {
-                    pin.set_function(.sio);
+                    gpio_pin.set_function(.sio);
                 } else if (comptime func.is_pwm()) {
-                    pin.set_function(.pwm);
-                } else if (comptime func.is_adc()) {
-                    // Matches adc.Input.configure_gpio_pin
-                    pin.set_function(.disabled);
-                    pin.set_pull(.disabled);
-                    pin.set_input_enabled(false);
+                    gpio_pin.set_function(.pwm);
                 } else if (comptime func.is_uart_tx() or func.is_uart_rx()) {
-                    pin.set_function(.uart);
+                    gpio_pin.set_function(.uart);
                 } else if (comptime func.is_uart_alt_tx() or func.is_uart_alt_rx()) {
-                    pin.set_function(.uart_alt);
+                    gpio_pin.set_function(.uart_alt);
                 } else if (comptime func.is_spi()) {
-                    pin.set_function(.spi);
+                    gpio_pin.set_function(.spi);
                 } else if (comptime func.is_i2c()) {
-                    pin.set_function(.i2c);
+                    gpio_pin.set_function(.i2c);
                 } else if (comptime func == .PIO0) {
-                    pin.set_function(.pio0);
+                    gpio_pin.set_function(.pio0);
                 } else if (comptime func == .PIO1) {
-                    pin.set_function(.pio1);
+                    gpio_pin.set_function(.pio1);
                 } else if (comptime func == .PIO2) {
-                    pin.set_function(.pio2);
+                    gpio_pin.set_function(.pio2);
                 } else if (comptime func.is_clock_in() or func.is_clock_out()) {
-                    pin.set_function(.gpck);
+                    gpio_pin.set_function(.gpck);
                 } else if (comptime func == .QMI_CS1) {
-                    pin.set_function(.gpck); // Shares function number with clock
+                    gpio_pin.set_function(.gpck); // Shares function number with clock
                 } else if (comptime func.is_usb()) {
-                    pin.set_function(.usb);
+                    gpio_pin.set_function(.usb);
+                } else if (comptime func == .HSTX) {
+                    gpio_pin.set_function(.hstx);
+                } else if (comptime func.is_adc()) {
+                    const adc_num = @intFromEnum(func) - @intFromEnum(Function.ADC0);
+                    adc.Input.configure_gpio_pin(@as(adc.Input, @enumFromInt(adc_num)));
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
-                        @intFromEnum(pin),
+                        @intFromEnum(gpio_pin),
                     }));
                 }
             }
@@ -939,39 +931,25 @@ pub const GlobalConfiguration = struct {
                 SIO.GPIO_HI_OE_SET.raw = @truncate(output_gpios >> 32);
         }
 
-        if (input_gpios != 0) {
-            inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field|
-                if (@field(config, field.name)) |pin_config| {
-                    const gpio_num = @intFromEnum(@field(Pin, field.name));
-                    if (pin_config.pull) |pull| {
-                        if (comptime pin_config.get_direction() != .in)
-                            @compileError("Only input pins can have pull up/down enabled");
+        inline for (@typeInfo(GlobalConfiguration).@"struct".fields) |field|
+            if (@field(config, field.name)) |pin_config| {
+                const gpio_num = @intFromEnum(@field(Pin, field.name));
+                if (pin_config.pull) |pull| {
+                    gpio.num(gpio_num).set_pull(pull);
+                }
 
-                        gpio.num(gpio_num).set_pull(pull);
-                    }
+                if (pin_config.schmitt_trigger) |enabled| {
+                    gpio.num(gpio_num).set_schmitt_trigger(enabled);
+                }
 
-                    if (pin_config.schmitt_trigger) |enabled| {
-                        if (comptime pin_config.get_direction() != .in)
-                            @compileError("Only input pins can have schmitt trigger enabled");
+                if (pin_config.drive_strength) |drive_strength| {
+                    gpio.num(gpio_num).set_drive_strength(drive_strength);
+                }
 
-                        gpio.num(gpio_num).set_schmitt_trigger(enabled);
-                    }
-
-                    if (pin_config.drive_strength) |drive_strength| {
-                        if (comptime pin_config.get_direction() != .out)
-                            @compileError("Only output pins can have drive strength set");
-
-                        gpio.num(gpio_num).set_drive_strength(drive_strength);
-                    }
-
-                    if (pin_config.slew_rate) |slew_rate| {
-                        if (comptime pin_config.get_direction() != .out)
-                            @compileError("Only output pins can have slew rate set");
-
-                        gpio.num(gpio_num).set_slew_rate(slew_rate);
-                    }
-                };
-        }
+                if (pin_config.slew_rate) |slew_rate| {
+                    gpio.num(gpio_num).set_slew_rate(slew_rate);
+                }
+            };
 
         if (has_adc) {
             // FIXME: https://github.com/ZigEmbeddedGroup/microzig/issues/311

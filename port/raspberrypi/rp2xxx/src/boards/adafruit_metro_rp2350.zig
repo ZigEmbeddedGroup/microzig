@@ -1,6 +1,6 @@
 pub const xosc_freq = 12_000_000;
 
-pub const has_qfn_80 = true;  // Uses QFN-80 chip with extra I/O pins
+pub const has_rp2350b = true; // Uses RP2350B chip with extra I/O pins
 
 // ### TODO ### Add automatic default pin configuration for board pins
 
@@ -11,34 +11,42 @@ const pins = hal.pins;
 pub const pin_config = pins.GlobalConfiguration{
     .GPIO12 = .{
         .name = "hstx_d2p",
+        .function = .HSTX,
     },
 
     .GPIO13 = .{
         .name = "hstx_d2n",
+        .function = .HSTX,
     },
 
     .GPIO14 = .{
         .name = "hstx_ckp",
+        .function = .HSTX,
     },
 
     .GPIO15 = .{
         .name = "hstx_ckn",
+        .function = .HSTX,
     },
 
     .GPIO16 = .{
         .name = "hstx_d1p",
+        .function = .HSTX,
     },
 
     .GPIO17 = .{
         .name = "hstx_d1n",
+        .function = .HSTX,
     },
 
     .GPIO18 = .{
         .name = "hstx_d0p",
+        .function = .HSTX,
     },
 
     .GPIO19 = .{
         .name = "hstx_d0n",
+        .function = .HSTX,
     },
 
     .GPIO20 = .{
@@ -71,10 +79,12 @@ pub const pin_config = pins.GlobalConfiguration{
 
     .GPIO26 = .{
         .name = "hstx_d26",
+        .function = .SIO,
     },
 
     .GPIO27 = .{
         .name = "hstx_d27",
+        .function = .SIO,
     },
 
     .GPIO28 = .{
@@ -145,27 +155,33 @@ pub const pin_config = pins.GlobalConfiguration{
     },
 
     .GPIO41 = .{
-        .name = "a0",
+        .name = "A0",
+        .function = .ADC1,
     },
 
     .GPIO42 = .{
-        .name = "a1",
+        .name = "A1",
+        .function = .ADC2,
     },
 
     .GPIO43 = .{
-        .name = "a2",
+        .name = "A2",
+        .function = .ADC3,
     },
 
     .GPIO44 = .{
-        .name = "a3",
+        .name = "A3",
+        .function = .ADC4,
     },
 
     .GPIO45 = .{
-        .name = "a4",
+        .name = "A4",
+        .function = .ADC5,
     },
 
     .GPIO46 = .{
-        .name = "a5",
+        .name = "A5",
+        .function = .ADC6,
     },
 
     .GPIO47 = .{
