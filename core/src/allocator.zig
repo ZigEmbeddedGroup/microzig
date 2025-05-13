@@ -11,11 +11,20 @@ const free_list_count: usize = 6;
 
 const Alloc = @This();
 
+/// The lists of free chunks.
 free_lists: [free_list_count]?*Chunk = @splat(null),
 
+/// The beginning address of the memory region that can be allocated from.
 low_boundary: usize,
+
+/// The next address beyond the highest address of the memory region can allocated from.
 high_boundary: usize,
 
+/// An optional fallback allocator that is used when the allocator runs out of memory.
+/// This allows allocation from multiple disjoint memory regions.
+fallback: ?*Alloc = null,
+
+/// A mutex used to protect access to the allocator.
 mutex: microzig.interrupt.Mutex = .{},
 
 /// Return a []u8 slice that contains the memory located between the
@@ -152,7 +161,7 @@ const vtable: std.mem.Allocator.VTable =
 ///
 /// Returns:
 /// - `?[*]u8`: A pointer to the allocated memory, or null if insufficient memory is available
-fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 {
+fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, pc: usize) ?[*]u8 {
     const self: *Alloc = @ptrCast(@alignCast(ptr));
 
     self.mutex.lock();
@@ -241,6 +250,10 @@ fn do_alloc(ptr: *anyopaque, len: usize, alignment: Alignment, _: usize) ?[*]u8 
         free_index += 1;
     }
 
+    if (self.fallback) |f| {
+        return do_alloc(f, len, alignment, pc);
+    }
+
     return null;
 }
 
@@ -307,8 +320,18 @@ fn do_resize(ptr: *anyopaque, memory: []u8, _: Alignment, new_len: usize, _: usi
 ///
 /// Parameters:
 /// - `memory`   : The memory to free
-fn do_free(ptr: *anyopaque, memory: []u8, _: Alignment, _: usize) void {
+fn do_free(ptr: *anyopaque, memory: []u8, alignment: Alignment, pc: usize) void {
     const self: *Alloc = @ptrCast(@alignCast(ptr));
+
+    const addr = @intFromPtr(memory.ptr);
+    if (addr < self.low_boundary or addr >= self.high_boundary) {
+        if (self.fallback) |f| {
+            do_free(f, memory, alignment, pc);
+            return;
+        }
+
+        @panic("free - address is not in range");
+    }
 
     self.mutex.lock();
     defer self.mutex.unlock();
