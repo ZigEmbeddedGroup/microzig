@@ -4,6 +4,10 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"microzig/build-internals" = .{ .path = "../../../build-internals" },
+        .atpack = .{
+            .url = "https://atpack.microzig.tech/Atmel.SAMD51_DFP.1.2.139.atpack",
+            .hash = "N-V-__8AANARcANIBlLE4tsLRqcfeI8Z4IZL4f5Jiq8DDotY",
+        },
     },
     .paths = .{
         "README.md",
