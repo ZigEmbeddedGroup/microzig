@@ -8,9 +8,10 @@ const ADC = microzig.chip.peripherals.ADC;
 const gpio = @import("gpio.zig");
 const resets = @import("resets.zig");
 const clocks = @import("clocks.zig");
-const chip = @import("compatibility.zig").chip;
+const compatibility = @import("compatibility.zig");
 
-const has_rp2350b = chip == .RP2350 and @hasDecl(microzig.board, "has_rp2350b") and microzig.board.has_rp2350b;
+const chip = compatibility.chip;
+const has_rp2350b = compatibility.has_rp2350b;
 
 pub const Error = error{
     /// ADC conversion failed, one such reason is that the controller failed to
@@ -83,7 +84,7 @@ pub fn get_selected_input() Input {
     return @as(Input, @enumFromInt(cs.AINSEL));
 }
 
-/// For RP2040 and RP2350A  , the values are:
+/// For RP2040 and RP2350A, the values are:
 ///
 ///     0..3 are GPIO 26..29 respectively,
 ///     4 is the temperature sensor.

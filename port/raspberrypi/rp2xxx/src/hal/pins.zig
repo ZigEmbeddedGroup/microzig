@@ -14,14 +14,15 @@ const resets = @import("resets.zig");
 
 const compatibility = @import("compatibility.zig");
 const chip = compatibility.chip;
-
-const has_rp2350b = chip == .RP2350 and @hasDecl(microzig.board, "has_rp2350b") and microzig.board.has_rp2350b;
+const has_rp2350b = compatibility.has_rp2350b;
 
 pub const Direction = enum(u2) {
     in,
     out,
     unknown,
 };
+
+pub const PinFlags = if (has_rp2350b) [48]u1 else [32]u1;
 
 pub const Pin = enum {
     GPIO0,
@@ -54,24 +55,24 @@ pub const Pin = enum {
     GPIO27,
     GPIO28,
     GPIO29,
-    GPIO30, // RP2340B only
-    GPIO31, // RP2340B only
-    GPIO32, // RP2340B only
-    GPIO33, // RP2340B only
-    GPIO34, // RP2340B only
-    GPIO35, // RP2340B only
-    GPIO36, // RP2340B only
-    GPIO37, // RP2340B only
-    GPIO38, // RP2340B only
-    GPIO39, // RP2340B only
-    GPIO40, // RP2340B only
-    GPIO41, // RP2340B only
-    GPIO42, // RP2340B only
-    GPIO43, // RP2340B only
-    GPIO44, // RP2340B only
-    GPIO45, // RP2340B only
-    GPIO46, // RP2340B only
-    GPIO47, // RP2340B only
+    GPIO30, // RP2350B only
+    GPIO31, // RP2350B only
+    GPIO32, // RP2350B only
+    GPIO33, // RP2350B only
+    GPIO34, // RP2350B only
+    GPIO35, // RP2350B only
+    GPIO36, // RP2350B only
+    GPIO37, // RP2350B only
+    GPIO38, // RP2350B only
+    GPIO39, // RP2350B only
+    GPIO40, // RP2350B only
+    GPIO41, // RP2350B only
+    GPIO42, // RP2350B only
+    GPIO43, // RP2350B only
+    GPIO44, // RP2350B only
+    GPIO45, // RP2350B only
+    GPIO46, // RP2350B only
+    GPIO47, // RP2350B only
 
     pub const Configuration = struct {
         name: ?[:0]const u8 = null,
@@ -114,7 +115,7 @@ pub const Function = enum {
 
     PIO0,
     PIO1,
-    PIO2, // RP2340 only
+    PIO2, // RP2350 only
 
     SPI0_RX,
     SPI0_CSn,
@@ -130,8 +131,8 @@ pub const Function = enum {
     UART0_RX,
     UART0_CTS,
     UART0_RTS,
-    UART0_ALT_TX, // RP2340 only
-    UART0_ALT_RX, // RP2340 only
+    UART0_ALT_TX, // RP2350 only
+    UART0_ALT_RX, // RP2350 only
 
     UART1_TX,
     UART1_RX,
@@ -170,17 +171,17 @@ pub const Function = enum {
     PWM7_A,
     PWM7_B,
 
-    PWM8_A, // RP2340B only
-    PWM8_B, // RP2340B only
+    PWM8_A, // RP2350B only
+    PWM8_B, // RP2350B only
 
-    PWM9_A, // RP2340B only
-    PWM9_B, // RP2340B only
+    PWM9_A, // RP2350B only
+    PWM9_B, // RP2350B only
 
-    PWM10_A, // RP2340B only
-    PWM10_B, // RP2340B only
+    PWM10_A, // RP2350B only
+    PWM10_B, // RP2350B only
 
-    PWM11_A, // RP2340B only
-    PWM11_B, // RP2340B only
+    PWM11_A, // RP2350B only
+    PWM11_B, // RP2350B only
 
     CLOCK_GPIN0,
     CLOCK_GPIN1,
@@ -198,10 +199,10 @@ pub const Function = enum {
     ADC1,
     ADC2,
     ADC3,
-    ADC4, // RP2340B only
-    ADC5, // RP2340B only
-    ADC6, // RP2340B only
-    ADC7, // RP2340B only
+    ADC4, // RP2350B only
+    ADC5, // RP2350B only
+    ADC6, // RP2350B only
+    ADC7, // RP2350B only
 
     /// Chip select for QMI memory bank 1
     /// This banks is addressed at 0x1100_0000
@@ -459,36 +460,29 @@ pub const Function = enum {
     }
 };
 
-fn all() [48]u1 {
-    var ret: [48]u1 = @splat(1);
-
-    if (!has_rp2350b) {
-        for (30..48) |i|
-            ret[i] = 0;
-    }
-
-    return ret;
+fn all() PinFlags {
+    return @splat(1);
 }
 
-fn list(gpio_list: []const u6) [48]u1 {
-    var ret = std.mem.zeroes([48]u1);
+fn list(gpio_list: []const u6) PinFlags {
+    var ret = std.mem.zeroes(PinFlags);
     for (gpio_list) |num|
         ret[num] = 1;
     return ret;
 }
 
-fn single(gpio_num: u6) [48]u1 {
-    var ret = std.mem.zeroes([48]u1);
+fn single(gpio_num: u6) PinFlags {
+    var ret = std.mem.zeroes(PinFlags);
     ret[gpio_num] = 1;
     return ret;
 }
 
-fn none() [48]u1 {
-    return std.mem.zeroes([48]u1);
+fn none() PinFlags {
+    return std.mem.zeroes(PinFlags);
 }
 
 const function_table = if (chip == .RP2040)
-    [@typeInfo(Function).@"enum".fields.len][48]u1{
+    [@typeInfo(Function).@"enum".fields.len]PinFlags{
         all(), // SIO
         all(), // PIO0
         all(), // PIO1
@@ -562,7 +556,7 @@ const function_table = if (chip == .RP2040)
         none(), // HSTX
     }
 else if (has_rp2350b)
-    [@typeInfo(Function).@"enum".fields.len][48]u1{
+    [@typeInfo(Function).@"enum".fields.len]PinFlags{
         all(), // SIO
         all(), // PIO0
         all(), // PIO1
@@ -636,7 +630,7 @@ else if (has_rp2350b)
         list(&.{ 12, 13, 14, 15, 16, 17, 18, 19 }), // HSTX
     }
 else
-    [@typeInfo(Function).@"enum".fields.len][48]u1{
+    [@typeInfo(Function).@"enum".fields.len]PinFlags{
         all(), // SIO
         all(), // PIO0
         all(), // PIO1

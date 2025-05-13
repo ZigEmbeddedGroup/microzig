@@ -149,7 +149,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .metro_rp2350 = chip_rp2350_arm.derive(.{
                     .board = .{
                         .name = "Adafruit Metro RP2350",
-                        .url = "https://www.adafruit.com/product/5542",
+                        .url = "https://www.adafruit.com/product/6267",
                         .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
                     },
                 }),

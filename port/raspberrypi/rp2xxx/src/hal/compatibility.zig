@@ -29,3 +29,5 @@ pub const arch: Arch = switch (chip) {
     else
         @compileError(std.fmt.comptimePrint("Unsupported cpu for RP2350: \"{s}\"", .{microzig.config.cpu_name})),
 };
+
+pub const has_rp2350b = chip == .RP2350 and @hasDecl(microzig.board, "has_rp2350b") and microzig.board.has_rp2350b;
