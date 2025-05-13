@@ -187,5 +187,6 @@ pub const pin_config = pins.GlobalConfiguration{
     .GPIO47 = .{
         .name = "QMI_CS1",
         .function = .PIO2,
+        .direction = .out,
     },
 };

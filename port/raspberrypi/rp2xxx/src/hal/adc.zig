@@ -33,8 +33,11 @@ pub const Config = struct {
     /// each input. So for 4 inputs in round-robin mode you'd see 1/4 sample
     /// rate for a given put vs what is set here.
     sample_frequency: ?u32 = null,
+    /// Configure pins to be used in round-robin mode.
     round_robin: ?InputMask = null,
+    /// Configure the ADC FIFO.
     fifo: ?fifo.Config = null,
+    /// Enable the temperature sensor.
     temp_sensor_enabled: bool = false,
 };
 
@@ -42,7 +45,7 @@ pub const Config = struct {
 /// CS.EN = 1. The global clock configuration is not needed to configure the
 /// sample rate because the ADC hardware block requires a 48MHz clock.
 pub fn apply(config: Config) void {
-   ADC.CS.write(.{
+    ADC.CS.write(.{
         .EN = 0,
         .TS_EN = @intFromBool(config.temp_sensor_enabled),
         .START_ONCE = 0,

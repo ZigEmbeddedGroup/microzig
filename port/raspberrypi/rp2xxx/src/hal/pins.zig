@@ -5,6 +5,7 @@ const StructField = std.builtin.Type.StructField;
 
 const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
+const XIP_CTRL = microzig.chip.peripherals.XIP_CTRL;
 
 const gpio = @import("gpio.zig");
 const pwm = @import("pwm.zig");
@@ -202,7 +203,10 @@ pub const Function = enum {
     ADC6, // RP2340B only
     ADC7, // RP2340B only
 
-    QMI_CS1, // RP2340 only
+    /// Chip select for QMI memory bank 1
+    /// This banks is addressed at 0x1100_0000
+    /// Set `.direction` to `.out` to configure Read/Write access if SDRAM is connected.
+    QMI_CS1,
 
     HSTX, // RP2350 only
 
@@ -862,6 +866,7 @@ pub const GlobalConfiguration = struct {
                     if (pin_config.function.is_adc()) {
                         has_adc = true;
                     }
+
                     if (pin_config.function.is_pwm()) {
                         has_pwm = true;
                     }
@@ -907,8 +912,6 @@ pub const GlobalConfiguration = struct {
                     gpio_pin.set_function(.pio2);
                 } else if (comptime func.is_clock_in() or func.is_clock_out()) {
                     gpio_pin.set_function(.gpck);
-                } else if (comptime func == .QMI_CS1) {
-                    gpio_pin.set_function(.gpck); // Shares function number with clock
                 } else if (comptime func.is_usb()) {
                     gpio_pin.set_function(.usb);
                 } else if (comptime func == .HSTX) {
@@ -916,6 +919,11 @@ pub const GlobalConfiguration = struct {
                 } else if (comptime func.is_adc()) {
                     const adc_num = @intFromEnum(func) - @intFromEnum(Function.ADC0);
                     adc.Input.configure_gpio_pin(@as(adc.Input, @enumFromInt(adc_num)));
+                } else if (comptime func == .QMI_CS1) {
+                    gpio_pin.set_function(.gpck); // Shares function number with clock
+                    XIP_CTRL.CTRL.modify(.{
+                        .WRITABLE_M1 = if (pin_config.direction == .out) 1 else 0,
+                    });
                 } else {
                     @compileError(std.fmt.comptimePrint("Unimplemented pin function. Please implement setting pin function {s} for GPIO {}", .{
                         @tagName(func),
@@ -952,8 +960,9 @@ pub const GlobalConfiguration = struct {
             };
 
         if (has_adc) {
-            // FIXME: https://github.com/ZigEmbeddedGroup/microzig/issues/311
-            // adc.init();
+            // Enable ADC to permit reading individual pins.
+            // Set other ADC features using functions in `hal.adc`.
+            adc.set_enabled(true);
         }
     }
 };
