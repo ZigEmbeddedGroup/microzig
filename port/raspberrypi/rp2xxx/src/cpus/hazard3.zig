@@ -4,7 +4,7 @@ const microzig_options = root.microzig_options;
 const microzig = @import("microzig");
 const riscv32_common = @import("riscv32-common");
 
-pub const CPUOptions = struct {
+pub const CPU_Options = struct {
     ram_vectors: bool = true,
     has_ram_vectors_section: bool = false,
 };

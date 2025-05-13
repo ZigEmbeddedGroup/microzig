@@ -1,7 +1,7 @@
 const microzig = @import("microzig");
 const mmio = microzig.mmio;
 
-pub const CPUOptions = struct {};
+pub const CPU_Options = struct {};
 
 pub const scb_base_offset = 0x0d00;
 
