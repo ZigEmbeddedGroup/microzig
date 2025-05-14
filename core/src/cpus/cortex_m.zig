@@ -606,53 +606,51 @@ pub const startup_logic = struct {
     }
 
     pub fn _start() callconv(.c) noreturn {
-        // fill .bss with zeroes
-        {
-            const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-            const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+        if (comptime !is_ramimage()) {
+            // fill .bss with zeroes
+            {
+                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
+                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
+                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
 
-            @memset(bss_start[0..bss_len], 0);
-        }
-
-        // load .data from flash
-        {
-            const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-            const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-            const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
-
-            @memcpy(data_start[0..data_len], data_src[0..data_len]);
-        }
-
-        // Move vector table to RAM if requested
-        if (interrupt.has_ram_vectors()) {
-            // Copy vector table to RAM and set VTOR to point to it
-
-            if (comptime interrupt.has_ram_vectors_section()) {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .section = "ram_vectors",
-                    .linkage = .strong,
-                });
-            } else {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .linkage = .strong,
-                });
+                @memset(bss_start[0..bss_len], 0);
             }
 
-            const flash_vector: [*]const usize = @ptrCast(&_vector_table);
+            // load .data from flash
+            {
+                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
+                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
+                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
 
-            @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
+                @memcpy(data_start[0..data_len], data_src[0..data_len]);
+            }
 
-            peripherals.scb.VTOR = @intFromPtr(&ram_vectors);
+            // Move vector table to RAM if requested
+            if (interrupt.has_ram_vectors()) {
+                // Copy vector table to RAM and set VTOR to point to it
+
+                if (comptime interrupt.has_ram_vectors_section()) {
+                    @export(&ram_vectors, .{
+                        .name = "_ram_vectors",
+                        .section = "ram_vectors",
+                        .linkage = .strong,
+                    });
+                } else {
+                    @export(&ram_vectors, .{
+                        .name = "_ram_vectors",
+                        .linkage = .strong,
+                    });
+                }
+
+                const flash_vector: [*]const usize = @ptrCast(&_vector_table);
+
+                @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
+
+                peripherals.scb.VTOR = @intFromPtr(&ram_vectors);
+            }
         }
 
-        microzig_main();
-    }
-
-    pub fn ramimage_start() callconv(.c) noreturn {
         microzig_main();
     }
 
@@ -662,10 +660,7 @@ pub const startup_logic = struct {
     pub const _vector_table: VectorTable = blk: {
         var tmp: VectorTable = .{
             .initial_stack_pointer = microzig.config.end_of_stack,
-            .Reset = .{ .c = if (is_ramimage())
-                microzig.cpu.startup_logic.ramimage_start
-            else
-                microzig.cpu.startup_logic._start },
+            .Reset = .{ .c = microzig.cpu.startup_logic._start },
         };
 
         for (@typeInfo(@TypeOf(microzig_options.interrupts)).@"struct".fields) |field| {
@@ -691,7 +686,6 @@ pub fn export_startup_logic() void {
     if (is_ramimage())
         @export(&startup_logic.ram_image_entrypoint, .{
             .name = "_entry_point",
-            .section = ".entry",
             .linkage = .strong,
         });
 
