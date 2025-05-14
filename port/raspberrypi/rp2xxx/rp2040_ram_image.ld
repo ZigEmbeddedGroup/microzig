@@ -35,18 +35,24 @@ SECTIONS
 
   .data :
   {
+     microzig_data_start = .;
+     KEEP(*(.time_critical*))
      *(.data*)
+     microzig_data_end = .;
   } > ram0
 
   .bss :
   {
+      microzig_bss_start = .;
       *(.bss*)
+      microzig_bss_end = .;
   } > ram0
 
-  /* These symbols are not needed, but must be defined */
-  microzig_data_load_start = 0;
-  microzig_data_start = 0;
-  microzig_data_end = 0;
-  microzig_bss_start = 0;
-  microzig_bss_end = 0;
+  .ram_vectors (NOLOAD) :
+  {
+    KEEP(*(ram_vectors))
+  } > ram0
+
+  /* Would not be used */
+  microzig_data_load_start = LOADADDR(.data);
 }
