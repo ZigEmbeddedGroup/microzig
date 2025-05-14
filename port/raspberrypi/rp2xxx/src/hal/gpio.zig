@@ -38,7 +38,7 @@ pub const Function =
             pio0,
             pio1,
             pio2,
-            gpck,
+            gpck, // Also QMI_CS1 and Trace
             usb,
             uart_alt,
             disabled = 0x1f,
@@ -78,6 +78,11 @@ pub const DriveStrength = enum(u2) {
     @"12mA",
 };
 
+pub const SchmittTrigger = enum(u1) {
+    enabled,
+    disabled,
+};
+
 pub const Enabled = enum {
     disabled,
     enabled,
@@ -89,7 +94,7 @@ pub const Pull = enum {
     disabled,
 };
 
-pub fn num(n: u6) Pin {
+pub fn num(n: u9) Pin {
     switch (chip) {
         .RP2040 => {
             if (n > 29)

@@ -10,6 +10,9 @@ chips: struct {
 },
 
 boards: struct {
+    adafruit: struct {
+        metro_rp2350: *const microzig.Target,
+    },
     raspberrypi: struct {
         pico: *const microzig.Target,
         pico2_arm: *const microzig.Target,
@@ -142,6 +145,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
         },
         .boards = .{
+            .adafruit = .{
+                .metro_rp2350 = chip_rp2350_arm.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350",
+                        .url = "https://www.adafruit.com/product/6267",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                }),
+            },
             .raspberrypi = .{
                 .pico = chip_rp2040.derive(.{
                     .board = .{
