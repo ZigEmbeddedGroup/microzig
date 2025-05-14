@@ -5,7 +5,6 @@ const Self = @This();
 
 chips: struct {
     rp2040: *const microzig.Target,
-    rp2040_ram_image: *const microzig.Target,
     rp2350_arm: *const microzig.Target,
     rp2350_riscv: *const microzig.Target,
 },
@@ -16,6 +15,7 @@ boards: struct {
     },
     raspberrypi: struct {
         pico: *const microzig.Target,
+        pico_flashless: *const microzig.Target,
         pico2_arm: *const microzig.Target,
         pico2_riscv: *const microzig.Target,
     },
@@ -142,16 +142,6 @@ pub fn init(dep: *std.Build.Dependency) Self {
     return .{
         .chips = .{
             .rp2040 = chip_rp2040.derive(.{}),
-            // This should probably be a board? Here it's a mix of a flash-less pico, so rp2040 on
-            // its own, but with an external oscillator
-            .rp2040_ram_image = chip_rp2040.derive(.{
-                .linker_script = b.path("rp2040_ram_image.ld"),
-                .board = .{
-                    .name = "RaspberryPi Pico (ram image)",
-                    .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
-                    .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
-                },
-            }),
             .rp2350_arm = chip_rp2350_arm.derive(.{}),
             .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
         },
@@ -172,6 +162,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
                         .imports = rp2040_bootrom_imports,
+                    },
+                }),
+                .pico_flashless = chip_rp2040.derive(.{
+                    .linker_script = b.path("rp2040_ram_image.ld"),
+                    .board = .{
+                        .name = "RaspberryPi Pico (ram image)",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                     },
                 }),
                 .pico2_arm = chip_rp2350_arm.derive(.{
