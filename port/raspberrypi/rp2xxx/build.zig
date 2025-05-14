@@ -10,6 +10,9 @@ chips: struct {
 },
 
 boards: struct {
+    adafruit: struct {
+        metro_rp2350: *const microzig.Target,
+    },
     raspberrypi: struct {
         pico: *const microzig.Target,
         pico2_arm: *const microzig.Target,
@@ -27,6 +30,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const riscv32_common_dep = b.dependency("microzig/modules/riscv32-common", .{});
+    const pico_sdk = b.dependency("pico-sdk", .{});
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
@@ -43,7 +47,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .chip = .{
             .name = "RP2040",
-            .register_definition = .{ .svd = b.path("src/chips/rp2040.svd") },
+            .register_definition = .{ .svd = pico_sdk.path("src/rp2040/hardware_regs/RP2040.svd") },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
                 .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
@@ -66,7 +70,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .chip = .{
             .name = "RP2350",
-            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x10000000, .length = 2048 * 1024 },
                 .{ .kind = .ram, .offset = 0x20000000, .length = 256 * 1024 },
@@ -110,7 +114,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
         },
         .chip = .{
             .name = "RP2350",
-            .register_definition = .{ .svd = b.path("src/chips/rp2350.svd") },
+            .register_definition = .{ .svd = pico_sdk.path("src/rp2350/hardware_regs/RP2350.svd") },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x10000100, .length = (2048 * 1024) - 256 },
                 .{ .kind = .flash, .offset = 0x10000000, .length = 256 },
@@ -141,6 +145,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .rp2350_riscv = chip_rp2350_riscv.derive(.{}),
         },
         .boards = .{
+            .adafruit = .{
+                .metro_rp2350 = chip_rp2350_arm.derive(.{
+                    .board = .{
+                        .name = "Adafruit Metro RP2350",
+                        .url = "https://www.adafruit.com/product/6267",
+                        .root_source_file = b.path("src/boards/adafruit_metro_rp2350.zig"),
+                    },
+                }),
+            },
             .raspberrypi = .{
                 .pico = chip_rp2040.derive(.{
                     .board = .{

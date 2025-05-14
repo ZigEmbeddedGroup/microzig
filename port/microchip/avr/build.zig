@@ -21,6 +21,8 @@ boards: struct {
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const atpack = b.dependency("atpack", .{});
+
     const avr5_target: std.Target.Query = .{
         .cpu_arch = .avr,
         .cpu_model = .{ .explicit = &std.Target.avr.cpu.avr5 },
@@ -36,7 +38,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "ATmega328P",
             .url = "https://www.microchip.com/en-us/product/atmega328p",
             .register_definition = .{
-                .atdf = b.path("src/chips/ATmega328P.atdf"),
+                .atdf = atpack.path("atdf/ATmega328P.atdf"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },
@@ -56,7 +58,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "ATmega32U4",
             .url = "https://www.microchip.com/en-us/product/ATmega32U4",
             .register_definition = .{
-                .atdf = b.path("src/chips/ATmega32U4.atdf"),
+                .atdf = atpack.path("atdf/ATmega32U4.atdf"),
             },
             .memory_regions = &.{
                 .{ .offset = 0x000000, .length = 32 * 1024, .kind = .flash },

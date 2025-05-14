@@ -2,12 +2,12 @@ const std = @import("std");
 const clap = @import("clap");
 const xml = @import("xml.zig");
 const Database = @import("Database.zig");
+const FS_Directory = @import("FS_Directory.zig");
 
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-const file_size_max = 100 * 1024 * 1024;
 pub const std_options = std.Options{
     .log_level = .warn,
 };
@@ -119,21 +119,15 @@ fn main_impl() anyerror!void {
         return;
     }
 
-    // TODO: if format not specified, try using file extension
-    const text = if (args.input_path) |input_path| blk: {
-        break :blk try std.fs.cwd().readFileAlloc(allocator, input_path, file_size_max);
-    } else blk: {
-        const stdin = std.io.getStdIn().reader().any();
-        break :blk try stdin.readAllAlloc(allocator, file_size_max);
-    };
-    defer allocator.free(text);
+    const input_path = args.input_path orelse return error.MissingInputPath;
+    const output_path = args.output_path orelse return error.MissingOutputPath;
 
     const format = args.format orelse {
         std.log.err("Format not specified", .{});
         return error.Explained;
     };
 
-    var db = try Database.create_from_xml(allocator, format, text);
+    var db = try Database.create_from_path(allocator, format, input_path);
     defer db.destroy();
 
     if (args.patch_path) |patch_path| {
@@ -158,29 +152,14 @@ fn main_impl() anyerror!void {
     }
 
     if (args.dump) {
-        const output_path = args.output_path orelse return error.MissingOutputPath;
         try db.backup(output_path);
         return;
     }
 
-    const raw_writer = if (args.output_path) |output_path|
-        if (std.fs.path.isAbsolute(output_path)) writer: {
-            if (std.fs.path.dirname(output_path)) |dirname| {
-                _ = dirname;
-                // TODO: recursively create absolute path if it doesn't exist
-            }
+    // output_path is the directory to write files
+    var output_dir = try std.fs.cwd().makeOpenPath(args.output_path.?, .{});
+    defer output_dir.close();
 
-            break :writer (try std.fs.createFileAbsolute(output_path, .{})).writer();
-        } else writer: {
-            if (std.fs.path.dirname(output_path)) |dirname|
-                try std.fs.cwd().makePath(dirname);
-
-            break :writer (try std.fs.cwd().createFile(output_path, .{})).writer();
-        }
-    else
-        std.io.getStdOut().writer();
-
-    var buffered = std.io.bufferedWriter(raw_writer);
-    try db.to_zig(buffered.writer(), .{ .for_microzig = args.microzig });
-    try buffered.flush();
+    var fs = FS_Directory.init(output_dir);
+    try db.to_zig(fs.directory(), .{ .for_microzig = args.microzig });
 }

@@ -1,114 +1,220 @@
-const root = @import("root");
-const microzig = @import("microzig");
-
 pub const cpu_frequency = 8_000_000; // 8 MHz
 
-pub const interrupt = struct {
-    pub inline fn enable_interrupts() void {
-        asm volatile ("csrsi mstatus, 0b1000");
-    }
-
-    pub inline fn disable_interrupts() void {
-        asm volatile ("csrci mstatus, 0b1000");
-    }
+pub const Interrupt = enum(u8) {
+    /// Non-maskable interrupt
+    NMI = 2,
+    /// Abnormal interruptions
+    HardFault = 3,
+    /// Callback interrupt in machine mode
+    EcallM = 5,
+    /// Callback interrupt in user mode
+    EcallU = 8,
+    /// Breakpoint callback interrupt
+    BreakPoint = 9,
+    /// System timer interrupt
+    SysTick = 12,
+    /// Software interrupt
+    SW = 14,
+    /// Window Watchdog interrupt
+    WWDG = 16,
+    /// PVD through EXTI line detection interrupt
+    PVD = 17,
+    /// Tamper interrupt
+    TAMPER = 18,
+    /// RTC global interrupt
+    RTC = 19,
+    /// Flash global interrupt
+    FLASH = 20,
+    /// RCC global interrupt
+    RCC = 21,
+    /// EXTI Line0 interrupt
+    EXTI0 = 22,
+    /// EXTI Line1 interrupt
+    EXTI1 = 23,
+    /// EXTI Line2 interrupt
+    EXTI2 = 24,
+    /// EXTI Line3 interrupt
+    EXTI3 = 25,
+    /// EXTI Line4 interrupt
+    EXTI4 = 26,
+    /// DMA1 Channel1 global interrupt
+    DMA1_Channel1 = 27,
+    /// DMA1 Channel2 global interrupt
+    DMA1_Channel2 = 28,
+    /// DMA1 Channel3 global interrupt
+    DMA1_Channel3 = 29,
+    /// DMA1 Channel4 global interrupt
+    DMA1_Channel4 = 30,
+    /// DMA1 Channel5 global interrupt
+    DMA1_Channel5 = 31,
+    /// DMA1 Channel6 global interrupt
+    DMA1_Channel6 = 32,
+    /// DMA1 Channel7 global interrupt
+    DMA1_Channel7 = 33,
+    /// ADC global interrupt
+    ADC = 34,
+    /// CAN1 TX interrupts
+    USB_HP_CAN1_TX = 35,
+    /// CAN1 RX0 interrupts
+    USB_LP_CAN1_RX0 = 36,
+    /// CAN1 RX1 interrupt
+    CAN1_RX1 = 37,
+    /// CAN1 SCE interrupt
+    CAN1_SCE = 38,
+    /// EXTI Line[9:5] interrupts
+    EXTI9_5 = 39,
+    /// TIM1 Break interrupt
+    TIM1_BRK = 40,
+    /// TIM1 Update interrupt
+    TIM1_UP_ = 41,
+    /// TIM1 Trigger and Commutation interrupts
+    TIM1_TRG_COM = 42,
+    /// TIM1 Capture Compare interrupt
+    TIM1_CC = 43,
+    /// TIM2 global interrupt
+    TIM2 = 44,
+    /// TIM3 global interrupt
+    TIM3 = 45,
+    /// TIM4 global interrupt
+    TIM4 = 46,
+    /// I2C1 event interrupt
+    I2C1_EV = 47,
+    /// I2C1 error interrupt
+    I2C1_ER = 48,
+    /// I2C2 event interrupt
+    I2C2_EV = 49,
+    /// I2C2 error interrupt
+    I2C2_ER = 50,
+    /// SPI1 global interrupt
+    SPI1 = 51,
+    /// SPI2 global interrupt
+    SPI2 = 52,
+    /// USART1 global interrupt
+    USART1 = 53,
+    /// USART2 global interrupt
+    USART2 = 54,
+    /// USART3 global interrupt
+    USART3 = 55,
+    /// EXTI Line[15:10] interrupts
+    EXTI15_10 = 56,
+    /// RTC Alarms through EXTI line interrupt
+    RTCAlarm = 57,
+    /// USB Device WakeUp from suspend through EXTI Line Interrupt
+    USBWakeUp = 58,
+    /// TIM8 Break interrupt
+    TIM8_BRK = 59,
+    /// TIM8 Update interrupt
+    TIM8_UP_ = 60,
+    /// TIM8 Trigger and Commutation interrupts
+    TIM8_TRG_COM = 61,
+    /// TIM8 Capture Compare interrupt
+    TIM8_CC = 62,
+    /// TIM5 global interrupt
+    TIM5 = 66,
+    /// SPI3 global interrupt
+    SPI3 = 67,
+    /// UART4 global interrupt
+    UART4 = 68,
+    /// UART5 global interrupt
+    UART5 = 69,
+    /// Ethernet global interrupt
+    ETH = 77,
+    /// Ethernet Wakeup through EXTI line interrupt
+    ETH_WKUP = 78,
+    /// OTG_FS
+    OTG_FS = 83,
+    /// USBHSWakeup
+    USBHSWakeup = 84,
+    /// USBHS
+    USBHS = 85,
+    /// UART6 global interrupt
+    UART6 = 87,
+    /// UART7 global interrupt
+    UART7 = 88,
+    /// UART8 global interrupt
+    UART8 = 89,
+    /// TIM9 Break interrupt
+    TIM9_BRK = 90,
+    /// TIM9 Update interrupt
+    TIM9_UP_ = 91,
+    /// TIM9 Trigger and Commutation interrupts
+    TIM9_TRG_COM = 92,
+    /// TIM9 Capture Compare interrupt
+    TIM9_CC = 93,
+    /// TIM10 Break interrupt
+    TIM10_BRK = 94,
+    /// TIM10 Update interrupt
+    TIM10_UP_ = 95,
+    /// TIM10 Trigger and Commutation interrupts
+    TIM10_TRG_COM = 96,
+    /// TIM10 Capture Compare interrupt
+    TIM10_CC = 97,
 };
 
-pub inline fn wfi() void {
-    asm volatile ("wfi");
-}
+// https://github.com/openwch/ch32v20x/blob/6209b6e7f910e313eaa93354dc3b29608431f725/EVT/EXAM/RCC/MCO/User/system_ch32v20x.c#L111
+pub inline fn system_init(comptime chip: anytype) void {
+    const RCC = chip.peripherals.RCC;
 
-pub inline fn wfe() void {
-    const PFIC = microzig.chip.peripherals.PFIC;
-    // Treats the subsequent wfi instruction as wfe
-    PFIC.SCTLR.modify(.{ .WFITOWFE = 1 });
-    asm volatile ("wfi");
-}
-
-pub const startup_logic = struct {
-    extern fn microzig_main() noreturn;
-
-    pub fn _start() callconv(.c) void {
-        // set global pointer
-        asm volatile (
-            \\.option push
-            \\.option norelax
-            \\la gp, __global_pointer$
-            \\.option pop
-        );
-        // set stack pointer
-        asm volatile ("mv sp, %[eos]"
-            :
-            : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
-        );
-
-        // It is not allowed to call the function directly from the interrupt, the MCU does not start after a power-off.
-        @export(&initialize_system_memories, .{ .name = "initialize_system_memories" });
-        asm volatile (
-            \\jal initialize_system_memories
-        );
-
-        // Vendor-defined CSRs
-        // 3.2 Interrupt-related CSR Registers
-        asm volatile ("csrsi 0x804, 0b0111"); // INTSYSCR: enable Interrupt nesting + HPE and the configured interrupt nesting depth is 2.
-        asm volatile ("csrsi mtvec, 0b11"); // mtvec: absolute address + vector table mode
-
-        // Enable floating point and interrupt.
-        // Set MPIE, MIE and floating point status to Dirty.
-        asm volatile (
-            \\li t0, 0x6088
-            \\csrw mstatus, t0
-        );
-
-        // Microprocessor Configuration Registers (corecfgr)
-        asm volatile (
-            \\li t0, 0x1f
-            \\csrw 0xbc0, t0
-        );
-
-        // init system clock
-        const RCC = microzig.chip.peripherals.RCC;
-        RCC.CTLR.modify(.{ .HSION = 1 });
-        RCC.CFGR0.raw &= 0xF8FF0000;
-        RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0 });
-        RCC.CTLR.modify(.{ .HSEBYP = 0 });
-        RCC.CFGR0.raw &= 0xFF80FFFF;
-        RCC.CTLR.raw &= 0xEBFFFFFF;
-        RCC.INTR.raw = 0x00FF0000;
-        RCC.CFGR2.raw = 0x00000000;
-
-        // Load the address of the `microzig_main` function into the `mepc` register
-        // and transfer control to it using the `mret` instruction.
-        // This is necessary to ensure proper MCU startup after a power-off.
-        // Directly calling the function from an interrupt would prevent the MCU from starting correctly.
-        asm volatile (
-            \\la t0, microzig_main
-            \\csrw mepc, t0
-            \\mret
-        );
-    }
-
-    export fn _reset_vector() linksection("microzig_flash_start") callconv(.naked) void {
-        asm volatile ("j _start");
-    }
-
-    fn initialize_system_memories() callconv(.c) void {
-        root.initialize_system_memories();
-    }
-};
-
-pub fn export_startup_logic() void {
-    @export(&startup_logic._start, .{
-        .name = "_start",
+    // RCC->CTLR |= (uint32_t)0x00000001;
+    RCC.CTLR.modify(.{ .HSION = 1 });
+    // RCC->CFGR0 &= (uint32_t)0xF0FF0000;
+    RCC.CFGR0.modify(.{
+        .SW = 0,
+        .SWS = 0,
+        .HPRE = 0,
+        .PPRE1 = 0,
+        .PPRE2 = 0,
+        .ADCPRE = 0,
+        .MCO = 0,
+    });
+    // RCC->CTLR &= (uint32_t)0xFEF6FFFF;
+    RCC.CTLR.modify(.{ .HSEON = 0, .CSSON = 0, .PLLON = 0 });
+    // RCC->CTLR &= (uint32_t)0xFFFBFFFF;
+    RCC.CTLR.modify(.{ .HSEBYP = 0 });
+    // RCC->CFGR0 &= (uint32_t)0xFF00FFFF;
+    RCC.CFGR0.modify(.{ .PLLSRC = 0, .PLLXTPRE = 0, .PLLMUL = 0, .USBPRE = 0 });
+    // RCC->INTR = 0x009F0000;
+    RCC.INTR.write(.{
+        // Read-only ready flags.
+        .LSIRDYF = 0,
+        .LSERDYF = 0,
+        .HSIRDYF = 0,
+        .HSERDYF = 0,
+        .PLLRDYF = 0,
+        .CSSF = 0,
+        // Disable ready interrupts.
+        .LSIRDYIE = 0,
+        .LSERDYIE = 0,
+        .HSIRDYIE = 0,
+        .HSERDYIE = 0,
+        .PLLRDYIE = 0,
+        // Clear ready flags.
+        .LSIRDYC = 1,
+        .LSERDYC = 1,
+        .HSIRDYC = 1,
+        .HSERDYC = 1,
+        .PLLRDYC = 1,
+        .CSSC = 1,
     });
 }
 
-const VectorTable = microzig.chip.VectorTable;
-pub const vector_table: VectorTable = blk: {
-    var tmp: VectorTable = .{};
-    if (@hasDecl(root, "microzig_options")) {
-        for (@typeInfo(microzig.VectorTableOptions).@"struct".fields) |field|
-            @field(tmp, field.name) = @field(root.microzig_options.interrupts, field.name);
-    }
-
-    break :blk tmp;
+pub const csr_types = struct {
+    pub const intsyscr = packed struct(u32) {
+        /// [0] HPE enable
+        hwstken: u1,
+        /// [1] Interrupt nesting enable
+        inesten: u1,
+        /// [3:2] Interrupt nesting depth configuration
+        pmtcfg: u2,
+        /// [4] Interrupt enable after HPE overflow
+        hwstkoven: u1 = 0,
+        /// [5] Global interrupt and HPE off enable
+        gihwstknen: u1 = 0,
+        /// [7:6] Reserved
+        reserved1: u2 = 0,
+        /// [15:8] Preemption status indication
+        pmtsta: u8 = 0,
+        /// [31:16] Reserved
+        reserved0: u16 = 0,
+    };
 };

@@ -12,6 +12,8 @@ boards: struct {},
 pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
+    const atpack_dep = b.dependency("atpack", .{});
+
     const chip_atsamd51j19: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
@@ -26,7 +28,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             .name = "ATSAMD51J19A",
             .url = "https://www.microchip.com/en-us/product/ATSAMD51J19A",
             .register_definition = .{
-                .atdf = b.path("src/chips/ATSAMD51J19A.atdf"),
+                .atdf = atpack_dep.path("samd51a/atdf/ATSAMD51J19A.atdf"),
             },
             .memory_regions = &.{
                 .{ .kind = .flash, .offset = 0x00000000, .length = 512 * 1024 }, // Embedded Flash

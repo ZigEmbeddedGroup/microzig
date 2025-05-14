@@ -89,7 +89,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
-        run: zig build -Dgenerate
+        run: zig build generate
         working-directory: port/stmicro/stm32
       - name: Check for code diffs
         run: |

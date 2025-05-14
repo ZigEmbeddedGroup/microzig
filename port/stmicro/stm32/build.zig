@@ -51,30 +51,28 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) !void {
-    const generate = b.option(bool, "generate", "Generate chip definitions from embassy-rs/stm32-data-generated") orelse false;
+    const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
 
-    if (generate) {
-        const stm32_data_generated = b.lazyDependency("stm32-data-generated", .{}) orelse return;
+    const generate_optimize = .ReleaseSafe;
+    const regz_dep = b.dependency("microzig/tools/regz", .{
+        .optimize = generate_optimize,
+    });
+    const regz = regz_dep.module("regz");
 
-        const generate_optimize = .ReleaseSafe;
-        const regz_dep = b.dependency("microzig/tools/regz", .{
-            .optimize = generate_optimize,
-        });
-        const regz = regz_dep.module("regz");
+    const generate_exe = b.addExecutable(.{
+        .name = "generate",
+        .root_source_file = b.path("src/generate.zig"),
+        .target = b.graph.host,
+        .optimize = generate_optimize,
+    });
+    generate_exe.root_module.addImport("regz", regz);
 
-        const generate_exe = b.addExecutable(.{
-            .name = "generate",
-            .root_source_file = b.path("src/generate.zig"),
-            .target = b.graph.host,
-            .optimize = generate_optimize,
-        });
-        generate_exe.root_module.addImport("regz", regz);
+    const generate_run = b.addRunArtifact(generate_exe);
+    generate_run.max_stdio_size = std.math.maxInt(usize);
+    generate_run.addFileArg(stm32_data_generated.path("."));
 
-        const generate_run = b.addRunArtifact(generate_exe);
-        generate_run.max_stdio_size = std.math.maxInt(usize);
-        generate_run.addFileArg(stm32_data_generated.path("."));
-        b.getInstallStep().dependOn(&generate_run.step);
-    } else {
-        _ = b.step("test", "Run platform agnostic unit tests");
-    }
+    const generate_step = b.step("generate", "Generate chips file 'src/Chips.zig'");
+    generate_step.dependOn(&generate_run.step);
+
+    _ = b.step("test", "Run platform agnostic unit tests");
 }

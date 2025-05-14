@@ -19,11 +19,7 @@ pub const config = @import("config");
 pub const cpu = @import("cpu");
 
 /// Provides access to the low level features of the current microchip.
-pub const chip = struct {
-    const inner = @import("chip");
-    pub const types = inner.types;
-    pub usingnamespace @field(inner.devices, config.chip_name);
-};
+pub const chip = @import("chip");
 
 /// Provides higher level APIs for interacting with hardware
 pub const hal = if (config.has_hal) @import("hal") else void;
@@ -68,7 +64,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const InterruptOptions = if (@hasDecl(cpu, "InterruptOptions")) cpu.InterruptOptions else struct {};
 
-pub const CPUOptions = if (@hasDecl(cpu, "CPUOptions")) cpu.CPUOptions else struct {};
+pub const CPU_Options = if (@hasDecl(cpu, "CPU_Options")) cpu.CPU_Options else struct {};
 
 pub const Options = struct {
     log_level: std.log.Level = std.log.default_level,
@@ -92,7 +88,7 @@ pub const Options = struct {
         }
     }.log,
     interrupts: InterruptOptions = .{},
-    cpu: CPUOptions = .{},
+    cpu: CPU_Options = .{},
 };
 
 /// Hangs the processor and will stop doing anything useful. Use with caution!

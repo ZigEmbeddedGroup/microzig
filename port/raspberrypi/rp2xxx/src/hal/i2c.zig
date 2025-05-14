@@ -12,6 +12,7 @@ const I2C0 = peripherals.I2C0;
 const I2C1 = peripherals.I2C1;
 
 const clocks = @import("clocks.zig");
+const dma = @import("dma");
 const time = @import("time.zig");
 const hw = @import("hw.zig");
 
@@ -361,6 +362,20 @@ pub const I2C = enum(u1) {
                 break;
         }
         _ = regs.IC_CLR_STOP_DET.read();
+    }
+
+    pub fn tx(i2c: I2C) dma.DMA_WriteTarget {
+        return .{
+            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_tx else .i2c1_tx,
+            .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
+        };
+    }
+
+    pub fn rx(i2c: I2C) dma.DMA_ReadTarget {
+        return .{
+            .dreq = if (@intFromEnum(i2c) == 0) .i2c0_rx else .i2c1_rx,
+            .addr = @intFromPtr(&i2c.get_regs().IC_DATA_CMD),
+        };
     }
 
     /// Attempts to write number of bytes provided to target device and blocks until one of the following occurs:

@@ -124,6 +124,9 @@ pub const Chip = struct {
 
         /// Use the provided file directly as the chip file.
         zig: LazyPath,
+
+        /// Path to embassy stm32-data directory
+        embassy: LazyPath,
     },
 
     /// The memory regions that are present in this chip.

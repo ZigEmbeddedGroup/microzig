@@ -179,7 +179,7 @@ pub const SPI_Device = struct {
     }
 
     pub fn write(dev: SPI_Device, datagrams: []const u8) !void {
-        dev.bus.writev_blocking(u8, datagrams);
+        dev.bus.write_blocking(u8, datagrams);
     }
 
     pub fn writev(dev: SPI_Device, datagrams: []const []const u8) !void {

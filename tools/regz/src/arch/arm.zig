@@ -123,7 +123,7 @@ pub fn write_interrupt_vector(
                 });
                 index = interrupt.idx;
             } else if (index > interrupt.idx) {
-                log.warn("skipping interrupt: {s}", .{interrupt.name});
+                log.debug("skipping interrupt: {s}", .{interrupt.name});
                 continue;
             }
 
