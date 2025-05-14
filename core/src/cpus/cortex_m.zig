@@ -575,24 +575,6 @@ const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
 var ram_vectors: [vector_count]usize align(256) = undefined;
 
-pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
-    asm volatile (
-        \\
-        // Set VTOR to point to ram table
-        \\mov r0, %[_vector_table]
-        \\mov r1, %[_VTOR_ADDRESS]
-        \\str r0, [r1]
-        // Set up stack and jump to _start
-        \\ldm r0!, {r1, r2}
-        \\msr msp, r1
-        \\bx r2
-        :
-        : [_vector_table] "r" (&startup_logic._vector_table),
-          [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
-        : "memory", "r0", "r1", "r2"
-    );
-}
-
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
 
@@ -604,6 +586,24 @@ pub const startup_logic = struct {
     extern var microzig_bss_start: u8;
     extern var microzig_bss_end: u8;
     extern const microzig_data_load_start: u8;
+
+    pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
+        asm volatile (
+            \\
+            // Set VTOR to point to ram table
+            \\mov r0, %[_vector_table]
+            \\mov r1, %[_VTOR_ADDRESS]
+            \\str r0, [r1]
+            // Set up stack and jump to _start
+            \\ldm r0!, {r1, r2}
+            \\msr msp, r1
+            \\bx r2
+            :
+            : [_vector_table] "r" (&startup_logic._vector_table),
+              [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+            : "memory", "r0", "r1", "r2"
+        );
+    }
 
     pub fn _start() callconv(.c) noreturn {
         // fill .bss with zeroes
@@ -689,7 +689,7 @@ fn is_ramimage() bool {
 
 pub fn export_startup_logic() void {
     if (is_ramimage())
-        @export(&ram_image_entrypoint, .{
+        @export(&startup_logic.ram_image_entrypoint, .{
             .name = "_entry_point",
             .linkage = .strong,
         });
