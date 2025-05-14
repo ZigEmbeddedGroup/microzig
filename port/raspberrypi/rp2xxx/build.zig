@@ -15,6 +15,7 @@ boards: struct {
     },
     raspberrypi: struct {
         pico: *const microzig.Target,
+        pico_flashless: *const microzig.Target,
         pico2_arm: *const microzig.Target,
         pico2_riscv: *const microzig.Target,
     },
@@ -161,6 +162,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
                         .root_source_file = b.path("src/boards/raspberry_pi_pico.zig"),
                         .imports = rp2040_bootrom_imports,
+                    },
+                }),
+                .pico_flashless = chip_rp2040.derive(.{
+                    .entry = .{ .symbol_name = "_entry_point" },
+                    .linker_script = b.path("rp2040_ram_image.ld"),
+                    .board = .{
+                        .name = "RaspberryPi Pico (ram image)",
+                        .url = "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+                        .root_source_file = b.path("src/boards/raspberry_pi_pico2.zig"),
                     },
                 }),
                 .pico2_arm = chip_rp2350_arm.derive(.{

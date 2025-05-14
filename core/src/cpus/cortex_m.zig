@@ -587,49 +587,68 @@ pub const startup_logic = struct {
     extern var microzig_bss_end: u8;
     extern const microzig_data_load_start: u8;
 
+    pub fn ram_image_entrypoint() linksection(".entry") callconv(.naked) void {
+        asm volatile (
+            \\
+            // Set VTOR to point to ram table
+            \\mov r0, %[_vector_table]
+            \\mov r1, %[_VTOR_ADDRESS]
+            \\str r0, [r1]
+            // Set up stack and jump to _start
+            \\ldm r0!, {r1, r2}
+            \\msr msp, r1
+            \\bx r2
+            :
+            : [_vector_table] "r" (&startup_logic._vector_table),
+              [_VTOR_ADDRESS] "r" (&peripherals.scb.VTOR),
+            : "memory", "r0", "r1", "r2"
+        );
+    }
+
     pub fn _start() callconv(.c) noreturn {
+        if (comptime !is_ramimage()) {
+            // fill .bss with zeroes
+            {
+                const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
+                const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
+                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
 
-        // fill .bss with zeroes
-        {
-            const bss_start: [*]u8 = @ptrCast(&microzig_bss_start);
-            const bss_end: [*]u8 = @ptrCast(&microzig_bss_end);
-            const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
-
-            @memset(bss_start[0..bss_len], 0);
-        }
-
-        // load .data from flash
-        {
-            const data_start: [*]u8 = @ptrCast(&microzig_data_start);
-            const data_end: [*]u8 = @ptrCast(&microzig_data_end);
-            const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
-            const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
-
-            @memcpy(data_start[0..data_len], data_src[0..data_len]);
-        }
-
-        // Move vector table to RAM if requested
-        if (interrupt.has_ram_vectors()) {
-            // Copy vector table to RAM and set VTOR to point to it
-
-            if (interrupt.has_ram_vectors_section()) {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .section = "ram_vectors",
-                    .linkage = .strong,
-                });
-            } else {
-                @export(&ram_vectors, .{
-                    .name = "_ram_vectors",
-                    .linkage = .strong,
-                });
+                @memset(bss_start[0..bss_len], 0);
             }
 
-            const flash_vector: [*]const usize = @ptrCast(&_vector_table);
+            // load .data from flash
+            {
+                const data_start: [*]u8 = @ptrCast(&microzig_data_start);
+                const data_end: [*]u8 = @ptrCast(&microzig_data_end);
+                const data_len = @intFromPtr(data_end) - @intFromPtr(data_start);
+                const data_src: [*]const u8 = @ptrCast(&microzig_data_load_start);
 
-            @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
+                @memcpy(data_start[0..data_len], data_src[0..data_len]);
+            }
 
-            peripherals.scb.VTOR = @intFromPtr(&ram_vectors);
+            // Move vector table to RAM if requested
+            if (interrupt.has_ram_vectors()) {
+                // Copy vector table to RAM and set VTOR to point to it
+
+                if (comptime interrupt.has_ram_vectors_section()) {
+                    @export(&ram_vectors, .{
+                        .name = "_ram_vectors",
+                        .section = "ram_vectors",
+                        .linkage = .strong,
+                    });
+                } else {
+                    @export(&ram_vectors, .{
+                        .name = "_ram_vectors",
+                        .linkage = .strong,
+                    });
+                }
+
+                const flash_vector: [*]const usize = @ptrCast(&_vector_table);
+
+                @memcpy(ram_vectors[0..vector_count], flash_vector[0..vector_count]);
+
+                peripherals.scb.VTOR = @intFromPtr(&ram_vectors);
+            }
         }
 
         microzig_main();
@@ -655,14 +674,28 @@ pub const startup_logic = struct {
     };
 };
 
+fn is_ramimage() bool {
+    // HACK
+    // TODO: Use microzig_options?
+    if (microzig.config.board_name) |board_name|
+        return std.mem.containsAtLeast(u8, board_name, 1, "ram image");
+    return false;
+}
+
 pub fn export_startup_logic() void {
+    if (is_ramimage())
+        @export(&startup_logic.ram_image_entrypoint, .{
+            .name = "_entry_point",
+            .linkage = .strong,
+        });
+
     @export(&startup_logic._start, .{
         .name = "_start",
     });
 
     @export(&startup_logic._vector_table, .{
         .name = "_vector_table",
-        .section = "microzig_flash_start",
+        .section = ".isr_vector",
         .linkage = .strong,
     });
 }

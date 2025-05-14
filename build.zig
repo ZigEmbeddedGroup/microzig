@@ -332,6 +332,9 @@ pub fn MicroBuild(port_select: PortSelect) type {
             /// If set, overrides the `linker_script` property of the target.
             linker_script: ?LazyPath = null,
 
+            /// If set, overrides the default `entry` property of the arget.
+            entry: ?Build.Step.Compile.Entry = null,
+
             /// Strips stack trace info from final executable.
             strip: bool = false,
 
@@ -538,6 +541,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             fw.artifact.link_gc_sections = options.strip_unused_symbols;
             fw.artifact.link_function_sections = options.strip_unused_symbols;
             fw.artifact.link_data_sections = options.strip_unused_symbols;
+            fw.artifact.entry = options.entry orelse target.entry orelse .default;
 
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);

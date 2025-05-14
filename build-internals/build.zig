@@ -57,6 +57,9 @@ pub const Target = struct {
     /// (optional) Provide a custom linker script for the hardware or define a custom generation.
     linker_script: ?LazyPath = null,
 
+    /// (Optional) Explicitly set the entry point
+    entry: ?Build.Step.Compile.Entry = null,
+
     /// (optional) Post processing step that will patch up and modify the elf file if necessary.
     patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
 
@@ -71,6 +74,7 @@ pub const Target = struct {
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
         linker_script: ?LazyPath = null,
+        entry: ?Build.Step.Compile.Entry = null,
         patch_elf: ?*const fn (*Build.Dependency, LazyPath) LazyPath = null,
     };
 
@@ -88,6 +92,7 @@ pub const Target = struct {
             .hal = options.hal orelse from.hal,
             .board = options.board orelse from.board,
             .linker_script = options.linker_script orelse from.linker_script,
+            .entry = options.entry orelse from.entry,
             .patch_elf = options.patch_elf orelse from.patch_elf,
         };
         return ret;

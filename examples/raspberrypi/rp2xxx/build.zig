@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
 
-    const rp2040_only_examples: []const Example = &.{
+    const specific_examples: []const Example = &.{
         // RaspberryPi Boards:
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-program", .file = "src/rp2040_only/flash_program.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_flash-id", .file = "src/rp2040_only/flash_id.zig" },
@@ -23,16 +23,13 @@ pub fn build(b: *std.Build) void {
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_hd44780", .file = "src/rp2040_only/hd44780.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_pcf8574", .file = "src/rp2040_only/pcf8574.zig" },
         .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico, .name = "pico_i2c_slave", .file = "src/rp2040_only/i2c_slave.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.raspberrypi.pico_flashless, .name = "pico_flashless_blinky", .file = "src/blinky.zig" },
 
         // WaveShare Boards:
-        .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040-matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
+        .{ .target = mb.ports.rp2xxx.boards.waveshare.rp2040_matrix, .name = "rp2040_matrix_tiles", .file = "src/rp2040_only/tiles.zig" },
         // .{ .target = "board:waveshare/rp2040_eth", .name = "rp2040-eth" },
         // .{ .target = "board:waveshare/rp2040_plus_4m", .name = "rp2040-plus-4m" },
         // .{ .target = "board:waveshare/rp2040_plus_16m", .name = "rp2040-plus-16m" },
-    };
-
-    const rp2350_only_examples: []const Example = &.{
-        // TODO: No RP2350 feature specific examples to show off yet
     };
 
     const chip_agnostic_examples: []const ChipAgnosticExample = &.{
@@ -60,8 +57,7 @@ pub fn build(b: *std.Build) void {
     };
 
     var available_examples = std.ArrayList(Example).init(b.allocator);
-    available_examples.appendSlice(rp2040_only_examples) catch @panic("out of memory");
-    available_examples.appendSlice(rp2350_only_examples) catch @panic("out of memory");
+    available_examples.appendSlice(specific_examples) catch @panic("out of memory");
     for (chip_agnostic_examples) |example| {
         available_examples.append(.{
             .target = mb.ports.rp2xxx.boards.raspberrypi.pico,
