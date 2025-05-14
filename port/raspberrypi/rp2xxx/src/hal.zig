@@ -4,7 +4,10 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
-pub const atomic = @import("hal/atomic.zig");
+pub const atomic = switch (compatibility.chip) {
+    .RP2040 => @import("hal/atomic.zig"),
+    else => void, // Zig handles atomics for other chips
+};
 pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
