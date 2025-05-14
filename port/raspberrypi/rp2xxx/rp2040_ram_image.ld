@@ -35,7 +35,6 @@ SECTIONS
 
   .data :
   {
-     KEEP(*(.time_critical*))
      *(.data*)
   } > ram0
 
