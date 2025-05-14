@@ -7,7 +7,6 @@
 ///
 /// We implement much of the RTC functionality here, as the RTC is not
 /// available on the RP2350.
-
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -62,7 +61,6 @@ pub fn disable() void {
 pub fn is_enabled() bool {
     return POWMAN.TIMER.read().RUN != 0;
 }
-
 
 fn is_leap_year(year: u32) bool {
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0);
@@ -464,5 +462,3 @@ pub const irq = struct {
 //         // Re-enable alarm now that settings have been applied
 //         alarm.enable();
 //     }
-
-

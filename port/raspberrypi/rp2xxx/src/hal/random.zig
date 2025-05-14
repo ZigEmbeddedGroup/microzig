@@ -25,7 +25,6 @@ pub const Trng = if (chip == .RP2350) struct {
 
         const result = TRNG.EHR_DATA5.read().EHR_DATA5;
 
-
         return result;
     }
 
@@ -45,12 +44,9 @@ pub const Trng = if (chip == .RP2350) struct {
 
             var data = reg.*;
 
-            if (reg == &TRNG.EHR_DATA5.raw)
-            {
+            if (reg == &TRNG.EHR_DATA5.raw) {
                 reg = &TRNG.EHR_DATA0.raw;
-            }
-            else
-            {
+            } else {
                 reg = @ptrFromInt(@intFromPtr(reg) + @sizeOf(u32));
             }
 
@@ -64,9 +60,8 @@ pub const Trng = if (chip == .RP2350) struct {
 
         // If we didn't read all the data, read DATA5 to clear the buffer
 
-        if (reg != &TRNG.EHR_DATA0.raw)
-        {
-        _ = TRNG.EHR_DATA5.read().EHR_DATA5;
+        if (reg != &TRNG.EHR_DATA0.raw) {
+            _ = TRNG.EHR_DATA5.read().EHR_DATA5;
         }
     }
 
@@ -76,10 +71,7 @@ pub const Trng = if (chip == .RP2350) struct {
             .TRNG_SW_RESET = true,
         });
     }
-}
-else
-    @compileError("Trng not supported on this chip");
-
+} else @compileError("Trng not supported on this chip");
 
 /// Wrapper around the Ascon CSPRNG with automatic reseed using the ROSC
 ///
