@@ -35,24 +35,19 @@ SECTIONS
 
   .data :
   {
-     microzig_data_start = .;
      KEEP(*(.time_critical*))
      *(.data*)
-     microzig_data_end = .;
   } > ram0
 
   .bss :
   {
-      microzig_bss_start = .;
       *(.bss*)
-      microzig_bss_end = .;
   } > ram0
 
-  .ram_vectors (NOLOAD) :
-  {
-    KEEP(*(ram_vectors))
-  } > ram0
-
-  /* Would not be used */
-  microzig_data_load_start = LOADADDR(.data);
+  /* Unused, but set as extern in startup_logic */
+  microzig_data_start = .;
+  microzig_data_end = .;
+  microzig_bss_start = .;
+  microzig_bss_end = .;
+  microzig_data_load_start = .;
 }
