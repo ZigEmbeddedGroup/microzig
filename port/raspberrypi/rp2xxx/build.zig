@@ -165,6 +165,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                     },
                 }),
                 .pico_flashless = chip_rp2040.derive(.{
+                    .entry = .{ .symbol_name = "_entry_point" },
                     .linker_script = b.path("rp2040_ram_image.ld"),
                     .board = .{
                         .name = "RaspberryPi Pico (ram image)",

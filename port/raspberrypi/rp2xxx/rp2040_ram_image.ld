@@ -3,8 +3,6 @@
  * Target Chip: RP2040
  */
 
-ENTRY(_entry_point);
-
 MEMORY
 {
   entry  (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00000100
