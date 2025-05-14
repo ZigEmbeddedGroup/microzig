@@ -541,7 +541,6 @@ pub fn MicroBuild(port_select: PortSelect) type {
 
             fw.artifact.root_module.addImport("microzig", core_mod);
             fw.artifact.root_module.addImport("app", app_mod);
-            fw.artifact.entry = .{ .symbol_name = "_entry_point" };
 
             // If not specified then generate the linker script
             const linker_script = options.linker_script orelse target.linker_script orelse blk: {
