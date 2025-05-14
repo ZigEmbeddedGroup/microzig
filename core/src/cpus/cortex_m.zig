@@ -691,6 +691,7 @@ pub fn export_startup_logic() void {
     if (is_ramimage())
         @export(&startup_logic.ram_image_entrypoint, .{
             .name = "_entry_point",
+            .section = ".entry",
             .linkage = .strong,
         });
 

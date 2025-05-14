@@ -15,7 +15,7 @@ SECTIONS
 {
   .entry :
   {
-     KEEP(*(_entry_point))
+     KEEP(*(.entry))
   } > entry
 
   .text :
