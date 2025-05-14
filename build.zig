@@ -393,6 +393,7 @@ pub fn MicroBuild(port_select: PortSelect) type {
             config.addOption([]const u8, "chip_name", target.chip.name);
             config.addOption(?[]const u8, "board_name", if (maybe_board) |board| board.name else null);
             config.addOption(usize, "end_of_stack", first_ram.offset + first_ram.length);
+            config.addOption(bool, "ram_image", target.ram_image);
 
             const core_mod = b.createModule(.{
                 .root_source_file = mb.core_dep.path("src/microzig.zig"),
