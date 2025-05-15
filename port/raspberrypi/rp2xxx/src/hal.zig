@@ -49,7 +49,6 @@ comptime {
     }
 }
 
-
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific
 /// clock configuration use case that this wont work for (for instance a custom
