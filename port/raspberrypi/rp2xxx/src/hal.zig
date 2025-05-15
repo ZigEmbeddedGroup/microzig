@@ -44,7 +44,7 @@ comptime {
 // atomics, so we don't need to export those functions for them.
 
 comptime {
-    if (compatibility.chip == .RP2040) {
+    if (!builtin.is_test and compatibility.chip == .RP2040) {
         _ = @import("hal/atomic.zig");
     }
 }
