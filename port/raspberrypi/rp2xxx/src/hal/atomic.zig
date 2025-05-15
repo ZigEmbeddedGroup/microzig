@@ -1,6 +1,11 @@
 // Based on: https://github.com/ziglang/zig/blob/79460d4a3eef8eb927b02a7eda8bc9999a766672/lib/compiler_rt/atomics.zig
 // and: https://github.com/raspberrypi/pico-sdk/blob/ee68c78d0afae2b69c03ae1a72bf5cc267a2d94c/src/rp2_common/pico_atomic/atomic.c
 
+//! Atomic operations for RP2040
+//!
+//! These functions should not be called directly. Instead, use the Zig atomic
+//! builtins or `std.atomic.Value`.
+
 const std = @import("std");
 const builtin = @import("builtin");
 const microzig = @import("microzig");
@@ -43,7 +48,7 @@ fn atomic_rmw(comptime T: type, ptr: *volatile T, val: T, _: i32, comptime op: s
         .And => ptr.* &= val,
         .Or => ptr.* |= val,
         .Xor => ptr.* ^= val,
-        .Nand => ptr.* = ~ptr.* & val,
+        .Nand => ptr.* = ~(ptr.* & val),
         .Max => ptr.* = @max(ptr.*, val),
         .Min => ptr.* = @min(ptr.*, val),
     }
