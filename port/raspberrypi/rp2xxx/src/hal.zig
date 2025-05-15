@@ -4,10 +4,6 @@ const microzig = @import("microzig");
 const SIO = microzig.chip.peripherals.SIO;
 
 pub const adc = @import("hal/adc.zig");
-pub const atomic = switch (compatibility.chip) {
-    .RP2040 => @import("hal/atomic.zig"),
-    else => void, // Zig handles atomics for other chips
-};
 pub const clocks = @import("hal/clocks.zig");
 pub const dma = @import("hal/dma.zig");
 pub const flash = @import("hal/flash.zig");
@@ -40,10 +36,19 @@ comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
     if (!builtin.is_test) {
         _ = image_def;
+    }
+}
 
+// On the RP2040, we need to import the `atomic.zig` file to export some global
+// functions that are used by the atomic builtins. Other chips have hardware
+// atomics, so we don't need to export those functions for them.
+
+comptime {
+    if (compatibility.chip == .RP2040) {
         _ = @import("hal/atomic.zig");
     }
 }
+
 
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific
