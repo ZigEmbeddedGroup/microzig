@@ -43,6 +43,11 @@ pub const Target = struct {
     /// This should always be true except for platforms where compiler_rt cannot be built right now.
     bundle_compiler_rt: bool = true,
 
+    /// Determines whether the artifact produced for this target will exist solely in RAM. This will
+    /// inform whether we need to do any special handling e.g. of vector tables and whether we need
+    /// to explicitly copy .data and clear out .bss
+    ram_image: bool = false,
+
     /// (optional) Provides a default hardware abstraction layer that is used.
     /// If `null`, no `microzig.hal` will be available.
     hal: ?HardwareAbstractionLayer = null,
@@ -71,6 +76,7 @@ pub const Target = struct {
         chip: ?Chip = null,
         single_threaded: ?bool = null,
         bundle_compiler_rt: ?bool = null,
+        ram_image: ?bool = null,
         hal: ?HardwareAbstractionLayer = null,
         board: ?Board = null,
         linker_script: ?LazyPath = null,
@@ -89,6 +95,7 @@ pub const Target = struct {
             .chip = options.chip orelse from.chip,
             .single_threaded = options.single_threaded orelse from.single_threaded,
             .bundle_compiler_rt = options.bundle_compiler_rt orelse from.bundle_compiler_rt,
+            .ram_image = options.ram_image orelse from.ram_image,
             .hal = options.hal orelse from.hal,
             .board = options.board orelse from.board,
             .linker_script = options.linker_script orelse from.linker_script,

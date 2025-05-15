@@ -675,11 +675,7 @@ pub const startup_logic = struct {
 };
 
 fn is_ramimage() bool {
-    // HACK
-    // TODO: Use microzig_options?
-    if (microzig.config.board_name) |board_name|
-        return std.mem.containsAtLeast(u8, board_name, 1, "ram image");
-    return false;
+    return microzig.config.ram_image;
 }
 
 pub fn export_startup_logic() void {
