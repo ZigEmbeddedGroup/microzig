@@ -8,17 +8,19 @@ const flash = microzig.chip.peripherals.FLASH;
 const rcc_v1 = microzig.chip.types.peripherals.rcc_f1;
 const flash_v1 = microzig.chip.types.peripherals.flash_f1;
 
-const USB = microzig.chip.peripherals.USB;
-const USB_v1 = microzig.chip.types.peripherals.usb_v1;
-
 const stm32 = microzig.hal;
-const usb_ll = stm32.usb.usb_ll;
-const pma = stm32.usb.pma;
 const gpio = stm32.gpio;
 const timer = stm32.timer.GPTimer.init(.TIM2);
+const usb_ll = stm32.usb.usb_ll;
+
+const EpControl = usb_ll.EpControl;
 
 const interrupt = microzig.interrupt;
 var Counter: stm32.drivers.CounterDevice = undefined;
+
+pub const microzig_options: microzig.Options = .{
+    .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
+};
 
 // ============== HID Descriptor ================
 const DeviceDescriptor = [18]u8{
@@ -127,12 +129,11 @@ const ReportDescriptor = [63]u8{
 
 //=============== USB DATA =================
 var EP0_RX_BUFFER: [64]u8 = undefined;
+var HID_send: [8]u8 = .{0} ** 8;
+var to_report: bool = false;
+var device_addr: ?u7 = null;
+var config: bool = false;
 //=============== USB DATA =================
-
-fn usb_send(buffer: []const u8, toggle: usb_ll.PID, EP: usize) void {
-    pma.buffer_to_TX(buffer, EP);
-    usb_ll.change_status(.TX, .Valid, toggle, EP);
-}
 
 //TODO port helpers from RPxxxx USB HAL
 fn calc_descriptor_size(comptime string: []const u8) comptime_int {
@@ -161,7 +162,7 @@ fn get_string(index: usize) []const u8 {
 }
 
 //TODO port USB driver from RPxxxx USB HAL
-fn get_descriptor(setup: []const u8) void {
+fn get_descriptor(setup: []const u8, epc: EpControl) void {
     const descriptor_type = setup[3];
     const descriptor_length: u16 = @as(u16, setup[6]) | (@as(u16, setup[7]) << 8);
 
@@ -176,101 +177,52 @@ fn get_descriptor(setup: []const u8) void {
     };
 
     const length = @min(buffer.len, descriptor_length);
-    usb_send(buffer[0..length], .force_data1, 0);
+    epc.write_buffer(buffer[0..length]) catch return;
+    epc.set_status(.TX, .Valid, .force_data1) catch return;
 }
 
-var device_addr: ?u7 = null;
-fn set_addr(recive_addr: u7) void {
+fn set_addr(recive_addr: u7, epc: EpControl) void {
     device_addr = recive_addr;
-    usb_send(&[_]u8{}, .force_data1, 0);
+    epc.ZLP() catch return;
+    epc.set_status(.TX, .Valid, .force_data1) catch return;
 }
 
-fn set_idle(value: u8) void {
-    if (value != 0) {
-        //TODO
-    }
-    usb_send(&[_]u8{}, .force_data1, 0);
-}
-
-fn ep0_setup_handler() void {
-    const setup = pma.RX_to_buffer(&EP0_RX_BUFFER, 0);
+fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
+    const setup = epc.read_buffer(&EP0_RX_BUFFER) catch unreachable;
     if (setup.len == 0) {
         return;
     }
 
     switch (setup[1]) {
-        0x06 => get_descriptor(setup),
-        0x05 => set_addr(@intCast(setup[2])),
+        0x06 => get_descriptor(setup, epc),
+        0x05 => set_addr(@intCast(setup[2]), epc),
         0x09 => {
-            usb_send(&[_]u8{}, .force_data1, 0);
+            epc.ZLP() catch return;
+            epc.set_status(.TX, .Valid, .force_data1) catch return;
             config = true;
+            to_report = false;
         },
-        0x0a => set_idle(setup[3]),
         else => {
-            usb_send(&[_]u8{}, .force_data1, 0);
+            epc.ZLP() catch return;
+            epc.set_status(.TX, .Valid, .force_data1) catch return;
         },
     }
 }
 
-var config: bool = false;
-fn ep0_handler() void {
-    const ep_data = USB.EPR[0].read();
-
-    if (ep_data.CTR_RX == 1) {
-        USB.EPR[0].modify(.{ .CTR_RX = 0 });
-        if (ep_data.SETUP == 1) {
-            ep0_setup_handler();
-        } else {
-            const recv = pma.RX_to_buffer(&EP0_RX_BUFFER, 0);
-
-            if (recv.len == 0) {
-                usb_ll.change_status(.RX, .Valid, .endpoint_ctr, 0);
-            }
-        }
-    }
-    if (ep_data.CTR_TX == 1) {
-        USB.EPR[0].modify(.{ .CTR_TX = 0 });
-        if (device_addr) |addr| {
-            USB.DADDR.modify(.{
-                .ADD = addr,
-                .EF = 1,
-            });
-        }
-        usb_ll.change_status(.RX, .Valid, .endpoint_ctr, 0);
-    }
+fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
+    epc.set_status(.RX, .Valid, .endpoint_ctr) catch {};
 }
 
-var HID_send: [8]u8 = .{0} ** 8;
-var to_report: bool = false;
-fn ep1_handler() void {
-    const ep_regs = USB.EPR[1].read();
-    if (ep_regs.CTR_TX == 1) {
-        USB.EPR[1].modify(.{ .CTR_TX = 0 });
-        usb_ll.change_status(.TX, .Nak, .no_change, 0);
-        to_report = false;
+fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
+    if (device_addr) |addr| {
+        usb_ll.set_addr(addr);
     }
+    epc.set_status(.RX, .Valid, .endpoint_ctr) catch {};
 }
 
-pub const microzig_options: microzig.Options = .{
-    .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = USB_handler } },
-};
-
-//TODO create USB_handler in the USB HAL
-fn USB_handler() callconv(.C) void {
-    const event = USB.ISTR.read();
-    if (event.RESET == 1) {
-        usb_ll.default_reset_handler();
-    }
-
-    if (event.CTR == 1) {
-        const EP = event.EP_ID;
-        USB.ISTR.modify(.{ .CTR = 0 });
-        switch (EP) {
-            0 => ep0_handler(),
-            1 => ep1_handler(),
-            else => {},
-        }
-    }
+fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
+    to_report = false;
+    epc.set_status(.TX, .Nak, .no_change) catch {};
 }
 
 //set clock to 72Mhz and USB to 48Mhz
@@ -315,17 +267,8 @@ fn config_clock() void {
     }
 }
 
-//TODO: full HID report function
-fn report(key: u8) void {
-    const report_flag: *volatile bool = &to_report;
-    if (!config) return;
-    while (report_flag.*) {}
-    HID_send[2] = key;
-    usb_send(&HID_send, .endpoint_ctr, 1);
-    report_flag.* = true;
-}
-
 const endpoint0 = usb_ll.Endpoint{
+    .ep_control = .EPC0,
     .endpoint = 0,
     .ep_type = .Control,
     .ep_kind = false,
@@ -333,9 +276,13 @@ const endpoint0 = usb_ll.Endpoint{
     .tx_reset_state = .Nak,
     .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
     .tx_buffer_size = 64,
+    .rx_callback = ep0_rx,
+    .tx_callback = ep0_tx,
+    .setup_callback = ep0_setup,
 };
 
 const endpoint1 = usb_ll.Endpoint{
+    .ep_control = .EPC1,
     .endpoint = 1,
     .ep_type = .Interrupt,
     .ep_kind = false,
@@ -343,7 +290,22 @@ const endpoint1 = usb_ll.Endpoint{
     .tx_reset_state = .Nak,
     .rx_buffer_size = .{ .block_qtd = 1, .block_size = .@"2bytes" },
     .tx_buffer_size = 16,
+    .tx_callback = ep1_tx,
 };
+
+//TODO: full HID report function
+fn report(keys: []const u8) void {
+    const len = @min(keys.len, 6);
+    const epc = usb_ll.EpControl.EPC1;
+    const report_flag: *volatile bool = &to_report;
+    if (!config) return;
+    while (report_flag.*) {}
+    std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
+    epc.write_buffer(&HID_send) catch return;
+    epc.set_status(.TX, .Valid, .endpoint_ctr) catch return;
+    report_flag.* = true;
+}
+
 pub fn main() !void {
     config_clock();
     RCC.APB2ENR.modify(.{
@@ -367,9 +329,13 @@ pub fn main() !void {
     while (true) {
         Counter.sleep_ms(1000);
         led.toggle();
-        report(0x04);
-        report(0x00);
-        report(0x05);
-        report(0x00);
+        report(&.{ 0xb, 0x8, 0xf });
+        report(&.{ 0, 0, 0, 0, 0, 0 });
+        report(&.{ 0xf, 0x12, 0x2c });
+        report(&.{ 0, 0, 0, 0, 0, 0 });
+        report(&.{ 0x1a, 0x12, 0x15, 0xf, 0x7 });
+        report(&.{ 0, 0, 0, 0, 0, 0 });
+        report(&.{0x28});
+        report(&.{ 0, 0, 0, 0, 0, 0 });
     }
 }

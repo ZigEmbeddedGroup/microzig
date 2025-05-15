@@ -85,7 +85,7 @@ pub const Config = struct {
     }
 };
 
-const BTABLEError = error{
+pub const BTABLEError = error{
     PMAOverflow,
 };
 
@@ -143,9 +143,13 @@ fn calc_offset(bytes: usize) usize {
     return @intFromFloat(@ceil(@as(f32, @floatFromInt(bytes)) / 2));
 }
 
+pub inline fn RX_recv_size(EP: usize) usize {
+    return BTABLE[EP].RX_count.value & 0x3FF;
+}
+
 pub fn RX_to_buffer(buffer: []u8, EP: usize) []const u8 {
     const PMA_buf = BTABLE[EP];
-    const count = PMA_buf.RX_count.value & 0x3FF;
+    const count = RX_recv_size(EP);
     if (count == 0) {
         return buffer[0..0];
     }
