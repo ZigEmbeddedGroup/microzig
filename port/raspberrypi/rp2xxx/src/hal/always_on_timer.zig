@@ -7,6 +7,12 @@
 ///
 /// We implement much of the RTC functionality here, as the RTC is not
 /// available on the RP2350.
+
+
+/// Note: We generally cannot use the Mmio function to write to the timer
+/// since all timer write operations require the "magic" value 0x5afe
+/// to be written to the top 16 bits of the register.
+
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -36,36 +42,191 @@ pub const DateTime = struct {
     second: u6,
 };
 
+pub const ClockSource = enum {
+    /// The low power 32_768 Hz oscillator
+    lposc,
+    /// The crystal oscillator
+    xosc,
+    /// External 1 kHz clock
+    gpio_1khz,
+    /// Not set -- timer will not run
+    /// Do not use this value for `set_clock_source`
+    none,
+};
+
+/// Set the clock source for the timer
+///
+/// This will disable the timer while setting the clock source.
+///
+/// Parameters:
+///
+/// * `source` - The clock source to use
+pub fn set_clock_source(source: ClockSource) void {
+    disable();
+    var val = POWMAN.TIMER.raw;
+    val &= 0x0000_ffff;
+    val |= 0x5afe_0002;
+
+    switch (source) {
+        .lposc => val |= 0x0100,
+        .xosc => val |= 0x0200,
+        .gpio_1khz => val |= 0x0400,
+        .none => @panic("Cannot set clock source to none."),
+    }
+
+    POWMAN.TIMER.raw = val;
+}
+
+/// Get the current clock source for the timer
+///
+/// Returns:
+///
+/// * `ClockSource` - The current clock source
+pub fn get_clock_source() ClockSource {
+    const src = POWMAN.TIMER.raw;
+
+    if ((src & 0x0001_0000) != 0) return .xosc;
+    if ((src & 0x0002_0000) != 0) return .lposc;
+    if ((src & 0x0004_0000) != 0) return .gpio_1khz;
+    return .none;
+}
+
+/// Set whether to use the 1 Hz clock for seconds.
+/// The timer set by `set_time` will continue to
+/// be used to count microseconds,
+///
+/// Parameters:
+///
+/// * `use_1hz` - Whether to use the 1 Hz clock
+pub fn set_use_1hz_clock(use_1hz: bool) void {
+    var val = POWMAN.TIMER.raw;
+    val &= 0x0000_ffff;
+    val |= 0x5afe_000;
+    if (use_1hz) val |= 0x2000;
+    POWMAN.TIMER.raw = val;
+}
+
+/// Get whether the 1 Hz clock is enabled
+///
+/// Returns:
+///
+/// * `bool` - Whether the 1 Hz clock is enabled
+pub fn get_use_1hz_clock() bool {
+    return POWMAN.TIMER.raw & 0x2000 != 0;
+}
+
+/// Get the frequency of the low power oscillator
+///
+/// Returns:
+///
+/// * `f32` - The frequency of the low power oscillator in Hz
+pub fn get_lposc_frequency() f32     {
+    const freq = POWMAN.LPOSC_FREQ_KHZ_INT.read().LPOSC_FREQ_KHZ_INT;
+    const frac = POWMAN.LPOSC_FREQ_KHZ_FRAC.read().LPOSC_FREQ_KHZ_FRAC;
+    return (@as(f32, @floatFromInt(freq)) + @as(f32, @floatFromInt(frac)) / 65_536) * 1_000;
+}
+
+/// Set the frequency of the low power oscillator
+///
+/// Parameters:
+///
+/// * `frequency` - The frequency of the low power oscillator in Hz
+pub fn set_lposc_frequency(frequency: f32) void {
+    if (frequency < 0.0) @panic("Frequency must be positive");
+    const hz = frequency * 1_000.0;
+    const freq: u6 = @truncate(hz);
+    const frac: u16 = @truncate((hz - @trunc(hz)) * 65_536.0);
+    POWMAN.LPOSC_FREQ_KHZ_INT.write(.{ .padding = 0x5afe, .LPOSC_FREQ_KHZ_INT = freq });
+    POWMAN.LPOSC_FREQ_KHZ_FRAC.write(.{ .padding = 0x5afe, .LPOSC_FREQ_KHZ_FRAC = frac });
+}
+
+/// Get the frequency of the external oscillator
+///
+/// Returns:
+///
+/// * `f32` - The frequency of the external oscillator in Hz
+pub fn get_xosc_frequency() f32 {
+    const freq = POWMAN.XOSC_FREQ_KHZ_INT.read().XOSC_FREQ_KHZ_INT;
+    const frac = POWMAN.XOSC_FREQ_KHZ_FRAC.read().XOSC_FREQ_KHZ_FRAC;
+    return (@as(f32, @floatFromInt(freq)) + @as(f32, @floatFromInt(frac)) / 65_536) * 1_000;
+}
+
+/// Set the frequency of the external oscillator
+///
+/// Parameters:
+///
+/// * `frequency` - The frequency of the external oscillator in Hz
+pub fn set_xosc_frequency(frequency: f32) void {
+    if (frequency < 0.0) @panic("Frequency must be positive");
+    const hz = frequency * 1_000.0;
+    const freq: u16 = @truncate(hz);
+    const frac: u16 = @truncate((hz - @trunc(hz)) * 65_536.0);
+    POWMAN.XOSC_FREQ_KHZ_INT.write(.{ .padding = 0x5afe, .XOSC_FREQ_KHZ_INT = freq });
+    POWMAN.XOSC_FREQ_KHZ_FRAC.write(.{ .padding = 0x5afe, .XOSC_FREQ_KHZ_FRAC = frac });
+}
+
+/// Get the current time in milliseconds
+///
+/// Returns:
+///
+/// * `u64` - The current time in milliseconds
 pub fn get_time() u64 {
     const lower = POWMAN.READ_TIME_LOWER.read().READ_TIME_LOWER;
     const upper = POWMAN.READ_TIME_UPPER.read().READ_TIME_UPPER;
     return @as(u64, upper) << 32 | lower;
 }
 
+/// Set the current time in milliseconds
+///
+/// Parameters:
+///
+/// * `time` - The time in milliseconds
 pub fn set_time(time: u64) void {
     disable();
-    POWMAN.SET_TIME_63TO48.write(.{ .SET_TIME_63TO48 = @truncate(time >> 48) });
-    POWMAN.SET_TIME_47TO32.write(.{ .SET_TIME_47TO32 = @truncate(time >> 32) });
-    POWMAN.SET_TIME_31TO16.write(.{ .SET_TIME_31TO16 = @truncate(time >> 16) });
-    POWMAN.SET_TIME_15TO0.write(.{ .SET_TIME_15TO0 = @truncate(time) });
+    POWMAN.SET_TIME_63TO48.write(.{ .padding = 0x5afe, .SET_TIME_63TO48 = @truncate(time >> 48) });
+    POWMAN.SET_TIME_47TO32.write(.{ .padding = 0x5afe, .SET_TIME_47TO32 = @truncate(time >> 32) });
+    POWMAN.SET_TIME_31TO16.write(.{ .padding = 0x5afe, .SET_TIME_31TO16 = @truncate(time >> 16) });
+    POWMAN.SET_TIME_15TO0.write(.{ .padding = 0x5afe, .SET_TIME_15TO0 = @truncate(time) });
     enable();
 }
 
+/// Enable the timer
 pub fn enable() void {
-    POWMAN.TIMER.write(.{ .RUN = 1 });
-}
-pub fn disable() void {
-    POWMAN.TIMER.write(.{ .RUN = 0 });
+    var val = POWMAN.TIMER.raw;
+    val &= 0x0000_ffff;
+    val |= 0x5afe_0002;
+    POWMAN.TIMER.raw = val;
 }
 
+/// Disable the timer
+pub fn disable() void {
+    var val = POWMAN.TIMER.raw;
+    val &= 0x0000_fffd;
+    val |= 0x5afe_0000;
+    POWMAN.TIMER.raw = val;
+}
+
+/// Check if the timer is enabled
+///
+/// Returns:
+///
+/// * `bool` - Whether the timer is enabled
 pub fn is_enabled() bool {
     return POWMAN.TIMER.read().RUN != 0;
 }
 
+/// Check if a year is a leap year
 fn is_leap_year(year: u32) bool {
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0);
 }
 
+/// Set the current based on a datetime
+///
+/// Parameters:
+///
+/// * `datetime` - The datetime to set
+///
+/// Returns an error if the datetime is invalid
 pub fn set_datetime(datetime: DateTime) !void {
     const leap_year = is_leap_year(datetime.year);
 
@@ -125,11 +286,12 @@ pub fn set_datetime(datetime: DateTime) !void {
         }
     }
 
-    set_time(raw_time);
+    set_time(raw_time * 1_000);
 }
 
+/// Get the current datetime
 pub fn get_datetime() DateTime {
-    var raw = get_time();
+    var raw = get_time() / 1_000;
 
     // Hours minutes and seconds are easy
 
@@ -143,7 +305,7 @@ pub fn get_datetime() DateTime {
     // The rest are a bit trickier
 
     var day = raw;
-    var year = 1970;
+    var year :u12 = 1970;
 
     while (day >= 365) {
         day -= 365;
@@ -154,7 +316,7 @@ pub fn get_datetime() DateTime {
     }
 
     // Now we need to find the month
-    var month = 1;
+    var month :u4 = 1;
 
     while (true) {
         switch (month) {
@@ -166,7 +328,7 @@ pub fn get_datetime() DateTime {
                 day -= 30;
                 month += 1;
             } else break,
-            2 => if (day >= if (is_leap_year(year)) 29 else 28) {
+            2 => if (day >= if (is_leap_year(year)) @as(u5, 29) else @as(u5, 28)) {
                 day -= if (is_leap_year(year)) 29 else 28;
                 month += 1;
             } else break,
@@ -194,28 +356,32 @@ pub fn get_datetime() DateTime {
     return .{
         .year = year,
         .month = month,
-        .day = day,
+        .day = @intCast(day),
         .day_of_week = @enumFromInt(dow),
-        .hour = hour,
-        .minute = minute,
-        .second = second,
+        .hour = @intCast(hour),
+        .minute = @intCast(minute),
+        .second = @intCast(second),
     };
 }
 
 /// Alarm functionality
 pub const alarm = struct {
+    /// Check if the alarm is enabled
     pub fn is_enabled() bool {
         return POWMAN.TIMER.read().ALARM != 0;
     }
 
+    /// Disable the alarm
     pub fn disable() void {
         POWMAN.TIMER.write(.{ .ALARM = 0 });
     }
 
+    /// Enable the alarm
     pub fn enable() void {
         POWMAN.TIMER.write(.{ .ALARM = 1 });
     }
 
+    /// Get the raw alarm time in microseconds
     pub fn get_raw() u64 {
         const b1 = POWMAN.ALARM_TIME_15TO0.read().ALARM_TIME_15TO0;
         const b2 = POWMAN.ALARM_TIME_31TO16.read().ALARM_TIME_31TO16;
@@ -224,6 +390,12 @@ pub const alarm = struct {
         return @as(u64, b4) << 48 | @as(u64, b3) << 32 | @as(u64, b2) << 16 | b1;
     }
 
+    /// Set the raw alarm time in microseconds and optionally enable the alarm
+    ///
+    /// Parameters:
+    ///
+    /// * `time` - The time in microseconds
+    /// * `enable_alarm` - Whether to enable the alarm
     pub fn set_raw(time: u64, enable_alarm: bool) void {
         alarm.disable();
         POWMAN.ALARM_TIME_15TO0.write(.{ .ALARM_TIME_15TO0 = @truncate(time) });
@@ -324,141 +496,3 @@ pub const irq = struct {
         // });
     }
 };
-
-// pub const DateTime = struct {
-//     year: u12,
-//     month: u4,
-//     day: u5,
-//     day_of_week: enum(u3) {
-//         Sunday = 0,
-//         Monday = 1,
-//         Tuesday = 2,
-//         Wednesday = 3,
-//         Thursday = 4,
-//         Friday = 5,
-//         Saturday = 6,
-//     },
-//     hour: u5,
-//     minute: u6,
-//     second: u6,
-// };
-
-// /// Configure and enable the RTC given a clock configuration that specifies what CLK_RTC frequency is
-// pub fn apply(comptime clock_config: clocks.config.Global) void {
-//     // disable();
-
-//     // const MAX_RTC_FREQ = 65536;
-//     // const rtc_freq = comptime clock_config.rtc.?.frequency();
-//     // comptime std.debug.assert((rtc_freq <= MAX_RTC_FREQ) and (rtc_freq >= 1));
-//     // RTC.CLKDIV_M1.write(.{ .CLKDIV_M1 = @as(u16, @truncate(rtc_freq - 1)) });
-
-//     // enable();
-// }
-
-// pub inline fn disable() void {
-
-//     // Clear alias to atomically disable RTC
-//     hw.clear_alias(&RTC.CTRL).write(.{
-//         .RTC_ENABLE = 1,
-//         .RTC_ACTIVE = 0,
-//         .LOAD = 0,
-//         .FORCE_NOTLEAPYEAR = 0,
-//     });
-//     // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
-//     while (RTC.CTRL.read().RTC_ACTIVE != 0) {}
-// }
-
-// pub inline fn enable() void {
-//     // Set alias to atomically enable RTC
-//     hw.set_alias(&RTC.CTRL).write(.{
-//         .RTC_ENABLE = 1,
-//         .RTC_ACTIVE = 0,
-//         .LOAD = 0,
-//         .FORCE_NOTLEAPYEAR = 0,
-//     });
-//     // Poll until enable bit takes effect, important for the purpose of ensuring state while changing settings
-//     while (RTC.CTRL.read().RTC_ACTIVE != 1) {}
-// }
-
-// pub inline fn set_datetime(datetime: DateTime) void {
-//     // ### TODO ### Implement this
-// }
-
-// pub inline fn get_datetime() DateTime {
-//     // ### TODO ### Implement this
-
-//     return .{
-//         .year = RTC1.YEAR,
-//         .month = RTC1.MONTH,
-//         .day = RTC1.DAY,
-//         .day_of_week = @enumFromInt(RTC0.DOTW),
-//         .hour = RTC0.HOUR,
-//         .minute = RTC0.MIN,
-//         .second = RTC0.SEC,
-//     };
-// }
-
-// /// For configuring time alarms that will generate interrupts
-// pub const alarm = struct {
-//     // ### TODO ### Implement this
-//     };
-
-//     /// Configure and enable an alarm to fire at values specified by config
-//     ///
-//     /// If a single alarm is desired at a specific datetime, all fields to make a datetime unique should be populated.
-//     /// For example:
-//     /// - The config .{.year = 2024, .month = 12, .day = 25, .hour = 8, .minute = 30, .second = 0}
-//     ///   Will fire an alarm at 12/25/2024 08:30:00
-//     ///
-//     /// For an alarm that fires on a set interval, only some fields should be specified. For example:
-//     /// - An alarm that fires once a minute at second "0" would have the config .{.second = 0}
-//     /// - An alarm that fires once an hour at minute "20" would have the config .{.minute = 20}
-//     /// - An alarm that fires 24 times a day at minute "20" but only on day "10" of the month would have the config .{.day = 10, .minute = 20}
-//     /// and so on...
-//     ///
-//     /// NOTE: To get an interrupt from an alarm, interrupts must also be enabled via irq.enable()
-//     ///
-//     pub fn configure(config: Config) void {
-
-//         // Keep alarm disabled while modifying settings
-//         alarm.disable();
-//         var irq_setup0 = RTC.IRQ_SETUP_0.read();
-//         var irq_setup1 = RTC.IRQ_SETUP_1.read();
-//         irq_setup0.MATCH_ENA = 0;
-
-//         if (config.year) |year| {
-//             irq_setup0.YEAR = year;
-//             irq_setup0.YEAR_ENA = 1;
-//         }
-//         if (config.month) |month| {
-//             irq_setup0.MONTH = month;
-//             irq_setup0.MONTH_ENA = 1;
-//         }
-//         if (config.day) |day| {
-//             irq_setup0.DAY = day;
-//             irq_setup0.DAY_ENA = 1;
-//         }
-
-//         if (config.day_of_week) |day_of_week| {
-//             irq_setup1.DOTW = @intFromEnum(day_of_week);
-//             irq_setup1.DOTW_ENA = 1;
-//         }
-//         if (config.hour) |hour| {
-//             irq_setup1.HOUR = hour;
-//             irq_setup1.HOUR_ENA = 1;
-//         }
-//         if (config.minute) |minute| {
-//             irq_setup1.MIN = minute;
-//             irq_setup1.MIN_ENA = 1;
-//         }
-//         if (config.second) |second| {
-//             irq_setup1.SEC = second;
-//             irq_setup1.SEC_ENA = 1;
-//         }
-
-//         RTC.IRQ_SETUP_0.write(irq_setup0);
-//         RTC.IRQ_SETUP_1.write(irq_setup1);
-
-//         // Re-enable alarm now that settings have been applied
-//         alarm.enable();
-//     }
