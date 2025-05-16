@@ -7,12 +7,9 @@
 ///
 /// We implement much of the RTC functionality here, as the RTC is not
 /// available on the RP2350.
-
-
 /// Note: We generally cannot use the Mmio function to write to the timer
 /// since all timer write operations require the "magic" value 0x5afe
 /// to be written to the top 16 bits of the register.
-
 const std = @import("std");
 const microzig = @import("microzig");
 
@@ -120,7 +117,7 @@ pub fn get_use_1hz_clock() bool {
 /// Returns:
 ///
 /// * `f32` - The frequency of the low power oscillator in Hz
-pub fn get_lposc_frequency() f32     {
+pub fn get_lposc_frequency() f32 {
     const freq = POWMAN.LPOSC_FREQ_KHZ_INT.read().LPOSC_FREQ_KHZ_INT;
     const frac = POWMAN.LPOSC_FREQ_KHZ_FRAC.read().LPOSC_FREQ_KHZ_FRAC;
     return (@as(f32, @floatFromInt(freq)) + @as(f32, @floatFromInt(frac)) / 65_536) * 1_000;
@@ -305,7 +302,7 @@ pub fn get_datetime() DateTime {
     // The rest are a bit trickier
 
     var day = raw;
-    var year :u12 = 1970;
+    var year: u12 = 1970;
 
     while (day >= 365) {
         day -= 365;
@@ -316,7 +313,7 @@ pub fn get_datetime() DateTime {
     }
 
     // Now we need to find the month
-    var month :u4 = 1;
+    var month: u4 = 1;
 
     while (true) {
         switch (month) {
