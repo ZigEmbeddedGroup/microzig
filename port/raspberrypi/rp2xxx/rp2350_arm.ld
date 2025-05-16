@@ -18,7 +18,7 @@ SECTIONS
 
   .vectortable :
   {
-     KEEP(*(microzig_flash_start))
+     KEEP(*(.isr_vector))
   } > flash0
 
   .bootmeta :
