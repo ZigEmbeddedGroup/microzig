@@ -11,9 +11,9 @@ pub const microzig_options: microzig.Options = .{
 };
 
 pub fn main() !void {
-    const pin_config = gpio.Pin.Config{
+    const pin_config: gpio.Pin.Config = .{
         .output_enable = true,
-        .drive_strength = gpio.DriveStrength.@"40mA",
+        .drive_strength = .@"40mA",
     };
 
     const led_r_pin = gpio.num(3);
