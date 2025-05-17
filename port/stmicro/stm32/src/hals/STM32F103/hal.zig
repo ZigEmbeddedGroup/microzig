@@ -5,4 +5,5 @@ pub const i2c = @import("i2c.zig");
 pub const spi = @import("spi.zig");
 pub const drivers = @import("drivers.zig");
 pub const timer = @import("timer.zig");
+pub const usb = @import("usb.zig");
 pub fn init() void {}
