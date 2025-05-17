@@ -64,6 +64,13 @@ SECTIONS
     KEEP(*(ram_vectors))
   } > ram0
 
+  .unallocated_memory (NOLOAD) :
+  {
+      microzig_heap_start = .;
+      . = ORIGIN(ram0) + LENGTH(ram0);
+      microzig_heap_end   = .;
+  } > ram0
+
   .flash_end :
   {
     microzig_flash_end = .;

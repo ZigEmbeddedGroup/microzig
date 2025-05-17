@@ -164,7 +164,7 @@ pub fn sev() void {
 
 const vector_count = @sizeOf(microzig.chip.VectorTable) / @sizeOf(usize);
 
-var ram_vectors: [vector_count]Handler = undefined;
+pub var ram_vectors: [vector_count]Handler = undefined;
 
 pub const startup_logic = struct {
     extern fn microzig_main() noreturn;
