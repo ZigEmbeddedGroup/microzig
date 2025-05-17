@@ -691,7 +691,7 @@ pub fn export_startup_logic() void {
 
     @export(&startup_logic._vector_table, .{
         .name = "_vector_table",
-        .section = ".isr_vector",
+        .section = "microzig_flash_start",
         .linkage = .strong,
     });
 }

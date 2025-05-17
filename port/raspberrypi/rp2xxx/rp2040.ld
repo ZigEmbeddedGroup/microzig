@@ -26,7 +26,7 @@ SECTIONS
 
   .text :
   {
-     KEEP(*(.isr_vector))
+     KEEP(*(microzig_flash_start))
      *(.text*)
      *(.rodata*)
   } > flash0
