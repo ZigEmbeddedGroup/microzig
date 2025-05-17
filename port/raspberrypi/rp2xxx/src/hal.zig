@@ -34,20 +34,21 @@ pub const image_def = @import("hal/image_def.zig");
 
 comptime {
     // HACK: tests can't access microzig. maybe there's a better way to do this.
-    if (!builtin.is_test) {
+    if (!builtin.is_test and compatibility.chip == .RP2350) {
         _ = image_def;
     }
-}
 
-// On the RP2040, we need to import the `atomic.zig` file to export some global
-// functions that are used by the atomic builtins. Other chips have hardware
-// atomics, so we don't need to export those functions for them.
-
-comptime {
+    // On the RP2040, we need to import the `atomic.zig` file to export some global
+    // functions that are used by the atomic builtins. Other chips have hardware
+    // atomics, so we don't need to export those functions for them.
     if (!builtin.is_test and compatibility.chip == .RP2040) {
         _ = @import("hal/atomic.zig");
     }
 }
+
+pub const HAL_Options = struct {
+    image_def_security: image_def.Security = .secure,
+};
 
 /// A default clock configuration with sensible defaults that will work
 /// for the majority of use cases. Use this unless you have a specific

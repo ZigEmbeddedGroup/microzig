@@ -33,7 +33,7 @@ SECTIONS
     .drom.rodata : ALIGN(0x10)
     {
         KEEP(*(.app_desc))
-        *(.rodata*) /* should we leave this here? */
+        *(.rodata*)
         . = ALIGN(0x10);
     } > drom
 
