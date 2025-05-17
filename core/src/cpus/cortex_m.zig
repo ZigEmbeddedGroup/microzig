@@ -378,7 +378,7 @@ pub const interrupt = struct {
 
     const nvic = peripherals.nvic;
 
-    pub fn is_enabled(comptime int: ExternalInterrupt) void {
+    pub fn is_enabled(comptime int: ExternalInterrupt) bool {
         const num: comptime_int = @intFromEnum(int);
         switch (cortex_m) {
             .cortex_m0,
