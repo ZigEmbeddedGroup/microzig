@@ -19,7 +19,7 @@ pub const resets = @import("hal/resets.zig");
 pub const rom = @import("hal/rom.zig");
 pub const rtc = switch (compatibility.chip) {
     .RP2040 => @import("hal/rtc.zig"),
-    .RP2350 => {}, // No explicit "RTC" module on RP2350
+    .RP2350 => @import("hal/always_on_timer.zig"),
 };
 pub const spi = @import("hal/spi.zig");
 pub const i2c = @import("hal/i2c.zig");
