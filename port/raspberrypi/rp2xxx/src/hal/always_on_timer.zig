@@ -13,6 +13,8 @@
 const std = @import("std");
 const microzig = @import("microzig");
 
+const epoch = std.time.Epoch;
+
 const clocks = @import("clocks.zig");
 const hw = @import("hw.zig");
 
@@ -29,6 +31,7 @@ pub const DayOfWeek = enum(u3) {
     Saturday,
 };
 
+/// A DateTime struct represents a date and time.
 pub const DateTime = struct {
     year: u12,
     month: u4,
@@ -37,6 +40,169 @@ pub const DateTime = struct {
     hour: u5,
     minute: u6,
     second: u6,
+    millis: u10,
+
+    /// Create a DateTime from a timestamp in milliseconds since the epoch
+    /// 1970-01-01 00:00:00
+    /// ### TODO ### handled time zones
+    pub fn from_timestamp(timestamp: u64) DateTime {
+        // Hours minutes and seconds are easy
+
+        var input = timestamp;
+
+        const millis = input % 1_000;
+        input /= 1_000;
+        const second = input % 60;
+        input /= 60;
+        const minute = input % 60;
+        input /= 60;
+        const hour = input % 24;
+        input /= 24;
+
+        // The rest are a bit trickier
+
+        var day = input;
+        var year: u12 = 1970;
+
+        while (day >= 365) {
+            day -= 365;
+            if (epoch.isLeapYear(year)) {
+                day -= 1;
+            }
+            year += 1;
+        }
+
+        // Now we need to find the month
+        var month: u4 = 1;
+
+        while (true) {
+            switch (month) {
+                1, 3, 5, 7, 8, 10, 12 => if (day >= 31) {
+                    day -= 31;
+                    month += 1;
+                } else break,
+                4, 6, 9, 11 => if (day >= 30) {
+                    day -= 30;
+                    month += 1;
+                } else break,
+                2 => if (day >= if (epoch.isLeapYear(year)) @as(u5, 29) else @as(u5, 28)) {
+                    day -= if (epoch.isLeapYear(year)) 29 else 28;
+                    month += 1;
+                } else break,
+                else => unreachable,
+            }
+        }
+
+        // Now we need to find the day of the week
+
+        var dow_month: u32 = month;
+        var dow_year: u32 = year;
+
+        if (month < 3) {
+            dow_month += 12;
+            dow_year -= 1;
+        }
+
+        const dow_cent = dow_year / 100;
+        dow_year = dow_year % 100;
+
+        dow_month = 13 * (dow_month + 1) / 5;
+
+        const dow = (day + dow_month + dow_year + dow_year / 4 + dow_cent / 4 - 2 * dow_cent) % 7;
+
+        return .{
+            .year = year,
+            .month = month,
+            .day = @intCast(day),
+            .day_of_week = @enumFromInt(dow),
+            .hour = @intCast(hour),
+            .minute = @intCast(minute),
+            .second = @intCast(second),
+        };
+    }
+
+    /// Convert a DateTime to a timestamp in milliseconds since the epoch
+    /// 1970-01-01 00:00:00
+    /// ### TODO ### handled time zones
+    pub fn timestamp(self: DateTime) !u64 {
+        const leap_year = epoch.isLeapYear(self.year);
+
+        if (self.millis > 999) {
+            return error.InvalidMillisecond;
+        }
+
+        if (self.second > 59) {
+            return error.InvalidSecond;
+        }
+
+        if (self.minute > 59) {
+            return error.InvalidMinute;
+        }
+
+        if (self.hour > 23) {
+            return error.InvalidHour;
+        }
+
+        if (self.day > epoch.daysInMonth(self.year, self.month)) {
+            return error.InvalidDay;
+        }
+
+        if (self.year < 1970) {
+            return error.InvalidYear;
+        }
+
+        // First computer number of days since 1970-01-01
+        var result: u65 = @as(u64, self.year - 1970) * 365;
+
+        // Add leap years
+        for (1970..self.year) |year| {
+            if (epoch.isLeapYear(year)) {
+                result += 1;
+            }
+        }
+
+        // Add days in previous months
+
+        switch (self.month) {
+            1 => result += 0,
+            2 => result += 31,
+            3 => result += 59,
+            4 => result += 90,
+            5 => result += 120,
+            6 => result += 151,
+            7 => result += 181,
+            8 => result += 212,
+            9 => result += 243,
+            10 => result += 273,
+            11 => result += 304,
+            12 => result += 334,
+            else => unreachable,
+        }
+
+        if (self.month > 2 and leap_year) {
+            result += 1;
+        }
+
+        // Add in days in this month
+
+        result += @as(u64, self.day) - 1;
+
+        // now add in hours, minutes and seconds, converting to seconds as we go
+
+        result *= 24;
+        result += @as(u64, self.hour);
+        result *= 60;
+        result += @as(u64, self.minute);
+        result *= 60;
+        result += @as(u64, self.second);
+
+        // Add milliseconds
+
+        result *= 1_000;
+        result += @as(u64, self.millis);
+
+        return result;
+    }
 };
 
 pub const ClockSource = enum {
@@ -90,7 +256,7 @@ pub fn get_clock_source() ClockSource {
 
 /// Set whether to use the 1 Hz clock for seconds.
 /// The timer set by `set_time` will continue to
-/// be used to count microseconds,
+/// be used to count milliseconds,
 ///
 /// Parameters:
 ///
@@ -212,11 +378,6 @@ pub fn is_enabled() bool {
     return POWMAN.TIMER.read().RUN != 0;
 }
 
-/// Check if a year is a leap year
-fn is_leap_year(year: u32) bool {
-    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0);
-}
-
 /// Set the current based on a datetime
 ///
 /// Parameters:
@@ -225,140 +386,14 @@ fn is_leap_year(year: u32) bool {
 ///
 /// Returns an error if the datetime is invalid
 pub fn set_datetime(datetime: DateTime) !void {
-    const leap_year = is_leap_year(datetime.year);
-
-    if (datetime.second > 59) {
-        return error.InvalidSecond;
-    }
-
-    if (datetime.minute > 59) {
-        return error.InvalidMinute;
-    }
-
-    if (datetime.hour > 23) {
-        return error.InvalidHour;
-    }
-
-    switch (datetime.month) {
-        0 => return error.InvalidMonth,
-        1, 3, 5, 7, 8, 10, 12 => if (datetime.day > 31) return error.InvalidDay,
-        4, 6, 9, 11 => if (datetime.day > 30) return error.InvalidDay,
-        2 => if (datetime.day > if (leap_year) 29 else 28) return error.InvalidDay,
-        else => {},
-    }
-
-    if (datetime.year < 1970) {
-        return error.InvalidYear;
-    }
-
-    // First computer number of seconds since 1970-01-01 00:00:00 UTC
-
-    var raw_time: u64 = datetime.second;
-    raw_time += @as(u64, datetime.minute) * 60;
-    raw_time += @as(u64, datetime.hour) * 60 * 60;
-    raw_time += (@as(u64, datetime.day) - 1) * 24 * 60 * 60;
-
-    switch (datetime.month) {
-        1 => raw_time += 0,
-        2 => raw_time += 31 * 24 * 60 * 60,
-        3 => raw_time += (87 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        4 => raw_time += (118 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        5 => raw_time += (149 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        6 => raw_time += (180 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        7 => raw_time += (211 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        8 => raw_time += (242 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        9 => raw_time += (273 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        10 => raw_time += (304 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        11 => raw_time += (335 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        12 => raw_time += (366 + if (leap_year) 1 else 0) * 24 * 60 * 60,
-        else => unreachable,
-    }
-
-    raw_time += @as(u64, datetime.year - 1970) * 365 * 24 * 60 * 60;
-
-    // Add leap years
-    for (1970..datetime.year) |year| {
-        if (is_leap_year(year)) {
-            raw_time += 24 * 60 * 60;
-        }
-    }
-
-    set_time(raw_time * 1_000);
+    const raw_time = try datetime.timestamp();
+    set_time(raw_time);
 }
 
 /// Get the current datetime
 pub fn get_datetime() DateTime {
-    var raw = get_time() / 1_000;
-
-    // Hours minutes and seconds are easy
-
-    const second = raw % 60;
-    raw /= 60;
-    const minute = raw % 60;
-    raw /= 60;
-    const hour = raw % 24;
-    raw /= 24;
-
-    // The rest are a bit trickier
-
-    var day = raw;
-    var year: u12 = 1970;
-
-    while (day >= 365) {
-        day -= 365;
-        if (is_leap_year(year)) {
-            day -= 1;
-        }
-        year += 1;
-    }
-
-    // Now we need to find the month
-    var month: u4 = 1;
-
-    while (true) {
-        switch (month) {
-            1, 3, 5, 7, 8, 10, 12 => if (day >= 31) {
-                day -= 31;
-                month += 1;
-            } else break,
-            4, 6, 9, 11 => if (day >= 30) {
-                day -= 30;
-                month += 1;
-            } else break,
-            2 => if (day >= if (is_leap_year(year)) @as(u5, 29) else @as(u5, 28)) {
-                day -= if (is_leap_year(year)) 29 else 28;
-                month += 1;
-            } else break,
-            else => unreachable,
-        }
-    }
-
-    // Now we need to find the day of the week
-
-    var dow_month: u32 = month;
-    var dow_year: u32 = year;
-
-    if (month < 3) {
-        dow_month += 12;
-        dow_year -= 1;
-    }
-
-    const dow_cent = dow_year / 100;
-    dow_year = dow_year % 100;
-
-    dow_month = 13 * (dow_month + 1) / 5;
-
-    const dow = (day + dow_month + dow_year + dow_year / 4 + dow_cent / 4 - 2 * dow_cent) % 7;
-
-    return .{
-        .year = year,
-        .month = month,
-        .day = @intCast(day),
-        .day_of_week = @enumFromInt(dow),
-        .hour = @intCast(hour),
-        .minute = @intCast(minute),
-        .second = @intCast(second),
-    };
+    const raw_time = get_time();
+    return DateTime.from_timestamp(raw_time);
 }
 
 /// Alarm functionality
@@ -378,8 +413,8 @@ pub const alarm = struct {
         POWMAN.TIMER.write(.{ .ALARM = 1 });
     }
 
-    /// Get the raw alarm time in microseconds
-    pub fn get_raw() u64 {
+    /// Get the raw alarm time in milliseconds
+    pub fn get_time() u64 {
         const b1 = POWMAN.ALARM_TIME_15TO0.read().ALARM_TIME_15TO0;
         const b2 = POWMAN.ALARM_TIME_31TO16.read().ALARM_TIME_31TO16;
         const b3 = POWMAN.ALARM_TIME_47TO32.read().ALARM_TIME_47TO32;
@@ -387,19 +422,31 @@ pub const alarm = struct {
         return @as(u64, b4) << 48 | @as(u64, b3) << 32 | @as(u64, b2) << 16 | b1;
     }
 
-    /// Set the raw alarm time in microseconds and optionally enable the alarm
+    /// Set the raw alarm time in milliseconds and optionally enable the alarm
     ///
     /// Parameters:
     ///
-    /// * `time` - The time in microseconds
+    /// * `time` - The time in milliseconds
     /// * `enable_alarm` - Whether to enable the alarm
-    pub fn set_raw(time: u64, enable_alarm: bool) void {
+    pub fn set_time(time: u64, enable_alarm: bool) void {
         alarm.disable();
         POWMAN.ALARM_TIME_15TO0.write(.{ .ALARM_TIME_15TO0 = @truncate(time) });
         POWMAN.ALARM_TIME_31TO16.write(.{ .ALARM_TIME_31TO16 = @truncate(time >> 16) });
         POWMAN.ALARM_TIME_47TO32.write(.{ .ALARM_TIME_47TO32 = @truncate(time >> 32) });
         POWMAN.ALARM_TIME_63TO48.write(.{ .ALARM_TIME_63TO48 = @truncate(time >> 48) });
         if (enable_alarm) alarm.enable();
+    }
+
+    /// Set the alarm time based on a DateTime value
+    pub fn set_datetime(datetime: DateTime, enable_alarm: bool) !void {
+        const raw = try datetime.timestamp();
+        set_time(raw, enable_alarm);
+    }
+
+    /// Get the alarm time as a DateTime value
+    pub fn get_datetime() DateTime {
+        const raw = get_time();
+        return DateTime.from_timestamp(raw);
     }
 
     const Config = struct {
@@ -430,7 +477,7 @@ pub const alarm = struct {
     pub fn configure(config: Config) void {
 
         // Keep alarm disabled while modifying settings
-        alarm.disable();
+        //alarm.disable();
 
         // ### TODO ### implement interrupts
         _ = config;
@@ -469,7 +516,7 @@ pub const alarm = struct {
         // }
 
         // Re-enable alarm now that settings have been applied
-        alarm.enable();
+        //alarm.enable();
     }
 };
 
@@ -477,7 +524,7 @@ pub const alarm = struct {
 pub const irq = struct {
     /// Disable interrupts being generated every time an alarm occurs
     pub inline fn disable() void {
-        // ### TODO ### implement
+        // ### TODO ### implement  irq.disable()
         // // Clear alias to atomically disable IRQ
         // hw.clear_alias(&RTC.INTE).write(.{
         //     .RTC = 1,
@@ -486,7 +533,7 @@ pub const irq = struct {
 
     /// Enable interrupts being generated every time an alarm occurs
     pub inline fn enable() void {
-        // ### TODO ### implement
+        // ### TODO ### implement  irq.enable()
         // // Set alias to atomically enable IRQ
         // hw.set_alias(&RTC.INTE).write(.{
         //     .RTC = 1,
