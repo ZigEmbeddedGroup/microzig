@@ -1,6 +1,6 @@
 const std = @import("std");
+const root = @import("root");
 const microzig = @import("microzig");
-const app = microzig.app;
 const arch = @import("compatibility.zig").arch;
 
 pub const Security = enum(u2) {
@@ -13,7 +13,7 @@ const Cpu = enum(u3) {
     riscv = 1,
 };
 
-const security: Security = if (@hasDecl(app, "image_def_security")) app.image_def_security else .secure;
+const security = root.microzig_options.hal.image_def_security;
 const cpu: Cpu = std.meta.stringToEnum(Cpu, @tagName(arch)).?;
 
 const image_def = init();
