@@ -18,8 +18,6 @@ pub const usb_serial_jtag = @import("hal/usb_serial_jtag.zig");
 comptime {
     // export atomic intrinsics
     _ = @import("hal/atomic.zig");
-
-    rom.export_functions();
 }
 
 /// Clock config applied by the default `init()` function of the hal.
