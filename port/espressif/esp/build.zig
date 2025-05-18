@@ -67,7 +67,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = b.path("esp32_c3.ld"),
+        .linker_script = b.path("ld/esp32_c3/esp32_c3.ld"),
     };
 
     return .{
@@ -89,7 +89,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                     }) catch @panic("OOM"),
                 },
-                .linker_script = b.path("esp32_c3_direct_boot.ld"),
+                .linker_script = b.path("ld/esp32_c3/esp32_c3_direct_boot.ld"),
             }),
         },
         .boards = .{},
