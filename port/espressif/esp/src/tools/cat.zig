@@ -17,7 +17,7 @@ pub fn main() !void {
     const output_file = try std.fs.createFileAbsolute(args[args.len - 1], .{});
     defer output_file.close();
 
-    for (args[1..args.len - 1]) |arg| {
+    for (args[1 .. args.len - 1]) |arg| {
         const file = try std.fs.openFileAbsolute(arg, .{ .mode = .read_only });
         defer file.close();
 

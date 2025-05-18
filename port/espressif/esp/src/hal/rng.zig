@@ -11,6 +11,6 @@ pub fn read(buf: []u8) void {
     while (i < buf.len) : (i += 4) {
         const count = @max(buf.len - i, 4);
         const value = random_u32();
-        @memcpy(buf[i..i+count], std.mem.asBytes(&value)[0..count]);
+        @memcpy(buf[i .. i + count], std.mem.asBytes(&value)[0..count]);
     }
 }
