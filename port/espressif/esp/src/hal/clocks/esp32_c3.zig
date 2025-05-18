@@ -206,7 +206,7 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
             dcur = 3;
             dbias = 2;
 
-            rom.functions.rom_i2c_writeReg(0x66, 0, 4, 0x69);
+            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x69);
         },
         .@"480mhz" => {
             div_ref = 0;
@@ -217,7 +217,7 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
             dcur = 3;
             dbias = 2;
 
-            rom.functions.rom_i2c_writeReg(0x66, 0, 4, 0x6b);
+            rom.functions.esp_rom_regi2c_write(0x66, 0, 4, 0x6b);
         },
     }
 
@@ -225,34 +225,34 @@ fn bbpll_configure(pll_freq: CpuClockSource.PllClock.PllFreq) void {
     const i2c_bbpll_dcur: u8 =
         (2 << i2c_bbpll_oc_dlref_sel_lsb) | (1 << i2c_bbpll_oc_dhref_sel_lsb) | dcur;
 
-    rom.functions.rom_i2c_writeReg(0x66, 0, 2, i2c_bbpll_lref);
-    rom.functions.rom_i2c_writeReg(0x66, 0, 3, div7_0);
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 2, i2c_bbpll_lref);
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 3, div7_0);
 
     {
-        var value = rom.functions.rom_i2c_readReg(0x66, 0, 5);
+        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 5);
         value &= ~@as(u8, 0b111);
         value &= ~@as(u8, 0b111 << 4);
         value |= dr1;
         value |= dr3 << 4;
-        rom.functions.rom_i2c_writeReg(0x66, 0, 5, value);
+        rom.functions.esp_rom_regi2c_write(0x66, 0, 5, value);
     }
 
-    rom.functions.rom_i2c_writeReg(0x66, 0, 6, i2c_bbpll_dcur);
+    rom.functions.esp_rom_regi2c_write(0x66, 0, 6, i2c_bbpll_dcur);
 
     {
-        var value = rom.functions.rom_i2c_readReg(0x66, 0, 9);
+        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 9);
         value &= ~@as(u8, 0b11);
         value |= dbias;
-        rom.functions.rom_i2c_writeReg(0x66, 0, 9, value);
+        rom.functions.esp_rom_regi2c_write(0x66, 0, 9, value);
     }
 
     {
-        var value = rom.functions.rom_i2c_readReg(0x66, 0, 6);
+        var value = rom.functions.esp_rom_regi2c_read(0x66, 0, 6);
         value &= ~@as(u8, 0b11 << 4);
         value &= ~@as(u8, 0b11 << 6);
         value |= 2 << 4;
         value |= 1 << 6;
-        rom.functions.rom_i2c_writeReg(0x66, 0, 6, value);
+        rom.functions.esp_rom_regi2c_write(0x66, 0, 6, value);
     }
 }
 

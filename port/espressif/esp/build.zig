@@ -67,7 +67,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = b.path("ld/esp32_c3/esp32_c3.ld"),
+        .linker_script = get_linker_script(
+            dep,
+            "esp32_c3.ld",
+            b.path("ld/esp32_c3/esp32_c3.ld.base"),
+            b.path("ld/esp32_c3/rom_functions.ld"),
+        ),
     };
 
     return .{
@@ -89,7 +94,12 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                     }) catch @panic("OOM"),
                 },
-                .linker_script = b.path("ld/esp32_c3/esp32_c3_direct_boot.ld"),
+                .linker_script = get_linker_script(
+                    dep,
+                    "esp32_c3_direct_boot.ld",
+                    b.path("ld/esp32_c3/esp32_c3_direct_boot.ld.base"),
+                    b.path("ld/esp32_c3/rom_functions.ld"),
+                ),
             }),
         },
         .boards = .{},
@@ -107,6 +117,16 @@ pub fn build(b: *std.Build) void {
     const unit_tests_run = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run platform agnostic unit tests");
     test_step.dependOn(&unit_tests_run.step);
+
+    const cat_exe = b.addExecutable(.{
+        .name = "cat",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/cat.zig"),
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+        }),
+    });
+    b.installArtifact(cat_exe);
 }
 
 fn get_cpu_config(b: *std.Build, boot_mode: cpu_options.BootMode) *std.Build.Module {
@@ -115,4 +135,19 @@ fn get_cpu_config(b: *std.Build, boot_mode: cpu_options.BootMode) *std.Build.Mod
     return b.createModule(.{
         .root_source_file = options.getOutput(),
     });
+}
+
+fn get_linker_script(
+    dep: *std.Build.Dependency,
+    output_name: []const u8,
+    base_path: std.Build.LazyPath,
+    rom_functions_path: std.Build.LazyPath,
+) std.Build.LazyPath {
+    const b = dep.builder;
+    const cat_exe = dep.artifact("cat");
+
+    const run = b.addRunArtifact(cat_exe);
+    run.addFileArg(base_path);
+    run.addFileArg(rom_functions_path);
+    return run.addOutputFileArg(output_name);
 }
