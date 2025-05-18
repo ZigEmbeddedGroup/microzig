@@ -2,8 +2,6 @@ const std = @import("std");
 const Import = std.Build.Module.Import;
 const microzig = @import("microzig/build-internals");
 
-const cpu_options = @import("src/cpus/options.zig");
-
 const Self = @This();
 
 chips: struct {
@@ -67,7 +65,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
             },
         },
         .hal = hal,
-        .linker_script = get_linker_script(
+        .linker_script = generate_linker_script(
             dep,
             "esp32_c3.ld",
             b.path("ld/esp32_c3/esp32_c3.ld.base"),
@@ -94,7 +92,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         },
                     }) catch @panic("OOM"),
                 },
-                .linker_script = get_linker_script(
+                .linker_script = generate_linker_script(
                     dep,
                     "esp32_c3_direct_boot.ld",
                     b.path("ld/esp32_c3/esp32_c3_direct_boot.ld.base"),
@@ -129,15 +127,20 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(cat_exe);
 }
 
-fn get_cpu_config(b: *std.Build, boot_mode: cpu_options.BootMode) *std.Build.Module {
+const BootMode = enum {
+    direct,
+    image,
+};
+
+fn get_cpu_config(b: *std.Build, boot_mode: BootMode) *std.Build.Module {
     const options = b.addOptions();
-    options.addOption(cpu_options.BootMode, "boot_mode", boot_mode);
+    options.addOption(BootMode, "boot_mode", boot_mode);
     return b.createModule(.{
         .root_source_file = options.getOutput(),
     });
 }
 
-fn get_linker_script(
+fn generate_linker_script(
     dep: *std.Build.Dependency,
     output_name: []const u8,
     base_path: std.Build.LazyPath,
