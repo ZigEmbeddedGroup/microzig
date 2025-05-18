@@ -712,6 +712,41 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                     out_string[i] = '%';
                     i += 1;
                 },
+                '-' => {
+                    switch (format[f + 1]) {
+                        'd' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.day);
+                        },
+                        'm' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.month);
+                        },
+                        'y' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.year % 100);
+                        },
+                        'H' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.hour);
+                        },
+                        'I' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            const hour = if (self.hour == 0) 12 else self.hour % 12;
+                            i += int_to_string(out_string[i..], hour);
+                        },
+                        'M' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.minute);
+                        },
+                        'S' => {
+                            if (i + 2 > out_string.len) return error.NotEnoughSpace;
+                            i += int_to_string(out_string[i..], self.second);
+                        },
+                        else => return error.InvalidFormat,
+                    }
+                    f += 1;
+                },
                 else => return error.InvalidFormat,
             }
             f += 1;
