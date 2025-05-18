@@ -185,6 +185,8 @@ pub const time = struct {
     }
 };
 
+pub const DateTime = @import("base/DateTime.zig");
+
 pub const base = struct {
     pub const Datagram_Device = @import("base/Datagram_Device.zig");
     pub const Stream_Device = @import("base/Stream_Device.zig");
@@ -212,6 +214,7 @@ test {
     _ = IO_expander.pcf8574;
 
     _ = time;
+    _ = DateTime;
 
     _ = base.Datagram_Device;
     _ = base.Stream_Device;
