@@ -454,17 +454,15 @@ pub fn from_timestamp(in_time: u64) DateTime {
 pub fn timestamp(self: DateTime) Error!u64 {
     try self.is_valid();
 
-    const utc = try self.to_timezone(.UTC);
+    if (self.year < 1970) return error.InvalidYear;
 
-    if (utc.year < 1970) return error.InvalidYear;
-
-    const leap_year = is_leap_year(utc.year);
+    const leap_year = is_leap_year(self.year);
 
     // First computer number of days since 1970-01-01
-    var result: u64 = @as(u64, utc.year - 1970) * 365;
+    var result: u64 = @as(u64, self.year - 1970) * 365;
 
     // Add leap years
-    for (1970..utc.year) |y| {
+    for (1970..self.year) |y| {
         if (is_leap_year(@intCast(y))) {
             result += 1;
         }
@@ -472,7 +470,7 @@ pub fn timestamp(self: DateTime) Error!u64 {
 
     // Add days in previous months
 
-    switch (utc.month) {
+    switch (self.month) {
         1 => result += 0,
         2 => result += 31,
         3 => result += 59,
@@ -488,27 +486,35 @@ pub fn timestamp(self: DateTime) Error!u64 {
         else => unreachable,
     }
 
-    if (utc.month > 2 and leap_year) {
+    if (self.month > 2 and leap_year) {
         result += 1;
     }
 
     // Add in days in this month
 
-    result += @as(u64, utc.day) - 1;
+    result += @as(u64, self.day) - 1;
 
     // now add in hours, minutes and seconds, converting to seconds as we go
 
     result *= 24;
-    result += @as(u64, utc.hour);
+    result += @as(u64, self.hour);
     result *= 60;
-    result += @as(u64, utc.minute);
+    result += @as(u64, self.minute);
     result *= 60;
-    result += @as(u64, utc.second);
+    result += @as(u64, self.second);
 
     // Add milliseconds
 
     result *= 1_000;
-    result += @as(u64, utc.millisecond);
+    result += @as(u64, self.millisecond);
+
+    // Subtract the timezone offset checking for underflow.
+
+    const tz_offset = self.timezone.offset(.UTC);
+
+    if (tz_offset > result) return error.InvalidYear;
+
+    result -= @intCast(tz_offset);
 
     return result;
 }
@@ -656,13 +662,13 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                     i += int_to_string_padded(out_string[i..], self.month, 2);
                 },
                 'b' => {
-                    const val = l10n.month_abbr[self.month];
+                    const val = l10n.month_abbr[self.month - 1];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
                     std.mem.copyForwards(u8, out_string[i .. i + val.len], val);
                     i += val.len;
                 },
                 'B' => {
-                    const val = l10n.month_names[self.month];
+                    const val = l10n.month_names[self.month - 1];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
                     std.mem.copyForwards(u8, out_string[i .. i + val.len], val);
                     i += val.len;
