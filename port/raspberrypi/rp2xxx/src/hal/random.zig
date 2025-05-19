@@ -11,7 +11,7 @@ const compatibility = microzig.hal.compatibility;
 const chip = compatibility.chip;
 
 /// Access the RP2350 True Random Number Generator (TRNG)
-pub const Trng = if (chip == .RP2350) struct {
+pub const trng = if (chip == .RP2350) struct {
     const TRNG = microzig.chip.peripherals.TRNG;
 
     /// Generate a random number using the TRNG.
@@ -71,7 +71,7 @@ pub const Trng = if (chip == .RP2350) struct {
             .TRNG_SW_RESET = true,
         });
     }
-} else @compileError("Trng not supported on this chip");
+} else @compileError("TRNG not supported on this chip");
 
 /// Wrapper around the Ascon CSPRNG with automatic reseed using the ROSC
 ///
