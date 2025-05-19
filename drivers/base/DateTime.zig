@@ -852,8 +852,92 @@ test "DateTime to string" {
     const dt = DateTime.from_timestamp(ts);
 
     var buf: [128]u8 = undefined;
-
     const len = try dt.to_string(&buf, "%a-%A-%w-%d-%-d-%b-%B-%m-%-m-%y-%-y-%Y-%H-%-H-%I-%-I-%p-%M-%-M-%S-%-S-%f-%z-%Z-%%100", .de);
 
     try std.testing.expectEqualStrings("Mit-Mittwoch-3-09-9-Mar-März-03-3-05-5-2005-17-17-05-5-nach-09-9-02-2-320-+0000-+00:00-%100", buf[0..len]);
+}
+
+test "Boundary Conditions - Year" {
+    const ts = 1767225599_999;
+    var dt = DateTime.from_timestamp(ts);
+
+    try std.testing.expect(dt.year == 2025);
+    try std.testing.expect(dt.month == 12);
+    try std.testing.expect(dt.day == 31);
+    try std.testing.expect(dt.hour == 23);
+    try std.testing.expect(dt.minute == 59);
+    try std.testing.expect(dt.second == 59);
+    try std.testing.expect(dt.millisecond == 999);
+
+    dt = try dt.offset(1);
+
+    try std.testing.expect(dt.year == 2026);
+    try std.testing.expect(dt.month == 1);
+    try std.testing.expect(dt.day == 1);
+    try std.testing.expect(dt.hour == 0);
+    try std.testing.expect(dt.minute == 0);
+    try std.testing.expect(dt.second == 0);
+    try std.testing.expect(dt.millisecond == 0);
+
+    try std.testing.expect(try dt.timestamp() == ts + 1);
+}
+
+test "Boundary Conditions - Feb/Mar - Non-Leap Year" {
+    const ts = 1740787199_999;
+    var dt = DateTime.from_timestamp(ts);
+
+    try std.testing.expect(dt.year == 2025);
+    try std.testing.expect(dt.month == 2);
+    try std.testing.expect(dt.day == 28);
+    try std.testing.expect(dt.hour == 23);
+    try std.testing.expect(dt.minute == 59);
+    try std.testing.expect(dt.second == 59);
+    try std.testing.expect(dt.millisecond == 999);
+
+    dt = try dt.offset(1);
+
+    try std.testing.expect(dt.year == 2025);
+    try std.testing.expect(dt.month == 3);
+    try std.testing.expect(dt.day == 1);
+    try std.testing.expect(dt.hour == 0);
+    try std.testing.expect(dt.minute == 0);
+    try std.testing.expect(dt.second == 0);
+    try std.testing.expect(dt.millisecond == 0);
+
+    try std.testing.expect(try dt.timestamp() == ts + 1);
+}
+
+test "Boundary Conditions - Feb/Mar - Leap Year" {
+    const ts = 1709164799_999;
+    var dt = DateTime.from_timestamp(ts);
+
+    try std.testing.expect(dt.year == 2024);
+    try std.testing.expect(dt.month == 2);
+    try std.testing.expect(dt.day == 28);
+    try std.testing.expect(dt.hour == 23);
+    try std.testing.expect(dt.minute == 59);
+    try std.testing.expect(dt.second == 59);
+    try std.testing.expect(dt.millisecond == 999);
+
+    dt = try dt.offset(1);
+
+    try std.testing.expect(dt.year == 2024);
+    try std.testing.expect(dt.month == 2);
+    try std.testing.expect(dt.day == 29);
+    try std.testing.expect(dt.hour == 0);
+    try std.testing.expect(dt.minute == 0);
+    try std.testing.expect(dt.second == 0);
+    try std.testing.expect(dt.millisecond == 0);
+
+    dt = try dt.offset(24 * 60 * 60 * 1000);
+
+    try std.testing.expect(dt.year == 2024);
+    try std.testing.expect(dt.month == 3);
+    try std.testing.expect(dt.day == 1);
+    try std.testing.expect(dt.hour == 0);
+    try std.testing.expect(dt.minute == 0);
+    try std.testing.expect(dt.second == 0);
+    try std.testing.expect(dt.millisecond == 0);
+
+    try std.testing.expect(try dt.timestamp() == ts + 1 + 24 * 60 * 60 * 1000);
 }

@@ -193,17 +193,23 @@ pub fn is_enabled() bool {
 pub const alarm = struct {
     /// Check if the alarm is enabled
     pub fn is_enabled() bool {
-        return POWMAN.TIMER.read().ALARM != 0;
+        return POWMAN.TIMER.read().ALARM_ENAB != 0;
     }
 
     /// Disable the alarm
     pub fn disable() void {
-        POWMAN.TIMER.write(.{ .ALARM = 0 });
+        var val = POWMAN.TIMER.raw;
+        val &= 0x0000_ffef;
+        val |= 0x5afe_0000;
+        POWMAN.TIMER.raw = val;
     }
 
     /// Enable the alarm
     pub fn enable() void {
-        POWMAN.TIMER.write(.{ .ALARM = 1 });
+        var val = POWMAN.TIMER.raw;
+        val &= 0x0000_ffef;
+        val |= 0x5afe_0010;
+        POWMAN.TIMER.raw = val;
     }
 
     /// Get the raw alarm time in milliseconds
@@ -223,31 +229,57 @@ pub const alarm = struct {
     /// * `enable_alarm` - Whether to enable the alarm
     pub fn set_time(time: u64, enable_alarm: bool) void {
         alarm.disable();
-        POWMAN.ALARM_TIME_15TO0.write(.{ .ALARM_TIME_15TO0 = @truncate(time) });
-        POWMAN.ALARM_TIME_31TO16.write(.{ .ALARM_TIME_31TO16 = @truncate(time >> 16) });
-        POWMAN.ALARM_TIME_47TO32.write(.{ .ALARM_TIME_47TO32 = @truncate(time >> 32) });
-        POWMAN.ALARM_TIME_63TO48.write(.{ .ALARM_TIME_63TO48 = @truncate(time >> 48) });
+        POWMAN.ALARM_TIME_15TO0.write(.{ .padding = 0x5afe, .ALARM_TIME_15TO0 = @truncate(time) });
+        POWMAN.ALARM_TIME_31TO16.write(.{ .padding = 0x5afe, .ALARM_TIME_31TO16 = @truncate(time >> 16) });
+        POWMAN.ALARM_TIME_47TO32.write(.{ .padding = 0x5afe, .ALARM_TIME_47TO32 = @truncate(time >> 32) });
+        POWMAN.ALARM_TIME_63TO48.write(.{ .padding = 0x5afe, .ALARM_TIME_63TO48 = @truncate(time >> 48) });
         if (enable_alarm) alarm.enable();
+    }
+
+    // Has the alarm expired?
+    pub fn has_expired() bool {
+        return POWMAN.TIMER.read().ALARM != 0;
+    }
+
+    // Clear the alarm expired flag
+    pub fn clear_expired() void {
+        var val = POWMAN.TIMER.raw;
+        val &= 0x0000_ffbf;
+        val |= 0x5afe_0040;
+        POWMAN.TIMER.raw = val;
+    }
+
+    // Get the alarm wake from low power flag.
+    pub fn get_power_up() bool {
+        return POWMAN.TIMER.read().WAKEUP != 0;
+    }
+
+    // Clear the alarm wakes from low power flag.
+    pub fn clear_power_up() void {
+        var val = POWMAN.TIMER.raw;
+        val &= 0x0000_ffdf;
+        val |= 0x5afe_0000;
+        POWMAN.TIMER.raw = val;
+    }
+
+    // Set the alarm wakes from low power flag.
+    pub fn set_power_up() void {
+        var val = POWMAN.TIMER.raw;
+        val &= 0x0000_ffdf;
+        val |= 0x5afe_0020;
+        POWMAN.TIMER.raw = val;
     }
 };
 
 /// Control whether or not this peripheral's IRQ is enabled
 pub const irq = struct {
     /// Disable interrupts being generated every time an alarm occurs
-    pub inline fn disable() void {
-        // ### TODO ### implement  irq.disable()
-        // // Clear alias to atomically disable IRQ
-        // hw.clear_alias(&RTC.INTE).write(.{
-        //     .RTC = 1,
-        // });
+    pub fn disable() void {
+        POWMAN.INTE.modify(.{ .TIMER = 0 });
     }
 
     /// Enable interrupts being generated every time an alarm occurs
-    pub inline fn enable() void {
-        // ### TODO ### implement  irq.enable()
-        // // Set alias to atomically enable IRQ
-        // hw.set_alias(&RTC.INTE).write(.{
-        //     .RTC = 1,
-        // });
+    pub fn enable() void {
+        POWMAN.INTE.modify(.{ .TIMER = 1 });
     }
 };
