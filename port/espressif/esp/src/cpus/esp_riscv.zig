@@ -3,6 +3,7 @@ const microzig = @import("microzig");
 const root = @import("root");
 const microzig_options = root.microzig_options;
 
+const cpu_config = @import("cpu-config");
 const riscv32_common = @import("riscv32-common");
 
 pub const Exception = enum(u5) {
@@ -232,6 +233,130 @@ pub const interrupt = struct {
 pub const nop = riscv32_common.nop;
 pub const wfi = riscv32_common.wfi;
 
+pub const startup_logic = switch (cpu_config.boot_mode) {
+    .direct => struct {
+        comptime {
+            // See this:
+            // https://github.com/espressif/esp32c3-direct-boot-example
+
+            // Direct Boot: does not support Security Boot and programs run directly in flash. To enable this mode, make
+            // sure that the first two words of the bin file downloading to flash (address: 0x42000000) are 0xaedb041d.
+
+            // In this case, the ROM bootloader sets up Flash MMU to map 4 MB of Flash to
+            // addresses 0x42000000 (for code execution) and 0x3C000000 (for read-only data
+            // access). The bootloader then jumps to address 0x42000008, i.e. to the
+            // instruction at offset 8 in flash, immediately after the magic numbers.
+
+            asm (
+                \\.extern _start
+                \\.section microzig_flash_start
+                \\.align 4
+                \\.byte 0x1d, 0x04, 0xdb, 0xae
+                \\.byte 0x1d, 0x04, 0xdb, 0xae
+            );
+        }
+
+        extern fn microzig_main() noreturn;
+
+        fn _start() linksection("microzig_flash_start") callconv(.c) noreturn {
+            interrupt.disable_interrupts();
+
+            asm volatile ("mv sp, %[eos]"
+                :
+                : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+            );
+
+            asm volatile (
+                \\.option push
+                \\.option norelax
+                \\la gp, __global_pointer$
+                \\.option pop
+            );
+
+            root.initialize_system_memories();
+
+            init_interrupts();
+
+            microzig_main();
+        }
+
+        fn export_impl() void {
+            @export(&_start, .{ .name = "_start" });
+        }
+    },
+    .image => struct {
+        extern fn microzig_main() noreturn;
+
+        const sections = struct {
+            extern var microzig_bss_start: u8;
+            extern var microzig_bss_end: u8;
+        };
+
+        fn _start() callconv(.naked) noreturn {
+            asm volatile (
+                \\mv sp, %[eos]
+                \\jal _start_c
+                :
+                : [eos] "r" (@as(u32, microzig.config.end_of_stack)),
+            );
+        }
+
+        fn _start_c() callconv(.c) noreturn {
+            interrupt.disable_interrupts();
+
+            asm volatile (
+                \\.option push
+                \\.option norelax
+                \\la gp, __global_pointer$
+                \\.option pop
+            );
+
+            // fill .bss with zeroes
+            {
+                const bss_start: [*]u8 = @ptrCast(&sections.microzig_bss_start);
+                const bss_end: [*]u8 = @ptrCast(&sections.microzig_bss_end);
+                const bss_len = @intFromPtr(bss_end) - @intFromPtr(bss_start);
+
+                @memset(bss_start[0..bss_len], 0);
+            }
+
+            init_interrupts();
+
+            microzig_main();
+        }
+
+        fn export_impl() void {
+            @export(&_start, .{ .name = "_start" });
+            @export(&_start_c, .{ .name = "_start_c" });
+        }
+    },
+};
+
+pub fn export_startup_logic() void {
+    startup_logic.export_impl();
+}
+
+/// Gets interrupts into a known state after the bootloader.
+fn init_interrupts() void {
+    // unmap all sources
+    for (std.enums.values(interrupt.Source)) |source| {
+        interrupt.map(source, null);
+    }
+
+    interrupt.set_priority_threshold(.zero);
+
+    for (std.enums.values(Interrupt)) |int| {
+        interrupt.set_type(int, .level);
+        interrupt.set_priority(int, .lowest);
+        interrupt.disable(int);
+    }
+
+    csr.mtvec.write(.{
+        .mode = .vectored,
+        .base = @intCast(@intFromPtr(&_vector_table) >> 2),
+    });
+}
+
 pub const TrapFrame = extern struct {
     ra: usize,
     t0: usize,
@@ -269,27 +394,6 @@ pub const TrapFrame = extern struct {
     mcause: usize,
     mtval: usize,
 };
-
-/// Gets interrupts into a known state after the bootloader.
-pub fn init_interrupts() void {
-    // unmap all sources
-    for (std.enums.values(interrupt.Source)) |source| {
-        interrupt.map(source, null);
-    }
-
-    interrupt.set_priority_threshold(.zero);
-
-    for (std.enums.values(Interrupt)) |int| {
-        interrupt.set_type(int, .level);
-        interrupt.set_priority(int, .lowest);
-        interrupt.disable(int);
-    }
-
-    csr.mtvec.write(.{
-        .mode = .vectored,
-        .base = @intCast(@intFromPtr(&_vector_table) >> 2),
-    });
-}
 
 fn _vector_table() align(256) linksection(".trap") callconv(.naked) void {
     comptime {
