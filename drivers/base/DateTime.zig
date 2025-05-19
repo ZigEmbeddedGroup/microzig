@@ -280,32 +280,29 @@ pub const Localization = struct {
 
 pub const default_localization = Localization{};
 
-/// A timezone
-pub const Timezone = struct {
-    hour_offset: i4,
-    minute_offset: i6 = 0,
+/// A timezone.  The value is the offset in minutes from UTC.
+pub const Timezone = enum(i16) {
+    UTC = 0,
+    _,
 
-    pub const UTC = Timezone{ .hour_offset = 0 };
-    pub const Z = Timezone{ .hour_offset = 0 };
+    pub const Z = Timezone.UTC;
 
-    /// Convert a string in the form "+00:00" or "-00:00" to a Timezone
-    /// This allows for leading characters so "UTC+00:00" or "UTC-00:00" are also valid.
+    /// Convert a string in the form "±00:00" or "±0000" to a Timezone
+    /// This allows for leading characters so "UTC+00:00" or "UTC-0000" are also valid.
     pub fn from_string(in_string: []const u8) Error!Timezone {
         // Look for a leading + or -
         var i: usize = 0;
-        var hour_offset: i4 = 0;
-        var minute_offset: i6 = 0;
 
         while (i < in_string.len) : (i += 1) {
             if (in_string[i] == '+' or in_string[i] == '-') break;
         }
 
-        if (in_string.len < i + 6) return error.InvalidTimezone;
-
         const is_minus = in_string[i] == '-';
         i += 1;
 
-        if (in_string[i] < '0' or in_string[i] > '9') return error.InvalidTimezone;
+        var hour_offset: u16 = undefined;
+
+        if (in_string[i] < '0' or in_string[i] > '1') return error.InvalidTimezone;
         hour_offset = 10 * (in_string[i] - '0');
         i += 1;
 
@@ -313,62 +310,81 @@ pub const Timezone = struct {
         hour_offset += in_string[i] - '0';
         i += 1;
 
-        if (in_string[i] != ':') return error.InvalidTimezone;
-        i += 1;
+        if (hour_offset > 14) return error.InvalidTimezone;
 
-        if (in_string[i] < '0' or in_string[i] > '9') return error.InvalidTimezone;
+        if (in_string[i] == ':') i += 1;
+
+        var minute_offset: i16 = undefined;
+
+        if (in_string[i] < '0' or in_string[i] > '5') return error.InvalidTimezone;
         minute_offset = 10 * (in_string[i] - '0');
         i += 1;
 
         if (in_string[i] < '0' or in_string[i] > '9') return error.InvalidTimezone;
-        minute_offset += in_string[i] - '0';
+        minute_offset += @intCast(in_string[i] - '0');
         i += 1;
 
+        if (minute_offset > 59) return error.InvalidTimezone;
+
+        minute_offset += @intCast(hour_offset * 60);
+
         if (is_minus) {
-            hour_offset = -hour_offset;
             minute_offset = -minute_offset;
         }
 
-        return Timezone{ .hour_offset = hour_offset, .minute_offset = minute_offset };
+        return @enumFromInt(minute_offset);
     }
 
-    /// Convert a Timezone to a string in the form "+00:00" or "-00:00"
+    /// Convert a Timezone to a string like "+00:00" or "-00:00"
     ///
     /// Parameters:
     ///
     /// * `out_string` - The buffer to write the string to
-    /// * `prefix` - An optional prefix to add to the string (e.g, "UTC")
-    pub fn to_string(self: Timezone, out_string: []u8, prefix: ?[]const u8) Error!void {
-        if (out_string.len < 6 + (prefix orelse "").len) return error.NotEnoughSpace;
+    /// * `separator` - An optional separator to add between  the hours and minutes
+    ///                 defaults to ":" if null
+    pub fn to_string(self: Timezone, out_string: []u8, separator: ?[]const u8) Error!usize {
+        if (out_string.len < 5 + (separator orelse ":").len) return error.NotEnoughSpace;
+
+        const minus = @intFromEnum(self) < 0;
+
+        var m = @abs(@intFromEnum(self));
+        const h = m / 60;
+        m = m % 60;
 
         var i: usize = 0;
 
-        if (prefix) |p| {
-            std.mem.copyForwards(u8, out_string[0..p.len], p);
-            i += p.len;
-        }
-
-        if (self.hour_offset < 0) {
+        if (minus) {
             out_string[i] = '-';
         } else {
             out_string[i] = '+';
         }
         i += 1;
 
-        _ = int_to_string_padded(out_string[i..], @abs(self.hour_offset), 2);
+        _ = int_to_string_padded(out_string[i..], h, 2);
+        i += 2;
 
-        out_string[i + 2] = ':';
+        if (separator) |sep| {
+            if (sep.len > 0) {
+                std.mem.copyForwards(u8, out_string[i..], sep);
+                i += sep.len;
+            }
+        } else {
+            out_string[i] = ':';
+            i += 1;
+        }
 
-        _ = int_to_string_padded(out_string[i + 3 ..], @abs(self.minute_offset), 2);
+        _ = int_to_string_padded(out_string[i..], m, 2);
+        i += 2;
+
+        return i;
     }
 
     /// Compute the offset in milliseconds between two timezones
+    /// This number is the number of milliseconds to add to a time in the this timezone
+    /// to get the time in the other timezone
     pub fn offset(self: Timezone, other: Timezone) i64 {
-        var delta: i64 = self.hour_offset;
-        delta -= other.hour_offset;
-        delta *= 60;
-        delta += self.minute_offset;
-        delta -= other.minute_offset;
+        var delta: i64 = @intFromEnum(other);
+        delta -= @intFromEnum(self);
         delta *= 60_000;
         return delta;
     }
@@ -438,7 +454,7 @@ pub fn from_timestamp(in_time: u64) DateTime {
     return .{
         .year = year,
         .month = month,
-        .day = @intCast(day),
+        .day = @intCast(day + 1),
         .hour = @intCast(hour),
         .minute = @intCast(minute),
         .second = @intCast(second),
@@ -512,9 +528,12 @@ pub fn timestamp(self: DateTime) Error!u64 {
 
     const tz_offset = self.timezone.offset(.UTC);
 
-    if (tz_offset > result) return error.InvalidYear;
-
-    result -= @intCast(tz_offset);
+    if (tz_offset > 0) {
+        if (result < @abs(tz_offset)) return error.InvalidYear;
+        result -= @abs(tz_offset);
+    } else {
+        result += @abs(tz_offset);
+    }
 
     return result;
 }
@@ -524,18 +543,16 @@ pub fn offset(self: DateTime, offset_ms: i64) Error!DateTime {
     if (offset_ms == 0) return self;
 
     var t = try self.timestamp();
-
     if (-offset_ms > t) return error.InvalidOffset;
-
     t += @intCast(offset_ms);
 
-    return from_timestamp(t);
+    return DateTime.from_timestamp(t);
 }
 
 /// Convert a DateTime to a different timezone
 pub fn to_timezone(self: DateTime, tz: Timezone) Error!DateTime {
     const delta = tz.offset(self.timezone);
-    var result = try self.offset(delta);
+    var result = try self.offset(-delta);
 
     result.timezone = tz;
 
@@ -544,27 +561,26 @@ pub fn to_timezone(self: DateTime, tz: Timezone) Error!DateTime {
 
 /// Compute the day of the week for a given date
 pub fn day_of_week(self: DateTime) DayOfWeek {
-    var dow_month: u32 = self.month;
-    var dow_year: u32 = self.year;
+    var y: u16 = self.year;
+    var m: u16 = self.month;
 
-    if (self.month < 3) {
-        dow_month += 12;
-        dow_year -= 1;
+    if (m < 3) {
+        y -= 1;
+        m += 12;
     }
 
-    const dow_cent = dow_year / 100;
-    dow_year = dow_year % 100;
+    const c = y / 100;
+    y = y % 100;
 
-    dow_month = 13 * (dow_month + 1) / 5;
+    var dow: i32 = (13 * (m + 1) / 5) + y + (y / 4) + (c / 4) + self.day;
+    dow -= 2 * c;
 
-    const dow = (self.day + dow_month + dow_year + dow_year / 4 + dow_cent / 4 - 2 * dow_cent) % 7;
-
-    return @enumFromInt(dow);
+    return @enumFromInt(@mod(dow, 7) - 1);
 }
 
 /// Convert the DateTime to an ISO 8601 string.
 pub fn to_iso_8601(self: DateTime, out_string: []u8) !usize {
-    if (self.timezone.hour_offset != 0 or self.timezone.minute_offset != 0) {
+    if (self.timezone != .UTC) {
         if (self.millisecond == 0) {
             return try self.to_string(out_string, "%Y-%m-%dT%H:%M:%S%z", null);
         }
@@ -582,7 +598,7 @@ pub fn to_iso_8601(self: DateTime, out_string: []u8) !usize {
 /// Convert the DateTime to an RFC 7231 string in the format
 /// ddd, DD MMM YYYY HH:MM:SS GMT
 pub fn to_rfc_7231(self: DateTime, out_string: []u8) !usize {
-    const the_date = if (self.timezone.hour_offset != 0 or self.timezone.minute_offset != 0)
+    const the_date = if (self.timezone != .UTC)
         try self.to_timezone(.UTC)
     else
         self;
@@ -625,6 +641,7 @@ pub fn to_rfc_7231(self: DateTime, out_string: []u8) !usize {
 /// %f    Millisecond as a decimal number, zero-padded on the left.  000 - 999
 ///
 /// %z    UTC offset in the form +HHMM or -HHMM.                      +0000 - +1400 or -0000 - -1400
+/// %Z    UTC offset in the form +HH:MM or -HH:MM.                     +00:00 - +14:00 or -00:00 - -14:00
 ///
 /// %%    A literal '%' character.                                   %
 pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localization: ?Localization) Error!usize {
@@ -636,17 +653,18 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
     while (f < format.len) {
         if (format[f] == '%') {
             f += 1;
+            if (f >= format.len) break;
             switch (format[f]) {
                 'a' => {
                     const val = l10n.day_abbr[@intFromEnum(self.day_of_week())];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
-                    std.mem.copyForwards(u8, out_string[i .. i + val.len], val);
+                    std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'A' => {
                     const val = l10n.day_names[@intFromEnum(self.day_of_week())];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
-                    std.mem.copyForwards(u8, out_string[i..i], val);
+                    std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'w' => {
@@ -664,13 +682,13 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                 'b' => {
                     const val = l10n.month_abbr[self.month - 1];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
-                    std.mem.copyForwards(u8, out_string[i .. i + val.len], val);
+                    std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'B' => {
                     const val = l10n.month_names[self.month - 1];
                     if (i + val.len > out_string.len) return error.NotEnoughSpace;
-                    std.mem.copyForwards(u8, out_string[i .. i + val.len], val);
+                    std.mem.copyForwards(u8, out_string[i..], val);
                     i += val.len;
                 },
                 'y' => {
@@ -710,8 +728,11 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                 },
                 'z' => {
                     if (i + 6 > out_string.len) return error.NotEnoughSpace;
-                    try self.timezone.to_string(out_string[i..], null);
-                    i += 6;
+                    i += try self.timezone.to_string(out_string[i..], "");
+                },
+                'Z' => {
+                    if (i + 6 > out_string.len) return error.NotEnoughSpace;
+                    i += try self.timezone.to_string(out_string[i..], null);
                 },
                 '%' => {
                     if (i + 1 > out_string.len) return error.NotEnoughSpace;
@@ -719,7 +740,9 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                     i += 1;
                 },
                 '-' => {
-                    switch (format[f + 1]) {
+                    f += 1;
+                    if (f >= format.len) break;
+                    switch (format[f]) {
                         'd' => {
                             if (i + 2 > out_string.len) return error.NotEnoughSpace;
                             i += int_to_string(out_string[i..], self.day);
@@ -751,7 +774,6 @@ pub fn to_string(self: DateTime, out_string: []u8, format: []const u8, localizat
                         },
                         else => return error.InvalidFormat,
                     }
-                    f += 1;
                 },
                 else => return error.InvalidFormat,
             }
@@ -790,21 +812,48 @@ fn int_to_string_padded(out_string: []u8, int: u32, width: usize) usize {
     return std.fmt.formatIntBuf(out_string, int, 10, .lower, .{ .fill = '0', .width = width });
 }
 
-// test "DateTime tz_offset" {
-//     const dt = DateTime{
-//         .year = 2025,
-//         .month = Month.January,
-//         .day = 1,
-//         .hour = 0,
-//         .minute = 0,
-//         .second = 0,
-//         .millisecond = 0,
-//     };
+test "DateTime-Conversion" {
+    const ts = 1110388142 * 1000 + 320;
+    const dt = DateTime.from_timestamp(ts);
 
-//     const tz = time.Timezone{
-//         .hour_offset = 0,
-//         .minute_offset = 0,
-//     };
+    try std.testing.expect(dt.year == 2005);
+    try std.testing.expect(dt.month == 3);
+    try std.testing.expect(dt.day == 9);
+    try std.testing.expect(dt.hour == 17);
+    try std.testing.expect(dt.minute == 9);
+    try std.testing.expect(dt.second == 2);
+    try std.testing.expect(dt.millisecond == 320);
 
-//     return dt.tz_offset(tz);
-// }
+    try std.testing.expect(try dt.timestamp() == ts);
+
+    try std.testing.expect(dt.day_of_week() == .Wednesday);
+
+    const tz = try Timezone.from_string("UTC+08:00");
+    const dt1 = try dt.to_timezone(tz);
+
+    try std.testing.expect(dt1.year == 2005);
+    try std.testing.expect(dt1.month == 3);
+    try std.testing.expect(dt1.day == 10);
+    try std.testing.expect(dt1.hour == 1);
+    try std.testing.expect(dt1.minute == 9);
+    try std.testing.expect(dt1.second == 2);
+    try std.testing.expect(dt1.millisecond == 320);
+}
+
+test "TimeZone-Compare" {
+    const tz1 = Timezone.UTC;
+    const tz2 = try Timezone.from_string("UTC-04:00");
+
+    try std.testing.expect(tz1.offset(tz2) == -4 * 60 * 60 * 1000);
+}
+
+test "DateTime to string" {
+    const ts = 1110388142 * 1000 + 320;
+    const dt = DateTime.from_timestamp(ts);
+
+    var buf: [128]u8 = undefined;
+
+    const len = try dt.to_string(&buf, "%a-%A-%w-%d-%-d-%b-%B-%m-%-m-%y-%-y-%Y-%H-%-H-%I-%-I-%p-%M-%-M-%S-%-S-%f-%z-%Z-%%100", .de);
+
+    try std.testing.expectEqualStrings("Mit-Mittwoch-3-09-9-Mar-März-03-3-05-5-2005-17-17-05-5-nach-09-9-02-2-320-+0000-+00:00-%100", buf[0..len]);
+}
