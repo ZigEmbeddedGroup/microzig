@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
@@ -71,12 +70,7 @@ pub const SlewRate = enum(u1) {
     fast,
 };
 
-pub const DriveStrength = enum(u2) {
-    @"2mA",
-    @"4mA",
-    @"8mA",
-    @"12mA",
-};
+pub const DriveStrength = microzig.chip.types.peripherals.PADS_BANK0.DriveStrength;
 
 pub const SchmittTrigger = enum(u1) {
     enabled,
@@ -106,18 +100,18 @@ pub fn num(n: u9) Pin {
         },
     }
 
-    return @as(Pin, @enumFromInt(n));
+    return @enumFromInt(n);
 }
 
 pub const mask = switch (chip) {
     .RP2040 => struct {
         pub fn mask(m: u30) Mask {
-            return @as(Mask, @enumFromInt(m));
+            return @enumFromInt(m);
         }
     }.mask,
     .RP2350 => struct {
         pub fn mask(m: u48) Mask {
-            return @as(Mask, @enumFromInt(m));
+            return @enumFromInt(m);
         }
     }.mask,
 };
@@ -507,13 +501,6 @@ pub const Pin = enum(u6) {
 
     pub fn set_drive_strength(gpio: Pin, drive_strength: DriveStrength) void {
         const pads_reg = gpio.get_pads_reg();
-        pads_reg.modify(.{
-            .DRIVE = switch (drive_strength) {
-                .@"2mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"2mA",
-                .@"4mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"4mA",
-                .@"8mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"8mA",
-                .@"12mA" => microzig.chip.types.peripherals.PADS_BANK0.DriveStrength.@"12mA",
-            },
-        });
+        pads_reg.modify(.{ .DRIVE = drive_strength });
     }
 };
