@@ -242,6 +242,14 @@ pub fn main() !void {
         if (!parsed_args.ram_image) {
             try writer.interface.print(
                 \\
+                \\  .heap (NOLOAD) :
+                \\  {
+                \\      microzig_heap_start = .;
+                \\      . = ORIGIN(ram0) + LENGTH(ram0);
+                \\      microzig_heap_end   = .;
+                \\  } > ram0
+                \\
+                \\
                 \\  .flash_end :
                 \\  {{
                 \\    microzig_flash_end = .;

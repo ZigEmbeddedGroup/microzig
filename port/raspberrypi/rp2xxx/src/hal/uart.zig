@@ -528,9 +528,18 @@ pub fn log(
 
 var log_mutex: microzig.hal.mutex.Mutex = .{};
 
+<<<<<<< HEAD
 /// This log function wraps `log` in a semaphore so that calls to it from
 /// different cores or interrupts don't collide.
 pub fn log_threadsafe(
+=======
+/// This log function wraps logFn in a mutex so that calls to it from
+/// different cores or interrupts don't collide.
+///
+/// It is NOT safe to use in code that could be suspended on one core and
+/// resumed on another.
+pub fn logFnThreadsafe(
+>>>>>>> 320a0b8 (Significant improvement)
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,

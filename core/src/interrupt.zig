@@ -72,3 +72,59 @@ pub const unhandled: Handler = .{
         }
     }.unhandled,
 };
+
+/// Return the mutex type to use.  If a target provides its own mutex type
+/// in its HAL, use that; otherwise, use the default `CriticalSectionMutex`.
+///
+/// Create a mutex instance with `var aMutex = Mutex.init(.{});`.
+///
+/// Lock it (blocking) with `aMutex.lock();`,
+/// try to lock it (non-blocking) with `const success: bool = aMutex.try_lock();`,
+/// and unlock it with `aMutex.unlock();`.
+///
+pub const Mutex = if (microzig.config.has_hal and @hasDecl(microzig.hal, "mutex") and @hasDecl(microzig.hal.mutex, "Mutex"))
+    microzig.hal.mutex.Mutex
+else
+    CriticalSectionMutex;
+
+/// This is an implementation of a mutex that simply wraps the critical section
+/// functionality.
+///
+pub const CriticalSectionMutex = struct {
+    critical_section: ?CriticalSection = null,
+
+    /// Initialize the mutex.
+    /// Parameters:
+    /// - `params`: Mutex configuration parameters. (ignored)
+    pub fn init(params: anytype) CriticalSectionMutex {
+        _ = params;
+        return .{};
+    }
+
+    /// Try to lock the mutex.
+    /// If the mutex was already locked return false.
+    pub fn try_lock(self: *CriticalSectionMutex) bool {
+        const cs = enter_critical_section();
+        if (self.critical_section != null) {
+            cs.leave();
+            return false;
+        }
+        self.critical_section = cs;
+        return true;
+    }
+
+    /// Makes sure the mutex is locked.
+    /// If this function is called from within a block of code that already
+    /// held the mutex it will panic.
+    pub fn lock(self: *CriticalSectionMutex) void {
+        if (!self.try_lock()) @panic("mutex already locked");
+    }
+
+    /// Unlocks the mutex.
+    pub fn unlock(self: *CriticalSectionMutex) void {
+        if (self.critical_section) |cs| {
+            cs.leave();
+            self.critical_section = null;
+        }
+    }
+};
