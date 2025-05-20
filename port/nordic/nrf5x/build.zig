@@ -4,14 +4,15 @@ const microzig = @import("microzig/build-internals");
 const Self = @This();
 
 chips: struct {
-    nrf52840: *const microzig.Target,
     nrf52832: *const microzig.Target,
+    nrf52840: *const microzig.Target,
 },
 
 boards: struct {
     nordic: struct {
         nrf52840_dongle: *const microzig.Target,
         nrf52840_mdk: *const microzig.Target,
+        pca10040: *const microzig.Target,
     },
 },
 
@@ -22,6 +23,31 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const hal: microzig.HardwareAbstractionLayer = .{
         .root_source_file = b.path("src/hal.zig"),
+    };
+
+    const chip_nrf52832: microzig.Target = .{
+        .dep = dep,
+        .preferred_binary_format = .elf,
+        .zig_target = .{
+            .cpu_arch = .thumb,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
+            .os_tag = .freestanding,
+            .abi = .eabi,
+        },
+        .chip = .{
+            .name = "nrf52",
+            .url = "https://www.nordicsemi.com/products/nrf52832",
+            .register_definition = .{
+                // TODO: does this determine the name of the chips/x.zig?
+                .svd = nrfx.path("mdk/nrf52.svd"),
+            },
+            .memory_regions = &.{
+                .{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
+                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
+            },
+            .patches = @import("patches/nrf52832.zig").patches,
+        },
+        .hal = .{ .root_source_file = b.path("src/hal.zig") },
     };
 
     const chip_nrf52840: microzig.Target = .{
@@ -54,32 +80,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
         .hal = hal,
     };
 
-    const chip_nrf52832: microzig.Target = .{
-        .dep = dep,
-        .preferred_binary_format = .elf,
-        .zig_target = .{
-            .cpu_arch = .thumb,
-            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m4 },
-            .os_tag = .freestanding,
-            .abi = .eabi,
-        },
-        .chip = .{
-            .name = "nrf52",
-            .url = "https://www.nordicsemi.com/products/nrf52832",
-            .register_definition = .{
-                .svd = nrfx.path("mdk/nrf52.svd"),
-            },
-            .memory_regions = &.{
-                .{ .offset = 0x00000000, .length = 0x80000, .kind = .flash },
-                .{ .offset = 0x20000000, .length = 0x10000, .kind = .ram },
-            },
-        },
-    };
-
     return .{
         .chips = .{
-            .nrf52840 = chip_nrf52840.derive(.{}),
             .nrf52832 = chip_nrf52832.derive(.{}),
+            .nrf52840 = chip_nrf52840.derive(.{}),
         },
         .boards = .{
             .nordic = .{
@@ -93,8 +97,15 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .nrf52840_mdk = chip_nrf52840.derive(.{
                     .board = .{
                         .name = "nRF52840 MDK USB Dongle",
-                        .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle/introduction/",
+                        .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle",
                         .root_source_file = b.path("src/boards/nrf52840-mdk.zig"),
+                    },
+                }),
+                .pca10040 = chip_nrf52832.derive(.{
+                    .board = .{
+                        .name = "PCA10040",
+                        .url = "https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK",
+                        .root_source_file = b.path("src/boards/pca10040.zig"),
                     },
                 }),
             },
