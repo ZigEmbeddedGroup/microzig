@@ -48,6 +48,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 // CODE_RAM
                 .{ .offset = 0x800000, .length = 0x40000, .kind = .ram },
             },
+            .patches = @import("patches/nrf52840.zig").patches,
         },
         .hal = hal,
     };

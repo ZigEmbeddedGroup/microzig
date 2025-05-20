@@ -8,26 +8,8 @@ pub const Direction = enum(u1) {
     out,
 };
 
-pub const DriveStrength = enum(u3) {
-    SOS1 = 0,
-    HOS1 = 1,
-    SOH1 = 2,
-    HOH1 = 3,
-    DOS1 = 4,
-    DOH1 = 5,
-    SOD1 = 6,
-    HOD1 = 7,
-};
-// pub const DriveStrength = peripherals.P0.PIN_CNF[0].underlying_type.DRIVE; // DELETEME
-// pub const DriveStrength = microzig.chip.types.peripherals.P0.OUT;
-// pub const DriveStrength = @FieldType(microzig.chip.types.peripherals.P0, "PIN_CNF[0].DRIVE");
-// PIN_CNF[0].DRIVE; // DELETEME
-
-pub const Pull = enum {
-    up,
-    down,
-    disabled,
-};
+pub const Pull = microzig.chip.types.peripherals.P0.Pull;
+pub const DriveStrength = microzig.chip.types.peripherals.P0.DriveStrength;
 
 pub fn num(bank: u1, n: u5) Pin {
     return @enumFromInt(@as(u6, bank) * 32 + n);
@@ -59,22 +41,7 @@ pub const Pin = enum(u6) {
 
     pub fn set_pull(pin: Pin, pull: Pull) void {
         const regs = pin.get_regs();
-        // regs.PIN_CNF[pin.index()].modify(.{
-        regs.PIN_CNF[pin.index()].write(.{
-            // NOTE: With `write` we know the type, with `modify` we take an anonymous struct which we only match the type with at comptime
-            .DIR = @enumFromInt(0), // DELETEME
-            .INPUT = @enumFromInt(0), // DELETEME
-            .DRIVE = @enumFromInt(0), // DELETEME
-            .SENSE = @enumFromInt(0), // DELETEME
-            .PULL = @enumFromInt(@intFromEnum(pull)),
-            // .PULL = switch (pull) {
-            //     // .up => microzig.chip.types.peripherals.P0.PIN_CNF[0].PULL.Pullup,
-            //     // .down => microzig.chip.types.peripherals.P0.PIN_CNF[0].PULL.Pulldown,
-            //     // .disabled => microzig.chip.types.peripherals.P0.PIN_CNF[0].PULL.Disabled,
-            //     // .up => microzig.chip.types.peripherals.P0.OUT,
-            //     else => unreachable,
-            // },
-        });
+        regs.PIN_CNF[pin.index()].modify(.{ .PULL = pull });
     }
 
     pub fn set_direction(pin: Pin, direction: Direction) void {
@@ -102,20 +69,7 @@ pub const Pin = enum(u6) {
 
     pub fn set_drive_strength(pin: Pin, drive_strength: DriveStrength) void {
         const regs = pin.get_regs();
-        // regs.PIN_CNF[pin.index()].modify(.{ .DRIVE = @intFromEnum(drive_strength) });
-        regs.PIN_CNF[pin.index()].modify(.{
-            .DRIVE = switch (drive_strength) {
-                // .SOS1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.SOS1,
-                // .HOS1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.HOS1,
-                // .SOH1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.SOH1,
-                // .HOH1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.HOH1,
-                // .DOS1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.DOS1,
-                // .DOH1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.DOH1,
-                // .SOD1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.SOD1,
-                // .HOD1 => microzig.chip.types.peripherals.P0.PIN_CNF[0].DRIVE.HOD1,
-                else => unreachable,
-            },
-        });
+        regs.PIN_CNF[pin.index()].modify(.{ .DRIVE = drive_strength });
     }
 };
 
