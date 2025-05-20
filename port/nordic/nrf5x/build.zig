@@ -11,6 +11,7 @@ chips: struct {
 boards: struct {
     nordic: struct {
         nrf52840_dongle: *const microzig.Target,
+        nrf52840_mdk: *const microzig.Target,
     },
 },
 
@@ -87,6 +88,13 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .name = "nRF52840 Dongle",
                         .url = "https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle",
                         .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
+                    },
+                }),
+                .nrf52840_mdk = chip_nrf52840.derive(.{
+                    .board = .{
+                        .name = "nRF52840 MDK USB Dongle",
+                        .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle/introduction/",
+                        .root_source_file = b.path("src/boards/nrf52840-mdk.zig"),
                     },
                 }),
             },
