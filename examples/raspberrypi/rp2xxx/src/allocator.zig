@@ -70,7 +70,7 @@ pub fn main() !void {
     // --- Set up the Allocator ----------------------
 
     // Create an Allocator type suitable for the target.
-    const Allocator = microzig.core.Allocator;
+    const Allocator = microzig.Allocator;
 
     // Create an instance of that type.
     var heap_allocator = Allocator.init_with_heap(1024);

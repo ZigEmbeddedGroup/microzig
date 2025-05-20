@@ -55,7 +55,7 @@ pub fn heap(reserve: usize) []u8 {
 /// Example of use:
 /// ```
 /// // Get a heap allocator instance reserving 1024 bytes for the stack.
-/// var heap_allocator = microzig.core.Allocator.init_with_heap(1024);
+/// var heap_allocator = microzig.Allocator.init_with_heap(1024);
 ///
 /// // Get the std.mem.Allocator from the heap allocator.
 /// const allocator : std.mem.Allocator = heap_allocator.allocator();
@@ -75,7 +75,7 @@ pub fn init_with_heap(reserve: usize) Alloc {
 /// const buffer: [4096]u8 = undefined;
 ///
 /// // Get a buffer allocator instance reserving 1024 bytes for the stack.
-/// var buffer_allocator = microzig.core.Allocator.init_with_buffer(buffer);
+/// var buffer_allocator = microzig.Allocator.init_with_buffer(buffer);
 ///
 /// // Get the std.mem.Allocator from the buffer allocator.
 /// const allocator : std.mem.Allocator = buffer_allocator.allocator();

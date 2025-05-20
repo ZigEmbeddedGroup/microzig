@@ -35,7 +35,7 @@ pub const interrupt = @import("interrupt.zig");
 pub const core = @import("core.zig");
 pub const concurrency = @import("concurrency.zig");
 pub const utilities = @import("utilities.zig");
-pub const allocator = @import("allocator.zig");
+pub const Allocator = @import("allocator.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
