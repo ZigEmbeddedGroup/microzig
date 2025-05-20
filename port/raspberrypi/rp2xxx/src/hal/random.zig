@@ -7,6 +7,72 @@ const Random = std.Random;
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
 
+const compatibility = microzig.hal.compatibility;
+const chip = compatibility.chip;
+
+/// Access the RP2350 True Random Number Generator (TRNG)
+pub const trng = if (chip == .RP2350) struct {
+    const TRNG = microzig.chip.peripherals.TRNG;
+
+    /// Generate a random number using the TRNG.
+    /// Returns a random 32-bit unsigned integer,
+    pub fn random_blocking() u32 {
+        TRNG.RND_SOURCE_ENABLE.raw = 1;
+
+        defer TRNG.RND_SOURCE_ENABLE.raw = 0;
+
+        while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
+
+        const result = TRNG.EHR_DATA5.read().EHR_DATA5;
+
+        return result;
+    }
+
+    /// Fill buffer with random data
+    pub fn random_bytes_blocking(out: []u8) void {
+        var reg: *volatile u32 = &TRNG.EHR_DATA0.raw;
+        var i: u32 = 0;
+
+        if (out.len == 0) return;
+
+        TRNG.RND_SOURCE_ENABLE.raw = 1;
+
+        defer TRNG.RND_SOURCE_ENABLE.raw = 0;
+
+        while (i < out.len) {
+            while (TRNG.TRNG_VALID.read().EHR_VALID == 0) {}
+
+            var data = reg.*;
+
+            if (reg == &TRNG.EHR_DATA5.raw) {
+                reg = &TRNG.EHR_DATA0.raw;
+            } else {
+                reg = @ptrFromInt(@intFromPtr(reg) + @sizeOf(u32));
+            }
+
+            for (0..@min(4, out.len - i)) |j| {
+                out[i + j] = @truncate(data);
+                data >>= 8;
+            }
+
+            i += 4;
+        }
+
+        // If we didn't read all the data, read DATA5 to clear the buffer
+
+        if (reg != &TRNG.EHR_DATA0.raw) {
+            _ = TRNG.EHR_DATA5.read().EHR_DATA5;
+        }
+    }
+
+    /// Generate an internal reset in the RNG block.
+    pub fn reset() void {
+        TRNG.TRNG_SW_RESET.write(.{
+            .TRNG_SW_RESET = true,
+        });
+    }
+} else @compileError("TRNG not supported on this chip");
+
 /// Wrapper around the Ascon CSPRNG with automatic reseed using the ROSC
 ///
 /// ## Usage

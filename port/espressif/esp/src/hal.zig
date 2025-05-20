@@ -1,10 +1,12 @@
 const microzig = @import("microzig");
 
+pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
 pub const gpio = @import("hal/gpio.zig");
 pub const i2c = @import("hal/i2c.zig");
+pub const rng = @import("hal/rng.zig");
 pub const rom = @import("hal/rom.zig");
 pub const system = @import("hal/system.zig");
 pub const systimer = @import("hal/systimer.zig");
@@ -27,6 +29,8 @@ pub fn init() void {
 /// Allows you to easily swap the clock config while using the recommended init sequence. To be used
 /// with a custom `init()` function.
 pub fn init_sequence(clock_cfg: clocks.Config) void {
+    cache.init();
+
     // TODO: disable watchdogs in a more elegant way (with a hal).
     disable_watchdogs();
 
