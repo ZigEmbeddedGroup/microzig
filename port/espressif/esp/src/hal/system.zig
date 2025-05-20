@@ -14,7 +14,7 @@ pub const PeripheralMask = packed struct(u43) {
         .usb_device = true,
         .systimer = true,
 
-        // NOTE: disabling this breaks the code. I don't know why it can't be disabled on startup.
+        // NOTE: SPI0 and SPI1 are for internal use.
         .spi01 = true,
     };
 
