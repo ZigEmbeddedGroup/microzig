@@ -35,7 +35,7 @@ pub const concurrency = @import("concurrency.zig");
 pub const interrupt = @import("interrupt.zig");
 pub const mmio = @import("mmio.zig");
 pub const utilities = @import("utilities.zig");
-pub const allocator = @import("allocator.zig");
+pub const Allocator = @import("allocator.zig");
 
 /// The microzig default panic handler. Will disable interrupts and loop endlessly.
 pub const panic = std.debug.FullPanic(struct {
