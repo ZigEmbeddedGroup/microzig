@@ -19,6 +19,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
 
     const nrfx = b.dependency("nrfx", .{});
 
+    const hal: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hal.zig"),
+    };
+
     const chip_nrf52840: microzig.Target = .{
         .dep = dep,
         .preferred_binary_format = .elf,
@@ -45,6 +49,7 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 .{ .offset = 0x800000, .length = 0x40000, .kind = .ram },
             },
         },
+        .hal = hal,
     };
 
     const chip_nrf52832: microzig.Target = .{
@@ -89,5 +94,14 @@ pub fn init(dep: *std.Build.Dependency) Self {
 }
 
 pub fn build(b: *std.Build) void {
-    _ = b.step("test", "Run platform agnostic unit tests");
+    const optimize = b.standardOptimizeOption(.{});
+
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/hal.zig"),
+        .optimize = optimize,
+    });
+
+    const unit_tests_run = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+    test_step.dependOn(&unit_tests_run.step);
 }
