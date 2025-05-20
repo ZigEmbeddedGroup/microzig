@@ -1,6 +1,6 @@
 const microzig = @import("microzig");
 
-const cache = @import("hal/cache.zig");
+pub const cache = @import("hal/cache.zig");
 pub const clocks = @import("hal/clocks.zig");
 pub const compatibility = @import("hal/compatibility.zig");
 pub const drivers = @import("hal/drivers.zig");
