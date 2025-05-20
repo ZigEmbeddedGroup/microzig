@@ -72,22 +72,29 @@ pub const Endpoint = struct {
     rx_pid: u1 = 0,
     tx_pid: u1 = 0,
 
-    pub fn toggle_pid(self: *Endpoint, dir: StatusDir) PID {
+    pub fn toggle_pid(self: *Endpoint, dir: StatusDir) void {
         switch (dir) {
             .RX => {
-                const pid: PID = @enumFromInt(self.rx_pid);
                 self.rx_pid ^= 1;
-                return pid;
             },
             .TX => {
-                const pid: PID = @enumFromInt(self.tx_pid);
                 self.tx_pid ^= 1;
-                return pid;
             },
         }
     }
 
-    pub fn toggle_change(self: *Endpoint, dir: StatusDir, val: u1) void {
+    pub fn get_pid(self: *const Endpoint, dir: StatusDir) PID {
+        switch (dir) {
+            .RX => {
+                return @enumFromInt(self.rx_pid);
+            },
+            .TX => {
+                return @enumFromInt(self.tx_pid);
+            },
+        }
+    }
+
+    pub fn force_change(self: *Endpoint, dir: StatusDir, val: u1) void {
         switch (dir) {
             .RX => self.rx_pid = val,
             .TX => self.tx_pid = val,
@@ -233,14 +240,14 @@ fn change_status(dir: StatusDir, status: USBTypes.STAT, pid: PID, EPC: usize) vo
 
     switch (pid) {
         .endpoint_ctr => {
-            const new_pid: PID = if (endpoints[EPC]) |*ep| ep.toggle_pid(dir) else PID.no_change;
+            const new_pid: PID = if (endpoints[EPC]) |*ep| ep.get_pid(dir) else PID.no_change;
             call(status, new_pid, EPC);
         },
-        .force_data0, .force_data1 => {
+        .force_data0, .force_data1 => |new_pid| {
             if (endpoints[EPC]) |*ep| {
-                ep.toggle_change(dir, @intCast(@intFromEnum(pid)));
+                ep.force_change(dir, @intCast(@intFromEnum(new_pid)));
             }
-            call(status, pid, EPC);
+            call(status, new_pid, EPC);
         },
         else => call(status, pid, EPC),
     }
@@ -305,10 +312,10 @@ pub fn usb_handler() callconv(.C) void {
         USB.ISTR.modify(.{ .CTR = 0 });
         const ep = event.EP_ID;
         const EPR = USB.EPR[ep].read();
-        const endpoint = endpoints[ep];
-        if (endpoint) |epc| {
+        if (endpoints[ep]) |*epc| {
             if (EPR.CTR_RX == 1) {
                 USB.EPR[ep].modify(.{ .CTR_RX = 0 });
+                epc.toggle_pid(.RX);
                 if (EPR.SETUP == 1) {
                     if (epc.setup_callback) |callback| {
                         callback(epc.ep_control, epc.user_param);
@@ -322,6 +329,7 @@ pub fn usb_handler() callconv(.C) void {
 
             if (EPR.CTR_TX == 1) {
                 USB.EPR[ep].modify(.{ .CTR_TX = 0 });
+                epc.toggle_pid(.TX);
                 if (epc.tx_callback) |callback| {
                     callback(epc.ep_control, epc.user_param);
                 }
