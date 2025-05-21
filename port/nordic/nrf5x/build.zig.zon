@@ -13,6 +13,7 @@
         "README.md",
         "build.zig",
         "build.zig.zon",
+        "patches",
         "src",
         "test",
     },

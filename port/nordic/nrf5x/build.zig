@@ -11,6 +11,7 @@ chips: struct {
 boards: struct {
     nordic: struct {
         nrf52840_dongle: *const microzig.Target,
+        nrf52840_mdk: *const microzig.Target,
     },
 },
 
@@ -18,6 +19,10 @@ pub fn init(dep: *std.Build.Dependency) Self {
     const b = dep.builder;
 
     const nrfx = b.dependency("nrfx", .{});
+
+    const hal: microzig.HardwareAbstractionLayer = .{
+        .root_source_file = b.path("src/hal.zig"),
+    };
 
     const chip_nrf52840: microzig.Target = .{
         .dep = dep,
@@ -44,7 +49,9 @@ pub fn init(dep: *std.Build.Dependency) Self {
                 // CODE_RAM
                 .{ .offset = 0x800000, .length = 0x40000, .kind = .ram },
             },
+            .patches = @import("patches/nrf52840.zig").patches,
         },
+        .hal = hal,
     };
 
     const chip_nrf52832: microzig.Target = .{
@@ -83,11 +90,27 @@ pub fn init(dep: *std.Build.Dependency) Self {
                         .root_source_file = b.path("src/boards/nrf52840-dongle.zig"),
                     },
                 }),
+                .nrf52840_mdk = chip_nrf52840.derive(.{
+                    .board = .{
+                        .name = "nRF52840 MDK USB Dongle",
+                        .url = "https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle/introduction/",
+                        .root_source_file = b.path("src/boards/nrf52840-mdk.zig"),
+                    },
+                }),
             },
         },
     };
 }
 
 pub fn build(b: *std.Build) void {
-    _ = b.step("test", "Run platform agnostic unit tests");
+    const optimize = b.standardOptimizeOption(.{});
+
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/hal.zig"),
+        .optimize = optimize,
+    });
+
+    const unit_tests_run = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run platform agnostic unit tests");
+    test_step.dependOn(&unit_tests_run.step);
 }

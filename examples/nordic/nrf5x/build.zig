@@ -14,6 +14,7 @@ pub fn build(b: *std.Build) void {
 
     const available_examples = [_]Example{
         .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_dongle, .name = "nrf52480-dongle_blinky", .file = "src/blinky.zig" },
+        .{ .target = mb.ports.nrf5x.boards.nordic.nrf52840_mdk, .name = "nrf52480-mdk_blinky", .file = "src/blinky.zig" },
     };
 
     for (available_examples) |example| {
