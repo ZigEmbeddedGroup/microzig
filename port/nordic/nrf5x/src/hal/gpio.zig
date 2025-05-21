@@ -11,11 +11,8 @@ pub const Direction = enum(u1) {
 
 pub const Sense = enum(u2) {
     disabled = 0x0,
-    /// sense high level
     high = 0x2,
-    /// sense low level
     low = 0x3,
-    _,
 };
 
 pub const InputBuffer = enum(u1) {
@@ -74,14 +71,21 @@ pub const Pin = enum(u6) {
     pub inline fn set_sense(pin: Pin, sense: Sense) void {
         const regs = pin.get_regs();
         regs.PIN_CNF[@intFromEnum(pin)].modify(.{
-            .SENSE = @bitCast(sense),
+            .SENSE = switch (sense) {
+                .disabled => .Disabled,
+                .high => .High,
+                .low => .Low,
+            },
         });
     }
 
     pub inline fn set_input_buffer(pin: Pin, input_buffer: InputBuffer) void {
         const regs = pin.get_regs();
         regs.PIN_CNF[@intFromEnum(pin)].modify(.{
-            .INPUT = @bitCast(input_buffer),
+            .INPUT = switch (input_buffer) {
+                .connect => .Connect,
+                .disconnect => .Disconnect,
+            },
         });
     }
 
