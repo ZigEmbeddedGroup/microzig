@@ -154,7 +154,8 @@ pub fn RX_to_buffer(buffer: []u8, EP: usize) []const u8 {
         return buffer[0..0];
     }
 
-    const to_read = @min(count, buffer.len) / 2;
+    const len = @min(count, buffer.len);
+    const to_read = len / 2;
     const addr = PMA_BASE + PMA_buf.RX_addr.value * 2;
     const data = @as([*]volatile pma_data, @ptrFromInt(addr))[0..to_read];
 
@@ -162,7 +163,12 @@ pub fn RX_to_buffer(buffer: []u8, EP: usize) []const u8 {
         buffer[i * 2] = data[i].low_byte;
         buffer[i * 2 + 1] = data[i].high_byte;
     }
-    return buffer[0 .. to_read * 2];
+
+    if (len % 2 != 0) {
+        const lb = data[to_read].low_byte;
+        buffer[len - 1] = lb;
+    }
+    return buffer[0..len];
 }
 
 pub fn buffer_to_TX(buffer: []const u8, EP: usize) void {

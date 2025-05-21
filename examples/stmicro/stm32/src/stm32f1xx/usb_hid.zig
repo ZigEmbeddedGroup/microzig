@@ -31,8 +31,8 @@ const DeviceDescriptor = [18]u8{
     0x00, // bDeviceSubClass
     0x00, // bDeviceProtocol
     0x40, // bMaxPacketSize0 (64 bytes)
-    0x83, 0x04, // idVendor (Exemplo: STM)
-    0x75, 0x14, // idProduct (Exemplo: HID Keyboard)
+    0x55, 0xF0, // idVendor FOSS
+    0x01, 0x98, // idProduct (0x9801) HID
     0x00, 0x01, // bcdDevice (1.00)
     0x01, // iManufacturer (String Index 1)
     0x02, // iProduct (String Index 2)
@@ -151,7 +151,7 @@ fn string_to_descriptor(comptime string: []const u8) [calc_descriptor_size(strin
 }
 
 const prod_id = string_to_descriptor("Zig Keyboard");
-const manu_id = string_to_descriptor("RecursiveError");
+const manu_id = string_to_descriptor("MicroZig");
 fn get_string(index: usize) []const u8 {
     return switch (index) {
         0 => &[_]u8{ 0x04, 0x03, 0x04, 0x09 },
@@ -177,14 +177,14 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     };
 
     const length = @min(buffer.len, descriptor_length);
-    epc.write_buffer(buffer[0..length]) catch return;
-    epc.set_status(.TX, .Valid, .force_data1) catch return;
+    epc.write_buffer(buffer[0..length]) catch unreachable;
+    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
 }
 
 fn set_addr(recive_addr: u7, epc: EpControl) void {
     device_addr = recive_addr;
-    epc.ZLP() catch return;
-    epc.set_status(.TX, .Valid, .force_data1) catch return;
+    epc.ZLP() catch unreachable;
+    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
 }
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
@@ -197,32 +197,32 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
         0x06 => get_descriptor(setup, epc),
         0x05 => set_addr(@intCast(setup[2]), epc),
         0x09 => {
-            epc.ZLP() catch return;
-            epc.set_status(.TX, .Valid, .force_data1) catch return;
+            epc.ZLP() catch unreachable;
+            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
             config = true;
             to_report = false;
         },
         else => {
-            epc.ZLP() catch return;
-            epc.set_status(.TX, .Valid, .force_data1) catch return;
+            epc.ZLP() catch unreachable;
+            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
         },
     }
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch {};
+    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
 }
 
 fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
     if (device_addr) |addr| {
         usb_ll.set_addr(addr);
     }
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch {};
+    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
 }
 
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
     to_report = false;
-    epc.set_status(.TX, .Nak, .no_change) catch {};
+    epc.set_status(.TX, .Nak, .no_change) catch unreachable;
 }
 
 //set clock to 72Mhz and USB to 48Mhz
@@ -301,8 +301,8 @@ fn report(keys: []const u8) void {
     if (!config) return;
     while (report_flag.*) {}
     std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
-    epc.write_buffer(&HID_send) catch return;
-    epc.set_status(.TX, .Valid, .endpoint_ctr) catch return;
+    epc.write_buffer(&HID_send) catch unreachable;
+    epc.set_status(.TX, .Valid, .endpoint_ctr) catch unreachable;
     report_flag.* = true;
 }
 
