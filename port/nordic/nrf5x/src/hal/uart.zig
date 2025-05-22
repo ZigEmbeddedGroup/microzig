@@ -19,7 +19,7 @@ pub fn num(n: u1) UART {
 /// Set a specific uart instance to be used for logging.
 ///
 /// Allows system logging over uart via:
-/// pub const microzig_options = .{
+/// pub const microzig_options = microzig.Options{
 ///     .logFn = hal.uart.logFn,
 /// };
 pub fn init_logger(uart: UART) void {
@@ -29,6 +29,29 @@ pub fn init_logger(uart: UART) void {
 
 pub fn deinit_logger() void {
     uart_logger = null;
+}
+
+pub fn logFn(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const level_prefix = comptime level.asText();
+    // const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+    const prefix = comptime level_prefix ++ switch (scope) {
+        .default => ": ",
+        else => " (" ++ @tagName(scope) ++ "): ",
+    };
+
+    if (uart_logger) |uart| {
+        // const current_time = time.get_time_since_boot();
+        // const seconds = current_time.to_us() / std.time.us_per_s;
+        // const microseconds = current_time.to_us() % std.time.us_per_s;
+
+        // uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
+        uart.print(prefix ++ format ++ "\r\n", args) catch {};
+    }
 }
 
 // TODO: On 52840 the CONFIG register has 1 bit for STOP bits

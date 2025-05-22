@@ -5,6 +5,11 @@ const nrf = microzig.hal;
 
 const uart = nrf.uart.num(0);
 
+pub const microzig_options = microzig.Options{
+    .log_level = .debug,
+    .logFn = nrf.uart.logFn,
+};
+
 pub fn main() !void {
     board.init();
 
@@ -20,8 +25,6 @@ pub fn main() !void {
 
     nrf.uart.init_logger(uart);
     std.log.info("Hello world, I will send back bytes you send me", .{});
-    const b: []const u8 = "hello\r\n";
-    uart.write_blocking(b[0..]);
 
     // now echo any bytes sent
     var buf: [1]u8 = undefined;
