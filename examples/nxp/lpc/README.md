@@ -1,5 +1,3 @@
 # Examples for the Port `nxp-lpc`
 
-- [Blinky](src/blinky.zig) on [nRF52840 Dongle](https://www.nordicsemi.com/Products/Development-hardware/nrf52840-dongle)  
-  TODO: Implement this!
-
+- [Blinky](src/blinky.zig) on [mbed LPD1768](https://os.mbed.com/platforms/mbed-LPC1768/)

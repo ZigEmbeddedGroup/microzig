@@ -2,10 +2,22 @@ const std = @import("std");
 
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const compatibility = @import("compatibility.zig");
 
 pub const Direction = enum(u1) {
     in,
     out,
+};
+
+pub const Sense = enum(u2) {
+    disabled = 0x0,
+    high = 0x2,
+    low = 0x3,
+};
+
+pub const InputBuffer = enum(u1) {
+    connect = 0x0,
+    disconnect = 0x1,
 };
 
 pub const Pull = microzig.chip.types.peripherals.P0.Pull;
@@ -15,17 +27,20 @@ pub fn num(bank: u1, n: u5) Pin {
     return @enumFromInt(@as(u6, bank) * 32 + n);
 }
 
-// TODO: Do we want to follow the rp2350 design where we encode the packaage
+// TODO: Do we want to follow the rp2350 design where we encode the package
 // somewhere? Some GPIOs are unbonded in certain packages.
 pub const Pin = enum(u6) {
     _,
     // TODO: Add support for LATCH, DETECTMODE
 
     fn get_regs(pin: Pin) @TypeOf(peripherals.P0) {
-        return if (@intFromEnum(pin) <= 31)
-            peripherals.P0
-        else
-            peripherals.P1;
+        return switch (compatibility.chip) {
+            .nrf52 => peripherals.P0,
+            .nrf52840 => if (@intFromEnum(pin) <= 31)
+                peripherals.P0
+            else
+                peripherals.P1,
+        };
     }
 
     /// Get the index of the pin, relative to its bank
@@ -34,9 +49,17 @@ pub const Pin = enum(u6) {
         return @truncate(if (n <= 31) n else (n - 32));
     }
 
+    /// Get the port of the pin
+    pub fn port(pin: Pin) u1 {
+        const n = @intFromEnum(pin);
+        if (n <= 31) {
+            return 0;
+        } else return 1;
+    }
+
     /// Get a bitmask of the pin, appropriate for registers in its bank
-    pub fn mask(pin: Pin) u31 {
-        return @as(u31, 1) << pin.index();
+    pub fn mask(pin: Pin) u32 {
+        return @as(u32, 1) << pin.index();
     }
 
     pub fn set_pull(pin: Pin, pull: Pull) void {
@@ -44,12 +67,34 @@ pub const Pin = enum(u6) {
         regs.PIN_CNF[pin.index()].modify(.{ .PULL = pull });
     }
 
+    /// Set GPIO pin as input or output
     pub fn set_direction(pin: Pin, direction: Direction) void {
         const regs = pin.get_regs();
         switch (direction) {
             .in => regs.DIRCLR.raw = pin.mask(),
             .out => regs.DIRSET.raw = pin.mask(),
         }
+    }
+
+    pub inline fn set_sense(pin: Pin, sense: Sense) void {
+        const regs = pin.get_regs();
+        regs.PIN_CNF[@intFromEnum(pin)].modify(.{
+            .SENSE = switch (sense) {
+                .disabled => .Disabled,
+                .high => .High,
+                .low => .Low,
+            },
+        });
+    }
+
+    pub inline fn set_input_buffer(pin: Pin, input_buffer: InputBuffer) void {
+        const regs = pin.get_regs();
+        regs.PIN_CNF[@intFromEnum(pin)].modify(.{
+            .INPUT = switch (input_buffer) {
+                .connect => .Connect,
+                .disconnect => .Disconnect,
+            },
+        });
     }
 
     pub inline fn put(pin: Pin, value: u1) void {
@@ -67,10 +112,7 @@ pub const Pin = enum(u6) {
 
     pub inline fn read(pin: Pin) u1 {
         const regs = pin.get_regs();
-        return if ((regs.IN.raw & pin.mask()) != 0)
-            1
-        else
-            0;
+        return @truncate(regs.in.raw >> @intFromEnum(pin));
     }
 
     pub fn set_drive_strength(pin: Pin, drive_strength: DriveStrength) void {

@@ -5,7 +5,7 @@ const board = microzig.board;
 fn delay(cycles: u32) void {
     var i: u32 = 0;
     while (i < cycles) : (i += 1) {
-        asm volatile ("nop");
+        std.mem.doNotOptimizeAway(i);
     }
 }
 
