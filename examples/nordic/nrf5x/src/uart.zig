@@ -12,6 +12,7 @@ pub const microzig_options = microzig.Options{
 
 pub fn main() !void {
     board.init();
+    nrf.time.init();
 
     uart.apply(.{
         .tx_pin = board.uart_tx,

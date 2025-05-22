@@ -9,6 +9,7 @@ const types = microzig.chip.types;
 const UART_Regs = types.peripherals.UART0;
 
 const gpio = @import("gpio.zig");
+const time = @import("time.zig");
 
 var uart_logger: ?UART.Writer = null;
 
@@ -37,20 +38,18 @@ pub fn logFn(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    const level_prefix = comptime level.asText();
-    // const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
+    const level_prefix = comptime "[{}.{:0>6}] " ++ level.asText();
     const prefix = comptime level_prefix ++ switch (scope) {
         .default => ": ",
         else => " (" ++ @tagName(scope) ++ "): ",
     };
 
     if (uart_logger) |uart| {
-        // const current_time = time.get_time_since_boot();
-        // const seconds = current_time.to_us() / std.time.us_per_s;
-        // const microseconds = current_time.to_us() % std.time.us_per_s;
+        const current_time = time.get_time_since_boot();
+        const seconds = current_time.to_us() / std.time.us_per_s;
+        const microseconds = current_time.to_us() % std.time.us_per_s;
 
-        // uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
-        uart.print(prefix ++ format ++ "\r\n", args) catch {};
+        uart.print(prefix ++ format ++ "\r\n", .{ seconds, microseconds } ++ args) catch {};
     }
 }
 
