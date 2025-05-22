@@ -31,9 +31,4 @@ pub fn init() void {
 
     for (buttons) |button|
         button.set_direction(.in);
-
-    uart_rx.set_direction(.in);
-    uart_cts.set_direction(.in);
-    uart_rts.set_direction(.out);
-    uart_tx.set_direction(.out);
 }

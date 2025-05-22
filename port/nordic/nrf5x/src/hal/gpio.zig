@@ -27,7 +27,7 @@ pub fn num(bank: u1, n: u5) Pin {
     return @enumFromInt(@as(u6, bank) * 32 + n);
 }
 
-// TODO: Do we want to follow the rp2350 design where we encode the packaage
+// TODO: Do we want to follow the rp2350 design where we encode the package
 // somewhere? Some GPIOs are unbonded in certain packages.
 pub const Pin = enum(u6) {
     _,

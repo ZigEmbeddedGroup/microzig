@@ -90,10 +90,15 @@ pub const UART = enum(u1) {
 
         // TODO: Make these optional... could have rx only for example
         uart.set_txd(config.tx_pin);
+        config.tx_pin.set_direction(.out);
+        config.tx_pin.put(1);
         uart.set_rxd(config.rx_pin);
         const hwfc = if (config.control_flow) |cf| blk: {
             uart.set_cts(cf.cts_pin);
+            config.uart_cts.set_direction(.in);
             uart.set_rts(cf.rts_pin);
+            config.uart_rts.set_direction(.out);
+            config.uart_rts.put(1);
             break :blk true;
         } else false;
 
@@ -112,14 +117,6 @@ pub const UART = enum(u1) {
         });
 
         uart.enable();
-        // TODO: Clear events?
-        // uart.clear_tx_rdy_event();
-        // uart.clear_rx_rdy_event();
-
-        uart.start_tx_task();
-        uart.start_rx_task();
-
-        // TODO: Set tx rdy?
     }
 
     fn set_txd(uart: UART, pin: gpio.Pin) void {
@@ -207,8 +204,14 @@ pub const UART = enum(u1) {
     }
 
     pub fn read_blocking(uart: UART, buffer: []u8) void {
+        uart.start_rx_task();
+        defer uart.stop_rx_task();
+
         for (buffer) |*b| {
-            // while (!uart.have_rx_rdy_event()) {}
+            // NOTE: Page 821
+            // > To prevent loss of incoming data, the RXD register must only be read one time
+            // > following every RXDRDY event.
+            while (!uart.have_rx_rdy_event()) {}
             uart.clear_rx_rdy_event();
 
             b.* = uart.read_rxd();
@@ -216,14 +219,13 @@ pub const UART = enum(u1) {
     }
 
     pub fn write_blocking(uart: UART, buffer: []const u8) void {
-        // while (!uart.have_tx_rdy_event()) {}
+        uart.start_tx_task();
+        defer uart.stop_tx_task();
 
         for (buffer) |b| {
             uart.clear_tx_rdy_event();
 
             uart.write_txd(b);
-            // Should not be needed for each transaction?
-            // uart.start_tx_task();
 
             while (!uart.have_tx_rdy_event()) {}
         }
