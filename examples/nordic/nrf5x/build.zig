@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
         .{ .target = nrf52840_dongle, .name = "blinky", .file = "src/blinky.zig" },
         .{ .target = nrf52840_mdk, .name = "blinky", .file = "src/blinky.zig" },
         .{ .target = pca10040, .name = "uart", .file = "src/uart.zig" },
+        .{ .target = nrf52840_mdk, .name = "uart", .file = "src/uart.zig" },
     };
 
     for (available_examples) |example| {

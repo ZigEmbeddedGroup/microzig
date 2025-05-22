@@ -49,6 +49,14 @@ pub const Pin = enum(u6) {
         return @truncate(if (n <= 31) n else (n - 32));
     }
 
+    /// Get the port of the pin
+    pub fn port(pin: Pin) u1 {
+        const n = @intFromEnum(pin);
+        if (n <= 31) {
+            return 0;
+        } else return 1;
+    }
+
     /// Get a bitmask of the pin, appropriate for registers in its bank
     pub fn mask(pin: Pin) u32 {
         return @as(u32, 1) << pin.index();

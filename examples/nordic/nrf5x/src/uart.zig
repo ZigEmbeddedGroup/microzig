@@ -11,15 +11,17 @@ pub fn main() !void {
     uart.apply(.{
         .tx_pin = board.uart_tx,
         .rx_pin = board.uart_rx,
-        .control_flow = .{
-            .cts_pin = board.uart_cts,
-            .rts_pin = board.uart_rts,
-        },
+        // .control_flow = .{
+        //     .cts_pin = board.uart_cts,
+        //     .rts_pin = board.uart_rts,
+        // },
         .baud_rate = .@"115200",
     });
 
     nrf.uart.init_logger(uart);
     std.log.info("Hello world, I will send back bytes you send me", .{});
+    const b: []const u8 = "hello\r\n";
+    uart.write_blocking(b[0..]);
 
     // now echo any bytes sent
     var buf: [1]u8 = undefined;

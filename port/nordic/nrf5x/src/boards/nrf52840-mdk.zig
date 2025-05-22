@@ -17,12 +17,29 @@ pub const leds: []const gpio.Pin = &.{ led1, led2, led3 };
 pub const buttons: []const gpio.Pin = &.{button1};
 pub const button1 = gpio.num(1, 18); // Reset, has external pullup
 
+// UART
+// NOTE: Any GPIO can be mapped to any peripheral
+pub const uart_rts = gpio.num(0, 9);
+pub const uart_cts = gpio.num(0, 10);
+pub const uart_rx = gpio.num(0, 4);
+pub const uart_tx = gpio.num(0, 5);
+pub const hwfc = true;
+
 pub fn init() void {
     for (leds) |led| {
         led.set_direction(.out);
+        // LEDs are active low so let's start with them off
         led.put(1);
     }
 
     for (buttons) |button|
         button.set_direction(.in);
+
+    // These are just for making sure it compiles
+    // uart_rx.set_input_buffer(.disconnect);
+    // uart_rx.set_sense(.high);
+    uart_rx.set_direction(.in);
+    uart_cts.set_direction(.in);
+    uart_rts.set_direction(.out);
+    uart_tx.set_direction(.out);
 }

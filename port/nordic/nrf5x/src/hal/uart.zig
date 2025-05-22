@@ -1,8 +1,11 @@
 const std = @import("std");
+
 const microzig = @import("microzig");
 const peripherals = microzig.chip.peripherals;
+const compatibility = @import("compatibility.zig");
 const types = microzig.chip.types;
 
+// TODO: UARTE0? Does DMA, just set rxd.ptr or txd.ptr. UART0 is deprecated (but still works?) on nRF52840
 const UART_Regs = types.peripherals.UART0;
 
 const gpio = @import("gpio.zig");
@@ -28,6 +31,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
+// TODO: On 52840 the CONFIG register has 1 bit for STOP bits
 pub const Config = struct {
     rx_pin: gpio.Pin,
     tx_pin: gpio.Pin,
@@ -83,8 +87,8 @@ pub const UART = enum(u1) {
 
     pub fn apply(uart: UART, comptime config: Config) void {
         uart.disable();
-        defer uart.enable();
 
+        // TODO: Make these optional... could have rx only for example
         uart.set_txd(config.tx_pin);
         uart.set_rxd(config.rx_pin);
         const hwfc = if (config.control_flow) |cf| blk: {
@@ -96,7 +100,7 @@ pub const UART = enum(u1) {
         uart.set_baud_rate(config.baud_rate);
 
         const regs = uart.get_regs();
-        regs.CONFIG.write(.{
+        regs.CONFIG.modify(.{
             .HWFC = if (hwfc)
                 .Enabled
             else
@@ -107,28 +111,63 @@ pub const UART = enum(u1) {
             },
         });
 
-        uart.start_rx_task();
+        uart.enable();
+        // TODO: Clear events?
+        // uart.clear_tx_rdy_event();
+        // uart.clear_rx_rdy_event();
+
         uart.start_tx_task();
+        uart.start_rx_task();
+
+        // TODO: Set tx rdy?
     }
 
     fn set_txd(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        regs.PSELTXD.write(.{ .PSELTXD = @enumFromInt(@intFromEnum(pin)) });
+        switch (compatibility.chip) {
+            .nrf52 => regs.PSELTXD.raw = @intFromEnum(pin),
+            .nrf52840 => regs.PSEL.TXD.write(.{
+                .PIN = pin.index(),
+                .PORT = pin.port(),
+                .CONNECT = @enumFromInt(0), // 0 means connected lol
+            }),
+        }
     }
 
     fn set_rxd(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        regs.PSELRXD.write(.{ .PSELRXD = @enumFromInt(@intFromEnum(pin)) });
+        switch (compatibility.chip) {
+            .nrf52 => regs.PSELRXD.raw = @intFromEnum(pin),
+            .nrf52840 => regs.PSEL.RXD.write(.{
+                .PIN = pin.index(),
+                .PORT = pin.port(),
+                .CONNECT = @enumFromInt(0), // 0 means connected lol
+            }),
+        }
     }
 
     fn set_cts(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        regs.PSELCTS.write(.{ .PSELCTS = @enumFromInt(@intFromEnum(pin)) });
+        switch (compatibility.chip) {
+            .nrf52 => regs.PSELCTS.raw = @intFromEnum(pin),
+            .nrf52840 => regs.PSEL.CTS.write(.{
+                .PIN = pin.index(),
+                .PORT = pin.port(),
+                .CONNECT = @enumFromInt(0), // 0 means connected lol
+            }),
+        }
     }
 
     fn set_rts(uart: UART, pin: gpio.Pin) void {
         const regs = uart.get_regs();
-        regs.PSELRTS.write(.{ .PSELRTS = @enumFromInt(@intFromEnum(pin)) });
+        switch (compatibility.chip) {
+            .nrf52 => regs.PSELRTS.raw = @intFromEnum(pin),
+            .nrf52840 => regs.PSEL.RTS.write(.{
+                .PIN = pin.index(),
+                .PORT = pin.port(),
+                .CONNECT = @enumFromInt(0), // 0 means connected lol
+            }),
+        }
     }
 
     pub fn set_baud_rate(uart: UART, baud_rate: BaudRate) void {
@@ -169,18 +208,22 @@ pub const UART = enum(u1) {
 
     pub fn read_blocking(uart: UART, buffer: []u8) void {
         for (buffer) |*b| {
-            while (!uart.have_rx_rdy_event()) {}
-
+            // while (!uart.have_rx_rdy_event()) {}
             uart.clear_rx_rdy_event();
+
             b.* = uart.read_rxd();
         }
     }
 
     pub fn write_blocking(uart: UART, buffer: []const u8) void {
-        while (!uart.have_tx_rdy_event()) {}
+        // while (!uart.have_tx_rdy_event()) {}
+
         for (buffer) |b| {
+            uart.clear_tx_rdy_event();
+
             uart.write_txd(b);
-            uart.start_tx_task();
+            // Should not be needed for each transaction?
+            // uart.start_tx_task();
 
             while (!uart.have_tx_rdy_event()) {}
         }
@@ -209,9 +252,8 @@ pub const UART = enum(u1) {
     }
 
     pub fn write_txd(uart: UART, byte: u8) void {
-        return uart.get_regs().TXD.write(.{
-            .TXD = byte,
-        });
+        const regs = uart.get_regs();
+        return regs.TXD.write(.{ .TXD = byte });
     }
 
     pub fn start_rx_task(uart: UART) void {
