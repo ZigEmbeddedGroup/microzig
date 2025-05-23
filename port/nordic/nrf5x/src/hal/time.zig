@@ -8,7 +8,6 @@ const microzig = @import("microzig");
 const time = microzig.drivers.time;
 
 const timer = microzig.chip.peripherals.TIMER0;
-// const INTERRUPT_INDEX = 0;
 const READ_INDEX = 1;
 
 var overflow_count: u32 = 0;
@@ -25,18 +24,9 @@ pub fn init() void {
     timer.BITMODE.write(.{ .BITMODE = .@"32Bit" });
     // 16Mhz / 2^4 = 1MHz: us resolution
     timer.PRESCALER.write(.{ .PRESCALER = 4 });
-
-    // TODO: Set an interrupt to fire when the timer overflows, and keep track of the count, that
-    // way we get more than 2^32 us.
-    // timer.INTENSET.modify(.{ .COMPARE0 = .Enabled });
-    // timer.SHORTS.modify(.{ .COMPARE0_CLEAR = .Enabled });
-    // timer.EVENTS_COMPARE[0].write(.{ .EVENTS_COMPARE = .NotGenerated });
 }
 
 pub fn get_time_since_boot() time.Absolute {
-    // TODO: Check for overflow here? Probably want to disable interrupts, and them and clear, just
-    // in case an interrupt for an overflow comes in right after we check the count.
-    // Trigger a 'capture' to get the timer value copied into the corresponding CC register.
     timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
     return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
 }
