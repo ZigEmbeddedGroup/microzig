@@ -3,6 +3,10 @@
 ///
 /// This module hogs TIMER0.
 /// It uses CC1 as the register to read the current count from.
+/// It also sets up an interrupt to fire when the 32 bit timer overflows, so that we are able to
+/// count them and keep time for centuries.
+/// It does this by setting up a comparator in CC0, and configures it to fire an interrupt when this
+/// happen. This interrupt handler simply increments the high value.
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
@@ -18,6 +22,7 @@ const version: enum {
 };
 
 const timer = microzig.chip.peripherals.TIMER0;
+// const INTERRUPT_INDEX = 0;
 const READ_INDEX = 1;
 
 var overflow_count: u32 = 0;
@@ -50,6 +55,17 @@ pub fn init() void {
             timer.PRESCALER.write(.{ .PRESCALER = 4 });
         },
     }
+
+    // TODO: Set an interrupt to fire when the timer overflows, and keep track of the count, that
+    // way we get more than 2^32 us.
+    // Set the comparator to trigger on overflow
+    // timer.CC[INTERRUPT_INDEX].write(.{ .CC = 0xFFFFFFFF });
+    // Enable interrupt firing
+    // timer.INTENSET.modify(.{ .COMPARE0 = .Enabled });
+    // Automatically clear the event on trigger
+    // timer.SHORTS.modify(.{ .COMPARE0_CLEAR = .Enabled });
+    // Clear events
+    // timer.EVENTS_COMPARE[INTERRUPT_INDEX].write(.{ .EVENTS_COMPARE = .NotGenerated });
 }
 
 pub fn get_time_since_boot() time.Absolute {
