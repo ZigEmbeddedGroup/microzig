@@ -47,6 +47,5 @@ pub fn sleep_ms(time_ms: u32) void {
 
 pub fn sleep_us(time_us: u64) void {
     const end_time = time.make_timeout_us(get_time_since_boot(), time_us);
-    std.log.info("End time is: {d}", .{@intFromEnum(end_time)});
     while (!end_time.is_reached_by(get_time_since_boot())) {}
 }
