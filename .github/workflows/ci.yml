@@ -148,7 +148,8 @@ jobs:
           [
             espressif/esp,
             gigadevice/gd32,
-          #microchip/avr,
+            hdsc/hc32l110,
+            #microchip/avr,
             microchip/atsam,
             nordic/nrf5x,
             nxp/lpc,
