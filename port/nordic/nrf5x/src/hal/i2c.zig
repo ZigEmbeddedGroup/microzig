@@ -144,6 +144,12 @@ pub const I2C = enum(u1) {
         i2c.disable();
     }
 
+    // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it. The nrf
+    // doesn't seem to have a fifo!
+    pub inline fn tx_fifo_available_spaces(i2c: I2C) bool {
+        return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
+    }
+
     // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it
     pub inline fn rx_fifo_bytes_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
@@ -186,43 +192,37 @@ pub const I2C = enum(u1) {
 
         var deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        i2c.set_address(addr);
         const regs = i2c.get_regs();
+        i2c.set_address(addr);
+        regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
-        defer i2c.ensure_stop_condition(deadline);
+        // TODO
+        // defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
-            regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(0),
-                .STOP = @enumFromInt(@intFromBool(element.last)),
-                .CMD = .WRITE,
-                .DAT = element.value,
+            regs.TXD.write(.{ .TXD = element.value });
 
-                .FIRST_DATA_BYTE = .INACTIVE,
-            });
-            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
-            // are ignored. If things work as expected, the TX FIFO gets drained naturally.
-            // This makes it okay to poll on this and check for an abort after.
-            // Note that this WILL loop infinitely if called when I2C is uninitialized and no
-            // timeout is supplied!
-            while (i2c.tx_fifo_available_spaces() == 0) {
+            while (!i2c.tx_fifo_available_spaces()) {
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
                 }
                 std.mem.doNotOptimizeAway(0);
             }
-            try i2c.check_and_clear_abort();
+            // TODO: Do we need to do this?
+            // try i2c.check_and_clear_abort();
             if (timed_out)
                 break;
         }
 
+        regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
+
         // Waits until everything in the TX FIFO is either successfully transmitted, or flushed
         // due to an abort. This functions because of TX_EMPTY_CTRL being enabled in apply().
-        while (regs.IC_RAW_INTR_STAT.read().TX_EMPTY == .INACTIVE) {
+        while (!i2c.tx_fifo_available_spaces()) {
             if (deadline.is_reached_by(time.get_time_since_boot())) {
                 timed_out = true;
                 break;
@@ -230,7 +230,6 @@ pub const I2C = enum(u1) {
             std.mem.doNotOptimizeAway(0);
         }
 
-        try i2c.check_and_clear_abort();
         if (timed_out)
             return TransactionError.Timeout;
     }
@@ -265,7 +264,6 @@ pub const I2C = enum(u1) {
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         const regs = i2c.get_regs();
-        // TODO: Start before or after setting the address?
         i2c.set_address(addr);
         regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
 
