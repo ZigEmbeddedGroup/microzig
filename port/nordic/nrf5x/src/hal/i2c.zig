@@ -144,6 +144,11 @@ pub const I2C = enum(u1) {
         i2c.disable();
     }
 
+    // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it
+    pub inline fn rx_fifo_bytes_ready(i2c: I2C) bool {
+        return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
+    }
+
     fn set_address(i2c: I2C, addr: Address) void {
         i2c.disable();
         defer i2c.enable();
@@ -259,37 +264,48 @@ pub const I2C = enum(u1) {
 
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        i2c.set_address(addr);
         const regs = i2c.get_regs();
+        // TODO: Start before or after setting the address?
+        i2c.set_address(addr);
+        regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
 
-        defer i2c.ensure_stop_condition(deadline);
+        // TODO
+        // defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         var iter = read_vec.iterator();
+        var count: usize = 0;
+        const total_len = read_vec.size();
         while (iter.next_element_ptr()) |element| {
-            regs.IC_DATA_CMD.write(.{
-                .RESTART = @enumFromInt(0),
-                .STOP = @enumFromInt(@intFromBool(element.last)),
-                .CMD = .READ,
-                .DAT = 0,
-
-                .FIRST_DATA_BYTE = .INACTIVE,
-            });
+            // regs.IC_DATA_CMD.write(.{
+            //     .RESTART = @enumFromInt(0),
+            //     .STOP = @enumFromInt(@intFromBool(element.last)),
+            //     .CMD = .READ,
+            //     .DAT = 0,
+            //
+            //     .FIRST_DATA_BYTE = .INACTIVE,
+            // });
 
             while (true) {
-                try i2c.check_and_clear_abort();
+                // TODO: Do we need to do this?
+                // try i2c.check_and_clear_abort();
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
                 }
-                if (i2c.rx_fifo_bytes_ready() != 0) break;
+                if (i2c.rx_fifo_bytes_ready()) break;
             }
 
             if (timed_out)
                 return TransactionError.Timeout;
 
-            element.value_ptr.* = regs.IC_DATA_CMD.read().DAT;
+            // NOTE: We must trigger STOPRX before receiving the last byte so that we properly NACK
+            // HACKC:
+            if (count == total_len - 1)
+                regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
+            element.value_ptr.* = regs.RXD.read().RXD;
+            count += 1;
         }
     }
 };
