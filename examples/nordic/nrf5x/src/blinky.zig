@@ -6,7 +6,6 @@ const time = nrf.time;
 
 pub fn main() !void {
     board.init();
-    nrf.time.init();
 
     while (true) {
         board.led1.toggle();

@@ -1,12 +1,18 @@
+///
+/// Basic timekeeping for the nRF5x series MCUs.
+///
+/// This module hogs TIMER0.
+/// It uses CC1 as the register to read the current count from.
 const std = @import("std");
 const microzig = @import("microzig");
 const time = microzig.drivers.time;
 
 const timer = microzig.chip.peripherals.TIMER0;
+// const INTERRUPT_INDEX = 0;
+const READ_INDEX = 1;
 
 var overflow_count: u32 = 0;
 
-// TODO: Who calls this?
 pub fn init() void {
     // Stop timer while we set it up
     timer.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
@@ -22,19 +28,17 @@ pub fn init() void {
 
     // TODO: Set an interrupt to fire when the timer overflows, and keep track of the count, that
     // way we get more than 2^32 us.
-    // timer.INTENSET.modify(.{COMPARE0 = .Enabled});
-
-    timer.SHORTS.modify(.{ .COMPARE0_CLEAR = .Enabled });
-
-    timer.EVENTS_COMPARE[0].write(.{ .EVENTS_COMPARE = .NotGenerated });
+    // timer.INTENSET.modify(.{ .COMPARE0 = .Enabled });
+    // timer.SHORTS.modify(.{ .COMPARE0_CLEAR = .Enabled });
+    // timer.EVENTS_COMPARE[0].write(.{ .EVENTS_COMPARE = .NotGenerated });
 }
 
 pub fn get_time_since_boot() time.Absolute {
     // TODO: Check for overflow here? Probably want to disable interrupts, and them and clear, just
     // in case an interrupt for an overflow comes in right after we check the count.
     // Trigger a 'capture' to get the timer value copied into the corresponding CC register.
-    timer.TASKS_CAPTURE[0].write(.{ .TASKS_CAPTURE = .Trigger });
-    return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[0].raw);
+    timer.TASKS_CAPTURE[READ_INDEX].write(.{ .TASKS_CAPTURE = .Trigger });
+    return @enumFromInt(@as(u64, overflow_count) << 32 | timer.CC[READ_INDEX].raw);
 }
 
 pub fn sleep_ms(time_ms: u32) void {
