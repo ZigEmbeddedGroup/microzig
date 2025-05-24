@@ -153,21 +153,21 @@ pub const I2C = enum(u1) {
         regs.ADDRESS.raw = 0x00000000;
     }
 
-    inline fn tx_sent(i2c: I2C) bool {
+    fn tx_sent(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
     }
 
-    inline fn rx_ready(i2c: I2C) bool {
+    fn rx_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
     }
 
-    inline fn set_tx_buffer(i2c: I2C, buf: []const u8) void {
+    fn set_tx_buffer(i2c: I2C, buf: []const u8) void {
         const regs = i2c.get_regs();
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
 
-    inline fn set_rx_buffer(i2c: I2C, buf: []u8) void {
+    fn set_rx_buffer(i2c: I2C, buf: []u8) void {
         const regs = i2c.get_regs();
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
@@ -181,16 +181,26 @@ pub const I2C = enum(u1) {
         });
     }
 
-    inline fn clear_errors(i2c: I2C) void {
+    fn clear_errors(i2c: I2C) void {
         const regs = i2c.get_regs();
         regs.ERRORSRC.raw = 0xFFFFFFFF;
     }
 
-    inline fn clear_events(i2c: I2C) void {
+    fn clear_events(i2c: I2C) void {
         const regs = i2c.get_regs();
         regs.EVENTS_SUSPENDED.raw = 0;
         regs.EVENTS_STOPPED.raw = 0;
         regs.EVENTS_ERROR.raw = 0;
+    }
+
+    fn disable_interrupts(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        // NOTE: Ignore `.Enabled`, this is write to clear
+        regs.INTENCLR.modify(.{
+            .STOPPED = .Enabled,
+            .ERROR = .Enabled,
+            .SUSPENDED = .Enabled,
+        });
     }
 
     fn check_and_clear_error(i2c: I2C) TransactionError!void {
@@ -404,7 +414,8 @@ pub const I2C = enum(u1) {
         i2c.set_tx_buffer(data);
         i2c.set_rx_buffer(dst);
 
-        // Set it up to automatically start a read after it's finished writing
+        // Set it up to automatically start a read after it's finished writing, and stop after it's
+        // finished reading.
         regs.SHORTS.modify(.{
             .LASTTX_STARTRX = .Enabled,
             .LASTRX_STOP = .Enabled,
@@ -418,15 +429,5 @@ pub const I2C = enum(u1) {
         _ = try i2c.check_error();
         try i2c.check_rx(dst.len);
         try i2c.check_tx(data.len);
-    }
-
-    inline fn disable_interrupts(i2c: I2C) void {
-        const regs = i2c.get_regs();
-        // NOTE: Ignore `.Enabled`, this is write to clear
-        regs.INTENCLR.modify(.{
-            .STOPPED = .Enabled,
-            .ERROR = .Enabled,
-            .SUSPENDED = .Enabled,
-        });
     }
 };
