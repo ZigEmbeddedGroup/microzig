@@ -143,7 +143,7 @@ pub const interrupt = struct {
 
         const old_handler = ram_vectors[@intFromEnum(int)];
         ram_vectors[@intFromEnum(int)] = handler orelse microzig.interrupt.unhandled;
-        return if (old_handler == microzig.interrupt.unhandled) null else old_handler;
+        return if (old_handler.naked == microzig.interrupt.unhandled.naked) null else old_handler;
     }
 };
 
