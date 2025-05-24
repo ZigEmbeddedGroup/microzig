@@ -66,7 +66,8 @@ pub const TransactionError = error{
     NoData,
     Overrun,
     TooMuchData,
-    UnknownAbort,
+    Transmit,
+    Receive,
 };
 
 pub fn num(n: u1) I2C {
@@ -180,12 +181,23 @@ pub const I2C = enum(u1) {
         });
     }
 
+    inline fn clear_errors(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.ERRORSRC.raw = 0xFFFFFFFF;
+    }
+
+    inline fn clear_events(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.EVENTS_SUSPENDED.raw = 0;
+        regs.EVENTS_STOPPED.raw = 0;
+        regs.EVENTS_ERROR.raw = 0;
+    }
+
     fn check_and_clear_error(i2c: I2C) TransactionError!void {
         const regs = i2c.get_regs();
         const error_generated = regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated;
         if (error_generated) {
-            // Clear error
-            regs.EVENTS_ERROR.raw = 0x0000000;
+            i2c.clear_errors();
             // We expect this to return an error, if it doesn't then we don't understand the error
             const error_src = try i2c.check_error();
             // TODO: Put in check error, should it complain on error_src != 0?
@@ -199,8 +211,6 @@ pub const I2C = enum(u1) {
     fn check_error(i2c: I2C) TransactionError!u32 {
         const regs = i2c.get_regs();
         const abort_reason = regs.ERRORSRC.read();
-        // TODO: Maybe clear at the start of a transaction?
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
 
         if (abort_reason.OVERRUN == .Received) {
             // Byte was received before we read the last one
@@ -220,7 +230,7 @@ pub const I2C = enum(u1) {
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
         if (bytes_read != len) {
             std.log.err("Didn't receive as much as expected {} vs {}", .{ bytes_read, len }); // DELETEME
-            return TransactionError.UnknownAbort;
+            return TransactionError.Receive;
         }
     }
 
@@ -229,21 +239,7 @@ pub const I2C = enum(u1) {
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
         if (bytes_written != len) {
             std.log.err("Didn't send as much as expected {} vs {}", .{ bytes_written, len }); // DELETEME
-            return TransactionError.UnknownAbort;
-        }
-    }
-
-    /// Independent of successful write or abort, always ensure
-    /// the STOP condition is generated and transaction is concluded before
-    /// returning. The one exception is if timeout is hit, then return,
-    /// potentially still leaving the I2C block in an "active" state.
-    /// However, this avoids an infinite loop.
-    fn ensure_stop_condition(i2c: I2C, deadline: mdf.time.Deadline) void {
-        const regs = i2c.get_regs();
-        while (regs.EVENTS_STOPPED.read().EVENTS_STOPPED != .Generated) {
-            std.mem.doNotOptimizeAway(0);
-            if (deadline.is_reached_by(time.get_time_since_boot()))
-                break;
+            return TransactionError.Transmit;
         }
     }
 
@@ -255,14 +251,14 @@ pub const I2C = enum(u1) {
                 regs.EVENTS_STOPPED.read().EVENTS_STOPPED == .Generated)
             {
                 regs.EVENTS_STOPPED.raw = 0;
-                // std.log.info("Stopped", .{});
+                // std.log.info("Stopped", .{}); // DELETEME
                 break;
             }
             // Stop the task on error, but we need to keep waiting until the stop event
             if (regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated) {
                 regs.EVENTS_ERROR.raw = 0;
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-                // std.log.info("Error", .{});
+                // std.log.info("Error", .{}); // DELETEME
             }
             if (deadline.is_reached_by(time.get_time_since_boot())) {
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
@@ -281,13 +277,9 @@ pub const I2C = enum(u1) {
         if (addr.is_reserved())
             return TransactionError.TargetAddressReserved;
 
-        // We need this to avoid setting a START and not having a LASTTX, we could allow it if we
-        // specially handled setting stop.
         // TODO: We can handle this if for some reason we want to send a start and immediate stop?
         if (data.len == 0)
             return TransactionError.NoData;
-
-        const regs = i2c.get_regs();
 
         // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
         // nRF52831
@@ -295,19 +287,23 @@ pub const I2C = enum(u1) {
         if (std.math.cast(tx_cnt_type, data.len) == null)
             return TransactionError.TooMuchData;
 
+        const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         std.log.info("Writing {} bytes", .{data.len}); // DELETEME
         i2c.set_address(addr);
 
-        // TODO: Write intenclr for suspended, stopped, and error?
+        i2c.clear_events();
+        i2c.clear_errors();
+
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
+
         i2c.set_tx_buffer(data);
 
-        // TODO: Do we need this? I don't think so, the stop task should do this
-        // defer i2c.ensure_stop_condition(deadline);
-        //
         // TODO: We only set the stop one if this is the last transaction... we could handle writev
         // this way probably. If it's not the last chunk, then just suspend
+        // Set it up to automatically stop after sending the last byte
         regs.SHORTS.modify(.{ .LASTTX_STOP = .Enabled });
 
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
@@ -332,28 +328,33 @@ pub const I2C = enum(u1) {
         if (dst.len == 0)
             return TransactionError.NoData;
 
-        const regs = i2c.get_regs();
-
         // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
         // nRF52831
         const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
         if (std.math.cast(rx_cnt_type, dst.len) == null)
             return TransactionError.TooMuchData;
+
+        const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
         i2c.set_address(addr);
 
-        // TODO: Write intenclr for suspended, stopped, and error?
+        i2c.clear_events();
+        i2c.clear_errors();
+
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
+
         i2c.set_rx_buffer(dst);
 
         // TODO: We only set the stop one if this is the last transaction... we could handle writev
         // this way probably. If it's not the last chunk, then just suspend
+        // Set it up to automatically stop after receiving the last expected byte
         regs.SHORTS.modify(.{ .LASTRX_STOP = .Enabled });
 
         regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
 
-        // Can return timeout, will trigger TASKS_STOP on timeout or error // DELETEME
         try i2c.wait(deadline);
         // Read the error
         _ = try i2c.check_error();
@@ -388,14 +389,17 @@ pub const I2C = enum(u1) {
         if (std.math.cast(rx_cnt_type, dst.len) == null)
             return TransactionError.TooMuchData;
 
-        std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
+        const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
+        std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
 
-        // TODO: Do we need this? I don't think so, the stop task should do this
-        // defer i2c.ensure_stop_condition(deadline);
+        i2c.clear_events();
+        i2c.clear_errors();
+
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
 
         i2c.set_tx_buffer(data);
         i2c.set_rx_buffer(dst);
@@ -412,9 +416,17 @@ pub const I2C = enum(u1) {
         try i2c.wait(deadline);
         // Read the error
         _ = try i2c.check_error();
-        // TODO: What error should we return here? This happens if we don't detect an error, but we
-        // stop the transaction early? This should probably never happen
         try i2c.check_rx(dst.len);
         try i2c.check_tx(data.len);
+    }
+
+    inline fn disable_interrupts(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        // NOTE: Ignore `.Enabled`, this is write to clear
+        regs.INTENCLR.modify(.{
+            .STOPPED = .Enabled,
+            .ERROR = .Enabled,
+            .SUSPENDED = .Enabled,
+        });
     }
 };
