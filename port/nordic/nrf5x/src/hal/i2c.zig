@@ -142,6 +142,22 @@ pub const I2C = enum(u1) {
     /// Disables I2C, returns peripheral registers to reset state.
     pub fn reset(i2c: I2C) void {
         i2c.disable();
+        const regs = i2c.get_regs();
+        regs.SHORTS.raw = 0x00000000;
+        regs.INTENSET.raw = 0x00000000;
+        regs.ERRORSRC.raw = 0x00000000;
+        switch (compatibility.chip) {
+            .nrf52 => {
+                regs.PSELSCL.raw = 0xFFFFFFFF;
+                regs.PSELSDA.raw = 0xFFFFFFFF;
+            },
+            .nrf52840 => {
+                regs.PSEL.SCL.raw = 0xFFFFFFFF;
+                regs.PSEL.SDA.raw = 0xFFFFFFFF;
+            },
+        }
+        regs.FREQUENCY.raw = 0x04000000;
+        regs.ADDRESS.raw = 0x00000000;
     }
 
     // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it. The nrf
