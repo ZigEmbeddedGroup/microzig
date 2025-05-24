@@ -541,7 +541,7 @@ pub const I2C = enum(u1) {
     /// This is useful for the common scenario of writing an address to a target device, and then
     /// immediately reading bytes from that address
     ///
-    /// NOTE: This function is a vectored version of `writev_then_readv_blocking` and takes an array
+    /// NOTE: This function is a vectored `writev_blocking` and `readv_blocking` and takes an array
     ///       of arrays. This pattern allows one to create better zero-copy send routines as message
     ///       prefixes and suffixes won't need to be concatenated/inserted to the original buffer,
     ///       but can be managed in a separate memory.
