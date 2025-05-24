@@ -236,18 +236,20 @@ pub const I2C = enum(u1) {
 
         var deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
+        std.log.info("Writing {} bytes", .{write_vec.size()}); // DELETEME
         i2c.set_address(addr);
         const regs = i2c.get_regs();
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
         // TODO: Do we need this? I don't think so, the stop task should do this
-        // defer i2c.ensure_stop_condition(deadline);
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         var iter = write_vec.iterator();
         while (iter.next_element()) |element| {
             regs.TXD.write(.{ .TXD = element.value });
+            std.log.info("Wrote byte", .{}); // DELETEME
 
             while (!i2c.tx_sent()) {
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
@@ -315,13 +317,14 @@ pub const I2C = enum(u1) {
         regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
 
         // TODO: Do we need this? I don't think so, the stop task should do this
-        // defer i2c.ensure_stop_condition(deadline);
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         var iter = read_vec.iterator();
         var count: usize = 0;
         const total_len = read_vec.size();
+        std.log.info("Reading {} bytes", .{total_len}); // DELETEME
         while (iter.next_element_ptr()) |element| {
             while (true) {
                 try i2c.check_and_clear_abort();
@@ -337,6 +340,7 @@ pub const I2C = enum(u1) {
 
             // NOTE: We must trigger STOPRX before receiving the last byte so that we properly NACK
             // HACK:
+            // It seems that we are not NACKing for long enough (pulling low before SCL high)
             if (count == total_len - 1)
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             element.value_ptr.* = regs.RXD.read().RXD;
@@ -375,12 +379,13 @@ pub const I2C = enum(u1) {
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
         // TODO: Do we need this? I don't think so, the stop task should do this
-        // defer i2c.ensure_stop_condition(deadline);
+        defer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
         // Write provided bytes to device
         var write_iter = write_vec.iterator();
+        std.log.info("Writing {} bytes", .{write_vec.size()}); // DELETEME
         while (write_iter.next_element()) |element| {
             regs.TXD.write(.{ .TXD = element.value });
 
@@ -404,12 +409,13 @@ pub const I2C = enum(u1) {
         if (timed_out)
             return TransactionError.Timeout;
 
-        // We start the RX stack without stopping the TX task
+        // We start the RX task without stopping the TX task
         regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
         // Read back requested bytes immediately following a repeated start
         var read_iter = read_vec.iterator();
         var count: usize = 0;
         const total_len = read_vec.size();
+        std.log.info("Reading {} bytes", .{total_len}); // DELETEME
         recv_loop: while (read_iter.next_element_ptr()) |element| {
             while (true) {
                 try i2c.check_and_clear_abort();
