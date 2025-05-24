@@ -31,6 +31,7 @@ pub fn main() !void {
     nrf.uart.init_logger(uart);
 
     defer i2c0.reset();
+    defer i2c0dma.reset();
 
     // ------------------------ BUS SCAN ------------------------
     std.log.info("I2C bus scan", .{});
@@ -52,6 +53,7 @@ pub fn main() !void {
 
         std.log.info("I2C device found at address {X}.", .{addr});
     }
+    i2c0.reset();
 
     // ------------------------ BUS SCAN (DMA) ------------------------
     std.log.info("I2C bus scan (DMA)", .{});
@@ -73,6 +75,7 @@ pub fn main() !void {
 
         std.log.info("I2C device found at address {X}.", .{addr});
     }
+    i2c0dma.reset();
 
     std.log.info("Done!", .{});
 }
