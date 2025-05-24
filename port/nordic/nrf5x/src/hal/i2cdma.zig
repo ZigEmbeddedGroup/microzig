@@ -152,12 +152,24 @@ pub const I2C = enum(u1) {
         regs.ADDRESS.raw = 0x00000000;
     }
 
-    pub inline fn tx_sent(i2c: I2C) bool {
+    inline fn tx_sent(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
     }
 
-    pub inline fn rx_ready(i2c: I2C) bool {
+    inline fn rx_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
+    }
+
+    inline fn set_tx_buffer(i2c: I2C, buf: []const u8) void {
+        const regs = i2c.get_regs();
+        regs.TXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
+        regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
+    }
+
+    inline fn set_rx_buffer(i2c: I2C, buf: []u8) void {
+        const regs = i2c.get_regs();
+        regs.RXD.PTR.write(.{ .PTR = @intFromPtr(buf.ptr) });
+        regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(buf.len) });
     }
 
     fn set_address(i2c: I2C, addr: Address) void {
@@ -289,9 +301,7 @@ pub const I2C = enum(u1) {
         i2c.set_address(addr);
 
         // TODO: Write intenclr for suspended, stopped, and error?
-        // Set TX buffer TODO function
-        regs.TXD.PTR.write(.{ .PTR = @intFromPtr(data.ptr) });
-        regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(data.len) });
+        i2c.set_tx_buffer(data);
 
         // TODO: Do we need this? I don't think so, the stop task should do this
         // defer i2c.ensure_stop_condition(deadline);
@@ -335,9 +345,7 @@ pub const I2C = enum(u1) {
         i2c.set_address(addr);
 
         // TODO: Write intenclr for suspended, stopped, and error?
-        // Set TX buffer TODO function
-        regs.RXD.PTR.write(.{ .PTR = @intFromPtr(dst.ptr) });
-        regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(dst.len) });
+        i2c.set_rx_buffer(dst);
 
         // TODO: We only set the stop one if this is the last transaction... we could handle writev
         // this way probably. If it's not the last chunk, then just suspend
@@ -389,11 +397,8 @@ pub const I2C = enum(u1) {
         // TODO: Do we need this? I don't think so, the stop task should do this
         // defer i2c.ensure_stop_condition(deadline);
 
-        regs.RXD.PTR.write(.{ .PTR = @intFromPtr(dst.ptr) });
-        regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(dst.len) });
-        // Set TX buffer TODO function
-        regs.TXD.PTR.write(.{ .PTR = @intFromPtr(data.ptr) });
-        regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(data.len) });
+        i2c.set_tx_buffer(data);
+        i2c.set_rx_buffer(dst);
 
         // Set it up to automatically start a read after it's finished writing
         regs.SHORTS.modify(.{
