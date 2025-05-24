@@ -152,12 +152,51 @@ pub const I2C = enum(u1) {
         regs.ADDRESS.raw = 0x00000000;
     }
 
-    pub inline fn tx_sent(i2c: I2C) bool {
+    fn tx_sent(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
     }
 
-    pub inline fn rx_ready(i2c: I2C) bool {
+    fn rx_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
+    }
+
+    fn read_byte(i2c: I2C, deadline: mdf.time.Deadline) TransactionError!u8 {
+        const regs = i2c.get_regs();
+        while (!i2c.rx_ready()) {
+            if (deadline.is_reached_by(time.get_time_since_boot()))
+                return TransactionError.Timeout;
+            _ = try i2c.check_error();
+        }
+        const v = regs.RXD.read().RXD;
+        regs.EVENTS_RXDREADY.raw = 0;
+        return v;
+    }
+
+    fn clear_shorts(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.SHORTS.raw = 0x00000000;
+    }
+
+    fn clear_events(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.EVENTS_SUSPENDED.raw = 0;
+        regs.EVENTS_STOPPED.raw = 0;
+        regs.EVENTS_ERROR.raw = 0;
+    }
+
+    fn clear_errors(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.ERRORSRC.raw = 0xFFFFFFFF;
+    }
+
+    fn disable_interrupts(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        // NOTE: Ignore `.Enabled`, this is write to clear
+        regs.INTENCLR.modify(.{
+            .STOPPED = .Enabled,
+            .ERROR = .Enabled,
+            .SUSPENDED = .Enabled,
+        });
     }
 
     fn set_address(i2c: I2C, addr: Address) void {
@@ -187,8 +226,6 @@ pub const I2C = enum(u1) {
     fn check_error(i2c: I2C) TransactionError!u32 {
         const regs = i2c.get_regs();
         const error_src = regs.ERRORSRC.read();
-        // TODO: Maybe clear at the start of a transaction?
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
 
         if (error_src.OVERRUN == .Present) {
             // Byte was received before we read the last one
@@ -268,11 +305,18 @@ pub const I2C = enum(u1) {
         if (write_vec.size() == 0)
             return TransactionError.NoData;
 
+        const regs = i2c.get_regs();
         var deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         std.log.info("Writing {} bytes", .{write_vec.size()}); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
+
+        i2c.clear_shorts();
+        i2c.clear_events();
+        i2c.clear_errors();
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
+
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
         // TODO: Do we need this? I don't think so, wait should do this
@@ -314,9 +358,6 @@ pub const I2C = enum(u1) {
         try i2c.wait(deadline);
         // Read the error
         _ = try i2c.check_error();
-
-        if (timed_out)
-            return TransactionError.Timeout;
     }
 
     /// Attempts to read number of bytes in provided slice from target device and blocks until one
@@ -348,48 +389,52 @@ pub const I2C = enum(u1) {
         if (read_vec.size() == 0)
             return TransactionError.NoData;
 
+        const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
+        std.log.info("Reading {} bytes", .{read_vec.size()}); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
-        regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
+
+        i2c.clear_shorts();
+        i2c.clear_events();
+        i2c.clear_errors();
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
 
         // TODO: Do we need this? I don't think so, wait should do this
         // defer i2c.ensure_stop_condition(deadline);
 
-        var timed_out = false;
-
         var iter = read_vec.iterator();
         var count: usize = 0;
         const total_len = read_vec.size();
+        // If we want to read more than one byte, then we have to suspend between bytes,
+        // otherwise automatically trigger a stop
+        if (total_len > 1) {
+            regs.SHORTS.modify(.{ .BB_SUSPEND = .Enabled });
+        } else {
+            regs.SHORTS.modify(.{ .BB_STOP = .Enabled });
+        }
+
+        // Start reception
+        regs.TASKS_STARTRX.write(.{ .TASKS_STARTRX = .Trigger });
+
+        // Read bytes
         while (iter.next_element_ptr()) |element| {
-            while (true) {
-                try i2c.check_and_clear_error();
-                if (deadline.is_reached_by(time.get_time_since_boot())) {
-                    // TODO: Probably don't need this var, `wait` will return with the error
-                    timed_out = true;
-                    break;
-                }
-                if (i2c.rx_ready()) break;
+            // Handle last byte specially
+            if (count == total_len - 1) {
+                // Stop after last byte
+                regs.SHORTS.modify(.{ .BB_STOP = .Enabled });
+                regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
+                element.value_ptr.* = try i2c.read_byte(deadline);
+                std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
+                break;
             }
 
-            if (timed_out)
-                return TransactionError.Timeout;
-
-            // NOTE: We must trigger STOPRX before receiving the last byte so that we properly NACK
-            // HACK:
-            // It seems that we are not NACKing for long enough (pulling low before SCL high)
-            if (count == total_len - 1)
-                regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-            // TODO: We read from rxd here even if there's no reply?
-            element.value_ptr.* = regs.RXD.read().RXD;
+            regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
+            element.value_ptr.* = try i2c.read_byte(deadline);
             std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
             count += 1;
         }
-
-        try i2c.wait(deadline);
-        // Read the error
-        _ = try i2c.check_error();
     }
 
     /// Attempts to write number of bytes provided to target device and then immediately read bytes
@@ -402,10 +447,10 @@ pub const I2C = enum(u1) {
     /// This is useful for the common scenario of writing an address to a target device, and then
     /// immediately reading bytes from that address
     ///
-    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
-    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
-    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
-    ///       in a separate memory.
+    /// NOTE: This function is a vectored version of `writev_then_readv_blocking` and takes an array
+    ///       of arrays. This pattern allows one to create better zero-copy send routines as message
+    ///       prefixes and suffixes won't need to be concatenated/inserted to the original buffer,
+    ///       but can be managed in a separate memory.
     ///
     pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
@@ -413,19 +458,29 @@ pub const I2C = enum(u1) {
 
         const write_vec = microzig.utilities.Slice_Vector([]const u8).init(write_chunks);
         const read_vec = microzig.utilities.Slice_Vector([]u8).init(read_chunks);
-        std.log.info("Writing {} bytes then reading {}", .{ write_vec.size(), read_vec.size() }); // DELETEME
 
         if (write_vec.size() == 0)
             return TransactionError.NoData;
+        if (read_vec.size() == 0)
+            return TransactionError.NoData;
+
+        const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
+        std.log.info("Writing {} bytes then reading {}", .{ write_vec.size(), read_vec.size() }); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
+
+        i2c.clear_shorts();
+        i2c.clear_events();
+        i2c.clear_errors();
+        // Probably not needed, we never set them
+        i2c.disable_interrupts();
+
         regs.TASKS_STARTTX.write(.{ .TASKS_STARTTX = .Trigger });
 
         // TODO: Do we need this? I don't think so, wait should do this
         // defer i2c.ensure_stop_condition(deadline);
-        errdefer i2c.ensure_stop_condition(deadline);
+        // errdefer i2c.ensure_stop_condition(deadline);
 
         var timed_out = false;
 
