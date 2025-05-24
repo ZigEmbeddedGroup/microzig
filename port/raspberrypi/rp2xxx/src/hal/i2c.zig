@@ -195,6 +195,7 @@ test "i2c.translate_baudrate" {
     try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(1_000_000, 31_900_000));
 }
 
+// TODO: Why create this empty struct?
 pub const instance = struct {
     pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub const I2C1: I2C = @as(I2C, @enumFromInt(1));
@@ -334,7 +335,7 @@ pub const I2C = enum(u1) {
                 // Address byte was acknowledged, but a data byte wasn't
                 return TransactionError.NoAcknowledge;
             } else if (abort_reason.TX_FLUSH_CNT > 0) {
-                // A previous abort caused the TX FIFO to be flusehed
+                // A previous abort caused the TX FIFO to be flushed
                 return TransactionError.TxFifoFlushed;
             } else {
                 std.log.err("Unknown abort reason, IC_TX_ABRT_SOURCE=0x{X}", .{@as(u32, @bitCast(abort_reason))});
@@ -424,7 +425,7 @@ pub const I2C = enum(u1) {
 
                 .FIRST_DATA_BYTE = .INACTIVE,
             });
-            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // If an abort occurs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
             // This makes it okay to poll on this and check for an abort after.
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
@@ -563,7 +564,7 @@ pub const I2C = enum(u1) {
 
         // Write provided bytes to device
         var write_iter = write_vec.iterator();
-        send_loop: while (write_iter.next_element()) |element| {
+        while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
                 .RESTART = @enumFromInt(0),
                 .STOP = @enumFromInt(0),
@@ -572,7 +573,7 @@ pub const I2C = enum(u1) {
 
                 .FIRST_DATA_BYTE = .INACTIVE,
             });
-            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // If an abort occurs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
             // This makes it okay to poll on this and check for an abort after.
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
@@ -586,7 +587,7 @@ pub const I2C = enum(u1) {
             }
             try i2c.check_and_clear_abort();
             if (timed_out)
-                break :send_loop;
+                break;
         }
 
         if (timed_out)
