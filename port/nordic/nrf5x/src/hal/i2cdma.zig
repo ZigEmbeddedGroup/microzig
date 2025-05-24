@@ -246,7 +246,7 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
         if (bytes_read != len) {
-            std.log.err("Didn't receive as much as expected {} vs {}", .{ bytes_read, len }); // DELETEME
+            // std.log.err("Didn't receive as much as expected {} vs {}", .{ bytes_read, len }); // DELETEME
             return TransactionError.Receive;
         }
     }
@@ -255,7 +255,7 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
         if (bytes_written != len) {
-            std.log.err("Didn't send as much as expected {} vs {}", .{ bytes_written, len }); // DELETEME
+            // std.log.err("Didn't send as much as expected {} vs {}", .{ bytes_written, len }); // DELETEME
             return TransactionError.Transmit;
         }
     }
@@ -307,13 +307,12 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        std.log.info("Writing {} bytes", .{data.len}); // DELETEME
+        // std.log.info("Writing {} bytes", .{data.len}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
-
         // Probably not needed, we never set them
         i2c.disable_interrupts();
 
@@ -355,7 +354,7 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
+        // std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -411,7 +410,7 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
+        // std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
