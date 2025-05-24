@@ -24,6 +24,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "i2c_bus_scan", .file = "src/i2c_bus_scan.zig" },
         .{ .name = "i2c_temp", .file = "src/i2c_temp.zig" },
         .{ .name = "i2c_display_sh1106", .file = "src/i2c_display_sh1106.zig" },
+        .{ .name = "onboard_led_blinky", .file = "src/onboard_led_blinky.zig" },
         .{ .name = "stepper_driver", .file = "src/stepper_driver.zig" },
         .{ .name = "stepper_driver_dumb", .file = "src/stepper_driver_dumb.zig" },
         .{ .name = "systimer", .file = "src/systimer.zig" },

@@ -68,14 +68,29 @@ pub const Event = enum(u3) {
 
 pub const InputSignal = enum(u8) {
     // TODO: Other signals
+    spiq = 0,
+    spid = 1,
+    spihd = 2,
+    spiwd = 3,
+    rmt0 = 51,
+    rmt1 = 52,
     i2cext0_scl = 53,
     i2cext0_sda = 54,
 };
 
 pub const OutputSignal = enum(u8) {
     // TODO: Other signals
+    spiq = 0,
+    spid = 1,
+    spihd = 2,
+    spiwd = 3,
+    spiclk = 4,
+    spics0 = 5,
+    rmt0 = 51,
+    rmt1 = 52,
     i2cext0_scl = 53,
     i2cext0_sda = 54,
+    spics1 = 126,
     gpio = 128,
 };
 
