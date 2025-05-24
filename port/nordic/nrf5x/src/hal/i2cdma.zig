@@ -181,9 +181,9 @@ pub const I2C = enum(u1) {
         });
     }
 
-    fn clear_errors(i2c: I2C) void {
+    fn clear_shorts(i2c: I2C) void {
         const regs = i2c.get_regs();
-        regs.ERRORSRC.raw = 0xFFFFFFFF;
+        regs.SHORTS.raw = 0x00000000;
     }
 
     fn clear_events(i2c: I2C) void {
@@ -191,6 +191,11 @@ pub const I2C = enum(u1) {
         regs.EVENTS_SUSPENDED.raw = 0;
         regs.EVENTS_STOPPED.raw = 0;
         regs.EVENTS_ERROR.raw = 0;
+    }
+
+    fn clear_errors(i2c: I2C) void {
+        const regs = i2c.get_regs();
+        regs.ERRORSRC.raw = 0xFFFFFFFF;
     }
 
     fn disable_interrupts(i2c: I2C) void {
@@ -303,6 +308,7 @@ pub const I2C = enum(u1) {
         std.log.info("Writing {} bytes", .{data.len}); // DELETEME
         i2c.set_address(addr);
 
+        i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
 
@@ -350,6 +356,7 @@ pub const I2C = enum(u1) {
         std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
         i2c.set_address(addr);
 
+        i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
 
@@ -405,6 +412,7 @@ pub const I2C = enum(u1) {
         std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
         i2c.set_address(addr);
 
+        i2c.clear_shorts();
         i2c.clear_events();
         i2c.clear_errors();
 

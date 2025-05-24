@@ -139,19 +139,11 @@ pub fn main() !void {
         .sda_pin = gpio.num(0, 10),
     });
     std.log.info("Writing config", .{});
-    try i2c0dma.write_blocking(
-        @enumFromInt(temp_sensor_address),
-        &cbuf,
-        null,
-    );
+    try i2c0dma.write_blocking(@enumFromInt(temp_sensor_address), &cbuf, null);
     std.log.info("Reading temp", .{});
     for (0..5) |_| {
         const write_buf = [_]u8{0}; // Read temperature register
-        // TODO: This doesn't work, it doesn't get a NACK after 2 bytes, keeps reading FF, and ACKs
-        // it, but thinks it read 0
-        // try i2c0dma.write_then_read_blocking(@enumFromInt(temp_sensor_address), &write_buf, &temp_buf, null);
-        try i2c0dma.write_blocking(@enumFromInt(temp_sensor_address), &write_buf, null);
-        try i2c0dma.read_blocking(@enumFromInt(temp_sensor_address), &temp_buf, null);
+        try i2c0dma.write_then_read_blocking(@enumFromInt(temp_sensor_address), &write_buf, &temp_buf, null);
         const temp_u = std.mem.readInt(u16, &temp_buf, .big);
         const temp = @as(f32, @floatFromInt(temp_u)) * 7.8125E-3;
         std.log.info("Temp: {d:0.2}°C", .{temp});
