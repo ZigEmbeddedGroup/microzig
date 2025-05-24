@@ -65,6 +65,7 @@ pub const TransactionError = error{
     TargetAddressReserved,
     NoData,
     Overrun,
+    TooMuchData,
     UnknownAbort,
 };
 
@@ -202,6 +203,24 @@ pub const I2C = enum(u1) {
         return @bitCast(abort_reason);
     }
 
+    fn check_rx(i2c: I2C, len: usize) TransactionError!void {
+        const regs = i2c.get_regs();
+        const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
+        if (bytes_read != len) {
+            std.log.err("Didn't receive as much as expected {} vs {}", .{ bytes_read, len }); // DELETEME
+            return TransactionError.UnknownAbort;
+        }
+    }
+
+    fn check_tx(i2c: I2C, len: usize) TransactionError!void {
+        const regs = i2c.get_regs();
+        const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
+        if (bytes_written != len) {
+            std.log.err("Didn't send as much as expected {} vs {}", .{ bytes_written, len }); // DELETEME
+            return TransactionError.UnknownAbort;
+        }
+    }
+
     /// Independent of successful write or abort, always ensure
     /// the STOP condition is generated and transaction is concluded before
     /// returning. The one exception is if timeout is hit, then return,
@@ -256,16 +275,22 @@ pub const I2C = enum(u1) {
         if (data.len == 0)
             return TransactionError.NoData;
 
+        const regs = i2c.get_regs();
+
+        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+        // nRF52831
+        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(tx_cnt_type, data.len) == null)
+            return TransactionError.TooMuchData;
+
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         std.log.info("Writing {} bytes", .{data.len}); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
 
         // TODO: Write intenclr for suspended, stopped, and error?
         // Set TX buffer TODO function
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(data.ptr) });
-        // TODO: Ensure len is in range
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(data.len) });
 
         // TODO: Do we need this? I don't think so, the stop task should do this
@@ -280,10 +305,7 @@ pub const I2C = enum(u1) {
         try i2c.wait(deadline);
         // Read the error
         _ = try i2c.check_error();
-        // TODO: What error should we return here? This happens if we don't detect an error, but we
-        // stop the transaction early? This should probably never happen
-        if (regs.TXD.AMOUNT.read().AMOUNT != data.len)
-            return TransactionError.UnknownAbort;
+        try i2c.check_tx(data.len);
     }
 
     /// Attempts to read number of bytes in provided slice from target device and blocks until one
@@ -300,16 +322,21 @@ pub const I2C = enum(u1) {
         if (dst.len == 0)
             return TransactionError.NoData;
 
+        const regs = i2c.get_regs();
+
+        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+        // nRF52831
+        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(rx_cnt_type, dst.len) == null)
+            return TransactionError.TooMuchData;
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
         std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
         i2c.set_address(addr);
-        const regs = i2c.get_regs();
 
         // TODO: Write intenclr for suspended, stopped, and error?
         // Set TX buffer TODO function
         regs.RXD.PTR.write(.{ .PTR = @intFromPtr(dst.ptr) });
-        // TODO: Ensure len is in range
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(dst.len) });
 
         // TODO: We only set the stop one if this is the last transaction... we could handle writev
@@ -322,11 +349,7 @@ pub const I2C = enum(u1) {
         try i2c.wait(deadline);
         // Read the error
         _ = try i2c.check_error();
-        if (regs.RXD.AMOUNT.read().AMOUNT != dst.len)
-            return TransactionError.NoData;
-        // todo: check operations?
-        //   * check errors
-        //   * check rx/tx
+        try i2c.check_rx(dst.len);
     }
 
     /// Attempts to write number of bytes provided to target device and then immediately read bytes
@@ -348,6 +371,15 @@ pub const I2C = enum(u1) {
         if (dst.len == 0)
             return TransactionError.NoData;
 
+        // TODO: There has got to be a nicer way to do this. MAXCNT is u16 on nRF52840, and u8 on
+        // nRF52831
+        const tx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "TXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(tx_cnt_type, data.len) == null)
+            return TransactionError.TooMuchData;
+        const rx_cnt_type = @FieldType(@FieldType(@FieldType(I2cRegs, "RXD"), "MAXCNT").underlying_type, "MAXCNT");
+        if (std.math.cast(rx_cnt_type, dst.len) == null)
+            return TransactionError.TooMuchData;
+
         std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
@@ -361,9 +393,7 @@ pub const I2C = enum(u1) {
         regs.RXD.MAXCNT.write(.{ .MAXCNT = @truncate(dst.len) });
         // Set TX buffer TODO function
         regs.TXD.PTR.write(.{ .PTR = @intFromPtr(data.ptr) });
-        // TODO: Ensure len is in range
         regs.TXD.MAXCNT.write(.{ .MAXCNT = @truncate(data.len) });
-        // var timed_out = false;
 
         // Set it up to automatically start a read after it's finished writing
         regs.SHORTS.modify(.{
@@ -379,13 +409,7 @@ pub const I2C = enum(u1) {
         _ = try i2c.check_error();
         // TODO: What error should we return here? This happens if we don't detect an error, but we
         // stop the transaction early? This should probably never happen
-        if (regs.TXD.AMOUNT.read().AMOUNT != data.len) {
-            std.log.err("Didn't send as much as expected {} vs {}", .{ regs.TXD.AMOUNT.read().AMOUNT, data.len }); // DELETEME
-            return TransactionError.UnknownAbort;
-        }
-        if (regs.RXD.AMOUNT.read().AMOUNT != dst.len) {
-            std.log.err("Didn't receive as much as expected {} vs {}", .{ regs.RXD.AMOUNT.read().AMOUNT, dst.len }); // DELETEME
-            return TransactionError.UnknownAbort;
-        }
+        try i2c.check_rx(dst.len);
+        try i2c.check_tx(data.len);
     }
 };
