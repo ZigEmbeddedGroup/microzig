@@ -59,20 +59,14 @@ pub const Address = enum(u7) {
 
 // TODO: Cleanup
 pub const TransactionError = error{
-    DeviceNotPresent,
+    // DeviceNotPresent,
     NoAcknowledge,
+    UnexpectedNoAcknowledge,
     Timeout,
     TargetAddressReserved,
     NoData,
-    TxFifoFlushed,
-    UnknownAbort,
-};
-
-pub const ConfigError = error{
-    UnsupportedBaudRate,
-    InputFreqTooLow,
-    InputFreqTooHigh,
-    HoldCountViolation,
+    Overrun,
+    // UnknownAbort,
 };
 
 pub fn num(n: u1) I2C {
@@ -160,14 +154,11 @@ pub const I2C = enum(u1) {
         regs.ADDRESS.raw = 0x00000000;
     }
 
-    // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it. The nrf
-    // doesn't seem to have a fifo!
-    pub inline fn tx_fifo_available_spaces(i2c: I2C) bool {
+    pub inline fn tx_sent(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_TXDSENT.read().EVENTS_TXDSENT == .Generated;
     }
 
-    // TODO: This is the rp2xxx name, but it's a boolean here, so maybe we rename it
-    pub inline fn rx_fifo_bytes_ready(i2c: I2C) bool {
+    pub inline fn rx_ready(i2c: I2C) bool {
         return i2c.get_regs().EVENTS_RXDREADY.read().EVENTS_RXDREADY == .Generated;
     }
 
@@ -235,7 +226,7 @@ pub const I2C = enum(u1) {
         while (iter.next_element()) |element| {
             regs.TXD.write(.{ .TXD = element.value });
 
-            while (!i2c.tx_fifo_available_spaces()) {
+            while (!i2c.tx_sent()) {
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
@@ -315,14 +306,14 @@ pub const I2C = enum(u1) {
                     timed_out = true;
                     break;
                 }
-                if (i2c.rx_fifo_bytes_ready()) break;
+                if (i2c.rx_ready()) break;
             }
 
             if (timed_out)
                 return TransactionError.Timeout;
 
             // NOTE: We must trigger STOPRX before receiving the last byte so that we properly NACK
-            // HACKC:
+            // HACK:
             if (count == total_len - 1)
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             element.value_ptr.* = regs.RXD.read().RXD;
@@ -367,7 +358,7 @@ pub const I2C = enum(u1) {
 
         // Write provided bytes to device
         var write_iter = write_vec.iterator();
-        send_loop: while (write_iter.next_element()) |element| {
+        while (write_iter.next_element()) |element| {
             regs.TXD.write(.{ .TXD = element.value });
 
             // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
@@ -375,7 +366,7 @@ pub const I2C = enum(u1) {
             // This makes it okay to poll on this and check for an abort after.
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
             // timeout is supplied!
-            while (!i2c.tx_fifo_available_spaces()) {
+            while (!i2c.tx_sent()) {
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
@@ -385,7 +376,7 @@ pub const I2C = enum(u1) {
             // TODO: Do we need to do this?
             // try i2c.check_and_clear_abort();
             if (timed_out)
-                break :send_loop;
+                break;
         }
 
         if (timed_out)
@@ -406,11 +397,11 @@ pub const I2C = enum(u1) {
                     break :recv_loop;
                 }
 
-                if (i2c.rx_fifo_bytes_ready()) break;
+                if (i2c.rx_ready()) break;
             }
 
             // NOTE: We must trigger STOPRX before receiving the last byte so that we properly NACK
-            // HACKC:
+            // HACK:
             if (count == total_len - 1)
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
             element.value_ptr.* = regs.RXD.read().RXD;
