@@ -137,7 +137,7 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         regs.SHORTS.raw = 0x00000000;
         regs.INTENSET.raw = 0x00000000;
-        regs.ERRORSRC.raw = 0x00000000;
+        regs.ERRORSRC.raw = 0xFFFFFFFF;
         switch (compatibility.chip) {
             .nrf52 => {
                 regs.PSELSCL.raw = 0xFFFFFFFF;
