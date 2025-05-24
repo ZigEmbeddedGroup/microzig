@@ -84,7 +84,7 @@ pub const I2C_Device = struct {
             => return error.Unsupported,
 
             error.UnknownAbort,
-            error.TxFifoFlushed,
+            error.Overrun,
             => return error.IoError,
 
             error.Timeout => return error.Timeout,
@@ -101,7 +101,7 @@ pub const I2C_Device = struct {
             => return error.Unsupported,
 
             error.UnknownAbort,
-            error.TxFifoFlushed,
+            error.Overrun,
             => return error.IoError,
 
             error.Timeout => return error.Timeout,

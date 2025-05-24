@@ -57,16 +57,14 @@ pub const Address = enum(u7) {
     }
 };
 
-// TODO: Cleanup
 pub const TransactionError = error{
-    // DeviceNotPresent,
+    DeviceNotPresent,
     NoAcknowledge,
-    UnexpectedNoAcknowledge,
     Timeout,
     TargetAddressReserved,
     NoData,
     Overrun,
-    // UnknownAbort,
+    UnknownAbort,
 };
 
 pub fn num(n: u1) I2C {
@@ -170,6 +168,31 @@ pub const I2C = enum(u1) {
         });
     }
 
+    fn check_and_clear_abort(i2c: I2C) TransactionError!void {
+        const regs = i2c.get_regs();
+        const error_generated = regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated;
+        if (error_generated) {
+            const abort_reason = regs.ERRORSRC.read();
+            // Clear error
+            regs.EVENTS_ERROR.raw = 0x0000000;
+            regs.ERRORSRC.raw = 0xFFFFFFFF;
+
+            if (abort_reason.OVERRUN == .Present) {
+                // Byte was received before we read the last one
+                return TransactionError.Overrun;
+            } else if (abort_reason.ANACK == .Present) {
+                // NACK received after address (device not present)
+                return TransactionError.DeviceNotPresent;
+            } else if (abort_reason.DNACK == .Present) {
+                // NACK received after sending data
+                return TransactionError.NoAcknowledge;
+            } else {
+                std.log.err("Unknown abort reason, EVENTS_ERROR=0x{X}", .{@as(u32, @bitCast(abort_reason))});
+                return TransactionError.UnknownAbort;
+            }
+        }
+    }
+
     /// Independent of successful write or abort, always ensure
     /// the STOP condition is generated and transaction is concluded before
     /// returning. The one exception is if timeout is hit, then return,
@@ -233,8 +256,8 @@ pub const I2C = enum(u1) {
                 }
                 std.mem.doNotOptimizeAway(0);
             }
-            // TODO: Do we need to do this?
-            // try i2c.check_and_clear_abort();
+
+            try i2c.check_and_clear_abort();
             if (timed_out)
                 break;
         }
@@ -251,6 +274,7 @@ pub const I2C = enum(u1) {
         //     std.mem.doNotOptimizeAway(0);
         // }
 
+        try i2c.check_and_clear_abort();
         if (timed_out)
             return TransactionError.Timeout;
     }
@@ -300,8 +324,7 @@ pub const I2C = enum(u1) {
         const total_len = read_vec.size();
         while (iter.next_element_ptr()) |element| {
             while (true) {
-                // TODO: Do we need to do this?
-                // try i2c.check_and_clear_abort();
+                try i2c.check_and_clear_abort();
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break;
@@ -373,8 +396,7 @@ pub const I2C = enum(u1) {
                 }
                 std.mem.doNotOptimizeAway(0);
             }
-            // TODO: Do we need to do this?
-            // try i2c.check_and_clear_abort();
+            try i2c.check_and_clear_abort();
             if (timed_out)
                 break;
         }
@@ -390,8 +412,7 @@ pub const I2C = enum(u1) {
         const total_len = read_vec.size();
         recv_loop: while (read_iter.next_element_ptr()) |element| {
             while (true) {
-                // TODO: Do we need to do this?
-                // try i2c.check_and_clear_abort();
+                try i2c.check_and_clear_abort();
                 if (deadline.is_reached_by(time.get_time_since_boot())) {
                     timed_out = true;
                     break :recv_loop;
