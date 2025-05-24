@@ -138,6 +138,8 @@ pub const I2C = enum(u1) {
                 .K400 => .K400,
             },
         });
+
+        i2c.disable_interrupts();
     }
 
     /// Disables I2C, returns peripheral registers to reset state.
