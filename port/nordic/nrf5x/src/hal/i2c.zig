@@ -283,7 +283,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Writing {} bytes", .{write_vec.size()}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -333,7 +332,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Reading {} bytes", .{read_vec.size()}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -364,13 +362,11 @@ pub const I2C = enum(u1) {
                 regs.SHORTS.modify(.{ .BB_STOP = .Enabled });
                 regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
                 element.value_ptr.* = try i2c.read_byte(deadline);
-                // std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
                 break;
             }
 
             regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
             element.value_ptr.* = try i2c.read_byte(deadline);
-            // std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
             count += 1;
         }
     }
@@ -405,7 +401,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Writing {} bytes then reading {}", .{ write_vec.size(), read_vec.size() }); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -444,13 +439,11 @@ pub const I2C = enum(u1) {
                 regs.SHORTS.modify(.{ .BB_STOP = .Enabled });
                 regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
                 element.value_ptr.* = try i2c.read_byte(deadline);
-                // std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
                 break;
             }
 
             regs.TASKS_RESUME.write(.{ .TASKS_RESUME = .Trigger });
             element.value_ptr.* = try i2c.read_byte(deadline);
-            // std.log.info("Read byte {X:02}", .{element.value_ptr.*}); // DELETEME
             count += 1;
         }
     }

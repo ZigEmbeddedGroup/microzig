@@ -246,7 +246,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const bytes_read = regs.RXD.AMOUNT.read().AMOUNT;
         if (bytes_read != len) {
-            // std.log.err("Didn't receive as much as expected {} vs {}", .{ bytes_read, len }); // DELETEME
             return TransactionError.Receive;
         }
     }
@@ -255,7 +254,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const bytes_written = regs.TXD.AMOUNT.read().AMOUNT;
         if (bytes_written != len) {
-            // std.log.err("Didn't send as much as expected {} vs {}", .{ bytes_written, len }); // DELETEME
             return TransactionError.Transmit;
         }
     }
@@ -268,14 +266,12 @@ pub const I2C = enum(u1) {
                 regs.EVENTS_STOPPED.read().EVENTS_STOPPED == .Generated)
             {
                 regs.EVENTS_STOPPED.raw = 0;
-                // std.log.info("Stopped", .{}); // DELETEME
                 break;
             }
             // Stop the task on error, but we need to keep waiting until the stop event
             if (regs.EVENTS_ERROR.read().EVENTS_ERROR == .Generated) {
                 regs.EVENTS_ERROR.raw = 0;
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
-                // std.log.info("Error", .{}); // DELETEME
             }
             if (deadline.is_reached_by(time.get_time_since_boot())) {
                 regs.TASKS_STOP.write(.{ .TASKS_STOP = .Trigger });
@@ -307,7 +303,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Writing {} bytes", .{data.len}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -354,7 +349,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Reading {} bytes", .{dst.len}); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
@@ -410,7 +404,6 @@ pub const I2C = enum(u1) {
         const regs = i2c.get_regs();
         const deadline = mdf.time.Deadline.init_relative(time.get_time_since_boot(), timeout);
 
-        // std.log.info("Writing {} bytes then reading {}", .{ data.len, dst.len }); // DELETEME
         i2c.set_address(addr);
 
         i2c.clear_shorts();
