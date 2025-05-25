@@ -20,7 +20,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
         with:
-          version: 0.14.0
+          version: 0.14.1
 
       - name: Run Test Suite
         working-directory: drivers
