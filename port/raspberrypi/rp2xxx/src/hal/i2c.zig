@@ -195,7 +195,6 @@ test "i2c.translate_baudrate" {
     try std.testing.expectError(ConfigError.InputFreqTooLow, translate_baudrate(1_000_000, 31_900_000));
 }
 
-// TODO: Why create this empty struct?
 pub const instance = struct {
     pub const I2C0: I2C = @as(I2C, @enumFromInt(0));
     pub const I2C1: I2C = @as(I2C, @enumFromInt(1));
