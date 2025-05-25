@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: 0.14.0
+  ZIG_VERSION: 0.14.1
 
 jobs:
   formatting-check:
@@ -17,7 +17,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Setup Zig
-      uses: mlugg/setup-zig@v1
+      uses: mlugg/setup-zig@v2
       with:
         version: ${{ env.ZIG_VERSION }}
     - name: Run zig fmt
@@ -34,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Regz
@@ -52,7 +52,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test UF2
@@ -70,7 +70,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test ESP Image
@@ -85,7 +85,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate Code
@@ -113,7 +113,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
@@ -131,7 +131,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Unit Test Ports
@@ -160,7 +160,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Build Examples
@@ -178,7 +178,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Generate and validate packages
@@ -197,9 +197,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.0
+          version: 0.14.1
       - name: Build Website
         run: zig build
         working-directory: website
@@ -212,7 +212,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Zig
-        uses: mlugg/setup-zig@v1
+        uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
       - name: Dry Run Packaging
