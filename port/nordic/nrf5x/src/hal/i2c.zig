@@ -16,12 +16,11 @@ const I2cRegs = microzig.chip.types.peripherals.TWI0;
 const Config = struct {
     scl_pin: gpio.Pin,
     sda_pin: gpio.Pin,
-    // TODO: Name these more nicely
     frequency: enum {
-        K100,
-        K250,
-        K400,
-    } = .K100,
+        @"100000",
+        @"250000",
+        @"400000",
+    } = .@"100000",
 };
 
 ///
@@ -124,9 +123,9 @@ pub const I2C = enum(u1) {
 
         regs.FREQUENCY.write(.{
             .FREQUENCY = switch (config.frequency) {
-                .K100 => .K100,
-                .K250 => .K250,
-                .K400 => .K400,
+                .@"100000" => .K100,
+                .@"250000" => .K250,
+                .@"400000" => .K400,
             },
         });
     }
@@ -228,7 +227,6 @@ pub const I2C = enum(u1) {
             regs.EVENTS_ERROR.raw = 0x0000000;
             // We expect this to return an error, if it doesn't then we don't understand the error
             const error_src = try i2c.check_error();
-            // TODO: Put in check error, should it complain on error_src != 0?
             if (error_src != 0) {
                 std.log.err("Unknown error source, EVENTS_ERROR=0x{X}", .{error_src});
                 return TransactionError.UnknownAbort;
