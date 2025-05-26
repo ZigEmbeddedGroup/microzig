@@ -148,7 +148,7 @@ pub const UART = enum(u1) {
             .nrf52840 => regs.PSEL.TXD.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
-                .CONNECT = @enumFromInt(0), // 0 means connected lol
+                .CONNECT = .Connected,
             }),
         }
     }
@@ -160,7 +160,7 @@ pub const UART = enum(u1) {
             .nrf52840 => regs.PSEL.RXD.write(.{
                 .PIN = pin.index(),
                 .PORT = pin.port(),
-                .CONNECT = @enumFromInt(0), // 0 means connected lol
+                .CONNECT = .Connected,
             }),
         }
     }
