@@ -67,6 +67,11 @@ pub fn main() !void {
 
     interrupt.enable(timer_irq);
 
+    // Enable machine external interrupts on RISC-V
+    if (rp2xxx.compatibility.arch == .riscv) {
+        microzig.cpu.interrupt.core.enable(.MachineExternal);
+    }
+
     microzig.cpu.interrupt.enable_interrupts();
 
     while (true) {
