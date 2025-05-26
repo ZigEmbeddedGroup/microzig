@@ -6,7 +6,6 @@ const drivers = microzig.drivers.base;
 const Datagram_Device = drivers.Datagram_Device;
 const Stream_Device = drivers.Stream_Device;
 const Digital_IO = drivers.Digital_IO;
-const Clock_Device = drivers.Clock_Device;
 
 pub const CounterDevice = struct {
     us_psc: u32,

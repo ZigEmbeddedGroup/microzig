@@ -14,7 +14,7 @@ const timer = rp2040.time;
 
 const i2c0 = i2c.instance.num(0);
 
-const i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x27));
+const i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x27), null);
 
 pub fn delay_us(time_delay: u32) void {
     timer.sleep_us(time_delay);
