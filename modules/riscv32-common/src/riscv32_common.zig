@@ -498,7 +498,7 @@ pub const utilities = struct {
                 }
 
                 pub fn is_pending(int: CoreInterruptEnum) bool {
-                    return csr.mip.read() & (@as(u32, 1) << @intFromEnum(int));
+                    return csr.mip.read() & (@as(u32, 1) << @intFromEnum(int)) != 0;
                 }
 
                 pub fn set_pending(int: CoreInterruptEnum) void {

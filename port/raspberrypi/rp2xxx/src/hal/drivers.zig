@@ -22,7 +22,7 @@ pub const I2C_Device = struct {
     pub const WriteError = Datagram_Device.WriteError;
     pub const ReadError = Datagram_Device.ReadError;
 
-    /// Selects I²C bus should be used.
+    /// Selects which I²C bus should be used.
     bus: hal.i2c.I2C,
 
     /// The address of our I²C device.

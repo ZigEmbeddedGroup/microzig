@@ -116,8 +116,8 @@ pub const interrupt = struct {
         const shift: u4 = @intCast(4 * (num & 0x4));
         const set_mask: u16 = @as(u16, @intFromEnum(priority)) << shift;
         const clear_mask: u16 = @as(u16, 0xf) << shift;
-        csr.meifa.clear(.{ .index = index, .window = clear_mask });
-        csr.meifa.set(.{ .index = index, .window = set_mask });
+        csr.meipra.clear(.{ .index = index, .window = clear_mask });
+        csr.meipra.set(.{ .index = index, .window = set_mask });
     }
 
     pub fn get_priority(int: ExternalInterrupt) Priority {
@@ -125,7 +125,7 @@ pub const interrupt = struct {
         const index: u5 = @intCast(num >> 2);
         const shift: u4 = @intCast(4 * (num & 0x4));
         const mask: u16 = @as(u16, 0xf) << shift;
-        return @enumFromInt((csr.meifa.read_set(.{ .index = index }).window & mask) >> shift);
+        return @enumFromInt((csr.meipra.read_set(.{ .index = index }).window & mask) >> shift);
     }
 
     pub inline fn has_ram_vectors() bool {
@@ -218,9 +218,6 @@ pub const startup_logic = struct {
 
             @memcpy(&ram_vectors, &startup_logic.external_interrupt_table);
         }
-
-        // NOTE: tact1m4n3: I don't think it's fine to enable this behind the user's back.
-        interrupt.core.enable(.MachineExternal);
 
         microzig_main();
     }
