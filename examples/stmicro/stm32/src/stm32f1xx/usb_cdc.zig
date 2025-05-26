@@ -13,6 +13,7 @@ const gpio = stm32.gpio;
 const Timeout = stm32.drivers.Timeout;
 const timer = stm32.timer.GPTimer.init(.TIM2);
 const usb_ll = stm32.usb.usb_ll;
+const usb_utils = stm32.usb.usb_utils;
 
 const host = microzig.core.experimental.ARM_semihosting;
 
@@ -46,6 +47,10 @@ const DeviceDescriptor = [_]u8{
     0x03, // iSerialNumber
     0x01, // bNumConfigurations
 };
+const langID = [_]u8{ 0x04, 0x03, 0x09, 0x04 };
+const prod_id = usb_utils.string_to_descriptor("STM32 CDC example");
+const manu_id = usb_utils.string_to_descriptor("MicroZig");
+const serial_id = usb_utils.string_to_descriptor("12345");
 
 // USB Configuration Descriptor
 const ConfigDescriptor = [_]u8{
@@ -187,8 +192,7 @@ const SerialState = packed struct(u8) {
 //==========CDC Serial Types ============
 
 //=============== USB DATA =================
-var EP0_RX_BUFFER: [64]u8 = undefined;
-var CDC_RX_BUFFER: [64]u8 = undefined;
+var USB_RX_BUFFER: [64]u8 = undefined;
 var CDC_fifo: std.fifo.LinearFifo(u8, .{ .Static = 64 }) = undefined;
 var device_addr: ?u7 = null;
 var remain_pkg: ?[]const u8 = null;
@@ -200,27 +204,10 @@ var CDC_send: bool = false;
 var line_pkg: [7]u8 = .{ 0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08 };
 //=============== USB DATA =================
 
-//TODO port helpers from RPxxxx USB HAL
-fn calc_descriptor_size(comptime string: []const u8) comptime_int {
-    return (string.len * 2) + 2;
-}
-fn string_to_descriptor(comptime string: []const u8) [calc_descriptor_size(string)]u8 {
-    var buf: [calc_descriptor_size(string)]u8 = undefined;
-    buf[0] = buf.len;
-    buf[1] = 0x03;
-    for (0..string.len) |index| {
-        buf[(((index) * 2)) + 2] = string[index];
-        buf[(((index) * 2) + 1) + 2] = 0;
-    }
-    return buf;
-}
-
-const prod_id = string_to_descriptor("Zig CDC");
-const manu_id = string_to_descriptor("MicroZig");
-const serial_id = string_to_descriptor("some serial");
+//=============== USB FUNC =================
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &[_]u8{ 0x04, 0x03, 0x09, 0x04 },
+        0 => &langID,
         1 => &manu_id,
         2 => &prod_id,
         3 => &serial_id,
@@ -244,22 +231,20 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     const length = @min(buffer.len, descriptor_length);
     const max = endpoint0.tx_buffer_size;
     if (length < max) {
-        epc.write_buffer(buffer[0..length]) catch unreachable;
+        epc.USB_send(buffer[0..length], .force_data1) catch unreachable;
     } else {
-        epc.write_buffer(buffer[0..max]) catch unreachable;
+        epc.USB_send(buffer[0..max], .force_data1) catch unreachable;
         remain_pkg = buffer[max..];
     }
-    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
 }
 
 fn set_addr(recive_addr: u7, epc: EpControl) void {
     device_addr = recive_addr;
-    epc.ZLP() catch unreachable;
-    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+    epc.ZLP(.force_data1) catch unreachable;
 }
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
-    const setup = epc.read_buffer(&EP0_RX_BUFFER) catch unreachable;
+    const setup = epc.USB_read(.endpoint_ctr) catch unreachable;
     if (setup.len != 8) {
         return;
     }
@@ -269,8 +254,7 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
         0x06 => get_descriptor(setup, epc),
         0x05 => set_addr(@intCast(setup[2]), epc),
         0x09 => {
-            epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.ZLP(.force_data1) catch unreachable;
             config = true;
         },
 
@@ -280,30 +264,24 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
             CDC_coding = true;
         },
         0x21 => {
-            epc.write_buffer(&line_pkg) catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.USB_send(&line_pkg, .force_data1) catch unreachable;
         },
         0x22 => {
-            epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.ZLP(.force_data1) catch unreachable;
             serial_state = @bitCast(setup[2]);
         },
         else => {
-            epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.ZLP(.force_data1) catch unreachable;
         },
     }
 }
 
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
-    const rev = epc.read_buffer(&EP0_RX_BUFFER) catch unreachable;
+    const rev = epc.USB_read(.endpoint_ctr) catch unreachable;
     if (CDC_coding) {
         const ep1 = usb_ll.EpControl.EPC1;
-        epc.ZLP() catch unreachable;
-        epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
-
-        ep1.write_buffer(&dev_serial_state) catch unreachable;
-        ep1.set_status(.TX, .Valid, .force_data0) catch unreachable;
+        epc.ZLP(.force_data1) catch unreachable;
+        ep1.USB_send(&dev_serial_state, .force_data0) catch unreachable;
 
         CDC_coding = false;
         std.mem.copyForwards(u8, &line_pkg, rev);
@@ -311,7 +289,7 @@ fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
 
         return;
     }
-    epc.set_status(.RX, .Valid, .force_data0) catch unreachable;
+    //epc.set_status(.RX, .Valid, .force_data0) catch unreachable;
 }
 
 fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
@@ -322,13 +300,12 @@ fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
         const length = pkg.len;
         const max = endpoint0.tx_buffer_size;
         if (length < max) {
-            epc.write_buffer(pkg) catch unreachable;
+            epc.USB_send(pkg, .no_change) catch unreachable;
             remain_pkg = null;
         } else {
-            epc.write_buffer(pkg[0..max]) catch unreachable;
+            epc.USB_send(pkg[0..max], .no_change) catch unreachable;
             remain_pkg = pkg[max..];
         }
-        epc.set_status(.TX, .Valid, .no_change) catch unreachable;
         return;
     }
     epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
@@ -337,21 +314,81 @@ fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
     //This function is responsible for sending the status of our serial device (CTS and RTS)
     //This example does not use these features, so there is nothing to notify the host.
-    epc.write_buffer(&dev_serial_state) catch unreachable;
-    epc.set_status(.TX, .Valid, .no_change) catch unreachable;
+
+    epc.USB_send(&dev_serial_state, .no_change) catch unreachable;
 }
 
 fn ep2_tx(_: EpControl, _: ?*anyopaque) void {
     CDC_send = false;
 }
 
-fn ep2_rx(epc: EpControl, _: ?*anyopaque) void {
-    const recv = epc.read_buffer(&CDC_RX_BUFFER) catch unreachable;
+fn ep3_rx(epc: EpControl, _: ?*anyopaque) void {
+    const recv = epc.USB_read(.endpoint_ctr) catch unreachable;
     const free_data = CDC_fifo.writableLength();
     const to_write = @min(recv.len, free_data);
     CDC_fifo.writeAssumeCapacity(recv[0..to_write]);
-    epc.set_status(.RX, .Valid, .endpoint_ctr) catch unreachable;
 }
+
+//=============== USB FUNC =================
+
+//================= main example =================
+const endpoint0 = usb_ll.Endpoint{
+    .ep_control = .EPC0,
+    .endpoint = 0,
+    .ep_type = .Control,
+    .ep_kind = false,
+    .rx_reset_state = .Valid,
+    .tx_reset_state = .Nak,
+    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
+    .tx_buffer_size = 64,
+    .rx_callback = ep0_rx,
+    .tx_callback = ep0_tx,
+    .setup_callback = ep0_setup,
+};
+
+const endpoint1 = usb_ll.Endpoint{
+    .ep_control = .EPC1,
+    .endpoint = 1,
+    .ep_type = .Interrupt,
+    .ep_kind = false,
+    .rx_reset_state = .Nak,
+    .tx_reset_state = .Nak,
+    .rx_buffer_size = .{ .block_qtd = 0 }, //no RX buffer for IN endpoint
+    .tx_buffer_size = 64,
+    .tx_callback = ep1_tx,
+};
+
+//BULK IN
+const endpoint2 = usb_ll.Endpoint{
+    .ep_control = .EPC2,
+    .endpoint = 2,
+    .ep_type = .Bulk,
+    .ep_kind = false,
+    .rx_reset_state = .Nak,
+    .tx_reset_state = .Nak,
+    .rx_buffer_size = .{ .block_qtd = 0 }, //no RX buffer for IN endpoint
+    .tx_buffer_size = 64,
+    .tx_callback = ep2_tx,
+};
+
+//BULK OUT
+
+const endpoint3 = usb_ll.Endpoint{
+    .ep_control = .EPC3,
+    .endpoint = 3,
+    .ep_type = .Bulk,
+    .ep_kind = false,
+    .rx_reset_state = .Valid,
+    .tx_reset_state = .Nak,
+    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
+    .tx_buffer_size = 0, //no TX buffer for OUT endpoint
+    .rx_callback = ep3_rx,
+};
+
+const USB_conf = usb_ll.Config{
+    .endpoints = &.{ endpoint0, endpoint1, endpoint2, endpoint3 },
+    .RX_buffer = &USB_RX_BUFFER,
+};
 
 //set clock to 72Mhz and USB to 48Mhz
 //NOTE: USB clock must be exactly 48Mhz
@@ -395,65 +432,11 @@ fn config_clock() void {
     }
 }
 
-const endpoint0 = usb_ll.Endpoint{
-    .ep_control = .EPC0,
-    .endpoint = 0,
-    .ep_type = .Control,
-    .ep_kind = false,
-    .rx_reset_state = .Valid,
-    .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
-    .tx_buffer_size = 64,
-    .rx_callback = ep0_rx,
-    .tx_callback = ep0_tx,
-    .setup_callback = ep0_setup,
-};
-
-const endpoint1 = usb_ll.Endpoint{
-    .ep_control = .EPC1,
-    .endpoint = 1,
-    .ep_type = .Interrupt,
-    .ep_kind = false,
-    .rx_reset_state = .Nak,
-    .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 8, .block_size = .@"2bytes" },
-    .tx_buffer_size = 64,
-    .tx_callback = ep1_tx,
-};
-
-//BULK IN
-const endpoint2 = usb_ll.Endpoint{
-    .ep_control = .EPC2,
-    .endpoint = 2,
-    .ep_type = .Bulk,
-    .ep_kind = false,
-    .rx_reset_state = .Nak,
-    .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
-    .tx_buffer_size = 16,
-    .tx_callback = ep2_tx,
-};
-
-//BULK OUT
-
-const endpoint3 = usb_ll.Endpoint{
-    .ep_control = .EPC3,
-    .endpoint = 3,
-    .ep_type = .Bulk,
-    .ep_kind = false,
-    .rx_reset_state = .Valid,
-    .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 8, .block_size = .@"2bytes" },
-    .tx_buffer_size = 64,
-    .rx_callback = ep2_rx,
-};
-
 fn CDC_write(msg: []const u8) void {
     const send: *volatile bool = &CDC_send;
     const EP2 = usb_ll.EpControl.EPC2;
-    EP2.write_buffer(msg) catch unreachable;
-    EP2.set_status(.TX, .Valid, .force_data0) catch unreachable;
     send.* = true;
+    EP2.USB_send(msg, .force_data0) catch unreachable;
     while (send.*) {
         asm volatile ("nop"); //don't call WFE or WFI here, USB events don't count for wakeup
     }
@@ -506,7 +489,7 @@ pub fn main() !void {
 
     Counter = timer.into_counter(60_000_000);
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(&.{ endpoint0, endpoint1, endpoint2, endpoint3 }, Counter.make_ms_timeout(25)) catch unreachable;
+    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
     var recv_byte: [64]u8 = undefined;
     const conf: *volatile bool = &config;
     while (true) {

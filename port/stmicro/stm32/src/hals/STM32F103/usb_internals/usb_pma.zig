@@ -27,12 +27,12 @@ pub const BlockSize = enum {
     @"32bytes",
 };
 pub const RX_size = struct {
-    block_size: BlockSize,
+    block_size: BlockSize = .@"2bytes",
     block_qtd: usize,
 
     pub fn calc_rx_size(size: *const RX_size) usize {
         const mul: usize = if (@intFromEnum(size.block_size) == 0) 2 else 32;
-        return mul * size.block_qtd;
+        return size.block_qtd * mul;
     }
 
     pub fn to_RXcount(size: *const RX_size) u16 {
@@ -134,6 +134,34 @@ fn load_and_check(config: Config) BTABLEError!void {
                 available_memory -= entry_size;
             } else {
                 return error.PMAOverflow;
+            }
+        }
+    }
+}
+
+pub fn comptime_check(comptime config: Config) void {
+    comptime {
+        const meta: [8]?EntryMetadata = .{
+            config.EP0,
+            config.EP1,
+            config.EP2,
+            config.EP3,
+            config.EP4,
+            config.EP5,
+            config.EP6,
+            config.EP7,
+        };
+
+        var available_memory: usize = 512 - 64;
+
+        for (meta) |ep_data| {
+            if (ep_data) |data| {
+                const entry_size = data.tx_max_size + data.rx_max_size.calc_rx_size();
+                if (entry_size < available_memory) {
+                    available_memory -= entry_size;
+                } else {
+                    @compileError(std.fmt.comptimePrint("PMA overflow by {d} bytes", .{entry_size - available_memory}));
+                }
             }
         }
     }
