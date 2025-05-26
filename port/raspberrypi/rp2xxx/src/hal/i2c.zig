@@ -334,7 +334,7 @@ pub const I2C = enum(u1) {
                 // Address byte was acknowledged, but a data byte wasn't
                 return TransactionError.NoAcknowledge;
             } else if (abort_reason.TX_FLUSH_CNT > 0) {
-                // A previous abort caused the TX FIFO to be flusehed
+                // A previous abort caused the TX FIFO to be flushed
                 return TransactionError.TxFifoFlushed;
             } else {
                 std.log.err("Unknown abort reason, IC_TX_ABRT_SOURCE=0x{X}", .{@as(u32, @bitCast(abort_reason))});
@@ -424,7 +424,7 @@ pub const I2C = enum(u1) {
 
                 .FIRST_DATA_BYTE = .INACTIVE,
             });
-            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // If an abort occurs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
             // This makes it okay to poll on this and check for an abort after.
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
@@ -530,18 +530,20 @@ pub const I2C = enum(u1) {
         return i2c.writev_then_readv_blocking(addr, &.{src}, &.{dst}, timeout);
     }
 
-    /// Attempts to write number of bytes provided to target device and then immediately read bytes following a repeated
-    /// start command (or Start + Stop if repeated start is disabled). Blocks until one of the following occurs:
+    /// Attempts to write number of bytes provided to target device and then immediately read bytes
+    /// following a repeated start command (or Start + Stop if repeated start is disabled). Blocks
+    /// until one of the following occurs:
     /// - Bytes have been transmitted and read successfully
     /// - An error occurs and the transaction is aborted
     /// - The transaction times out (a null for timeout blocks indefinitely)
     ///
-    /// This is useful for the common scenario of writing an address to a target device, and then immediately reading bytes from that address
+    /// This is useful for the common scenario of writing an address to a target device, and then
+    /// immediately reading bytes from that address
     ///
-    /// NOTE: This function is a vectored version of `read_blocking` and takes an array of arrays.
-    ///       This pattern allows one to create better zero-copy send routines as message prefixes and
-    ///       suffixes won't need to be concatenated/inserted to the original buffer, but can be managed
-    ///       in a separate memory.
+    /// NOTE: This function is a vectored `writev_blocking` and `readv_blocking` and takes an array
+    ///       of arrays. This pattern allows one to create better zero-copy send routines as message
+    ///       prefixes and suffixes won't need to be concatenated/inserted to the original buffer,
+    ///       but can be managed in a separate memory.
     ///
     pub fn writev_then_readv_blocking(i2c: I2C, addr: Address, write_chunks: []const []const u8, read_chunks: []const []u8, timeout: ?mdf.time.Duration) TransactionError!void {
         if (addr.is_reserved())
@@ -563,7 +565,7 @@ pub const I2C = enum(u1) {
 
         // Write provided bytes to device
         var write_iter = write_vec.iterator();
-        send_loop: while (write_iter.next_element()) |element| {
+        while (write_iter.next_element()) |element| {
             regs.IC_DATA_CMD.write(.{
                 .RESTART = @enumFromInt(0),
                 .STOP = @enumFromInt(0),
@@ -572,7 +574,7 @@ pub const I2C = enum(u1) {
 
                 .FIRST_DATA_BYTE = .INACTIVE,
             });
-            // If an abort occurrs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
+            // If an abort occurs, the TX/RX FIFO is flushed, and subsequent writes to IC_DATA_CMD
             // are ignored. If things work as expected, the TX FIFO gets drained naturally.
             // This makes it okay to poll on this and check for an abort after.
             // Note that this WILL loop infinitely if called when I2C is uninitialized and no
@@ -586,7 +588,7 @@ pub const I2C = enum(u1) {
             }
             try i2c.check_and_clear_abort();
             if (timed_out)
-                break :send_loop;
+                break;
         }
 
         if (timed_out)
