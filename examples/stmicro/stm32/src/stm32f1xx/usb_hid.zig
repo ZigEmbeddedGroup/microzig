@@ -37,12 +37,12 @@ const DeviceDescriptor = [18]u8{
     0x00, 0x01, // bcdDevice (1.00)
     0x01, // iManufacturer (String Index 1)
     0x02, // iProduct (String Index 2)
-    0x00, // iSerialNumber (None)
+    0x03, // iSerialNumber (Index 3)
     0x01, // bNumConfigurations
 };
 
 const langID = [_]u8{ 0x04, 0x03, 0x09, 0x04 };
-const prod_id = usb_utils.string_to_descriptor("STM32 CDC example");
+const prod_id = usb_utils.string_to_descriptor("STM32 HID example");
 const manu_id = usb_utils.string_to_descriptor("MicroZig");
 const serial_id = usb_utils.string_to_descriptor("12345");
 
