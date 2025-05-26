@@ -114,7 +114,7 @@ pub const I2C_Device = struct {
             I2c.IOError.BusError,
             I2c.IOError.BusTimeout,
             I2c.IOError.ArbitrationLoss,
-            => return error.IoError,
+            => error.IoError,
 
             I2c.IOError.Timeout => return error.Timeout,
             I2c.IOError.UnrecoverableError => {
@@ -133,7 +133,7 @@ pub const I2C_Device = struct {
             I2c.IOError.BusError,
             I2c.IOError.BusTimeout,
             I2c.IOError.ArbitrationLoss,
-            => return error.IoError,
+            => error.IoError,
 
             I2c.IOError.Timeout => return error.Timeout,
             I2c.IOError.UnrecoverableError => {

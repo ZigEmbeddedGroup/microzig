@@ -81,13 +81,13 @@ pub const I2C_Device = struct {
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.TargetAddressReserved,
-            => return error.Unsupported,
+            => error.Unsupported,
 
             error.UnknownAbort,
             error.Overrun,
-            => return error.IoError,
+            => error.IoError,
 
-            error.Timeout => return error.Timeout,
+            error.Timeout => error.Timeout,
             error.NoData => {},
         };
     }
@@ -98,14 +98,14 @@ pub const I2C_Device = struct {
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.TargetAddressReserved,
-            => return error.Unsupported,
+            => error.Unsupported,
 
             error.UnknownAbort,
             error.Overrun,
-            => return error.IoError,
+            => error.IoError,
 
-            error.Timeout => return error.Timeout,
-            error.NoData => return 0,
+            error.Timeout => error.Timeout,
+            error.NoData => 0,
         };
     }
 };
