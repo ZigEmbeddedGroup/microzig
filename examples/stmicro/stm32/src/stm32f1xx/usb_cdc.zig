@@ -23,16 +23,20 @@ var Counter: stm32.drivers.CounterDevice = undefined;
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
+    .logFn = stm32.uart.logFn,
 };
+
+const uart = stm32.uart.UART.init(.USART1);
+const TX = gpio.Pin.from_port(.A, 9);
 
 // ============== HID Descriptor ================
 const DeviceDescriptor = [_]u8{
     0x12, // bLength
     0x01, // bDescriptorType (Device)
     0x00, 0x02, // bcdUSB 2.00
-    0x02, // bDeviceClass (Communications)
-    0x00, // bDeviceSubClass
-    0x00, // bDeviceProtocol
+    0xEF, // bDeviceClass (misc class)
+    0x02, // bDeviceSubClass (Common)
+    0x01, // bDeviceProtocol (IAD)
     0x40, // bMaxPacketSize0
     0x55, 0xF0, // idVendor FOSS
     0x00, 0x98, // idProduct (0x9800) CDC
@@ -60,7 +64,7 @@ const ConfigDescriptor = [_]u8{
     0x02, // bInterfaceCount
     0x02, // bFunctionClass: Communications
     0x02, // bFunctionSubClass: Abstract Control Model
-    0x01, // bFunctionProtocol: AT commands (V.25TER)
+    0x00, // bFunctionProtocol: none
     0x00, // iFunction
 
     // Interface Descriptor (Communication Interface)
@@ -70,17 +74,17 @@ const ConfigDescriptor = [_]u8{
     0x01, // bNumEndpoints
     0x02, // bInterfaceClass: Communications
     0x02, // bInterfaceSubClass: Abstract Control Model
-    0x01, // bInterfaceProtocol: AT commands
+    0x00, // bInterfaceProtocol: none
     0x00, // iInterface
 
     // CDC Header Functional Descriptor
     0x05, 0x24, 0x00, 0x10, 0x01, // bFunctionLength, bDescriptorType, bDescriptorSubType, CDC version
 
-    // CDC Call Management Functional Descriptor
-    0x05, 0x24, 0x01, 0x00, 0x01, // bmCapabilities, bDataInterface
-
     // CDC ACM Functional Descriptor
-    0x04, 0x24, 0x02, 0x02, // bmCapabilities
+    0x04, 0x24, 0x02, 0x06, // bmCapabilities
+
+    // CDC Call Management Functional Descriptor
+    0x05, 0x24, 0x01, 0x02, 0x02, // bmCapabilities, bDataInterface
 
     // CDC Union Functional Descriptor
     0x05, 0x24, 0x06, 0x00, 0x01, // bMasterInterface, bSlaveInterface0
@@ -89,8 +93,8 @@ const ConfigDescriptor = [_]u8{
     0x07, 0x05, // bLength, bDescriptorType
     0x81, // bEndpointAddress: IN, EP1
     0x03, // bmAttributes: Interrupt
-    0x10, 0x00, // wMaxPacketSize: 16
-    0x10, // bInterval: 16ms polling
+    0x40, 0x00, // wMaxPacketSize: 64
+    0x01, // bInterval: 1
 
     // Interface Descriptor (Data Interface)
     0x09, 0x04, // bLength, bDescriptorType
@@ -102,19 +106,19 @@ const ConfigDescriptor = [_]u8{
     0x00, // bInterfaceProtocol
     0x00, // iInterface
 
-    // Endpoint Descriptor (Bulk OUT)
-    0x07, 0x05, // bLength, bDescriptorType
-    0x03, // bEndpointAddress: OUT, EP3
-    0x02, // bmAttributes: Bulk
-    0x40, 0x00, // wMaxPacketSize: 64
-    0x00, // bInterval
-
     // Endpoint Descriptor (Bulk IN)
     0x07, 0x05, // bLength, bDescriptorType
     0x82, // bEndpointAddress: IN, EP2
     0x02, // bmAttributes: Bulk
     0x40, 0x00, // wMaxPacketSize: 64
     0x00,
+
+    // Endpoint Descriptor (Bulk OUT)
+    0x07, 0x05, // bLength, bDescriptorType
+    0x03, // bEndpointAddress: OUT, EP3
+    0x02, // bmAttributes: Bulk
+    0x40, 0x00, // wMaxPacketSize: 64
+    0x00, // bInterval
 };
 
 const DeviceQualifierDescriptor = [_]u8{
@@ -128,6 +132,8 @@ const DeviceQualifierDescriptor = [_]u8{
     0x01, // bNumConfigurations = 1
     0x00, // bReserved (sempre 0)
 };
+
+const dev_serial_state: [10]u8 = .{ 0xA1, 0x20, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 
 // ============== HID Descriptor ================
 
@@ -191,6 +197,7 @@ var CDC_coding: bool = false;
 var serial_config: Encoding = undefined;
 var serial_state: SerialState = undefined;
 var CDC_send: bool = false;
+var line_pkg: [7]u8 = .{ 0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08 };
 //=============== USB DATA =================
 
 //TODO port helpers from RPxxxx USB HAL
@@ -210,11 +217,13 @@ fn string_to_descriptor(comptime string: []const u8) [calc_descriptor_size(strin
 
 const prod_id = string_to_descriptor("Zig CDC");
 const manu_id = string_to_descriptor("MicroZig");
+const serial_id = string_to_descriptor("some serial");
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &[_]u8{ 0x04, 0x03, 0x04, 0x09 },
+        0 => &[_]u8{ 0x04, 0x03, 0x09, 0x04 },
         1 => &manu_id,
         2 => &prod_id,
+        3 => &serial_id,
         else => &[_]u8{},
     };
 }
@@ -251,7 +260,7 @@ fn set_addr(recive_addr: u7, epc: EpControl) void {
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
     const setup = epc.read_buffer(&EP0_RX_BUFFER) catch unreachable;
-    if (setup.len == 0) {
+    if (setup.len != 8) {
         return;
     }
 
@@ -270,14 +279,18 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
             epc.set_status(.RX, .Valid, .force_data1) catch unreachable;
             CDC_coding = true;
         },
+        0x21 => {
+            epc.write_buffer(&line_pkg) catch unreachable;
+            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+        },
         0x22 => {
-            serial_state = @bitCast(setup[2]);
             epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .no_change) catch unreachable;
+            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            serial_state = @bitCast(setup[2]);
         },
         else => {
             epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .no_change) catch unreachable;
+            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
         },
     }
 }
@@ -285,10 +298,17 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
 fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
     const rev = epc.read_buffer(&EP0_RX_BUFFER) catch unreachable;
     if (CDC_coding) {
-        CDC_coding = false;
-        serial_config = Encoding.from_pkg(rev) catch unreachable;
+        const ep1 = usb_ll.EpControl.EPC1;
         epc.ZLP() catch unreachable;
-        epc.set_status(.TX, .Valid, .force_data0) catch unreachable;
+        epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+
+        ep1.write_buffer(&dev_serial_state) catch unreachable;
+        ep1.set_status(.TX, .Valid, .force_data0) catch unreachable;
+
+        CDC_coding = false;
+        std.mem.copyForwards(u8, &line_pkg, rev);
+        serial_config = Encoding.from_pkg(rev) catch unreachable;
+
         return;
     }
     epc.set_status(.RX, .Valid, .force_data0) catch unreachable;
@@ -297,12 +317,12 @@ fn ep0_rx(epc: EpControl, _: ?*anyopaque) void {
 fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
     if (device_addr) |addr| {
         usb_ll.set_addr(addr);
-    }
-    if (remain_pkg) |pkg| {
+        device_addr = null;
+    } else if (remain_pkg) |pkg| {
         const length = pkg.len;
         const max = endpoint0.tx_buffer_size;
         if (length < max) {
-            epc.write_buffer(pkg[0..length]) catch unreachable;
+            epc.write_buffer(pkg) catch unreachable;
             remain_pkg = null;
         } else {
             epc.write_buffer(pkg[0..max]) catch unreachable;
@@ -317,7 +337,8 @@ fn ep0_tx(epc: EpControl, _: ?*anyopaque) void {
 fn ep1_tx(epc: EpControl, _: ?*anyopaque) void {
     //This function is responsible for sending the status of our serial device (CTS and RTS)
     //This example does not use these features, so there is nothing to notify the host.
-    epc.set_status(.TX, .Nak, .no_change) catch unreachable;
+    epc.write_buffer(&dev_serial_state) catch unreachable;
+    epc.set_status(.TX, .Valid, .no_change) catch unreachable;
 }
 
 fn ep2_tx(_: EpControl, _: ?*anyopaque) void {
@@ -395,12 +416,12 @@ const endpoint1 = usb_ll.Endpoint{
     .ep_kind = false,
     .rx_reset_state = .Nak,
     .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"2bytes" },
+    .rx_buffer_size = .{ .block_qtd = 8, .block_size = .@"2bytes" },
     .tx_buffer_size = 64,
     .tx_callback = ep1_tx,
 };
 
-//BULK OUT
+//BULK IN
 const endpoint2 = usb_ll.Endpoint{
     .ep_control = .EPC2,
     .endpoint = 2,
@@ -409,11 +430,11 @@ const endpoint2 = usb_ll.Endpoint{
     .rx_reset_state = .Nak,
     .tx_reset_state = .Nak,
     .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
-    .tx_buffer_size = 64,
+    .tx_buffer_size = 16,
     .tx_callback = ep2_tx,
 };
 
-//BULK IN
+//BULK OUT
 
 const endpoint3 = usb_ll.Endpoint{
     .ep_control = .EPC3,
@@ -422,7 +443,7 @@ const endpoint3 = usb_ll.Endpoint{
     .ep_kind = false,
     .rx_reset_state = .Valid,
     .tx_reset_state = .Nak,
-    .rx_buffer_size = .{ .block_qtd = 2, .block_size = .@"32bytes" },
+    .rx_buffer_size = .{ .block_qtd = 8, .block_size = .@"2bytes" },
     .tx_buffer_size = 64,
     .rx_callback = ep2_rx,
 };
@@ -463,20 +484,29 @@ pub fn main() !void {
         .GPIOAEN = 1,
         .GPIOBEN = 1,
         .GPIOCEN = 1,
+        .USART1EN = 1,
     });
 
     RCC.APB1ENR.modify(.{
         .TIM2EN = 1,
         .USBEN = 1,
     });
-    CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
     const led = gpio.Pin.from_port(.B, 2);
-    Counter = timer.into_counter(60_000_000);
+    led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
 
+    TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
+
+    uart.apply(.{
+        .baud_rate = 115200,
+        .clock_speed = 72_000_000,
+    });
+    stm32.uart.init_logger(&uart);
+
+    CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
+
+    Counter = timer.into_counter(60_000_000);
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
     usb_ll.usb_init(&.{ endpoint0, endpoint1, endpoint2, endpoint3 }, Counter.make_ms_timeout(25)) catch unreachable;
-
-    led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     var recv_byte: [64]u8 = undefined;
     const conf: *volatile bool = &config;
     while (true) {
