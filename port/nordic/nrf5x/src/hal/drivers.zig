@@ -109,3 +109,25 @@ pub const I2C_Device = struct {
         };
     }
 };
+
+///
+/// Implementation of a time device
+///
+pub const ClockDevice = struct {
+    pub fn clock_device(td: *ClockDevice) Clock_Device {
+        _ = td;
+        return Clock_Device{
+            .ptr = undefined,
+            .vtable = &vtable,
+        };
+    }
+    const vtable = Clock_Device.VTable{
+        .get_time_since_boot = get_time_since_boot_fn,
+    };
+
+    fn get_time_since_boot_fn(td: *anyopaque) time.Absolute {
+        _ = td;
+        const t = hal.time.get_time_since_boot().to_us();
+        return @enumFromInt(t);
+    }
+};
