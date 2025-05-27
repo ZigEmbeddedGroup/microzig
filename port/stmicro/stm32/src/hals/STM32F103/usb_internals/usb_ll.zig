@@ -32,6 +32,8 @@ const InitError = error{
     InvalidEPC,
     EPControlTaken,
     EndpointTaken,
+    ConfigError,
+    BadEP0,
 } || PMA.Config.Error || PMA.BTABLEError;
 
 const EndpointError = error{
@@ -40,6 +42,7 @@ const EndpointError = error{
     TransBufferOVF,
 };
 
+const UsbError = error{UsbNotInit} || EndpointError;
 const StatusDir = enum {
     RX,
     TX,
@@ -94,11 +97,12 @@ pub const Endpoint = struct {
         }
     }
 
-    pub fn force_change(self: *Endpoint, dir: StatusDir, val: u1) void {
+    pub fn force_change(self: *Endpoint, dir: StatusDir, val: PID) PID {
         switch (dir) {
-            .RX => self.rx_pid = val,
-            .TX => self.tx_pid = val,
+            .RX => self.rx_pid = @intCast(@intFromEnum(val)),
+            .TX => self.tx_pid = @intCast(@intFromEnum(val)),
         }
+        return val;
     }
 };
 
@@ -140,17 +144,147 @@ pub const EpControl = enum {
         PMA.buffer_to_TX(buffer, ep_num);
     }
 
-    pub fn ZLP(ep: EpControl) EndpointError!void {
-        try ep.write_buffer(&[0]u8{});
+    //write to buffer and enable TX
+    pub fn USB_send(ep: EpControl, buffer: []const u8, pid: PID) UsbError!void {
+        if (!init) return error.UsbNotInit;
+        const ep_num: usize = try ep.check_ep();
+        if (buffer.len > endpoints[ep_num].?.tx_buffer_size) {
+            return error.TransBufferOVF;
+        }
+        PMA.buffer_to_TX(buffer, ep_num);
+        change_status(.TX, .Valid, pid, ep_num);
     }
+
+    pub inline fn ZLP(ep: EpControl, pid: PID) UsbError!void {
+        return USB_send(ep, &[_]u8{}, pid);
+    }
+
+    //read and enable RX for the next pkg
+    pub fn USB_read(ep: EpControl, next: PID) UsbError![]const u8 {
+        if (!init) return error.UsbNotInit;
+        const ep_num: usize = try ep.check_ep();
+        const recv = PMA.RX_to_buffer(iner_RX_buffer, ep_num);
+        change_status(.RX, .Valid, next, ep_num);
+        return recv;
+    }
+};
+
+const UsbErrorStatus = struct {}; //TODO
+
+const ResetCallback = *const fn (?*anyopaque) void;
+const ErrorCallback = *const fn (UsbErrorStatus, ?*anyopaque) void;
+
+pub const Config = struct {
+    endpoints: []const Endpoint,
+    RX_buffer: []u8,
+    reset_callback: ?ResetCallback = null,
+    reset_args: ?*anyopaque = null,
+    error_callback: ?ErrorCallback = null,
+    error_args: ?*anyopaque = null,
 };
 
 var init: bool = false;
 var endpoints: [8]?Endpoint = .{null} ** 8;
+var iner_RX_buffer: []u8 = undefined;
+var reset_callback: ?ResetCallback = null;
+var reset_ctx: ?*anyopaque = null;
+var error_callback: ?ErrorCallback = null;
+var error_ctx: ?*anyopaque = null;
 
-pub fn usb_init(configs: []const Endpoint, startup: timeout) InitError!void {
+fn comptime_or_runtime_err(erro: InitError, comptime msg: []const u8, args: anytype) InitError!void {
+    if (@inComptime()) {
+        @compileError(std.fmt.comptimePrint(msg, args));
+    } else {
+        return erro;
+    }
+}
+
+fn usb_check(config: Config) InitError!PMA.Config {
+    if (config.endpoints.len > 8) {
+        comptime_or_runtime_err(
+            InitError.ConfigError,
+            "USB can only support up to 8 endpoints configurations\n",
+            .{},
+        );
+    } else if (config.endpoints.len == 0) {
+        comptime_or_runtime_err(
+            InitError.ConfigError,
+            "USB must have at least one endpoint configuration\n\n",
+            .{},
+        );
+    }
+
+    var ep_check: u16 = 0;
+    var epc_check: u16 = 0;
+    var max_rx_size: usize = 0;
+    var btable_conf: PMA.Config = .{};
+    for (config.endpoints) |epconf| {
+        const ep_size = epconf.rx_buffer_size.calc_rx_size();
+        const ep_bit: u16 = @as(u16, 1) << epconf.endpoint;
+        const epc_bit: u16 = @as(u16, 1) << @as(u4, @intFromEnum(epconf.ep_control));
+
+        if (epconf.endpoint == 0) {
+            if (epconf.ep_type != .Control) comptime_or_runtime_err(
+                InitError.BadEP0,
+                "EP0 must have type: Control",
+                .{},
+            );
+        }
+        if (ep_size > max_rx_size) {
+            max_rx_size = ep_size;
+        }
+
+        if ((ep_bit & ep_check) == 0) {
+            ep_check |= ep_bit;
+        } else {
+            comptime_or_runtime_err(
+                InitError.InvalidEndpoint,
+                "EP: {x} has already been taken\n",
+                .{epconf.endpoint},
+            );
+        }
+
+        if ((epc_bit & epc_check) == 0) {
+            epc_check |= epc_bit;
+        } else {
+            comptime_or_runtime_err(
+                InitError.InvalidEndpoint,
+                "EPC{d} has already been taken\n",
+                .{@as(u4, @intFromEnum(epconf.ep_control))},
+            );
+        }
+
+        btable_conf.set_config(epconf.endpoint, .{
+            .rx_max_size = epconf.rx_buffer_size,
+            .tx_max_size = epconf.tx_buffer_size,
+        }) catch unreachable;
+    }
+    if ((epc_check & 0x1) == 0) comptime_or_runtime_err(
+        InitError.BadEP0,
+        "EP0 not configured\n",
+        .{},
+    );
+    if (config.RX_buffer.len < max_rx_size) comptime_or_runtime_err(
+        InitError.ConfigError,
+        "Internal RX is too small for current configuration",
+        .{},
+    );
+    return btable_conf;
+}
+
+pub fn usb_init(comptime config: Config, startup: timeout) void {
+    const btable_conf = comptime usb_check(config) catch unreachable;
+    PMA.comptime_check(btable_conf);
+    inner_init(config, btable_conf, startup) catch unreachable;
+}
+
+pub fn usb_runtime_init(config: Config, startup: timeout) InitError!void {
+    const btable_conf = try usb_check(config);
+    try inner_init(config, btable_conf, startup);
+}
+
+fn inner_init(config: Config, PMA_conf: PMA.Config, startup: timeout) InitError!void {
     interrupt.disable(.USB_LP_CAN1_RX0);
-    if (init) return error.UsbAlreadyEnabled;
 
     //force USB reset before init
     USB.CNTR.modify(.{
@@ -169,25 +303,17 @@ pub fn usb_init(configs: []const Endpoint, startup: timeout) InitError!void {
     USB.CNTR.raw = 0;
     USB.ISTR.raw = 0;
 
-    //config btable
-    var BTABLE_conf: PMA.Config = .{};
-    var test_ep: u16 = 0;
-    for (configs) |ep_conf| {
+    for (config.endpoints) |ep_conf| {
         const epc_num: usize = @intFromEnum(ep_conf.ep_control);
-        const ep_bit: u16 = @as(u16, 1) << ep_conf.endpoint;
-        if (endpoints[epc_num]) |_| {
-            return error.EPControlTaken;
-        } else if ((test_ep & ep_bit) == 1) {
-            return error.EndpointTaken;
-        }
-        test_ep |= ep_bit;
         endpoints[epc_num] = ep_conf;
-        try BTABLE_conf.set_config(epc_num, .{
-            .tx_max_size = ep_conf.tx_buffer_size,
-            .rx_max_size = ep_conf.rx_buffer_size,
-        });
     }
-    try PMA.btable_init(BTABLE_conf);
+    try PMA.btable_init(PMA_conf);
+
+    reset_callback = config.reset_callback;
+    reset_ctx = config.reset_args;
+    error_callback = config.error_callback;
+    error_ctx = config.error_args;
+    iner_RX_buffer = config.RX_buffer;
 
     //re-enable interrupts
     USB.CNTR.modify(.{
@@ -233,24 +359,29 @@ fn change_tx_status(status: USBTypes.STAT, pid: PID, EPC: usize) void {
 }
 
 fn change_status(dir: StatusDir, status: USBTypes.STAT, pid: PID, EPC: usize) void {
+    const endpoint = &endpoints[EPC].?;
+
     const call: *const fn (USBTypes.STAT, PID, usize) void = switch (dir) {
         .RX => change_rx_status,
         .TX => change_tx_status,
     };
 
-    switch (pid) {
-        .endpoint_ctr => {
-            const new_pid: PID = if (endpoints[EPC]) |*ep| ep.get_pid(dir) else PID.no_change;
-            call(status, new_pid, EPC);
-        },
-        .force_data0, .force_data1 => |new_pid| {
-            if (endpoints[EPC]) |*ep| {
-                ep.force_change(dir, @intCast(@intFromEnum(new_pid)));
-            }
-            call(status, new_pid, EPC);
-        },
-        else => call(status, pid, EPC),
+    const new_pid = switch (pid) {
+        .endpoint_ctr => endpoint.get_pid(dir),
+        .force_data0, .force_data1 => |p| endpoint.force_change(dir, p),
+        else => |some| some,
+    };
+
+    call(status, new_pid, EPC);
+}
+
+pub fn get_epc_from_ep(ep: usize) ?EpControl {
+    for (endpoints) |eps| {
+        if (eps) |valid| {
+            if (valid.endpoint == ep) return valid.EpControl;
+        }
     }
+    return null;
 }
 
 pub fn set_addr(addr: u7) void {
@@ -305,7 +436,11 @@ pub fn usb_handler() callconv(.C) void {
     const event = USB.ISTR.read();
     if (event.RESET == 1) {
         USB.ISTR.modify(.{ .RESET = 0 });
-        default_reset_handler();
+        if (reset_callback) |callback| {
+            callback(reset_ctx);
+        } else {
+            default_reset_handler();
+        }
     }
 
     if (event.CTR == 1) {

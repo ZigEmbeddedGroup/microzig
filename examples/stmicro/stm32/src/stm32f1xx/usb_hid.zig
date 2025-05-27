@@ -12,6 +12,7 @@ const stm32 = microzig.hal;
 const gpio = stm32.gpio;
 const timer = stm32.timer.GPTimer.init(.TIM2);
 const usb_ll = stm32.usb.usb_ll;
+const usb_utils = stm32.usb.usb_utils;
 
 const EpControl = usb_ll.EpControl;
 
@@ -36,9 +37,14 @@ const DeviceDescriptor = [18]u8{
     0x00, 0x01, // bcdDevice (1.00)
     0x01, // iManufacturer (String Index 1)
     0x02, // iProduct (String Index 2)
-    0x00, // iSerialNumber (None)
+    0x03, // iSerialNumber (Index 3)
     0x01, // bNumConfigurations
 };
+
+const langID = [_]u8{ 0x04, 0x03, 0x09, 0x04 };
+const prod_id = usb_utils.string_to_descriptor("STM32 HID example");
+const manu_id = usb_utils.string_to_descriptor("MicroZig");
+const serial_id = usb_utils.string_to_descriptor("12345");
 
 const ConfigurationDescriptor = [34]u8{
     // Configuration Descriptor (9 bytes)
@@ -129,34 +135,19 @@ const ReportDescriptor = [63]u8{
 
 //=============== USB DATA =================
 var EP0_RX_BUFFER: [64]u8 = undefined;
+var USB_RX_BUFFER: [64]u8 = undefined;
 var HID_send: [8]u8 = .{0} ** 8;
 var to_report: bool = false;
 var device_addr: ?u7 = null;
 var config: bool = false;
 //=============== USB DATA =================
 
-//TODO port helpers from RPxxxx USB HAL
-fn calc_descriptor_size(comptime string: []const u8) comptime_int {
-    return (string.len * 2) + 2;
-}
-fn string_to_descriptor(comptime string: []const u8) [calc_descriptor_size(string)]u8 {
-    var buf: [calc_descriptor_size(string)]u8 = undefined;
-    buf[0] = buf.len;
-    buf[1] = 0x03;
-    for (0..string.len) |index| {
-        buf[(((index) * 2)) + 2] = string[index];
-        buf[(((index) * 2) + 1) + 2] = 0;
-    }
-    return buf;
-}
-
-const prod_id = string_to_descriptor("Zig Keyboard");
-const manu_id = string_to_descriptor("MicroZig");
 fn get_string(index: usize) []const u8 {
     return switch (index) {
-        0 => &[_]u8{ 0x04, 0x03, 0x04, 0x09 },
+        0 => &langID,
         1 => &manu_id,
         2 => &prod_id,
+        3 => &serial_id,
         else => &[_]u8{},
     };
 }
@@ -177,14 +168,13 @@ fn get_descriptor(setup: []const u8, epc: EpControl) void {
     };
 
     const length = @min(buffer.len, descriptor_length);
-    epc.write_buffer(buffer[0..length]) catch unreachable;
-    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+
+    epc.USB_send(buffer[0..length], .force_data1) catch unreachable;
 }
 
 fn set_addr(recive_addr: u7, epc: EpControl) void {
     device_addr = recive_addr;
-    epc.ZLP() catch unreachable;
-    epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+    epc.ZLP(.force_data1) catch unreachable;
 }
 
 fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
@@ -197,14 +187,12 @@ fn ep0_setup(epc: EpControl, _: ?*anyopaque) void {
         0x06 => get_descriptor(setup, epc),
         0x05 => set_addr(@intCast(setup[2]), epc),
         0x09 => {
-            epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.ZLP(.force_data1) catch unreachable;
             config = true;
             to_report = false;
         },
         else => {
-            epc.ZLP() catch unreachable;
-            epc.set_status(.TX, .Valid, .force_data1) catch unreachable;
+            epc.ZLP(.force_data1) catch unreachable;
         },
     }
 }
@@ -293,6 +281,11 @@ const endpoint1 = usb_ll.Endpoint{
     .tx_callback = ep1_tx,
 };
 
+const USB_conf = usb_ll.Config{
+    .endpoints = &.{ endpoint0, endpoint1 },
+    .RX_buffer = &USB_RX_BUFFER,
+};
+
 //TODO: full HID report function
 fn report(keys: []const u8) void {
     const len = @min(keys.len, 6);
@@ -301,9 +294,8 @@ fn report(keys: []const u8) void {
     if (!config) return;
     while (report_flag.*) {}
     std.mem.copyForwards(u8, HID_send[3..], keys[0..len]);
-    epc.write_buffer(&HID_send) catch unreachable;
-    epc.set_status(.TX, .Valid, .endpoint_ctr) catch unreachable;
     report_flag.* = true;
+    epc.USB_send(&HID_send, .endpoint_ctr) catch unreachable;
 }
 
 pub fn main() !void {
@@ -323,7 +315,7 @@ pub fn main() !void {
     Counter = timer.into_counter(60_000_000);
 
     //NOTE: the stm32f103 does not have an internal 1.5k pull-up resistor for USB, you must add one externally
-    usb_ll.usb_init(&.{ endpoint0, endpoint1 }, Counter.make_ms_timeout(25)) catch unreachable;
+    usb_ll.usb_init(USB_conf, Counter.make_ms_timeout(25));
 
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
     while (true) {

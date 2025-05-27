@@ -27,12 +27,12 @@ pub const BlockSize = enum {
     @"32bytes",
 };
 pub const RX_size = struct {
-    block_size: BlockSize,
+    block_size: BlockSize = .@"2bytes",
     block_qtd: usize,
 
     pub fn calc_rx_size(size: *const RX_size) usize {
         const mul: usize = if (@intFromEnum(size.block_size) == 0) 2 else 32;
-        return mul * size.block_qtd;
+        return size.block_qtd * mul;
     }
 
     pub fn to_RXcount(size: *const RX_size) u16 {
@@ -139,6 +139,34 @@ fn load_and_check(config: Config) BTABLEError!void {
     }
 }
 
+pub fn comptime_check(comptime config: Config) void {
+    comptime {
+        const meta: [8]?EntryMetadata = .{
+            config.EP0,
+            config.EP1,
+            config.EP2,
+            config.EP3,
+            config.EP4,
+            config.EP5,
+            config.EP6,
+            config.EP7,
+        };
+
+        var available_memory: usize = 512 - 64;
+
+        for (meta) |ep_data| {
+            if (ep_data) |data| {
+                const entry_size = data.tx_max_size + data.rx_max_size.calc_rx_size();
+                if (entry_size < available_memory) {
+                    available_memory -= entry_size;
+                } else {
+                    @compileError(std.fmt.comptimePrint("PMA overflow by {d} bytes", .{entry_size - available_memory}));
+                }
+            }
+        }
+    }
+}
+
 fn calc_offset(bytes: usize) usize {
     return @intFromFloat(@ceil(@as(f32, @floatFromInt(bytes)) / 2));
 }
@@ -149,6 +177,7 @@ pub inline fn RX_recv_size(EP: usize) usize {
 
 pub fn RX_to_buffer(buffer: []u8, EP: usize) []const u8 {
     const PMA_buf = BTABLE[EP];
+    const addr = PMA_BASE + PMA_buf.RX_addr.value * 2; //calc real addr
     const count = RX_recv_size(EP);
     if (count == 0) {
         return buffer[0..0];
@@ -156,48 +185,40 @@ pub fn RX_to_buffer(buffer: []u8, EP: usize) []const u8 {
 
     const len = @min(count, buffer.len);
     const to_read = len / 2;
-    const addr = PMA_BASE + PMA_buf.RX_addr.value * 2;
-    const data = @as([*]volatile pma_data, @ptrFromInt(addr))[0..to_read];
+    const data = @as([*]const u32, @ptrFromInt(addr))[0..to_read];
+    const buf_ptr = @as([*]align(1) u16, @ptrCast(buffer.ptr))[0..to_read];
 
-    for (0..data.len) |i| {
-        buffer[i * 2] = data[i].low_byte;
-        buffer[i * 2 + 1] = data[i].high_byte;
+    for (data, buf_ptr) |word, *half| {
+        half.* = @truncate(word);
     }
-
+    //if odd load the last byte into buffer
     if (len % 2 != 0) {
-        const lb = data[to_read].low_byte;
-        buffer[len - 1] = lb;
+        buffer[len - 1] = @truncate(data.ptr[to_read]);
     }
+
     return buffer[0..len];
 }
 
 pub fn buffer_to_TX(buffer: []const u8, EP: usize) void {
     const len = buffer.len;
-    const addr = PMA_BASE + BTABLE[EP].TX_addr.value * 2;
-    var data = @as([*]u32, @ptrFromInt(addr));
+    const addr = PMA_BASE + BTABLE[EP].TX_addr.value * 2; //calc real ADDRS
+
+    //load bytes qtd into PMA
     if (len == 0) {
         BTABLE[EP].TX_count.value = 0;
         return;
     }
     BTABLE[EP].TX_count.value = @intCast((len));
 
-    for (0..(len / 2)) |i| {
-        const lb = buffer[i * 2];
-        const high_index = i * 2 + 1;
-        const hb = if (high_index < len) buffer[high_index] else 0;
-        const hold = pma_data{
-            .low_byte = lb,
-            .high_byte = hb,
-        };
-        data[i] = @bitCast(hold);
+    const to_write = len / 2;
+    const buf_ptr = @as([*]align(1) const u16, @ptrCast(buffer.ptr))[0..to_write];
+    var data = @as([*]volatile u32, @ptrFromInt(addr))[0..to_write];
+    for (data, buf_ptr) |*word, val| {
+        word.* = val;
     }
 
+    //if odd, load the last byte into PMA
     if (len % 2 != 0) {
-        const lb = buffer[len - 1];
-        const hold = pma_data{
-            .low_byte = lb,
-            .high_byte = 0,
-        };
-        data[len / 2] = @bitCast(hold);
+        data.ptr[data.len] = buffer[len - 1];
     }
 }
