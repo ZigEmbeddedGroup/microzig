@@ -15,8 +15,6 @@ const timer = stm32.timer.GPTimer.init(.TIM2);
 const usb_ll = stm32.usb.usb_ll;
 const usb_utils = stm32.usb.usb_utils;
 
-const host = microzig.core.experimental.ARM_semihosting;
-
 const EpControl = usb_ll.EpControl;
 
 const interrupt = microzig.interrupt;
@@ -24,11 +22,7 @@ var Counter: stm32.drivers.CounterDevice = undefined;
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .USB_LP_CAN1_RX0 = .{ .c = usb_ll.usb_handler } },
-    .logFn = stm32.uart.logFn,
 };
-
-const uart = stm32.uart.UART.init(.USART1);
-const TX = gpio.Pin.from_port(.A, 9);
 
 // ============== HID Descriptor ================
 const DeviceDescriptor = [_]u8{
@@ -467,7 +461,6 @@ pub fn main() !void {
         .GPIOAEN = 1,
         .GPIOBEN = 1,
         .GPIOCEN = 1,
-        .USART1EN = 1,
     });
 
     RCC.APB1ENR.modify(.{
@@ -476,15 +469,6 @@ pub fn main() !void {
     });
     const led = gpio.Pin.from_port(.B, 2);
     led.set_output_mode(.general_purpose_push_pull, .max_50MHz);
-
-    TX.set_output_mode(.alternate_function_push_pull, .max_50MHz);
-
-    uart.apply(.{
-        .baud_rate = 115200,
-        .clock_speed = 72_000_000,
-    });
-    stm32.uart.init_logger(&uart);
-
     CDC_fifo = std.fifo.LinearFifo(u8, .{ .Static = 64 }).init();
 
     Counter = timer.into_counter(60_000_000);
