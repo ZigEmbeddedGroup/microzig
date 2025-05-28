@@ -209,6 +209,7 @@ pub const ICM_20948 = struct {
     pub fn setup(self: *Self) !void {
         try self.reset();
 
+        std.log.debug("Reading who am i", .{}); // DELETEME
         const id = try self.read_byte(.{ .bank0 = .who_am_i });
         if (id != Self.WHOAMI) return error.WhoAmI;
 
@@ -249,10 +250,12 @@ pub const ICM_20948 = struct {
     pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) !void {
         // Read the value and cast to the correct type
         var val: reg_t = @bitCast(try self.read_byte(reg));
+        // std.log.debug("Modify: before: {any}", .{val}); // DELETEME
         // Modify the named fields
         inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
             @field(val, field.name) = @field(fields, field.name);
         }
+        // std.log.debug("Modify: after: {any}", .{val}); // DELETEME
         try self.write_byte(reg, @bitCast(val));
     }
 
@@ -261,6 +264,7 @@ pub const ICM_20948 = struct {
     pub inline fn set_bank(self: *Self, comptime bank: u2) !void {
         // Avoid a write if we are already on the correct bank
         if (bank == self.current_bank) return;
+        std.log.debug("Setting bank to {}", .{bank}); // DELETEME
 
         // Bits 5:4
         try self.write_byte(.{ .bank0 = .reg_bank_sel }, @as(u8, bank) << 4);
@@ -268,14 +272,17 @@ pub const ICM_20948 = struct {
     }
 
     pub fn reset(self: *Self) !void {
+        std.log.debug("Reset", .{}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true });
     }
 
     pub fn sleep(self: *Self, on: bool) !void {
+        std.log.debug("Sleep ({any})", .{on}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
     }
 
     pub fn low_power(self: *Self, on: bool) !void {
+        std.log.debug("Low power ({any})", .{on}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
     }
 
