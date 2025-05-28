@@ -421,4 +421,29 @@ pub const ICM_20948 = struct {
     fn gyro_scalar(self: *Self) f32 {
         return self.config.gyro_range.scalar() / self.config.gyro_range.divisor();
     }
+
+    const @"6Dof_data" = struct {
+        accel: Accel_data,
+        gyro: Gyro_data,
+    };
+    pub fn get_accel_gyro_data(self: *Self) !@"6Dof_data" {
+        var raw_data = packed struct {
+            ax: i16 = 0,
+            ay: i16 = 0,
+            az: i16 = 0,
+            gx: i16 = 0,
+            gy: i16 = 0,
+            gz: i16 = 0,
+        }{};
+        try self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data));
+        return .{ .accel = .{
+            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ax))) * self.accel_scalar(),
+            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ay))) * self.accel_scalar(),
+            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.az))) * self.accel_scalar(),
+        }, .gyro = .{
+            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gx))) * self.gyro_scalar(),
+            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gy))) * self.gyro_scalar(),
+            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gz))) * self.gyro_scalar(),
+        } };
+    }
 };
