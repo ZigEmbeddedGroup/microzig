@@ -6,7 +6,6 @@
 //!
 //! TODO:
 //! * Add support for magnetometer
-//! * Add support for temperature readings
 //! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
 //! * Figure out minimium timing. 150 is too low, 200 is OK, but find it in the docs!
 //!
@@ -54,6 +53,7 @@ pub const ICM_20948 = struct {
             gyro_zout_h = 0x37,
             gyro_zout_l = 0x38,
             temp_out_h = 0x39,
+            temp_out_l = 0x3A,
 
             reg_bank_sel = 0x7F,
         },
@@ -445,5 +445,11 @@ pub const ICM_20948 = struct {
             .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gy))) * self.gyro_scalar(),
             .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gz))) * self.gyro_scalar(),
         } };
+    }
+
+    pub fn get_temp(self: *Self) !f32 {
+        var raw_data: i16 = undefined;
+        try self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data));
+        return @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data))) / 333.87 + 21.0;
     }
 };

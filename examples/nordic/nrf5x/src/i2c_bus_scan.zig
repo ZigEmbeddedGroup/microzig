@@ -68,8 +68,10 @@ pub fn main() !void {
         i2c_device.datagram_device(),
         cd.clock_device(),
         .{
-            .accel_dlp = .@"50Hz",
-            .gyro_dlp = .@"51",
+            .accel_dlp = .@"6Hz",
+            .gyro_dlp = .@"6Hz",
+            .accel_odr_div = 21, // About 50Hz
+            .gyro_odr_div = 21, // About 50Hz
         },
     );
 
@@ -77,10 +79,19 @@ pub fn main() !void {
 
     while (true) {
         // const accel = try dev.get_accel_data();
-        // std.log.info("accel: x {d: >8} y {d: >8} z {d: >8}", .{ accel.x, accel.y, accel.z });
+        // std.log.info("accel: x {d: >8.2} y {d: >8.2} z {d: >8.2}", .{ accel.x, accel.y, accel.z });
 
-        const gyro = try dev.get_gyro_data();
-        std.log.info("gyro: x {d: >8} y {d: >8} z {d: >8}", .{ gyro.x, gyro.y, gyro.z });
+        // const gyro = try dev.get_gyro_data();
+        // std.log.info("gyro: x {d: >8.2} y {d: >8.2} z {d: r8.2}", .{ gyro.x, gyro.y, gyro.z });
+
+        const data = try dev.get_accel_gyro_data();
+        std.log.info(
+            "accel: x {d: >8.2} y {d: >8.2} z {d: >8.2} " ++
+                "gyro: x {d: >8.2} y {d: >8.2} z {d: >8.2}",
+            .{ data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z },
+        );
+        const temp_c = try dev.get_temp();
+        std.log.info("temp: {d: >5.2}°C", .{temp_c});
 
         // var log_buf: [128]u8 = undefined;
         // _ = try std.fmt.bufPrint(&log_buf, gyro.x, gyro.y, gyro.z);
