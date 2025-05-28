@@ -178,17 +178,6 @@ pub const ICM_20948 = struct {
         gyro_odr_div: u8 = 0,
     };
 
-    // const power_modes = enum {
-    //     sleep = .{ false, false, false },
-    //     lp_accel = .{ false, true, false }, // TODO: "Duty cycled"
-    //     ln_accel = .{ false, true, false },
-    //     gyro = .{ true, false, false },
-    //     magnetometer = .{ false, false, true },
-    //     accel_gyro = .{ true, true, false },
-    //     accel_magnetometer = .{ false, true, true },
-    //     @"9axis" = .{ true, true, true },
-    // };
-
     const pwr_mgmt_1 = packed struct(u8) {
         CLKSEL: u3 = 0,
         TEMP_DIS: u1 = 0,
@@ -225,8 +214,6 @@ pub const ICM_20948 = struct {
 
         // TODO: We should set low power on after we are done configuring
         try self.low_power(false);
-
-        // try self.startup_magnetometer();
 
         // set sample mode
         try self.set_sample_mode();
@@ -304,17 +291,6 @@ pub const ICM_20948 = struct {
             .DEVICE_RESET = false,
         });
     }
-
-    // pub fn startup_magnetometer(self: *Self) !void {
-    //     // enable master passthrough false
-    //     // enable master
-    //     // reset magnetometer
-    //     // loop a few tries until we can read MAG who i am
-    //
-    //     // Write mode 100hz to reg cntl 2
-    //     // configure master peripheral
-    //
-    // }
 
     pub fn set_sample_mode(self: *Self) !void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
