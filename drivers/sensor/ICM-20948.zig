@@ -399,22 +399,32 @@ pub const ICM_20948 = struct {
         });
     }
 
+    const Gyro_data_unscaled = struct {
+        x: i16 = 0,
+        y: i16 = 0,
+        z: i16 = 0,
+    };
+    pub fn get_gyro_data_unscaled(self: *Self) !Gyro_data_unscaled {
+        var raw_data: Gyro_data_unscaled = .{};
+        try self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data));
+        return .{
+            .x = std.mem.bigToNative(i16, raw_data.x),
+            .y = std.mem.bigToNative(i16, raw_data.y),
+            .z = std.mem.bigToNative(i16, raw_data.z),
+        };
+    }
+
     const Gyro_data = struct {
         x: f32 = 0,
         y: f32 = 0,
         z: f32 = 0,
     };
     pub fn get_gyro_data(self: *Self) !Gyro_data {
-        var raw_data = packed struct {
-            x: i16 = 0,
-            y: i16 = 0,
-            z: i16 = 0,
-        }{};
-        try self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data));
+        const unscaled_data = try self.get_gyro_data_unscaled();
         return .{
-            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.x))) * self.gyro_scalar(),
-            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.y))) * self.gyro_scalar(),
-            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.z))) * self.gyro_scalar(),
+            .x = @as(f32, @floatFromInt(unscaled_data.x)) * self.gyro_scalar(),
+            .y = @as(f32, @floatFromInt(unscaled_data.y)) * self.gyro_scalar(),
+            .z = @as(f32, @floatFromInt(unscaled_data.z)) * self.gyro_scalar(),
         };
     }
 
