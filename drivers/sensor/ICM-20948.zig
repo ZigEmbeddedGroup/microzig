@@ -8,6 +8,9 @@
 //! * Add support for magnetometer
 //! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
 //! * Figure out minimium timing. 150 is too low, 200 is OK, but find it in the docs!
+//! * Add support for calibration/bias correction
+//!   * In the accelerometer
+//!   * In the gyroscope
 //!
 const std = @import("std");
 const mdf = @import("../framework.zig");
