@@ -28,7 +28,7 @@ pub fn main() !void {
     );
 
     // Create i2c datagram device
-    const i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x3C));
+    const i2c_device = I2C_Device.init(i2c0, @enumFromInt(0x3C), null);
     // Pass i2c device to driver to create display instance
     const display_driver = SH1106(.{
         .mode = .i2c,

@@ -5,6 +5,7 @@
 const std = @import("std");
 const microzig = @import("microzig");
 const hal = @import("../hal.zig");
+const mdf = microzig.drivers;
 
 const drivers = microzig.drivers.base;
 const time = microzig.drivers.time;
@@ -28,10 +29,14 @@ pub const I2C_Device = struct {
     /// The address of our I²C device.
     address: hal.i2c.Address,
 
-    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address) I2C_Device {
+    /// Default timeout duration
+    timeout: ?mdf.time.Duration = null,
+
+    pub fn init(bus: hal.i2c.I2C, address: hal.i2c.Address, timeout: ?mdf.time.Duration) I2C_Device {
         return .{
             .bus = bus,
             .address = address,
+            .timeout = timeout,
         };
     }
 
@@ -51,20 +56,20 @@ pub const I2C_Device = struct {
     }
 
     pub fn write(dev: I2C_Device, datagram: []const u8) !void {
-        try dev.bus.write_blocking(dev.address, datagram, null);
+        try dev.bus.write_blocking(dev.address, datagram, dev.timeout);
     }
 
     pub fn writev(dev: I2C_Device, datagrams: []const []const u8) !void {
-        try dev.bus.writev_blocking(dev.address, datagrams, null);
+        try dev.bus.writev_blocking(dev.address, datagrams, dev.timeout);
     }
 
     pub fn read(dev: I2C_Device, datagram: []u8) !usize {
-        try dev.bus.read_blocking(dev.address, datagram, null);
+        try dev.bus.read_blocking(dev.address, datagram, dev.timeout);
         return datagram.len;
     }
 
     pub fn readv(dev: I2C_Device, datagrams: []const []u8) !usize {
-        try dev.bus.readv_blocking(dev.address, datagrams, null);
+        try dev.bus.readv_blocking(dev.address, datagrams, dev.timeout);
         return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
     }
 
