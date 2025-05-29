@@ -73,11 +73,20 @@ pub const I2C_Device = struct {
         return microzig.utilities.Slice_Vector([]u8).init(datagrams).size();
     }
 
+    pub fn writev_then_readv(
+        dev: I2C_Device,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) !void {
+        try dev.bus.writev_then_readv_blocking(dev.address, write_chunks, read_chunks, null);
+    }
+
     const vtable = Datagram_Device.VTable{
         .connect_fn = null,
         .disconnect_fn = null,
         .writev_fn = writev_fn,
         .readv_fn = readv_fn,
+        .writev_then_readv_fn = writev_then_readv_fn,
     };
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
@@ -111,6 +120,27 @@ pub const I2C_Device = struct {
 
             error.Timeout => error.Timeout,
             error.NoData => 0,
+        };
+    }
+
+    fn writev_then_readv_fn(
+        dd: *anyopaque,
+        write_chunks: []const []const u8,
+        read_chunks: []const []u8,
+    ) (WriteError || ReadError)!void {
+        const dev: *I2C_Device = @ptrCast(@alignCast(dd));
+        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+            error.TargetAddressReserved,
+            => error.Unsupported,
+
+            error.DeviceNotPresent,
+            error.NoAcknowledge,
+            error.UnknownAbort,
+            error.Overrun,
+            => error.IoError,
+
+            error.Timeout => error.Timeout,
+            error.NoData => {},
         };
     }
 };

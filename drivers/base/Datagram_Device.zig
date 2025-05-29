@@ -53,6 +53,25 @@ pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!voi
 
 pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
 
+/// Writes then reads a single `datagram` to the device.
+pub fn write_then_read(
+    dd: Datagram_Device,
+    src: []const u8,
+    dst: []u8,
+) WriteError!void {
+    return try dd.writev_then_readv(&.{src}, &.{dst});
+}
+
+/// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
+pub fn writev_then_readv(
+    dd: Datagram_Device,
+    write_chunks: []const []const u8,
+    read_chunks: []const []u8,
+) (WriteError || ReadError)!void {
+    const writev_then_readv_fn = dd.vtable.writev_then_readv_fn orelse return error.Unsupported;
+    return writev_then_readv_fn(dd.ptr, write_chunks, read_chunks);
+}
+
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
 ///
@@ -77,6 +96,7 @@ pub const VTable = struct {
     disconnect_fn: ?*const fn (*anyopaque) void,
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
+    writev_then_readv_fn: ?*const fn (*anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void = null,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
