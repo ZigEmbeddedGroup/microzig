@@ -129,13 +129,13 @@ pub const I2C_Device = struct {
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.TargetAddressReserved,
-            => return error.Unsupported,
+            => error.Unsupported,
 
             error.UnknownAbort,
             error.TxFifoFlushed,
-            => return error.IoError,
+            => error.IoError,
 
-            error.Timeout => return error.Timeout,
+            error.Timeout => error.Timeout,
             error.NoData => {},
         };
     }

@@ -131,15 +131,15 @@ pub const I2C_Device = struct {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
             error.TargetAddressReserved,
-            => return error.Unsupported,
+            => error.Unsupported,
 
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.UnknownAbort,
             error.Overrun,
-            => return error.IoError,
+            => error.IoError,
 
-            error.Timeout => return error.Timeout,
+            error.Timeout => error.Timeout,
             error.NoData => return {},
         };
     }
