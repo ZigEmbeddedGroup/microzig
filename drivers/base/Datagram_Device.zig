@@ -56,9 +56,8 @@ pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverr
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagram`.
 ///
-/// If `error.BufferOverrun` is returned, the `datagram` will stilled be fully filled
-/// with the data that was received up till the overrun. The rest of the datagram
-/// will be discarded.
+/// If `error.BufferOverrun` is returned, the `datagram` will still be fully filled with the data
+/// that was received up till the overrun. The rest of the datagram will be discarded.
 pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
     return try dd.readv(&.{datagram});
 }
@@ -66,9 +65,8 @@ pub fn read(dd: Datagram_Device, datagram: []u8) ReadError!usize {
 /// Reads a single `datagram` from the device.
 /// Function returns the number of bytes written in `datagrams`.
 ///
-/// If `error.BufferOverrun` is returned, the `datagrams` will stilled be fully filled
-/// with the data that was received up till the overrun. The rest of the datagram
-/// will be discarded.
+/// If `error.BufferOverrun` is returned, the `datagrams` will still be fully filled with the data
+/// that was received up till the overrun. The rest of the datagram will be discarded.
 pub fn readv(dd: Datagram_Device, datagrams: []const []u8) ReadError!usize {
     const readv_fn = dd.vtable.readv_fn orelse return error.Unsupported;
     return readv_fn(dd.ptr, datagrams);
