@@ -54,12 +54,20 @@ pub fn writev(dd: Datagram_Device, datagrams: []const []const u8) WriteError!voi
 pub const ReadError = BaseError || error{ Unsupported, NotConnected, BufferOverrun };
 
 /// Writes then reads a single `datagram` to the device.
-pub fn write_then_read(dd: Datagram_Device, src: []const u8, dst: []u8) WriteError!void {
+pub fn write_then_read(
+    dd: Datagram_Device,
+    src: []const u8,
+    dst: []u8,
+) WriteError!void {
     return try dd.write_then_readv(&.{src}, &.{dst});
 }
 
 /// Writes then reads a single `datagram` to the device.
-pub fn writev_then_readv(dd: Datagram_Device, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
+pub fn writev_then_readv(
+    dd: Datagram_Device,
+    write_chunks: []const []const u8,
+    read_chunks: []const []u8,
+) (WriteError || ReadError)!void {
     const writev_then_readv_fn = dd.vtable.writev_then_readv_fn orelse return error.Unsupported;
     return writev_then_readv_fn(dd.ptr, write_chunks, read_chunks);
 }
