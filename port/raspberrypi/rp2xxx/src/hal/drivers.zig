@@ -77,8 +77,8 @@ pub const I2C_Device = struct {
         try dev.bus.write_then_read_blocking(dev.address, src, dst, null);
     }
 
-    pub fn write_then_readv(dev: I2C_Device, datagrams: []const []const u8) !void {
-        try dev.bus.writev_blocking(dev.address, datagrams, null);
+    pub fn writev_then_readv(dev: I2C_Device, write_chunks: []const []const u8, read_chunks: []const []u8) !void {
+        try dev.bus.writev_then_readv_blocking(dev.address, write_chunks, read_chunks, null);
     }
 
     const vtable = Datagram_Device.VTable{
@@ -86,7 +86,7 @@ pub const I2C_Device = struct {
         .disconnect_fn = null,
         .writev_fn = writev_fn,
         .readv_fn = readv_fn,
-        .write_then_readv_fn = write_then_readv_fn,
+        .writev_then_readv_fn = writev_then_readv_fn,
     };
 
     fn writev_fn(dd: *anyopaque, chunks: []const []const u8) WriteError!void {
@@ -123,7 +123,7 @@ pub const I2C_Device = struct {
         };
     }
 
-    fn write_then_readv_fn(dd: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) WriteError!void {
+    fn writev_then_readv_fn(dd: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
         return dev.write_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
             error.DeviceNotPresent,
