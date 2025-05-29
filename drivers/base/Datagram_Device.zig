@@ -59,7 +59,7 @@ pub fn write_then_read(
     src: []const u8,
     dst: []u8,
 ) WriteError!void {
-    return try dd.write_then_readv(&.{src}, &.{dst});
+    return try dd.writev_then_readv(&.{src}, &.{dst});
 }
 
 /// Writes then reads a single `datagram` to the device.
