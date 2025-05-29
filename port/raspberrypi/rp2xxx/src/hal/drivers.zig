@@ -125,7 +125,7 @@ pub const I2C_Device = struct {
 
     fn writev_then_readv_fn(dd: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
         const dev: *I2C_Device = @ptrCast(@alignCast(dd));
-        return dev.write_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
+        return dev.writev_then_readv(write_chunks, read_chunks) catch |err| switch (err) {
             error.DeviceNotPresent,
             error.NoAcknowledge,
             error.TargetAddressReserved,
