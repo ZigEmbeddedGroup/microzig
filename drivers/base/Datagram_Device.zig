@@ -40,6 +40,17 @@ pub fn disconnect(dd: Datagram_Device) void {
 
 pub const WriteError = BaseError || error{ Unsupported, NotConnected };
 
+/// Writes then reads a single `datagram` to the device.
+pub fn write_then_read(dd: Datagram_Device, src: []const u8, dst: []u8) WriteError!void {
+    return try dd.write_then_readv(&.{src}, &.{dst});
+}
+
+/// Writes then reads a single `datagram` to the device.
+pub fn write_then_readv(dd: Datagram_Device, write_chunks: []const []const u8, read_chunks: []const []u8) WriteError!void {
+    const write_then_readv_fn = dd.vtable.write_then_readv_fn orelse return error.Unsupported;
+    return write_then_readv_fn(dd.ptr, write_chunks, read_chunks);
+}
+
 /// Writes a single `datagram` to the device.
 pub fn write(dd: Datagram_Device, datagram: []const u8) WriteError!void {
     return try dd.writev(&.{datagram});
@@ -77,6 +88,7 @@ pub const VTable = struct {
     disconnect_fn: ?*const fn (*anyopaque) void,
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
+    write_then_readv_fn: ?*const fn (*anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) WriteError!void,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
