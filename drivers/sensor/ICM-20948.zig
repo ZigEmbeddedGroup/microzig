@@ -228,7 +228,7 @@ pub const ICM_20948 = struct {
 
     pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) !void {
         try self.set_bank(reg.bank());
-        try self.dev.write(&[_]u8{reg.value()});
+        try self.dev.write(&.{reg.value()});
         self.clock.sleep_us(MIN_SLEEP_US);
         const size = try self.dev.read(buf);
         if (size != buf.len) return error.ReadError;
@@ -243,7 +243,7 @@ pub const ICM_20948 = struct {
 
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) !void {
         defer self.clock.sleep_us(MIN_SLEEP_US);
-        return self.dev.write(&([2]u8{ reg.value(), val }));
+        return self.dev.write(&.{ reg.value(), val });
     }
 
     /// Read the register and modify the matching fields as provided
