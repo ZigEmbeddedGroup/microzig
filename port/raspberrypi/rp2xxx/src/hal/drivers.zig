@@ -74,11 +74,11 @@ pub const I2C_Device = struct {
     }
 
     pub fn write_then_read(dev: I2C_Device, src: []const u8, dst: []u8) !void {
-        try dev.bus.write_then_read_blocking(dev.address, src, dst, null);
+        try dev.bus.write_then_read_blocking(dev.address, src, dst, dev.timeout);
     }
 
     pub fn writev_then_readv(dev: I2C_Device, write_chunks: []const []const u8, read_chunks: []const []u8) !void {
-        try dev.bus.writev_then_readv_blocking(dev.address, write_chunks, read_chunks, null);
+        try dev.bus.writev_then_readv_blocking(dev.address, write_chunks, read_chunks, dev.timeout);
     }
 
     const vtable = Datagram_Device.VTable{
