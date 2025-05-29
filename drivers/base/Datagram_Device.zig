@@ -62,7 +62,7 @@ pub fn write_then_read(
     return try dd.writev_then_readv(&.{src}, &.{dst});
 }
 
-/// Writes then reads a `datagram` to the device.
+/// Writes a slice of datagrams to the device, then reads back into another slice of datagrams
 pub fn writev_then_readv(
     dd: Datagram_Device,
     write_chunks: []const []const u8,
