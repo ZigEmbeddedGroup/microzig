@@ -485,3 +485,40 @@ test "set_bank" {
     try dev.set_bank(3);
     try d.expect_sent(&.{ &.{ 0x7f, 0x00 }, &.{ 0x7F, 0x30 } });
 }
+
+test "reset" {
+    var ttd = TestTime.init();
+    var d = TestDatagramDevice.init(null, true);
+    defer d.deinit();
+    const dd = d.datagram_device();
+    try dd.connect();
+
+    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+
+    // Nothing is sent in init
+    try d.expect_sent(&.{});
+
+    // Reset will set the bank, then the register address, modify, and write it back
+    // -- Put in the values it expects to read
+    d.input_sequence = &.{&.{0x41}};
+    try dev.reset();
+    try d.expect_sent(&.{ &.{ 0x7f, 0x00 }, &.{0x06}, &.{ 0x06, 0xC1 } });
+}
+
+test "read_byte" {
+    var ttd = TestTime.init();
+    var d = TestDatagramDevice.init(null, true);
+    defer d.deinit();
+    const dd = d.datagram_device();
+    try dd.connect();
+
+    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+
+    // Read byte will set the bank
+    // -- Put in the values it expects to read
+    d.input_sequence = &.{&.{0x41}};
+    const b = try dev.read_byte(.{ .bank1 = .xa_offs_h });
+    // -- bank sel, bank 1, register 0x14
+    try d.expect_sent(&.{ &.{ 0x7f, 0x10 }, &.{0x14} });
+    try std.testing.expectEqual(0x41, b);
+}
