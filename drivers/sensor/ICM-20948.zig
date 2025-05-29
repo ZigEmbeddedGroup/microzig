@@ -452,3 +452,36 @@ pub const ICM_20948 = struct {
         return @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data))) / 333.87 + 21.0;
     }
 };
+
+// Testing
+const TestDatagramDevice = mdf.base.Datagram_Device.Test_Device;
+const TestTime = mdf.base.Clock_Device.Test_Device;
+
+test "set_bank" {
+    var ttd = TestTime.init();
+    var d = TestDatagramDevice.init(null, true);
+    defer d.deinit();
+    const dd = d.datagram_device();
+    try dd.connect();
+
+    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+
+    // Nothing is sent in init
+    try d.expect_sent(&.{});
+
+    // First call sets the bank, since it starts as null
+    try dev.set_bank(0);
+    try d.expect_sent(&.{&.{ 0x7f, 0x00 }});
+
+    // Second call skips all writes, since we cache it and know we don't need to write
+    try dev.set_bank(0);
+    try d.expect_sent(&.{&.{ 0x7f, 0x00 }});
+
+    // Third call changes the bank, so we need to write again
+    try dev.set_bank(3);
+    try d.expect_sent(&.{ &.{ 0x7f, 0x00 }, &.{ 0x7F, 0x30 } });
+
+    // Fourth is again repeated, so no data is sent
+    try dev.set_bank(3);
+    try d.expect_sent(&.{ &.{ 0x7f, 0x00 }, &.{ 0x7F, 0x30 } });
+}
