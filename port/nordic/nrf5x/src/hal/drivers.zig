@@ -140,7 +140,7 @@ pub const I2C_Device = struct {
             => error.IoError,
 
             error.Timeout => error.Timeout,
-            error.NoData => return {},
+            error.NoData => {},
         };
     }
 };
