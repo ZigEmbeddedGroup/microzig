@@ -250,11 +250,17 @@ pub const Test_Device = struct {
         return written;
     }
 
+    fn writev_then_readv(ctx: *anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void {
+        try Test_Device.writev(ctx, write_chunks);
+        _ = try Test_Device.readv(ctx, read_chunks);
+    }
+
     const vtable = VTable{
         .connect_fn = Test_Device.connect,
         .disconnect_fn = Test_Device.disconnect,
         .writev_fn = Test_Device.writev,
         .readv_fn = Test_Device.readv,
+        .writev_then_readv_fn = Test_Device.writev_then_readv,
     };
 };
 
