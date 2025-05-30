@@ -37,6 +37,13 @@ pub fn sleep_ms(td: Clock_Device, time_ms: u32) void {
 }
 
 pub fn sleep_us(td: Clock_Device, time_us: u64) void {
+    // If the device provides a custom sleep implementation, use it
+    if (td.vtable.sleep) |sleep_fn| {
+        sleep_fn(td.ptr, time_us);
+        return;
+    }
+
+    // Otherwise, fall back to polling
     const end_time = td.make_timeout_us(time_us);
     while (!td.is_reached(end_time)) {}
 }
@@ -48,10 +55,12 @@ pub fn get_time_since_boot(td: Clock_Device) mdf.time.Absolute {
 
 pub const VTable = struct {
     get_time_since_boot: *const fn (*anyopaque) mdf.time.Absolute,
+    sleep: ?*const fn (*anyopaque, u64) void = null,
 };
 
 pub const Test_Device = struct {
     time: u64 = 0,
+    total_sleep_time: u64 = 0,
 
     pub fn init() Test_Device {
         return Test_Device{};
@@ -63,6 +72,14 @@ pub const Test_Device = struct {
 
     pub fn set_time(dev: *Test_Device, time_us: u64) void {
         dev.time = time_us;
+    }
+
+    pub fn get_total_sleep_time(dev: *Test_Device) u64 {
+        return dev.total_sleep_time;
+    }
+
+    pub fn reset_sleep_time(dev: *Test_Device) void {
+        dev.total_sleep_time = 0;
     }
 
     pub fn clock_device(dev: *Test_Device) Clock_Device {
@@ -77,8 +94,15 @@ pub const Test_Device = struct {
         return @enumFromInt(dev.time);
     }
 
+    pub fn sleep_fn(ctx: *anyopaque, time_us: u64) void {
+        const dev: *Test_Device = @ptrCast(@alignCast(ctx));
+        dev.total_sleep_time += time_us;
+        dev.time += time_us;
+    }
+
     const vtable = VTable{
         .get_time_since_boot = Test_Device.get_time_since_boot_fn,
+        .sleep = Test_Device.sleep_fn,
     };
 };
 
@@ -102,8 +126,9 @@ test Test_Device {
         @intFromEnum(td.make_timeout(mdf.time.Duration.from_us(50))),
     );
     ttd.elapse_time(50);
-    try std.testing.expectEqual(
-        104,
-        @intFromEnum(td.make_timeout_us(50)),
-    );
+    try std.testing.expectEqual(104, @intFromEnum(td.make_timeout_us(50)));
+
+    try std.testing.expectEqual(0, ttd.get_total_sleep_time());
+    td.sleep_ms(1000);
+    try std.testing.expectEqual(1_000_000, ttd.get_total_sleep_time());
 }
