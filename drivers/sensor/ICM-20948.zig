@@ -7,7 +7,6 @@
 //! TODO:
 //! * Add support for magnetometer
 //! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
-//! * Figure out minimium timing. 150 is too low, 200 is OK, but find it in the docs!
 //! * Add support for calibration/bias correction
 //!   * In the accelerometer
 //!   * In the gyroscope
@@ -17,7 +16,11 @@ const mdf = @import("../framework.zig");
 
 pub const ICM_20948 = struct {
     const Self = @This();
-    const MIN_SLEEP_US = 200;
+    // const MIN_SLEEP_US = 200;
+    const BANK_SWITCH_DELAY_US = 25;
+    const REGISTER_WRITE_DELAY_US = 10;
+    const REGISTER_READ_DELAY_US = 15;
+    const RESET_DELAY_US = 100_000;
     const WHOAMI = 0xEA;
     dev: mdf.base.Datagram_Device,
     clock: mdf.base.Clock_Device,
@@ -209,7 +212,7 @@ pub const ICM_20948 = struct {
     pub fn setup(self: *Self) !void {
         try self.reset();
 
-        std.log.debug("Reading who am i", .{}); // DELETEME
+        // std.log.debug("Reading who am i", .{}); // DELETEME
         const id = try self.read_byte(.{ .bank0 = .who_am_i });
         if (id != Self.WHOAMI) return error.WhoAmI;
 
@@ -227,12 +230,17 @@ pub const ICM_20948 = struct {
     }
 
     pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) !void {
+        // std.log.debug("Reading register", .{}); // DELETEME
         try self.set_bank(reg.bank());
-        try self.dev.write(&.{reg.value()});
-        self.clock.sleep_us(MIN_SLEEP_US);
-        const size = try self.dev.read(buf);
-        if (size != buf.len) return error.ReadError;
-        self.clock.sleep_us(MIN_SLEEP_US);
+        // ---- Write, sleep, read
+        // try self.dev.write(&.{reg.value()});
+        // self.clock.sleep_us(MIN_SLEEP_US);
+        // const size = try self.dev.read(buf);
+        // if (size != buf.len) return error.ReadError;
+        // self.clock.sleep_us(MIN_SLEEP_US);
+        // ---- Write then read
+        try self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf});
+        self.clock.sleep_us(REGISTER_READ_DELAY_US);
     }
 
     pub inline fn read_byte(self: *Self, reg: Self.Register) !u8 {
@@ -242,20 +250,19 @@ pub const ICM_20948 = struct {
     }
 
     pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) !void {
-        defer self.clock.sleep_us(MIN_SLEEP_US);
-        return self.dev.write(&.{ reg.value(), val });
+        try self.dev.write(&.{ reg.value(), val });
+        self.clock.sleep_us(REGISTER_WRITE_DELAY_US);
     }
 
     /// Read the register and modify the matching fields as provided
     pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) !void {
         // Read the value and cast to the correct type
         var val: reg_t = @bitCast(try self.read_byte(reg));
-        // std.log.debug("Modify: before: {any}", .{val}); // DELETEME
         // Modify the named fields
         inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
             @field(val, field.name) = @field(fields, field.name);
         }
-        // std.log.debug("Modify: after: {any}", .{val}); // DELETEME
+
         try self.write_byte(reg, @bitCast(val));
     }
 
@@ -264,30 +271,33 @@ pub const ICM_20948 = struct {
     pub inline fn set_bank(self: *Self, comptime bank: u2) !void {
         // Avoid a write if we are already on the correct bank
         if (bank == self.current_bank) return;
-        std.log.debug("Setting bank to {}", .{bank}); // DELETEME
+        // std.log.debug("Setting bank to {}", .{bank}); // DELETEME
 
         // Bits 5:4
         try self.write_byte(.{ .bank0 = .reg_bank_sel }, @as(u8, bank) << 4);
+        self.clock.sleep_us(BANK_SWITCH_DELAY_US);
         self.current_bank = bank;
     }
 
     pub fn reset(self: *Self) !void {
         std.log.debug("Reset", .{}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true });
+        // We sleep after modifying, but sleep more to give the device time to start up
+        self.clock.sleep_us(RESET_DELAY_US);
     }
 
     pub fn sleep(self: *Self, on: bool) !void {
-        std.log.debug("Sleep ({any})", .{on}); // DELETEME
+        // std.log.debug("Sleep ({any})", .{on}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
     }
 
     pub fn low_power(self: *Self, on: bool) !void {
-        std.log.debug("Low power ({any})", .{on}); // DELETEME
+        // std.log.debug("Low power ({any})", .{on}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
     }
 
     pub fn set_clocks(self: *Self) !void {
-        std.log.debug("Set clocks", .{});
+        // std.log.debug("Set clocks", .{}); // DELETEME
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
             .CLKSEL = 1,
             .SLEEP = false,
