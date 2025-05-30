@@ -11,21 +11,47 @@
 //!   * In the accelerometer
 //!   * In the gyroscope
 //!
+
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
 pub const ICM_20948 = struct {
     const Self = @This();
-    // const MIN_SLEEP_US = 200;
+
     const BANK_SWITCH_DELAY_US = 25;
     const REGISTER_WRITE_DELAY_US = 10;
     const REGISTER_READ_DELAY_US = 15;
     const RESET_DELAY_US = 100_000;
     const WHOAMI = 0xEA;
+
+    // Timeout constants for operations
+    const RESET_TIMEOUT_US = 100_000;
+    const COMMUNICATION_TIMEOUT_US = 10_000;
+
     dev: mdf.base.Datagram_Device,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
+
+    /// Comprehensive error set for ICM-20948 operations
+    pub const Error = error{
+        // Device identification errors
+        DeviceNotFound,
+        UnexpectedDeviceId,
+
+        // Communication errors
+        CommunicationTimeout,
+        ReadError,
+        WriteError,
+
+        // Device state errors
+        DeviceNotReady,
+        ResetFailed,
+        SetupFailed,
+        BankSwitchFailed,
+
+        InvalidParameter,
+    };
 
     const Register = union(enum) {
         bank0: enum(u8) {
@@ -124,11 +150,13 @@ pub const ICM_20948 = struct {
             gs4 = 1,
             gs8 = 2,
             gs16 = 3,
+
             fn scalar(self: @This()) f32 {
                 // TODO: Support converting to Gs
                 _ = self;
                 return 9.81;
             }
+
             fn divisor(self: @This()) f32 {
                 return switch (self) {
                     .gs2 => @as(f32, std.math.maxInt(i16)) / 2.0,
@@ -138,16 +166,19 @@ pub const ICM_20948 = struct {
                 };
             }
         } = .gs2,
+
         gyro_range: enum(u2) {
             dps250 = 0,
             dps500 = 1,
             dps1000 = 2,
             dps2000 = 3,
+
             fn scalar(self: @This()) f32 {
                 // TODO: Support converting to radians
                 _ = self;
                 return 1.0;
             }
+
             fn divisor(self: @This()) f32 {
                 return switch (self) {
                     .dps250 => @as(f32, std.math.maxInt(i16)) / 250.0,
@@ -157,6 +188,7 @@ pub const ICM_20948 = struct {
                 };
             }
         } = .dps1000,
+
         accel_dlp: enum(u4) {
             @"473Hz" = 7,
             @"246Hz" = 1,
@@ -167,6 +199,7 @@ pub const ICM_20948 = struct {
             @"6Hz" = 6,
             disabled = 8,
         } = .disabled,
+
         gyro_dlp: enum(u4) {
             @"361Hz" = 7,
             @"197Hz" = 0,
@@ -178,6 +211,7 @@ pub const ICM_20948 = struct {
             @"6Hz" = 6,
             disabled = 8,
         } = .disabled,
+
         // ODR (output data rate) is computed as: 1125Hz / (1 + ACCEL_SMPLRT_DIV)
         accel_odr_div: u12 = 0,
         // ODR = 1100 / (1 + GYRO_SMPLRT_DIV)
@@ -192,11 +226,13 @@ pub const ICM_20948 = struct {
         SLEEP: bool = false,
         DEVICE_RESET: bool = false,
     };
+
     const pwr_mgmt_2 = packed struct(u8) {
         DISABLE_GYRO: enum(u3) { disable = 0b111, enable = 0b000 } = .enable,
         DISABLE_ACCEL: enum(u3) { disable = 0b111, enable = 0b000 } = .enable,
         reserved_6: u2 = 0,
     };
+
     const lp_config = packed struct(u8) {
         reserved_0: u3,
         GYRO_CYCLE: u1,
@@ -205,99 +241,169 @@ pub const ICM_20948 = struct {
         reserved_7: u1,
     };
 
-    pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) !Self {
+    pub fn init(dev: mdf.base.Datagram_Device, clock: mdf.base.Clock_Device, config: Config) Error!Self {
         return Self{ .dev = dev, .clock = clock, .config = config };
     }
 
-    pub fn setup(self: *Self) !void {
-        try self.reset();
+    pub fn setup(self: *Self) Error!void {
+        self.reset() catch |err| {
+            std.log.err("Failed to reset device: {}", .{err});
+            return Error.ResetFailed;
+        };
 
-        // std.log.debug("Reading who am i", .{}); // DELETEME
-        const id = try self.read_byte(.{ .bank0 = .who_am_i });
-        if (id != Self.WHOAMI) return error.WhoAmI;
+        // Verify device identity
+        const id = self.read_byte(.{ .bank0 = .who_am_i }) catch |err| {
+            std.log.err("Failed to read device ID: {}", .{err});
+            return Error.DeviceNotFound;
+        };
 
-        try self.set_clocks();
+        if (id != Self.WHOAMI) {
+            std.log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ Self.WHOAMI, id });
+            return Error.UnexpectedDeviceId;
+        }
 
-        // TODO: We should set low power on after we are done configuring
-        try self.low_power(false);
+        // Configure device step by step with error handling
+        self.set_clocks() catch |err| {
+            std.log.err("Failed to set clocks: {}", .{err});
+            return Error.SetupFailed;
+        };
+
+        self.low_power(false) catch |err| {
+            std.log.err("Failed to configure low power mode: {}", .{err});
+            return Error.SetupFailed;
+        };
 
         // set sample mode
-        try self.set_sample_mode();
+        self.set_sample_mode() catch |err| {
+            std.log.err("Failed to set sample mode: {}", .{err});
+            return Error.SetupFailed;
+        };
 
         // This sets DLPF as well as full scale and enables the devices
-        try self.configure_accelerometer(self.config);
-        try self.configure_gyroscope(self.config);
+        self.configure_accelerometer(self.config) catch |err| {
+            std.log.err("Failed to configure accelerometer: {}", .{err});
+            return Error.SetupFailed;
+        };
+
+        self.configure_gyroscope(self.config) catch |err| {
+            std.log.err("Failed to configure gyroscope: {}", .{err});
+            return Error.SetupFailed;
+        };
     }
 
-    pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) !void {
-        // std.log.debug("Reading register", .{}); // DELETEME
+    /// Check if the device is responsive by reading the WHO_AM_I register
+    pub fn is_device_responsive(self: *Self) bool {
+        const id = self.read_byte(.{ .bank0 = .who_am_i }) catch return false;
+        return id == Self.WHOAMI;
+    }
+
+    /// Perform a basic device health check
+    pub fn health_check(self: *Self) Error!void {
+        // Check device identity
+        if (!self.is_device_responsive())
+            return Error.DeviceNotFound;
+
+        // Try reading some basic registers to ensure communication is working
+        _ = self.read_byte(.{ .bank0 = .pwr_mgmt_1 }) catch |err| {
+            std.log.err("Health check failed: cannot read power management register: {}", .{err});
+            return Error.DeviceNotReady;
+        };
+
+        std.log.debug("Device health check passed", .{});
+    }
+
+    pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) Error!void {
+        if (buf.len == 0) return Error.InvalidParameter;
+
         try self.set_bank(reg.bank());
-        // ---- Write, sleep, read
-        // try self.dev.write(&.{reg.value()});
-        // self.clock.sleep_us(MIN_SLEEP_US);
-        // const size = try self.dev.read(buf);
-        // if (size != buf.len) return error.ReadError;
-        // self.clock.sleep_us(MIN_SLEEP_US);
-        // ---- Write then read
-        try self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf});
+
+        self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf}) catch |err| {
+            std.log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
+            return Error.ReadError;
+        };
+
         self.clock.sleep_us(REGISTER_READ_DELAY_US);
     }
 
-    pub inline fn read_byte(self: *Self, reg: Self.Register) !u8 {
+    pub inline fn read_byte(self: *Self, reg: Self.Register) Error!u8 {
         var buf: [1]u8 = undefined;
         try self.read_register(reg, &buf);
-        return @bitCast(buf[0]);
+        return buf[0];
     }
 
-    pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) !void {
-        try self.dev.write(&.{ reg.value(), val });
+    pub inline fn write_byte(self: *Self, reg: Self.Register, val: u8) Error!void {
+        try self.set_bank(reg.bank());
+
+        self.dev.write(&.{ reg.value(), val }) catch |err| {
+            std.log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
+            return Error.WriteError;
+        };
+
         self.clock.sleep_us(REGISTER_WRITE_DELAY_US);
     }
 
     /// Read the register and modify the matching fields as provided
-    pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) !void {
-        // Read the value and cast to the correct type
-        var val: reg_t = @bitCast(try self.read_byte(reg));
-        // Modify the named fields
+    pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) Error!void {
+        // Read the current value
+        const current_val = self.read_byte(reg) catch |err| {
+            std.log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
+            return err;
+        };
+
+        // Cast to the correct type and modify the named fields
+        var val: reg_t = @bitCast(current_val);
         inline for (@typeInfo(@TypeOf(fields)).@"struct".fields) |field| {
             @field(val, field.name) = @field(fields, field.name);
         }
 
-        try self.write_byte(reg, @bitCast(val));
+        // Write back the modified value
+        self.write_byte(reg, @bitCast(val)) catch |err| {
+            std.log.err("Failed to write modified register 0x{X:02}: {}", .{ reg.value(), err });
+            return err;
+        };
     }
 
     /// Set the register bank for the next read/write. This device tracks which bank was last set to
     /// avoid having to set it continuously when using registers in the same bank.
-    pub inline fn set_bank(self: *Self, comptime bank: u2) !void {
+    pub inline fn set_bank(self: *Self, comptime bank: u2) Error!void {
         // Avoid a write if we are already on the correct bank
         if (bank == self.current_bank) return;
-        // std.log.debug("Setting bank to {}", .{bank}); // DELETEME
 
-        // Bits 5:4
-        try self.write_byte(.{ .bank0 = .reg_bank_sel }, @as(u8, bank) << 4);
+        // Bits 5:4 - directly write to bank0 register without recursion
+        self.dev.write(&.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
+            std.log.err("Failed to switch to bank {}: {}", .{ bank, err });
+            return Error.BankSwitchFailed;
+        };
+
         self.clock.sleep_us(BANK_SWITCH_DELAY_US);
         self.current_bank = bank;
     }
 
-    pub fn reset(self: *Self) !void {
-        std.log.debug("Reset", .{}); // DELETEME
-        try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true });
-        // We sleep after modifying, but sleep more to give the device time to start up
+    pub fn reset(self: *Self) Error!void {
+        std.log.debug("Resetting ICM-20948", .{});
+
+        // Reset the current bank cache since we're resetting the device
+        self.current_bank = null;
+
+        self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .DEVICE_RESET = true }) catch
+            return Error.ResetFailed;
+
+        // Sleep longer after reset to ensure device is ready
         self.clock.sleep_us(RESET_DELAY_US);
+
+        // Clear the bank cache after reset
+        self.current_bank = null;
     }
 
-    pub fn sleep(self: *Self, on: bool) !void {
-        // std.log.debug("Sleep ({any})", .{on}); // DELETEME
+    pub fn sleep(self: *Self, on: bool) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .SLEEP = on });
     }
 
-    pub fn low_power(self: *Self, on: bool) !void {
-        // std.log.debug("Low power ({any})", .{on}); // DELETEME
+    pub fn low_power(self: *Self, on: bool) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{ .LP_EN = on });
     }
 
-    pub fn set_clocks(self: *Self) !void {
-        // std.log.debug("Set clocks", .{}); // DELETEME
+    pub fn set_clocks(self: *Self) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_1 }, pwr_mgmt_1, .{
             .CLKSEL = 1,
             .SLEEP = false,
@@ -305,7 +411,7 @@ pub const ICM_20948 = struct {
         });
     }
 
-    pub fn set_sample_mode(self: *Self) !void {
+    pub fn set_sample_mode(self: *Self) Error!void {
         // TODO: Support setting these individually. Could set based on if ODR fields are set (make
         // optional?)
         try self.modify_register(.{ .bank0 = .lp_config }, lp_config, .{
@@ -315,7 +421,7 @@ pub const ICM_20948 = struct {
         });
     }
 
-    pub fn configure_accelerometer(self: *Self, config: Config) !void {
+    pub fn configure_accelerometer(self: *Self, config: Config) Error!void {
         const reg = packed struct(u8) {
             ACCEL_FCHOICE: u1,
             ACCEL_FS_SEL: u2,
@@ -326,6 +432,7 @@ pub const ICM_20948 = struct {
             .ACCEL_FS_SEL = @intFromEnum(config.accel_range),
             .ACCEL_DLPFCFG = @truncate(@intFromEnum(config.accel_dlp)),
         };
+
         try self.write_byte(.{ .bank2 = .accel_config }, @bitCast(reg));
 
         try self.write_byte(
@@ -338,7 +445,7 @@ pub const ICM_20948 = struct {
         );
     }
 
-    pub fn disable_accelerometer(self: *Self) !void {
+    pub fn disable_accelerometer(self: *Self) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_ACCEL = .disable,
         });
@@ -349,9 +456,16 @@ pub const ICM_20948 = struct {
         y: i16 = 0,
         z: i16 = 0,
     };
-    pub fn get_accel_data_unscaled(self: *Self) !Accel_data_unscaled {
+
+    pub fn get_accel_data_unscaled(self: *Self) Error!Accel_data_unscaled {
         var raw_data: Accel_data_unscaled = .{};
-        try self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data));
+        const bytes_to_read = @sizeOf(Accel_data_unscaled);
+
+        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+            std.log.err("Failed to read accelerometer data: {}", .{err});
+            return err;
+        };
+
         return .{
             .x = std.mem.bigToNative(i16, raw_data.x),
             .y = std.mem.bigToNative(i16, raw_data.y),
@@ -364,12 +478,15 @@ pub const ICM_20948 = struct {
         y: f32 = 0,
         z: f32 = 0,
     };
-    pub fn get_accel_data(self: *Self) !Accel_data {
+
+    pub fn get_accel_data(self: *Self) Error!Accel_data {
         const unscaled_data = try self.get_accel_data_unscaled();
+        const scalar_val = self.accel_scalar();
+
         return .{
-            .x = @as(f32, @floatFromInt(unscaled_data.x)) * self.accel_scalar(),
-            .y = @as(f32, @floatFromInt(unscaled_data.y)) * self.accel_scalar(),
-            .z = @as(f32, @floatFromInt(unscaled_data.z)) * self.accel_scalar(),
+            .x = @as(f32, @floatFromInt(unscaled_data.x)) * scalar_val,
+            .y = @as(f32, @floatFromInt(unscaled_data.y)) * scalar_val,
+            .z = @as(f32, @floatFromInt(unscaled_data.z)) * scalar_val,
         };
     }
 
@@ -377,7 +494,7 @@ pub const ICM_20948 = struct {
         return self.config.accel_range.scalar() / self.config.accel_range.divisor();
     }
 
-    pub fn configure_gyroscope(self: *Self, config: Config) !void {
+    pub fn configure_gyroscope(self: *Self, config: Config) Error!void {
         const reg = packed struct(u8) {
             GYRO_FCHOICE: u1,
             GYRO_FS_SEL: u2,
@@ -388,11 +505,12 @@ pub const ICM_20948 = struct {
             .GYRO_FS_SEL = @intFromEnum(config.gyro_range),
             .GYRO_DLPFCFG = @truncate(@intFromEnum(config.gyro_dlp)),
         };
+
         try self.write_byte(.{ .bank2 = .gyro_config_1 }, @bitCast(reg));
         try self.write_byte(.{ .bank2 = .gyro_smplrt_div }, config.gyro_odr_div);
     }
 
-    pub fn disable_gyroscope(self: *Self) !void {
+    pub fn disable_gyroscope(self: *Self) Error!void {
         try self.modify_register(.{ .bank0 = .pwr_mgmt_2 }, pwr_mgmt_2, .{
             .DISABLE_GYRO = .disable,
         });
@@ -403,9 +521,16 @@ pub const ICM_20948 = struct {
         y: i16 = 0,
         z: i16 = 0,
     };
-    pub fn get_gyro_data_unscaled(self: *Self) !Gyro_data_unscaled {
+
+    pub fn get_gyro_data_unscaled(self: *Self) Error!Gyro_data_unscaled {
         var raw_data: Gyro_data_unscaled = .{};
-        try self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data));
+        const bytes_to_read = @sizeOf(Gyro_data_unscaled);
+
+        self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+            std.log.err("Failed to read gyroscope data: {}", .{err});
+            return err;
+        };
+
         return .{
             .x = std.mem.bigToNative(i16, raw_data.x),
             .y = std.mem.bigToNative(i16, raw_data.y),
@@ -418,12 +543,15 @@ pub const ICM_20948 = struct {
         y: f32 = 0,
         z: f32 = 0,
     };
-    pub fn get_gyro_data(self: *Self) !Gyro_data {
+
+    pub fn get_gyro_data(self: *Self) Error!Gyro_data {
         const unscaled_data = try self.get_gyro_data_unscaled();
+        const scalar_val = self.gyro_scalar();
+
         return .{
-            .x = @as(f32, @floatFromInt(unscaled_data.x)) * self.gyro_scalar(),
-            .y = @as(f32, @floatFromInt(unscaled_data.y)) * self.gyro_scalar(),
-            .z = @as(f32, @floatFromInt(unscaled_data.z)) * self.gyro_scalar(),
+            .x = @as(f32, @floatFromInt(unscaled_data.x)) * scalar_val,
+            .y = @as(f32, @floatFromInt(unscaled_data.y)) * scalar_val,
+            .z = @as(f32, @floatFromInt(unscaled_data.z)) * scalar_val,
         };
     }
 
@@ -431,11 +559,12 @@ pub const ICM_20948 = struct {
         return self.config.gyro_range.scalar() / self.config.gyro_range.divisor();
     }
 
-    const @"6Dof_data" = struct {
+    const SixDofData = struct {
         accel: Accel_data,
         gyro: Gyro_data,
     };
-    pub fn get_accel_gyro_data(self: *Self) !@"6Dof_data" {
+
+    pub fn get_accel_gyro_data(self: *Self) Error!SixDofData {
         var raw_data = packed struct {
             ax: i16 = 0,
             ay: i16 = 0,
@@ -444,22 +573,44 @@ pub const ICM_20948 = struct {
             gy: i16 = 0,
             gz: i16 = 0,
         }{};
-        try self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data));
+
+        const bytes_to_read = @sizeOf(@TypeOf(raw_data));
+
+        self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+            std.log.err("Failed to read combined accel/gyro data: {}", .{err});
+            return err;
+        };
+
+        const accel_scalar_val = self.accel_scalar();
+        const gyro_scalar_val = self.gyro_scalar();
+
         return .{ .accel = .{
-            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ax))) * self.accel_scalar(),
-            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ay))) * self.accel_scalar(),
-            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.az))) * self.accel_scalar(),
+            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ax))) * accel_scalar_val,
+            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.ay))) * accel_scalar_val,
+            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.az))) * accel_scalar_val,
         }, .gyro = .{
-            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gx))) * self.gyro_scalar(),
-            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gy))) * self.gyro_scalar(),
-            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gz))) * self.gyro_scalar(),
+            .x = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gx))) * gyro_scalar_val,
+            .y = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gy))) * gyro_scalar_val,
+            .z = @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data.gz))) * gyro_scalar_val,
         } };
     }
 
-    pub fn get_temp(self: *Self) !f32 {
+    pub fn get_temp(self: *Self) Error!f32 {
         var raw_data: i16 = undefined;
-        try self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data));
-        return @as(f32, @floatFromInt(std.mem.bigToNative(i16, raw_data))) / 333.87 + 21.0;
+        const bytes_to_read = @sizeOf(i16);
+
+        self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
+            std.log.err("Failed to read temperature data: {}", .{err});
+            return err;
+        };
+
+        const temp_raw = std.mem.bigToNative(i16, raw_data);
+        // Temperature conversion formula from datasheet:
+        // Temp_degC = (TEMP_OUT - RoomTemp_Offset)/Temp_Sensitivity + 21°C
+        // Where Temp_Sensitivity = 333.87 LSB/°C and RoomTemp_Offset is typically 0
+        const temp_celsius = @as(f32, @floatFromInt(temp_raw)) / 333.87 + 21.0;
+
+        return temp_celsius;
     }
 };
 
@@ -531,4 +682,37 @@ test "read_byte" {
     // -- bank sel, bank 1, register 0x14
     try d.expect_sent(&.{ &.{ 0x7f, 0x10 }, &.{0x14} });
     try std.testing.expectEqual(0x41, b);
+}
+
+test "error handling in setup" {
+    var ttd = TestTime.init();
+    var d = TestDatagramDevice.init(null, true);
+    defer d.deinit();
+    const dd = d.datagram_device();
+    try dd.connect();
+
+    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+
+    // Test wrong WHO_AM_I response, first byte is read during reset()
+    d.input_sequence = &.{ &.{0x00}, &.{0xFF} }; // Wrong ID after reset
+    const result = dev.setup();
+    try std.testing.expectError(ICM_20948.Error.UnexpectedDeviceId, result);
+}
+
+test "device responsiveness check" {
+    var ttd = TestTime.init();
+    var d = TestDatagramDevice.init(null, true);
+    defer d.deinit();
+    const dd = d.datagram_device();
+    try dd.connect();
+
+    var dev = try ICM_20948.init(dd, ttd.clock_device(), .{});
+
+    // Test with correct WHO_AM_I
+    d.input_sequence = &.{&.{ICM_20948.WHOAMI}};
+    try std.testing.expect(dev.is_device_responsive());
+
+    // Test with incorrect WHO_AM_I
+    d.input_sequence = &.{&.{0x00}};
+    try std.testing.expect(!dev.is_device_responsive());
 }
