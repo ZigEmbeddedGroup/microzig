@@ -4,9 +4,29 @@
 //! Datasheet:
 //! * https://invensense.tdk.com/wp-content/uploads/2024/03/DS-000189-ICM-20948-v1.6.pdf
 //!
+//! Example usage:
+//! ```zig
+//! var sensor = try ICM_20948.init(
+//!     i2c_device.datagram_device(),
+//!     clock.clock_device(),
+//!     .{
+//!         .accel_range = .gs4,
+//!         .gyro_range = .dps1000,
+//!         .accel_dlp = .@"50Hz",
+//!     },
+//! );
+//! try sensor.setup();
+//!
+//! while (true) {
+//!     const data = try sensor.get_all_sensor_data();
+//!     // Process data...
+//! }
+//! ```
+//!
 //! TODO:
 //! * Add support for magnetometer
 //! * Allow configuring the unit of the readings (Gs vs m/s^2, degrees vs. radians, C vs F)
+//! * Test/ensure support for SPI datagram devices (need to set r/w bit in register address)
 //! * Add support for calibration/bias correction
 //!   * In the accelerometer
 //!   * In the gyroscope
