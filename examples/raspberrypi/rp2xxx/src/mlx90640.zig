@@ -40,7 +40,7 @@ pub fn main() !void {
     std.log.info("camera serial number: 0x{x}", .{sn});
 
     try camera.set_refresh_rate(0b011);
-    const rate = try camera.refreshRate();
+    const rate = try camera.refresh_rate();
     std.log.info("camera refresh rate: 0b{b:0>3}", .{rate});
 
     const rez = try camera.resolution();
