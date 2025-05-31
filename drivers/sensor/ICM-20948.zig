@@ -51,22 +51,17 @@ const log = struct {
 pub const ICM_20948 = struct {
     const Self = @This();
 
+    const WHOAMI = 0xEA;
     const BANK_SWITCH_DELAY_US = 25;
     const REGISTER_WRITE_DELAY_US = 10;
     const REGISTER_READ_DELAY_US = 15;
     const RESET_DELAY_US = 100_000;
-    const WHOAMI = 0xEA;
-
-    // Timeout constants for operations
-    const RESET_TIMEOUT_US = 100_000;
-    const COMMUNICATION_TIMEOUT_US = 10_000;
 
     dev: mdf.base.Datagram_Device,
     clock: mdf.base.Clock_Device,
     config: Config,
     current_bank: ?u2 = null,
 
-    /// Comprehensive error set for ICM-20948 operations
     pub const Error = error{
         // Device identification errors
         DeviceNotFound,
