@@ -35,6 +35,19 @@
 const std = @import("std");
 const mdf = @import("../framework.zig");
 
+const log = struct {
+    const builtin = @import("builtin");
+    fn debug(comptime format: []const u8, args: anytype) void {
+        if (!builtin.is_test)
+            std.log.debug(format, args);
+    }
+
+    fn err(comptime format: []const u8, args: anytype) void {
+        if (!builtin.is_test)
+            std.log.err(format, args);
+    }
+};
+
 pub const ICM_20948 = struct {
     const Self = @This();
 
@@ -267,46 +280,46 @@ pub const ICM_20948 = struct {
 
     pub fn setup(self: *Self) Error!void {
         self.reset() catch |err| {
-            std.log.err("Failed to reset device: {}", .{err});
+            log.err("Failed to reset device: {}", .{err});
             return Error.ResetFailed;
         };
 
         // Verify device identity
         const id = self.read_byte(.{ .bank0 = .who_am_i }) catch |err| {
-            std.log.err("Failed to read device ID: {}", .{err});
+            log.err("Failed to read device ID: {}", .{err});
             return Error.DeviceNotFound;
         };
 
         if (id != Self.WHOAMI) {
-            std.log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ Self.WHOAMI, id });
+            log.err("Unexpected device ID: expected 0x{X:02}, got 0x{X:02}", .{ Self.WHOAMI, id });
             return Error.UnexpectedDeviceId;
         }
 
         // Configure device step by step with error handling
         self.set_clocks() catch |err| {
-            std.log.err("Failed to set clocks: {}", .{err});
+            log.err("Failed to set clocks: {}", .{err});
             return Error.SetupFailed;
         };
 
         self.low_power(false) catch |err| {
-            std.log.err("Failed to configure low power mode: {}", .{err});
+            log.err("Failed to configure low power mode: {}", .{err});
             return Error.SetupFailed;
         };
 
         // set sample mode
         self.set_sample_mode() catch |err| {
-            std.log.err("Failed to set sample mode: {}", .{err});
+            log.err("Failed to set sample mode: {}", .{err});
             return Error.SetupFailed;
         };
 
         // This sets DLPF as well as full scale and enables the devices
         self.configure_accelerometer(self.config) catch |err| {
-            std.log.err("Failed to configure accelerometer: {}", .{err});
+            log.err("Failed to configure accelerometer: {}", .{err});
             return Error.SetupFailed;
         };
 
         self.configure_gyroscope(self.config) catch |err| {
-            std.log.err("Failed to configure gyroscope: {}", .{err});
+            log.err("Failed to configure gyroscope: {}", .{err});
             return Error.SetupFailed;
         };
     }
@@ -325,11 +338,11 @@ pub const ICM_20948 = struct {
 
         // Try reading some basic registers to ensure communication is working
         _ = self.read_byte(.{ .bank0 = .pwr_mgmt_1 }) catch |err| {
-            std.log.err("Health check failed: cannot read power management register: {}", .{err});
+            log.err("Health check failed: cannot read power management register: {}", .{err});
             return Error.DeviceNotReady;
         };
 
-        std.log.debug("Device health check passed", .{});
+        log.debug("Device health check passed", .{});
     }
 
     pub inline fn read_register(self: *Self, reg: Self.Register, buf: []u8) Error!void {
@@ -338,7 +351,7 @@ pub const ICM_20948 = struct {
         try self.set_bank(reg.bank());
 
         self.dev.writev_then_readv(&.{&.{reg.value()}}, &.{buf}) catch |err| {
-            std.log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
+            log.err("Failed to read register 0x{X:02}: {}", .{ reg.value(), err });
             return Error.ReadError;
         };
 
@@ -355,7 +368,7 @@ pub const ICM_20948 = struct {
         try self.set_bank(reg.bank());
 
         self.dev.write(&.{ reg.value(), val }) catch |err| {
-            std.log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
+            log.err("Failed to write register 0x{X:02} = 0x{X:02}: {}", .{ reg.value(), val, err });
             return Error.WriteError;
         };
 
@@ -366,7 +379,7 @@ pub const ICM_20948 = struct {
     pub inline fn modify_register(self: *Self, reg: Self.Register, reg_t: type, fields: anytype) Error!void {
         // Read the current value
         const current_val = self.read_byte(reg) catch |err| {
-            std.log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
+            log.err("Failed to read register 0x{X:02} for modification: {}", .{ reg.value(), err });
             return err;
         };
 
@@ -378,7 +391,7 @@ pub const ICM_20948 = struct {
 
         // Write back the modified value
         self.write_byte(reg, @bitCast(val)) catch |err| {
-            std.log.err("Failed to write modified register 0x{X:02}: {}", .{ reg.value(), err });
+            log.err("Failed to write modified register 0x{X:02}: {}", .{ reg.value(), err });
             return err;
         };
     }
@@ -391,7 +404,7 @@ pub const ICM_20948 = struct {
 
         // Bits 5:4 - directly write to bank0 register without recursion
         self.dev.write(&.{ 0x7F, @as(u8, bank) << 4 }) catch |err| {
-            std.log.err("Failed to switch to bank {}: {}", .{ bank, err });
+            log.err("Failed to switch to bank {}: {}", .{ bank, err });
             return Error.BankSwitchFailed;
         };
 
@@ -400,7 +413,7 @@ pub const ICM_20948 = struct {
     }
 
     pub fn reset(self: *Self) Error!void {
-        std.log.debug("Resetting ICM-20948", .{});
+        log.debug("Resetting ICM-20948", .{});
 
         // Reset the current bank cache since we're resetting the device
         self.current_bank = null;
@@ -482,7 +495,7 @@ pub const ICM_20948 = struct {
         const bytes_to_read = @sizeOf(Accel_data_unscaled);
 
         self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
-            std.log.err("Failed to read accelerometer data: {}", .{err});
+            log.err("Failed to read accelerometer data: {}", .{err});
             return err;
         };
 
@@ -547,7 +560,7 @@ pub const ICM_20948 = struct {
         const bytes_to_read = @sizeOf(Gyro_data_unscaled);
 
         self.read_register(.{ .bank0 = .gyro_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
-            std.log.err("Failed to read gyroscope data: {}", .{err});
+            log.err("Failed to read gyroscope data: {}", .{err});
             return err;
         };
 
@@ -597,7 +610,7 @@ pub const ICM_20948 = struct {
         const bytes_to_read = @sizeOf(@TypeOf(raw_data));
 
         self.read_register(.{ .bank0 = .accel_xout_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
-            std.log.err("Failed to read combined accel/gyro data: {}", .{err});
+            log.err("Failed to read combined accel/gyro data: {}", .{err});
             return err;
         };
 
@@ -620,7 +633,7 @@ pub const ICM_20948 = struct {
         const bytes_to_read = @sizeOf(i16);
 
         self.read_register(.{ .bank0 = .temp_out_h }, std.mem.asBytes(&raw_data)[0..bytes_to_read]) catch |err| {
-            std.log.err("Failed to read temperature data: {}", .{err});
+            log.err("Failed to read temperature data: {}", .{err});
             return err;
         };
 
