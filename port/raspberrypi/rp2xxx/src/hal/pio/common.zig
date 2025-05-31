@@ -647,7 +647,7 @@ pub fn StateMachineInitOptions(chip: Chip) type {
 
 pub fn LoadAndStartProgramOptions(chip: Chip) type {
     return struct {
-        clkdiv: ClkDivOptions,
+        clkdiv: ClkDivOptions = .{},
         shift: ShiftOptions(chip) = .{},
         pin_mappings: PinMappingOptions = .{},
         exec: ExecOptions = .{},
