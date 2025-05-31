@@ -15,10 +15,10 @@ pub const StateMachine = common.StateMachine;
 pub const Instruction = common.Instruction(chip);
 pub const PinMapping = common.PinMapping;
 pub const PinMappingOptions = common.PinMappingOptions;
-pub const StateMachineInitOptions = chip_specific.StateMachineInitOptions;
-pub const LoadAndStartProgramOptions = chip_specific.LoadAndStartProgramOptions;
+pub const StateMachineInitOptions = common.StateMachineInitOptions(chip);
+pub const LoadAndStartProgramOptions = common.LoadAndStartProgramOptions(chip);
 pub const ClkDivOptions = common.ClkDivOptions;
-pub const ShiftOptions = chip_specific.ShiftOptions;
+pub const ShiftOptions = common.ShiftOptions(chip);
 
 pub const assembler = @import("pio/assembler.zig");
 const encoder = @import("pio/assembler/encoder.zig");

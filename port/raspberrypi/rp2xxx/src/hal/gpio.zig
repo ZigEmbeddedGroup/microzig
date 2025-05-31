@@ -264,7 +264,7 @@ pub const Mask =
 
             pub fn read(self: Mask) u48 {
                 const lower_mask = self.lower_32_mask();
-                const lower_val: u32 = SIO.GPIO_IN & lower_mask;
+                const lower_val: u32 = SIO.GPIO_IN.raw & lower_mask;
                 const upper_mask = self.upper_16_mask();
                 const upper_val: u16 = @truncate(SIO.GPIO_HI_IN.raw & upper_mask);
                 return (@as(u48, upper_val) << 32) | @as(u48, lower_val);
