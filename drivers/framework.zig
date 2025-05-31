@@ -38,6 +38,7 @@ pub const input = struct {
 
 pub const sensor = struct {
     pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
+    pub const MLX90640 = @import("sensor/MLX90640.zig").MLX90640;
 };
 
 pub const stepper = struct {
