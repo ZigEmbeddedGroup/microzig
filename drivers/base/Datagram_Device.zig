@@ -58,7 +58,7 @@ pub fn write_then_read(
     dd: Datagram_Device,
     src: []const u8,
     dst: []u8,
-) WriteError!void {
+) (WriteError || ReadError)!void {
     return try dd.writev_then_readv(&.{src}, &.{dst});
 }
 
@@ -96,7 +96,11 @@ pub const VTable = struct {
     disconnect_fn: ?*const fn (*anyopaque) void,
     writev_fn: ?*const fn (*anyopaque, datagrams: []const []const u8) WriteError!void,
     readv_fn: ?*const fn (*anyopaque, datagrams: []const []u8) ReadError!usize,
-    writev_then_readv_fn: ?*const fn (*anyopaque, write_chunks: []const []const u8, read_chunks: []const []u8) (WriteError || ReadError)!void = null,
+    writev_then_readv_fn: ?*const fn (
+        *anyopaque,
+        datagrams: []const []const u8,
+        datagrams: []const []u8,
+    ) (WriteError || ReadError)!void = null,
 };
 
 /// A device implementation that can be used to write unit tests for datagram devices.
