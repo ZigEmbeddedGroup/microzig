@@ -53,8 +53,8 @@ pub const ICM_20948 = struct {
 
     const WHOAMI = 0xEA;
     const BANK_SWITCH_DELAY_US = 25;
-    const REGISTER_WRITE_DELAY_US = 10;
-    const REGISTER_READ_DELAY_US = 15;
+    const REGISTER_WRITE_DELAY_US = 2;
+    const REGISTER_READ_DELAY_US = 2;
     const RESET_DELAY_US = 100_000;
 
     dev: mdf.base.Datagram_Device,
