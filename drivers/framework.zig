@@ -208,6 +208,7 @@ test {
 
     _ = sensor.TMP117;
     _ = sensor.ICM_20948;
+    _ = sensor.MLX90640;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
