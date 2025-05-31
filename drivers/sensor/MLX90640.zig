@@ -1,0 +1,882 @@
+//!
+//! Driver for the Melexis MLX90640 32x24 IR array (thermal camera)
+//!
+//! Datasheet:
+//! * MLX90640: https://www.melexis.com/en/documents/documentation/datasheets/datasheet-mlx90640
+//!
+//! Not all functionality from the datasheet is exposed in this driver
+//!
+//! The calculations were copied from https://github.com/netzbasteln/MLX90640-Thermocam
+//!
+const std = @import("std");
+const mdf = @import("../framework.zig");
+
+const Mlx90649Error = error{
+    BadPixels,
+};
+
+pub const MLX90640_Config = struct {
+    i2c: mdf.base.Datagram_Device,
+    clock: mdf.base.Clock_Device,
+    open_air_shift: f32 = 8,
+    emissivity: f32 = 0.95,
+};
+
+pub const MLX90640 = struct {
+    const Self = @This();
+
+    const parameters = struct {
+        kVdd: i16 = 0,
+        vdd25: i16 = 0,
+        KvPTAT: f32 = 0,
+        KtPTAT: f32 = 0,
+        vPTAT25: i16 = 0,
+        alphaPTAT: f32 = 0,
+        gainEE: i16 = 0,
+        tgc: f32 = 0,
+        cpKv: f32 = 0,
+        cpKta: f32 = 0,
+        resolutionEE: u8 = 0,
+        calibrationModeEE: u8 = 0,
+        KsTa: f32 = 0,
+        ksTo: [5]f32 = undefined,
+        ct: [5]i16 = undefined,
+        alpha: [768]u16 = undefined,
+        alphaScale: u8 = 0,
+        offset: [768]i32 = undefined,
+        kta: [768]i8 = undefined,
+        ktaScale: u8 = 0,
+        kv: [768]i8 = undefined,
+        kvScale: u8 = 0,
+        cpAlpha: [2]f32 = undefined,
+        cpOffset: [2]i16 = undefined,
+        ilChessC: [3]f32 = undefined,
+        brokenPixels: [5]u16 = undefined,
+        outlierPixels: [5]u16 = undefined,
+    };
+
+    eeprom: [832]u16 = undefined,
+    frame: [834]u16 = undefined,
+    frame_data: [834 * 2]u8 = undefined,
+    scratch_data: [768]f32 = undefined,
+    i2c: mdf.base.Datagram_Device,
+    clock_device: mdf.base.Clock_Device,
+    params: parameters,
+    emissivity: f32,
+    open_air_shift: f32,
+
+    scale_alpha: f32 = 0.000001,
+    control_register_address: u16 = 0x800D,
+    status_register_address: u16 = 0x8000,
+    ram_address: u16 = 0x0400,
+    eeprom_address: u16 = 0x2400,
+    device_id_1_address: u16 = 0x2407,
+
+    frame_loop: [2]u1 = [2]u1{ 0, 1 },
+    refresh_rate_mask: u16 = 0b111 << 7,
+
+    pub fn init(cfg: MLX90640_Config) !Self {
+        var obj = Self{
+            .i2c = cfg.i2c,
+            .clock_device = cfg.clock,
+            .open_air_shift = cfg.open_air_shift,
+            .emissivity = cfg.emissivity,
+            .params = parameters{},
+        };
+
+        // the temperatures are all wack on first read
+        try obj.loadFrame();
+
+        return obj;
+    }
+
+    fn write(self: *Self, address: u16, val: u48) !void {
+        var req = [4]u8{
+            @as(u8, @truncate(address >> 8)),
+            @as(u8, @truncate(address & 0xFF)),
+            @as(u8, @truncate(val >> 8)),
+            @as(u8, @truncate(val & 0xFF)),
+        };
+
+        try self.i2c.write(&req);
+    }
+
+    fn writeThenRead(self: *Self, address: u16, buf: []u16) !void {
+        var req = [2]u8{ @as(u8, @truncate(address >> 8)), @as(u8, @truncate(address & 0xFF)) };
+        try self.i2c.write_then_read(&req, self.frame_data[0 .. buf.len * 2]);
+        for (0.., buf) |i, _| {
+            buf[i] = std.mem.readInt(u16, self.frame_data[i * 2 .. (i * 2) + 2][0..2], .big);
+        }
+    }
+
+    pub fn serialNumber(self: *Self) !u48 {
+        try self.writeThenRead(self.device_id_1_address, self.frame[0..3]);
+        return @as(u48, self.frame[0]) << 32 |
+            @as(u48, self.frame[1]) << 16 |
+            @as(u48, self.frame[2]);
+    }
+
+    pub fn setRefreshRate(self: *Self, rate: u16) !void {
+        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+        const val: u16 = (self.frame[0] & ~self.refresh_rate_mask) | ((rate << 7) & self.refresh_rate_mask);
+        try self.write(self.control_register_address, val);
+    }
+
+    pub fn refreshRate(self: *Self) !u3 {
+        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+        const val = self.frame[0] >> 7 & 0b111;
+        return @as(u3, @truncate(val));
+    }
+
+    pub fn resolution(self: *Self) !u2 {
+        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+        const val = self.frame[0] >> 10 & 0b11;
+        return @as(u2, @truncate(val));
+    }
+
+    pub fn temperature(self: *Self, result: []f32) !void {
+        try self.loadFrame();
+
+        const subPage: u16 = self.frame[833] & 0x0001;
+        const vdd = self.getVdd();
+        const ta = self.getTa(vdd);
+        const tr = ta - self.open_air_shift;
+
+        var ta4: f32 = (ta + 273.15);
+        ta4 = ta4 * ta4;
+        ta4 = ta4 * ta4;
+        var tr4: f32 = (tr + 273.15);
+        tr4 = tr4 * tr4;
+        tr4 = tr4 * tr4;
+        const taTr: f32 = tr4 - (tr4 - ta4) / self.emissivity;
+
+        const ktaScale: f32 = @floatFromInt(std.math.pow(u16, 2, self.params.ktaScale));
+        const kvScale: f32 = @floatFromInt(std.math.pow(u16, 2, self.params.kvScale));
+        const alphaScale: f32 = @floatFromInt(std.math.pow(u16, 2, self.params.alphaScale));
+
+        var alphaCorrR: [4]f32 = undefined;
+        alphaCorrR[0] = 1 / (1 + self.params.ksTo[0] * 40);
+        alphaCorrR[1] = 1;
+        var ct: f32 = @floatFromInt(self.params.ct[2]);
+        alphaCorrR[2] = (1 + self.params.ksTo[1] * ct);
+        ct = @floatFromInt(self.params.ct[3] - self.params.ct[2]);
+        alphaCorrR[3] = alphaCorrR[2] * (1 + self.params.ksTo[2] * (ct));
+
+        var gain: f32 = @floatFromInt(self.frame[778]);
+        if (gain > 32767) {
+            gain = gain - 65536;
+        }
+
+        const gee: f32 = @floatFromInt(self.params.gainEE);
+        gain = gee / gain;
+
+        const mode: f32 = @floatFromInt((self.frame[832] & 0x1000) >> 5);
+
+        var irDataCP = [2]f32{
+            @floatFromInt(self.frame[776]),
+            @floatFromInt(self.frame[808]),
+        };
+
+        for (0..2) |i| {
+            if (irDataCP[i] > 32767) {
+                irDataCP[i] = irDataCP[i] - 65536;
+            }
+            irDataCP[i] = irDataCP[i] * gain;
+        }
+
+        var cpo: f32 = @floatFromInt(self.params.cpOffset[0]);
+        irDataCP[0] = irDataCP[0] - cpo * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+
+        const cmee: f32 = @floatFromInt(self.params.calibrationModeEE);
+        cpo = @floatFromInt(self.params.cpOffset[1]);
+        if (mode == cmee) {
+            irDataCP[1] = irDataCP[1] - cpo * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+        } else {
+            irDataCP[1] = irDataCP[1] - (cpo + self.params.ilChessC[0]) * (1 + self.params.cpKta * (ta - 25)) * (1 + self.params.cpKv * (vdd - 3.3));
+        }
+
+        var range: u8 = 0;
+        var pattern: i32 = 0;
+        var pixelNumber: i32 = 0;
+        for (0..768) |i| {
+            pixelNumber = @intCast(i);
+            const ilPattern: i32 = @divTrunc(pixelNumber, 32) - @divTrunc(pixelNumber, 64) * 2;
+            const chessPattern: i32 = ilPattern ^ (pixelNumber - @divTrunc(pixelNumber, 2) * 2);
+            const conversionPattern: i32 = (@divTrunc((pixelNumber + 2), 4) - @divTrunc((pixelNumber + 3), 4) + @divTrunc((pixelNumber + 1), 4) - @divTrunc(pixelNumber, 4)) * (1 - 2 * ilPattern);
+
+            if (mode == 0) {
+                pattern = ilPattern;
+            } else {
+                pattern = chessPattern;
+            }
+
+            var irData: f32 = @floatFromInt(self.frame[i]);
+            if (irData > 32767) {
+                irData = irData - 65536;
+            }
+
+            irData = irData * gain;
+
+            const ktax: f32 = @floatFromInt(self.params.kta[i]);
+            const kta: f32 = ktax / ktaScale;
+            const kvx: f32 = @floatFromInt(self.params.kv[i]);
+            const kv: f32 = kvx / kvScale;
+            const offsetx: f32 = @floatFromInt(self.params.offset[i]);
+            irData = irData - offsetx * (1 + kta * (ta - 25)) * (1 + kv * (vdd - 3.3));
+
+            if (mode != cmee) {
+                const x: f32 = @floatFromInt(ilPattern);
+                const y: f32 = @floatFromInt(conversionPattern);
+                irData = irData + self.params.ilChessC[2] * (2 * x - 1) - self.params.ilChessC[1] * y;
+            }
+
+            irData = irData - self.params.tgc * irDataCP[subPage];
+            irData = irData / self.emissivity;
+
+            const alphax: f32 = @floatFromInt(self.params.alpha[i]);
+            var alphaCompensated: f32 = self.scale_alpha * alphaScale / alphax;
+            alphaCompensated = alphaCompensated * (1 + self.params.KsTa * (ta - 25));
+
+            var Sx: f32 = alphaCompensated * alphaCompensated * alphaCompensated * (irData + alphaCompensated * taTr);
+            Sx = std.math.sqrt(std.math.sqrt(Sx)) * self.params.ksTo[1];
+
+            var To: f32 = std.math.sqrt(std.math.sqrt(irData / (alphaCompensated * (1 - self.params.ksTo[1] * 273.15) + Sx) + taTr)) - 273.15;
+            const x: i16 = @intFromFloat(To);
+            if (x < self.params.ct[1]) {
+                range = 0;
+            } else if (x < self.params.ct[2]) {
+                range = 1;
+            } else if (x < self.params.ct[3]) {
+                range = 2;
+            } else {
+                range = 3;
+            }
+
+            const y: f32 = @floatFromInt(self.params.ct[range]);
+            To = std.math.sqrt(std.math.sqrt(irData / (alphaCompensated * alphaCorrR[range] * (1 + self.params.ksTo[range] * (To - y))) + taTr)) - 273.15;
+            result[i] = To;
+        }
+    }
+
+    fn getVdd(self: *Self) f32 {
+        var vdd: f32 = @floatFromInt(self.frame[810]);
+        if (vdd > 32767) {
+            vdd -= 65536;
+        }
+
+        const resolutionRAM: f32 = @floatFromInt((self.frame[832] & 0x0C00) >> 10);
+        const resolutionCorrection = std.math.pow(f32, 2, @floatFromInt(self.params.resolutionEE)) / std.math.pow(f32, 2, resolutionRAM);
+        const vdd25: f32 = @floatFromInt(self.params.vdd25);
+        const kvdd: f32 = @floatFromInt(self.params.kVdd);
+        vdd = (resolutionCorrection * vdd - vdd25) / kvdd + 3.3;
+
+        return vdd;
+    }
+
+    pub fn loadFrame(self: *Self) !void {
+        var ready: bool = false;
+        for (self.frame_loop) |i| {
+            while (!ready) {
+                try self.writeThenRead(self.status_register_address, self.frame[833..834]);
+                ready = self.isReady(i, self.frame[833]);
+                self.clock_device.sleep_ms(10);
+            }
+
+            try self.writeThenRead(self.ram_address, self.frame[0..832]);
+            ready = false;
+        }
+
+        try self.writeThenRead(self.control_register_address, self.frame[832..833]);
+    }
+
+    fn getTa(self: *Self, vdd: f32) f32 {
+        var ptat: f32 = @floatFromInt(self.frame[800]);
+        if (ptat > 32767) {
+            ptat = ptat - 65536;
+        }
+
+        var ptatArt: f32 = @floatFromInt(self.frame[768]);
+        if (ptatArt > 32767) {
+            ptatArt = ptatArt - 65536;
+        }
+
+        const vPTA25: f32 = @floatFromInt(self.params.vPTAT25);
+
+        ptatArt = (ptat / (ptat * self.params.alphaPTAT + ptatArt)) * std.math.pow(f32, 2, 18);
+        var ta: f32 = (ptatArt / (1 + self.params.KvPTAT * (vdd - 3.3)) - vPTA25);
+        ta = ta / self.params.KtPTAT + 25;
+
+        return ta;
+    }
+
+    fn isReady(_: *Self, i: u1, status: u16) bool {
+        return @as(u1, @truncate(status & 0b1)) == i and @as(u1, @truncate((status >> 3) & 0b1)) == 1;
+    }
+
+    pub fn extractParameters(self: *Self) !void {
+        try self.writeThenRead(self.eeprom_address, &self.eeprom);
+        self.extractVdd();
+        self.extractPtat();
+        self.extractGain();
+        self.extractTgc();
+        self.extractResolution();
+        self.extractKta();
+        self.extractKsTo();
+        self.extractCp();
+        self.extractAlpha();
+        self.extractOffset();
+        self.extractKtaPixel();
+        self.extractKvpixel();
+        self.extractCilc();
+        const err: i16 = self.extractDeviatingPixels();
+        if (err > 0) {
+            return Mlx90649Error.BadPixels;
+        }
+    }
+
+    fn extractVdd(self: *Self) void {
+        self.params.kVdd = @intCast((self.eeprom[51] & 0xFF00) >> 8);
+        if (self.params.kVdd > 127) {
+            self.params.kVdd = (self.params.kVdd - 256);
+        }
+
+        self.params.kVdd *= 32;
+
+        var vdd25: i32 = self.eeprom[51] & 0x00FF;
+        vdd25 = ((vdd25 - 256) << 5) - 8192;
+        self.params.vdd25 = @intCast(vdd25);
+    }
+
+    fn extractPtat(self: *Self) void {
+        self.params.KvPTAT = @floatFromInt((self.eeprom[50] & 0xFC00) >> 10);
+        if (self.params.KvPTAT > 31) {
+            self.params.KvPTAT = self.params.KvPTAT - 64;
+        }
+        self.params.KvPTAT = self.params.KvPTAT / 4096;
+
+        self.params.KtPTAT = @floatFromInt(self.eeprom[50] & 0x03FF);
+        if (self.params.KtPTAT > 511) {
+            self.params.KtPTAT = self.params.KtPTAT - 1024;
+        }
+
+        self.params.KtPTAT = self.params.KtPTAT / 8;
+
+        self.params.vPTAT25 = @intCast(self.eeprom[49]);
+
+        const x: f32 = @floatFromInt(self.eeprom[16] & 0xF000);
+        const y: f32 = std.math.pow(f32, 2, 14);
+        self.params.alphaPTAT = (x / y) + 8.0;
+    }
+
+    fn extractGain(self: *Self) void {
+        self.params.gainEE = @intCast(self.eeprom[48]);
+        if (self.params.gainEE > 32767) {
+            self.params.gainEE -= -65536;
+        }
+    }
+
+    fn extractTgc(self: *Self) void {
+        self.params.tgc = @floatFromInt(self.eeprom[60] & 0x00FF);
+        if (self.params.tgc > 127) {
+            self.params.tgc -= -256;
+        }
+        self.params.tgc /= 32.0;
+    }
+
+    fn extractResolution(self: *Self) void {
+        self.params.resolutionEE = @truncate((self.eeprom[56] & 0x3000) >> 12);
+    }
+
+    fn extractKta(self: *Self) void {
+        self.params.KsTa = @floatFromInt((self.eeprom[60] & 0xFF00) >> 8);
+        if (self.params.KsTa > 127) {
+            self.params.KsTa -= 256;
+        }
+        self.params.KsTa /= 8192.0;
+    }
+
+    fn extractKsTo(self: *Self) void {
+        const step: i16 = @intCast(((self.eeprom[63] & 0x3000) >> 12) * 10);
+        self.params.ct[0] = -40;
+        self.params.ct[1] = 0;
+        self.params.ct[2] = @intCast((self.eeprom[63] & 0x00F0) >> 4);
+        self.params.ct[2] *= step;
+        self.params.ct[3] = @intCast((self.eeprom[63] & 0x0F00) >> 8);
+        self.params.ct[3] *= step;
+
+        self.params.ksTo[0] = @floatFromInt(self.eeprom[61] & 0x00FF);
+        self.params.ksTo[1] = @floatFromInt((self.eeprom[61] & 0xFF00) >> 8);
+        self.params.ksTo[2] = @floatFromInt(self.eeprom[62] & 0x00FF);
+        self.params.ksTo[3] = @floatFromInt((self.eeprom[62] & 0xFF00) >> 8);
+
+        const x: u5 = @intCast((self.eeprom[63] & 0x000F) + 8);
+        const y: u32 = @as(u32, 1) << x;
+        const KsToScale: f32 = @floatFromInt(y);
+
+        for (0..4) |i| {
+            if (self.params.ksTo[i] > 127) {
+                self.params.ksTo[i] -= 256;
+            }
+            self.params.ksTo[i] /= KsToScale;
+        }
+        self.params.ksTo[4] = -0.0002;
+    }
+
+    fn extractCp(self: *Self) void {
+        const alphaScale: u16 = ((self.eeprom[32] & 0xF000) >> 12) + 27;
+
+        self.params.cpOffset[0] = @intCast(self.eeprom[58] & 0x03FF);
+        if (self.params.cpOffset[0] > 511) {
+            self.params.cpOffset[0] = self.params.cpOffset[0] - 1024;
+        }
+
+        self.params.cpOffset[1] = @intCast((self.eeprom[58] & 0xFC00) >> 10);
+        if (self.params.cpOffset[1] > 31) {
+            self.params.cpOffset[1] = self.params.cpOffset[1] - 64;
+        }
+
+        self.params.cpAlpha[0] = @floatFromInt(self.eeprom[57] & 0x03FF);
+        if (self.params.cpAlpha[0] > 511) {
+            self.params.cpAlpha[0] -= 1024;
+        }
+
+        self.params.cpAlpha[0] /= (std.math.pow(f32, 2, @floatFromInt(alphaScale)));
+
+        self.params.cpAlpha[1] = @floatFromInt((self.eeprom[57] & 0xFC00) >> 10);
+        if (self.params.cpAlpha[1] > 31) {
+            self.params.cpAlpha[1] -= 64;
+        }
+
+        self.params.cpAlpha[1] = (1 + self.params.cpAlpha[1] / 128) * self.params.cpAlpha[0];
+
+        self.params.cpKta = @floatFromInt(self.eeprom[59] & 0x00FF);
+        if (self.params.cpKta > 127) {
+            self.params.cpKta -= 256;
+        }
+
+        const ktaScale1: f32 = @floatFromInt(((self.eeprom[56] & 0x00F0) >> 4) + 8);
+        self.params.cpKta /= std.math.pow(f32, 2, ktaScale1);
+
+        self.params.cpKv = @floatFromInt((self.eeprom[59] & 0xFF00) >> 8);
+        if (self.params.cpKv > 127) {
+            self.params.cpKv -= 256;
+        }
+
+        const kvScale: f32 = @floatFromInt((self.eeprom[56] & 0x0F00) >> 8);
+        self.params.cpKv /= std.math.pow(f32, 2, kvScale);
+    }
+
+    fn extractAlpha(self: *Self) void {
+        const accRemScale: u3 = @intCast(self.eeprom[32] & 0x0F);
+        const accColumnScale: u4 = @intCast((self.eeprom[32] & 0x00F0) >> 4);
+        const accRowScale: u4 = @intCast((self.eeprom[32] & 0x0F00) >> 8);
+        var alphaScale: f32 = @floatFromInt(((self.eeprom[32] & 0xF000) >> 12) + 30);
+        const alphaRef: i32 = @intCast(self.eeprom[33]);
+
+        var accRow: [24]i16 = undefined;
+        var accColumn: [32]i16 = undefined;
+
+        for (0..6) |i| {
+            const p = i * 4;
+            accRow[p + 0] = @intCast(self.eeprom[34 + i] & 0x000F);
+            accRow[p + 1] = @intCast((self.eeprom[34 + i] & 0x00F0) >> 4);
+            accRow[p + 2] = @intCast((self.eeprom[34 + i] & 0x0F00) >> 8);
+            accRow[p + 3] = @intCast((self.eeprom[34 + i] & 0xF000) >> 12);
+        }
+
+        for (0..24) |i| {
+            if (accRow[i] > 7) {
+                accRow[i] = accRow[i] - 16;
+            }
+        }
+
+        for (0..8) |i| {
+            const p = i * 4;
+            accColumn[p + 0] = @intCast(self.eeprom[40 + i] & 0x000F);
+            accColumn[p + 1] = @intCast((self.eeprom[40 + i] & 0x00F0) >> 4);
+            accColumn[p + 2] = @intCast((self.eeprom[40 + i] & 0x0F00) >> 8);
+            accColumn[p + 3] = @intCast((self.eeprom[40 + i] & 0xF000) >> 12);
+        }
+
+        for (0..32) |i| {
+            if (accColumn[i] > 7) {
+                accColumn[i] = accColumn[i] - 16;
+            }
+        }
+
+        for (0..24) |i| {
+            for (0..32) |j| {
+                const p = 32 * i + j;
+                self.scratch_data[p] = @floatFromInt((self.eeprom[64 + p] & 0x03F0) >> 4);
+                if (self.scratch_data[p] > 31) {
+                    self.scratch_data[p] = self.scratch_data[p] - 64;
+                }
+                const x: f32 = @floatFromInt(@as(u8, 1) << accRemScale);
+                self.scratch_data[p] = self.scratch_data[p] * x;
+                const y: f32 = @floatFromInt((alphaRef + (accRow[i] << accRowScale) + (accColumn[j] << accColumnScale)));
+                self.scratch_data[p] = y + self.scratch_data[p];
+                self.scratch_data[p] /= std.math.pow(f32, 2, alphaScale);
+                self.scratch_data[p] = self.scratch_data[p] - self.params.tgc * (self.params.cpAlpha[0] + self.params.cpAlpha[1]) / 2;
+                self.scratch_data[p] = self.scale_alpha / self.scratch_data[p];
+            }
+        }
+
+        var temp = self.scratch_data[0];
+        for (1..768) |i| {
+            if (self.scratch_data[i] > temp) {
+                temp = self.scratch_data[i];
+            }
+        }
+
+        alphaScale = 0;
+        while (temp < 32768) {
+            temp *= 2;
+            alphaScale += alphaScale;
+        }
+
+        for (0..768) |i| {
+            temp = self.scratch_data[i] * std.math.pow(f32, 2, alphaScale);
+            self.params.alpha[i] = @intFromFloat(temp + 0.5);
+        }
+
+        self.params.alphaScale = @intFromFloat(alphaScale);
+    }
+
+    fn extractOffset(self: *Self) void {
+        var occRow: [24]i16 = undefined;
+        var occColumn: [32]i16 = undefined;
+        const occRemScale: u3 = @intCast(self.eeprom[16] & 0x000F);
+        const occColumnScale: u4 = @intCast((self.eeprom[16] & 0x00F0) >> 4);
+        const occRowScale: u4 = @intCast((self.eeprom[16] & 0x0F00) >> 8);
+        var offsetRef: i32 = @intCast(self.eeprom[17]);
+
+        if (offsetRef > 32767) {
+            offsetRef -= 65536;
+        }
+
+        for (0..6) |i| {
+            const p = i * 4;
+            occRow[p + 0] = @intCast(self.eeprom[18 + i] & 0x000F);
+            occRow[p + 1] = @intCast((self.eeprom[18 + i] & 0x00F0) >> 4);
+            occRow[p + 2] = @intCast((self.eeprom[18 + i] & 0x0F00) >> 8);
+            occRow[p + 3] = @intCast((self.eeprom[18 + i] & 0xF000) >> 12);
+        }
+
+        for (0..24) |i| {
+            if (occRow[i] > 7) {
+                occRow[i] -= 16;
+            }
+        }
+
+        for (0..8) |i| {
+            const p = i * 4;
+            occColumn[p + 0] = @intCast(self.eeprom[24 + i] & 0x000F);
+            occColumn[p + 1] = @intCast((self.eeprom[24 + i] & 0x00F0) >> 4);
+            occColumn[p + 2] = @intCast((self.eeprom[24 + i] & 0x0F00) >> 8);
+            occColumn[p + 3] = @intCast((self.eeprom[24 + i] & 0xF000) >> 12);
+        }
+
+        for (0..32) |i| {
+            if (occColumn[i] > 7) {
+                occColumn[i] = occColumn[i] - 16;
+            }
+        }
+
+        for (0..24) |i| {
+            for (0..32) |j| {
+                const p = 32 * i + j;
+                self.params.offset[p] = @intCast((self.eeprom[64 + p] & 0xFC00) >> 10);
+                if (self.params.offset[p] > 31) {
+                    self.params.offset[p] = self.params.offset[p] - 64;
+                }
+                self.params.offset[p] = self.params.offset[p] * (@as(u8, 1) << occRemScale);
+
+                const x: i32 = offsetRef + @as(i32, (occRow[i] << occRowScale));
+                const y: i32 = (occColumn[j] << occColumnScale);
+                const z: i32 = self.params.offset[p];
+                self.params.offset[p] = x + y + z;
+            }
+        }
+    }
+
+    fn extractKtaPixel(self: *Self) void {
+        var ktaRC: [4]i8 = undefined;
+        var ktaRoCo: i8 = @intCast((self.eeprom[54] & 0xFF00) >> 8);
+        if (ktaRoCo > 127) {
+            ktaRoCo = ktaRoCo - 256;
+        }
+        ktaRC[0] = ktaRoCo;
+
+        var ktaReCo: i8 = @intCast(self.eeprom[54] & 0xFF);
+        if (ktaReCo > 127) {
+            ktaReCo = ktaReCo - 256;
+        }
+        ktaRC[2] = ktaReCo;
+
+        var ktaRoCe: i8 = @intCast((self.eeprom[55] & 0xFF00) >> 8);
+        if (ktaRoCe > 127) {
+            ktaRoCe = ktaRoCe - 256;
+        }
+        ktaRC[1] = ktaRoCe;
+
+        var ktaReCe: i8 = @intCast((self.eeprom[55] & 0xFF));
+        if (ktaReCe > 127) {
+            ktaReCe = ktaReCe - 256;
+        }
+        ktaRC[3] = ktaReCe;
+
+        var ktaScale1: u8 = @intCast(((self.eeprom[56] & 0x00F0) >> 4) + 8);
+        const ktaScale2: u3 = @intCast(self.eeprom[56] & 0x000F);
+
+        for (0..24) |i| {
+            for (0..32) |j| {
+                const p = 32 * i + j;
+                const split = 2 * (p / 32 - (p / 64) * 2) + p % 2;
+                self.scratch_data[p] = @floatFromInt((self.eeprom[64 + p] & 0x000E) >> 1);
+                if (self.scratch_data[p] > 3) {
+                    self.scratch_data[p] = self.scratch_data[p] - 8;
+                }
+                const x: f32 = @floatFromInt(@as(u8, 1) << ktaScale2);
+                self.scratch_data[p] = self.scratch_data[p] * x;
+                const y: f32 = @floatFromInt(ktaRC[split]);
+                self.scratch_data[p] = y + self.scratch_data[p];
+                self.scratch_data[p] = self.scratch_data[p] / std.math.pow(f32, 2, @floatFromInt(ktaScale1));
+                //self.scratch_data[p] = self.scratch_data[p] * self.params.offset[p];
+            }
+        }
+
+        var temp: f32 = @abs(self.scratch_data[0]);
+        for (1..768) |i| {
+            if (@abs(self.scratch_data[i]) > temp) {
+                temp = @abs(self.scratch_data[i]);
+            }
+        }
+
+        ktaScale1 = 0;
+        while (temp < 64) {
+            temp = temp * 2;
+            ktaScale1 = ktaScale1 + 1;
+        }
+
+        for (0..768) |i| {
+            temp = self.scratch_data[i] * std.math.pow(f32, 2, @floatFromInt(ktaScale1));
+            if (temp < 0) {
+                self.params.kta[i] = @intFromFloat(temp - 0.5);
+            } else {
+                self.params.kta[i] = @intFromFloat(temp + 0.5);
+            }
+        }
+
+        self.params.ktaScale = ktaScale1;
+    }
+
+    fn extractKvpixel(self: *Self) void {
+        var KvT: [4]u8 = undefined;
+        var KvRoCo: i8 = @intCast((self.eeprom[52] & 0xF000) >> 12);
+        if (KvRoCo > 7) {
+            KvRoCo = KvRoCo - 16;
+        }
+        KvT[0] = @intCast(KvRoCo);
+
+        var KvReCo: i8 = @intCast((self.eeprom[52] & 0x0F00) >> 8);
+        if (KvReCo > 7) {
+            KvReCo = KvReCo - 16;
+        }
+        KvT[2] = @intCast(KvReCo);
+
+        var KvRoCe: i8 = @intCast((self.eeprom[52] & 0x00F0) >> 4);
+        if (KvRoCe > 7) {
+            KvRoCe = KvRoCe - 16;
+        }
+        KvT[1] = @intCast(KvRoCe);
+
+        var KvReCe: i8 = @intCast(self.eeprom[52] & 0x000F);
+        if (KvReCe > 7) {
+            KvReCe = KvReCe - 16;
+        }
+        KvT[3] = @intCast(KvReCe);
+
+        var kvScale: u8 = @intCast((self.eeprom[56] & 0x0F00) >> 8);
+
+        for (0..24) |i| {
+            for (0..32) |j| {
+                const p = 32 * i + j;
+                const split = 2 * (p / 32 - (p / 64) * 2) + p % 2;
+                self.scratch_data[p] = @floatFromInt(KvT[split]);
+                self.scratch_data[p] = self.scratch_data[p] / std.math.pow(f32, 2, @floatFromInt(kvScale));
+                //self.scratch_data[p] = self.scratch_data[p] * mlx90640->offset[p];
+            }
+        }
+
+        var temp: f32 = @abs(self.scratch_data[0]);
+        for (1..768) |i| {
+            if (@abs(self.scratch_data[i]) > temp) {
+                temp = @abs(self.scratch_data[i]);
+            }
+        }
+
+        kvScale = 0;
+        while (temp < 64) {
+            temp = temp * 2;
+            kvScale = kvScale + 1;
+        }
+
+        for (0..768) |i| {
+            temp = self.scratch_data[i] * std.math.pow(f32, 2, @floatFromInt(kvScale));
+            if (temp < 0) {
+                self.params.kv[i] = @intFromFloat(temp - 0.5);
+            } else {
+                self.params.kv[i] = @intFromFloat(temp + 0.5);
+            }
+        }
+
+        self.params.kvScale = kvScale;
+    }
+
+    fn extractCilc(self: *Self) void {
+        var offsetSP: [2]i16 = undefined;
+        var alphaSP: [2]f32 = undefined;
+        const alphaScale: u8 = @intCast(((self.eeprom[32] & 0xF000) >> 12) + 27);
+
+        offsetSP[0] = @intCast(self.eeprom[58] & 0x03FF);
+        if (offsetSP[0] > 511) {
+            offsetSP[0] = offsetSP[0] - 1024;
+        }
+
+        offsetSP[1] = @intCast((self.eeprom[58] & 0xFC00) >> 10);
+        if (offsetSP[1] > 31) {
+            offsetSP[1] = offsetSP[1] - 64;
+        }
+        offsetSP[1] = offsetSP[1] + offsetSP[0];
+
+        alphaSP[0] = @floatFromInt(self.eeprom[57] & 0x03FF);
+        if (alphaSP[0] > 511) {
+            alphaSP[0] = alphaSP[0] - 1024;
+        }
+        alphaSP[0] = alphaSP[0] / std.math.pow(f32, 2, @floatFromInt(alphaScale));
+
+        alphaSP[1] = @floatFromInt((self.eeprom[57] & 0xFC00) >> 10);
+        if (alphaSP[1] > 31) {
+            alphaSP[1] = alphaSP[1] - 64;
+        }
+        alphaSP[1] = (1 + alphaSP[1] / 128) * alphaSP[0];
+
+        self.params.cpKta = @floatFromInt(self.eeprom[59] & 0x00FF);
+        if (self.params.cpKta > 127) {
+            self.params.cpKta = self.params.cpKta - 256;
+        }
+        const ktaScale1: u8 = @intCast(((self.eeprom[56] & 0x00F0) >> 4) + 8);
+        self.params.cpKta /= std.math.pow(f32, 2, @floatFromInt(ktaScale1));
+
+        var cpKv: f32 = @floatFromInt((self.eeprom[59] & 0xFF00) >> 8);
+        if (cpKv > 127) {
+            cpKv = cpKv - 256;
+        }
+        const kvScale: u8 = @intCast((self.eeprom[56] & 0x0F00) >> 8);
+        self.params.cpKv = cpKv / std.math.pow(f32, 2, @floatFromInt(kvScale));
+
+        self.params.cpAlpha[0] = alphaSP[0];
+        self.params.cpAlpha[1] = alphaSP[1];
+        self.params.cpOffset[0] = offsetSP[0];
+        self.params.cpOffset[1] = offsetSP[1];
+    }
+
+    fn extractDeviatingPixels(self: *Self) i16 {
+        var pixCnt: u32 = 0;
+        for (0..5) |i| {
+            pixCnt = @intCast(i);
+            self.params.brokenPixels[pixCnt] = 0xFFFF;
+            self.params.outlierPixels[pixCnt] = 0xFFFF;
+        }
+
+        var brokenPixCnt: u16 = 0;
+        var outlierPixCnt: u16 = 0;
+        pixCnt = 0;
+        while (pixCnt < 768 and brokenPixCnt < 5 and outlierPixCnt < 5) {
+            if (self.eeprom[pixCnt + 64] == 0) {
+                self.params.brokenPixels[brokenPixCnt] = @intCast(pixCnt);
+                brokenPixCnt = brokenPixCnt + 1;
+            } else if ((self.eeprom[pixCnt + 64] & 0x0001) != 0) {
+                self.params.outlierPixels[outlierPixCnt] = @intCast(pixCnt);
+                outlierPixCnt = outlierPixCnt + 1;
+            }
+
+            pixCnt = pixCnt + 1;
+        }
+
+        var warn: i16 = 0;
+        if (brokenPixCnt > 4) {
+            // Serial.print("Broken pixels: ");
+            // Serial.println(brokenPixCnt);
+            warn = -3;
+        } else if (outlierPixCnt > 4) {
+            //Serial.print("Outlier pixels: ");
+            //Serial.println(outlierPixCnt);
+            warn = -4;
+        } else if ((brokenPixCnt + outlierPixCnt) > 4) {
+            //Serial.print("Broken+outlier pixels: ");
+            //Serial.println(brokenPixCnt + outlierPixCnt);
+            warn = -5;
+        } else {
+            for (0..brokenPixCnt) |x| {
+                pixCnt = @intCast(x);
+                for (pixCnt + 1..brokenPixCnt) |i| {
+                    warn = self.checkAdjacentPixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
+                    if (warn != 0) {
+                        //Serial.println("Broken pixel has adjacent broken pixel");
+                        return warn;
+                    }
+                }
+            }
+
+            for (0..outlierPixCnt) |x| {
+                pixCnt = @intCast(x);
+                for (pixCnt + 1..outlierPixCnt) |i| {
+                    warn = self.checkAdjacentPixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
+                    if (warn != 0) {
+                        //Serial.println("Outlier pixel has adjacent outlier pixel");
+                        return warn;
+                    }
+                }
+            }
+
+            for (0..brokenPixCnt) |x| {
+                pixCnt = @intCast(x);
+                for (0..outlierPixCnt) |i| {
+                    warn = self.checkAdjacentPixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
+                    if (warn != 0) {
+                        //Serial.println("Broken pixel has adjacent outlier pixel");
+                        return warn;
+                    }
+                }
+            }
+        }
+
+        return warn;
+    }
+
+    fn checkAdjacentPixels(_: *Self, pix1: u16, pix2: u16) i16 {
+        var pixPosDif: i32 = 0;
+
+        pixPosDif = pix1 - pix2;
+        if (pixPosDif > -34 and pixPosDif < -30) {
+            return -6;
+        }
+        if (pixPosDif > -2 and pixPosDif < 2) {
+            return -6;
+        }
+        if (pixPosDif > 30 and pixPosDif < 34) {
+            return -6;
+        }
+
+        return 0;
+    }
+};
+
+// test "get temperature" {
+//     var mi2c: MockI2C() = MockI2C().init();
+//     var camera = MLX90640().init(&mi2c.interface);
+//     try camera.extractParameters();
+//     var frame: [834]f32 = undefined;
+//     try camera.temperature(&frame);
+// }
