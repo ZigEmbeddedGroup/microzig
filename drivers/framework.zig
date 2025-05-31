@@ -38,6 +38,7 @@ pub const input = struct {
 
 pub const sensor = struct {
     pub const TMP117 = @import("sensor/TMP117.zig").TMP117;
+    pub const ICM_20948 = @import("sensor/ICM-20948.zig").ICM_20948;
 };
 
 pub const stepper = struct {
@@ -205,6 +206,7 @@ test {
     _ = input.rotary_encoder;
 
     _ = sensor.TMP117;
+    _ = sensor.ICM_20948;
 
     _ = @import("stepper/common.zig");
     _ = stepper.A4988;
