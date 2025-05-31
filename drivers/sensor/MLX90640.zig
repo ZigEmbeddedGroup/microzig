@@ -85,7 +85,7 @@ pub const MLX90640 = struct {
         };
 
         // the temperatures are all wack on first read
-        try obj.loadFrame();
+        try obj.load_frame();
 
         return obj;
     }
@@ -99,9 +99,12 @@ pub const MLX90640 = struct {
         };
 
         try self.i2c.write(&req);
+        self.clock_device.sleep_ms(100);
+        try self.extract_parameters();
+        self.clock_device.sleep_ms(100);
     }
 
-    fn writeThenRead(self: *Self, address: u16, buf: []u16) !void {
+    fn write_then_read(self: *Self, address: u16, buf: []u16) !void {
         var req = [2]u8{ @as(u8, @truncate(address >> 8)), @as(u8, @truncate(address & 0xFF)) };
         try self.i2c.write_then_read(&req, self.frame_data[0 .. buf.len * 2]);
         for (0.., buf) |i, _| {
@@ -109,33 +112,33 @@ pub const MLX90640 = struct {
         }
     }
 
-    pub fn serialNumber(self: *Self) !u48 {
-        try self.writeThenRead(self.device_id_1_address, self.frame[0..3]);
+    pub fn serial_number(self: *Self) !u48 {
+        try self.write_then_read(self.device_id_1_address, self.frame[0..3]);
         return @as(u48, self.frame[0]) << 32 |
             @as(u48, self.frame[1]) << 16 |
             @as(u48, self.frame[2]);
     }
 
-    pub fn setRefreshRate(self: *Self, rate: u16) !void {
-        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+    pub fn set_refresh_rate(self: *Self, rate: u16) !void {
+        try self.write_then_read(self.control_register_address, self.frame[0..1]);
         const val: u16 = (self.frame[0] & ~self.refresh_rate_mask) | ((rate << 7) & self.refresh_rate_mask);
         try self.write(self.control_register_address, val);
     }
 
-    pub fn refreshRate(self: *Self) !u3 {
-        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+    pub fn refresh_rate(self: *Self) !u3 {
+        try self.write_then_read(self.control_register_address, self.frame[0..1]);
         const val = self.frame[0] >> 7 & 0b111;
         return @as(u3, @truncate(val));
     }
 
     pub fn resolution(self: *Self) !u2 {
-        try self.writeThenRead(self.control_register_address, self.frame[0..1]);
+        try self.write_then_read(self.control_register_address, self.frame[0..1]);
         const val = self.frame[0] >> 10 & 0b11;
         return @as(u2, @truncate(val));
     }
 
     pub fn temperature(self: *Self, result: []f32) !void {
-        try self.loadFrame();
+        try self.load_frame();
 
         const subPage: u16 = self.frame[833] & 0x0001;
         const vdd = self.getVdd();
@@ -273,20 +276,20 @@ pub const MLX90640 = struct {
         return vdd;
     }
 
-    pub fn loadFrame(self: *Self) !void {
+    pub fn load_frame(self: *Self) !void {
         var ready: bool = false;
         for (self.frame_loop) |i| {
             while (!ready) {
-                try self.writeThenRead(self.status_register_address, self.frame[833..834]);
-                ready = self.isReady(i, self.frame[833]);
+                try self.write_then_read(self.status_register_address, self.frame[833..834]);
+                ready = self.is_ready(i, self.frame[833]);
                 self.clock_device.sleep_ms(10);
             }
 
-            try self.writeThenRead(self.ram_address, self.frame[0..832]);
+            try self.write_then_read(self.ram_address, self.frame[0..832]);
             ready = false;
         }
 
-        try self.writeThenRead(self.control_register_address, self.frame[832..833]);
+        try self.write_then_read(self.control_register_address, self.frame[832..833]);
     }
 
     fn getTa(self: *Self, vdd: f32) f32 {
@@ -309,32 +312,32 @@ pub const MLX90640 = struct {
         return ta;
     }
 
-    fn isReady(_: *Self, i: u1, status: u16) bool {
+    fn is_ready(_: *Self, i: u1, status: u16) bool {
         return @as(u1, @truncate(status & 0b1)) == i and @as(u1, @truncate((status >> 3) & 0b1)) == 1;
     }
 
-    pub fn extractParameters(self: *Self) !void {
-        try self.writeThenRead(self.eeprom_address, &self.eeprom);
-        self.extractVdd();
-        self.extractPtat();
-        self.extractGain();
-        self.extractTgc();
-        self.extractResolution();
-        self.extractKta();
-        self.extractKsTo();
-        self.extractCp();
-        self.extractAlpha();
-        self.extractOffset();
-        self.extractKtaPixel();
-        self.extractKvpixel();
-        self.extractCilc();
-        const err: i16 = self.extractDeviatingPixels();
+    pub fn extract_parameters(self: *Self) !void {
+        try self.write_then_read(self.eeprom_address, &self.eeprom);
+        self.extract_vdd();
+        self.extract_ptat();
+        self.extact_gain();
+        self.extract_tgc();
+        self.extract_resolution();
+        self.extract_kta();
+        self.extract_ksto();
+        self.extract_cp();
+        self.extract_alpha();
+        self.extract_offset();
+        self.extract_kta_pixel();
+        self.extract_ky_pixel();
+        self.extract_cilc();
+        const err: i16 = self.extract_deviating_pixels();
         if (err > 0) {
             return Mlx90649Error.BadPixels;
         }
     }
 
-    fn extractVdd(self: *Self) void {
+    fn extract_vdd(self: *Self) void {
         self.params.kVdd = @intCast((self.eeprom[51] & 0xFF00) >> 8);
         if (self.params.kVdd > 127) {
             self.params.kVdd = (self.params.kVdd - 256);
@@ -347,7 +350,7 @@ pub const MLX90640 = struct {
         self.params.vdd25 = @intCast(vdd25);
     }
 
-    fn extractPtat(self: *Self) void {
+    fn extract_ptat(self: *Self) void {
         self.params.KvPTAT = @floatFromInt((self.eeprom[50] & 0xFC00) >> 10);
         if (self.params.KvPTAT > 31) {
             self.params.KvPTAT = self.params.KvPTAT - 64;
@@ -368,14 +371,14 @@ pub const MLX90640 = struct {
         self.params.alphaPTAT = (x / y) + 8.0;
     }
 
-    fn extractGain(self: *Self) void {
+    fn extact_gain(self: *Self) void {
         self.params.gainEE = @intCast(self.eeprom[48]);
         if (self.params.gainEE > 32767) {
             self.params.gainEE -= -65536;
         }
     }
 
-    fn extractTgc(self: *Self) void {
+    fn extract_tgc(self: *Self) void {
         self.params.tgc = @floatFromInt(self.eeprom[60] & 0x00FF);
         if (self.params.tgc > 127) {
             self.params.tgc -= -256;
@@ -383,11 +386,11 @@ pub const MLX90640 = struct {
         self.params.tgc /= 32.0;
     }
 
-    fn extractResolution(self: *Self) void {
+    fn extract_resolution(self: *Self) void {
         self.params.resolutionEE = @truncate((self.eeprom[56] & 0x3000) >> 12);
     }
 
-    fn extractKta(self: *Self) void {
+    fn extract_kta(self: *Self) void {
         self.params.KsTa = @floatFromInt((self.eeprom[60] & 0xFF00) >> 8);
         if (self.params.KsTa > 127) {
             self.params.KsTa -= 256;
@@ -395,7 +398,7 @@ pub const MLX90640 = struct {
         self.params.KsTa /= 8192.0;
     }
 
-    fn extractKsTo(self: *Self) void {
+    fn extract_ksto(self: *Self) void {
         const step: i16 = @intCast(((self.eeprom[63] & 0x3000) >> 12) * 10);
         self.params.ct[0] = -40;
         self.params.ct[1] = 0;
@@ -422,7 +425,7 @@ pub const MLX90640 = struct {
         self.params.ksTo[4] = -0.0002;
     }
 
-    fn extractCp(self: *Self) void {
+    fn extract_cp(self: *Self) void {
         const alphaScale: u16 = ((self.eeprom[32] & 0xF000) >> 12) + 27;
 
         self.params.cpOffset[0] = @intCast(self.eeprom[58] & 0x03FF);
@@ -466,7 +469,7 @@ pub const MLX90640 = struct {
         self.params.cpKv /= std.math.pow(f32, 2, kvScale);
     }
 
-    fn extractAlpha(self: *Self) void {
+    fn extract_alpha(self: *Self) void {
         const accRemScale: u3 = @intCast(self.eeprom[32] & 0x0F);
         const accColumnScale: u4 = @intCast((self.eeprom[32] & 0x00F0) >> 4);
         const accRowScale: u4 = @intCast((self.eeprom[32] & 0x0F00) >> 8);
@@ -542,7 +545,7 @@ pub const MLX90640 = struct {
         self.params.alphaScale = @intFromFloat(alphaScale);
     }
 
-    fn extractOffset(self: *Self) void {
+    fn extract_offset(self: *Self) void {
         var occRow: [24]i16 = undefined;
         var occColumn: [32]i16 = undefined;
         const occRemScale: u3 = @intCast(self.eeprom[16] & 0x000F);
@@ -599,7 +602,7 @@ pub const MLX90640 = struct {
         }
     }
 
-    fn extractKtaPixel(self: *Self) void {
+    fn extract_kta_pixel(self: *Self) void {
         var ktaRC: [4]i8 = undefined;
         var ktaRoCo: i8 = @intCast((self.eeprom[54] & 0xFF00) >> 8);
         if (ktaRoCo > 127) {
@@ -670,7 +673,7 @@ pub const MLX90640 = struct {
         self.params.ktaScale = ktaScale1;
     }
 
-    fn extractKvpixel(self: *Self) void {
+    fn extract_ky_pixel(self: *Self) void {
         var KvT: [4]u8 = undefined;
         var KvRoCo: i8 = @intCast((self.eeprom[52] & 0xF000) >> 12);
         if (KvRoCo > 7) {
@@ -733,7 +736,7 @@ pub const MLX90640 = struct {
         self.params.kvScale = kvScale;
     }
 
-    fn extractCilc(self: *Self) void {
+    fn extract_cilc(self: *Self) void {
         var offsetSP: [2]i16 = undefined;
         var alphaSP: [2]f32 = undefined;
         const alphaScale: u8 = @intCast(((self.eeprom[32] & 0xF000) >> 12) + 27);
@@ -781,7 +784,7 @@ pub const MLX90640 = struct {
         self.params.cpOffset[1] = offsetSP[1];
     }
 
-    fn extractDeviatingPixels(self: *Self) i16 {
+    fn extract_deviating_pixels(self: *Self) i16 {
         var pixCnt: u32 = 0;
         for (0..5) |i| {
             pixCnt = @intCast(i);
@@ -806,22 +809,16 @@ pub const MLX90640 = struct {
 
         var warn: i16 = 0;
         if (brokenPixCnt > 4) {
-            // Serial.print("Broken pixels: ");
-            // Serial.println(brokenPixCnt);
             warn = -3;
         } else if (outlierPixCnt > 4) {
-            //Serial.print("Outlier pixels: ");
-            //Serial.println(outlierPixCnt);
             warn = -4;
         } else if ((brokenPixCnt + outlierPixCnt) > 4) {
-            //Serial.print("Broken+outlier pixels: ");
-            //Serial.println(brokenPixCnt + outlierPixCnt);
             warn = -5;
         } else {
             for (0..brokenPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (pixCnt + 1..brokenPixCnt) |i| {
-                    warn = self.checkAdjacentPixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
+                    warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
                     if (warn != 0) {
                         //Serial.println("Broken pixel has adjacent broken pixel");
                         return warn;
@@ -832,7 +829,7 @@ pub const MLX90640 = struct {
             for (0..outlierPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (pixCnt + 1..outlierPixCnt) |i| {
-                    warn = self.checkAdjacentPixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
+                    warn = self.check_adjacent_pixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
                     if (warn != 0) {
                         //Serial.println("Outlier pixel has adjacent outlier pixel");
                         return warn;
@@ -843,7 +840,7 @@ pub const MLX90640 = struct {
             for (0..brokenPixCnt) |x| {
                 pixCnt = @intCast(x);
                 for (0..outlierPixCnt) |i| {
-                    warn = self.checkAdjacentPixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
+                    warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
                     if (warn != 0) {
                         //Serial.println("Broken pixel has adjacent outlier pixel");
                         return warn;
@@ -855,7 +852,7 @@ pub const MLX90640 = struct {
         return warn;
     }
 
-    fn checkAdjacentPixels(_: *Self, pix1: u16, pix2: u16) i16 {
+    fn check_adjacent_pixels(_: *Self, pix1: u16, pix2: u16) i16 {
         var pixPosDif: i32 = 0;
 
         pixPosDif = pix1 - pix2;
