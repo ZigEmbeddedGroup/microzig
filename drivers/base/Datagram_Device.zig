@@ -58,7 +58,7 @@ pub fn write_then_read(
     dd: Datagram_Device,
     src: []const u8,
     dst: []u8,
-) WriteError!void {
+) (WriteError || ReadError)!void {
     return try dd.writev_then_readv(&.{src}, &.{dst});
 }
 
