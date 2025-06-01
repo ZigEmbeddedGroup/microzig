@@ -760,14 +760,14 @@ const instructions = struct {
     /// addresses 0-31.
     inline fn cbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 0
-        cpu.io.writeMasked(info.a, info.b.mask(), 0x00);
+        cpu.io.write_masked(info.a, info.b.mask(), 0x00);
     }
 
     /// SBI – Set Bit in I/O Register
     /// Sets a specified bit in an I/O Register. This instruction operates on the lower 32 I/O Registers – addresses 0-31.
     inline fn sbi(cpu: *Cpu, info: isa.opinfo.a5b3) void {
         // I/O(A,b) ← 1
-        cpu.io.writeMasked(info.a, info.b.mask(), 0xFF);
+        cpu.io.write_masked(info.a, info.b.mask(), 0xFF);
     }
 
     // Branching:
