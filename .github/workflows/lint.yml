@@ -32,7 +32,6 @@ jobs:
           ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
 
       - name: Post comments
-        if: steps.lint.outputs.exit_code != 0
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
