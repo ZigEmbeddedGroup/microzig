@@ -25,6 +25,18 @@ pub const MLX90640_Config = struct {
 pub const MLX90640 = struct {
     const Self = @This();
 
+    const control_register = packed struct {
+        enable_subpages_mode: u1,
+        reserved: u1,
+        enable_data_hold: u1,
+        enable_subpages_repeat: u1,
+        select_subpage: u3,
+        refresh_rate: u3,
+        resolution: u2,
+        reading_pattern: u1,
+        reserved2: u3,
+    };
+
     const parameters = struct {
         kVdd: i16 = 0,
         vdd25: i16 = 0,
@@ -127,8 +139,8 @@ pub const MLX90640 = struct {
 
     pub fn refresh_rate(self: *Self) !u3 {
         try self.write_then_read(self.control_register_address, self.frame[0..1]);
-        const val = self.frame[0] >> 7 & 0b111;
-        return @as(u3, @truncate(val));
+        const val: control_register = @bitCast(self.frame[0]);
+        return val.refresh_rate;
     }
 
     pub fn resolution(self: *Self) !u2 {
@@ -820,7 +832,6 @@ pub const MLX90640 = struct {
                 for (pixCnt + 1..brokenPixCnt) |i| {
                     warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.brokenPixels[i]);
                     if (warn != 0) {
-                        //Serial.println("Broken pixel has adjacent broken pixel");
                         return warn;
                     }
                 }
@@ -831,7 +842,6 @@ pub const MLX90640 = struct {
                 for (pixCnt + 1..outlierPixCnt) |i| {
                     warn = self.check_adjacent_pixels(self.params.outlierPixels[pixCnt], self.params.outlierPixels[i]);
                     if (warn != 0) {
-                        //Serial.println("Outlier pixel has adjacent outlier pixel");
                         return warn;
                     }
                 }
@@ -842,7 +852,6 @@ pub const MLX90640 = struct {
                 for (0..outlierPixCnt) |i| {
                     warn = self.check_adjacent_pixels(self.params.brokenPixels[pixCnt], self.params.outlierPixels[i]);
                     if (warn != 0) {
-                        //Serial.println("Broken pixel has adjacent outlier pixel");
                         return warn;
                     }
                 }
@@ -870,10 +879,18 @@ pub const MLX90640 = struct {
     }
 };
 
-// test "get temperature" {
-//     var mi2c: MockI2C() = MockI2C().init();
-//     var camera = MLX90640().init(&mi2c.interface);
-//     try camera.extractParameters();
-//     var frame: [834]f32 = undefined;
-//     try camera.temperature(&frame);
-// }
+test "refresh rate" {
+    const Test_Datagram = mdf.base.Datagram_Device.Test_Device;
+    const Test_Clock = mdf.base.Clock_Device.Test_Device;
+    const control_register_data = [1][1]u8{
+        [1]u8{ 0, 0b11000000 },
+    };
+
+    var td = Test_Datagram.init(control_register_data);
+    var tc = Test_Clock.init();
+    defer td.deinit();
+
+    var camera = MLX90640().init(.{ .i2c = td.datagram_device(), .clock = tc.clock_device() });
+    const rr = try camera.refresh_rate();
+    try std.testing.expectEqual(3, rr);
+}
