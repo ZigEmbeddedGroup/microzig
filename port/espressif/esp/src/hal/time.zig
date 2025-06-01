@@ -4,7 +4,6 @@ const time = microzig.drivers.time;
 const systimer = microzig.hal.systimer;
 
 pub fn initialize() void {
-    systimer.initialize();
     systimer.unit(0).apply(.enabled);
 }
 
