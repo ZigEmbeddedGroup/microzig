@@ -29,7 +29,7 @@ const config = I2c.Config{
 };
 
 pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.logFn,
+    .logFn = stm32.uart.log,
 };
 
 var global_counter: stm32.drivers.CounterDevice = undefined;

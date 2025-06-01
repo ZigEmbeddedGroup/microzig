@@ -62,7 +62,7 @@ const RGB = extern struct {
     r: u8,
 };
 
-inline fn floatToBright(f: f32) u8 {
+inline fn float_to_bright(f: f32) u8 {
     return brightness[
         @intFromFloat(
             std.math.clamp(255.0 * f, 0.0, 255.0),

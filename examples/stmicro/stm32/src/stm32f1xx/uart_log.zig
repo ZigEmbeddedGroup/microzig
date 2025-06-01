@@ -9,7 +9,7 @@ const gpio = stm32.gpio;
 const TX = gpio.Pin.from_port(.A, 9);
 
 pub const microzig_options = microzig.Options{
-    .logFn = stm32.uart.logFn,
+    .logFn = stm32.uart.log,
 };
 
 pub fn main() !void {

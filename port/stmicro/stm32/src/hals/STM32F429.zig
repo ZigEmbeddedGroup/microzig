@@ -42,7 +42,7 @@ pub const clock_frequencies = .{
     .apb2 = 16_000_000,
 };
 
-pub fn parsePin(comptime spec: []const u8) type {
+pub fn parse_pin(comptime spec: []const u8) type {
     const invalid_format_msg = "The given pin '" ++ spec ++ "' has an invalid format. Pins must follow the format \"P{Port}{Pin}\" scheme.";
 
     if (spec[0] != 'P')
@@ -60,21 +60,21 @@ pub fn parsePin(comptime spec: []const u8) type {
     };
 }
 
-fn setRegField(reg: anytype, comptime field_name: anytype, value: anytype) void {
+fn set_reg_field(reg: anytype, comptime field_name: anytype, value: anytype) void {
     var temp = reg.read();
     @field(temp, field_name) = value;
     reg.write(temp);
 }
 
 pub const gpio = struct {
-    pub fn setOutput(comptime pin: type) void {
-        setRegField(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
+    pub fn set_output(comptime pin: type) void {
+        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b01);
     }
 
-    pub fn setInput(comptime pin: type) void {
-        setRegField(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
-        setRegField(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
+    pub fn set_input(comptime pin: type) void {
+        set_reg_field(RCC.AHB1ENR, "GPIO" ++ pin.gpio_port_name ++ "EN", 1);
+        set_reg_field(@field(pin.gpio_port, "MODER"), "MODER" ++ pin.suffix, 0b00);
     }
 
     pub fn read(comptime pin: type) microzig.gpio.State {
@@ -85,8 +85,8 @@ pub const gpio = struct {
 
     pub fn write(comptime pin: type, state: microzig.gpio.State) void {
         switch (state) {
-            .low => setRegField(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
-            .high => setRegField(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
+            .low => set_reg_field(pin.gpio_port.BSRR, "BR" ++ pin.suffix, 1),
+            .high => set_reg_field(pin.gpio_port.BSRR, "BS" ++ pin.suffix, 1),
         }
     }
 };

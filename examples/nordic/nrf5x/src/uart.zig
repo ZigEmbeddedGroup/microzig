@@ -7,7 +7,7 @@ const uart = nrf.uart.num(0);
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = nrf.uart.logFn,
+    .logFn = nrf.uart.log,
 };
 
 pub fn main() !void {

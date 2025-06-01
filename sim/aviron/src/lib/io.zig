@@ -22,10 +22,10 @@ pub const Flash = struct {
     pub const empty = Flash{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = emptyRead },
+        .vtable = &VTable{ .readFn = empty_read },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: Address) u16 {
+    fn empty_read(ctx: ?*anyopaque, addr: Address) u16 {
         _ = addr;
         _ = ctx;
         return 0;
@@ -47,9 +47,9 @@ pub const Flash = struct {
                 };
             }
 
-            pub const vtable = VTable{ .readFn = memRead };
+            pub const vtable = VTable{ .readFn = mem_read };
 
-            fn memRead(ctx: ?*anyopaque, addr: Address) u16 {
+            fn mem_read(ctx: ?*anyopaque, addr: Address) u16 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 return std.mem.bytesAsSlice(u16, &mem.data)[addr];
             }
@@ -84,16 +84,16 @@ pub const RAM = struct {
     pub const empty = RAM{
         .ctx = null,
         .size = 0,
-        .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
+        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: u16) u8 {
+    fn empty_read(ctx: ?*anyopaque, addr: u16) u8 {
         _ = addr;
         _ = ctx;
         return 0;
     }
 
-    fn emptyWrite(ctx: ?*anyopaque, addr: u16, value: u8) void {
+    fn empty_write(ctx: ?*anyopaque, addr: u16, value: u8) void {
         _ = value;
         _ = addr;
         _ = ctx;
@@ -114,16 +114,16 @@ pub const RAM = struct {
             }
 
             pub const vtable = VTable{
-                .readFn = memRead,
-                .writeFn = memWrite,
+                .readFn = mem_read,
+                .writeFn = mem_write,
             };
 
-            fn memRead(ctx: ?*anyopaque, addr: Address) u8 {
+            fn mem_read(ctx: ?*anyopaque, addr: Address) u8 {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 return mem.data[addr];
             }
 
-            fn memWrite(ctx: ?*anyopaque, addr: Address, value: u8) void {
+            fn mem_write(ctx: ?*anyopaque, addr: Address, value: u8) void {
                 const mem: *Self = @ptrCast(@alignCast(ctx.?));
                 mem.data[addr] = value;
             }
@@ -146,11 +146,11 @@ pub const IO = struct {
     }
 
     pub fn write(mem: IO, addr: Address, value: u8) void {
-        return mem.writeMasked(addr, 0xFF, value);
+        return mem.write_masked(addr, 0xFF, value);
     }
 
     /// `mask` determines which bits of `value` are written. To write everything, use `0xFF` for `mask`.
-    pub fn writeMasked(mem: IO, addr: Address, mask: u8, value: u8) void {
+    pub fn write_masked(mem: IO, addr: Address, mask: u8, value: u8) void {
         return mem.vtable.writeFn(mem.ctx, addr, mask, value);
     }
 
@@ -161,16 +161,16 @@ pub const IO = struct {
 
     pub const empty = IO{
         .ctx = null,
-        .vtable = &VTable{ .readFn = emptyRead, .writeFn = emptyWrite },
+        .vtable = &VTable{ .readFn = empty_read, .writeFn = empty_write },
     };
 
-    fn emptyRead(ctx: ?*anyopaque, addr: Address) u8 {
+    fn empty_read(ctx: ?*anyopaque, addr: Address) u8 {
         _ = addr;
         _ = ctx;
         return 0;
     }
 
-    fn emptyWrite(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
+    fn empty_write(ctx: ?*anyopaque, addr: Address, mask: u8, value: u8) void {
         _ = mask;
         _ = value;
         _ = addr;

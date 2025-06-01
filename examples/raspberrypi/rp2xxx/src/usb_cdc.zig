@@ -43,10 +43,10 @@ pub var DEVICE_CONFIGURATION: usb.DeviceConfiguration = .{
     .config_descriptor = &usb_config_descriptor,
     .lang_descriptor = "\x04\x03\x09\x04", // length || string descriptor (0x03) || Engl (0x0409)
     .descriptor_strings = &.{
-        &usb.utils.utf8ToUtf16Le("Raspberry Pi"),
-        &usb.utils.utf8ToUtf16Le("Pico Test Device"),
-        &usb.utils.utf8ToUtf16Le("someserial"),
-        &usb.utils.utf8ToUtf16Le("Board CDC"),
+        &usb.utils.utf8_to_utf16_le("Raspberry Pi"),
+        &usb.utils.utf8_to_utf16_le("Pico Test Device"),
+        &usb.utils.utf8_to_utf16_le("someserial"),
+        &usb.utils.utf8_to_utf16_le("Board CDC"),
     },
     .drivers = &drivers,
 };
@@ -59,7 +59,7 @@ pub fn panic(message: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noretu
 
 pub const microzig_options = microzig.Options{
     .log_level = .debug,
-    .logFn = rp2xxx.uart.logFn,
+    .logFn = rp2xxx.uart.log,
 };
 
 pub fn main() !void {

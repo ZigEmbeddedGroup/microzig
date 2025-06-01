@@ -455,7 +455,7 @@ var uart_logger: ?UART.Writer = null;
 ///
 /// Allows system logging over uart via:
 /// pub const microzig_options = .{
-///     .logFn = hal.uart.logFn,
+///     .logFn = hal.uart.log,
 /// };
 pub fn init_logger(uart: UART) void {
     uart_logger = uart.writer();
@@ -467,7 +467,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn logFn(
+pub fn log(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,
@@ -490,15 +490,15 @@ pub fn logFn(
 
 var log_mutex: microzig.hal.mutex.Mutex = .{};
 
-/// This log function wraps logFn in a semaphore so that calls to it from
+/// This log function wraps `log` in a semaphore so that calls to it from
 /// different cores or interrupts don't collide.
-pub fn logFnThreadsafe(
+pub fn log_threadsafe(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,
     args: anytype,
 ) void {
     log_mutex.lock();
-    logFn(level, scope, format, args);
+    log(level, scope, format, args);
     log_mutex.unlock();
 }

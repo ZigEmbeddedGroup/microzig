@@ -8,7 +8,7 @@ const usb_serial_jtag = hal.usb_serial_jtag;
 
 pub const microzig_options: microzig.Options = .{
     .log_level = .debug,
-    .logFn = usb_serial_jtag.logger.logFn,
+    .logFn = usb_serial_jtag.logger.log,
     .interrupts = .{
         .interrupt1 = timer_interrupt,
     },
