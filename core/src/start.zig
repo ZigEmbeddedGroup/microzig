@@ -14,7 +14,7 @@ pub const microzig_options: microzig.Options = if (@hasDecl(app, "microzig_optio
 pub const std_options = std.Options{
     .log_level = microzig_options.log_level,
     .log_scope_levels = microzig_options.log_scope_levels,
-    .logFn = microzig_options.log,
+    .logFn = microzig_options.logFn,
 };
 
 // Startup logic:
