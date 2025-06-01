@@ -280,7 +280,7 @@ fn add_test_suite(
                 },
             };
 
-            const write_file = b.addWriteFile("config.json", cae.config.toString(b));
+            const write_file = b.addWriteFile("config.json", cae.config.to_string(b));
 
             const test_run = b.addRunArtifact(testrunner_exe);
             test_run.addArg("--config");
@@ -367,7 +367,7 @@ fn add_test_suite_update(
                     gcc_invocation.addArg("testsuite");
                     gcc_invocation.addArg(b.fmt("testsuite.avr-gcc/{s}", .{entry.path}));
 
-                    const write_file = b.addWriteFile("config.json", config.toString(b));
+                    const write_file = b.addWriteFile("config.json", config.to_string(b));
 
                     const copy_file = b.addSystemCommand(&.{"cp"}); // todo make this cross-platform!
                     copy_file.addFileArg(write_file.getDirectory().path(b, "config.json"));
