@@ -37,7 +37,7 @@ pub fn main() !void {
                     if (is_camel_case(identifier_str) and !is_snake_case(identifier_str)) {
                         const snake_case = try camel_to_snake(allocator, identifier_str);
                         const location = ast.tokenLocation(0, identifier_tok);
-                        const message = try std.fmt.allocPrint(allocator, "For MicroZig we use snake case for function names. Please change to `{s}`.", .{
+                        const message = try std.fmt.allocPrint(allocator, "Please change to `{s}`, in MicroZig we use snake case for function names.", .{
                             snake_case,
                         });
 
