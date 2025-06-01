@@ -55,11 +55,11 @@ pub const gpio = struct {
         };
     }
 
-    pub fn setOutput(comptime pin: type) void {
+    pub fn set_output(comptime pin: type) void {
         cpu.sbi(regs(pin).dir_addr, pin.pin);
     }
 
-    pub fn setInput(comptime pin: type) void {
+    pub fn set_input(comptime pin: type) void {
         cpu.cbi(regs(pin).dir_addr, pin.pin);
     }
 
@@ -110,14 +110,14 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
     return struct {
         const Self = @This();
 
-        fn computeDivider(baud_rate: u32) !u12 {
+        fn compute_divider(baud_rate: u32) !u12 {
             const pclk = microzig.clock.get().cpu;
             const divider = ((pclk + (8 * baud_rate)) / (16 * baud_rate)) - 1;
 
             return std.math.cast(u12, divider) orelse return error.UnsupportedBaudRate;
         }
 
-        fn computeBaudRate(divider: u12) u32 {
+        fn compute_baudrate(divider: u12) u32 {
             return microzig.clock.get().cpu / (16 * @as(u32, divider) + 1);
         }
 
@@ -147,7 +147,7 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
             // BAUD = ----------------
             //        16 * (UBRRn + 1)
 
-            const ubrr_val = try computeDivider(config.baud_rate);
+            const ubrr_val = try compute_divider(config.baud_rate);
 
             USART1.UCSR1A.modify(.{
                 .MPCM1 = 0,
@@ -176,23 +176,23 @@ pub fn Uart(comptime index: usize, comptime pins: microzig.uart.Pins) type {
             return Self{};
         }
 
-        pub fn canWrite(self: Self) bool {
+        pub fn can_write(self: Self) bool {
             _ = self;
             return (USART1.UCSR1A.read().UDRE1 == 1);
         }
 
         pub fn tx(self: Self, ch: u8) void {
-            while (!self.canWrite()) {} // Wait for Previous transmission
+            while (!self.can_write()) {} // Wait for Previous transmission
             USART1.UDR1.* = ch; // Load the data to be transmitted
         }
 
-        pub fn canRead(self: Self) bool {
+        pub fn can_read(self: Self) bool {
             _ = self;
             return (USART1.UCSR1A.read().RXC1 == 1);
         }
 
         pub fn rx(self: Self) u8 {
-            while (!self.canRead()) {} // Wait till the data is received
+            while (!self.can_read()) {} // Wait till the data is received
             return USART1.UDR1.*; // Read received data
         }
     };

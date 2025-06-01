@@ -131,7 +131,7 @@ pub fn main() !u8 {
             return 1;
         }
 
-        const maybe_device = try autoDetectPico(allocator);
+        const maybe_device = try auto_detect_pico(allocator);
 
         if (maybe_device) |device|
             break device;
@@ -219,7 +219,7 @@ pub fn main() !u8 {
     return 0;
 }
 
-fn autoDetectPico(allocator: std.mem.Allocator) !?[]const u8 {
+fn auto_detect_pico(allocator: std.mem.Allocator) !?[]const u8 {
     switch (builtin.os.tag) {
         .linux => {
             const stdin = std.io.getStdIn();
@@ -243,7 +243,7 @@ fn autoDetectPico(allocator: std.mem.Allocator) !?[]const u8 {
                 defer device_dir.close();
 
                 const H = struct {
-                    fn isPicoDevice(dir: std.fs.Dir, allo: std.mem.Allocator) !?[]const u8 {
+                    fn is_pico_device(dir: std.fs.Dir, allo: std.mem.Allocator) !?[]const u8 {
                         // "/sys/block/*/removable" => "1"
                         // "/sys/block/*/device/model" => "RP2"
                         // "/sys/block/*/device/vendor" => "RPI"
@@ -270,7 +270,7 @@ fn autoDetectPico(allocator: std.mem.Allocator) !?[]const u8 {
                     }
                 };
 
-                const maybe_device = H.isPicoDevice(device_dir, allocator) catch |err| {
+                const maybe_device = H.is_pico_device(device_dir, allocator) catch |err| {
                     if (err != error.FileNotFound and err != error.AccessDenied) {
                         std.log.err("failed to scan /sys/block/{s}: {s}", .{ entry.name, @errorName(err) });
                     }

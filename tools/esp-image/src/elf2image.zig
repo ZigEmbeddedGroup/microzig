@@ -112,7 +112,7 @@ pub fn main() !void {
             std.log.err("no segments found in elf", .{});
             return error.NoSegments;
         }
-        std.sort.insertion(SegmentInfo, info_list.items, {}, SegmentInfo.lessThan);
+        std.sort.insertion(SegmentInfo, info_list.items, {}, SegmentInfo.less_than);
 
         for (info_list.items) |segment_info| {
             if ((chip.irom_map_start <= segment_info.addr and segment_info.addr < chip.irom_map_end) or
@@ -332,7 +332,7 @@ const SegmentInfo = struct {
     file_offset: usize,
     size: usize,
 
-    pub fn lessThan(_: void, lhs: SegmentInfo, rhs: SegmentInfo) bool {
+    pub fn less_than(_: void, lhs: SegmentInfo, rhs: SegmentInfo) bool {
         return lhs.addr < rhs.addr;
     }
 };

@@ -101,7 +101,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
         };
 
         const pc = cpu.pc;
-        const inst = try isa.decode(cpu.fetchCode());
+        const inst = try isa.decode(cpu.fetch_code());
 
         if (cpu.trace) {
             // std.debug.print("TRACE {s} {} 0x{X:0>6}: {}\n", .{
@@ -124,7 +124,7 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
 
             std.debug.print("] 0x{X:0>6}: {}\n", .{
                 pc,
-                fmtInstruction(inst),
+                fmt_instruction(inst),
             });
         }
 
@@ -145,11 +145,11 @@ pub fn run(cpu: *Cpu, mileage: ?u64) RunError!RunResult {
     }
 }
 
-fn shiftProgramCounter(cpu: *Cpu, by: i12) void {
+fn shift_program_counter(cpu: *Cpu, by: i12) void {
     cpu.pc = @intCast(@as(i32, @intCast(cpu.pc)) + by);
 }
 
-fn fetchCode(cpu: *Cpu) u16 {
+fn fetch_code(cpu: *Cpu) u16 {
     const value = cpu.flash.read(cpu.pc);
     cpu.pc +%= 1; // increment with wraparound
     cpu.pc &= @intFromEnum(cpu.code_model); // then wrap to lower bit size
@@ -157,18 +157,18 @@ fn fetchCode(cpu: *Cpu) u16 {
 }
 
 fn push(cpu: *Cpu, val: u8) void {
-    const sp = cpu.getSP();
+    const sp = cpu.get_sp();
     cpu.sram.write(sp, val);
-    cpu.setSP(sp -% 1);
+    cpu.set_sp(sp -% 1);
 }
 
 fn pop(cpu: *Cpu) u8 {
-    const sp = cpu.getSP() +% 1;
-    cpu.setSP(sp);
+    const sp = cpu.get_sp() +% 1;
+    cpu.set_sp(sp);
     return cpu.sram.read(sp);
 }
 
-fn pushCodeLoc(cpu: *Cpu, val: u24) void {
+fn push_code_loc(cpu: *Cpu, val: u24) void {
     const pc: u24 = val;
     const mask: u24 = @intFromEnum(cpu.code_model);
 
@@ -183,7 +183,7 @@ fn pushCodeLoc(cpu: *Cpu, val: u24) void {
     }
 }
 
-fn popCodeLoc(cpu: *Cpu) u24 {
+fn pop_code_loc(cpu: *Cpu) u24 {
     const mask = @intFromEnum(cpu.code_model);
 
     var pc: u24 = 0;
@@ -211,7 +211,7 @@ const WideReg = enum(u8) {
 
 const IndexRegReadMode = enum { eind, ramp, raw };
 
-fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMode) u24 {
+fn read_wide_reg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMode) u24 {
     return compose24(
         switch (mode) {
             .raw => 0,
@@ -229,7 +229,7 @@ fn readWideReg(cpu: *Cpu, comptime reg: WideReg, comptime mode: IndexRegReadMode
 
 const IndexRegWriteMode = enum { raw, ramp };
 
-fn writeWideReg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWriteMode) void {
+fn write_wide_reg(cpu: *Cpu, reg: WideReg, value: u24, comptime mode: IndexRegWriteMode) void {
     const parts = decompose24(value);
     cpu.regs[reg.base() + 0] = parts[0];
     cpu.regs[reg.base() + 1] = parts[1];
@@ -779,8 +779,8 @@ const instructions = struct {
     inline fn brbc(cpu: *Cpu, info: isa.opinfo.k7s3) void {
         // If SREG(s) = 0 then PC ← PC + k + 1, else PC ← PC + 1
         const pc_offset: i7 = @bitCast(info.k);
-        if (!cpu.sreg.readBit(info.s)) {
-            cpu.shiftProgramCounter(pc_offset);
+        if (!cpu.sreg.read_bit(info.s)) {
+            cpu.shift_program_counter(pc_offset);
         }
     }
 
@@ -792,8 +792,8 @@ const instructions = struct {
         // If SREG(s) = 1 then PC ← PC + k + 1, else PC ← PC + 1
 
         const pc_offset: i7 = @bitCast(bits.k);
-        if (cpu.sreg.readBit(bits.s)) {
-            cpu.shiftProgramCounter(pc_offset);
+        if (cpu.sreg.read_bit(bits.s)) {
+            cpu.shift_program_counter(pc_offset);
         }
     }
 
@@ -859,7 +859,7 @@ const instructions = struct {
     /// NOTE: 32 bit instruction!
     inline fn jmp(cpu: *Cpu, info: isa.opinfo.k6) void {
         // PC ← k
-        const ext = cpu.fetchCode();
+        const ext = cpu.fetch_code();
         cpu.pc = (@as(u24, info.k) << 16) | ext;
     }
 
@@ -868,7 +868,7 @@ const instructions = struct {
     /// Program memory not exceeding 4K words (8KB) this instruction can address the entire memory from
     /// every address location. See also JMP.
     inline fn rjmp(cpu: *Cpu, bits: isa.opinfo.k12) void {
-        cpu.shiftProgramCounter(@as(i12, @bitCast(bits.k)));
+        cpu.shift_program_counter(@as(i12, @bitCast(bits.k)));
     }
 
     /// RCALL – Relative Call to Subroutine
@@ -878,7 +878,7 @@ const instructions = struct {
     /// address location. The Stack Pointer uses a post-decrement scheme during RCALL.
     inline fn rcall(cpu: *Cpu, info: isa.opinfo.k12) void {
         // PC ← PC + k + 1
-        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        cpu.push_code_loc(cpu.pc); // PC already points to the next instruction
         rjmp(cpu, info);
     }
 
@@ -888,7 +888,7 @@ const instructions = struct {
     inline fn ret(cpu: *Cpu) void {
         // PC(15:0) ← STACK Devices with 16-bit PC, 128KB Program memory maximum.
         // PC(21:0) ← STACK Devices with 22-bit PC, 8MB Program memory maximum.
-        cpu.pc = cpu.popCodeLoc();
+        cpu.pc = cpu.pop_code_loc();
     }
 
     /// RETI – Return from Interrupt
@@ -899,7 +899,7 @@ const instructions = struct {
     inline fn reti(cpu: *Cpu) void {
         // PC(15:0) ← STACK Devices with 16-bit PC, 128KB Program memory maximum.
         // PC(21:0) ← STACK Devices with 22-bit PC, 8MB Program memory maximum.
-        cpu.pc = cpu.popCodeLoc();
+        cpu.pc = cpu.pop_code_loc();
         cpu.sreg.i = true;
     }
 
@@ -911,8 +911,8 @@ const instructions = struct {
     ///
     /// NOTE: 32 bit instruction!
     inline fn call(cpu: *Cpu, info: isa.opinfo.k6) void {
-        const ext = cpu.fetchCode();
-        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
+        const ext = cpu.fetch_code();
+        cpu.push_code_loc(cpu.pc); // PC already points to the next instruction
         cpu.pc = (@as(u24, info.k) << 16) | ext;
     }
 
@@ -925,8 +925,8 @@ const instructions = struct {
     inline fn icall(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← 0
-        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
-        cpu.pc = cpu.readWideReg(.z, .raw);
+        cpu.push_code_loc(cpu.pc); // PC already points to the next instruction
+        cpu.pc = cpu.read_wide_reg(.z, .raw);
     }
 
     /// IJMP – Indirect Jump
@@ -937,7 +937,7 @@ const instructions = struct {
     inline fn ijmp(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← 0
-        cpu.pc = cpu.readWideReg(.z, .raw);
+        cpu.pc = cpu.read_wide_reg(.z, .raw);
     }
 
     /// EICALL – Extended Indirect Call to Subroutine
@@ -948,8 +948,8 @@ const instructions = struct {
     inline fn eicall(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← EIND
-        cpu.pushCodeLoc(cpu.pc); // PC already points to the next instruction
-        cpu.pc = cpu.readWideReg(.z, .eind);
+        cpu.push_code_loc(cpu.pc); // PC already points to the next instruction
+        cpu.pc = cpu.read_wide_reg(.z, .eind);
     }
 
     /// EIJMP – Extended Indirect Jump
@@ -960,7 +960,7 @@ const instructions = struct {
     inline fn eijmp(cpu: *Cpu) void {
         // PC(15:0) ← Z(15:0)
         // PC(21:16) ← EIND
-        cpu.pc = cpu.readWideReg(.z, .eind);
+        cpu.pc = cpu.read_wide_reg(.z, .eind);
     }
 
     // Comparisons
@@ -1008,7 +1008,7 @@ const instructions = struct {
     /// reading status bits stored in SRAM.
     inline fn xch(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd, Rd ← (Z)
-        const z = cpu.readWideReg(.z, .ramp);
+        const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
@@ -1027,7 +1027,7 @@ const instructions = struct {
     /// (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
     inline fn lac(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← ($FF – Rd) • (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z, .ramp);
+        const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
@@ -1046,7 +1046,7 @@ const instructions = struct {
     /// status bits stored in SRAM.
     inline fn las(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd v (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z, .ramp);
+        const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
@@ -1064,7 +1064,7 @@ const instructions = struct {
     /// changing status bits stored in SRAM.
     inline fn lat(cpu: *Cpu, info: isa.opinfo.r5) void {
         // (Z) ← Rd ⊕ (Z), Rd ← (Z)
-        const z = cpu.readWideReg(.z, .ramp);
+        const z = cpu.read_wide_reg(.z, .ramp);
 
         const Rd = cpu.regs[info.r.num()];
         const mem = cpu.sram.read(z);
@@ -1086,7 +1086,7 @@ const instructions = struct {
     /// NOTE: 32 bit instruction!
     inline fn lds(cpu: *Cpu, info: isa.opinfo.d5) void {
         // Rd ← (k)
-        const addr = cpu.extendDirectAddress(cpu.fetchCode());
+        const addr = cpu.extend_direct_address(cpu.fetch_code());
         cpu.regs[info.d.num()] = cpu.sram.read(addr);
     }
 
@@ -1097,17 +1097,17 @@ const instructions = struct {
         rd: IndexRegReadMode,
     };
     inline fn compute_and_mutate_index(cpu: *Cpu, comptime wr: WideReg, q: u6, comptime config: IndexOpConfig) u24 {
-        const raw = cpu.readWideReg(wr, config.rd);
+        const raw = cpu.read_wide_reg(wr, config.rd);
         const address = switch (config.op) {
             .none => raw,
             .displace => raw +% q,
             .pre_decr => blk: {
                 const index = raw -% 1;
-                cpu.writeWideReg(wr, index, config.wb);
+                cpu.write_wide_reg(wr, index, config.wb);
                 break :blk index;
             },
             .post_incr => blk: {
-                cpu.writeWideReg(wr, raw +% 1, config.wb);
+                cpu.write_wide_reg(wr, raw +% 1, config.wb);
                 break :blk raw;
             },
         };
@@ -1391,7 +1391,7 @@ const instructions = struct {
     /// NOTE: 32 bit instruction!
     inline fn sts(cpu: *Cpu, info: isa.opinfo.d5) void {
         // (k) ← Rr
-        const addr = cpu.extendDirectAddress(cpu.fetchCode());
+        const addr = cpu.extend_direct_address(cpu.fetch_code());
         cpu.sram.write(addr, cpu.regs[info.d.num()]);
     }
 
@@ -1410,21 +1410,21 @@ const instructions = struct {
     /// Clears a single Flag in SREG.
     inline fn bclr(cpu: *Cpu, info: isa.opinfo.s3) void {
         // SREG(s) ← 0
-        cpu.sreg.writeBit(info.s, false);
+        cpu.sreg.write_bit(info.s, false);
     }
 
     /// BSET – Bit Set in SREG
     /// Sets a single Flag or bit in SREG.
     inline fn bset(cpu: *Cpu, info: isa.opinfo.s3) void {
         // SREG(s) ← 1
-        cpu.sreg.writeBit(info.s, true);
+        cpu.sreg.write_bit(info.s, true);
     }
 
     /// BLD – Bit Load from the T Flag in SREG to a Bit in Register
     /// Copies the T Flag in the SREG (Status Register) to bit b in register Rd.
     inline fn bld(cpu: *Cpu, info: isa.opinfo.b3d5) void {
         // Rd(b) ← T
-        changeBit(&cpu.regs[info.d.num()], info.b.num(), cpu.sreg.t);
+        change_bit(&cpu.regs[info.d.num()], info.b.num(), cpu.sreg.t);
     }
 
     /// BST – Bit Store from Bit in Register to T Flag in SREG
@@ -1534,14 +1534,14 @@ pub const SREG = packed struct(u8) {
     /// Changing the I bit through the I/O register results in a one-cycle Wait state on the access.
     i: bool,
 
-    pub fn readBit(sreg: SREG, bit: isa.StatusRegisterBit) bool {
+    pub fn read_bit(sreg: SREG, bit: isa.StatusRegisterBit) bool {
         const val: u8 = @bitCast(sreg);
         return (bit.mask() & val) != 0;
     }
 
-    pub fn writeBit(sreg: *SREG, bit: isa.StatusRegisterBit, value: bool) void {
+    pub fn write_bit(sreg: *SREG, bit: isa.StatusRegisterBit, value: bool) void {
         var val: u8 = @bitCast(sreg.*);
-        changeBit(&val, bit.num(), value);
+        change_bit(&val, bit.num(), value);
         sreg.* = @bitCast(val);
     }
 
@@ -1576,7 +1576,7 @@ inline fn bval(b: u3) u8 {
     return @as(u8, 1) << b;
 }
 
-inline fn changeBit(dst: *u8, bit: u3, val: bool) void {
+inline fn change_bit(dst: *u8, bit: u3, val: bool) void {
     if (val) {
         dst.* |= bval(bit);
     } else {
@@ -1614,21 +1614,21 @@ pub const SpecialIoRegisters = struct {
     sreg: IO.Address,
 };
 
-fn extendDirectAddress(cpu: *Cpu, value: u16) u24 {
+fn extend_direct_address(cpu: *Cpu, value: u16) u24 {
     return value | if (cpu.sio.ramp_d) |ramp_d|
         @as(u24, cpu.io.read(ramp_d)) << 16
     else
         0;
 }
 
-fn getSP(cpu: *Cpu) u16 {
+fn get_sp(cpu: *Cpu) u16 {
     const lo = cpu.io.read(cpu.sio.sp_l);
     const hi = cpu.io.read(cpu.sio.sp_h);
 
     return (@as(u16, hi) << 8) | lo;
 }
 
-fn setSP(cpu: *Cpu, value: u16) void {
+fn set_sp(cpu: *Cpu, value: u16) void {
     const lo: u8 = @truncate(value >> 0);
     const hi: u8 = @truncate(value >> 8);
 
@@ -1661,11 +1661,11 @@ fn decompose16(value: u16) [2]u8 {
     };
 }
 
-fn fmtInstruction(inst: isa.Instruction) std.fmt.Formatter(formatInstruction) {
+fn fmt_instruction(inst: isa.Instruction) std.fmt.Formatter(format_instruction) {
     return .{ .data = inst };
 }
 
-fn formatInstruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
+fn format_instruction(inst: isa.Instruction, fmt: []const u8, opt: std.fmt.FormatOptions, writer: anytype) !void {
     _ = opt;
     _ = fmt;
     try writer.print(" {s: <8}", .{@tagName(inst)});

@@ -332,7 +332,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn logFn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
+pub fn log_fn(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime format: []const u8, args: anytype) void {
     const prefix = comptime level.asText() ++ switch (scope) {
         .default => ": ",
         else => " (" ++ @tagName(scope) ++ "): ",

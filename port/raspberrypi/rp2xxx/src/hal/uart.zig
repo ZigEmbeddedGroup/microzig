@@ -467,7 +467,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn logFn(
+pub fn log_fn(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,
@@ -492,13 +492,13 @@ var log_mutex: microzig.hal.mutex.Mutex = .{};
 
 /// This log function wraps logFn in a semaphore so that calls to it from
 /// different cores or interrupts don't collide.
-pub fn logFnThreadsafe(
+pub fn log_fn_threadsafe(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,
     args: anytype,
 ) void {
     log_mutex.lock();
-    logFn(level, scope, format, args);
+    log_fn(level, scope, format, args);
     log_mutex.unlock();
 }

@@ -70,7 +70,7 @@ pub const logger = struct {
         }
     }
 
-    pub fn logFn(
+    pub fn log_fn(
         comptime level: std.log.Level,
         comptime scope: @TypeOf(.EnumLiteral),
         comptime format: []const u8,

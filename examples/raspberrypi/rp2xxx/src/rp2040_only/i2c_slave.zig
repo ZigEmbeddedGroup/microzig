@@ -44,7 +44,7 @@ pub fn main() !void {
 
     std.log.info("Hello from i2c_slave.", .{});
 
-    i2c.slave.i2c0.open(slave_addr, &i2c_buffer, i2cRXCallback, i2cTXCallback, null);
+    i2c.slave.i2c0.open(slave_addr, &i2c_buffer, i2c_rx_callback, i2c_tx_callback, null);
 
     std.log.debug("Setup Complete", .{});
 
@@ -53,7 +53,7 @@ pub fn main() !void {
     }
 }
 
-fn i2cRXCallback(in_data: []const u8, in_first: bool, in_last: bool, in_gen_call: bool, in_param: ?*anyopaque) void {
+fn i2c_rx_callback(in_data: []const u8, in_first: bool, in_last: bool, in_gen_call: bool, in_param: ?*anyopaque) void {
     _ = in_param;
 
     std.log.debug("i2cRXCallback: {any} [{d}]", .{ in_data, in_data.len });
@@ -62,7 +62,7 @@ fn i2cRXCallback(in_data: []const u8, in_first: bool, in_last: bool, in_gen_call
     std.log.debug("gen_call: {}", .{in_gen_call});
 }
 
-fn i2cTXCallback(out_data: []u8, in_first: bool, in_param: ?*anyopaque) usize {
+fn i2c_tx_callback(out_data: []u8, in_first: bool, in_param: ?*anyopaque) usize {
     _ = in_param;
 
     std.log.debug("i2cTXCallback", .{});

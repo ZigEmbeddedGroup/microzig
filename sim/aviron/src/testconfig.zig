@@ -77,7 +77,7 @@ pub const TestSuiteConfig = struct {
         "-ffreestanding",
     },
 
-    pub fn toString(config: TestSuiteConfig, b: *std.Build) []const u8 {
+    pub fn to_string(config: TestSuiteConfig, b: *std.Build) []const u8 {
         return std.json.stringifyAlloc(b.allocator, config, .{
             .whitespace = .indent_2,
             .emit_null_optional_fields = true,

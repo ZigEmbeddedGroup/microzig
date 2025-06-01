@@ -35,7 +35,7 @@ const ExitMode = union(testconfig.ExitType) {
     system_exit: u8,
 };
 
-fn validateReg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void {
+fn validate_reg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void {
     const expected = @field(ts.config.postcondition, @tagName(reg)) orelse return;
 
     const actual = ts.cpu.regs[reg.num()];
@@ -49,7 +49,7 @@ fn validateReg(ok: *bool, ts: *SystemState, comptime reg: aviron.Register) void 
     }
 }
 
-fn validateSystemAndExit(exit_mode: ExitMode) noreturn {
+fn validate_syste_and_exit(exit_mode: ExitMode) noreturn {
     var ok = true;
     const ts = &test_system;
 
@@ -82,7 +82,7 @@ fn validateSystemAndExit(exit_mode: ExitMode) noreturn {
     }
 
     inline for (comptime std.enums.values(aviron.Register)) |reg| {
-        validateReg(&ok, ts, reg);
+        validate_reg(&ok, ts, reg);
     }
 
     inline for (comptime std.meta.fields(aviron.Cpu.SREG)) |fld| {
@@ -216,7 +216,7 @@ pub fn main() !u8 {
     }
 
     const result = try test_system.cpu.run(null);
-    validateSystemAndExit(switch (result) {
+    validate_syste_and_exit(switch (result) {
         inline else => |tag| @unionInit(ExitMode, @tagName(tag), {}),
     });
 }
@@ -319,39 +319,39 @@ const IO = struct {
         const io: *IO = @ptrCast(@alignCast(ctx.?));
         const reg: Register = @enumFromInt(addr);
         switch (reg) {
-            .exit => validateSystemAndExit(.{
+            .exit => validate_syste_and_exit(.{
                 .system_exit = (value & mask),
             }),
 
             .stdio => io.stdout.append(value & mask) catch @panic("out of memory"),
             .stderr => io.stderr.append(value & mask) catch @panic("out of memory"),
 
-            .scratch_0 => writeMasked(&io.scratch_regs[0x0], mask, value),
-            .scratch_1 => writeMasked(&io.scratch_regs[0x1], mask, value),
-            .scratch_2 => writeMasked(&io.scratch_regs[0x2], mask, value),
-            .scratch_3 => writeMasked(&io.scratch_regs[0x3], mask, value),
-            .scratch_4 => writeMasked(&io.scratch_regs[0x4], mask, value),
-            .scratch_5 => writeMasked(&io.scratch_regs[0x5], mask, value),
-            .scratch_6 => writeMasked(&io.scratch_regs[0x6], mask, value),
-            .scratch_7 => writeMasked(&io.scratch_regs[0x7], mask, value),
-            .scratch_8 => writeMasked(&io.scratch_regs[0x8], mask, value),
-            .scratch_9 => writeMasked(&io.scratch_regs[0x9], mask, value),
-            .scratch_a => writeMasked(&io.scratch_regs[0xa], mask, value),
-            .scratch_b => writeMasked(&io.scratch_regs[0xb], mask, value),
-            .scratch_c => writeMasked(&io.scratch_regs[0xc], mask, value),
-            .scratch_d => writeMasked(&io.scratch_regs[0xd], mask, value),
-            .scratch_e => writeMasked(&io.scratch_regs[0xe], mask, value),
-            .scratch_f => writeMasked(&io.scratch_regs[0xf], mask, value),
+            .scratch_0 => write_masked(&io.scratch_regs[0x0], mask, value),
+            .scratch_1 => write_masked(&io.scratch_regs[0x1], mask, value),
+            .scratch_2 => write_masked(&io.scratch_regs[0x2], mask, value),
+            .scratch_3 => write_masked(&io.scratch_regs[0x3], mask, value),
+            .scratch_4 => write_masked(&io.scratch_regs[0x4], mask, value),
+            .scratch_5 => write_masked(&io.scratch_regs[0x5], mask, value),
+            .scratch_6 => write_masked(&io.scratch_regs[0x6], mask, value),
+            .scratch_7 => write_masked(&io.scratch_regs[0x7], mask, value),
+            .scratch_8 => write_masked(&io.scratch_regs[0x8], mask, value),
+            .scratch_9 => write_masked(&io.scratch_regs[0x9], mask, value),
+            .scratch_a => write_masked(&io.scratch_regs[0xa], mask, value),
+            .scratch_b => write_masked(&io.scratch_regs[0xb], mask, value),
+            .scratch_c => write_masked(&io.scratch_regs[0xc], mask, value),
+            .scratch_d => write_masked(&io.scratch_regs[0xd], mask, value),
+            .scratch_e => write_masked(&io.scratch_regs[0xe], mask, value),
+            .scratch_f => write_masked(&io.scratch_regs[0xf], mask, value),
 
-            .sp_l => writeMasked(lobyte(&io.sp), mask, value),
-            .sp_h => writeMasked(hibyte(&io.sp), mask, value),
-            .sreg => writeMasked(@ptrCast(io.sreg), mask, value),
+            .sp_l => write_masked(low_byte(&io.sp), mask, value),
+            .sp_h => write_masked(high_byte(&io.sp), mask, value),
+            .sreg => write_masked(@ptrCast(io.sreg), mask, value),
 
             _ => std.debug.panic("illegal i/o write to undefined register 0x{X:0>2} with value=0x{X:0>2}, mask=0x{X:0>2}", .{ addr, value, mask }),
         }
     }
 
-    fn lobyte(val: *u16) *u8 {
+    fn low_byte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
             .big => return &bits[1],
@@ -359,7 +359,7 @@ const IO = struct {
         };
     }
 
-    fn hibyte(val: *u16) *u8 {
+    fn high_byte(val: *u16) *u8 {
         const bits: *[2]u8 = @ptrCast(val);
         return switch (comptime builtin.cpu.arch.endian()) {
             .big => return &bits[0],
@@ -367,7 +367,7 @@ const IO = struct {
         };
     }
 
-    fn writeMasked(dst: *u8, mask: u8, val: u8) void {
+    fn write_masked(dst: *u8, mask: u8, val: u8) void {
         dst.* &= ~mask;
         dst.* |= (val & mask);
     }

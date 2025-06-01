@@ -32,7 +32,7 @@ pub fn deinit_logger() void {
     uart_logger = null;
 }
 
-pub fn logFn(
+pub fn log_fn(
     comptime level: std.log.Level,
     comptime scope: @TypeOf(.EnumLiteral),
     comptime format: []const u8,
@@ -329,20 +329,3 @@ pub const UART = enum(u1) {
         uart.get_regs().EVENTS_RXTO.raw = 0;
     }
 };
-
-pub fn log_fn(
-    comptime level: std.log.Level,
-    comptime scope: @TypeOf(.EnumLiteral),
-    comptime format: []const u8,
-    args: anytype,
-) void {
-    const level_prefix = comptime level.asText();
-    const prefix = comptime level_prefix ++ switch (scope) {
-        .default => ": ",
-        else => " (" ++ @tagName(scope) ++ "): ",
-    };
-
-    if (uart_logger) |uart| {
-        uart.print(prefix ++ format ++ "\r\n", args) catch {};
-    }
-}

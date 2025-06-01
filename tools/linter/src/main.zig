@@ -20,7 +20,10 @@ pub fn main() !void {
     defer issues.deinit();
 
     for (args[1..]) |path| {
-        const source = try std.fs.cwd().readFileAllocOptions(allocator, path, 1024 * 1024, null, 1, 0);
+        const source = std.fs.cwd().readFileAllocOptions(allocator, path, 100 * 1024 * 1024, null, 1, 0) catch |err| {
+            std.log.err("Failed to read file '{s}': {}", .{ path, err });
+            return err;
+        };
         defer allocator.free(source);
 
         var ast = try std.zig.Ast.parse(allocator, source, .zig);

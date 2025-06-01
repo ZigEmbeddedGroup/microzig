@@ -2,7 +2,7 @@ const std = @import("std");
 const isa_def = @embedFile("isa.txt");
 const isa = @import("isa");
 
-fn stringToEnum(comptime T: type, str: []const u8) ?T {
+fn string_to_enum(comptime T: type, str: []const u8) ?T {
     inline for (@typeInfo(T).@"enum".fields) |enumField| {
         if (std.mem.eql(u8, str, enumField.name)) {
             return @field(T, enumField.name);
@@ -44,7 +44,7 @@ pub fn main() !void {
         var pit = std.mem.tokenizeScalar(u8, line, ' ');
 
         const op_name = pit.next() orelse continue;
-        const opcode = stringToEnum(isa.Opcode, op_name) orelse @panic(op_name);
+        const opcode = string_to_enum(isa.Opcode, op_name) orelse @panic(op_name);
 
         base_number_bit_set.mask = 0;
         try unknown_indices.resize(0);
