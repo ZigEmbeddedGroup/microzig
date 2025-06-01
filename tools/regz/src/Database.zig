@@ -16,7 +16,7 @@ const gen = @import("gen.zig");
 const Patch = @import("patch.zig").Patch;
 const SQL_Options = @import("SQL_Options.zig");
 const Arch = @import("arch.zig").Arch;
-const Directory = @import("Directory.zig");
+pub const Directory = @import("Directory.zig");
 
 const log = std.log.scoped(.db);
 const file_size_max = 100 * 1024 * 1024;

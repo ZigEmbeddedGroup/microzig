@@ -8,11 +8,7 @@ pub const VTable = struct {
 pub const CreateFileError = error{
     TODO,
     System,
-};
-
-pub const CreateDirectoryError = error{
-    TODO,
-    System,
+    OutOfMemory,
 };
 
 pub inline fn create_file(d: Directory, filename: []const u8, content: []const u8) CreateFileError!void {
