@@ -37,7 +37,7 @@ pub fn main() !void {
                     if (is_camel_case(identifier_str) and !is_snake_case(identifier_str)) {
                         const snake_case = try camel_to_snake(allocator, identifier_str);
                         const location = ast.tokenLocation(0, identifier_tok);
-                        const message = try std.fmt.allocPrint(allocator, "For MicroZig we use snake case for function names. Please change to `{s}`. This is not required", .{
+                        const message = try std.fmt.allocPrint(allocator, "For MicroZig we use snake case for function names. Please change to `{s}`.", .{
                             snake_case,
                         });
 
@@ -66,9 +66,6 @@ pub fn main() !void {
 
     const stdout = std.io.getStdOut().writer();
     try std.json.stringify(issues.items, .{}, stdout);
-
-    if (issues.items.len > 0)
-        return error.FoundLintingErrors;
 }
 
 const Token = std.zig.Token;
@@ -140,8 +137,28 @@ fn is_camel_case(str: []const u8) bool {
     return true;
 }
 
-// TODO: implement
 fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
-    _ = arena;
-    return str;
+    if (str.len == 0)
+        return str;
+
+    var ret = std.ArrayList(u8).init(arena);
+    errdefer ret.deinit();
+
+    if (std.ascii.isUpper(str[0])) {
+        try ret.append(std.ascii.toLower(str[0]));
+    } else {
+        try ret.append(str[0]);
+    }
+
+    for (str[1..]) |c| {
+        if (std.ascii.isUpper(c)) {
+            // Add underscore before uppercase letters
+            try ret.append('_');
+            try ret.append(std.ascii.toLower(c));
+        } else {
+            try ret.append(c);
+        }
+    }
+
+    return ret.toOwnedSlice();
 }

@@ -33,7 +33,6 @@ jobs:
 
       - name: Post comments
         uses: actions/github-script@v6
-        if: steps.lint.outputs.exit_code != 0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
