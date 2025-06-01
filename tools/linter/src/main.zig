@@ -1,98 +1,71 @@
-const Type = struct {
-    pub fn whatIsThis() void {}
+const Issue = struct {
+    file: []const u8,
+    line: u32,
+    message: []const u8,
 };
 
-fn is_snake_case(str: []const u8) bool {
-    for (str) |c| {
-        switch (c) {
-            'A'...'Z' => return false,
-            else => {},
-        }
-    }
-
-    return true;
-}
-
-fn is_camel_case(str: []const u8) bool {
-    if (str.len == 0)
-        return false;
-
-    if (!std.ascii.isLower(str[0]))
-        return false;
-
-    for (str[1..]) |c| {
-        if (c == '_')
-            return false;
-    }
-
-    return true;
-}
-
-// Starts with capital, but there are _some_ lowercase
-fn is_type_case(str: []const u8) bool {
-    if (str.len == 0)
-        return false;
-
-    if (!std.ascii.isUpper(str[0]))
-        return false;
-
-    for (str[1..]) |c| {
-        if (std.ascii.isLower(c)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 pub fn main() !void {
-    const source = @embedFile(@src().file);
-
     var debug_allocator = std.heap.DebugAllocator(.{}){};
     defer _ = debug_allocator.deinit();
 
-    const gpa = debug_allocator.allocator();
-    var ast = try std.zig.Ast.parse(gpa, source, .zig);
-    defer ast.deinit(gpa);
+    var arena = std.heap.ArenaAllocator.init(debug_allocator.allocator());
+    defer arena.deinit();
 
-    for (ast.nodes.items(.tag), ast.nodes.items(.main_token), 0..) |node_tag, main_tok_idx, node_idx| {
-        _ = node_idx;
-        switch (node_tag) {
-            .fn_proto_simple,
-            .fn_proto_multi,
-            .fn_proto_one,
-            .fn_proto,
-            => {
-                const identifier_tok = find_first_token_tag(ast, .identifier, main_tok_idx);
-                const identifier_str = ast.tokenSlice(identifier_tok);
-                if (is_camel_case(identifier_str) and !is_snake_case(identifier_str)) {
-                    const location = ast.tokenLocation(0, identifier_tok);
-                    // TODO: break up camel case
-                    std.log.info("FAILED SNAKE CASE: {s}, location: {}", .{ identifier_str, location });
-                }
-            },
+    const allocator = arena.allocator();
 
-            .global_var_decl,
-            .local_var_decl,
-            .aligned_var_decl,
-            .simple_var_decl,
-            => {
-                //const str = ast.getNodeSource(@intCast(node_idx));
-                //std.log.info("  node_str: {s}", .{str});
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
 
-                // Find first identifier token
-                const identifier_tok = find_first_token_tag(ast, .identifier, main_tok_idx);
-                //std.log.info("  identifier_token_idx: {}", .{identifier_tok});
+    var issues: std.ArrayList(Issue) = .init(allocator);
+    defer issues.deinit();
 
-                const identifier_str = ast.tokenSlice(identifier_tok);
-                std.log.info("  identifier_str: '{s}'", .{identifier_str});
+    for (args[1..]) |path| {
+        const source = try std.fs.cwd().readFileAllocOptions(allocator, path, 1024 * 1024, null, 1, 0);
+        defer allocator.free(source);
 
-                if (!is_type_case(identifier_str))
-                    continue;
-            },
-            else => {},
+        var ast = try std.zig.Ast.parse(allocator, source, .zig);
+        defer ast.deinit(allocator);
+        for (ast.nodes.items(.tag), ast.nodes.items(.main_token)) |node_tag, main_tok_idx| {
+            switch (node_tag) {
+                .fn_proto_simple,
+                .fn_proto_multi,
+                .fn_proto_one,
+                .fn_proto,
+                => {
+                    const identifier_tok = find_first_token_tag(ast, .identifier, main_tok_idx);
+                    const identifier_str = ast.tokenSlice(identifier_tok);
+                    if (is_camel_case(identifier_str) and !is_snake_case(identifier_str)) {
+                        const snake_case = try camel_to_snake(allocator, identifier_str);
+                        const location = ast.tokenLocation(0, identifier_tok);
+                        const message = try std.fmt.allocPrint(allocator, "For MicroZig we use snake case for function names. Please change to `{s}`. This is not required", .{
+                            snake_case,
+                        });
+
+                        try issues.append(.{
+                            .line = @intCast(location.line + 1),
+                            .message = message,
+                            .file = path,
+                        });
+                        // TODO: break up camel case
+                        std.log.info("FAILED SNAKE CASE: {s}, location: {}", .{ identifier_str, location });
+                    }
+                },
+
+                .global_var_decl,
+                .local_var_decl,
+                .aligned_var_decl,
+                .simple_var_decl,
+                => {
+                    // TODO: check types for common abbreviations and ensure they follow coding style.
+
+                },
+                else => {},
+            }
         }
     }
+
+    const stdout = std.io.getStdOut().writer();
+    try std.json.stringify(issues.items, .{}, stdout);
 }
 
 const Token = std.zig.Token;
@@ -128,6 +101,44 @@ test "fuzz example" {
 }
 
 const std = @import("std");
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
 
 /// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
 const lib = @import("linter_lib");
+
+const Type = struct {
+    pub fn whatIsThis() void {}
+};
+
+fn is_snake_case(str: []const u8) bool {
+    for (str) |c| {
+        switch (c) {
+            'A'...'Z' => return false,
+            else => {},
+        }
+    }
+
+    return true;
+}
+
+fn is_camel_case(str: []const u8) bool {
+    if (str.len == 0)
+        return false;
+
+    if (!std.ascii.isLower(str[0]))
+        return false;
+
+    for (str[1..]) |c| {
+        if (c == '_')
+            return false;
+    }
+
+    return true;
+}
+
+// TODO: implement
+fn camel_to_snake(arena: Allocator, str: []const u8) ![]const u8 {
+    _ = arena;
+    return str;
+}

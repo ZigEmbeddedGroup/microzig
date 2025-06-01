@@ -21,12 +21,15 @@ jobs:
         with:
           version: 0.14.1
 
-      - name: Run linter
+      - name: Build linter
         working-directory: tools/linter
+        run: zig build --release=safe
+
+      - name: Run linter
         run: |
           FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$')
           echo changed files: $FILES
-          zig build run -- $FILES > lint_results.json
+          ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
 
       - name: Post comments
         if: steps.lint.outputs.exit_code != 0
