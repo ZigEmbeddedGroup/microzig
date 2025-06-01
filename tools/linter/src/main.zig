@@ -66,6 +66,9 @@ pub fn main() !void {
 
     const stdout = std.io.getStdOut().writer();
     try std.json.stringify(issues.items, .{}, stdout);
+
+    if (issues.items.len > 0)
+        return error.FoundLintingErrors;
 }
 
 const Token = std.zig.Token;
