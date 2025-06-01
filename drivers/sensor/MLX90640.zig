@@ -67,6 +67,14 @@ pub const MLX90640 = struct {
         outlierPixels: [5]u16 = undefined,
     };
 
+    const registers = enum(u16) {
+        control = 0x800D,
+        status = 0x8000,
+        ram = 0x0400,
+        eeprom = 0x2400,
+        device_id = 0x2407,
+    };
+
     eeprom: [832]u16 = undefined,
     frame: [834]u16 = undefined,
     frame_data: [834 * 2]u8 = undefined,
@@ -76,14 +84,8 @@ pub const MLX90640 = struct {
     params: parameters,
     emissivity: f32,
     open_air_shift: f32,
-    initial_frame_load: bool = false,
 
     scale_alpha: f32 = 0.000001,
-    control_register_address: u16 = 0x800D,
-    status_register_address: u16 = 0x8000,
-    ram_address: u16 = 0x0400,
-    eeprom_address: u16 = 0x2400,
-    device_id_1_address: u16 = 0x2407,
 
     frame_loop: [2]u1 = [2]u1{ 0, 1 },
     refresh_rate_mask: u16 = 0b111 << 7,
@@ -98,10 +100,11 @@ pub const MLX90640 = struct {
         };
     }
 
-    fn write(self: *Self, address: u16, val: u16) !void {
+    fn write(self: *Self, reg: Self.registers, val: u16) !void {
+        const addr: u16 = @intFromEnum(reg);
         var req = [4]u8{
-            @as(u8, @truncate(address >> 8)),
-            @as(u8, @truncate(address & 0xFF)),
+            @as(u8, @truncate(addr >> 8)),
+            @as(u8, @truncate(addr & 0xFF)),
             @as(u8, @truncate(val >> 8)),
             @as(u8, @truncate(val & 0xFF)),
         };
@@ -110,22 +113,23 @@ pub const MLX90640 = struct {
         self.clock_device.sleep_ms(100);
     }
 
-    fn write_then_read(self: *Self, address: u16, buf: []u16) !void {
-        var req = [2]u8{ @as(u8, @truncate(address >> 8)), @as(u8, @truncate(address & 0xFF)) };
-        try self.i2c.write_then_read(&req, self.frame_data[0 .. buf.len * 2]);
+    fn write_then_read(self: *Self, reg: Self.registers, buf: []u16) !void {
+        const addr: u16 = std.mem.nativeToBig(u16, @intFromEnum(reg));
+        const req = std.mem.asBytes(&addr);
+        try self.i2c.write_then_read(req, self.frame_data[0 .. buf.len * 2]);
         for (0.., buf) |i, _| {
             buf[i] = std.mem.readInt(u16, self.frame_data[i * 2 .. (i * 2) + 2][0..2], .big);
         }
     }
 
     fn read_control_register(self: *Self) !control_register {
-        try self.write_then_read(self.control_register_address, self.frame[0..1]);
+        try self.write_then_read(Self.registers.control, self.frame[0..1]);
         const val: control_register = @bitCast(self.frame[0]);
         return val;
     }
 
     pub fn serial_number(self: *Self) !u48 {
-        try self.write_then_read(self.device_id_1_address, self.frame[0..3]);
+        try self.write_then_read(Self.registers.control, self.frame[0..3]);
         return @as(u48, self.frame[0]) << 32 |
             @as(u48, self.frame[1]) << 16 |
             @as(u48, self.frame[2]);
@@ -135,7 +139,7 @@ pub const MLX90640 = struct {
         var val = try self.read_control_register();
         val.refresh_rate = rate;
         const bytes: u16 = @bitCast(val);
-        try self.write(self.control_register_address, bytes);
+        try self.write(Self.registers.control, bytes);
     }
 
     pub fn refresh_rate(self: *Self) !u3 {
@@ -149,10 +153,11 @@ pub const MLX90640 = struct {
     }
 
     pub fn temperature(self: *Self, result: []f32) !void {
-        if (!self.initial_frame_load) {
+        if (self.params.kVdd == 0) {
+            try self.extract_parameters();
+
             // the initial frame load results in bad data upon restart, so get that bad data out of the way
             try self.load_frame();
-            self.initial_frame_load = true;
         }
 
         try self.load_frame();
@@ -278,6 +283,22 @@ pub const MLX90640 = struct {
         }
     }
 
+    pub fn load_frame(self: *Self) !void {
+        var ready: bool = false;
+        for (self.frame_loop) |i| {
+            while (!ready) {
+                try self.write_then_read(Self.registers.status, self.frame[833..834]);
+                ready = self.is_ready(i, self.frame[833]);
+                self.clock_device.sleep_ms(10);
+            }
+
+            try self.write_then_read(Self.registers.ram, self.frame[0..832]);
+            ready = false;
+        }
+
+        try self.write_then_read(Self.registers.control, self.frame[832..833]);
+    }
+
     fn getVdd(self: *Self) f32 {
         var vdd: f32 = @floatFromInt(self.frame[810]);
         if (vdd > 32767) {
@@ -291,22 +312,6 @@ pub const MLX90640 = struct {
         vdd = (resolutionCorrection * vdd - vdd25) / kvdd + 3.3;
 
         return vdd;
-    }
-
-    pub fn load_frame(self: *Self) !void {
-        var ready: bool = false;
-        for (self.frame_loop) |i| {
-            while (!ready) {
-                try self.write_then_read(self.status_register_address, self.frame[833..834]);
-                ready = self.is_ready(i, self.frame[833]);
-                self.clock_device.sleep_ms(10);
-            }
-
-            try self.write_then_read(self.ram_address, self.frame[0..832]);
-            ready = false;
-        }
-
-        try self.write_then_read(self.control_register_address, self.frame[832..833]);
     }
 
     fn getTa(self: *Self, vdd: f32) f32 {
@@ -334,7 +339,7 @@ pub const MLX90640 = struct {
     }
 
     pub fn extract_parameters(self: *Self) !void {
-        try self.write_then_read(self.eeprom_address, &self.eeprom);
+        try self.write_then_read(Self.registers.eeprom, &self.eeprom);
         self.extract_vdd();
         self.extract_ptat();
         self.extact_gain();
@@ -905,12 +910,12 @@ test "control_register_values" {
     try std.testing.expectEqual(5, rr);
 
     try camera.set_refresh_rate(3);
-    const refresh_rate_sent = [_][]const u8{
-        &.{ 0x80, 0x0D }, // control register from first refresh_rate() call
-        &.{ 0x80, 0x0D }, // control register from set_refresh_rate() calling refresh_rate()
+    const sent = [_][]const u8{
+        &.{ 0x80, 0x0D }, // control register request from first refresh_rate() call
+        &.{ 0x80, 0x0D }, // control register request from set_refresh_rate() calling refresh_rate()
         &.{ 0x80, 0x0D, 0b00000001, 0b10000000 },
     };
-    try td.expect_sent(&refresh_rate_sent);
+    try td.expect_sent(&sent);
 
     const rez = try camera.resolution();
     try std.testing.expectEqual(3, rez);
