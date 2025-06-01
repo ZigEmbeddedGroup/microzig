@@ -1,0 +1,53 @@
+name: Code Linting
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Build linter
+        working-directory: tools/linter
+        run: zig build --release=safe
+
+      - name: Run linter
+        run: |
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.zig$')
+          echo changed files: $FILES
+          ./tools/linter/zig-out/bin/linter $FILES > lint_results.json
+
+      - name: Post comments
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const issues = JSON.parse(fs.readFileSync('lint_results.json', 'utf8'));
+
+            for (const issue of issues) {
+              await github.rest.pulls.createReviewComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                commit_id: context.payload.pull_request.head.sha,
+                path: issue.file,
+                line: issue.line,
+                body: issue.message
+              });
+            }
+
